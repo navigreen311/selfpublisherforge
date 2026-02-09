@@ -1,0 +1,207 @@
+"""API router for the Production Pipeline module."""
+
+from __future__ import annotations
+
+import uuid
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.modules.production_pipeline import service
+from app.modules.production_pipeline.models import PipelineStatus
+from app.modules.production_pipeline.schemas import (
+    CreatePipeline,
+    CreateTask,
+    CreateTemplate,
+    PaginatedPipelines,
+    PipelineResponse,
+    TaskResponse,
+    TemplateResponse,
+    TimelineView,
+    UpdatePipeline,
+    UpdateTask,
+)
+from app.modules.production_pipeline.workflow import WorkflowError
+
+router = APIRouter()
+
+# ── Helpers ───────────────────────────────────────────────────────────────
+
+
+def _get_org_id(org_id: str = Query(..., alias="org_id")) -> uuid.UUID:
+    """Extract org_id from query parameter (placeholder for auth middleware)."""
+    try:
+        return uuid.UUID(org_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid org_id format.",
+        )
+
+
+# ── Template endpoints (MUST be before /{pipeline_id} routes) ─────────────
+
+
+@router.post(
+    "/templates",
+    response_model=TemplateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Save a pipeline template",
+)
+async def create_template(
+    payload: CreateTemplate,
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    template = await service.create_template(db, org_id, payload)
+    return template
+
+
+@router.get(
+    "/templates",
+    response_model=list[TemplateResponse],
+    summary="List pipeline templates",
+)
+async def list_templates(
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    return await service.list_templates(db, org_id)
+
+
+# ── Pipeline endpoints ────────────────────────────────────────────────────
+
+
+@router.post(
+    "",
+    response_model=PipelineResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new production pipeline",
+)
+async def create_pipeline(
+    payload: CreatePipeline,
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    pipeline = await service.create_pipeline(db, org_id, payload)
+    return pipeline
+
+
+@router.get(
+    "",
+    response_model=PaginatedPipelines,
+    summary="List pipelines (paginated, filterable)",
+)
+async def list_pipelines(
+    org_id: uuid.UUID = Depends(_get_org_id),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    pipeline_status: Optional[PipelineStatus] = Query(None, alias="status"),
+    book_id: Optional[uuid.UUID] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await service.list_pipelines(
+        db, org_id, page=page, page_size=page_size, status=pipeline_status, book_id=book_id
+    )
+
+
+@router.get(
+    "/{pipeline_id}",
+    response_model=PipelineResponse,
+    summary="Get pipeline detail with tasks",
+)
+async def get_pipeline(
+    pipeline_id: uuid.UUID,
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    pipeline = await service.get_pipeline(db, pipeline_id, org_id)
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Pipeline not found.")
+    return pipeline
+
+
+@router.patch(
+    "/{pipeline_id}",
+    response_model=PipelineResponse,
+    summary="Update pipeline settings",
+)
+async def update_pipeline(
+    pipeline_id: uuid.UUID,
+    payload: UpdatePipeline,
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pipeline = await service.update_pipeline(db, pipeline_id, org_id, payload)
+    except WorkflowError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Pipeline not found.")
+    return pipeline
+
+
+# ── Task endpoints ────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/{pipeline_id}/tasks",
+    response_model=TaskResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a task to a pipeline",
+)
+async def add_task(
+    pipeline_id: uuid.UUID,
+    payload: CreateTask,
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        task = await service.add_task(db, pipeline_id, org_id, payload)
+    except WorkflowError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not task:
+        raise HTTPException(status_code=404, detail="Pipeline not found.")
+    return task
+
+
+@router.patch(
+    "/{pipeline_id}/tasks/{task_id}",
+    response_model=TaskResponse,
+    summary="Update task status/assignee",
+)
+async def update_task(
+    pipeline_id: uuid.UUID,
+    task_id: uuid.UUID,
+    payload: UpdateTask,
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        task = await service.update_task(db, pipeline_id, task_id, org_id, payload)
+    except WorkflowError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not task:
+        raise HTTPException(status_code=404, detail="Pipeline or task not found.")
+    return task
+
+
+# ── Timeline endpoint ─────────────────────────────────────────────────────
+
+
+@router.get(
+    "/{pipeline_id}/timeline",
+    response_model=TimelineView,
+    summary="Get Gantt-style timeline for a pipeline",
+)
+async def get_timeline(
+    pipeline_id: uuid.UUID,
+    org_id: uuid.UUID = Depends(_get_org_id),
+    db: AsyncSession = Depends(get_db),
+):
+    timeline = await service.get_timeline(db, pipeline_id, org_id)
+    if not timeline:
+        raise HTTPException(status_code=404, detail="Pipeline not found.")
+    return timeline
