@@ -1,0 +1,334 @@
+"""Storage service — wraps an S3-compatible client for presigned URLs, asset CRUD, etc."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import datetime, timezone
+from typing import Any
+
+import boto3
+from botocore.config import Config as BotoConfig
+from botocore.exceptions import ClientError
+from sqlalchemy import String, BigInteger, Text, select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.config import get_settings
+from app.core.exceptions import AppException
+from app.database import TenantModel
+from app.modules.storage.schemas import (
+    AssetResponse,
+    AssetStatus,
+    AssetType,
+    UploadResponse,
+)
+from app.modules.storage.validators import validate_file
+
+settings = get_settings()
+
+
+# ---------------------------------------------------------------------------
+# SQLAlchemy model — maps to the "content_assets" table created by W02
+# ---------------------------------------------------------------------------
+
+class ContentAsset(TenantModel):
+    """ORM model for the content_assets table."""
+
+    __tablename__ = "content_assets"
+
+    file_name: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(127))
+    size: Mapped[int] = mapped_column(BigInteger)
+    asset_type: Mapped[str] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(50), default=AssetStatus.PENDING.value)
+    s3_key: Mapped[str] = mapped_column(String(1024))
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# S3 client helper
+# ---------------------------------------------------------------------------
+
+def _get_s3_client():
+    """Return a boto3 S3 client configured for the current settings."""
+    return boto3.client(
+        "s3",
+        region_name=settings.S3_REGION,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        config=BotoConfig(signature_version="s3v4"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Service class
+# ---------------------------------------------------------------------------
+
+class StorageService:
+    """High-level storage operations."""
+
+    def __init__(self, db: AsyncSession, s3_client=None):
+        self.db = db
+        self.s3 = s3_client or _get_s3_client()
+        self.bucket = settings.S3_BUCKET
+
+    # -- Presigned upload ---------------------------------------------------
+
+    async def create_presigned_upload(
+        self,
+        *,
+        org_id: uuid.UUID,
+        file_name: str,
+        content_type: str,
+        size: int,
+        asset_type: AssetType,
+    ) -> UploadResponse:
+        """Validate the incoming file metadata, create an asset record, and
+        return a presigned PUT URL the client can use to upload directly to S3.
+        """
+        # 1. Validate
+        validate_file(
+            file_name=file_name,
+            content_type=content_type,
+            size=size,
+            asset_type=asset_type,
+        )
+
+        # 2. Build S3 key
+        asset_id = uuid.uuid4()
+        s3_key = self._build_s3_key(org_id, asset_type, asset_id, file_name)
+
+        # 3. Persist asset record in PENDING state
+        asset = ContentAsset(
+            id=asset_id,
+            org_id=org_id,
+            file_name=file_name,
+            content_type=content_type,
+            size=size,
+            asset_type=asset_type.value,
+            status=AssetStatus.PENDING.value,
+            s3_key=s3_key,
+        )
+        self.db.add(asset)
+        await self.db.flush()
+        await self.db.refresh(asset)
+
+        # 4. Generate presigned URL
+        expires_in = 3600
+        upload_url = self.s3.generate_presigned_url(
+            ClientMethod="put_object",
+            Params={
+                "Bucket": self.bucket,
+                "Key": s3_key,
+                "ContentType": content_type,
+            },
+            ExpiresIn=expires_in,
+        )
+
+        return UploadResponse(
+            upload_url=upload_url,
+            asset_id=asset_id,
+            expires_in=expires_in,
+        )
+
+    # -- Complete upload ----------------------------------------------------
+
+    async def complete_upload(
+        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
+    ) -> AssetResponse:
+        """Mark the asset as uploaded after the client finishes the PUT."""
+        asset = await self._get_asset_or_404(asset_id, org_id)
+
+        if asset.status != AssetStatus.PENDING.value:
+            raise AppException(
+                status_code=409,
+                code="INVALID_ASSET_STATE",
+                message=f"Asset is in '{asset.status}' state, expected 'pending'.",
+            )
+
+        # Optionally verify the object actually exists in S3
+        try:
+            self.s3.head_object(Bucket=self.bucket, Key=asset.s3_key)
+        except ClientError:
+            raise AppException(
+                status_code=400,
+                code="UPLOAD_NOT_FOUND",
+                message="The file has not been uploaded to storage yet.",
+            )
+
+        asset.status = AssetStatus.UPLOADED.value
+        await self.db.flush()
+        await self.db.refresh(asset)
+
+        return self._to_response(asset)
+
+    # -- List assets --------------------------------------------------------
+
+    async def list_assets(
+        self,
+        *,
+        org_id: uuid.UUID,
+        asset_type: AssetType | None = None,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Return paginated assets for the organisation."""
+        query = (
+            select(ContentAsset)
+            .where(ContentAsset.org_id == org_id)
+            .where(ContentAsset.deleted_at.is_(None))
+            .order_by(ContentAsset.created_at.desc())
+        )
+        count_query = (
+            select(func.count())
+            .select_from(ContentAsset)
+            .where(ContentAsset.org_id == org_id)
+            .where(ContentAsset.deleted_at.is_(None))
+        )
+
+        if asset_type is not None:
+            query = query.where(ContentAsset.asset_type == asset_type.value)
+            count_query = count_query.where(ContentAsset.asset_type == asset_type.value)
+
+        if cursor:
+            try:
+                cursor_dt = datetime.fromisoformat(cursor)
+            except ValueError:
+                raise AppException(
+                    status_code=400,
+                    code="INVALID_CURSOR",
+                    message="Cursor value is not a valid ISO-8601 datetime.",
+                )
+            query = query.where(ContentAsset.created_at < cursor_dt)
+
+        query = query.limit(limit + 1)  # fetch one extra for has_more
+
+        result = await self.db.execute(query)
+        rows = list(result.scalars().all())
+
+        total_result = await self.db.execute(count_query)
+        total_count = total_result.scalar()
+
+        has_more = len(rows) > limit
+        if has_more:
+            rows = rows[:limit]
+
+        next_cursor = rows[-1].created_at.isoformat() if rows and has_more else None
+
+        items = [self._to_response(r) for r in rows]
+
+        return {
+            "items": items,
+            "next_cursor": next_cursor,
+            "has_more": has_more,
+            "total_count": total_count,
+        }
+
+    # -- Get single asset ---------------------------------------------------
+
+    async def get_asset(
+        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
+    ) -> AssetResponse:
+        asset = await self._get_asset_or_404(asset_id, org_id)
+        download_url = self._generate_download_url(asset.s3_key)
+        return self._to_response(asset, download_url=download_url)
+
+    # -- Soft-delete --------------------------------------------------------
+
+    async def delete_asset(
+        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
+    ) -> None:
+        asset = await self._get_asset_or_404(asset_id, org_id)
+        asset.status = AssetStatus.DELETED.value
+        asset.deleted_at = datetime.now(timezone.utc)
+        await self.db.flush()
+        await self.db.refresh(asset)
+
+    # -- Trigger processing -------------------------------------------------
+
+    async def trigger_processing(
+        self,
+        *,
+        asset_id: uuid.UUID,
+        org_id: uuid.UUID,
+        action: str = "auto",
+        options: dict | None = None,
+    ) -> AssetResponse:
+        """Mark the asset as PROCESSING and (in production) enqueue a Celery task."""
+        asset = await self._get_asset_or_404(asset_id, org_id)
+
+        if asset.status not in (AssetStatus.UPLOADED.value, AssetStatus.READY.value):
+            raise AppException(
+                status_code=409,
+                code="INVALID_ASSET_STATE",
+                message=f"Cannot process asset in '{asset.status}' state.",
+            )
+
+        asset.status = AssetStatus.PROCESSING.value
+        await self.db.flush()
+        await self.db.refresh(asset)
+
+        # TODO: Dispatch Celery task based on action + asset_type
+        # e.g. tasks.process_asset.delay(str(asset_id), action, options)
+
+        return self._to_response(asset)
+
+    # -- Private helpers ----------------------------------------------------
+
+    async def _get_asset_or_404(
+        self, asset_id: uuid.UUID, org_id: uuid.UUID
+    ) -> ContentAsset:
+        result = await self.db.execute(
+            select(ContentAsset)
+            .where(ContentAsset.id == asset_id)
+            .where(ContentAsset.org_id == org_id)
+            .where(ContentAsset.deleted_at.is_(None))
+        )
+        asset = result.scalar_one_or_none()
+        if asset is None:
+            raise AppException(
+                status_code=404,
+                code="ASSET_NOT_FOUND",
+                message="The requested asset does not exist.",
+            )
+        return asset
+
+    @staticmethod
+    def _build_s3_key(
+        org_id: uuid.UUID,
+        asset_type: AssetType,
+        asset_id: uuid.UUID,
+        file_name: str,
+    ) -> str:
+        """Construct a deterministic S3 object key.
+
+        Pattern: ``orgs/<org_id>/<asset_type>/<asset_id>/<file_name>``
+        """
+        safe_name = file_name.replace(" ", "_")
+        return f"orgs/{org_id}/{asset_type.value}/{asset_id}/{safe_name}"
+
+    def _generate_download_url(self, s3_key: str, expires_in: int = 3600) -> str:
+        return self.s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={"Bucket": self.bucket, "Key": s3_key},
+            ExpiresIn=expires_in,
+        )
+
+    @staticmethod
+    def _to_response(
+        asset: ContentAsset, *, download_url: str | None = None
+    ) -> AssetResponse:
+        return AssetResponse(
+            id=asset.id,
+            org_id=asset.org_id,
+            file_name=asset.file_name,
+            content_type=asset.content_type,
+            size=asset.size,
+            asset_type=AssetType(asset.asset_type),
+            status=AssetStatus(asset.status),
+            s3_key=asset.s3_key,
+            download_url=download_url,
+            metadata=None,
+            created_at=asset.created_at,
+            updated_at=asset.updated_at,
+        )
