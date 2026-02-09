@@ -43,8 +43,13 @@ def create_app() -> FastAPI:
 def _register_routers(app: FastAPI):
     """Register all module API routers."""
     prefix = settings.API_V1_PREFIX
-    # Routers will be registered by each module worker
-    # Example: app.include_router(auth_router, prefix=f"{prefix}/auth", tags=["auth"])
-    pass
+
+    # Cover Design Studio
+    from app.modules.cover_design.router import router as cover_router
+    app.include_router(cover_router, prefix=prefix)
+
+    # Chrome Extension API
+    from app.modules.chrome_extension.router import router as extension_router
+    app.include_router(extension_router, prefix=prefix)
 
 app = create_app()

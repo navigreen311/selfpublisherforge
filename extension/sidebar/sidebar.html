@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPF Research Sidebar</title>
+  <link rel="stylesheet" href="../styles/popup.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    #app {
+      min-width: auto;
+      max-width: 100%;
+      padding: 16px;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .metric-card {
+      background: #f4f6f8;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .metric-card__value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .metric-card__label {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .bsr-history {
+      width: 100%;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .bsr-history table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .bsr-history th,
+    .bsr-history td {
+      padding: 4px 8px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .keyword-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .keyword-tag {
+      background: #e8eaf6;
+      color: #3f51b5;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px 0;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="spf-header">
+      <h1 class="spf-logo" style="font-size: 16px;">SPF Research</h1>
+    </header>
+
+    <!-- Product info -->
+    <section id="product-section" class="section hidden">
+      <h2 id="product-title" class="section__title" style="font-size: 14px;"></h2>
+      <p id="product-asin" style="font-size: 12px; color: #888;"></p>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-card__value" id="metric-bsr">--</div>
+          <div class="metric-card__label">Current BSR</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card__value" id="metric-sales">--</div>
+          <div class="metric-card__label">Est. Daily Sales</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card__value" id="metric-price">--</div>
+          <div class="metric-card__label">Avg Price</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card__value" id="metric-competitors">--</div>
+          <div class="metric-card__label">Competitors</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BSR History -->
+    <section id="bsr-history-section" class="section hidden">
+      <h2 class="section__title" style="font-size: 13px;">BSR History</h2>
+      <div class="bsr-history">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>BSR</th></tr>
+          </thead>
+          <tbody id="bsr-history-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Related keywords -->
+    <section id="keywords-section" class="section hidden">
+      <h2 class="section__title" style="font-size: 13px;">Related Keywords</h2>
+      <div id="keyword-tags" class="keyword-tags"></div>
+    </section>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">Loading research data...</div>
+
+    <!-- No data -->
+    <div id="no-data" class="section hidden">
+      <p class="section__description">
+        Navigate to an Amazon product page to see research data.
+      </p>
+    </div>
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>

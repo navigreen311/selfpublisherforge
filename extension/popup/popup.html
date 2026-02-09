@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SelfPublisherForge</title>
+  <link rel="stylesheet" href="../styles/popup.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="spf-header">
+      <h1 class="spf-logo">SPF</h1>
+      <span id="auth-status" class="auth-badge auth-badge--disconnected">
+        Disconnected
+      </span>
+    </header>
+
+    <!-- Login section (visible when not authenticated) -->
+    <section id="login-section" class="section">
+      <p class="section__description">
+        Connect to your SelfPublisherForge account to save research data.
+      </p>
+      <div class="form-group">
+        <label for="api-url">API URL</label>
+        <input
+          id="api-url"
+          type="url"
+          placeholder="https://api.selfpublisherforge.com"
+          value="http://localhost:8000"
+        />
+      </div>
+      <div class="form-group">
+        <label for="api-token">API Token</label>
+        <input id="api-token" type="password" placeholder="Paste your API token" />
+      </div>
+      <button id="btn-connect" class="btn btn--primary btn--full">
+        Connect
+      </button>
+    </section>
+
+    <!-- Quick actions (visible when authenticated) -->
+    <section id="actions-section" class="section hidden">
+      <h2 class="section__title">Quick Actions</h2>
+
+      <button id="btn-extract" class="btn btn--primary btn--full">
+        Extract Page Data
+      </button>
+
+      <button id="btn-sidebar" class="btn btn--secondary btn--full">
+        Open Research Sidebar
+      </button>
+
+      <button id="btn-clip" class="btn btn--secondary btn--full">
+        Clip Selection to Vault
+      </button>
+
+      <div id="extract-result" class="result-box hidden"></div>
+
+      <hr class="divider" />
+
+      <button id="btn-disconnect" class="btn btn--danger btn--full btn--small">
+        Disconnect
+      </button>
+    </section>
+
+    <!-- Footer -->
+    <footer class="spf-footer">
+      <small>SelfPublisherForge v1.0.0</small>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
