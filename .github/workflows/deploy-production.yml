@@ -1,0 +1,323 @@
+# =============================================================================
+# Deploy to Production — On tag push (blue-green with auto-rollback)
+# =============================================================================
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  ECS_CLUSTER: selfpublisherforge-production
+  ENVIRONMENT: production
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build and Push Docker Images to ECR
+  # ---------------------------------------------------------------------------
+  build-and-push:
+    name: Build & Push Production Images
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: meta
+        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_PROD_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/selfpublisherforge-api:${{ steps.meta.outputs.tag }}
+            ${{ env.ECR_REGISTRY }}/selfpublisherforge-api:production-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/selfpublisherforge-frontend:${{ steps.meta.outputs.tag }}
+            ${{ env.ECR_REGISTRY }}/selfpublisherforge-frontend:production-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # Blue-Green Deploy to Production ECS
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Blue-Green Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    outputs:
+      previous-api-task-def: ${{ steps.save-current.outputs.api-task-def }}
+      previous-frontend-task-def: ${{ steps.save-current.outputs.frontend-task-def }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_PROD_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Save current task definitions for rollback
+        id: save-current
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition selfpublisherforge-api-production \
+            --query taskDefinition > current-api-task-def.json
+          echo "api-task-def=$(cat current-api-task-def.json | jq -r '.taskDefinitionArn')" >> "$GITHUB_OUTPUT"
+
+          aws ecs describe-task-definition \
+            --task-definition selfpublisherforge-frontend-production \
+            --query taskDefinition > current-frontend-task-def.json
+          echo "frontend-task-def=$(cat current-frontend-task-def.json | jq -r '.taskDefinitionArn')" >> "$GITHUB_OUTPUT"
+
+      - name: Download API task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition selfpublisherforge-api-production \
+            --query taskDefinition > api-task-def.json
+
+      - name: Update API task definition with new image
+        id: render-api
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: api-task-def.json
+          container-name: api
+          image: ${{ env.ECR_REGISTRY }}/selfpublisherforge-api:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy API to Production ECS (blue-green)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-api.outputs.task-definition }}
+          service: selfpublisherforge-api-production
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          wait-for-minutes: 15
+          codedeploy-appspec: infra/appspec.json
+          codedeploy-application: selfpublisherforge-production
+          codedeploy-deployment-group: selfpublisherforge-api-production-dg
+
+      - name: Download Frontend task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition selfpublisherforge-frontend-production \
+            --query taskDefinition > frontend-task-def.json
+
+      - name: Update Frontend task definition with new image
+        id: render-frontend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: frontend-task-def.json
+          container-name: frontend
+          image: ${{ env.ECR_REGISTRY }}/selfpublisherforge-frontend:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Deploy Frontend to Production ECS (blue-green)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-frontend.outputs.task-definition }}
+          service: selfpublisherforge-frontend-production
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          wait-for-minutes: 15
+
+      - name: Deploy Worker and Beat to Production
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service selfpublisherforge-worker-production \
+            --force-new-deployment
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service selfpublisherforge-beat-production \
+            --force-new-deployment
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services selfpublisherforge-worker-production selfpublisherforge-beat-production
+
+  # ---------------------------------------------------------------------------
+  # Health Checks & Auto-Rollback
+  # ---------------------------------------------------------------------------
+  health-check:
+    name: Health Check & Auto-Rollback
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_PROD_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Wait for deployment stabilization
+        run: sleep 60
+
+      - name: Check API health endpoint
+        id: api-health
+        run: |
+          HEALTH_URL="${{ secrets.PRODUCTION_API_URL }}/api/health"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+          echo "http_status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "API health check failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Check error rate from CloudWatch
+        id: error-rate
+        run: |
+          ERROR_RATE=$(aws cloudwatch get-metric-statistics \
+            --namespace "AWS/ApplicationELB" \
+            --metric-name "HTTPCode_Target_5XX_Count" \
+            --dimensions Name=TargetGroup,Value="${{ secrets.PROD_TARGET_GROUP_ARN }}" \
+            --start-time "$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%S)" \
+            --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
+            --period 300 \
+            --statistics Sum \
+            --query 'Datapoints[0].Sum // `0`' \
+            --output text)
+
+          TOTAL_REQUESTS=$(aws cloudwatch get-metric-statistics \
+            --namespace "AWS/ApplicationELB" \
+            --metric-name "RequestCount" \
+            --dimensions Name=TargetGroup,Value="${{ secrets.PROD_TARGET_GROUP_ARN }}" \
+            --start-time "$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%S)" \
+            --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
+            --period 300 \
+            --statistics Sum \
+            --query 'Datapoints[0].Sum // `1`' \
+            --output text)
+
+          if [ "$TOTAL_REQUESTS" -gt 0 ]; then
+            RATE=$(echo "scale=4; $ERROR_RATE / $TOTAL_REQUESTS * 100" | bc)
+          else
+            RATE="0"
+          fi
+
+          echo "error_rate=$RATE" >> "$GITHUB_OUTPUT"
+          echo "Error rate: ${RATE}%"
+
+          # Auto-rollback if error rate exceeds 1%
+          THRESHOLD="1.0"
+          if (( $(echo "$RATE > $THRESHOLD" | bc -l) )); then
+            echo "Error rate ${RATE}% exceeds threshold ${THRESHOLD}%"
+            exit 1
+          fi
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "Rolling back to previous task definitions..."
+
+          # Rollback API
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service selfpublisherforge-api-production \
+            --task-definition "${{ needs.deploy.outputs.previous-api-task-def }}" \
+            --force-new-deployment
+
+          # Rollback Frontend
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service selfpublisherforge-frontend-production \
+            --task-definition "${{ needs.deploy.outputs.previous-frontend-task-def }}" \
+            --force-new-deployment
+
+          # Rollback Worker and Beat
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service selfpublisherforge-worker-production \
+            --force-new-deployment
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service selfpublisherforge-beat-production \
+            --force-new-deployment
+
+          # Wait for rollback stability
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services selfpublisherforge-api-production selfpublisherforge-frontend-production
+
+          echo "Rollback complete."
+
+  # ---------------------------------------------------------------------------
+  # Notify Slack
+  # ---------------------------------------------------------------------------
+  notify:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: [deploy, health-check]
+    if: always()
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [ "${{ needs.health-check.result }}" == "success" ]; then
+            echo "color=good" >> "$GITHUB_OUTPUT"
+            echo "status=SUCCESS" >> "$GITHUB_OUTPUT"
+            echo "emoji=:rocket:" >> "$GITHUB_OUTPUT"
+          else
+            echo "color=danger" >> "$GITHUB_OUTPUT"
+            echo "status=FAILED (ROLLBACK TRIGGERED)" >> "$GITHUB_OUTPUT"
+            echo "emoji=:rotating_light:" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ steps.status.outputs.color }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "${{ steps.status.outputs.emoji }} *Production Deploy ${{ steps.status.outputs.status }}*\n*Version:* `${{ github.ref_name }}`\n*Repo:* ${{ github.repository }}\n*Actor:* ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

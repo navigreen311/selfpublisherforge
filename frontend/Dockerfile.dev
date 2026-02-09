@@ -1,0 +1,19 @@
+# =============================================================================
+# Frontend Dockerfile.dev — Development with hot reload
+# =============================================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Application code is mounted as a volume at runtime
+EXPOSE 3000
+
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV WATCHPACK_POLLING=true
+
+# Run Next.js dev server with hot reload
+CMD ["npm", "run", "dev"]

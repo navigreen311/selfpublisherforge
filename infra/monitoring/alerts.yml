@@ -1,0 +1,348 @@
+# =============================================================================
+# Alert Definitions — Severity tiers P0 (critical) through P3 (informational)
+# =============================================================================
+# P0: Immediate response required (page on-call)
+# P1: Urgent response within 15 minutes
+# P2: Respond within 1 hour
+# P3: Informational / next business day
+
+alerts:
+
+  # ---------------------------------------------------------------------------
+  # P0 — Critical: Immediate paging, service is down or data loss risk
+  # ---------------------------------------------------------------------------
+  - name: "API Service Down"
+    severity: P0
+    type: metric
+    query: "avg(last_5m):avg:aws.ecs.service.running{servicename:selfpublisherforge-api-production} < 1"
+    message: |
+      P0 CRITICAL: API service has zero running tasks in production.
+      Service is completely unavailable to users.
+      Runbook: https://wiki.internal/runbooks/api-service-down
+    notify:
+      - pagerduty-critical
+      - slack-incidents
+    thresholds:
+      critical: 1
+    tags:
+      - service:api
+      - env:production
+      - severity:P0
+
+  - name: "Database Connection Failure"
+    severity: P0
+    type: metric
+    query: "avg(last_3m):avg:aws.rds.database_connections{dbinstanceidentifier:selfpublisherforge-production-postgres} < 1"
+    message: |
+      P0 CRITICAL: No active database connections detected.
+      RDS instance may be down or unreachable.
+      Runbook: https://wiki.internal/runbooks/rds-connection-failure
+    notify:
+      - pagerduty-critical
+      - slack-incidents
+    thresholds:
+      critical: 1
+    tags:
+      - service:database
+      - env:production
+      - severity:P0
+
+  - name: "API Error Rate > 5%"
+    severity: P0
+    type: metric
+    query: "avg(last_5m):( sum:trace.fastapi.request.errors{env:production}.as_count() / sum:trace.fastapi.request.hits{env:production}.as_count() ) * 100 > 5"
+    message: |
+      P0 CRITICAL: API error rate has exceeded 5%.
+      Current value: {{value}}%
+      Widespread failures affecting users.
+      Runbook: https://wiki.internal/runbooks/high-error-rate
+    notify:
+      - pagerduty-critical
+      - slack-incidents
+    thresholds:
+      critical: 5
+      warning: 3
+    tags:
+      - service:api
+      - env:production
+      - severity:P0
+
+  - name: "RDS Storage Space Critical"
+    severity: P0
+    type: metric
+    query: "avg(last_5m):avg:aws.rds.free_storage_space{dbinstanceidentifier:selfpublisherforge-production-postgres} < 2147483648"
+    message: |
+      P0 CRITICAL: RDS free storage is below 2 GB.
+      Database writes may fail imminently.
+      Runbook: https://wiki.internal/runbooks/rds-storage-critical
+    notify:
+      - pagerduty-critical
+      - slack-incidents
+    thresholds:
+      critical: 2147483648
+    tags:
+      - service:database
+      - env:production
+      - severity:P0
+
+  # ---------------------------------------------------------------------------
+  # P1 — Urgent: Respond within 15 minutes, degraded experience
+  # ---------------------------------------------------------------------------
+  - name: "API Latency P95 > 2s"
+    severity: P1
+    type: metric
+    query: "avg(last_10m):avg:trace.fastapi.request.duration{env:production,quantile:0.95} > 2000"
+    message: |
+      P1 URGENT: API P95 latency has exceeded 2 seconds.
+      Current P95: {{value}}ms
+      Users are experiencing significant slowness.
+      Runbook: https://wiki.internal/runbooks/high-latency
+    notify:
+      - pagerduty-high
+      - slack-alerts
+    thresholds:
+      critical: 2000
+      warning: 1000
+    tags:
+      - service:api
+      - env:production
+      - severity:P1
+
+  - name: "API Error Rate > 1%"
+    severity: P1
+    type: metric
+    query: "avg(last_10m):( sum:trace.fastapi.request.errors{env:production}.as_count() / sum:trace.fastapi.request.hits{env:production}.as_count() ) * 100 > 1"
+    message: |
+      P1 URGENT: API error rate has exceeded 1% SLO threshold.
+      Current rate: {{value}}%
+      Runbook: https://wiki.internal/runbooks/elevated-error-rate
+    notify:
+      - pagerduty-high
+      - slack-alerts
+    thresholds:
+      critical: 1
+      warning: 0.5
+    tags:
+      - service:api
+      - env:production
+      - severity:P1
+
+  - name: "Celery Queue Depth > 500"
+    severity: P1
+    type: metric
+    query: "avg(last_10m):avg:celery.queue.length{env:production} > 500"
+    message: |
+      P1 URGENT: Celery queue depth has exceeded 500 tasks.
+      Current depth: {{value}}
+      Background job processing is severely backed up.
+      Runbook: https://wiki.internal/runbooks/celery-queue-backup
+    notify:
+      - pagerduty-high
+      - slack-alerts
+    thresholds:
+      critical: 500
+      warning: 200
+    tags:
+      - service:worker
+      - env:production
+      - severity:P1
+
+  - name: "RDS CPU > 90%"
+    severity: P1
+    type: metric
+    query: "avg(last_10m):avg:aws.rds.cpuutilization{dbinstanceidentifier:selfpublisherforge-production-postgres} > 90"
+    message: |
+      P1 URGENT: RDS CPU utilization is above 90%.
+      Current: {{value}}%
+      Database performance is likely degraded.
+      Runbook: https://wiki.internal/runbooks/rds-high-cpu
+    notify:
+      - pagerduty-high
+      - slack-alerts
+    thresholds:
+      critical: 90
+      warning: 80
+    tags:
+      - service:database
+      - env:production
+      - severity:P1
+
+  - name: "Redis Memory > 90%"
+    severity: P1
+    type: metric
+    query: "avg(last_10m):avg:aws.elasticache.database_memory_usage_percentage{cacheclusterid:selfpublisherforge-production-redis} > 90"
+    message: |
+      P1 URGENT: Redis memory usage is above 90%.
+      Current: {{value}}%
+      Cache evictions may be occurring, LRU eviction will accelerate.
+      Runbook: https://wiki.internal/runbooks/redis-high-memory
+    notify:
+      - pagerduty-high
+      - slack-alerts
+    thresholds:
+      critical: 90
+      warning: 75
+    tags:
+      - service:redis
+      - env:production
+      - severity:P1
+
+  # ---------------------------------------------------------------------------
+  # P2 — Warning: Respond within 1 hour, potential issue developing
+  # ---------------------------------------------------------------------------
+  - name: "ECS Task Restarts"
+    severity: P2
+    type: metric
+    query: "sum(last_30m):sum:aws.ecs.service.task_stopped_count{clustername:selfpublisherforge-production} by {servicename} > 5"
+    message: |
+      P2 WARNING: ECS service {{servicename.name}} has had more than 5 task restarts in 30 minutes.
+      Possible crash loop or OOM kills.
+      Runbook: https://wiki.internal/runbooks/ecs-task-restarts
+    notify:
+      - slack-alerts
+    thresholds:
+      critical: 5
+      warning: 3
+    tags:
+      - service:ecs
+      - env:production
+      - severity:P2
+
+  - name: "API Latency P95 > 500ms"
+    severity: P2
+    type: metric
+    query: "avg(last_15m):avg:trace.fastapi.request.duration{env:production,quantile:0.95} > 500"
+    message: |
+      P2 WARNING: API P95 latency exceeds 500ms SLO target.
+      Current P95: {{value}}ms
+      Runbook: https://wiki.internal/runbooks/latency-investigation
+    notify:
+      - slack-alerts
+    thresholds:
+      critical: 500
+      warning: 300
+    tags:
+      - service:api
+      - env:production
+      - severity:P2
+
+  - name: "Celery Task Failure Rate"
+    severity: P2
+    type: metric
+    query: "avg(last_15m):( sum:celery.task.failed{env:production}.as_count() / ( sum:celery.task.succeeded{env:production}.as_count() + sum:celery.task.failed{env:production}.as_count() ) ) * 100 > 5"
+    message: |
+      P2 WARNING: Celery task failure rate exceeds 5%.
+      Current rate: {{value}}%
+      Runbook: https://wiki.internal/runbooks/celery-failures
+    notify:
+      - slack-alerts
+    thresholds:
+      critical: 5
+      warning: 2
+    tags:
+      - service:worker
+      - env:production
+      - severity:P2
+
+  - name: "RDS Free Storage Low"
+    severity: P2
+    type: metric
+    query: "avg(last_15m):avg:aws.rds.free_storage_space{dbinstanceidentifier:selfpublisherforge-production-postgres} < 10737418240"
+    message: |
+      P2 WARNING: RDS free storage is below 10 GB.
+      Current free: {{value}} bytes
+      Plan for storage expansion.
+      Runbook: https://wiki.internal/runbooks/rds-storage-low
+    notify:
+      - slack-alerts
+    thresholds:
+      critical: 10737418240
+    tags:
+      - service:database
+      - env:production
+      - severity:P2
+
+  - name: "DB Connection Pool Near Capacity"
+    severity: P2
+    type: metric
+    query: "avg(last_10m):avg:aws.rds.database_connections{dbinstanceidentifier:selfpublisherforge-production-postgres} > 150"
+    message: |
+      P2 WARNING: Database connection count is above 150 (max 200).
+      Current connections: {{value}}
+      Runbook: https://wiki.internal/runbooks/db-connection-pool
+    notify:
+      - slack-alerts
+    thresholds:
+      critical: 150
+      warning: 120
+    tags:
+      - service:database
+      - env:production
+      - severity:P2
+
+  # ---------------------------------------------------------------------------
+  # P3 — Informational: Next business day, tracking trends
+  # ---------------------------------------------------------------------------
+  - name: "ECS CPU Sustained Above 70%"
+    severity: P3
+    type: metric
+    query: "avg(last_1h):avg:aws.ecs.cpuutilization{clustername:selfpublisherforge-production} by {servicename} > 70"
+    message: |
+      P3 INFO: ECS service {{servicename.name}} CPU has been above 70% for 1 hour.
+      Consider scaling review.
+    notify:
+      - slack-monitoring
+    thresholds:
+      warning: 70
+    tags:
+      - service:ecs
+      - env:production
+      - severity:P3
+
+  - name: "Redis Cache Hit Rate Below 80%"
+    severity: P3
+    type: metric
+    query: "avg(last_1h):( sum:aws.elasticache.cache_hits{cacheclusterid:selfpublisherforge-production-redis}.as_count() / ( sum:aws.elasticache.cache_hits{cacheclusterid:selfpublisherforge-production-redis}.as_count() + sum:aws.elasticache.cache_misses{cacheclusterid:selfpublisherforge-production-redis}.as_count() ) ) * 100 < 80"
+    message: |
+      P3 INFO: Redis cache hit rate is below 80%.
+      Current rate: {{value}}%
+      Review cache key strategies and TTLs.
+    notify:
+      - slack-monitoring
+    thresholds:
+      warning: 80
+    tags:
+      - service:redis
+      - env:production
+      - severity:P3
+
+  - name: "Celery Queue Growing Trend"
+    severity: P3
+    type: metric
+    query: "avg(last_1h):avg:celery.queue.length{env:production} > 100"
+    message: |
+      P3 INFO: Celery queue depth has been above 100 for 1 hour.
+      Current depth: {{value}}
+      May need more workers or task optimization.
+    notify:
+      - slack-monitoring
+    thresholds:
+      warning: 100
+    tags:
+      - service:worker
+      - env:production
+      - severity:P3
+
+  - name: "Deployment Completed"
+    severity: P3
+    type: event
+    query: "events('sources:github priority:normal tags:action:deploy env:production').rollup('count').last('5m') > 0"
+    message: |
+      P3 INFO: A new deployment to production has been detected.
+      Review deployment health metrics.
+    notify:
+      - slack-deployments
+    tags:
+      - service:deploy
+      - env:production
+      - severity:P3
