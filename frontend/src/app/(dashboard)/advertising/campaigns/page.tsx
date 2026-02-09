@@ -1,0 +1,279 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useCampaigns, useCreateCampaign } from "@/modules/advertising/hooks";
+import { CampaignCard } from "@/modules/advertising/components/CampaignCard";
+import { toast } from "sonner";
+
+export default function CampaignsListPage() {
+  const [platformFilter, setPlatformFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  const { data, isLoading, error } = useCampaigns({
+    platform: platformFilter || undefined,
+    status: statusFilter || undefined,
+  });
+
+  const createCampaign = useCreateCampaign();
+
+  const [newCampaign, setNewCampaign] = useState({
+    name: "",
+    platform: "amazon",
+    campaign_type: "sponsored_products",
+    daily_budget: 25,
+    bid_strategy: "manual",
+    target_acos: 30,
+    targeting_keywords: "",
+  });
+
+  const handleCreate = async () => {
+    if (!newCampaign.name) {
+      toast.error("Campaign name is required");
+      return;
+    }
+    try {
+      await createCampaign.mutateAsync({
+        ...newCampaign,
+        targeting_keywords: newCampaign.targeting_keywords
+          .split(",")
+          .map((k) => k.trim())
+          .filter(Boolean),
+      });
+      toast.success("Campaign created successfully");
+      setShowCreateForm(false);
+      setNewCampaign({
+        name: "",
+        platform: "amazon",
+        campaign_type: "sponsored_products",
+        daily_budget: 25,
+        bid_strategy: "manual",
+        target_acos: 30,
+        targeting_keywords: "",
+      });
+    } catch {
+      toast.error("Failed to create campaign");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Campaigns</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your advertising campaigns across platforms
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/advertising"
+            className="px-4 py-2 border rounded-lg text-sm hover:bg-muted"
+          >
+            Dashboard
+          </Link>
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90"
+          >
+            {showCreateForm ? "Cancel" : "Create Campaign"}
+          </button>
+        </div>
+      </div>
+
+      {/* Create Campaign Form */}
+      {showCreateForm && (
+        <div className="border rounded-lg p-5 bg-muted/10 space-y-4">
+          <h3 className="font-semibold">New Campaign</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Name *</label>
+              <input
+                type="text"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={newCampaign.name}
+                onChange={(e) =>
+                  setNewCampaign((prev) => ({ ...prev, name: e.target.value }))
+                }
+                placeholder="Campaign name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Platform</label>
+              <select
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={newCampaign.platform}
+                onChange={(e) =>
+                  setNewCampaign((prev) => ({ ...prev, platform: e.target.value }))
+                }
+              >
+                <option value="amazon">Amazon Ads</option>
+                <option value="facebook">Facebook Ads</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Campaign Type</label>
+              <select
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={newCampaign.campaign_type}
+                onChange={(e) =>
+                  setNewCampaign((prev) => ({
+                    ...prev,
+                    campaign_type: e.target.value,
+                  }))
+                }
+              >
+                <option value="sponsored_products">Sponsored Products</option>
+                <option value="sponsored_brands">Sponsored Brands</option>
+                <option value="sponsored_display">Sponsored Display</option>
+                <option value="lockscreen">Lockscreen</option>
+                <option value="facebook_feed">Facebook Feed</option>
+                <option value="facebook_stories">Facebook Stories</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Daily Budget ($)</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={newCampaign.daily_budget}
+                onChange={(e) =>
+                  setNewCampaign((prev) => ({
+                    ...prev,
+                    daily_budget: parseFloat(e.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Bid Strategy</label>
+              <select
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={newCampaign.bid_strategy}
+                onChange={(e) =>
+                  setNewCampaign((prev) => ({
+                    ...prev,
+                    bid_strategy: e.target.value,
+                  }))
+                }
+              >
+                <option value="manual">Manual</option>
+                <option value="auto_low">Auto (Low)</option>
+                <option value="auto_high">Auto (High)</option>
+                <option value="rule_based">Rule-based</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Target ACOS (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={newCampaign.target_acos}
+                onChange={(e) =>
+                  setNewCampaign((prev) => ({
+                    ...prev,
+                    target_acos: parseFloat(e.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div className="md:col-span-2 lg:col-span-3">
+              <label className="block text-sm font-medium mb-1">
+                Targeting Keywords (comma-separated)
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+                value={newCampaign.targeting_keywords}
+                onChange={(e) =>
+                  setNewCampaign((prev) => ({
+                    ...prev,
+                    targeting_keywords: e.target.value,
+                  }))
+                }
+                placeholder="fantasy books, epic fantasy, dragon books"
+              />
+            </div>
+          </div>
+          <button
+            onClick={handleCreate}
+            disabled={createCampaign.isPending}
+            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
+          >
+            {createCampaign.isPending ? "Creating..." : "Create Campaign"}
+          </button>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex gap-3">
+        <select
+          className="border rounded-lg px-3 py-2 text-sm"
+          value={platformFilter}
+          onChange={(e) => setPlatformFilter(e.target.value)}
+        >
+          <option value="">All Platforms</option>
+          <option value="amazon">Amazon Ads</option>
+          <option value="facebook">Facebook Ads</option>
+        </select>
+        <select
+          className="border rounded-lg px-3 py-2 text-sm"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">All Statuses</option>
+          <option value="draft">Draft</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="ended">Ended</option>
+          <option value="archived">Archived</option>
+        </select>
+        {data?.total_count !== undefined && (
+          <span className="text-sm text-muted-foreground self-center">
+            {data.total_count} campaign(s)
+          </span>
+        )}
+      </div>
+
+      {/* Campaign List */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-muted rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="border border-red-200 bg-red-50 rounded-lg p-4 text-red-700">
+          Failed to load campaigns. Please try again.
+        </div>
+      ) : data && data.items.length > 0 ? (
+        <div className="space-y-3">
+          {data.items.map((campaign) => (
+            <CampaignCard key={campaign.id} campaign={campaign} />
+          ))}
+          {data.has_more && (
+            <p className="text-center text-sm text-muted-foreground py-4">
+              More campaigns available. Scroll down or adjust filters.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="border rounded-lg p-8 text-center text-muted-foreground">
+          <p>No campaigns found matching your filters.</p>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="text-primary hover:underline mt-2"
+          >
+            Create your first campaign
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
