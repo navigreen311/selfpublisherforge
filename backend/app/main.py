@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,8 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.core.exceptions import AppException, app_exception_handler
 from app.database import init_db
-
-logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -34,7 +31,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Exception handlers
+    # Register custom exception handlers
     app.add_exception_handler(AppException, app_exception_handler)
 
     # Health check
@@ -48,128 +45,91 @@ def create_app() -> FastAPI:
 
     return app
 
-def _safe_include(app: FastAPI, import_fn, prefix: str, tags: list[str]):
-    """Import and register a router, logging a warning on failure."""
-    try:
-        routers = import_fn()
-        if isinstance(routers, list):
-            for r, t in routers:
-                app.include_router(r, prefix=prefix, tags=[t])
-        else:
-            app.include_router(routers, prefix=prefix, tags=tags)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Skipping router %s: %s", tags, exc)
-
-
 def _register_routers(app: FastAPI):
     """Register all module API routers."""
     prefix = settings.API_V1_PREFIX
 
     # Tier 0: Foundation
-    _safe_include(app,
-        lambda: __import__("app.modules.auth.router", fromlist=["router"]).router,
-        f"{prefix}/auth", ["auth"])
+    from app.modules.auth.router import router as auth_router
+    app.include_router(auth_router, prefix=f"{prefix}/auth", tags=["auth"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.users.router", fromlist=["router"]).router,
-        prefix, ["users"])
+    from app.modules.users.router import router as users_router
+    app.include_router(users_router, prefix=prefix, tags=["users"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.billing.router", fromlist=["router"]).router,
-        prefix, ["billing"])
+    from app.modules.billing.router import router as billing_router
+    app.include_router(billing_router, prefix=prefix, tags=["billing"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.storage.router", fromlist=["router"]).router,
-        prefix, ["storage"])
+    from app.modules.storage.router import router as storage_router
+    app.include_router(storage_router, prefix=prefix, tags=["storage"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.notifications.router", fromlist=["router"]).router,
-        prefix, ["notifications"])
+    from app.modules.notifications.router import router as notifications_router
+    app.include_router(notifications_router, prefix=prefix, tags=["notifications"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.realtime.router", fromlist=["router"]).router,
-        prefix, ["realtime"])
+    from app.modules.realtime.router import router as realtime_router
+    app.include_router(realtime_router, prefix=prefix, tags=["realtime"])
 
     # Tier 1-2: Data & Creation
-    # llm_orchestration has no router module; skip until it is created
-    _safe_include(app,
-        lambda: __import__("app.modules.llm_orchestration.router", fromlist=["router"]).router,
-        f"{prefix}/llm", ["llm"])
+    from app.modules.llm_orchestration import router as llm_router
+    app.include_router(llm_router, prefix=f"{prefix}/llm", tags=["llm"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.market_intelligence.router", fromlist=["router"]).router,
-        f"{prefix}/market", ["market"])
+    from app.modules.market_intelligence.router import router as market_router
+    app.include_router(market_router, prefix=f"{prefix}/market", tags=["market"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.knowledge_vault.router", fromlist=["router"]).router,
-        f"{prefix}/knowledge", ["knowledge"])
+    from app.modules.knowledge_vault.router import router as knowledge_router
+    app.include_router(knowledge_router, prefix=f"{prefix}/knowledge", tags=["knowledge"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.ai_writing.router", fromlist=["router"]).router,
-        prefix, ["writing"])
+    from app.modules.ai_writing.router import router as writing_router
+    app.include_router(writing_router, prefix=prefix, tags=["writing"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.style_cloning.router", fromlist=["router"]).router,
-        prefix, ["style"])
+    from app.modules.style_cloning.router import router as style_router
+    app.include_router(style_router, prefix=prefix, tags=["style"])
 
     # Tier 3: Production
-    _safe_include(app,
-        lambda: __import__("app.modules.production_pipeline.router", fromlist=["router"]).router,
-        f"{prefix}/pipelines", ["pipelines"])
+    from app.modules.production_pipeline.router import router as pipeline_router
+    app.include_router(pipeline_router, prefix=f"{prefix}/pipelines", tags=["pipelines"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.publishing_ops.router", fromlist=["router"]).router,
-        f"{prefix}/publishing", ["publishing"])
+    from app.modules.publishing_ops.router import router as publishing_router
+    app.include_router(publishing_router, prefix=f"{prefix}/publishing", tags=["publishing"])
 
     from app.modules.kdp_validation.router import router as kdp_router
     app.include_router(kdp_router, prefix=prefix, tags=["kdp-validation"])
 
     # Tier 4: Optimization
-    _safe_include(app,
-        lambda: __import__("app.modules.product_page_lab.router", fromlist=["router"]).router,
-        prefix, ["product-page"])
+    from app.modules.product_page_lab.router import router as product_page_router
+    app.include_router(product_page_router, prefix=prefix, tags=["product-page"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.pricing_automation.router", fromlist=["router"]).router,
-        prefix, ["pricing"])
+    from app.modules.pricing_automation.router import router as pricing_router
+    app.include_router(pricing_router, prefix=prefix, tags=["pricing"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.competitor_finder.router", fromlist=["router"]).router,
-        prefix, ["competitors"])
+    from app.modules.competitor_finder.router import router as competitor_router
+    app.include_router(competitor_router, prefix=prefix, tags=["competitors"])
 
     # Tier 5: Growth
-    _safe_include(app,
-        lambda: __import__("app.modules.marketing.router", fromlist=["router"]).router,
-        f"{prefix}/marketing", ["marketing"])
+    from app.modules.marketing.router import router as marketing_router
+    app.include_router(marketing_router, prefix=f"{prefix}/marketing", tags=["marketing"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.advertising.router", fromlist=["router"]).router,
-        f"{prefix}/ads", ["advertising"])
+    from app.modules.advertising.router import router as advertising_router
+    app.include_router(advertising_router, prefix=f"{prefix}/ads", tags=["advertising"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.review_intelligence.router", fromlist=["router"]).router,
-        prefix, ["reviews"])
+    from app.modules.review_intelligence.router import router as review_router
+    app.include_router(review_router, prefix=prefix, tags=["reviews"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.analytics.router", fromlist=["router"]).router,
-        f"{prefix}/analytics", ["analytics"])
+    from app.modules.analytics.router import router as analytics_router
+    app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
 
     # Tier 6-8: Intelligence & Scale
-    _safe_include(app,
-        lambda: __import__("app.modules.agent_system.router", fromlist=["router"]).router,
-        f"{prefix}/agents", ["agents"])
+    from app.modules.agent_system.router import router as agent_router
+    app.include_router(agent_router, prefix=f"{prefix}/agents", tags=["agents"])
 
-    def _load_portfolio_routers():
-        mod = __import__("app.modules.portfolio_economics.router", fromlist=["portfolio_router", "audience_router", "seasonal_router"])
-        return [(mod.portfolio_router, "portfolio"), (mod.audience_router, "audience"), (mod.seasonal_router, "seasonal")]
-    _safe_include(app, _load_portfolio_routers, prefix, ["portfolio"])
+    from app.modules.portfolio_economics.router import portfolio_router, audience_router, seasonal_router
+    app.include_router(portfolio_router, prefix=prefix, tags=["portfolio"])
+    app.include_router(audience_router, prefix=prefix, tags=["audience"])
+    app.include_router(seasonal_router, prefix=prefix, tags=["seasonal"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.cover_design.router", fromlist=["router"]).router,
-        prefix, ["covers"])
+    from app.modules.cover_design.router import router as cover_router
+    app.include_router(cover_router, prefix=prefix, tags=["covers"])
 
-    _safe_include(app,
-        lambda: __import__("app.modules.chrome_extension.router", fromlist=["router"]).router,
-        prefix, ["chrome-extension"])
+    from app.modules.chrome_extension.router import router as extension_router
+    app.include_router(extension_router, prefix=prefix, tags=["chrome-extension"])
 
 app = create_app()

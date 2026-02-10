@@ -14,7 +14,8 @@ from fastapi.testclient import TestClient
 
 from app.modules.users.router import router
 from app.database import get_db
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import get_current_user
+from app.core.exceptions import AppException, app_exception_handler
 
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -48,8 +49,15 @@ def _make_mapping_result(rows: list[dict]):
 
 
 def _create_app(user_factory=None) -> tuple[FastAPI, AsyncMock]:
-    """Build a test app with mocked dependencies."""
+    """Build a test app with mocked dependencies.
+
+    Overriding ``get_current_user`` is sufficient because ``require_role``
+    internally depends on ``get_current_user`` via ``Depends``, so FastAPI
+    resolves the override transitively. The role check inside
+    ``require_role`` then runs against the mocked user dict.
+    """
     app = FastAPI()
+    app.add_exception_handler(AppException, app_exception_handler)
     app.include_router(router, prefix="/api/v1")
 
     mock_db = AsyncMock()
@@ -63,22 +71,8 @@ def _create_app(user_factory=None) -> tuple[FastAPI, AsyncMock]:
     async def override_get_current_user():
         return user
 
-    def override_require_role(*roles):
-        async def checker():
-            if user["role"] not in roles:
-                from fastapi import HTTPException, status
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Insufficient permissions",
-                )
-            return user
-        return checker
-
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
-    # Patch require_role for each specific set of roles used
-    for role_set in [("owner",), ("owner", "admin")]:
-        app.dependency_overrides[require_role(*role_set)] = override_require_role(*role_set)
 
     return app, mock_db
 
@@ -144,9 +138,6 @@ class TestUpdateUserProfile:
 
     def test_update_empty_body_returns_400(self):
         app, mock_db = _create_app()
-        # The service will raise 400 when all fields are None
-        from app.core.exceptions import AppException
-        mock_db.execute.side_effect = AppException(400, "NO_FIELDS", "No fields to update")
 
         client = TestClient(app)
         resp = client.patch("/api/v1/users/me", json={})
