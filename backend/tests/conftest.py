@@ -1,87 +1,96 @@
-"""Shared test fixtures for backend tests."""
+"""Shared test fixtures for Review Intelligence tests."""
 
-import asyncio
-from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
-from uuid import uuid4
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import AsyncGenerator
+from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    create_async_engine,
-    async_sessionmaker,
-)
 from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-from app.database import Base, get_db
-from app.main import create_app
+from app.database import Base
 
 
-# Use in-memory SQLite for tests
+# Use an in-memory SQLite database for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for the test session."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="session")
-async def test_engine():
+@pytest_asyncio.fixture
+async def db_engine():
     """Create a test database engine."""
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-
-    # Enable foreign key support for SQLite
-    @event.listens_for(engine.sync_engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
     yield engine
-
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-
     await engine.dispose()
 
 
 @pytest_asyncio.fixture
-async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create a fresh database session for each test."""
+async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
+    """Create a test database session."""
     session_factory = async_sessionmaker(
-        test_engine, class_=AsyncSession, expire_on_commit=False
+        db_engine, class_=AsyncSession, expire_on_commit=False
     )
-
     async with session_factory() as session:
         yield session
-        await session.rollback()
 
 
 @pytest.fixture
-def org_id():
-    """Generate a test org ID."""
-    return uuid4()
+def org_id() -> uuid.UUID:
+    """A test organization ID."""
+    return uuid.uuid4()
 
 
 @pytest.fixture
-def user_id():
-    """Generate a test user ID."""
-    return uuid4()
+def book_id() -> uuid.UUID:
+    """A test book ID."""
+    return uuid.uuid4()
 
 
 @pytest.fixture
-def current_user(user_id, org_id):
-    """Mock current user dict."""
+def user_id() -> uuid.UUID:
+    """A test user ID."""
+    return uuid.uuid4()
+
+
+@pytest.fixture
+def current_user(org_id, user_id):
+    """Mock current user dict as returned by get_current_user."""
     return {
         "user_id": user_id,
         "org_id": org_id,
-        "role": "admin",
+        "role": "owner",
     }
+
+
+def make_review(
+    org_id: uuid.UUID,
+    book_id: uuid.UUID,
+    star_rating: float = 4.0,
+    body: str = "Great book!",
+    sentiment: str | None = None,
+    sentiment_score: float | None = None,
+    is_competitor: bool = False,
+    review_date: datetime | None = None,
+    source: str = "amazon",
+):
+    """Helper to create a BookReview instance for testing."""
+    from app.modules.review_intelligence.models import BookReview
+
+    return BookReview(
+        org_id=org_id,
+        book_id=book_id,
+        source=source,
+        star_rating=star_rating,
+        body=body,
+        sentiment=sentiment,
+        sentiment_score=sentiment_score,
+        is_competitor=is_competitor,
+        review_date=review_date or datetime.now(timezone.utc),
+        title="Test Review",
+        verified_purchase=True,
+    )
