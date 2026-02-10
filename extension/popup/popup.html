@@ -5,6 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SelfPublisherForge</title>
   <link rel="stylesheet" href="../styles/popup.css" />
+  <style>
+    /* Status message styles */
+    .status-message {
+      margin-top: 8px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .status-message--error {
+      color: #d32f2f;
+      background-color: #fdecea;
+      border: 1px solid #f5c6cb;
+    }
+    .status-message--success {
+      color: #2e7d32;
+      background-color: #edf7ed;
+      border: 1px solid #c3e6cb;
+    }
+
+    /* Loading spinner */
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ccc;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
   <div id="app">
@@ -37,6 +78,15 @@
       <button id="btn-connect" class="btn btn--primary btn--full">
         Connect
       </button>
+
+      <!-- Status message area for connection feedback -->
+      <div id="status-message" class="status-message hidden"></div>
+
+      <!-- Loading spinner (hidden by default) -->
+      <div id="loading-spinner" class="loading-spinner hidden">
+        <div class="spinner"></div>
+        <span>Testing connection...</span>
+      </div>
     </section>
 
     <!-- Quick actions (visible when authenticated) -->

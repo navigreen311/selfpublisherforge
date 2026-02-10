@@ -150,7 +150,7 @@ class FormattingTemplateBase(BaseModel):
 
 
 class FormattingTemplateCreate(FormattingTemplateBase):
-    pass
+    """Request body for creating a formatting template. Inherits all fields from FormattingTemplateBase."""
 
 
 class FormattingTemplate(FormattingTemplateBase):

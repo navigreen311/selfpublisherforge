@@ -14,7 +14,8 @@ groups:
   - name: selfpublisherforge-p0-critical
     rules:
       - alert: APIServiceDown
-        expr: ecs_service_running_task_count{service_name="selfpublisherforge-api-production"} < 1
+        # aws_ecs_service_running_task_count is the standard YACE/CloudWatch exporter metric
+        expr: aws_ecs_service_running_task_count{service_name="selfpublisherforge-api-production"} < 1
         for: 5m
         labels:
           severity: P0
@@ -26,23 +27,24 @@ groups:
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/api-service-down.md"
 
       - alert: DatabaseConnectionFailure
-        expr: pg_stat_activity_count{instance=~"selfpublisherforge-production-postgres.*"} < 1
-        for: 3m
+        # pg_up is the standard postgres_exporter liveness metric (1 = up, 0 = down)
+        expr: pg_up{instance=~"selfpublisherforge-production-postgres.*"} == 0
+        for: 2m
         labels:
           severity: P0
           service: database
           env: production
         annotations:
-          summary: "No active database connections detected"
-          description: "P0 CRITICAL: No active database connections detected. RDS instance may be down or unreachable."
+          summary: "PostgreSQL database is unreachable"
+          description: "P0 CRITICAL: PostgreSQL exporter reports database is down. RDS instance may be unreachable."
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/rds-connection-failure.md"
 
       - alert: APIErrorRateCritical
         expr: >
           (
-            sum(rate(http_requests_total{job="selfpublisherforge-api", status=~"5.."}[5m]))
+            sum(rate(http_requests_total{job="spf-api", status=~"5.."}[5m]))
           /
-            sum(rate(http_requests_total{job="selfpublisherforge-api"}[5m]))
+            sum(rate(http_requests_total{job="spf-api"}[5m]))
           ) * 100 > 5
         for: 5m
         labels:
@@ -55,7 +57,7 @@ groups:
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/high-error-rate.md"
 
       - alert: RDSStorageSpaceCritical
-        expr: rds_free_storage_space_bytes{dbinstance_identifier="selfpublisherforge-production-postgres"} < 2147483648
+        expr: aws_rds_free_storage_space_average{dbinstance_identifier="selfpublisherforge-production-postgres"} < 2147483648
         for: 5m
         labels:
           severity: P0
@@ -74,7 +76,7 @@ groups:
       - alert: APILatencyP95Critical
         expr: >
           histogram_quantile(0.95,
-            sum(rate(http_request_duration_seconds_bucket{job="selfpublisherforge-api"}[10m])) by (le)
+            sum(rate(http_request_duration_seconds_bucket{job="spf-api"}[10m])) by (le)
           ) > 2
         for: 10m
         labels:
@@ -89,9 +91,9 @@ groups:
       - alert: APIErrorRateWarning
         expr: >
           (
-            sum(rate(http_requests_total{job="selfpublisherforge-api", status=~"5.."}[10m]))
+            sum(rate(http_requests_total{job="spf-api", status=~"5.."}[10m]))
           /
-            sum(rate(http_requests_total{job="selfpublisherforge-api"}[10m]))
+            sum(rate(http_requests_total{job="spf-api"}[10m]))
           ) * 100 > 1
         for: 10m
         labels:
@@ -104,7 +106,9 @@ groups:
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elevated-error-rate.md"
 
       - alert: CeleryQueueDepthCritical
-        expr: celery_queue_length{env="production"} > 500
+        # celery_queue_length is exported by celery-exporter (danihodovic/celery-exporter)
+        # Ensure celery-exporter is deployed alongside Flower
+        expr: celery_queue_length{queue="celery", env="production"} > 500
         for: 10m
         labels:
           severity: P1
@@ -116,7 +120,7 @@ groups:
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/celery-queue-backup.md"
 
       - alert: RDSCPUCritical
-        expr: rds_cpu_utilization_percent{dbinstance_identifier="selfpublisherforge-production-postgres"} > 90
+        expr: aws_rds_cpuutilization_average{dbinstance_identifier="selfpublisherforge-production-postgres"} > 90
         for: 10m
         labels:
           severity: P1
@@ -129,9 +133,9 @@ groups:
 
       - alert: RedisMemoryUsageCritical
         expr: >
-          (redis_memory_used_bytes{instance=~"selfpublisherforge-production-redis.*"}
+          (redis_used_memory_bytes{instance=~"selfpublisherforge-production-redis.*"}
           /
-          redis_memory_max_bytes{instance=~"selfpublisherforge-production-redis.*"})
+          redis_config_maxmemory{instance=~"selfpublisherforge-production-redis.*"})
           * 100 > 90
         for: 10m
         labels:
@@ -143,15 +147,29 @@ groups:
           description: "P1 URGENT: Redis memory usage is above 90%. Current: {{ $value | printf \"%.1f\" }}%. Cache evictions may be occurring, LRU eviction will accelerate."
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/redis-high-memory.md"
 
+      - alert: ElasticsearchClusterHealthRed
+        # elasticsearch_cluster_health_status is from elasticsearch_exporter
+        expr: elasticsearch_cluster_health_status{color="red", cluster=~"selfpublisherforge.*"} == 1
+        for: 5m
+        labels:
+          severity: P1
+          service: elasticsearch
+          env: production
+        annotations:
+          summary: "Elasticsearch cluster health is RED"
+          description: "P1 URGENT: Elasticsearch cluster health is RED. One or more primary shards are unassigned. Search functionality may be degraded or unavailable."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elasticsearch-red.md"
+
   # ---------------------------------------------------------------------------
   # P2 — Warning: Respond within 1 hour, potential issue developing
   # ---------------------------------------------------------------------------
   - name: selfpublisherforge-p2-warning
     rules:
       - alert: ECSTaskRestarts
+        # Requires YACE/CloudWatch exporter scraping ECS Container Insights
         expr: >
-          sum(increase(ecs_container_restarts_total{cluster_name="selfpublisherforge-production"}[30m])) by (service_name) > 5
-        for: 5m
+          sum(increase(aws_ecs_container_restarts_sum{cluster_name="selfpublisherforge-production"}[30m])) by (service_name) > 5
+        for: 10m
         labels:
           severity: P2
           service: ecs
@@ -164,7 +182,7 @@ groups:
       - alert: APILatencyP95Warning
         expr: >
           histogram_quantile(0.95,
-            sum(rate(http_request_duration_seconds_bucket{job="selfpublisherforge-api"}[15m])) by (le)
+            sum(rate(http_request_duration_seconds_bucket{job="spf-api"}[15m])) by (le)
           ) > 0.5
         for: 15m
         labels:
@@ -177,6 +195,7 @@ groups:
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/latency-investigation.md"
 
       - alert: CeleryTaskFailureRate
+        # celery_task_failed_total and celery_task_succeeded_total are from celery-exporter
         expr: >
           (
             sum(rate(celery_task_failed_total{env="production"}[15m]))
@@ -198,7 +217,7 @@ groups:
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/celery-failures.md"
 
       - alert: RDSFreeStorageLow
-        expr: rds_free_storage_space_bytes{dbinstance_identifier="selfpublisherforge-production-postgres"} < 10737418240
+        expr: aws_rds_free_storage_space_average{dbinstance_identifier="selfpublisherforge-production-postgres"} < 10737418240
         for: 15m
         labels:
           severity: P2
@@ -221,22 +240,36 @@ groups:
           description: "P2 WARNING: Database connection count is above 150 (max 200). Current connections: {{ $value }}."
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/db-connection-pool.md"
 
+      - alert: ElasticsearchClusterHealthYellow
+        # elasticsearch_cluster_health_status is from elasticsearch_exporter
+        expr: elasticsearch_cluster_health_status{color="yellow", cluster=~"selfpublisherforge.*"} == 1
+        for: 30m
+        labels:
+          severity: P2
+          service: elasticsearch
+          env: production
+        annotations:
+          summary: "Elasticsearch cluster health is YELLOW"
+          description: "P2 WARNING: Elasticsearch cluster health is YELLOW for over 30 minutes. One or more replica shards are unassigned. Redundancy is reduced."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elasticsearch-yellow.md"
+
   # ---------------------------------------------------------------------------
   # P3 — Informational: Next business day, tracking trends
   # ---------------------------------------------------------------------------
   - name: selfpublisherforge-p3-informational
     rules:
       - alert: HighCPUUsageSustained
+        # container_cpu_usage_seconds_total is a standard cAdvisor/ECS Container Insights metric
         expr: >
-          avg(rate(container_cpu_usage_seconds_total{container_label_com_amazonaws_ecs_cluster="selfpublisherforge-production"}[5m])) by (container_label_com_amazonaws_ecs_service_name) > 0.7
+          avg(rate(container_cpu_usage_seconds_total{container_label_com_amazonaws_ecs_cluster="selfpublisherforge-production"}[5m])) by (container_label_com_amazonaws_ecs_task_definition_family) > 0.7
         for: 1h
         labels:
           severity: P3
           service: ecs
           env: production
         annotations:
-          summary: "ECS service {{ $labels.container_label_com_amazonaws_ecs_service_name }} CPU sustained above 70%"
-          description: "P3 INFO: ECS service {{ $labels.container_label_com_amazonaws_ecs_service_name }} CPU has been above 70% for 1 hour. Consider scaling review."
+          summary: "ECS task family {{ $labels.container_label_com_amazonaws_ecs_task_definition_family }} CPU sustained above 70%"
+          description: "P3 INFO: ECS task family {{ $labels.container_label_com_amazonaws_ecs_task_definition_family }} CPU has been above 70% for 1 hour. Consider scaling review."
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/high-cpu.md"
 
       - alert: RedisCacheHitRateLow
@@ -261,7 +294,8 @@ groups:
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/redis-low-hit-rate.md"
 
       - alert: CeleryQueueGrowingTrend
-        expr: celery_queue_length{env="production"} > 100
+        # celery_queue_length is exported by celery-exporter (danihodovic/celery-exporter)
+        expr: celery_queue_length{queue="celery", env="production"} > 100
         for: 1h
         labels:
           severity: P3
@@ -285,26 +319,3 @@ groups:
           description: "P3 INFO: A new deployment to production has been detected. Review deployment health metrics."
           runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/deployment-completed.md"
 
-      - alert: ElasticsearchClusterHealthRed
-        expr: elasticsearch_cluster_health_status{color="red", cluster=~"selfpublisherforge.*"} == 1
-        for: 5m
-        labels:
-          severity: P1
-          service: elasticsearch
-          env: production
-        annotations:
-          summary: "Elasticsearch cluster health is RED"
-          description: "P1 URGENT: Elasticsearch cluster health is RED. One or more primary shards are unassigned. Search functionality may be degraded or unavailable."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elasticsearch-red.md"
-
-      - alert: ElasticsearchClusterHealthYellow
-        expr: elasticsearch_cluster_health_status{color="yellow", cluster=~"selfpublisherforge.*"} == 1
-        for: 30m
-        labels:
-          severity: P2
-          service: elasticsearch
-          env: production
-        annotations:
-          summary: "Elasticsearch cluster health is YELLOW"
-          description: "P2 WARNING: Elasticsearch cluster health is YELLOW for over 30 minutes. One or more replica shards are unassigned. Redundancy is reduced."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elasticsearch-yellow.md"

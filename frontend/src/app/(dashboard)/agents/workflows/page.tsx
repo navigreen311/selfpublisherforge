@@ -112,11 +112,11 @@ export default function WorkflowsPage() {
                     {String(step.status || "pending")}
                   </span>
                 </div>
-                {step.description && (
+                {step.description ? (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {String(step.description)}
                   </p>
-                )}
+                ) : null}
               </div>
             ))}
           </div>

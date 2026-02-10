@@ -1,6 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
+<!-- IMPORTANT: Replace EXTENSION_ID with your actual Chrome Web Store extension ID before publishing -->
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
   <app appid='EXTENSION_ID'>
+    <!-- Verify this endpoint serves a valid signed .crx package -->
     <updatecheck codebase='https://selfpublisherforge.com/extension/selfpublisherforge-latest.crx' version='1.0.0' />
   </app>
 </gupdate>

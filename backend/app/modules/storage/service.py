@@ -9,7 +9,7 @@ from typing import Any
 
 import boto3
 from botocore.config import Config as BotoConfig
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +41,35 @@ def _get_s3_client():
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         config=BotoConfig(signature_version="s3v4"),
     )
+
+
+async def check_s3_connectivity() -> bool:
+    """Preflight check: verify the configured S3 bucket is accessible.
+
+    Returns True if the bucket responds to a HEAD request, False otherwise.
+    Intended to be called during application startup (e.g. from main.py).
+    """
+    try:
+        s3_client = _get_s3_client()
+        s3_client.head_bucket(Bucket=settings.S3_BUCKET)
+        logger.info("S3 connectivity check passed for bucket '%s'", settings.S3_BUCKET)
+        return True
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code", "Unknown")
+        logger.error(
+            "S3 connectivity check failed for bucket '%s': ClientError %s — %s",
+            settings.S3_BUCKET,
+            error_code,
+            exc,
+        )
+        return False
+    except BotoCoreError as exc:
+        logger.error(
+            "S3 connectivity check failed for bucket '%s': BotoCoreError — %s",
+            settings.S3_BUCKET,
+            exc,
+        )
+        return False
 
 
 # ---------------------------------------------------------------------------

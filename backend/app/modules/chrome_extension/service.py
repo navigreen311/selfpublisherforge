@@ -17,6 +17,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.cover_design.models import ExtractedProduct, KnowledgeClip
+from app.models.market import CompetitorBook, MarketKeyword
 from app.modules.chrome_extension.schemas import (
     ClipSaveRequest,
     ClipSaveResponse,
@@ -93,57 +94,114 @@ async def get_quick_research(
 ) -> QuickResearchResponse:
     """Return quick niche research data for the extension sidebar.
 
-    In production this would aggregate data from:
-    - Historical BSR tracking
-    - Market intelligence module
-    - Competitor analysis
-
-    For now, returns data from our stored extractions plus some
-    computed estimates.
+    Aggregates data from stored extractions, competitor tracking
+    (CompetitorBook), and market intelligence scoring.  Each data
+    source is wrapped in its own try/except so a single failing
+    module never breaks the whole response.
     """
     response = QuickResearchResponse(asin=query.asin)
 
     if query.asin:
-        # Look up stored data for this ASIN
-        stmt = (
-            select(ExtractedProduct)
-            .where(
-                ExtractedProduct.org_id == org_id,
-                ExtractedProduct.asin == query.asin,
-                ExtractedProduct.deleted_at.is_(None),
+        # --- Stored extraction data (ExtractedProduct) -----------------
+        try:
+            stmt = (
+                select(ExtractedProduct)
+                .where(
+                    ExtractedProduct.org_id == org_id,
+                    ExtractedProduct.asin == query.asin,
+                    ExtractedProduct.deleted_at.is_(None),
+                )
+                .order_by(ExtractedProduct.created_at.desc())
             )
-            .order_by(ExtractedProduct.created_at.desc())
-        )
-        result = await db.execute(stmt)
-        products = result.scalars().all()
+            result = await db.execute(stmt)
+            products = result.scalars().all()
 
-        if products:
-            latest = products[0]
-            response.title = latest.title
-            response.current_bsr = latest.bsr
+            if products:
+                latest = products[0]
+                response.title = latest.title
+                response.current_bsr = latest.bsr
 
-            # Build BSR history from stored snapshots
-            response.bsr_history = [
-                {
-                    "date": p.created_at.isoformat() if p.created_at else None,
-                    "bsr": p.bsr,
-                }
-                for p in products
-                if p.bsr is not None
-            ]
+                # BSR history from extraction snapshots
+                response.bsr_history = [
+                    {
+                        "date": p.created_at.isoformat() if p.created_at else None,
+                        "bsr": p.bsr,
+                    }
+                    for p in products
+                    if p.bsr is not None
+                ]
 
-            # Rough sales estimate from BSR (simplified formula)
-            if latest.bsr:
-                response.estimated_daily_sales = _estimate_daily_sales(latest.bsr)
+                if latest.bsr:
+                    response.estimated_daily_sales = _estimate_daily_sales(latest.bsr)
+        except Exception:
+            logger.warning(
+                "Failed to fetch ExtractedProduct data for ASIN %s",
+                query.asin,
+                exc_info=True,
+            )
 
-    # Keyword-based niche stats
+        # --- Competitor tracking data (CompetitorBook) -----------------
+        try:
+            comp_stmt = (
+                select(CompetitorBook)
+                .where(
+                    CompetitorBook.asin == query.asin,
+                    CompetitorBook.deleted_at.is_(None),
+                )
+            )
+            comp_result = await db.execute(comp_stmt)
+            competitor = comp_result.scalar_one_or_none()
+
+            if competitor:
+                # Fill in title/BSR from competitor if not already set
+                if not response.title:
+                    response.title = competitor.title
+                if response.current_bsr is None and competitor.bsr_current is not None:
+                    response.current_bsr = competitor.bsr_current
+                    response.estimated_daily_sales = _estimate_daily_sales(
+                        competitor.bsr_current
+                    )
+
+                # Merge richer BSR history from competitor tracking
+                if isinstance(competitor.bsr_history, list) and competitor.bsr_history:
+                    tracked_history = [
+                        {"date": pt.get("date"), "bsr": pt.get("bsr")}
+                        for pt in competitor.bsr_history
+                        if pt.get("bsr") is not None
+                    ]
+                    # Combine with extraction history, de-duplicate by date
+                    existing_dates = {
+                        entry.get("date") for entry in response.bsr_history
+                    }
+                    for entry in tracked_history:
+                        if entry.get("date") not in existing_dates:
+                            response.bsr_history.append(entry)
+                    # Sort chronologically
+                    response.bsr_history.sort(
+                        key=lambda e: e.get("date") or ""
+                    )
+        except Exception:
+            logger.warning(
+                "Failed to fetch CompetitorBook data for ASIN %s",
+                query.asin,
+                exc_info=True,
+            )
+
+    # --- Keyword-based niche stats ------------------------------------
     if query.keywords:
-        niche_stats = await _compute_niche_stats(db, org_id, query.keywords)
-        response.competitor_count = niche_stats.get("competitor_count")
-        response.avg_price = niche_stats.get("avg_price")
-        response.avg_reviews = niche_stats.get("avg_reviews")
-        response.niche_score = niche_stats.get("niche_score")
-        response.related_keywords = niche_stats.get("related_keywords", [])
+        try:
+            niche_stats = await _compute_niche_stats(db, org_id, query.keywords)
+            response.competitor_count = niche_stats.get("competitor_count")
+            response.avg_price = niche_stats.get("avg_price")
+            response.avg_reviews = niche_stats.get("avg_reviews")
+            response.niche_score = niche_stats.get("niche_score")
+            response.related_keywords = niche_stats.get("related_keywords", [])
+        except Exception:
+            logger.warning(
+                "Failed to compute niche stats for keywords %s",
+                query.keywords,
+                exc_info=True,
+            )
 
     return response
 
@@ -174,40 +232,216 @@ async def _compute_niche_stats(
 ) -> dict[str, Any]:
     """Compute aggregate niche statistics from stored product data.
 
-    Queries stored product data for competition metrics and generates
-    related keyword suggestions via the LLM orchestration service with
-    a local frequency-analysis fallback.
+    Queries ExtractedProduct and CompetitorBook tables for competition
+    metrics, computes a niche opportunity score via the market
+    intelligence scoring module, and generates related keyword
+    suggestions via the LLM orchestration service with a local
+    frequency-analysis fallback.
     """
-    # Count products matching any keyword in title/keywords
-    stmt = select(func.count(ExtractedProduct.id)).where(
-        ExtractedProduct.org_id == org_id,
-        ExtractedProduct.deleted_at.is_(None),
-    )
-    result = await db.execute(stmt)
-    competitor_count = result.scalar() or 0
+    competitor_count = 0
+    avg_price: float | None = None
+    avg_reviews: float | None = None
+    niche_score: float | None = None
 
-    # Average price
-    price_stmt = select(func.avg(ExtractedProduct.price)).where(
-        ExtractedProduct.org_id == org_id,
-        ExtractedProduct.price.isnot(None),
-        ExtractedProduct.deleted_at.is_(None),
-    )
-    price_result = await db.execute(price_stmt)
-    avg_price_raw = price_result.scalar()
-    avg_price = round(float(avg_price_raw), 2) if avg_price_raw else None
+    # --- Competitor count from ExtractedProduct -----------------------
+    try:
+        stmt = select(func.count(ExtractedProduct.id)).where(
+            ExtractedProduct.org_id == org_id,
+            ExtractedProduct.deleted_at.is_(None),
+        )
+        result = await db.execute(stmt)
+        competitor_count = result.scalar() or 0
+    except Exception:
+        logger.warning("Failed to count ExtractedProduct entries", exc_info=True)
 
-    # Generate related keywords
-    related_keywords = await _generate_related_keywords(
-        db, org_id, keywords
-    )
+    # --- Average price from ExtractedProduct --------------------------
+    try:
+        price_stmt = select(func.avg(ExtractedProduct.price)).where(
+            ExtractedProduct.org_id == org_id,
+            ExtractedProduct.price.isnot(None),
+            ExtractedProduct.deleted_at.is_(None),
+        )
+        price_result = await db.execute(price_stmt)
+        avg_price_raw = price_result.scalar()
+        avg_price = round(float(avg_price_raw), 2) if avg_price_raw else None
+    except Exception:
+        logger.warning("Failed to compute avg price from ExtractedProduct", exc_info=True)
+
+    # --- Average reviews from CompetitorBook --------------------------
+    try:
+        reviews_stmt = select(func.avg(CompetitorBook.reviews_count)).where(
+            CompetitorBook.deleted_at.is_(None),
+            CompetitorBook.reviews_count > 0,
+        )
+        # Scope to org if the book has an org_id
+        reviews_stmt = reviews_stmt.where(CompetitorBook.org_id == org_id)
+        reviews_result = await db.execute(reviews_stmt)
+        avg_reviews_raw = reviews_result.scalar()
+        if avg_reviews_raw is not None:
+            avg_reviews = round(float(avg_reviews_raw), 1)
+    except Exception:
+        logger.warning("Failed to compute avg reviews from CompetitorBook", exc_info=True)
+
+    # Also augment competitor_count with CompetitorBook rows
+    try:
+        comp_count_stmt = select(func.count(CompetitorBook.id)).where(
+            CompetitorBook.org_id == org_id,
+            CompetitorBook.deleted_at.is_(None),
+        )
+        comp_count_result = await db.execute(comp_count_stmt)
+        comp_count = comp_count_result.scalar() or 0
+        competitor_count = max(competitor_count, comp_count)
+    except Exception:
+        logger.warning("Failed to count CompetitorBook entries", exc_info=True)
+
+    # --- Niche score via market intelligence scoring ------------------
+    try:
+        from app.modules.market_intelligence.scoring import (
+            NicheMetrics,
+            calculate_niche_scores,
+        )
+
+        # Gather BSR values from CompetitorBook for the org
+        bsr_stmt = select(CompetitorBook.bsr_current).where(
+            CompetitorBook.org_id == org_id,
+            CompetitorBook.bsr_current.isnot(None),
+            CompetitorBook.deleted_at.is_(None),
+        )
+        bsr_result = await db.execute(bsr_stmt)
+        bsr_values = [row[0] for row in bsr_result.all() if row[0] is not None]
+
+        # Gather top-10 review counts for supply score
+        top_reviews_stmt = (
+            select(CompetitorBook.reviews_count)
+            .where(
+                CompetitorBook.org_id == org_id,
+                CompetitorBook.deleted_at.is_(None),
+            )
+            .order_by(CompetitorBook.reviews_count.desc())
+            .limit(10)
+        )
+        top_reviews_result = await db.execute(top_reviews_stmt)
+        top_10_reviews = [row[0] for row in top_reviews_result.all()]
+
+        # Gather avg rating from CompetitorBook
+        rating_stmt = select(func.avg(CompetitorBook.rating)).where(
+            CompetitorBook.org_id == org_id,
+            CompetitorBook.rating.isnot(None),
+            CompetitorBook.deleted_at.is_(None),
+        )
+        rating_result = await db.execute(rating_stmt)
+        avg_rating_raw = rating_result.scalar()
+        avg_rating = float(avg_rating_raw) if avg_rating_raw is not None else 0.0
+
+        # Look up keyword search volume from MarketKeyword if available
+        search_volume = 0
+        try:
+            for kw in keywords:
+                kw_stmt = (
+                    select(MarketKeyword.search_volume)
+                    .where(
+                        MarketKeyword.keyword == kw,
+                        MarketKeyword.deleted_at.is_(None),
+                    )
+                    .limit(1)
+                )
+                kw_result = await db.execute(kw_stmt)
+                kw_row = kw_result.scalar_one_or_none()
+                if kw_row is not None:
+                    search_volume = max(search_volume, kw_row)
+        except Exception:
+            logger.debug("MarketKeyword lookup failed, defaulting search_volume=0", exc_info=True)
+
+        import statistics as _stats
+
+        metrics = NicheMetrics(
+            avg_monthly_search_volume=search_volume,
+            bsr_values=bsr_values,
+            trend_slope=0.0,
+            total_competing_titles=competitor_count,
+            avg_review_count=float(avg_reviews) if avg_reviews else 0.0,
+            avg_rating=avg_rating,
+            top_10_avg_reviews=(
+                _stats.mean(top_10_reviews) if top_10_reviews else 0.0
+            ),
+            avg_price=float(avg_price) if avg_price else 0.0,
+        )
+
+        scores = calculate_niche_scores(metrics)
+        niche_score = round(scores.opportunity_score, 1)
+    except Exception:
+        logger.warning("Failed to compute niche score via market intelligence", exc_info=True)
+
+    # --- Related keywords ---------------------------------------------
+    related_keywords: list[RelatedKeyword] = []
+    try:
+        related_keywords = await _generate_related_keywords(
+            db, org_id, keywords
+        )
+        # Augment with MarketKeyword data for volume accuracy
+        related_keywords = await _enrich_keywords_from_market_data(
+            db, related_keywords
+        )
+    except Exception:
+        logger.warning("Failed to generate related keywords", exc_info=True)
 
     return {
         "competitor_count": competitor_count,
         "avg_price": avg_price,
-        "avg_reviews": None,  # Would come from reviews_json aggregation
-        "niche_score": None,  # Would be computed by market intelligence
+        "avg_reviews": avg_reviews,
+        "niche_score": niche_score,
         "related_keywords": related_keywords,
     }
+
+
+async def _enrich_keywords_from_market_data(
+    db: AsyncSession,
+    keywords: list[RelatedKeyword],
+) -> list[RelatedKeyword]:
+    """Enrich related keywords with real volume data from MarketKeyword table.
+
+    If a keyword exists in the MarketKeyword table, replace the estimated
+    volume indicator with one derived from actual search volume data.
+    """
+    if not keywords:
+        return keywords
+
+    enriched: list[RelatedKeyword] = []
+    for kw in keywords:
+        try:
+            stmt = (
+                select(MarketKeyword.search_volume, MarketKeyword.competition_score)
+                .where(
+                    MarketKeyword.keyword == kw.keyword,
+                    MarketKeyword.deleted_at.is_(None),
+                )
+                .limit(1)
+            )
+            result = await db.execute(stmt)
+            row = result.one_or_none()
+
+            if row and row[0] is not None:
+                sv = row[0]
+                if sv >= 5000:
+                    volume = "high"
+                elif sv >= 1000:
+                    volume = "medium"
+                else:
+                    volume = "low"
+                enriched.append(
+                    RelatedKeyword(
+                        keyword=kw.keyword,
+                        volume=volume,
+                        relevance=kw.relevance,
+                        source=kw.source,
+                    )
+                )
+            else:
+                enriched.append(kw)
+        except Exception:
+            enriched.append(kw)
+
+    return enriched
 
 
 # ---------------------------------------------------------------------------

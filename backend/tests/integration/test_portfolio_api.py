@@ -1,26 +1,51 @@
 """Integration tests for Portfolio Economics, Audience DNA, and Seasonal Calendar API endpoints."""
+import uuid
+
 import pytest
 import pytest_asyncio
 from datetime import date, timedelta
 from uuid import uuid4
+from unittest.mock import AsyncMock, MagicMock
 
 from httpx import AsyncClient, ASGITransport
-from app.main import app
+from app.main import create_app
 
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-@pytest_asyncio.fixture
-async def client():
-    """Create an async HTTP client for testing."""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
+@pytest.fixture
+def org_id():
+    return uuid.uuid4()
 
 
 @pytest.fixture
-def org_id():
-    return str(uuid4())
+def user_id():
+    return uuid.uuid4()
+
+
+@pytest.fixture
+def mock_user(org_id, user_id):
+    return {"user_id": user_id, "org_id": org_id, "role": "owner"}
+
+
+@pytest.fixture
+def mock_db():
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    db.close = AsyncMock()
+
+    # Mock execute to return empty results for DB queries
+    mock_result = MagicMock()
+    mock_scalars = MagicMock()
+    mock_scalars.all.return_value = []
+    mock_result.scalars.return_value = mock_scalars
+    mock_result.all.return_value = []
+    db.execute = AsyncMock(return_value=mock_result)
+
+    return db
 
 
 @pytest.fixture
@@ -28,15 +53,30 @@ def book_id():
     return str(uuid4())
 
 
+@pytest_asyncio.fixture
+async def client(mock_db, mock_user):
+    """Create an async HTTP client with auth and DB dependency overrides."""
+    app = create_app()
+
+    from app.database import get_db
+    from app.core.dependencies import get_current_user
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
 # ─── Portfolio Endpoints ─────────────────────────────────────────────────────
 
 class TestPortfolioOverview:
     @pytest.mark.asyncio
-    async def test_get_portfolio_overview(self, client, org_id):
-        response = await client.get(
-            "/api/v1/portfolio",
-            params={"org_id": org_id},
-        )
+    async def test_get_portfolio_overview(self, client):
+        response = await client.get("/api/v1/portfolio")
         assert response.status_code == 200
         data = response.json()["data"]
         assert "total_books" in data
@@ -45,9 +85,12 @@ class TestPortfolioOverview:
         assert "top_performers" in data
 
     @pytest.mark.asyncio
-    async def test_portfolio_overview_requires_org_id(self, client):
+    async def test_portfolio_overview_returns_empty_portfolio(self, client):
+        """With no books in DB, should return an empty portfolio overview."""
         response = await client.get("/api/v1/portfolio")
-        assert response.status_code == 422  # Missing required query param
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["total_books"] == 0
 
 
 class TestGreenlightGate:
@@ -225,11 +268,8 @@ class TestBacklistProjection:
 
 class TestPortfolioRecommendations:
     @pytest.mark.asyncio
-    async def test_get_recommendations(self, client, org_id):
-        response = await client.get(
-            "/api/v1/portfolio/recommendations",
-            params={"org_id": org_id},
-        )
+    async def test_get_recommendations(self, client):
+        response = await client.get("/api/v1/portfolio/recommendations")
         assert response.status_code == 200
         data = response.json()["data"]
         assert isinstance(data, list)
@@ -316,7 +356,7 @@ class TestAudienceGrowth:
     async def test_audience_growth(self, client, org_id):
         response = await client.get(
             "/api/v1/audience/growth",
-            params={"org_id": org_id, "days": 30},
+            params={"org_id": str(org_id), "days": 30},
         )
         assert response.status_code == 200
         data = response.json()["data"]
@@ -329,7 +369,7 @@ class TestAudienceGrowth:
     async def test_audience_growth_validates_days(self, client, org_id):
         response = await client.get(
             "/api/v1/audience/growth",
-            params={"org_id": org_id, "days": 3},  # Below minimum
+            params={"org_id": str(org_id), "days": 3},  # Below minimum
         )
         assert response.status_code == 422
 

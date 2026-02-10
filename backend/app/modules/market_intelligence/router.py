@@ -11,6 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.market_intelligence.schemas import (
     CategoryAnalysis,
@@ -49,6 +50,7 @@ def _service() -> MarketIntelligenceService:
 async def browse_categories(
     root_id: Optional[str] = Query(None, description="Parent category ID"),
     marketplace: str = Query("US"),
+    current_user: dict = Depends(get_current_user),
 ):
     """Browse Amazon category taxonomy (tree structure)."""
     svc = _service()
@@ -64,6 +66,7 @@ async def browse_categories(
 async def category_analysis(
     category_id: str,
     marketplace: str = Query("US"),
+    current_user: dict = Depends(get_current_user),
 ):
     """Category analysis with BSR distribution and competition score."""
     svc = _service()
@@ -81,7 +84,10 @@ async def category_analysis(
     summary="Keyword research",
     description="Research keywords for search volume, competition, CPC, and trends.",
 )
-async def keyword_research(request: KeywordResearchRequest):
+async def keyword_research(
+    request: KeywordResearchRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """Keyword research: search volume, competition, CPC, trends."""
     svc = _service()
     return await svc.research_keywords(request)
@@ -97,6 +103,7 @@ async def keyword_suggestions(
     genre: str = Query(..., min_length=1),
     niche: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
 ):
     """AI-suggested keywords for a genre / niche."""
     from app.modules.market_intelligence.schemas import KeywordSuggestionsParams
@@ -117,7 +124,10 @@ async def keyword_suggestions(
     summary="Analyze niche",
     description="Comprehensive niche analysis with scoring, demand signals, and gap analysis.",
 )
-async def analyze_niche(request: NicheAnalysisRequest):
+async def analyze_niche(
+    request: NicheAnalysisRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """Comprehensive niche analysis with scoring and gap analysis."""
     svc = _service()
     return await svc.analyze_niche(request)
@@ -137,10 +147,11 @@ async def analyze_niche(request: NicheAnalysisRequest):
 async def list_competitors(
     marketplace: str = Query("US"),
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """List tracked competitor books."""
     svc = _service()
-    return await svc.list_competitors(db=db, marketplace=marketplace)
+    return await svc.list_competitors(db=db, org_id=current_user["org_id"], marketplace=marketplace)
 
 
 @router.post(
@@ -153,11 +164,12 @@ async def list_competitors(
 async def track_competitor(
     request: CompetitorTrackRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Start tracking a competitor by ASIN."""
     svc = _service()
     try:
-        return await svc.track_competitor(db=db, request=request)
+        return await svc.track_competitor(db=db, request=request, org_id=current_user["org_id"])
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -171,6 +183,7 @@ async def track_competitor(
 async def get_competitor(
     competitor_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Competitor detail with BSR history."""
     svc = _service()
@@ -195,6 +208,7 @@ async def market_trends(
     category_id: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
     days: int = Query(30, ge=1, le=365),
+    current_user: dict = Depends(get_current_user),
 ):
     """Market trend data for categories and keywords."""
     svc = _service()
@@ -213,6 +227,7 @@ async def market_snapshots(
     category_id: Optional[str] = Query(None),
     limit: int = Query(30, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Daily category snapshots."""
     svc = _service()

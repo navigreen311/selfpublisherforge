@@ -7,15 +7,11 @@ Produces print-ready PDFs with:
 - ISBN barcode on the last page (optional)
 - Chapter heading styles from formatting templates
 
-This module generates a lightweight HTML-based PDF representation.
-In production it would delegate to a headless browser or
-reportlab/weasyprint; here we produce a structured intermediate
-representation that can be consumed by any PDF rendering backend.
+Uses ReportLab for PDF rendering.
 """
 
 from __future__ import annotations
 
-import base64
 import io
 import json
 import logging
@@ -23,6 +19,42 @@ import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any
+
+try:
+    from reportlab.lib.pagesizes import letter, A4, inch
+    from reportlab.lib.units import inch as rl_inch
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from reportlab.lib.colors import black, gray, white, HexColor
+    from reportlab.platypus import (
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        PageBreak,
+        Table,
+        TableStyle,
+        BaseDocTemplate,
+        PageTemplate,
+        Frame,
+        NextPageTemplate,
+        KeepTogether,
+    )
+    from reportlab.platypus.flowables import HRFlowable
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
+try:
+    from reportlab.graphics.barcode.eanbc import Ean13BarcodeWidget
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics import renderPDF
+
+    BARCODE_WIDGET_AVAILABLE = True
+except ImportError:
+    BARCODE_WIDGET_AVAILABLE = False
 
 import barcode
 from barcode.writer import ImageWriter
@@ -35,6 +67,12 @@ from app.modules.publishing_ops.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+if not REPORTLAB_AVAILABLE:
+    logger.error(
+        "reportlab is not installed. PDF generation will not work. "
+        "Install it with: pip install reportlab"
+    )
 
 
 # ---------- Trim size dimensions (width x height in inches) ----------
@@ -61,7 +99,7 @@ class PDFPage:
 
 @dataclass
 class PDFDocument:
-    """Structured representation of a print-ready PDF document."""
+    """Represents a print-ready PDF document with actual PDF binary content."""
     book_id: str
     title: str
     authors: list[str]
@@ -79,21 +117,21 @@ class PDFDocument:
     include_isbn_barcode: bool = False
     total_pages: int = 0
     generated_at: str = ""
+    _pdf_bytes: bytes = field(default=b"", repr=False)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        """Return a dictionary representation of the document metadata."""
+        d = asdict(self)
+        d.pop("_pdf_bytes", None)
+        return d
 
     def to_json(self) -> str:
+        """Return a JSON string of the document metadata."""
         return json.dumps(self.to_dict(), indent=2)
 
     def to_bytes(self) -> bytes:
-        """Return a byte representation (JSON) of the PDF document spec.
-
-        In production this would be actual PDF binary content rendered by
-        weasyprint / reportlab / headless Chrome.  For now we return the
-        structured JSON that a renderer would consume.
-        """
-        return self.to_json().encode("utf-8")
+        """Return the rendered PDF binary content."""
+        return self._pdf_bytes
 
 
 def _estimate_pages_for_chapter(content: str, chars_per_page: int = 2000) -> int:
@@ -102,7 +140,11 @@ def _estimate_pages_for_chapter(content: str, chars_per_page: int = 2000) -> int
 
 
 def _build_chapter_html(title: str, content: str, style: TemplateStyleSettings) -> str:
-    """Build HTML for a single chapter."""
+    """Build HTML representation for a single chapter.
+
+    This is retained for backward compatibility and testing. The actual PDF
+    rendering uses ReportLab flowables directly.
+    """
     paragraphs = content.strip().split("\n\n")
     p_tags: list[str] = []
     for para in paragraphs:
@@ -147,7 +189,6 @@ def _validate_isbn13(isbn: str) -> str:
     if not cleaned.isdigit():
         raise ValueError(f"ISBN must contain only digits (and optional hyphens), got: '{isbn}'")
 
-    # Verify the ISBN-13 check digit (alternating weights of 1 and 3)
     total = sum(
         int(digit) * (1 if i % 2 == 0 else 3)
         for i, digit in enumerate(cleaned)
@@ -187,31 +228,480 @@ def render_isbn_barcode(isbn: str) -> bytes:
     return buffer.getvalue()
 
 
-def _isbn_barcode_html(isbn: str) -> str:
-    """Render an ISBN-13 barcode as an inline HTML ``<img>`` tag.
+# ---------- ReportLab PDF rendering helpers ----------
 
-    Generates a real EAN-13 barcode image using ``python-barcode`` and
-    embeds it as a base64-encoded data URI.  Falls back to a text
-    placeholder if the ISBN is invalid or barcode generation fails.
+def _get_font_name(requested_font: str) -> str:
+    """Map a requested font family to a ReportLab built-in font name.
+
+    ReportLab ships with a limited set of built-in fonts.  We map common
+    font family names to their closest built-in equivalents.
     """
-    try:
-        png_bytes = render_isbn_barcode(isbn)
-        b64 = base64.b64encode(png_bytes).decode("ascii")
-        return (
-            f'<div class="isbn-barcode" style="text-align: center; margin-top: 2em;">\n'
-            f'  <img src="data:image/png;base64,{b64}" '
-            f'alt="ISBN {isbn}" style="max-width: 300px; height: auto;" />\n'
-            f"  <p><strong>ISBN: {isbn}</strong></p>\n"
-            f"</div>"
+    font_map = {
+        "georgia": "Times-Roman",
+        "times": "Times-Roman",
+        "times new roman": "Times-Roman",
+        "serif": "Times-Roman",
+        "arial": "Helvetica",
+        "helvetica": "Helvetica",
+        "sans-serif": "Helvetica",
+        "courier": "Courier",
+        "courier new": "Courier",
+        "monospace": "Courier",
+    }
+    return font_map.get(requested_font.lower(), "Times-Roman")
+
+
+def _get_bold_font_name(base_font: str) -> str:
+    """Return the bold variant of a ReportLab built-in font."""
+    bold_map = {
+        "Times-Roman": "Times-Bold",
+        "Helvetica": "Helvetica-Bold",
+        "Courier": "Courier-Bold",
+    }
+    return bold_map.get(base_font, "Times-Bold")
+
+
+def _get_italic_font_name(base_font: str) -> str:
+    """Return the italic variant of a ReportLab built-in font."""
+    italic_map = {
+        "Times-Roman": "Times-Italic",
+        "Helvetica": "Helvetica-Oblique",
+        "Courier": "Courier-Oblique",
+    }
+    return italic_map.get(base_font, "Times-Italic")
+
+
+class _PageNumberCanvas:
+    """Mixin-style helper that draws headers and footers on each page.
+
+    This is used as a canvasmaker callback within the doc build process.
+    """
+
+    def __init__(
+        self,
+        title: str,
+        authors: list[str],
+        font_name: str,
+        font_size: float,
+        show_page_numbers: bool,
+        header_template: str | None,
+        footer_template: str | None,
+        margin_bottom: float,
+        margin_top: float,
+        margin_outer: float,
+        page_width: float,
+        page_height: float,
+    ):
+        self.title = title
+        self.authors = authors
+        self.font_name = font_name
+        self.font_size = font_size
+        self.show_page_numbers = show_page_numbers
+        self.header_template = header_template
+        self.footer_template = footer_template
+        self.margin_bottom = margin_bottom
+        self.margin_top = margin_top
+        self.margin_outer = margin_outer
+        self.page_width = page_width
+        self.page_height = page_height
+
+
+def _resolve_template(template: str | None, title: str, authors: list[str], page_num: int) -> str | None:
+    """Resolve header/footer template placeholders."""
+    if template is None:
+        return None
+    return (
+        template
+        .replace("{title}", title)
+        .replace("{author}", ", ".join(authors))
+        .replace("{page}", str(page_num))
+    )
+
+
+def _build_isbn_barcode_flowable(isbn: str, page_width: float) -> list:
+    """Build ReportLab flowables for an ISBN barcode.
+
+    Attempts to use reportlab.graphics.barcode for a native vector barcode.
+    Falls back to a placeholder rectangle with the ISBN text.
+    """
+    flowables = []
+    flowables.append(Spacer(1, 2 * inch))
+
+    if BARCODE_WIDGET_AVAILABLE:
+        try:
+            cleaned = _validate_isbn13(isbn)
+            barcode_widget = Ean13BarcodeWidget(cleaned)
+            barcode_widget.barHeight = 1.0 * inch
+            barcode_widget.barWidth = 0.015 * inch
+            bounds = barcode_widget.getBounds()
+            widget_width = bounds[2] - bounds[0]
+            widget_height = bounds[3] - bounds[1]
+            drawing = Drawing(widget_width, widget_height)
+            drawing.add(barcode_widget)
+            flowables.append(drawing)
+            flowables.append(Spacer(1, 12))
+            isbn_style = ParagraphStyle(
+                "ISBNText",
+                fontName="Helvetica-Bold",
+                fontSize=12,
+                alignment=TA_CENTER,
+            )
+            flowables.append(Paragraph(f"ISBN: {isbn}", isbn_style))
+            return flowables
+        except Exception as exc:
+            logger.warning("ReportLab barcode widget failed for '%s': %s", isbn, exc)
+
+    # Fallback: draw a placeholder box with ISBN text
+    isbn_style = ParagraphStyle(
+        "ISBNPlaceholder",
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        alignment=TA_CENTER,
+        borderWidth=2,
+        borderColor=black,
+        borderPadding=10,
+    )
+    flowables.append(Paragraph(f"ISBN: {isbn}", isbn_style))
+    flowables.append(Spacer(1, 6))
+    note_style = ParagraphStyle(
+        "ISBNNote",
+        fontName="Helvetica",
+        fontSize=9,
+        alignment=TA_CENTER,
+        textColor=gray,
+    )
+    flowables.append(Paragraph("[Barcode rendered at print time]", note_style))
+    return flowables
+
+
+def _render_pdf(
+    title: str,
+    authors: list[str],
+    chapters: list[ChapterInput],
+    trim_size: tuple[float, float],
+    style: TemplateStyleSettings,
+    isbn: str | None,
+    include_isbn_barcode: bool,
+) -> tuple[bytes, int]:
+    """Render a complete PDF and return (pdf_bytes, page_count).
+
+    Parameters
+    ----------
+    title : str
+        The book title.
+    authors : list[str]
+        Author name(s).
+    chapters : list[ChapterInput]
+        Sorted list of chapters.
+    trim_size : tuple[float, float]
+        (width_inches, height_inches).
+    style : TemplateStyleSettings
+        Typography and layout settings.
+    isbn : str or None
+        ISBN-13 string for barcode page.
+    include_isbn_barcode : bool
+        Whether to add a barcode page at the end.
+
+    Returns
+    -------
+    tuple[bytes, int]
+        The PDF content as bytes and the total page count.
+    """
+    if not REPORTLAB_AVAILABLE:
+        raise RuntimeError(
+            "reportlab is not installed. Cannot generate PDF. "
+            "Install it with: pip install reportlab"
         )
-    except (ValueError, Exception) as exc:
-        logger.warning("Failed to render ISBN barcode for '%s': %s", isbn, exc)
-        return (
-            f'<div class="isbn-barcode" style="text-align: center; margin-top: 2em;">\n'
-            f"  <p><strong>ISBN: {isbn}</strong></p>\n"
-            f"  <p><em>(Barcode could not be generated: {exc})</em></p>\n"
-            f"</div>"
-        )
+
+    page_width = trim_size[0] * inch
+    page_height = trim_size[1] * inch
+    pagesize = (page_width, page_height)
+
+    margin_top = max(style.margin_top_in, 0.75) * inch
+    margin_bottom = max(style.margin_bottom_in, 0.75) * inch
+    margin_inner = max(style.margin_inner_in, 0.75) * inch
+    margin_outer = max(style.margin_outer_in, 0.75) * inch
+
+    base_font = _get_font_name(style.font_family)
+    bold_font = _get_bold_font_name(base_font)
+    italic_font = _get_italic_font_name(base_font)
+    heading_font = _get_font_name(style.chapter_heading_font)
+    heading_bold = _get_bold_font_name(heading_font)
+
+    # Resolve footer/header templates once (page numbers added per-page)
+    header_template = style.header_text
+    footer_template = style.footer_text
+    show_page_numbers = style.page_numbers
+
+    buffer = io.BytesIO()
+
+    # We track the page count using a list (mutable in closure)
+    page_counter = [0]
+
+    def on_page(canvas, doc):
+        """Draw header, footer, and page numbers on each page."""
+        page_counter[0] += 1
+        page_num = page_counter[0]
+        canvas.saveState()
+
+        # Footer with page number
+        if show_page_numbers:
+            footer_y = margin_bottom - 0.4 * inch
+            if footer_y < 0.3 * inch:
+                footer_y = 0.3 * inch
+            canvas.setFont(base_font, 9)
+            canvas.setFillColor(gray)
+
+            # Resolve footer template
+            footer_text_resolved = _resolve_template(
+                footer_template, title, authors, page_num
+            )
+            if footer_text_resolved:
+                display_footer = f"{footer_text_resolved} | Page {page_num}"
+            else:
+                display_footer = f"Page {page_num}"
+
+            canvas.drawCentredString(page_width / 2, footer_y, display_footer)
+
+        elif footer_template:
+            footer_y = margin_bottom - 0.4 * inch
+            if footer_y < 0.3 * inch:
+                footer_y = 0.3 * inch
+            canvas.setFont(base_font, 9)
+            canvas.setFillColor(gray)
+            footer_text_resolved = _resolve_template(
+                footer_template, title, authors, page_num
+            )
+            if footer_text_resolved:
+                canvas.drawCentredString(page_width / 2, footer_y, footer_text_resolved)
+
+        # Header
+        if header_template:
+            header_y = page_height - margin_top + 0.25 * inch
+            canvas.setFont(italic_font, 8)
+            canvas.setFillColor(gray)
+            header_text_resolved = _resolve_template(
+                header_template, title, authors, page_num
+            )
+            if header_text_resolved:
+                canvas.drawCentredString(page_width / 2, header_y, header_text_resolved)
+
+        canvas.restoreState()
+
+    def on_title_page(canvas, doc):
+        """Title page has no header/footer/page number."""
+        page_counter[0] += 1
+
+    # Build the document template with two page templates:
+    # one for the title page (no headers/footers) and one for body pages
+    frame_body = Frame(
+        margin_inner,
+        margin_bottom,
+        page_width - margin_inner - margin_outer,
+        page_height - margin_top - margin_bottom,
+        id="body_frame",
+    )
+    frame_title = Frame(
+        margin_outer,
+        margin_bottom,
+        page_width - 2 * margin_outer,
+        page_height - margin_top - margin_bottom,
+        id="title_frame",
+    )
+
+    title_template = PageTemplate(
+        id="title_page",
+        frames=[frame_title],
+        onPage=on_title_page,
+    )
+    body_template = PageTemplate(
+        id="body_page",
+        frames=[frame_body],
+        onPage=on_page,
+    )
+
+    doc = BaseDocTemplate(
+        buffer,
+        pagesize=pagesize,
+        topMargin=margin_top,
+        bottomMargin=margin_bottom,
+        leftMargin=margin_inner,
+        rightMargin=margin_outer,
+        title=title,
+        author=", ".join(authors),
+    )
+    doc.addPageTemplates([title_template, body_template])
+
+    # ---------- Build styles ----------
+    body_style = ParagraphStyle(
+        "BookBody",
+        fontName=base_font,
+        fontSize=style.font_size_pt,
+        leading=style.font_size_pt * style.line_height,
+        alignment=TA_JUSTIFY,
+        firstLineIndent=style.paragraph_indent_em * style.font_size_pt,
+        spaceBefore=style.paragraph_spacing_pt,
+        spaceAfter=style.paragraph_spacing_pt,
+    )
+    body_first_style = ParagraphStyle(
+        "BookBodyFirst",
+        parent=body_style,
+        firstLineIndent=0,
+    )
+    chapter_heading_style = ParagraphStyle(
+        "ChapterHeading",
+        fontName=heading_bold,
+        fontSize=style.chapter_heading_size_pt,
+        leading=style.chapter_heading_size_pt * 1.3,
+        alignment=TA_CENTER,
+        spaceBefore=36,
+        spaceAfter=24,
+        textColor=black,
+    )
+    title_style = ParagraphStyle(
+        "BookTitle",
+        fontName=heading_bold,
+        fontSize=28,
+        leading=34,
+        alignment=TA_CENTER,
+        spaceBefore=0,
+        spaceAfter=12,
+    )
+    subtitle_style = ParagraphStyle(
+        "BookSubtitle",
+        fontName=italic_font,
+        fontSize=16,
+        leading=20,
+        alignment=TA_CENTER,
+        spaceBefore=6,
+        spaceAfter=12,
+        textColor=HexColor("#444444"),
+    )
+    author_style = ParagraphStyle(
+        "BookAuthor",
+        fontName=base_font,
+        fontSize=18,
+        leading=22,
+        alignment=TA_CENTER,
+        spaceBefore=12,
+        spaceAfter=6,
+    )
+    toc_title_style = ParagraphStyle(
+        "TOCTitle",
+        fontName=heading_bold,
+        fontSize=20,
+        leading=26,
+        alignment=TA_CENTER,
+        spaceBefore=24,
+        spaceAfter=24,
+    )
+    toc_entry_style = ParagraphStyle(
+        "TOCEntry",
+        fontName=base_font,
+        fontSize=style.font_size_pt,
+        leading=style.font_size_pt * 1.8,
+        alignment=TA_LEFT,
+        leftIndent=20,
+    )
+
+    # ---------- Build flowables ----------
+    story = []
+
+    # -- Title page --
+    story.append(NextPageTemplate("title_page"))
+    story.append(Spacer(1, page_height * 0.25))
+    story.append(Paragraph(title, title_style))
+
+    # Add subtitle if available (we check for a subtitle in the title string
+    # separated by a colon, or callers can embed it)
+    story.append(Spacer(1, 12))
+    story.append(HRFlowable(
+        width="40%",
+        thickness=1,
+        color=HexColor("#999999"),
+        spaceAfter=18,
+        spaceBefore=6,
+    ))
+
+    if authors:
+        author_text = " &amp; ".join(authors) if len(authors) > 1 else authors[0]
+        story.append(Paragraph(author_text, author_style))
+
+    story.append(PageBreak())
+
+    # -- Table of Contents --
+    story.append(NextPageTemplate("body_page"))
+    story.append(Paragraph("Table of Contents", toc_title_style))
+    story.append(Spacer(1, 12))
+
+    for idx, ch in enumerate(chapters, start=1):
+        toc_text = f"{idx}. &nbsp;&nbsp;{ch.title}"
+        story.append(Paragraph(toc_text, toc_entry_style))
+
+    story.append(Spacer(1, 24))
+    story.append(HRFlowable(
+        width="100%",
+        thickness=0.5,
+        color=HexColor("#cccccc"),
+        spaceAfter=12,
+    ))
+    story.append(PageBreak())
+
+    # -- Chapter pages --
+    for ch_idx, ch in enumerate(chapters):
+        # Chapter heading
+        story.append(Spacer(1, 48))
+        story.append(Paragraph(ch.title, chapter_heading_style))
+        story.append(Spacer(1, 18))
+        story.append(HRFlowable(
+            width="30%",
+            thickness=0.5,
+            color=HexColor("#999999"),
+            spaceAfter=24,
+            spaceBefore=6,
+        ))
+
+        # Chapter body: split on double newlines for paragraphs
+        paragraphs = ch.content.strip().split("\n\n")
+        for p_idx, para_text in enumerate(paragraphs):
+            para_text = para_text.strip()
+            if not para_text:
+                continue
+
+            # Handle lines within a paragraph (single newlines become spaces)
+            para_text = para_text.replace("\n", " ")
+
+            # Escape XML-sensitive characters for ReportLab Paragraph
+            para_text = (
+                para_text
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            )
+
+            # First paragraph of chapter: no indent
+            if p_idx == 0:
+                story.append(Paragraph(para_text, body_first_style))
+            else:
+                story.append(Paragraph(para_text, body_style))
+
+        # Page break after each chapter (except the last if barcode follows or it's the end)
+        if ch_idx < len(chapters) - 1 or (include_isbn_barcode and isbn):
+            story.append(PageBreak())
+
+    # -- ISBN barcode page --
+    if include_isbn_barcode and isbn:
+        barcode_flowables = _build_isbn_barcode_flowable(isbn, page_width)
+        story.extend(barcode_flowables)
+
+    # ---------- Build the PDF ----------
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+
+    total_pages = page_counter[0]
+
+    return pdf_bytes, total_pages
 
 
 def generate_pdf(
@@ -220,7 +710,7 @@ def generate_pdf(
     authors: list[str] | None = None,
     style_settings: TemplateStyleSettings | None = None,
 ) -> PDFDocument:
-    """Generate a structured PDF document representation.
+    """Generate a print-ready PDF document.
 
     Parameters
     ----------
@@ -236,13 +726,75 @@ def generate_pdf(
     Returns
     -------
     PDFDocument
-        A structured document that can be serialised or rendered to
-        actual PDF bytes by a rendering backend.
+        A document object containing rendered PDF binary content
+        accessible via ``to_bytes()``.
     """
     style = style_settings or TemplateStyleSettings()
     trim = TRIM_DIMENSIONS.get(request.trim_size, TRIM_DIMENSIONS[TrimSize.SIZE_6x9])
     chapters = sorted(request.chapters, key=lambda c: c.order)
     authors = authors or []
+
+    pdf_bytes, total_pages = _render_pdf(
+        title=title,
+        authors=authors,
+        chapters=chapters,
+        trim_size=trim,
+        style=style,
+        isbn=request.isbn,
+        include_isbn_barcode=request.include_isbn_barcode,
+    )
+
+    # Build a page list for metadata / backward compatibility.
+    # The actual PDF content is in _pdf_bytes; the pages list provides
+    # a structural summary with chapter HTML for inspection.
+    pages: list[PDFPage] = []
+    page_number = 1
+
+    header_template = style.header_text
+    footer_template = style.footer_text
+
+    def _resolve_tpl(template: str | None, page_num: int) -> str | None:
+        if template is None:
+            return None
+        return (
+            template
+            .replace("{title}", title)
+            .replace("{author}", ", ".join(authors))
+            .replace("{page}", str(page_num))
+        )
+
+    for ch in chapters:
+        chapter_html = _build_chapter_html(ch.title, ch.content, style)
+        estimated = _estimate_pages_for_chapter(ch.content)
+
+        for p in range(estimated):
+            header = _resolve_tpl(header_template, page_number)
+            footer = _resolve_tpl(footer_template, page_number)
+            if style.page_numbers:
+                footer = f"{footer or ''} | Page {page_number}".strip(" |")
+
+            pages.append(
+                PDFPage(
+                    page_number=page_number,
+                    content_html=chapter_html if p == 0 else "<p>(continued)</p>",
+                    is_chapter_start=(p == 0),
+                    header=header,
+                    footer=footer,
+                )
+            )
+            page_number += 1
+
+    if request.include_isbn_barcode and request.isbn:
+        pages.append(
+            PDFPage(
+                page_number=page_number,
+                content_html=f'<div class="isbn-barcode"><p>ISBN: {request.isbn}</p></div>',
+                is_chapter_start=False,
+                header=None,
+                footer=f"Page {page_number}" if style.page_numbers else None,
+            )
+        )
+        page_number += 1
 
     doc = PDFDocument(
         book_id=str(request.book_id),
@@ -257,59 +809,14 @@ def generate_pdf(
         font_family=style.font_family,
         font_size_pt=style.font_size_pt,
         line_height=style.line_height,
+        pages=pages,
         isbn=request.isbn,
         include_isbn_barcode=request.include_isbn_barcode,
         generated_at=datetime.now(timezone.utc).isoformat(),
+        total_pages=total_pages,
+        _pdf_bytes=pdf_bytes,
     )
 
-    page_number = 1
-
-    # Header / footer templates
-    header_template = style.header_text
-    footer_template = style.footer_text
-
-    def _resolve_template(template: str | None, page_num: int) -> str | None:
-        if template is None:
-            return None
-        return template.replace("{title}", title).replace(
-            "{author}", ", ".join(authors)
-        ).replace("{page}", str(page_num))
-
-    for ch in chapters:
-        chapter_html = _build_chapter_html(ch.title, ch.content, style)
-        estimated_pages = _estimate_pages_for_chapter(ch.content)
-
-        for p in range(estimated_pages):
-            header = _resolve_template(header_template, page_number)
-            footer = _resolve_template(footer_template, page_number)
-            if style.page_numbers:
-                footer = f"{footer or ''} | Page {page_number}".strip(" |")
-
-            doc.pages.append(
-                PDFPage(
-                    page_number=page_number,
-                    content_html=chapter_html if p == 0 else "<p>(continued)</p>",
-                    is_chapter_start=(p == 0),
-                    header=header,
-                    footer=footer,
-                )
-            )
-            page_number += 1
-
-    # ISBN barcode page
-    if request.include_isbn_barcode and request.isbn:
-        doc.pages.append(
-            PDFPage(
-                page_number=page_number,
-                content_html=_isbn_barcode_html(request.isbn),
-                is_chapter_start=False,
-                header=None,
-                footer=f"Page {page_number}" if style.page_numbers else None,
-            )
-        )
-        page_number += 1
-
-    doc.total_pages = len(doc.pages)
     return doc
 
 
@@ -319,6 +826,6 @@ def generate_pdf_bytes(
     authors: list[str] | None = None,
     style_settings: TemplateStyleSettings | None = None,
 ) -> bytes:
-    """Convenience wrapper that returns raw bytes."""
+    """Convenience wrapper that returns raw PDF bytes."""
     doc = generate_pdf(request, title, authors, style_settings)
     return doc.to_bytes()

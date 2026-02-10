@@ -20,6 +20,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
 from app.database import async_session
@@ -118,7 +119,8 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
                 await db.commit()
                 return {"snapshots_created": snapshots_created, "org_count": len(org_ids)}
 
-            except Exception:
+            except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+                logger.error("DB error during daily metric aggregation: %s", exc, exc_info=True)
                 await db.rollback()
                 raise
 
@@ -173,7 +175,8 @@ def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
                     "file_size": report.file_size,
                 }
 
-            except Exception:
+            except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+                logger.error("DB error during report generation for %s: %s", report_id, exc, exc_info=True)
                 await db.rollback()
                 raise
 
@@ -370,7 +373,8 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                     "details": platform_details,
                 }
 
-            except Exception:
+            except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+                logger.error("DB error during royalty sync for org %s: %s", org_id, exc, exc_info=True)
                 await db.rollback()
                 raise
 

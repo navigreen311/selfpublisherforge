@@ -143,7 +143,6 @@ export interface UseApiInfiniteOptions<TItem>
       PaginatedSuccessResponse<TItem>,
       AxiosError<ApiError>,
       InfiniteData<PaginatedSuccessResponse<TItem>>,
-      PaginatedSuccessResponse<TItem>,
       QueryKey,
       string | null
     >,

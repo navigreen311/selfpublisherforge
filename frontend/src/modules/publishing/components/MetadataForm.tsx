@@ -1,15 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   useBookMetadata,
   useUpdateMetadata,
-  type BookMetadata,
   type BookMetadataUpdate,
 } from "../hooks";
 import { toast } from "sonner";
 
 const MAX_KEYWORDS = 7;
+const MAX_KEYWORD_LENGTH = 50;
+const MAX_CATEGORIES = 2;
+const MAX_TITLE_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 4000;
+
+// ---------------------------------------------------------------------------
+// Validation helpers (simple functions — no zod)
+// ---------------------------------------------------------------------------
 
 const isValidISBN = (isbn: string): boolean => {
   const cleaned = isbn.replace(/[-\s]/g, "");
@@ -42,12 +49,70 @@ const isValidASIN = (asin: string): boolean => {
   return /^[A-Z0-9]{10}$/.test(asin.toUpperCase());
 };
 
+type FieldErrors = Record<string, string>;
+
+function validateTitle(value: string): string {
+  if (!value || value.trim().length === 0) return "This field is required";
+  if (value.length > MAX_TITLE_LENGTH) return `Title must be at most ${MAX_TITLE_LENGTH} characters`;
+  return "";
+}
+
+function validateDescription(value: string): string {
+  if (value.length > MAX_DESCRIPTION_LENGTH)
+    return `Description must be at most ${MAX_DESCRIPTION_LENGTH} characters (KDP limit)`;
+  return "";
+}
+
+function validateKeywords(input: string): string {
+  const keywords = input
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (keywords.length > MAX_KEYWORDS) return `Maximum ${MAX_KEYWORDS} keywords allowed`;
+  const tooLong = keywords.find((k) => k.length > MAX_KEYWORD_LENGTH);
+  if (tooLong) return `Each keyword must be at most ${MAX_KEYWORD_LENGTH} characters`;
+  return "";
+}
+
+function validateCategories(input: string): string {
+  const categories = input
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (categories.length > MAX_CATEGORIES) return `Maximum ${MAX_CATEGORIES} categories allowed`;
+  return "";
+}
+
+function validateISBN(value: string): string {
+  if (!value || value.trim() === "") return "";
+  if (!isValidISBN(value)) return "Invalid ISBN format. Must be a valid ISBN-10 or ISBN-13.";
+  return "";
+}
+
+function validateASIN(value: string): string {
+  if (!value || value.trim() === "") return "";
+  if (!isValidASIN(value)) return "Invalid ASIN format. Must be 10 alphanumeric characters.";
+  return "";
+}
+
+function validatePrice(value: string, fieldName: string, required: boolean): string {
+  if (!required && (!value || value.trim() === "")) return "";
+  const num = parseFloat(value);
+  if (isNaN(num)) return `${fieldName} must be a valid number`;
+  if (num < 0) return `${fieldName} must be a positive number`;
+  return "";
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 interface MetadataFormProps {
   bookId: string;
 }
 
 export function MetadataForm({ bookId }: MetadataFormProps) {
-  const { data: metadata, isLoading, error } = useBookMetadata(bookId);
+  const { data: metadata, isLoading } = useBookMetadata(bookId);
   const updateMetadata = useUpdateMetadata(bookId);
 
   const [form, setForm] = useState<BookMetadataUpdate>({
@@ -73,8 +138,61 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
   const [listPrice, setListPrice] = useState("0.00");
   const [salePrice, setSalePrice] = useState("");
   const [currency, setCurrency] = useState("USD");
-  const [isbnError, setIsbnError] = useState("");
-  const [asinError, setAsinError] = useState("");
+
+  // Touched state tracking — errors only show after user interaction or submit
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  // Recompute all errors whenever form state changes
+  const computeErrors = useCallback((): FieldErrors => {
+    const errors: FieldErrors = {};
+
+    const titleErr = validateTitle(form.title || "");
+    if (titleErr) errors.title = titleErr;
+
+    const descErr = validateDescription(form.description || "");
+    if (descErr) errors.description = descErr;
+
+    const kwErr = validateKeywords(keywordsInput);
+    if (kwErr) errors.keywords = kwErr;
+
+    const catErr = validateCategories(categoriesInput);
+    if (catErr) errors.categories = catErr;
+
+    const isbnErr = validateISBN(form.isbn || "");
+    if (isbnErr) errors.isbn = isbnErr;
+
+    const asinErr = validateASIN(form.asin || "");
+    if (asinErr) errors.asin = asinErr;
+
+    const listPriceErr = validatePrice(listPrice, "List price", false);
+    if (listPriceErr) errors.listPrice = listPriceErr;
+
+    const salePriceErr = validatePrice(salePrice, "Sale price", false);
+    if (salePriceErr) errors.salePrice = salePriceErr;
+
+    return errors;
+  }, [form.title, form.description, form.isbn, form.asin, keywordsInput, categoriesInput, listPrice, salePrice]);
+
+  useEffect(() => {
+    setFieldErrors(computeErrors());
+  }, [computeErrors]);
+
+  const hasErrors = Object.keys(fieldErrors).length > 0;
+
+  // Helper: should we show an error for a given field?
+  const showError = (field: string): boolean =>
+    !!(fieldErrors[field] && (touched[field] || submitAttempted));
+
+  const errorClass = (field: string): string =>
+    showError(field)
+      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+      : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500";
 
   useEffect(() => {
     if (metadata) {
@@ -100,35 +218,23 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
       setListPrice(String(metadata.pricing?.list_price ?? "0.00"));
       setSalePrice(metadata.pricing?.sale_price != null ? String(metadata.pricing.sale_price) : "");
       setCurrency(metadata.pricing?.currency || "USD");
+      // Reset validation state when metadata loads
+      setTouched({});
+      setSubmitAttempted(false);
     }
   }, [metadata]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
 
-    // Validate ISBN if provided
-    if (form.isbn && form.isbn.trim() !== "" && !isValidISBN(form.isbn)) {
-      setIsbnError("Invalid ISBN format. Must be a valid ISBN-10 or ISBN-13.");
-      toast.error("Invalid ISBN format");
-      return;
-    }
-    setIsbnError("");
+    const errors = computeErrors();
+    setFieldErrors(errors);
 
-    // Validate ASIN if provided
-    if (form.asin && form.asin.trim() !== "" && !isValidASIN(form.asin)) {
-      setAsinError("Invalid ASIN format. Must be 10 alphanumeric characters.");
-      toast.error("Invalid ASIN format");
-      return;
-    }
-    setAsinError("");
-
-    // Validate keyword count
-    const keywords = keywordsInput
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (keywords.length > MAX_KEYWORDS) {
-      toast.error(`Maximum ${MAX_KEYWORDS} keywords allowed`);
+    if (Object.keys(errors).length > 0) {
+      // Show the first error as a toast
+      const firstError = Object.values(errors)[0];
+      toast.error(firstError);
       return;
     }
 
@@ -154,7 +260,10 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
     };
 
     updateMetadata.mutate(payload, {
-      onSuccess: () => toast.success("Metadata saved successfully"),
+      onSuccess: () => {
+        toast.success("Metadata saved successfully");
+        setSubmitAttempted(false);
+      },
       onError: () => toast.error("Failed to save metadata"),
     });
   };
@@ -179,9 +288,20 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
               type="text"
               value={form.title || ""}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              onBlur={() => markTouched("title")}
+              maxLength={MAX_TITLE_LENGTH}
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("title")}`}
             />
+            <div className="flex justify-between mt-1">
+              {showError("title") ? (
+                <p className="text-xs text-red-500">{fieldErrors.title}</p>
+              ) : (
+                <span />
+              )}
+              <p className="text-xs text-gray-400">
+                {(form.title || "").length}/{MAX_TITLE_LENGTH}
+              </p>
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
@@ -197,9 +317,27 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
             <textarea
               value={form.description || ""}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onBlur={() => markTouched("description")}
+              maxLength={MAX_DESCRIPTION_LENGTH}
               rows={5}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("description")}`}
             />
+            <div className="flex justify-between mt-1">
+              {showError("description") ? (
+                <p className="text-xs text-red-500">{fieldErrors.description}</p>
+              ) : (
+                <span />
+              )}
+              <p
+                className={`text-xs ${
+                  (form.description || "").length >= MAX_DESCRIPTION_LENGTH
+                    ? "text-red-500 font-medium"
+                    : "text-gray-400"
+                }`}
+              >
+                {(form.description || "").length}/{MAX_DESCRIPTION_LENGTH}
+              </p>
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -253,45 +391,56 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
             <input
               type="text"
               value={keywordsInput}
-              onChange={(e) => {
-                const newKeywords = e.target.value
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean);
-                if (newKeywords.length > MAX_KEYWORDS) {
-                  toast.error(`Maximum ${MAX_KEYWORDS} keywords allowed`);
-                  return;
-                }
-                setKeywordsInput(e.target.value);
-              }}
+              onChange={(e) => setKeywordsInput(e.target.value)}
+              onBlur={() => markTouched("keywords")}
               placeholder="thriller, suspense, mystery, detective"
-              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
-                keywordsInput.split(",").filter((k) => k.trim()).length > MAX_KEYWORDS
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-              }`}
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("keywords")}`}
             />
-            <p
-              className={`mt-1 text-xs ${
-                keywordsInput.split(",").filter((k) => k.trim()).length >= MAX_KEYWORDS
-                  ? "text-red-500 font-medium"
-                  : "text-gray-400"
-              }`}
-            >
-              {keywordsInput.split(",").filter((k) => k.trim()).length}/{MAX_KEYWORDS} keywords
-            </p>
+            <div className="flex justify-between mt-1">
+              {showError("keywords") ? (
+                <p className="text-xs text-red-500">{fieldErrors.keywords}</p>
+              ) : (
+                <span />
+              )}
+              <p
+                className={`text-xs ${
+                  keywordsInput.split(",").filter((k) => k.trim()).length >= MAX_KEYWORDS
+                    ? "text-red-500 font-medium"
+                    : "text-gray-400"
+                }`}
+              >
+                {keywordsInput.split(",").filter((k) => k.trim()).length}/{MAX_KEYWORDS} keywords
+              </p>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categories (comma-separated)
+              Categories (comma-separated, max {MAX_CATEGORIES})
             </label>
             <input
               type="text"
               value={categoriesInput}
               onChange={(e) => setCategoriesInput(e.target.value)}
+              onBlur={() => markTouched("categories")}
               placeholder="Fiction > Thriller, Fiction > Mystery"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("categories")}`}
             />
+            <div className="flex justify-between mt-1">
+              {showError("categories") ? (
+                <p className="text-xs text-red-500">{fieldErrors.categories}</p>
+              ) : (
+                <span />
+              )}
+              <p
+                className={`text-xs ${
+                  categoriesInput.split(",").filter((c) => c.trim()).length >= MAX_CATEGORIES
+                    ? "text-red-500 font-medium"
+                    : "text-gray-400"
+                }`}
+              >
+                {categoriesInput.split(",").filter((c) => c.trim()).length}/{MAX_CATEGORIES} categories
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -305,19 +454,15 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
             <input
               type="text"
               value={form.isbn || ""}
-              onChange={(e) => {
-                setForm({ ...form, isbn: e.target.value });
-                if (isbnError) setIsbnError("");
-              }}
+              onChange={(e) => setForm({ ...form, isbn: e.target.value })}
+              onBlur={() => markTouched("isbn")}
               placeholder="978-0-123456-47-2"
-              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
-                isbnError
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-              }`}
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("isbn")}`}
             />
-            {isbnError && (
-              <p className="mt-1 text-xs text-red-500">{isbnError}</p>
+            {showError("isbn") ? (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.isbn}</p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-400">10 or 13 digits, with optional hyphens</p>
             )}
           </div>
           <div>
@@ -325,19 +470,13 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
             <input
               type="text"
               value={form.asin || ""}
-              onChange={(e) => {
-                setForm({ ...form, asin: e.target.value });
-                if (asinError) setAsinError("");
-              }}
+              onChange={(e) => setForm({ ...form, asin: e.target.value })}
+              onBlur={() => markTouched("asin")}
               placeholder="B0XXXXXXXXX"
-              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
-                asinError
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-              }`}
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("asin")}`}
             />
-            {asinError ? (
-              <p className="mt-1 text-xs text-red-500">{asinError}</p>
+            {showError("asin") ? (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.asin}</p>
             ) : (
               <p className="mt-1 text-xs text-gray-400">10 alphanumeric characters (e.g., B0XXXXXXXXX)</p>
             )}
@@ -399,8 +538,12 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
               min="0"
               value={listPrice}
               onChange={(e) => setListPrice(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              onBlur={() => markTouched("listPrice")}
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("listPrice")}`}
             />
+            {showError("listPrice") && (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.listPrice}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
@@ -410,9 +553,13 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
               min="0"
               value={salePrice}
               onChange={(e) => setSalePrice(e.target.value)}
+              onBlur={() => markTouched("salePrice")}
               placeholder="Optional"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${errorClass("salePrice")}`}
             />
+            {showError("salePrice") && (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.salePrice}</p>
+            )}
           </div>
         </div>
       </section>
@@ -450,8 +597,8 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
       <div className="flex justify-end border-t border-gray-200 pt-6">
         <button
           type="submit"
-          disabled={updateMetadata.isPending}
-          className="rounded-md bg-indigo-600 px-6 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          disabled={updateMetadata.isPending || hasErrors}
+          className="rounded-md bg-indigo-600 px-6 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {updateMetadata.isPending ? "Saving..." : "Save Metadata"}
         </button>

@@ -1,4 +1,4 @@
-"""Tests for Portfolio Economics module — router endpoints, services, and schemas.
+"""Tests for Portfolio Economics module -- router endpoints, services, and schemas.
 
 Covers:
 - Portfolio overview, greenlight, kill/scale, backlist, recommendations (portfolio_router)
@@ -7,11 +7,75 @@ Covers:
 """
 from __future__ import annotations
 
+import uuid
+
 import pytest
+import pytest_asyncio
 from datetime import date, timedelta
 from uuid import uuid4
+from unittest.mock import AsyncMock, MagicMock
 
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+
+from app.main import create_app
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def org_id():
+    return uuid.uuid4()
+
+
+@pytest.fixture
+def user_id():
+    return uuid.uuid4()
+
+
+@pytest.fixture
+def mock_user(org_id, user_id):
+    return {"user_id": user_id, "org_id": org_id, "role": "owner"}
+
+
+@pytest.fixture
+def mock_db():
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    db.close = AsyncMock()
+
+    # Mock execute to return empty results for DB queries
+    mock_result = MagicMock()
+    mock_scalars = MagicMock()
+    mock_scalars.all.return_value = []
+    mock_result.scalars.return_value = mock_scalars
+    mock_result.all.return_value = []
+    db.execute = AsyncMock(return_value=mock_result)
+
+    return db
+
+
+@pytest_asyncio.fixture
+async def client(mock_db, mock_user) -> AsyncClient:
+    """Yield an HTTP test client with auth and DB dependency overrides."""
+    app = create_app()
+
+    from app.database import get_db
+    from app.core.dependencies import get_current_user
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -24,8 +88,7 @@ class TestPortfolioOverviewEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_portfolio_overview_success(self, client: AsyncClient) -> None:
-        org_id = str(uuid4())
-        resp = await client.get("/api/v1/portfolio", params={"org_id": org_id})
+        resp = await client.get("/api/v1/portfolio")
         assert resp.status_code == 200
         body = resp.json()
         data = body["data"]
@@ -38,9 +101,12 @@ class TestPortfolioOverviewEndpoint:
         assert "genre_distribution" in data
 
     @pytest.mark.asyncio
-    async def test_portfolio_overview_requires_org_id(self, client: AsyncClient) -> None:
+    async def test_portfolio_overview_returns_empty_portfolio(self, client: AsyncClient) -> None:
+        """With no books in mock DB, should return an empty portfolio overview."""
         resp = await client.get("/api/v1/portfolio")
-        assert resp.status_code == 422
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["total_books"] == 0
 
 
 class TestGreenlightEndpoint:
@@ -180,11 +246,7 @@ class TestRecommendationsEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_recommendations(self, client: AsyncClient) -> None:
-        org_id = str(uuid4())
-        resp = await client.get(
-            "/api/v1/portfolio/recommendations",
-            params={"org_id": org_id},
-        )
+        resp = await client.get("/api/v1/portfolio/recommendations")
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert isinstance(data, list)

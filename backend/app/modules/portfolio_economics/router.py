@@ -1,10 +1,16 @@
 """FastAPI router for Portfolio Economics, Audience DNA, and Seasonal Calendar endpoints."""
-from datetime import date
-from uuid import UUID, uuid4
+from datetime import date, datetime, timedelta, timezone
+from uuid import UUID
 from typing import Optional
 
-from fastapi import APIRouter, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
+from app.database import get_db
+from app.models.project import Book, BookStatus, Project
+from app.modules.analytics.models import RoyaltyRecord
 from app.schemas.responses import SuccessResponse
 from app.core.pagination import PaginatedResponse
 from app.modules.portfolio_economics.schemas import (
@@ -68,40 +74,87 @@ seasonal_router = APIRouter(prefix="/seasonal", tags=["seasonal"])
     description="Get portfolio overview with total books, revenue, ROI, and projections.",
 )
 async def get_portfolio_overview(
-    org_id: UUID = Query(..., description="Organization ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
-    """Get portfolio overview for an organization.
+    """Get portfolio overview for the authenticated user's organization."""
+    org_id: UUID = current_user["org_id"]
 
-    In production, this would query the database for all books and metrics.
-    Here we return a representative overview.
-    """
-    # ASSUMPTION: In production, this queries portfolio_metrics and royalty_records tables
-    sample_books = [
-        {
-            "book_id": uuid4(),
-            "title": "Sample Book 1",
-            "genre": "romance",
-            "monthly_revenue": 450.0,
-            "monthly_units": 90,
-            "total_revenue": 5400.0,
-            "total_investment": 800.0,
-            "launch_date": date(2024, 1, 15),
-            "status": "active",
-        },
-        {
-            "book_id": uuid4(),
-            "title": "Sample Book 2",
-            "genre": "thriller",
-            "monthly_revenue": 280.0,
-            "monthly_units": 55,
-            "total_revenue": 3360.0,
-            "total_investment": 600.0,
-            "launch_date": date(2024, 6, 1),
-            "status": "active",
-        },
-    ]
+    # Fetch all books belonging to org projects (Book -> Project -> org_id)
+    books_query = (
+        select(Book)
+        .join(Project, Book.project_id == Project.id)
+        .where(
+            Project.org_id == org_id,
+            Book.deleted_at.is_(None),
+            Project.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(books_query)
+    books = result.scalars().all()
 
-    overview = build_portfolio_overview(org_id, sample_books)
+    if not books:
+        overview = build_portfolio_overview(org_id, [])
+        return SuccessResponse(data=overview)
+
+    book_ids = [b.id for b in books]
+
+    # Aggregate total royalty revenue per book from royalty_records
+    total_royalty_query = (
+        select(
+            RoyaltyRecord.book_id,
+            func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("total_revenue"),
+            func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("total_units"),
+        )
+        .where(
+            RoyaltyRecord.org_id == org_id,
+            RoyaltyRecord.book_id.in_(book_ids),
+            RoyaltyRecord.deleted_at.is_(None),
+        )
+        .group_by(RoyaltyRecord.book_id)
+    )
+    total_result = await db.execute(total_royalty_query)
+    total_by_book = {row.book_id: row for row in total_result.all()}
+
+    # Aggregate last-30-day royalty revenue per book for monthly metrics
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    monthly_royalty_query = (
+        select(
+            RoyaltyRecord.book_id,
+            func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("monthly_revenue"),
+            func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("monthly_units"),
+        )
+        .where(
+            RoyaltyRecord.org_id == org_id,
+            RoyaltyRecord.book_id.in_(book_ids),
+            RoyaltyRecord.deleted_at.is_(None),
+            RoyaltyRecord.period_start >= thirty_days_ago,
+        )
+        .group_by(RoyaltyRecord.book_id)
+    )
+    monthly_result = await db.execute(monthly_royalty_query)
+    monthly_by_book = {row.book_id: row for row in monthly_result.all()}
+
+    # Build book data dicts for the portfolio service
+    book_data_list = []
+    for book in books:
+        totals = total_by_book.get(book.id)
+        monthly = monthly_by_book.get(book.id)
+        metadata = book.metadata_ or {}
+
+        book_data_list.append({
+            "book_id": book.id,
+            "title": book.title,
+            "genre": metadata.get("genre", "Unknown"),
+            "monthly_revenue": float(monthly.monthly_revenue) if monthly else 0.0,
+            "monthly_units": int(monthly.monthly_units) if monthly else 0,
+            "total_revenue": float(totals.total_revenue) if totals else 0.0,
+            "total_investment": float(metadata.get("production_cost", 0)),
+            "launch_date": metadata.get("launch_date"),
+            "status": "active" if book.status == BookStatus.PUBLISHED else book.status.value,
+        })
+
+    overview = build_portfolio_overview(org_id, book_data_list)
     return SuccessResponse(data=overview)
 
 
@@ -168,23 +221,87 @@ async def backlist_projection(
     description="AI recommendations for portfolio optimization.",
 )
 async def get_recommendations(
-    org_id: UUID = Query(..., description="Organization ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Get AI-powered portfolio optimization recommendations."""
-    # Build overview first (in production, from DB)
-    sample_books = [
-        {
-            "book_id": uuid4(),
-            "title": "Sample Book 1",
-            "genre": "romance",
-            "monthly_revenue": 450.0,
-            "monthly_units": 90,
-            "total_revenue": 5400.0,
-            "total_investment": 800.0,
-            "status": "active",
-        },
-    ]
-    overview = build_portfolio_overview(org_id, sample_books)
+    org_id: UUID = current_user["org_id"]
+
+    # Fetch all books belonging to org projects
+    books_query = (
+        select(Book)
+        .join(Project, Book.project_id == Project.id)
+        .where(
+            Project.org_id == org_id,
+            Book.deleted_at.is_(None),
+            Project.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(books_query)
+    books = result.scalars().all()
+
+    if not books:
+        overview = build_portfolio_overview(org_id, [])
+        recommendations = generate_portfolio_recommendations(overview)
+        return SuccessResponse(data=recommendations)
+
+    book_ids = [b.id for b in books]
+
+    # Aggregate total royalty revenue per book
+    total_royalty_query = (
+        select(
+            RoyaltyRecord.book_id,
+            func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("total_revenue"),
+            func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("total_units"),
+        )
+        .where(
+            RoyaltyRecord.org_id == org_id,
+            RoyaltyRecord.book_id.in_(book_ids),
+            RoyaltyRecord.deleted_at.is_(None),
+        )
+        .group_by(RoyaltyRecord.book_id)
+    )
+    total_result = await db.execute(total_royalty_query)
+    total_by_book = {row.book_id: row for row in total_result.all()}
+
+    # Aggregate last-30-day royalty revenue per book
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    monthly_royalty_query = (
+        select(
+            RoyaltyRecord.book_id,
+            func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("monthly_revenue"),
+            func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("monthly_units"),
+        )
+        .where(
+            RoyaltyRecord.org_id == org_id,
+            RoyaltyRecord.book_id.in_(book_ids),
+            RoyaltyRecord.deleted_at.is_(None),
+            RoyaltyRecord.period_start >= thirty_days_ago,
+        )
+        .group_by(RoyaltyRecord.book_id)
+    )
+    monthly_result = await db.execute(monthly_royalty_query)
+    monthly_by_book = {row.book_id: row for row in monthly_result.all()}
+
+    # Build book data dicts
+    book_data_list = []
+    for book in books:
+        totals = total_by_book.get(book.id)
+        monthly = monthly_by_book.get(book.id)
+        metadata = book.metadata_ or {}
+
+        book_data_list.append({
+            "book_id": book.id,
+            "title": book.title,
+            "genre": metadata.get("genre", "Unknown"),
+            "monthly_revenue": float(monthly.monthly_revenue) if monthly else 0.0,
+            "monthly_units": int(monthly.monthly_units) if monthly else 0,
+            "total_revenue": float(totals.total_revenue) if totals else 0.0,
+            "total_investment": float(metadata.get("production_cost", 0)),
+            "status": "active" if book.status == BookStatus.PUBLISHED else book.status.value,
+        })
+
+    overview = build_portfolio_overview(org_id, book_data_list)
     recommendations = generate_portfolio_recommendations(overview)
     return SuccessResponse(data=recommendations)
 
@@ -200,7 +317,7 @@ async def get_recommendations(
 )
 async def analyze_audience(request: AudienceAnalyzeRequest):
     """Build audience personas from genre and book data."""
-    personas = build_audience_personas(request)
+    personas = await build_audience_personas(request)
     return SuccessResponse(data=personas)
 
 
@@ -216,7 +333,7 @@ async def get_personas(
 ):
     """Get reader personas for a specific book."""
     request = AudienceAnalyzeRequest(book_id=book_id, genre=genre)
-    personas = build_audience_personas(request)
+    personas = await build_audience_personas(request)
     return SuccessResponse(data=personas)
 
 
@@ -231,7 +348,7 @@ async def get_also_bought(
     genre: str = Query("romance", description="Book genre"),
 ):
     """Get also-bought intelligence for a book."""
-    result = build_also_bought_intelligence(book_id, genre)
+    result = await build_also_bought_intelligence(book_id, genre)
     return SuccessResponse(data=result)
 
 
@@ -246,7 +363,7 @@ async def audience_growth(
     days: int = Query(90, ge=7, le=365, description="Number of days to track"),
 ):
     """Get audience growth tracking data."""
-    result = get_audience_growth(org_id, days)
+    result = await get_audience_growth(org_id, days)
     return SuccessResponse(data=result)
 
 

@@ -99,6 +99,7 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 aria-label={collapsed ? item.label : undefined}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md text-sm font-medium transition-colors",
                   collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
@@ -138,6 +139,7 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 aria-label={collapsed ? item.label : undefined}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md text-sm font-medium transition-colors",
                   collapsed ? "justify-center px-2 py-2" : "px-3 py-2",

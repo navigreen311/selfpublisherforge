@@ -136,7 +136,7 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
           wait-for-minutes: 15
-          codedeploy-appspec: infra/appspec.json
+          codedeploy-appspec: infra/appspec.yml
           codedeploy-application: selfpublisherforge-production
           codedeploy-deployment-group: selfpublisherforge-api-production-dg
 

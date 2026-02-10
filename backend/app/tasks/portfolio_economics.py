@@ -11,6 +11,8 @@ from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.database import async_session
 from app.tasks import celery_app
 
@@ -240,7 +242,8 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                 result["completed_at"] = datetime.now(timezone.utc).isoformat()
                 return result
 
-            except Exception:
+            except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+                logger.error("DB error during portfolio snapshot for org %s: %s", org_id, exc, exc_info=True)
                 await db.rollback()
                 raise
 
@@ -260,6 +263,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
         logger.error(
             "Failed to snapshot portfolio metrics for org %s: %s",
             org_id, str(exc),
+            exc_info=True,
         )
         raise self.retry(exc=exc)
 
@@ -394,7 +398,8 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
                     "completed_at": datetime.now(timezone.utc).isoformat(),
                 }
 
-            except Exception:
+            except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+                logger.error("DB error during audience refresh for org %s: %s", org_id, exc, exc_info=True)
                 await db.rollback()
                 raise
 
@@ -413,6 +418,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
         logger.error(
             "Failed to refresh audience data for org %s: %s",
             org_id, str(exc),
+            exc_info=True,
         )
         raise self.retry(exc=exc)
 
@@ -627,7 +633,8 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
                     "completed_at": datetime.now(timezone.utc).isoformat(),
                 }
 
-            except Exception:
+            except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+                logger.error("DB error during kill/scale alert generation for org %s: %s", org_id, exc, exc_info=True)
                 await db.rollback()
                 raise
 
@@ -646,6 +653,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
         logger.error(
             "Failed to generate kill/scale alerts for org %s: %s",
             org_id, str(exc),
+            exc_info=True,
         )
         raise self.retry(exc=exc)
 
@@ -735,7 +743,8 @@ def update_seasonal_calendar(self) -> dict:
                     "completed_at": datetime.now(timezone.utc).isoformat(),
                 }
 
-            except Exception:
+            except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+                logger.error("DB error during seasonal calendar update: %s", exc, exc_info=True)
                 await db.rollback()
                 raise
 
@@ -750,7 +759,7 @@ def update_seasonal_calendar(self) -> dict:
         return result
 
     except Exception as exc:
-        logger.error("Failed to update seasonal calendar: %s", str(exc))
+        logger.error("Failed to update seasonal calendar: %s", str(exc), exc_info=True)
         raise self.retry(exc=exc)
 
 

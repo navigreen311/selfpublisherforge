@@ -6,6 +6,33 @@ import { useCampaigns, useCreateCampaign } from "@/modules/advertising/hooks";
 import { CampaignCard } from "@/modules/advertising/components/CampaignCard";
 import { toast } from "sonner";
 
+// ---------------------------------------------------------------------------
+// Validation helpers
+// ---------------------------------------------------------------------------
+
+function getCampaignNameError(value: string, touched: boolean): string | undefined {
+  if (!touched) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return "Campaign name is required.";
+  if (trimmed.length < 2) return "Campaign name must be at least 2 characters.";
+  if (trimmed.length > 100) return "Campaign name must be 100 characters or fewer.";
+  return undefined;
+}
+
+function getDailyBudgetError(value: number, touched: boolean): string | undefined {
+  if (!touched) return undefined;
+  if (value <= 0) return "Daily budget must be a positive number.";
+  if (value > 50000) return "Daily budget cannot exceed $50,000.";
+  return undefined;
+}
+
+function getTargetAcosError(value: number, touched: boolean): string | undefined {
+  if (!touched) return undefined;
+  if (value < 0) return "Target ACOS cannot be negative.";
+  if (value > 100) return "Target ACOS cannot exceed 100%.";
+  return undefined;
+}
+
 export default function CampaignsListPage() {
   const [platformFilter, setPlatformFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -28,11 +55,29 @@ export default function CampaignsListPage() {
     targeting_keywords: "",
   });
 
+  // -- Touched state for inline validation --
+  const [touchedName, setTouchedName] = useState(false);
+  const [touchedBudget, setTouchedBudget] = useState(false);
+  const [touchedAcos, setTouchedAcos] = useState(false);
+
+  const nameError = getCampaignNameError(newCampaign.name, touchedName);
+  const budgetError = getDailyBudgetError(newCampaign.daily_budget, touchedBudget);
+  const acosError = getTargetAcosError(newCampaign.target_acos, touchedAcos);
+
+  // Form is valid when there are no errors (checked ignoring touched state)
+  const isFormValid =
+    !getCampaignNameError(newCampaign.name, true) &&
+    !getDailyBudgetError(newCampaign.daily_budget, true) &&
+    !getTargetAcosError(newCampaign.target_acos, true);
+
   const handleCreate = async () => {
-    if (!newCampaign.name) {
-      toast.error("Campaign name is required");
-      return;
-    }
+    // Mark all fields as touched to reveal any remaining errors
+    setTouchedName(true);
+    setTouchedBudget(true);
+    setTouchedAcos(true);
+
+    if (!isFormValid) return;
+
     try {
       await createCampaign.mutateAsync({
         ...newCampaign,
@@ -52,6 +97,9 @@ export default function CampaignsListPage() {
         target_acos: 30,
         targeting_keywords: "",
       });
+      setTouchedName(false);
+      setTouchedBudget(false);
+      setTouchedAcos(false);
     } catch {
       toast.error("Failed to create campaign");
     }
@@ -74,7 +122,24 @@ export default function CampaignsListPage() {
             Dashboard
           </Link>
           <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
+            onClick={() => {
+              if (showCreateForm) {
+                // Closing -- reset form and touched state
+                setNewCampaign({
+                  name: "",
+                  platform: "amazon",
+                  campaign_type: "sponsored_products",
+                  daily_budget: 25,
+                  bid_strategy: "manual",
+                  target_acos: 30,
+                  targeting_keywords: "",
+                });
+                setTouchedName(false);
+                setTouchedBudget(false);
+                setTouchedAcos(false);
+              }
+              setShowCreateForm(!showCreateForm);
+            }}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90"
           >
             {showCreateForm ? "Cancel" : "Create Campaign"}
@@ -91,13 +156,19 @@ export default function CampaignsListPage() {
               <label className="block text-sm font-medium mb-1">Name *</label>
               <input
                 type="text"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className={`w-full border rounded-lg px-3 py-2 text-sm ${
+                  nameError ? "border-red-500 focus:ring-red-500" : ""
+                }`}
                 value={newCampaign.name}
                 onChange={(e) =>
                   setNewCampaign((prev) => ({ ...prev, name: e.target.value }))
                 }
+                onBlur={() => setTouchedName(true)}
                 placeholder="Campaign name"
               />
+              {nameError && (
+                <p className="mt-1 text-sm text-red-600">{nameError}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Platform</label>
@@ -133,12 +204,14 @@ export default function CampaignsListPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Daily Budget ($)</label>
+              <label className="block text-sm font-medium mb-1">Daily Budget ($) *</label>
               <input
                 type="number"
                 min="1"
                 step="1"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className={`w-full border rounded-lg px-3 py-2 text-sm ${
+                  budgetError ? "border-red-500 focus:ring-red-500" : ""
+                }`}
                 value={newCampaign.daily_budget}
                 onChange={(e) =>
                   setNewCampaign((prev) => ({
@@ -146,7 +219,11 @@ export default function CampaignsListPage() {
                     daily_budget: parseFloat(e.target.value) || 0,
                   }))
                 }
+                onBlur={() => setTouchedBudget(true)}
               />
+              {budgetError && (
+                <p className="mt-1 text-sm text-red-600">{budgetError}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Bid Strategy</label>
@@ -173,7 +250,9 @@ export default function CampaignsListPage() {
                 min="0"
                 max="100"
                 step="1"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className={`w-full border rounded-lg px-3 py-2 text-sm ${
+                  acosError ? "border-red-500 focus:ring-red-500" : ""
+                }`}
                 value={newCampaign.target_acos}
                 onChange={(e) =>
                   setNewCampaign((prev) => ({
@@ -181,7 +260,11 @@ export default function CampaignsListPage() {
                     target_acos: parseFloat(e.target.value) || 0,
                   }))
                 }
+                onBlur={() => setTouchedAcos(true)}
               />
+              {acosError && (
+                <p className="mt-1 text-sm text-red-600">{acosError}</p>
+              )}
             </div>
             <div className="md:col-span-2 lg:col-span-3">
               <label className="block text-sm font-medium mb-1">
@@ -203,8 +286,8 @@ export default function CampaignsListPage() {
           </div>
           <button
             onClick={handleCreate}
-            disabled={createCampaign.isPending}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
+            disabled={createCampaign.isPending || !isFormValid}
+            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {createCampaign.isPending ? "Creating..." : "Create Campaign"}
           </button>

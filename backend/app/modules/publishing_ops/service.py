@@ -11,6 +11,7 @@ All functions accept an ``AsyncSession`` as first parameter for DB access.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -48,6 +49,13 @@ from app.modules.publishing_ops.schemas import (
 from app.modules.publishing_ops.epub_generator import generate_epub
 from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.templates import get_all_templates
+from app.tasks.publishing_ops import (
+    task_generate_epub,
+    task_generate_pdf,
+    task_sync_listing as celery_sync_listing,
+)
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -161,55 +169,127 @@ async def generate_export(
     language: str = "en",
     style_settings: TemplateStyleSettings | None = None,
 ) -> ExportResponse:
-    """Kick off an export job and return a response with status.
+    """Kick off an export job by dispatching a Celery task.
 
-    In production this would queue a Celery task. Here we perform the
-    generation synchronously for demonstration purposes.
+    Creates a pending export record in the database, then queues the
+    appropriate Celery task (EPUB or PDF) for asynchronous generation.
+    If the Celery broker is unavailable, falls back to synchronous
+    generation so the caller still receives a result.
     """
-    if request.format == ExportFormat.EPUB:
-        data = generate_epub(
-            request,
-            title=title,
-            authors=authors,
-            language=language,
-            style_settings=style_settings,
-        )
-    else:
-        data = generate_pdf_bytes(
-            request,
-            title=title,
-            authors=authors,
-            style_settings=style_settings,
-        )
-
     fmt_str = request.format.value if hasattr(request.format, "value") else str(request.format)
 
-    # Persist the export job
+    # Persist the export job up front with "processing" status
     export_job = ExportJob(
         org_id=org_id,
         book_id=request.book_id,
         format=fmt_str,
-        status="completed",
-        file_url=f"/exports/{uuid.uuid4()}.{fmt_str}",
-        file_size_bytes=len(data),
+        status="processing",
+        file_url=None,
+        file_size_bytes=None,
         page_count=None,
-        message=f"{fmt_str.upper()} export completed successfully",
+        message=f"{fmt_str.upper()} export queued for processing",
     )
     db.add(export_job)
     await db.flush()
     await db.refresh(export_job)
 
-    return ExportResponse(
-        id=export_job.id,
-        book_id=export_job.book_id,
-        format=request.format,
-        status=export_job.status,
-        file_url=export_job.file_url,
-        file_size_bytes=export_job.file_size_bytes,
-        page_count=export_job.page_count,
-        created_at=export_job.created_at,
-        message=export_job.message or "",
-    )
+    # Serialise chapters so they can cross the Celery wire as plain dicts
+    chapters_serialised = [ch.model_dump() for ch in request.chapters]
+    style_dict = style_settings.model_dump() if style_settings else None
+    export_id_str = str(export_job.id)
+    book_id_str = str(request.book_id)
+
+    try:
+        if request.format == ExportFormat.EPUB:
+            result = task_generate_epub.delay(
+                export_id=export_id_str,
+                book_id=book_id_str,
+                chapters=chapters_serialised,
+                title=title,
+                authors=authors,
+                language=language,
+                style_settings=style_dict,
+                include_toc=request.include_toc,
+                include_cover=request.include_cover,
+                cover_image_url=request.cover_image_url,
+            )
+        else:
+            trim_str = request.trim_size.value if hasattr(request.trim_size, "value") else str(request.trim_size)
+            result = task_generate_pdf.delay(
+                export_id=export_id_str,
+                book_id=book_id_str,
+                chapters=chapters_serialised,
+                title=title,
+                authors=authors,
+                trim_size=trim_str,
+                isbn=request.isbn,
+                include_isbn_barcode=request.include_isbn_barcode,
+                style_settings=style_dict,
+            )
+
+        # Store the Celery task ID in the message for caller tracking
+        export_job.message = f"Celery task dispatched: {result.id}"
+        await db.flush()
+
+        logger.info(
+            "Export task dispatched: export_id=%s, celery_task_id=%s, format=%s",
+            export_id_str, result.id, fmt_str,
+        )
+
+        return ExportResponse(
+            id=export_job.id,
+            book_id=export_job.book_id,
+            format=request.format,
+            status="processing",
+            file_url=None,
+            file_size_bytes=None,
+            page_count=None,
+            created_at=export_job.created_at,
+            message=f"Export queued (task_id={result.id})",
+        )
+
+    except Exception as exc:
+        # Celery broker is unreachable -- fall back to synchronous generation
+        logger.warning(
+            "Celery broker unavailable, falling back to synchronous export "
+            "for export_id=%s: %s",
+            export_id_str, exc,
+        )
+
+        if request.format == ExportFormat.EPUB:
+            data = generate_epub(
+                request,
+                title=title,
+                authors=authors,
+                language=language,
+                style_settings=style_settings,
+            )
+        else:
+            data = generate_pdf_bytes(
+                request,
+                title=title,
+                authors=authors,
+                style_settings=style_settings,
+            )
+
+        export_job.status = "completed"
+        export_job.file_url = f"/exports/{uuid.uuid4()}.{fmt_str}"
+        export_job.file_size_bytes = len(data)
+        export_job.message = f"{fmt_str.upper()} export completed synchronously (broker unavailable)"
+        await db.flush()
+        await db.refresh(export_job)
+
+        return ExportResponse(
+            id=export_job.id,
+            book_id=export_job.book_id,
+            format=request.format,
+            status=export_job.status,
+            file_url=export_job.file_url,
+            file_size_bytes=export_job.file_size_bytes,
+            page_count=export_job.page_count,
+            created_at=export_job.created_at,
+            message=export_job.message or "",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -443,10 +523,12 @@ async def list_listings(db: AsyncSession, org_id: uuid.UUID) -> list[ListingDeta
 
 
 async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncResponse:
-    """Queue a sync job for a specific listing.
+    """Queue a Celery task to sync a listing with its external platform.
 
-    In production this would enqueue a Celery task to fetch data from the
-    platform API and update the listing record.
+    Looks up the listing to determine its platform, then dispatches the
+    ``task_sync_listing`` Celery task. If the broker is unreachable the
+    listing is still marked with an updated ``last_synced`` timestamp
+    and the caller receives a degraded but functional response.
     """
     stmt = (
         select(ListingModel)
@@ -458,13 +540,50 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
     result = await db.execute(stmt)
     listing = result.scalar_one_or_none()
 
-    if listing is not None:
+    if listing is None:
+        return ListingSyncResponse(
+            listing_id=listing_id,
+            status="not_found",
+            message="Listing not found",
+        )
+
+    # Determine the platform from listing data for the Celery task
+    listing_data = listing.listing_data or {}
+    platform = listing_data.get("platform", "unknown")
+    if hasattr(platform, "value"):
+        platform = platform.value
+
+    try:
+        celery_result = celery_sync_listing.delay(
+            listing_id=str(listing_id),
+            platform=platform,
+        )
+
+        logger.info(
+            "Listing sync task dispatched: listing_id=%s, celery_task_id=%s, platform=%s",
+            listing_id, celery_result.id, platform,
+        )
+
+        return ListingSyncResponse(
+            listing_id=listing_id,
+            status="sync_queued",
+            message=f"Listing sync queued (task_id={celery_result.id})",
+        )
+
+    except Exception as exc:
+        # Celery broker is unreachable -- perform inline fallback sync
+        logger.warning(
+            "Celery broker unavailable, falling back to inline sync "
+            "for listing_id=%s: %s",
+            listing_id, exc,
+        )
+
         listing.last_synced = _now()
         listing.status = ListingStatusEnum.LIVE
         await db.flush()
 
-    return ListingSyncResponse(
-        listing_id=listing_id,
-        status="sync_queued",
-        message="Listing sync has been queued",
-    )
+        return ListingSyncResponse(
+            listing_id=listing_id,
+            status="sync_queued",
+            message="Listing sync completed inline (broker unavailable)",
+        )

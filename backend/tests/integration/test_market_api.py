@@ -4,10 +4,56 @@ Uses FastAPI's TestClient (via httpx) to exercise every endpoint
 defined in the market intelligence router.
 """
 
+import uuid
+
 import pytest
-from httpx import AsyncClient
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+
+from app.core.dependencies import get_current_user
+from app.database import get_db
+from app.main import create_app
 
 BASE = "/api/v1/market"
+
+
+# ---------------------------------------------------------------------------
+# Auth override — all market endpoints now require get_current_user
+# ---------------------------------------------------------------------------
+
+
+def _mock_current_user():
+    return {
+        "user_id": uuid.UUID("00000000-0000-0000-0000-000000000001"),
+        "org_id": uuid.UUID("00000000-0000-0000-0000-000000000099"),
+        "role": "owner",
+    }
+
+
+@pytest_asyncio.fixture
+async def client(db_session):
+    """Authenticated HTTP test client with get_current_user overridden."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    async def _override_get_db():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _mock_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
 
 
 # ------------------------------------------------------------------

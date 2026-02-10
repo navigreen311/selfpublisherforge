@@ -53,6 +53,7 @@ from app.modules.analytics.schemas import (
     TrendData,
 )
 from app.core.pagination import CursorParams, PaginatedResponse
+from app.tasks.analytics import scheduled_report_generation
 
 logger = logging.getLogger(__name__)
 
@@ -256,10 +257,24 @@ async def create_report(
     )
     db.add(report)
     await db.flush()
+    await db.commit()
 
-    # Generate the report synchronously for now
-    # In production, this would be dispatched to a Celery task
-    report = await generate_report(db, report)
+    try:
+        task_result = scheduled_report_generation.delay(str(report.id))
+        logger.info(
+            "Dispatched report generation task for report_id=%s, celery_task_id=%s",
+            report.id,
+            task_result.id,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to dispatch Celery task for report_id=%s; "
+            "falling back to synchronous generation.",
+            report.id,
+        )
+        async with db.begin():
+            report = await generate_report(db, report)
+
     return ReportResponse.model_validate(report)
 
 

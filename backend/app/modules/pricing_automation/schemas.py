@@ -74,7 +74,7 @@ class PricingRuleBase(BaseModel):
 
 
 class PricingRuleCreate(PricingRuleBase):
-    pass
+    """Request body for creating a new pricing rule. Inherits all fields from PricingRuleBase."""
 
 
 class PricingRuleUpdate(BaseModel):

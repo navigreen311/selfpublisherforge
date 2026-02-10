@@ -392,10 +392,22 @@ class TestDeleteAccount:
 
 
 class TestGenerateExport:
-    """Tests for generate_export(db, org_id, request, ...)."""
+    """Tests for generate_export(db, org_id, request, ...).
+
+    The service dispatches Celery tasks for export generation.  When the
+    broker is unreachable (i.e. ``.delay()`` raises), it falls back to
+    synchronous generation.  We mock the Celery tasks so they always
+    raise, exercising the synchronous fallback path.
+    """
+
+    _CELERY_EPUB = "app.modules.publishing_ops.service.task_generate_epub"
+    _CELERY_PDF = "app.modules.publishing_ops.service.task_generate_pdf"
 
     @pytest.mark.asyncio
-    async def test_epub_export_returns_completed_response(self):
+    @patch("app.modules.publishing_ops.service.task_generate_epub")
+    async def test_epub_export_returns_completed_response(self, mock_epub_task):
+        mock_epub_task.delay.side_effect = RuntimeError("broker unavailable")
+
         db = _make_db()
         org_id = uuid.uuid4()
         book_id = uuid.uuid4()
@@ -430,7 +442,10 @@ class TestGenerateExport:
         assert result.file_size_bytes > 0
 
     @pytest.mark.asyncio
-    async def test_pdf_export_returns_completed_response(self):
+    @patch("app.modules.publishing_ops.service.task_generate_pdf")
+    async def test_pdf_export_returns_completed_response(self, mock_pdf_task):
+        mock_pdf_task.delay.side_effect = RuntimeError("broker unavailable")
+
         db = _make_db()
         org_id = uuid.uuid4()
         book_id = uuid.uuid4()
@@ -459,7 +474,10 @@ class TestGenerateExport:
         assert result.file_size_bytes > 0
 
     @pytest.mark.asyncio
-    async def test_export_with_empty_chapters(self):
+    @patch("app.modules.publishing_ops.service.task_generate_epub")
+    async def test_export_with_empty_chapters(self, mock_epub_task):
+        mock_epub_task.delay.side_effect = RuntimeError("broker unavailable")
+
         db = _make_db()
         org_id = uuid.uuid4()
 
@@ -483,7 +501,10 @@ class TestGenerateExport:
         assert result.file_size_bytes > 0
 
     @pytest.mark.asyncio
-    async def test_export_persists_job_record(self):
+    @patch("app.modules.publishing_ops.service.task_generate_epub")
+    async def test_export_persists_job_record(self, mock_epub_task):
+        mock_epub_task.delay.side_effect = RuntimeError("broker unavailable")
+
         db = _make_db()
         org_id = uuid.uuid4()
         book_id = uuid.uuid4()
@@ -512,11 +533,15 @@ class TestGenerateExport:
         assert job.book_id == book_id
         assert job.format == "epub"
         assert job.status == "completed"
-        db.flush.assert_awaited_once()
-        db.refresh.assert_awaited_once()
+        # The fallback path calls flush/refresh twice (initial persist + post-generation update)
+        assert db.flush.await_count == 2
+        assert db.refresh.await_count == 2
 
     @pytest.mark.asyncio
-    async def test_export_message_includes_format(self):
+    @patch("app.modules.publishing_ops.service.task_generate_pdf")
+    async def test_export_message_includes_format(self, mock_pdf_task):
+        mock_pdf_task.delay.side_effect = RuntimeError("broker unavailable")
+
         db = _make_db()
 
         request = ExportRequest(
@@ -967,10 +992,18 @@ class TestListListings:
 
 
 class TestSyncListing:
-    """Tests for sync_listing(db, listing_id)."""
+    """Tests for sync_listing(db, listing_id).
+
+    The service dispatches a Celery task for listing sync.  When the
+    broker is unreachable, it falls back to inline sync.  We mock the
+    Celery task so it raises, exercising the inline fallback path.
+    """
 
     @pytest.mark.asyncio
-    async def test_returns_sync_queued_response(self):
+    @patch("app.modules.publishing_ops.service.celery_sync_listing")
+    async def test_returns_sync_queued_response(self, mock_sync_task):
+        mock_sync_task.delay.side_effect = RuntimeError("broker unavailable")
+
         db = _make_db()
         listing_id = uuid.uuid4()
         row = _make_listing_row(listing_id=listing_id)
@@ -983,10 +1016,12 @@ class TestSyncListing:
         assert isinstance(result, ListingSyncResponse)
         assert result.listing_id == listing_id
         assert result.status == "sync_queued"
-        assert "queued" in result.message.lower()
 
     @pytest.mark.asyncio
-    async def test_updates_last_synced_and_status(self):
+    @patch("app.modules.publishing_ops.service.celery_sync_listing")
+    async def test_updates_last_synced_and_status(self, mock_sync_task):
+        mock_sync_task.delay.side_effect = RuntimeError("broker unavailable")
+
         db = _make_db()
         listing_id = uuid.uuid4()
         row = _make_listing_row(listing_id=listing_id, status="draft")
@@ -996,7 +1031,7 @@ class TestSyncListing:
 
         await sync_listing(db, listing_id)
 
-        # The service should update last_synced and status
+        # The fallback path should update last_synced and status
         assert row.last_synced is not None
         from app.models.publishing import ListingStatus as ListingStatusEnum
         assert row.status == ListingStatusEnum.LIVE
@@ -1004,8 +1039,8 @@ class TestSyncListing:
 
     @pytest.mark.asyncio
     async def test_sync_nonexistent_listing_still_returns_response(self):
-        """Even when the listing is not found, the service returns a response
-        (it just doesn't update anything)."""
+        """When the listing is not found, the service returns a not_found
+        response without dispatching any task or flushing."""
         db = _make_db()
         listing_id = uuid.uuid4()
         result_mock = MagicMock()
@@ -1016,6 +1051,6 @@ class TestSyncListing:
 
         assert isinstance(result, ListingSyncResponse)
         assert result.listing_id == listing_id
-        assert result.status == "sync_queued"
+        assert result.status == "not_found"
         # No flush should happen since there was nothing to update
         db.flush.assert_not_awaited()

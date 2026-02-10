@@ -5,10 +5,12 @@ import asyncio
 import uuid
 from typing import AsyncGenerator, Generator
 
+import logging
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event, text, Enum as SAEnum
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -180,11 +182,14 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Yield an HTTP test client with the DB dependency overridden."""
 
+    logger = logging.getLogger(__name__)
+
     async def _override_get_db():
         try:
             yield db_session
             await db_session.commit()
-        except Exception:
+        except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
+            logger.error("DB error in test session override: %s", exc, exc_info=True)
             await db_session.rollback()
             raise
 

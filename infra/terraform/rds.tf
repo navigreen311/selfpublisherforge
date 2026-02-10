@@ -103,7 +103,7 @@ resource "aws_db_instance" "postgres" {
   multi_az            = var.db_multi_az
   publicly_accessible = false
 
-  backup_retention_period = var.db_backup_retention
+  backup_retention_period = var.environment == "production" ? 30 : 7
   backup_window           = "03:00-04:00"
   maintenance_window      = "sun:04:00-sun:05:00"
 

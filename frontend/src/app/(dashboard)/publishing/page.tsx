@@ -35,10 +35,33 @@ export default function PublishingDashboardPage() {
   const [newPlatform, setNewPlatform] = useState("kdp");
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [connectTouched, setConnectTouched] = useState<Record<string, boolean>>({});
+  const [connectSubmitAttempted, setConnectSubmitAttempted] = useState(false);
+
+  // Simple validation for connect form
+  const connectErrors: Record<string, string> = {};
+  if (!newName.trim()) connectErrors.name = "This field is required";
+  if (newEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim()))
+    connectErrors.email = "Invalid email format";
+
+  const showConnectError = (field: string): boolean =>
+    !!(connectErrors[field] && (connectTouched[field] || connectSubmitAttempted));
+
+  const connectErrorClass = (field: string): string =>
+    showConnectError(field)
+      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+      : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500";
+
+  const connectHasErrors = Object.keys(connectErrors).length > 0;
 
   const handleConnect = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim()) return;
+    setConnectSubmitAttempted(true);
+
+    if (Object.keys(connectErrors).length > 0) {
+      toast.error(Object.values(connectErrors)[0]);
+      return;
+    }
 
     const payload: CreateAccountPayload = {
       platform: newPlatform,
@@ -52,6 +75,8 @@ export default function PublishingDashboardPage() {
         setShowConnect(false);
         setNewName("");
         setNewEmail("");
+        setConnectTouched({});
+        setConnectSubmitAttempted(false);
       },
       onError: () => toast.error("Failed to connect account"),
     });
@@ -143,10 +168,13 @@ export default function PublishingDashboardPage() {
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  required
+                  onBlur={() => setConnectTouched((prev) => ({ ...prev, name: true }))}
                   placeholder="My KDP Account"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${connectErrorClass("name")}`}
                 />
+                {showConnectError("name") && (
+                  <p className="mt-1 text-xs text-red-500">{connectErrors.name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -154,16 +182,20 @@ export default function PublishingDashboardPage() {
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
+                  onBlur={() => setConnectTouched((prev) => ({ ...prev, email: true }))}
                   placeholder="Optional"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${connectErrorClass("email")}`}
                 />
+                {showConnectError("email") && (
+                  <p className="mt-1 text-xs text-red-500">{connectErrors.email}</p>
+                )}
               </div>
             </div>
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={createAccount.isPending}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                disabled={createAccount.isPending || connectHasErrors}
+                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {createAccount.isPending ? "Connecting..." : "Connect"}
               </button>

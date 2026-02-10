@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 
-export default function OAuthCallbackPage() {
+function OAuthCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { handleOAuthCallback } = useAuth();
@@ -88,5 +88,21 @@ export default function OAuthCallbackPage() {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+export default function OAuthCallbackPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <Card className="w-full max-w-md">
+          <CardContent className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      }
+    >
+      <OAuthCallbackContent />
+    </React.Suspense>
   );
 }

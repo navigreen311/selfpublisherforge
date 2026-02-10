@@ -6,6 +6,55 @@ import { EmailSequenceBuilder } from "@/modules/marketing/components/EmailSequen
 import { toast } from "sonner";
 import Link from "next/link";
 
+// ---------------------------------------------------------------------------
+// Validation helpers for email sequence data
+// ---------------------------------------------------------------------------
+
+function validateEmailSequence(data: {
+  name: string;
+  description?: string;
+  emails: Array<Record<string, unknown>>;
+}): string[] {
+  const errors: string[] = [];
+
+  // Sequence name: required, 2-100 chars
+  const trimmedName = data.name.trim();
+  if (!trimmedName) {
+    errors.push("Sequence name is required.");
+  } else if (trimmedName.length < 2) {
+    errors.push("Sequence name must be at least 2 characters.");
+  } else if (trimmedName.length > 100) {
+    errors.push("Sequence name must be 100 characters or fewer.");
+  }
+
+  // At least one email required
+  if (!data.emails || data.emails.length === 0) {
+    errors.push("At least one email is required in the sequence.");
+  } else {
+    data.emails.forEach((email, index) => {
+      const emailNum = index + 1;
+      const subject = (email.subject as string) || "";
+      const body = (email.body_html as string) || "";
+
+      // Email subject: required, max 200 chars
+      if (!subject.trim()) {
+        errors.push(`Email #${emailNum}: Subject is required.`);
+      } else if (subject.trim().length > 200) {
+        errors.push(`Email #${emailNum}: Subject must be 200 characters or fewer.`);
+      }
+
+      // Email body: required, min 10 chars
+      if (!body.trim()) {
+        errors.push(`Email #${emailNum}: Body is required.`);
+      } else if (body.trim().length < 10) {
+        errors.push(`Email #${emailNum}: Body must be at least 10 characters.`);
+      }
+    });
+  }
+
+  return errors;
+}
+
 export default function EmailSequencePage() {
   const searchParams = useSearchParams();
   const sequenceId = searchParams.get("id");
@@ -22,6 +71,13 @@ export default function EmailSequencePage() {
     description?: string;
     emails: Array<Record<string, unknown>>;
   }) => {
+    // Validate before saving
+    const validationErrors = validateEmailSequence(data);
+    if (validationErrors.length > 0) {
+      validationErrors.forEach((err) => toast.error(err));
+      return;
+    }
+
     createMutation.mutate(
       {
         name: data.name,

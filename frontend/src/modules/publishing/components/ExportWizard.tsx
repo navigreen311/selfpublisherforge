@@ -36,6 +36,7 @@ export function ExportWizard({ bookId, chapters = [] }: ExportWizardProps) {
   const [includeCover, setIncludeCover] = useState(false);
   const [includeIsbn, setIncludeIsbn] = useState(false);
   const [isbn, setIsbn] = useState("");
+  const [isbnTouched, setIsbnTouched] = useState(false);
   const [result, setResult] = useState<ExportResponse | null>(null);
 
   const { data: templates = [] } = useFormattingTemplates();
@@ -44,7 +45,46 @@ export function ExportWizard({ bookId, chapters = [] }: ExportWizardProps) {
 
   const isExporting = exportEpub.isPending || exportPdf.isPending;
 
+  // ISBN validation for the export wizard
+  const isValidISBN = (value: string): boolean => {
+    const cleaned = value.replace(/[-\s]/g, "");
+    if (cleaned.length === 10) {
+      let sum = 0;
+      for (let i = 0; i < 10; i++) {
+        const char = cleaned[i];
+        const val = char === "X" && i === 9 ? 10 : parseInt(char, 10);
+        if (isNaN(val)) return false;
+        sum += val * (10 - i);
+      }
+      return sum % 11 === 0;
+    }
+    if (cleaned.length === 13) {
+      let sum = 0;
+      for (let i = 0; i < 13; i++) {
+        const val = parseInt(cleaned[i], 10);
+        if (isNaN(val)) return false;
+        sum += val * (i % 2 === 0 ? 1 : 3);
+      }
+      return sum % 10 === 0;
+    }
+    return false;
+  };
+
+  const isbnError =
+    isbn.trim() !== "" && !isValidISBN(isbn)
+      ? "Invalid ISBN format. Must be a valid ISBN-10 or ISBN-13."
+      : "";
+
+  const showIsbnError = isbnTouched && !!isbnError;
+
   const handleExport = () => {
+    // Block export if ISBN is invalid
+    if (includeIsbn && isbn.trim() !== "" && !isValidISBN(isbn)) {
+      toast.error("Invalid ISBN format");
+      setIsbnTouched(true);
+      return;
+    }
+
     const payload: ExportRequest = {
       book_id: bookId,
       format,
@@ -251,9 +291,19 @@ export function ExportWizard({ bookId, chapters = [] }: ExportWizardProps) {
                       type="text"
                       value={isbn}
                       onChange={(e) => setIsbn(e.target.value)}
+                      onBlur={() => setIsbnTouched(true)}
                       placeholder="978-0-123456-47-2"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
+                        showIsbnError
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                      }`}
                     />
+                    {showIsbnError ? (
+                      <p className="mt-1 text-xs text-red-500">{isbnError}</p>
+                    ) : (
+                      <p className="mt-1 text-xs text-gray-400">10 or 13 digits, with optional hyphens</p>
+                    )}
                   </div>
                 )}
               </>

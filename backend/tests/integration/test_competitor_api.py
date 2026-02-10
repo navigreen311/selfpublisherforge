@@ -407,7 +407,7 @@ class TestGapAnalysisEndpoint:
 # ---------------------------------------------------------------------------
 
 class TestBatchAnalyzeEndpoint:
-    @patch("app.tasks.competitor_finder.process_batch_analysis")
+    @patch("app.modules.competitor_finder.router.process_batch_analysis")
     @patch("app.modules.competitor_finder.router.CompetitorFinderService")
     def test_batch_analyze_returns_202(self, mock_service_cls, mock_task):
         analysis1 = _mock_analysis()
@@ -432,7 +432,7 @@ class TestBatchAnalyzeEndpoint:
 
         client = TestClient(app)
         response = client.post(
-            "/api/v1/competitors/batch-analyze",
+            "/api/v1/competitors/batch-analyze?marketplace=US",
             json={"category": "Self-Help", "top_n": 5},
         )
         assert response.status_code == 202

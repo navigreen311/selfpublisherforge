@@ -374,8 +374,6 @@ export default function DashboardPage() {
                       className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
                         activity.type === "success"
                           ? "bg-green-500"
-                          : activity.type === "warning"
-                          ? "bg-yellow-500"
                           : "bg-blue-500"
                       }`}
                     />

@@ -35,8 +35,29 @@ from app.modules.billing.schemas import (
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# Configure stripe module-level API key
-stripe.api_key = settings.STRIPE_SECRET_KEY
+_stripe_configured = False
+
+
+def _ensure_stripe_configured() -> None:
+    """Lazily configure the Stripe API key on first use.
+
+    Raises a clear error when the key is missing or still set to a
+    placeholder value, instead of failing cryptically at call time.
+    """
+    global _stripe_configured
+    if _stripe_configured:
+        return
+
+    key = settings.STRIPE_SECRET_KEY
+    if not key or key.startswith("sk_test_PLACEHOLDER") or key == "CHANGE_ME":
+        raise AppException(
+            status_code=500,
+            code="STRIPE_NOT_CONFIGURED",
+            message="Stripe is not configured. Set STRIPE_SECRET_KEY in environment.",
+        )
+
+    stripe.api_key = key
+    _stripe_configured = True
 
 # ---------------------------------------------------------------------------
 # Mapping: PlanTier -> Stripe Price ID (read from settings)
@@ -140,6 +161,7 @@ async def create_checkout_session(
     request: CheckoutRequest,
 ) -> CheckoutResponse:
     """Create a Stripe Checkout session for upgrading / subscribing."""
+    _ensure_stripe_configured()
     if request.plan_tier == PlanTier.FREE:
         raise AppException(
             status_code=400,
@@ -174,6 +196,7 @@ async def create_portal_session(
     request: PortalRequest,
 ) -> PortalResponse:
     """Create a Stripe Billing Portal session so users can manage payments."""
+    _ensure_stripe_configured()
     row = await _get_org_row(db, org_id)
     customer_id = row.get("stripe_customer_id")
     if not customer_id:
@@ -232,6 +255,7 @@ async def list_invoices(
     limit: int = 10,
 ) -> InvoiceListResponse:
     """Fetch invoices for the organization from Stripe."""
+    _ensure_stripe_configured()
     row = await _get_org_row(db, org_id)
     customer_id = row.get("stripe_customer_id")
     if not customer_id:
@@ -281,6 +305,7 @@ async def handle_webhook_event(
     Returns a dict with at minimum ``{"status": "..."}`` indicating
     the processing result.
     """
+    _ensure_stripe_configured()
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
@@ -412,6 +437,7 @@ async def _ensure_stripe_customer(
     email: str,
 ) -> str:
     """Return the Stripe customer ID for an org, creating one if needed."""
+    _ensure_stripe_configured()
     row = await _get_org_row(db, org_id)
     existing_customer_id = row.get("stripe_customer_id")
     if existing_customer_id:

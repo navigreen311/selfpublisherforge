@@ -43,9 +43,14 @@ variable "availability_zones_count" {
 }
 
 variable "allowed_cidr_blocks" {
-  description = "CIDR blocks allowed to access the ALB"
+  description = "CIDR blocks allowed to access the ALB — MUST be explicitly configured for production (no default access)"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = []
+
+  validation {
+    condition     = length(var.allowed_cidr_blocks) > 0
+    error_message = "allowed_cidr_blocks must contain at least one CIDR block. Open access (0.0.0.0/0) is not set by default for security — provide explicit CIDR ranges."
+  }
 }
 
 # -----------------------------------------------------------------------------

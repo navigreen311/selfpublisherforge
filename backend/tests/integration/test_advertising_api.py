@@ -25,6 +25,7 @@ from app.modules.advertising.schemas import (
     BidStrategy,
     MatchType,
 )
+from app.modules.advertising.amazon_ads import AmazonAdsNotConfiguredError
 
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -198,8 +199,17 @@ class TestCampaignEndpoints:
     """Test campaign CRUD endpoints."""
 
     @pytest.mark.asyncio
-    async def test_create_campaign(self, client):
+    @patch("app.modules.advertising.service.AmazonAdsClient")
+    async def test_create_campaign(self, mock_amazon_cls, client):
         """POST /api/v1/ads/campaigns should create a new campaign."""
+        mock_amazon = AsyncMock()
+        mock_amazon.create_campaign.return_value = {
+            "external_campaign_id": None,
+            "status": "draft",
+            "created": False,
+        }
+        mock_amazon_cls.return_value = mock_amazon
+
         response = await client.post(
             "/api/v1/ads/campaigns",
             json={

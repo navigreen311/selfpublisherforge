@@ -46,6 +46,22 @@ class AmazonAdsError(Exception):
         super().__init__(f"Amazon Ads API error {status_code}: {detail}")
 
 
+class AmazonAdsNotConfiguredError(Exception):
+    """Raised when Amazon Ads credentials are missing or incomplete.
+
+    Callers should catch this to distinguish "not configured" from
+    "configured but returned no data".
+    """
+
+    def __init__(self, method: str = ""):
+        self.method = method
+        detail = "Amazon Ads credentials are not configured"
+        if method:
+            detail = f"Amazon Ads credentials are not configured (called from {method})"
+        self.detail = detail
+        super().__init__(detail)
+
+
 class AmazonAdsClient:
     """Client for interacting with Amazon Advertising API.
 
@@ -80,14 +96,33 @@ class AmazonAdsClient:
         self._token_expiry: datetime | None = None
 
     @property
-    def _is_configured(self) -> bool:
-        """Return True when all required credentials are present."""
+    def is_configured(self) -> bool:
+        """Return True when all required credentials are present.
+
+        Use this to check credential availability before calling methods
+        that require Amazon Ads API access.  When credentials are missing,
+        action methods will raise ``AmazonAdsNotConfiguredError``.
+        """
         return bool(
             self.client_id
             and self.client_secret
             and self.refresh_token
             and self.profile_id
         )
+
+    # Keep the private alias for internal backward-compatibility
+    @property
+    def _is_configured(self) -> bool:
+        return self.is_configured
+
+    def _require_configured(self, method_name: str) -> None:
+        """Raise ``AmazonAdsNotConfiguredError`` when credentials are absent."""
+        if not self.is_configured:
+            logger.warning(
+                "Amazon Ads credentials not configured — cannot execute %s",
+                method_name,
+            )
+            raise AmazonAdsNotConfiguredError(method_name)
 
     async def _get_headers(self) -> dict[str, str]:
         """Build request headers with auth token."""
@@ -218,19 +253,7 @@ class AmazonAdsClient:
         Returns a dict with the external campaign ID and status.
         """
         logger.info(f"Creating Amazon Ads campaign: {name}")
-
-        if not self._is_configured:
-            logger.warning(
-                "Amazon Ads credentials not configured; returning degraded response"
-            )
-            return {
-                "external_campaign_id": None,
-                "status": "draft",
-                "campaign_type": campaign_type,
-                "daily_budget": daily_budget,
-                "created": False,
-                "error": "Amazon Ads credentials are not configured",
-            }
+        self._require_configured("create_campaign")
 
         effective_start = start_date or datetime.now(timezone.utc).strftime("%Y%m%d")
 
@@ -301,15 +324,7 @@ class AmazonAdsClient:
     ) -> dict:
         """Update an existing Amazon Ads campaign."""
         logger.info(f"Updating Amazon Ads campaign: {external_campaign_id}")
-
-        if not self._is_configured:
-            logger.warning("Amazon Ads credentials not configured; skipping update")
-            return {
-                "external_campaign_id": external_campaign_id,
-                "updated": False,
-                "changes": updates,
-                "error": "Amazon Ads credentials are not configured",
-            }
+        self._require_configured("update_campaign")
 
         # Map internal field names to Amazon API field names
         campaign_update: dict = {"campaignId": external_campaign_id}
@@ -371,19 +386,7 @@ class AmazonAdsClient:
         logger.info(
             f"Adding {len(keywords)} keywords to campaign {external_campaign_id}"
         )
-
-        if not self._is_configured:
-            logger.warning("Amazon Ads not configured — returning stub data for %s", "add_keywords")
-            return [
-                {
-                    "keyword": kw["keyword"],
-                    "match_type": kw.get("match_type", "broad"),
-                    "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
-                    "status": "draft",
-                    "external_keyword_id": None,
-                }
-                for kw in keywords
-            ]
+        self._require_configured("add_keywords")
 
         sp_keywords = [
             {
@@ -456,18 +459,7 @@ class AmazonAdsClient:
         logger.info(
             f"Updating {len(bid_updates)} keyword bids for campaign {external_campaign_id}"
         )
-
-        if not self._is_configured:
-            logger.warning("Amazon Ads not configured — returning stub data for %s", "update_keyword_bids")
-            return [
-                {
-                    "external_keyword_id": update["external_keyword_id"],
-                    "new_bid": update["bid"],
-                    "updated": False,
-                    "error": "Amazon Ads credentials are not configured",
-                }
-                for update in bid_updates
-            ]
+        self._require_configured("update_keyword_bids")
 
         sp_updates = [
             {
@@ -517,13 +509,7 @@ class AmazonAdsClient:
         logger.info(
             f"Adding {len(keywords)} negative keywords to campaign {external_campaign_id}"
         )
-
-        if not self._is_configured:
-            logger.warning("Amazon Ads not configured — returning stub data for %s", "add_negative_keywords")
-            return [
-                {"keyword": kw, "match_type": "negative_exact", "status": "draft"}
-                for kw in keywords
-            ]
+        self._require_configured("add_negative_keywords")
 
         neg_keywords = [
             {
@@ -650,17 +636,7 @@ class AmazonAdsClient:
             f"Fetching report for {external_campaign_id} "
             f"from {start_date} to {end_date}"
         )
-
-        if not self._is_configured:
-            logger.warning("Amazon Ads not configured — returning stub data for %s", "get_campaign_report")
-            return {
-                "external_campaign_id": external_campaign_id,
-                "start_date": start_date,
-                "end_date": end_date,
-                "metrics": {m: 0.0 for m in requested_metrics},
-                "report_status": "skipped",
-                "error": "Amazon Ads credentials are not configured",
-            }
+        self._require_configured("get_campaign_report")
 
         # Amazon Advertising v3 reporting API column names
         column_map = {
@@ -742,10 +718,7 @@ class AmazonAdsClient:
         logger.info(
             f"Fetching keyword report for {external_campaign_id}"
         )
-
-        if not self._is_configured:
-            logger.warning("Amazon Ads not configured — returning stub data for %s", "get_keyword_report")
-            return []
+        self._require_configured("get_keyword_report")
 
         report_payload = {
             "reportTypeId": "spTargeting",
@@ -814,10 +787,7 @@ class AmazonAdsClient:
         logger.info(
             f"Fetching search term report for {external_campaign_id}"
         )
-
-        if not self._is_configured:
-            logger.warning("Amazon Ads not configured — returning stub data for %s", "get_search_term_report")
-            return []
+        self._require_configured("get_search_term_report")
 
         report_payload = {
             "reportTypeId": "spSearchTerm",

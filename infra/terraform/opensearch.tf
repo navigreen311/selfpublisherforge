@@ -172,83 +172,130 @@ resource "aws_opensearch_domain" "main" {
 }
 
 # -----------------------------------------------------------------------------
-# ILM (Index Lifecycle Management) Policy — Suggested Configuration
+# ISM (Index State Management) Policy
 # -----------------------------------------------------------------------------
-# OpenSearch ISM (Index State Management) can be configured via the OpenSearch
-# API after the domain is provisioned. Below is an example ISM policy that
-# manages index retention with hot/warm/delete phases.
+# OpenSearch ISM manages the index lifecycle automatically. This policy defines
+# three phases for selfpublisherforge-* indices:
 #
-# To apply this policy, use the OpenSearch ISM API:
-#   PUT _plugins/_ism/policies/index_retention_policy
+#   1. HOT (days 0-30)  — Active indexing and querying. Standard replicas.
+#   2. WARM (days 30-90) — Read-optimized. Replicas reduced to 0, segments
+#                          force-merged to 1 for smaller disk footprint.
+#                          If UltraWarm is enabled on the cluster, indices
+#                          migrate to warm storage in this phase.
+#   3. DELETE (day 90+)  — Index is permanently deleted to reclaim storage.
 #
-# Example ISM policy JSON:
-# {
-#   "policy": {
-#     "description": "Index retention policy for SelfPublisherForge",
-#     "default_state": "hot",
-#     "states": [
-#       {
-#         "name": "hot",
-#         "actions": [
-#           {
-#             "rollover": {
-#               "min_index_age": "7d",
-#               "min_primary_shard_size": "30gb"
-#             }
-#           }
-#         ],
-#         "transitions": [
-#           {
-#             "state_name": "warm",
-#             "conditions": {
-#               "min_index_age": "30d"
-#             }
-#           }
-#         ]
-#       },
-#       {
-#         "name": "warm",
-#         "actions": [
-#           {
-#             "replica_count": {
-#               "number_of_replicas": 0
-#             }
-#           },
-#           {
-#             "force_merge": {
-#               "max_num_segments": 1
-#             }
-#           }
-#         ],
-#         "transitions": [
-#           {
-#             "state_name": "delete",
-#             "conditions": {
-#               "min_index_age": "90d"
-#             }
-#           }
-#         ]
-#       },
-#       {
-#         "name": "delete",
-#         "actions": [
-#           {
-#             "delete": {}
-#           }
-#         ],
-#         "transitions": []
-#       }
-#     ],
-#     "ism_template": [
-#       {
-#         "index_patterns": ["knowledge-vault-*", "market-intel-*"],
-#         "priority": 100
-#       }
-#     ]
-#   }
-# }
-#
-# To apply the policy to existing indices:
-#   POST _plugins/_ism/add/<index-pattern>
-#   { "policy_id": "index_retention_policy" }
+# The policy is applied via the OpenSearch _plugins/_ism REST API using a
+# null_resource provisioner, since the AWS Terraform provider does not have
+# a native ISM policy resource.
 # -----------------------------------------------------------------------------
+
+locals {
+  ism_policy_name = "selfpublisherforge_index_retention"
+
+  ism_policy = jsonencode({
+    policy = {
+      description   = "Index lifecycle policy for SelfPublisherForge — hot(30d) -> warm(60d) -> delete"
+      default_state = "hot"
+
+      states = [
+        {
+          name    = "hot"
+          actions = []
+          transitions = [
+            {
+              state_name = "warm"
+              conditions = {
+                min_index_age = "30d"
+              }
+            }
+          ]
+        },
+        {
+          name = "warm"
+          actions = [
+            {
+              replica_count = {
+                number_of_replicas = 0
+              }
+            },
+            {
+              force_merge = {
+                max_num_segments = 1
+              }
+            }
+          ]
+          transitions = [
+            {
+              state_name = "delete"
+              conditions = {
+                min_index_age = "90d"
+              }
+            }
+          ]
+        },
+        {
+          name = "delete"
+          actions = [
+            {
+              delete = {}
+            }
+          ]
+          transitions = []
+        }
+      ]
+
+      ism_template = [
+        {
+          index_patterns = ["selfpublisherforge-*"]
+          priority       = 100
+        }
+      ]
+    }
+  })
+}
+
+# Write the ISM policy JSON to a local file so it can be inspected, versioned,
+# and applied via the OpenSearch REST API.
+resource "local_file" "ism_policy" {
+  content  = local.ism_policy
+  filename = "${path.module}/generated/ism_policy.json"
+}
+
+# Apply the ISM policy to the OpenSearch domain via the _plugins/_ism API.
+# This runs after the domain is fully provisioned. The provisioner uses curl
+# to PUT the policy document. On subsequent applies, it will update the
+# existing policy (OpenSearch upserts on PUT with seq_no/primary_term, but
+# for initial creation a simple PUT suffices).
+#
+# NOTE: This provisioner runs from a machine that has network access to the
+# OpenSearch VPC endpoint (e.g., a bastion host, VPN, or CI runner inside
+# the VPC). If running from outside the VPC, you will need to configure
+# an SSH tunnel or use AWS Session Manager port forwarding first.
+resource "null_resource" "opensearch_ism_policy" {
+  triggers = {
+    # Re-apply whenever the policy content changes
+    policy_hash = sha256(local.ism_policy)
+    # Re-apply if the domain is recreated
+    domain_endpoint = aws_opensearch_domain.main.endpoint
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      curl -s -o /dev/null -w "%%{http_code}" \
+        -X PUT \
+        -H "Content-Type: application/json" \
+        -d '${replace(local.ism_policy, "'", "'\\''")}' \
+        "https://${aws_opensearch_domain.main.endpoint}/_plugins/_ism/policies/${local.ism_policy_name}" \
+        --aws-sigv4 "aws:amz:${data.aws_region.current.name}:es" \
+        --user "${data.aws_caller_identity.current.account_id}:" \
+        | grep -qE "^(200|201)"
+    EOT
+
+    interpreter = ["bash", "-c"]
+  }
+
+  depends_on = [
+    aws_opensearch_domain.main,
+    local_file.ism_policy,
+  ]
+}

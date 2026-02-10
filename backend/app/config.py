@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
@@ -129,6 +130,48 @@ class Settings(BaseSettings):
                 "Production mode (ENVIRONMENT=production) requires real values for the "
                 "following environment variables that still contain placeholder "
                 f"defaults:\n  - " + "\n  - ".join(missing)
+            )
+        return self
+
+    # Optional-but-recommended fields that default to empty strings.
+    # These power optional integrations (OAuth, Stripe tiers, Amazon Ads)
+    # and should be configured in production for full functionality.
+    _OPTIONAL_RECOMMENDED_FIELDS: list[str] = [
+        # OAuth — Google
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        # OAuth — GitHub
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        # Stripe price IDs (billing tiers)
+        "STRIPE_PRICE_STARTER",
+        "STRIPE_PRICE_PRO",
+        "STRIPE_PRICE_BUSINESS",
+        "STRIPE_PRICE_ENTERPRISE",
+        # Amazon Ads
+        "AMAZON_ADS_CLIENT_ID",
+        "AMAZON_ADS_CLIENT_SECRET",
+    ]
+
+    @model_validator(mode="after")
+    def _warn_empty_optional_secrets(self) -> "Settings":
+        """Warn about empty optional integration credentials in production."""
+        if self.ENVIRONMENT != "production":
+            return self
+
+        empty: list[str] = [
+            name
+            for name in self._OPTIONAL_RECOMMENDED_FIELDS
+            if not getattr(self, name, "")
+        ]
+        if empty:
+            warnings.warn(
+                "Production mode: the following optional integration credentials are "
+                "empty. Related features (OAuth login, Stripe billing tiers, "
+                "Amazon Ads) will be unavailable until configured:\n  - "
+                + "\n  - ".join(empty),
+                UserWarning,
+                stacklevel=2,
             )
         return self
 

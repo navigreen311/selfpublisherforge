@@ -3,11 +3,14 @@ patterns, rhetorical devices, and dialogue analysis."""
 
 from __future__ import annotations
 
+import json
+import logging
 import math
 import re
 import statistics
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
 
 from app.modules.style_cloning.ingestion import SegmentedText
@@ -19,12 +22,15 @@ from app.modules.style_cloning.schemas import (
     VocabularyMetrics,
 )
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Common English stop words & top-5000 approximation
+# Load feature word lists from config (with hardcoded fallbacks)
 # ---------------------------------------------------------------------------
 
-_STOP_WORDS: frozenset[str] = frozenset(
+_CONFIG_PATH = Path(__file__).parent / "feature_words.json"
+
+_DEFAULT_STOP_WORDS = (
     "the be to of and a in that have i it for not on with he as you do at "
     "this but his by from they we say her she or an will my one all would "
     "there their what so up out if about who get which go me when make can "
@@ -33,13 +39,64 @@ _STOP_WORDS: frozenset[str] = frozenset(
     "after use two how our work first well way even new want because any "
     "these give day most us is was are been has had were did does doing "
     "am being have has having do does doing shall should would may might "
-    "must need dare ought used will can could".split()
+    "must need dare ought used will can could"
+).split()
+
+_DEFAULT_TRANSITION_WORDS = (
+    "however moreover furthermore additionally nevertheless nonetheless "
+    "therefore consequently meanwhile accordingly alternatively besides "
+    "hence likewise otherwise similarly thus indeed finally instead "
+    "subsequently certainly specifically particularly especially notably "
+    "significantly incidentally admittedly conversely undoubtedly"
+).split()
+
+_DEFAULT_EMOTIONAL_WORDS = (
+    "love hate fear anger joy sorrow grief ecstasy rage fury terror "
+    "passion despair hope agony bliss torment dread euphoria misery "
+    "delight horror anguish triumph heartbreak devastation elation "
+    "anxious terrified furious overjoyed heartbroken desperate "
+    "thrilled horrified enraged ecstatic melancholy"
+).split()
+
+
+def _load_feature_words() -> dict:
+    """Load feature word lists from the JSON config file.
+
+    Falls back to hardcoded defaults if the config file is missing or invalid.
+    """
+    try:
+        with open(_CONFIG_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        logger.debug("Loaded feature words from %s", _CONFIG_PATH)
+        return data
+    except FileNotFoundError:
+        logger.warning(
+            "Feature words config not found at %s; using hardcoded defaults",
+            _CONFIG_PATH,
+        )
+        return {}
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning(
+            "Failed to read feature words config at %s (%s); using hardcoded defaults",
+            _CONFIG_PATH,
+            exc,
+        )
+        return {}
+
+
+_feature_config = _load_feature_words()
+
+# ---------------------------------------------------------------------------
+# Common English stop words & top-5000 approximation
+# ---------------------------------------------------------------------------
+
+_STOP_WORDS: frozenset[str] = frozenset(
+    _feature_config.get("stop_words", _DEFAULT_STOP_WORDS)
 )
 
 # A simplified set of common English words (top ~5000 proxy) — for rare-word
-# detection we flag words NOT in this set.  In production this would be loaded
-# from a frequency corpus; here we use a heuristic: words <= 5 chars that
-# appear often in the text are considered common.
+# detection we flag words NOT in this set.  We use a heuristic: words <= 5
+# chars that appear often in the text are considered common.
 
 # Empty by design: feature extraction uses heuristic analysis rather than POS prefix matching
 _CONTENT_POS_PREFIXES: frozenset[str] = frozenset()
@@ -54,11 +111,7 @@ def _is_content_word(word: str) -> bool:
 # ---------------------------------------------------------------------------
 
 _TRANSITION_WORDS: frozenset[str] = frozenset(
-    "however moreover furthermore additionally nevertheless nonetheless "
-    "therefore consequently meanwhile accordingly alternatively besides "
-    "hence likewise otherwise similarly thus indeed finally instead "
-    "subsequently certainly specifically particularly especially notably "
-    "significantly incidentally admittedly conversely undoubtedly".split()
+    _feature_config.get("transition_words", _DEFAULT_TRANSITION_WORDS)
 )
 
 # ---------------------------------------------------------------------------
@@ -75,12 +128,8 @@ _HUMOR_MARKERS = re.compile(
     re.IGNORECASE,
 )
 _ALLITERATION_RE = re.compile(r'\b([a-z])\w+\s+\1\w+(?:\s+\1\w+)?', re.IGNORECASE)
-_EMOTIONAL_WORDS = frozenset(
-    "love hate fear anger joy sorrow grief ecstasy rage fury terror "
-    "passion despair hope agony bliss torment dread euphoria misery "
-    "delight horror anguish triumph heartbreak devastation elation "
-    "anxious terrified furious overjoyed heartbroken desperate "
-    "thrilled horrified enraged ecstatic melancholy".split()
+_EMOTIONAL_WORDS: frozenset[str] = frozenset(
+    _feature_config.get("emotional_words", _DEFAULT_EMOTIONAL_WORDS)
 )
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 class KnowledgeService:
     """Encapsulates all Knowledge Vault operations."""
 
+    # Class-level set of entry IDs that failed ES indexing and need retry.
+    _pending_reindex: set[str] = set()
+
     def __init__(self, db: AsyncSession, search: KnowledgeSearchService | None = None):
         self.db = db
         self.search = search or KnowledgeSearchService()
@@ -46,13 +49,20 @@ class KnowledgeService:
         await self.db.refresh(entry)
 
         # Index in Elasticsearch (best-effort)
+        search_index_status = "indexed"
         try:
             await self.search.index_entry(entry.to_dict())
-        except (ConnectionError, OSError) as exc:
+        except (ConnectionError, OSError):
             logger.error("Failed to index entry %s in Elasticsearch: connection error", entry.id, exc_info=True)
-        except ValueError as exc:
+            KnowledgeService._pending_reindex.add(str(entry.id))
+            search_index_status = "pending_index"
+        except ValueError:
             logger.error("Failed to index entry %s in Elasticsearch: invalid data", entry.id, exc_info=True)
+            KnowledgeService._pending_reindex.add(str(entry.id))
+            search_index_status = "pending_index"
 
+        # Attach index status so callers can see if search is lagging
+        entry.search_index_status = search_index_status  # type: ignore[attr-defined]
         return entry
 
     async def get_entry(self, org_id: UUID, entry_id: UUID) -> KnowledgeEntry | None:
@@ -143,13 +153,21 @@ class KnowledgeService:
         await self.db.flush()
         await self.db.refresh(entry)
 
+        search_index_status = "indexed"
         try:
             await self.search.index_entry(entry.to_dict())
-        except (ConnectionError, OSError) as exc:
+            # If re-index succeeds, remove from pending queue if present
+            KnowledgeService._pending_reindex.discard(str(entry.id))
+        except (ConnectionError, OSError):
             logger.error("Failed to re-index entry %s: connection error", entry.id, exc_info=True)
-        except ValueError as exc:
+            KnowledgeService._pending_reindex.add(str(entry.id))
+            search_index_status = "pending_index"
+        except ValueError:
             logger.error("Failed to re-index entry %s: invalid data", entry.id, exc_info=True)
+            KnowledgeService._pending_reindex.add(str(entry.id))
+            search_index_status = "pending_index"
 
+        entry.search_index_status = search_index_status  # type: ignore[attr-defined]
         return entry
 
     async def delete_entry(self, org_id: UUID, entry_id: UUID) -> bool:
@@ -162,12 +180,75 @@ class KnowledgeService:
 
         try:
             await self.search.delete_entry(str(entry_id))
-        except (ConnectionError, OSError) as exc:
+            # Entry deleted; no longer needs re-indexing
+            KnowledgeService._pending_reindex.discard(str(entry_id))
+        except (ConnectionError, OSError):
             logger.error("Failed to remove entry %s from search index: connection error", entry_id, exc_info=True)
-        except ValueError as exc:
+        except ValueError:
             logger.error("Failed to remove entry %s from search index: invalid data", entry_id, exc_info=True)
 
         return True
+
+    # ── Reindex pending entries ──────────────────────────────────
+
+    async def reindex_pending(self) -> dict[str, Any]:
+        """Retry Elasticsearch indexing for entries that previously failed.
+
+        Returns a summary with counts of succeeded and still-failing entries.
+        """
+        if not KnowledgeService._pending_reindex:
+            return {"pending": 0, "succeeded": 0, "failed": 0}
+
+        pending_ids = list(KnowledgeService._pending_reindex)
+        succeeded = 0
+        failed_ids: list[str] = []
+
+        for entry_id_str in pending_ids:
+            try:
+                entry_id = UUID(entry_id_str)
+            except ValueError:
+                logger.warning("Invalid UUID in pending reindex set: %s", entry_id_str)
+                KnowledgeService._pending_reindex.discard(entry_id_str)
+                continue
+
+            # Fetch the entry from DB (across all orgs since we only have the ID)
+            result = await self.db.execute(
+                select(KnowledgeEntry).where(
+                    and_(
+                        KnowledgeEntry.id == entry_id,
+                        KnowledgeEntry.deleted_at.is_(None),
+                    )
+                )
+            )
+            entry = result.scalar_one_or_none()
+
+            if entry is None:
+                # Entry was deleted or doesn't exist; drop from queue
+                KnowledgeService._pending_reindex.discard(entry_id_str)
+                continue
+
+            try:
+                await self.search.index_entry(entry.to_dict())
+                KnowledgeService._pending_reindex.discard(entry_id_str)
+                succeeded += 1
+            except (ConnectionError, OSError):
+                logger.error("Reindex retry failed for entry %s: connection error", entry_id, exc_info=True)
+                failed_ids.append(entry_id_str)
+            except ValueError:
+                logger.error("Reindex retry failed for entry %s: invalid data", entry_id, exc_info=True)
+                failed_ids.append(entry_id_str)
+
+        return {
+            "pending": len(pending_ids),
+            "succeeded": succeeded,
+            "failed": len(failed_ids),
+            "failed_ids": failed_ids,
+        }
+
+    @classmethod
+    def get_pending_reindex_ids(cls) -> list[str]:
+        """Return the list of entry IDs currently awaiting re-indexing."""
+        return list(cls._pending_reindex)
 
     # ── Search ───────────────────────────────────────────────────
 

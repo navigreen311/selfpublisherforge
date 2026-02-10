@@ -35,7 +35,7 @@ class PhaseTaskBase(BaseModel):
 
 
 class PhaseTaskCreate(PhaseTaskBase):
-    pass
+    """Request body for creating a phase task. Inherits all fields from PhaseTaskBase."""
 
 
 class PhaseTaskUpdate(BaseModel):
@@ -177,7 +177,7 @@ class EmailTemplateBase(BaseModel):
 
 
 class EmailTemplateCreate(EmailTemplateBase):
-    pass
+    """Request body for creating an email template. Inherits all fields from EmailTemplateBase."""
 
 
 class EmailTemplateUpdate(BaseModel):
@@ -339,7 +339,7 @@ class ARCRecipientBase(BaseModel):
 
 
 class ARCRecipientCreate(ARCRecipientBase):
-    pass
+    """Request body for adding a recipient to an ARC campaign. Inherits all fields from ARCRecipientBase."""
 
 
 class ARCRecipientResponse(ARCRecipientBase):

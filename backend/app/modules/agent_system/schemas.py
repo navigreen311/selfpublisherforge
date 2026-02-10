@@ -37,7 +37,7 @@ class AgentBase(BaseModel):
 
 
 class AgentCreate(AgentBase):
-    pass
+    """Request body for creating a new AI agent. Inherits all fields from AgentBase."""
 
 
 class AgentConfigUpdate(BaseModel):

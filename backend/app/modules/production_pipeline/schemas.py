@@ -29,9 +29,7 @@ class TaskBase(BaseModel):
 
 
 class CreateTask(TaskBase):
-    """Schema for adding a task to a pipeline."""
-
-    pass
+    """Schema for adding a task to a pipeline. Inherits all fields from TaskBase."""
 
 
 class UpdateTask(BaseModel):

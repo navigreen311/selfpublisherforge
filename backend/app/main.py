@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,11 +7,60 @@ from app.config import get_settings
 from app.core.error_handler import register_error_handlers
 from app.database import init_db
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
+
+def _log_startup_config_warnings() -> None:
+    """Log warnings/info about service configuration at startup."""
+    s = get_settings()
+
+    # --- Critical service credentials still using placeholders ---
+    if s.AWS_ACCESS_KEY_ID == "YOUR_AWS_ACCESS_KEY_HERE" or s.AWS_SECRET_ACCESS_KEY == "YOUR_AWS_SECRET_KEY_HERE":
+        logger.warning("S3/AWS credentials are still using placeholder values — file storage will not work")
+
+    if s.STRIPE_SECRET_KEY == "YOUR_STRIPE_SECRET_KEY_HERE":
+        logger.warning("Stripe secret key is a placeholder — billing will not work")
+
+    if s.STRIPE_WEBHOOK_SECRET == "YOUR_STRIPE_WEBHOOK_SECRET_HERE":
+        logger.warning("Stripe webhook secret is a placeholder — webhook verification will fail")
+
+    # --- Email provider ---
+    sendgrid_configured = s.SENDGRID_API_KEY != "YOUR_SENDGRID_API_KEY_HERE"
+    smtp_configured = bool(s.SMTP_HOST and s.SMTP_USER)
+    if not sendgrid_configured and not smtp_configured:
+        logger.warning("No email provider configured (neither SendGrid nor SMTP) — transactional emails will not be sent")
+    elif sendgrid_configured:
+        logger.info("Email provider: SendGrid")
+    else:
+        logger.info("Email provider: SMTP (%s)", s.SMTP_HOST)
+
+    # --- Optional integrations: configured vs not ---
+    integrations = {
+        "Google OAuth": bool(s.GOOGLE_CLIENT_ID and s.GOOGLE_CLIENT_SECRET),
+        "GitHub OAuth": bool(s.GITHUB_CLIENT_ID and s.GITHUB_CLIENT_SECRET),
+        "Stripe billing tiers": all([
+            s.STRIPE_PRICE_STARTER, s.STRIPE_PRICE_PRO,
+            s.STRIPE_PRICE_BUSINESS, s.STRIPE_PRICE_ENTERPRISE,
+        ]),
+        "Amazon Ads": bool(s.AMAZON_ADS_CLIENT_ID and s.AMAZON_ADS_CLIENT_SECRET),
+        "Anthropic LLM": s.ANTHROPIC_API_KEY != "YOUR_ANTHROPIC_API_KEY_HERE",
+        "OpenAI LLM": s.OPENAI_API_KEY != "YOUR_OPENAI_API_KEY_HERE",
+    }
+
+    configured = [name for name, ready in integrations.items() if ready]
+    not_configured = [name for name, ready in integrations.items() if not ready]
+
+    if configured:
+        logger.info("Integrations configured: %s", ", ".join(configured))
+    if not_configured:
+        logger.info("Integrations NOT configured: %s", ", ".join(not_configured))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    _log_startup_config_warnings()
     yield
     # Shut down the WebSocket connection manager (cancels background tasks, closes Redis).
     from app.modules.realtime.router import manager as ws_manager

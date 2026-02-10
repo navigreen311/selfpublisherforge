@@ -30,13 +30,12 @@ from app.modules.competitor_finder.schemas import (
     WeaknessSignalSchema,
 )
 from app.modules.competitor_finder.service import CompetitorFinderService
+from app.tasks.competitor_finder import process_batch_analysis, process_single_analysis
+
+VALID_MARKETPLACES = {"US", "UK", "DE", "FR", "JP", "IT", "ES", "IN", "CA", "AU"}
 
 router = APIRouter()
 
-
-# ---------------------------------------------------------------------------
-# POST /competitors/analyze
-# ---------------------------------------------------------------------------
 
 @router.post(
     "/analyze",
@@ -56,14 +55,15 @@ async def analyze_competitor(
             request=request,
             org_id=current_user["org_id"],
         )
+        process_single_analysis.delay(
+            analysis_id=str(analysis.id),
+            org_id=str(current_user["org_id"]),
+            include_opportunity=request.include_opportunity,
+        )
         return analysis
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-
-# ---------------------------------------------------------------------------
-# GET /competitors/{id}/weaknesses
-# ---------------------------------------------------------------------------
 
 @router.get(
     "/{analysis_id}/weaknesses",
@@ -87,10 +87,6 @@ async def get_weaknesses(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-# ---------------------------------------------------------------------------
-# POST /competitors/batch-analyze
-# ---------------------------------------------------------------------------
-
 @router.post(
     "/batch-analyze",
     response_model=BatchAnalyzeResponse,
@@ -100,18 +96,21 @@ async def get_weaknesses(
 )
 async def batch_analyze(
     request: BatchAnalyzeRequest,
+    marketplace: str = Query("US", description="Amazon marketplace code"),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if marketplace not in VALID_MARKETPLACES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid marketplace '{marketplace}'. Must be one of: {', '.join(sorted(VALID_MARKETPLACES))}",
+        )
     service = CompetitorFinderService(db)
     try:
         analyses = await service.batch_analyze(
             request=request,
             org_id=current_user["org_id"],
         )
-        # In production, this would enqueue Celery tasks for each analysis
-        from app.tasks.competitor_finder import process_batch_analysis
-
         task = process_batch_analysis.delay(
             analysis_ids=[str(a.id) for a in analyses],
             org_id=str(current_user["org_id"]),
@@ -126,10 +125,6 @@ async def batch_analyze(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-
-# ---------------------------------------------------------------------------
-# GET /competitors/{id}/opportunity
-# ---------------------------------------------------------------------------
 
 @router.get(
     "/{analysis_id}/opportunity",
@@ -158,10 +153,6 @@ async def get_opportunity(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-# ---------------------------------------------------------------------------
-# POST /competitors/gap-analysis
-# ---------------------------------------------------------------------------
-
 @router.post(
     "/gap-analysis",
     response_model=GapAnalysisSchema,
@@ -171,9 +162,15 @@ async def get_opportunity(
 )
 async def gap_analysis(
     request: GapAnalysisRequest,
+    marketplace: str = Query("US", description="Amazon marketplace code"),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if marketplace not in VALID_MARKETPLACES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid marketplace '{marketplace}'. Must be one of: {', '.join(sorted(VALID_MARKETPLACES))}",
+        )
     service = CompetitorFinderService(db)
     try:
         result = await service.run_gap_analysis(
@@ -184,10 +181,6 @@ async def gap_analysis(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-
-# ---------------------------------------------------------------------------
-# GET /competitors/alerts
-# ---------------------------------------------------------------------------
 
 @router.get(
     "/alerts",

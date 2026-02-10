@@ -19,6 +19,8 @@ const btnDisconnect = document.getElementById("btn-disconnect");
 const extractResult = document.getElementById("extract-result");
 const versionLabel = document.getElementById("version-label");
 const updateBadge = document.getElementById("update-badge");
+const statusMessage = document.getElementById("status-message");
+const loadingSpinner = document.getElementById("loading-spinner");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -44,6 +46,118 @@ function showResult(text, isError = false) {
   extractResult.textContent = text;
   extractResult.classList.remove("hidden", "result-box--error", "result-box--success");
   extractResult.classList.add(isError ? "result-box--error" : "result-box--success");
+}
+
+/**
+ * Show a status message to the user (success or error).
+ */
+function showStatusMessage(text, isError = false) {
+  if (!statusMessage) return;
+  statusMessage.textContent = text;
+  statusMessage.classList.remove(
+    "hidden",
+    "status-message--error",
+    "status-message--success"
+  );
+  statusMessage.classList.add(
+    isError ? "status-message--error" : "status-message--success"
+  );
+}
+
+/**
+ * Hide the status message.
+ */
+function hideStatusMessage() {
+  if (!statusMessage) return;
+  statusMessage.classList.add("hidden");
+  statusMessage.classList.remove("status-message--error", "status-message--success");
+  statusMessage.textContent = "";
+}
+
+/**
+ * Show or hide the loading spinner.
+ */
+function setLoading(visible) {
+  if (!loadingSpinner) return;
+  if (visible) {
+    loadingSpinner.classList.remove("hidden");
+  } else {
+    loadingSpinner.classList.add("hidden");
+  }
+}
+
+/**
+ * Validate that a URL string starts with http:// or https:// and is well-formed.
+ * Returns an error string if invalid, or null if valid.
+ */
+function validateApiUrl(url) {
+  if (!url) {
+    return "API URL is required.";
+  }
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return "API URL must start with http:// or https://";
+  }
+  try {
+    new URL(url);
+  } catch {
+    return "API URL is not a valid URL.";
+  }
+  return null;
+}
+
+/**
+ * Ping the API health endpoint to test the connection.
+ * Returns { success: true } or { success: false, error: string }.
+ */
+async function testConnection(apiUrl, apiToken) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(`${apiUrl}/api/v1/health`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.status === 401 || response.status === 403) {
+      return {
+        success: false,
+        error: "Authentication failed. Please check your API token.",
+      };
+    }
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `Server returned ${response.status} ${response.statusText}. Check the API URL.`,
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    if (err.name === "AbortError") {
+      return {
+        success: false,
+        error: "Connection timed out. The server did not respond within 10 seconds.",
+      };
+    }
+    if (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError")) {
+      return {
+        success: false,
+        error: "Network error. Could not reach the server. Check the URL and your internet connection.",
+      };
+    }
+    return {
+      success: false,
+      error: `Connection error: ${err.message}`,
+    };
+  }
 }
 
 /**
@@ -100,46 +214,77 @@ btnConnect.addEventListener("click", async () => {
   const apiUrl = apiUrlInput.value.trim().replace(/\/+$/, "");
   const apiToken = apiTokenInput.value.trim();
 
+  // Clear previous status messages
+  hideStatusMessage();
+
   if (!apiUrl || !apiToken) {
-    alert("Please enter both API URL and token.");
+    showStatusMessage("Please enter both API URL and token.", true);
     return;
   }
 
-  // Validate API URL format
-  if (!apiUrl.startsWith("https://")) {
-    alert("API URL must start with https://");
-    return;
-  }
-  try {
-    new URL(apiUrl);
-  } catch {
-    alert("API URL is not a valid URL.");
+  // Validate API URL format (must start with http:// or https://)
+  const urlError = validateApiUrl(apiUrl);
+  if (urlError) {
+    showStatusMessage(urlError, true);
     return;
   }
 
   // Validate API token length
   if (apiToken.length < 1 || apiToken.length > 500) {
-    alert("API token must be between 1 and 500 characters.");
+    showStatusMessage("API token must be between 1 and 500 characters.", true);
     return;
   }
 
   btnConnect.disabled = true;
   btnConnect.textContent = "Connecting...";
+  setLoading(true);
 
   try {
+    // Test the connection by pinging the health endpoint directly
+    const connectionResult = await testConnection(apiUrl, apiToken);
+
+    if (!connectionResult.success) {
+      showStatusMessage(connectionResult.error, true);
+      setLoading(false);
+      btnConnect.disabled = false;
+      btnConnect.textContent = "Connect";
+      return;
+    }
+
+    // Connection succeeded — persist credentials
     await chrome.storage.local.set({ apiUrl, apiToken });
-    // Verify connection with a quick health check via background
+
+    // Also verify via the background service worker
     const res = await sendMessage("healthCheck");
     if (res && res.success) {
+      showStatusMessage("Connected successfully!", false);
       showActions();
     } else {
-      showResult("Connection failed. Check your URL and token.", true);
+      showStatusMessage(
+        "Direct connection succeeded but background check failed. Check your URL and token.",
+        true
+      );
       showLogin();
     }
   } catch (err) {
-    showResult(`Error: ${err.message}`, true);
+    // Classify the error for a meaningful message
+    const msg = err.message || "Unknown error";
+    if (msg.includes("NetworkError") || msg.includes("Failed to fetch")) {
+      showStatusMessage(
+        "Network error: Could not reach the server. Verify the URL and your internet connection.",
+        true
+      );
+    } else if (msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("auth")) {
+      showStatusMessage(
+        "Authentication error: Your API token was rejected. Please verify it.",
+        true
+      );
+    } else {
+      showStatusMessage(`Error: ${msg}`, true);
+    }
     showLogin();
   } finally {
+    setLoading(false);
     btnConnect.disabled = false;
     btnConnect.textContent = "Connect";
   }
