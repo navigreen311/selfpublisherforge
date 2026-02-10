@@ -1,0 +1,263 @@
+"""Knowledge Vault API router — all /api/v1/knowledge endpoints."""
+
+from __future__ import annotations
+
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_current_user
+from app.core.pagination import PaginatedResponse
+from app.database import get_db
+from app.modules.knowledge_vault.schemas import (
+    CreateEntryRequest,
+    ImportRequest,
+    ImportResponse,
+    KnowledgeEntryResponse,
+    SearchRequest,
+    SearchResult,
+    SuggestionsResponse,
+    SummarizeResponse,
+    TagListResponse,
+    UpdateEntryRequest,
+)
+from app.modules.knowledge_vault.service import KnowledgeService
+
+router = APIRouter()
+
+
+def _get_service(db: AsyncSession = Depends(get_db)) -> KnowledgeService:
+    return KnowledgeService(db=db)
+
+
+def _org_id(current_user: dict) -> UUID:
+    return current_user["org_id"]
+
+
+# ── Create ───────────────────────────────────────────────────────
+
+@router.post(
+    "",
+    response_model=KnowledgeEntryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a knowledge entry",
+)
+async def create_entry(
+    payload: CreateEntryRequest,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    entry = await service.create_entry(_org_id(current_user), payload)
+    return _entry_response(entry)
+
+
+# ── List (paginated, filterable) ─────────────────────────────────
+
+@router.get(
+    "",
+    response_model=PaginatedResponse[KnowledgeEntryResponse],
+    summary="List knowledge entries",
+)
+async def list_entries(
+    tag: list[str] | None = Query(default=None),
+    source_type: str | None = Query(default=None),
+    cursor: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    result = await service.list_entries(
+        _org_id(current_user),
+        tags=tag,
+        source_type=source_type,
+        cursor=cursor,
+        limit=limit,
+    )
+    return {
+        "items": [_entry_response(e) for e in result["items"]],
+        "next_cursor": result["next_cursor"],
+        "has_more": result["has_more"],
+        "total_count": result["total_count"],
+    }
+
+
+# ── Get detail ───────────────────────────────────────────────────
+
+@router.get(
+    "/{entry_id}",
+    response_model=KnowledgeEntryResponse,
+    summary="Get knowledge entry detail",
+)
+async def get_entry(
+    entry_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    entry = await service.get_entry(_org_id(current_user), entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+    return _entry_response(entry)
+
+
+# ── Update ───────────────────────────────────────────────────────
+
+@router.put(
+    "/{entry_id}",
+    response_model=KnowledgeEntryResponse,
+    summary="Update a knowledge entry",
+)
+async def update_entry(
+    entry_id: UUID,
+    payload: UpdateEntryRequest,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    entry = await service.update_entry(_org_id(current_user), entry_id, payload)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+    return _entry_response(entry)
+
+
+# ── Delete (soft) ────────────────────────────────────────────────
+
+@router.delete(
+    "/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Soft-delete a knowledge entry",
+)
+async def delete_entry(
+    entry_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    deleted = await service.delete_entry(_org_id(current_user), entry_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+
+
+# ── Full-text search ─────────────────────────────────────────────
+
+@router.post(
+    "/search",
+    response_model=SearchResult,
+    summary="Full-text search via Elasticsearch",
+)
+async def search_entries(
+    payload: SearchRequest,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    result = await service.full_text_search(
+        org_id=_org_id(current_user),
+        query=payload.query,
+        tags=payload.tags or None,
+        source_type=payload.source_type,
+        limit=payload.limit,
+        offset=payload.offset,
+    )
+    return SearchResult(
+        hits=result["hits"],
+        total=result["total"],
+        query=payload.query,
+    )
+
+
+# ── Import ───────────────────────────────────────────────────────
+
+@router.post(
+    "/import",
+    response_model=ImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import from URL or file with AI extraction",
+)
+async def import_entry(
+    payload: ImportRequest,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    try:
+        entry = await service.import_entry(
+            org_id=_org_id(current_user),
+            url=payload.url,
+            file_name=payload.file_name,
+            file_content_base64=payload.file_content_base64,
+            extract_facts=payload.extract_facts,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return ImportResponse(
+        entry_id=entry.id,
+        title=entry.title,
+        content_preview=entry.content[:300] if entry.content else "",
+        tags=entry.tags or [],
+        source_type=entry.source_type,
+    )
+
+
+# ── AI Suggestions ───────────────────────────────────────────────
+
+@router.get(
+    "/suggestions",
+    response_model=SuggestionsResponse,
+    summary="AI-suggested research topics",
+)
+async def get_suggestions(
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    suggestions = await service.get_suggestions(_org_id(current_user))
+    return SuggestionsResponse(suggestions=suggestions)
+
+
+# ── Summarize ────────────────────────────────────────────────────
+
+@router.post(
+    "/{entry_id}/summarize",
+    response_model=SummarizeResponse,
+    summary="AI-summarize a knowledge entry",
+)
+async def summarize_entry(
+    entry_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    result = await service.summarize_entry(_org_id(current_user), entry_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+    return result
+
+
+# ── Tags ─────────────────────────────────────────────────────────
+
+@router.get(
+    "/tags",
+    response_model=TagListResponse,
+    summary="List all tags",
+)
+async def list_tags(
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    return await service.get_all_tags(_org_id(current_user))
+
+
+# ── Helpers ──────────────────────────────────────────────────────
+
+def _entry_response(entry) -> dict:
+    """Convert a KnowledgeEntry ORM instance to a response dict."""
+    return {
+        "id": entry.id,
+        "org_id": entry.org_id,
+        "title": entry.title,
+        "content": entry.content,
+        "source_url": entry.source_url,
+        "source_type": entry.source_type,
+        "tags": entry.tags or [],
+        "credibility_score": entry.credibility_score,
+        "metadata": entry.metadata_ or {},
+        "created_at": entry.created_at,
+        "updated_at": entry.updated_at,
+        "deleted_at": entry.deleted_at,
+    }
