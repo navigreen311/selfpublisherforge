@@ -60,7 +60,7 @@ def _register_routers(app: FastAPI):
     app.include_router(users_router, prefix=prefix, tags=["users"])
 
     from app.modules.billing.router import router as billing_router
-    app.include_router(billing_router, prefix=prefix, tags=["billing"])
+    app.include_router(billing_router, prefix=f"{prefix}/billing", tags=["billing"])
 
     from app.modules.storage.router import router as storage_router
     app.include_router(storage_router, prefix=f"{prefix}/storage", tags=["storage"])
