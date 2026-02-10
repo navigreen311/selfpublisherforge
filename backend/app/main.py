@@ -63,7 +63,7 @@ def _register_routers(app: FastAPI):
     app.include_router(storage_router, prefix=f"{prefix}/storage", tags=["storage"])
 
     from app.modules.notifications.router import router as notifications_router
-    app.include_router(notifications_router, prefix=prefix, tags=["notifications"])
+    app.include_router(notifications_router, prefix=f"{prefix}/notifications", tags=["notifications"])
 
     from app.modules.realtime.router import router as realtime_router
     app.include_router(realtime_router, prefix=prefix, tags=["realtime"])
