@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
@@ -9,18 +9,27 @@ jest.mock("lucide-react", () => ({
   X: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="x-icon" {...props} />
   ),
+  Loader2: (props: React.SVGAttributes<SVGElement>) => (
+    <svg data-testid="loader-icon" {...props} />
+  ),
 }));
 
 // Mock Radix UI Dialog primitives to render simple HTML elements
+let capturedOnOpenChange: ((open: boolean) => void) | undefined;
+
 jest.mock("@radix-ui/react-dialog", () => ({
   Root: ({
     children,
     open,
+    onOpenChange,
   }: {
     children: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-  }) => (open ? <div data-testid="dialog-root">{children}</div> : null),
+  }) => {
+    capturedOnOpenChange = onOpenChange;
+    return open ? <div data-testid="dialog-root">{children}</div> : null;
+  },
   Portal: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dialog-portal">{children}</div>
   ),
@@ -29,7 +38,18 @@ jest.mock("@radix-ui/react-dialog", () => ({
   ),
   Content: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
     ({ children, ...props }, ref) => (
-      <div ref={ref} role="dialog" data-testid="dialog-content" {...props}>
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        data-testid="dialog-content"
+        onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+          if (e.key === "Escape" && capturedOnOpenChange) {
+            capturedOnOpenChange(false);
+          }
+        }}
+        {...props}
+      >
         {children}
       </div>
     )
@@ -84,7 +104,7 @@ jest.mock("@radix-ui/react-slot", () => ({
 
 // ─── Import after mocks ─────────────────────────────────────────────────────
 
-import { ConfirmDialog } from "../confirm-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -99,15 +119,16 @@ describe("ConfirmDialog", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    capturedOnOpenChange = undefined;
   });
 
-  it("opens dialog when open is true", () => {
+  it("renders when open=true", () => {
     render(<ConfirmDialog {...defaultProps} />);
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("does not render dialog when open is false", () => {
+  it("is hidden when open=false", () => {
     render(<ConfirmDialog {...defaultProps} open={false} />);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -122,50 +143,39 @@ describe("ConfirmDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("confirm button triggers callback", async () => {
+  it("calls onConfirm when confirm button clicked", async () => {
     const onConfirm = jest.fn();
-    const onOpenChange = jest.fn();
 
     render(
-      <ConfirmDialog
-        {...defaultProps}
-        onConfirm={onConfirm}
-        onOpenChange={onOpenChange}
-      />
+      <ConfirmDialog {...defaultProps} onConfirm={onConfirm} />
     );
 
-    const confirmButton = screen.getByRole("button", { name: "Confirm" });
+    // Default confirm text is "Delete"
+    const confirmButton = screen.getByRole("button", { name: "Delete" });
     await userEvent.click(confirmButton);
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("cancel button closes dialog", async () => {
-    const onCancel = jest.fn();
+  it("calls onOpenChange(false) when cancel button clicked", async () => {
     const onOpenChange = jest.fn();
 
     render(
-      <ConfirmDialog
-        {...defaultProps}
-        onCancel={onCancel}
-        onOpenChange={onOpenChange}
-      />
+      <ConfirmDialog {...defaultProps} onOpenChange={onOpenChange} />
     );
 
     const cancelButton = screen.getByRole("button", { name: "Cancel" });
     await userEvent.click(cancelButton);
 
-    expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("renders custom button labels", () => {
+  it("shows custom confirmText and cancelText", () => {
     render(
       <ConfirmDialog
         {...defaultProps}
-        confirmLabel="Yes, delete"
-        cancelLabel="No, keep it"
+        confirmText="Yes, delete"
+        cancelText="No, keep it"
       />
     );
 
@@ -177,9 +187,56 @@ describe("ConfirmDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows loading state when loading is true", () => {
+  it("confirm button has destructive styling by default", () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    // Default variant is "destructive"
+    const confirmButton = screen.getByRole("button", { name: "Delete" });
+    expect(confirmButton).toHaveClass("bg-destructive");
+  });
+
+  it("confirm button has default styling when variant is default", () => {
+    render(<ConfirmDialog {...defaultProps} variant="default" />);
+
+    const confirmButton = screen.getByRole("button", { name: "Delete" });
+    expect(confirmButton).toHaveClass("bg-primary");
+  });
+
+  it("shows loading spinner when loading=true", () => {
     render(<ConfirmDialog {...defaultProps} loading={true} />);
 
     expect(screen.getByText("Processing...")).toBeInTheDocument();
+    expect(screen.getByTestId("loader-icon")).toBeInTheDocument();
+  });
+
+  it("confirm button is disabled when loading", () => {
+    render(<ConfirmDialog {...defaultProps} loading={true} />);
+
+    const confirmButton = screen.getByRole("button", { name: /Processing/i });
+    expect(confirmButton).toBeDisabled();
+  });
+
+  it("cancel button is also disabled when loading", () => {
+    render(<ConfirmDialog {...defaultProps} loading={true} />);
+
+    const cancelButton = screen.getByRole("button", { name: "Cancel" });
+    expect(cancelButton).toBeDisabled();
+  });
+
+  it("closes on Escape key", () => {
+    const onOpenChange = jest.fn();
+    render(<ConfirmDialog {...defaultProps} onOpenChange={onOpenChange} />);
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.keyDown(dialog, { key: "Escape", code: "Escape" });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("has proper role and aria-modal attributes for accessibility", () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
   });
 });

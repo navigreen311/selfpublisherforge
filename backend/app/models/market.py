@@ -23,6 +23,12 @@ from app.database import BaseModel
 class MarketCategory(BaseModel):
     __tablename__ = "market_categories"
 
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
     amazon_node_id: Mapped[str | None] = mapped_column(
         String(50), nullable=True, default=None, unique=True, index=True
     )
@@ -52,6 +58,12 @@ class MarketCategory(BaseModel):
 class MarketKeyword(BaseModel):
     __tablename__ = "market_keywords"
 
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
     keyword: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
     search_volume: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     competition_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
@@ -178,6 +190,12 @@ class CompetitorReview(BaseModel):
 class MarketSnapshot(BaseModel):
     __tablename__ = "market_snapshots"
 
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
     category_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("market_categories.id", ondelete="CASCADE"),
         nullable=False,

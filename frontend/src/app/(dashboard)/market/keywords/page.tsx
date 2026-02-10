@@ -35,7 +35,7 @@ export default function KeywordsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <div role="region" aria-label="Page header">
         <h1 className="text-2xl font-bold">Keyword Research</h1>
         <p className="text-muted-foreground mt-1">
           Discover high-value keywords and analyze search trends for your book niche
@@ -43,9 +43,14 @@ export default function KeywordsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 border-b" role="tablist" aria-label="Keyword research tabs">
         <button
           onClick={() => setActiveTab("research")}
+          role="tab"
+          id="tab-research"
+          aria-selected={activeTab === "research"}
+          aria-controls="tabpanel-research"
+          tabIndex={activeTab === "research" ? 0 : -1}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "research"
               ? "border-primary text-primary"
@@ -56,6 +61,11 @@ export default function KeywordsPage() {
         </button>
         <button
           onClick={() => setActiveTab("suggestions")}
+          role="tab"
+          id="tab-suggestions"
+          aria-selected={activeTab === "suggestions"}
+          aria-controls="tabpanel-suggestions"
+          tabIndex={activeTab === "suggestions" ? 0 : -1}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "suggestions"
               ? "border-primary text-primary"
@@ -68,63 +78,91 @@ export default function KeywordsPage() {
 
       {/* Research tab */}
       {activeTab === "research" && (
-        <div className="space-y-4">
-          <div className="flex gap-3">
+        <div
+          className="space-y-4"
+          role="tabpanel"
+          id="tabpanel-research"
+          aria-labelledby="tab-research"
+        >
+          <div className="flex gap-3" role="region" aria-label="Keyword research input">
+            <label htmlFor="keyword-input" className="sr-only">
+              Keywords to research
+            </label>
             <input
+              id="keyword-input"
               type="text"
               placeholder="Enter keywords separated by commas (e.g., 'self help, productivity, mindset')..."
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleResearch()}
+              aria-label="Enter keywords separated by commas for research"
               className="flex-1 px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <button
               onClick={handleResearch}
               disabled={keywordResearch.isPending || !keywordInput.trim()}
+              aria-label={keywordResearch.isPending ? "Keyword research in progress" : "Research entered keywords"}
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {keywordResearch.isPending ? "Researching..." : "Research"}
             </button>
           </div>
 
-          <KeywordTable
-            keywords={keywordResearch.data?.keywords ?? []}
-            isLoading={keywordResearch.isPending}
-          />
+          <div role="region" aria-label="Keyword research results" aria-live="polite">
+            <KeywordTable
+              keywords={keywordResearch.data?.keywords ?? []}
+              isLoading={keywordResearch.isPending}
+            />
+          </div>
 
-          {keywordResearch.isError && (
-            <div className="border border-red-200 rounded-lg bg-red-50 p-4 text-sm text-red-700">
-              Failed to research keywords. Please try again.
-            </div>
-          )}
+          <div aria-live="polite" aria-atomic="true">
+            {keywordResearch.isError && (
+              <div role="alert" className="border border-red-200 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+                Failed to research keywords. Please try again.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* Suggestions tab */}
       {activeTab === "suggestions" && (
-        <div className="space-y-4">
-          <div className="flex gap-3">
+        <div
+          className="space-y-4"
+          role="tabpanel"
+          id="tabpanel-suggestions"
+          aria-labelledby="tab-suggestions"
+        >
+          <div className="flex gap-3" role="region" aria-label="Genre suggestion input">
+            <label htmlFor="genre-input" className="sr-only">
+              Genre for keyword suggestions
+            </label>
             <input
+              id="genre-input"
               type="text"
               placeholder="Enter a genre (e.g., 'science fiction', 'self-help')..."
               value={genreInput}
               onChange={(e) => setGenreInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSuggest()}
+              aria-label="Enter a genre to get AI keyword suggestions"
               className="flex-1 px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <button
               onClick={handleSuggest}
               disabled={!genreInput.trim()}
+              aria-label="Get AI keyword suggestions for entered genre"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Get Suggestions
             </button>
           </div>
 
-          <KeywordTable
-            keywords={suggestions}
-            isLoading={suggestionsLoading}
-          />
+          <div role="region" aria-label="AI keyword suggestions results" aria-live="polite">
+            <KeywordTable
+              keywords={suggestions}
+              isLoading={suggestionsLoading}
+            />
+          </div>
         </div>
       )}
     </div>

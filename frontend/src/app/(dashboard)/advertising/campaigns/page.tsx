@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCampaigns, useCreateCampaign } from "@/modules/advertising/hooks";
 import { CampaignCard } from "@/modules/advertising/components/CampaignCard";
 import { toast } from "sonner";
+import { AD_PLATFORMS, DEFAULT_AD_PLATFORM } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -47,7 +48,7 @@ export default function CampaignsListPage() {
 
   const [newCampaign, setNewCampaign] = useState({
     name: "",
-    platform: "amazon",
+    platform: DEFAULT_AD_PLATFORM as string,
     campaign_type: "sponsored_products",
     daily_budget: 25,
     bid_strategy: "manual",
@@ -90,7 +91,7 @@ export default function CampaignsListPage() {
       setShowCreateForm(false);
       setNewCampaign({
         name: "",
-        platform: "amazon",
+        platform: DEFAULT_AD_PLATFORM,
         campaign_type: "sponsored_products",
         daily_budget: 25,
         bid_strategy: "manual",
@@ -118,16 +119,18 @@ export default function CampaignsListPage() {
           <Link
             href="/advertising"
             className="px-4 py-2 border rounded-lg text-sm hover:bg-muted"
+            aria-label="Back to advertising dashboard"
           >
             Dashboard
           </Link>
           <button
+            aria-label={showCreateForm ? "Cancel creating campaign" : "Create a new campaign"}
             onClick={() => {
               if (showCreateForm) {
                 // Closing -- reset form and touched state
                 setNewCampaign({
                   name: "",
-                  platform: "amazon",
+                  platform: DEFAULT_AD_PLATFORM,
                   campaign_type: "sponsored_products",
                   daily_budget: 25,
                   bid_strategy: "manual",
@@ -165,6 +168,7 @@ export default function CampaignsListPage() {
                 }
                 onBlur={() => setTouchedName(true)}
                 placeholder="Campaign name"
+                aria-label="Campaign name"
               />
               {nameError && (
                 <p className="mt-1 text-sm text-red-600">{nameError}</p>
@@ -178,9 +182,13 @@ export default function CampaignsListPage() {
                 onChange={(e) =>
                   setNewCampaign((prev) => ({ ...prev, platform: e.target.value }))
                 }
+                aria-label="Select advertising platform"
               >
-                <option value="amazon">Amazon Ads</option>
-                <option value="facebook">Facebook Ads</option>
+                {Object.entries(AD_PLATFORMS).map(([key, meta]) => (
+                  <option key={key} value={key}>
+                    {meta.displayName}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -194,6 +202,7 @@ export default function CampaignsListPage() {
                     campaign_type: e.target.value,
                   }))
                 }
+                aria-label="Select campaign type"
               >
                 <option value="sponsored_products">Sponsored Products</option>
                 <option value="sponsored_brands">Sponsored Brands</option>
@@ -220,6 +229,7 @@ export default function CampaignsListPage() {
                   }))
                 }
                 onBlur={() => setTouchedBudget(true)}
+                aria-label="Daily budget in dollars"
               />
               {budgetError && (
                 <p className="mt-1 text-sm text-red-600">{budgetError}</p>
@@ -236,6 +246,7 @@ export default function CampaignsListPage() {
                     bid_strategy: e.target.value,
                   }))
                 }
+                aria-label="Select bid strategy"
               >
                 <option value="manual">Manual</option>
                 <option value="auto_low">Auto (Low)</option>
@@ -261,6 +272,7 @@ export default function CampaignsListPage() {
                   }))
                 }
                 onBlur={() => setTouchedAcos(true)}
+                aria-label="Target ACOS percentage"
               />
               {acosError && (
                 <p className="mt-1 text-sm text-red-600">{acosError}</p>
@@ -281,6 +293,7 @@ export default function CampaignsListPage() {
                   }))
                 }
                 placeholder="fantasy books, epic fantasy, dragon books"
+                aria-label="Targeting keywords, comma-separated"
               />
             </div>
           </div>
@@ -288,6 +301,7 @@ export default function CampaignsListPage() {
             onClick={handleCreate}
             disabled={createCampaign.isPending || !isFormValid}
             className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Submit new campaign"
           >
             {createCampaign.isPending ? "Creating..." : "Create Campaign"}
           </button>
@@ -300,15 +314,20 @@ export default function CampaignsListPage() {
           className="border rounded-lg px-3 py-2 text-sm"
           value={platformFilter}
           onChange={(e) => setPlatformFilter(e.target.value)}
+          aria-label="Filter by advertising platform"
         >
           <option value="">All Platforms</option>
-          <option value="amazon">Amazon Ads</option>
-          <option value="facebook">Facebook Ads</option>
+          {Object.entries(AD_PLATFORMS).map(([key, meta]) => (
+            <option key={key} value={key}>
+              {meta.displayName}
+            </option>
+          ))}
         </select>
         <select
           className="border rounded-lg px-3 py-2 text-sm"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filter by campaign status"
         >
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
@@ -352,6 +371,7 @@ export default function CampaignsListPage() {
           <button
             onClick={() => setShowCreateForm(true)}
             className="text-primary hover:underline mt-2"
+            aria-label="Create your first advertising campaign"
           >
             Create your first campaign
           </button>

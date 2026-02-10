@@ -55,6 +55,7 @@ export default function ReportsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
         <a
           href="/analytics"
+          aria-label="Back to Analytics Dashboard"
           className="text-sm text-blue-600 hover:text-blue-800"
         >
           Back to Dashboard
@@ -62,18 +63,23 @@ export default function ReportsPage() {
       </div>
 
       {downloadError && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4">
+        <div
+          className="rounded-md bg-red-50 border border-red-200 p-4"
+          role="alert"
+          aria-live="assertive"
+        >
           <div className="flex">
             <div className="flex-1">
               <p className="text-sm text-red-800">{downloadError}</p>
             </div>
             <button
               type="button"
+              aria-label="Dismiss download error"
               className="ml-3 text-red-500 hover:text-red-700"
               onClick={() => setDownloadError(null)}
             >
               <span className="sr-only">Dismiss</span>
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path
                   fillRule="evenodd"
                   d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -87,94 +93,132 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Report Builder */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1" role="region" aria-label="Report Builder">
           <ReportBuilder />
         </div>
 
         {/* Reports List */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2" role="region" aria-label="Generated Reports List">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Generated Reports</h3>
+              <h3 className="text-lg font-semibold text-gray-900" id="reports-table-heading">
+                Generated Reports
+              </h3>
             </div>
 
-            {isLoading ? (
-              <div className="p-6">
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse flex items-center space-x-4">
-                      <div className="h-10 bg-gray-200 rounded flex-1" />
-                      <div className="h-10 bg-gray-200 rounded w-24" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : reports?.items && reports.items.length > 0 ? (
-              <div className="divide-y divide-gray-200">
-                {reports.items.map((report) => (
-                  <div key={report.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{report.title}</p>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-xs text-gray-500 capitalize">
-                          {report.report_type.replace("_", " ")}
-                        </span>
-                        <span className="text-xs text-gray-500 uppercase">{report.output_format}</span>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            report.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : report.status === "failed"
-                                ? "bg-red-100 text-red-800"
-                                : report.status === "processing"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {report.status}
-                        </span>
-                        {report.file_size && (
-                          <span className="text-xs text-gray-500">
-                            {(report.file_size / 1024).toFixed(1)} KB
-                          </span>
-                        )}
+            <div aria-live="polite" aria-atomic="true">
+              {isLoading ? (
+                <div className="p-6" role="status" aria-label="Loading reports">
+                  <span className="sr-only">Loading reports, please wait...</span>
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse flex items-center space-x-4">
+                        <div className="h-10 bg-gray-200 rounded flex-1" />
+                        <div className="h-10 bg-gray-200 rounded w-24" />
                       </div>
-                      {report.generated_at && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Generated: {new Date(report.generated_at).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                    <div className="ml-4">
-                      {report.status === "completed" && (
-                        <button
-                          onClick={() =>
-                            handleDownload(report.id, `${report.title}.${report.output_format}`)
-                          }
-                          disabled={downloadReport.isPending}
-                          className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 disabled:opacity-50"
-                        >
-                          Download
-                        </button>
-                      )}
-                      {report.status === "failed" && report.error_message && (
-                        <span className="text-xs text-red-600" title={report.error_message}>
-                          Error
-                        </span>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 text-center">
-                <p className="text-gray-500">No reports generated yet. Use the builder to create one.</p>
-              </div>
-            )}
+                </div>
+              ) : reports?.items && reports.items.length > 0 ? (
+                <>
+                  <p id="reports-table-desc" className="sr-only">
+                    A list of {reports.items.length} generated reports showing title, type, format, status, and download options.
+                  </p>
+                  <table
+                    className="w-full"
+                    aria-describedby="reports-table-desc"
+                    aria-labelledby="reports-table-heading"
+                  >
+                    <caption className="sr-only">
+                      Generated reports with title, report type, output format, status, file size, and download actions
+                    </caption>
+                    <thead className="sr-only">
+                      <tr>
+                        <th scope="col">Report Details</th>
+                        <th scope="col">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {reports.items.map((report) => (
+                        <tr key={report.id} className="hover:bg-gray-50">
+                          <td className="p-4">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{report.title}</p>
+                              <div className="flex items-center space-x-4 mt-1">
+                                <span className="text-xs text-gray-500 capitalize">
+                                  {report.report_type.replace("_", " ")}
+                                </span>
+                                <span className="text-xs text-gray-500 uppercase">{report.output_format}</span>
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    report.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : report.status === "failed"
+                                        ? "bg-red-100 text-red-800"
+                                        : report.status === "processing"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : "bg-gray-100 text-gray-800"
+                                  }`}
+                                  role="status"
+                                  aria-label={`Status: ${report.status}`}
+                                >
+                                  {report.status}
+                                </span>
+                                {report.file_size && (
+                                  <span className="text-xs text-gray-500">
+                                    {(report.file_size / 1024).toFixed(1)} KB
+                                  </span>
+                                )}
+                              </div>
+                              {report.generated_at && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Generated: {new Date(report.generated_at).toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4 text-right">
+                            {report.status === "completed" && (
+                              <button
+                                onClick={() =>
+                                  handleDownload(report.id, `${report.title}.${report.output_format}`)
+                                }
+                                disabled={downloadReport.isPending}
+                                aria-label={`Download report: ${report.title}`}
+                                className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 disabled:opacity-50"
+                              >
+                                Download
+                              </button>
+                            )}
+                            {report.status === "failed" && report.error_message && (
+                              <span
+                                className="text-xs text-red-600"
+                                title={report.error_message}
+                                role="alert"
+                                aria-label={`Error for report ${report.title}: ${report.error_message}`}
+                              >
+                                Error
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              ) : (
+                <div className="p-6 text-center">
+                  <p className="text-gray-500">No reports generated yet. Use the builder to create one.</p>
+                </div>
+              )}
+            </div>
 
             {reports?.has_more && (
               <div className="p-4 border-t border-gray-200 text-center">
-                <button className="text-sm text-blue-600 hover:text-blue-800">
+                <button
+                  aria-label="Load more reports"
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
                   Load More
                 </button>
               </div>

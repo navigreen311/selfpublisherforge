@@ -5,10 +5,9 @@ interactions to implement niche analysis, keyword research, and
 competitor tracking.
 
 NOTE: org_id scoping is enforced on all DB-backed queries to prevent
-cross-tenant data leakage.  Models that do not yet have an org_id
-column (MarketCategory, MarketKeyword, MarketSnapshot) accept the
-parameter for forward compatibility -- a migration is required to
-add the column before filtering can be applied to those tables.
+cross-tenant data leakage.  Client-only methods (categories, keywords,
+niche analysis) accept the org_id parameter for forward compatibility
+so that filtering can be applied when DB-backed caching is added.
 """
 
 from __future__ import annotations
@@ -73,7 +72,6 @@ class MarketIntelligenceService:
         marketplace: str = "US",
         org_id: Optional[uuid.UUID] = None,
     ) -> list[CategoryNode]:
-        # TODO: filter by org_id once MarketCategory has an org_id column
         raw = await self._client.get_category_tree(root_id=root_id, marketplace=marketplace)
         return [self._map_category(c) for c in raw]
 
@@ -83,7 +81,6 @@ class MarketIntelligenceService:
         marketplace: str = "US",
         org_id: Optional[uuid.UUID] = None,
     ) -> CategoryAnalysis:
-        # TODO: filter by org_id once MarketCategory has an org_id column
         products = await self._client.search_products(
             keywords="", category_id=category_id, marketplace=marketplace, max_results=20
         )
@@ -138,7 +135,6 @@ class MarketIntelligenceService:
         request: KeywordResearchRequest,
         org_id: Optional[uuid.UUID] = None,
     ) -> KeywordResearchResponse:
-        # TODO: filter by org_id once MarketKeyword has an org_id column
         keyword_data = await self._client.get_keyword_data(
             request.keywords, marketplace=request.marketplace
         )
@@ -171,7 +167,6 @@ class MarketIntelligenceService:
             "for beginners",
             "2024",
         ]
-        # TODO: filter by org_id once MarketKeyword has an org_id column
         base = params.niche or params.genre
         expanded = [f"{base} {m}".strip() for m in modifiers][: params.limit]
         return await self._client.get_keyword_data(expanded)
@@ -185,7 +180,6 @@ class MarketIntelligenceService:
         request: NicheAnalysisRequest,
         org_id: Optional[uuid.UUID] = None,
     ) -> NicheAnalysisResponse:
-        # TODO: scope niche analysis results by org_id when DB-backed caching is added
         # 1. Fetch products matching the niche
         products = await self._client.search_products(
             keywords=request.niche,
@@ -404,11 +398,6 @@ class MarketIntelligenceService:
 
         When org_id is provided the query is scoped to that tenant.
         If no snapshots exist yet, returns an empty list.
-
-        NOTE: MarketSnapshot and MarketCategory do not yet have an org_id
-        column.  A migration is needed to add it before the org_id filter
-        below will have any effect.  The parameter is accepted now for
-        forward compatibility.
         """
         query = (
             select(MarketSnapshotDB)
@@ -416,18 +405,16 @@ class MarketIntelligenceService:
             .order_by(MarketSnapshotDB.snapshot_date.desc())
             .limit(limit)
         )
-        # TODO: uncomment once MarketSnapshot has an org_id column
-        # if org_id is not None:
-        #     query = query.where(MarketSnapshotDB.org_id == org_id)
+        if org_id is not None:
+            query = query.where(MarketSnapshotDB.org_id == org_id)
         if category_id:
             # Find MarketCategory by amazon_node_id, then filter snapshots
             cat_query = select(MarketCategory).where(
                 MarketCategory.amazon_node_id == category_id,
                 MarketCategory.deleted_at.is_(None),
             )
-            # TODO: uncomment once MarketCategory has an org_id column
-            # if org_id is not None:
-            #     cat_query = cat_query.where(MarketCategory.org_id == org_id)
+            if org_id is not None:
+                cat_query = cat_query.where(MarketCategory.org_id == org_id)
             cat_result = await db.execute(cat_query)
             cat_obj = cat_result.scalar_one_or_none()
             if cat_obj:

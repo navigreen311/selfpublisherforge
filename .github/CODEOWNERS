@@ -1,0 +1,199 @@
+# =============================================================================
+# CODEOWNERS - SelfPublisherForge
+# =============================================================================
+#
+# This file defines code ownership for automated pull request review assignments.
+# GitHub will automatically request reviews from the listed owners when a PR
+# modifies files matching the specified patterns.
+#
+# Patterns follow .gitignore syntax. Later rules take precedence over earlier
+# ones, so more specific paths should appear after general catch-all rules.
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Default owner for everything in the repository
+# This catch-all ensures no PR goes unreviewed.
+# -----------------------------------------------------------------------------
+* @navigreen311
+
+# =============================================================================
+# Backend (Python / FastAPI)
+# =============================================================================
+/backend/ @navigreen311
+
+# Core framework: config, database, middleware, security
+/backend/app/core/ @navigreen311
+/backend/app/config.py @navigreen311
+/backend/app/database.py @navigreen311
+/backend/app/main.py @navigreen311
+
+# API layer
+/backend/app/api/ @navigreen311
+
+# Data models and schemas
+/backend/app/models/ @navigreen311
+/backend/app/schemas/ @navigreen311
+
+# Backend services and async tasks
+/backend/app/services/ @navigreen311
+/backend/app/tasks/ @navigreen311
+
+# Backend modules - Auth & Users
+/backend/app/modules/auth/ @navigreen311
+/backend/app/modules/users/ @navigreen311
+
+# Backend modules - Billing & Pricing
+/backend/app/modules/billing/ @navigreen311
+/backend/app/modules/pricing_automation/ @navigreen311
+/backend/app/modules/portfolio_economics/ @navigreen311
+
+# Backend modules - AI Writing & LLM
+/backend/app/modules/ai_writing/ @navigreen311
+/backend/app/modules/llm_orchestration/ @navigreen311
+/backend/app/modules/agent_system/ @navigreen311
+/backend/app/modules/style_cloning/ @navigreen311
+
+# Backend modules - Publishing & Production
+/backend/app/modules/publishing_ops/ @navigreen311
+/backend/app/modules/production_pipeline/ @navigreen311
+/backend/app/modules/kdp_validation/ @navigreen311
+/backend/app/modules/cover_design/ @navigreen311
+
+# Backend modules - Marketing & Advertising
+/backend/app/modules/marketing/ @navigreen311
+/backend/app/modules/advertising/ @navigreen311
+/backend/app/modules/product_page_lab/ @navigreen311
+
+# Backend modules - Analytics & Market Intelligence
+/backend/app/modules/analytics/ @navigreen311
+/backend/app/modules/market_intelligence/ @navigreen311
+/backend/app/modules/competitor_finder/ @navigreen311
+/backend/app/modules/review_intelligence/ @navigreen311
+/backend/app/modules/knowledge_vault/ @navigreen311
+
+# Backend modules - Infrastructure & Real-time
+/backend/app/modules/notifications/ @navigreen311
+/backend/app/modules/realtime/ @navigreen311
+/backend/app/modules/storage/ @navigreen311
+/backend/app/modules/chrome_extension/ @navigreen311
+
+# Database migrations
+/backend/migrations/ @navigreen311
+
+# Backend tests
+/backend/tests/ @navigreen311
+
+# Backend dependency and build files
+/backend/requirements.txt @navigreen311
+/backend/pyproject.toml @navigreen311
+/backend/Dockerfile @navigreen311
+/backend/Dockerfile.dev @navigreen311
+
+# =============================================================================
+# Frontend (Next.js / TypeScript / React)
+# =============================================================================
+/frontend/ @navigreen311
+
+# Frontend shared components and UI library
+/frontend/src/components/ @navigreen311
+/frontend/src/components/ui/ @navigreen311
+/frontend/src/components/layout/ @navigreen311
+/frontend/src/components/shared/ @navigreen311
+
+# Frontend application routes
+/frontend/src/app/ @navigreen311
+
+# Frontend hooks and utilities
+/frontend/src/hooks/ @navigreen311
+/frontend/src/lib/ @navigreen311
+/frontend/src/types/ @navigreen311
+
+# Frontend feature modules
+/frontend/src/modules/writing/ @navigreen311
+/frontend/src/modules/publishing/ @navigreen311
+/frontend/src/modules/marketing/ @navigreen311
+/frontend/src/modules/advertising/ @navigreen311
+/frontend/src/modules/analytics/ @navigreen311
+/frontend/src/modules/billing/ @navigreen311
+/frontend/src/modules/users/ @navigreen311
+/frontend/src/modules/agents/ @navigreen311
+/frontend/src/modules/knowledge/ @navigreen311
+/frontend/src/modules/market/ @navigreen311
+/frontend/src/modules/pipeline/ @navigreen311
+/frontend/src/modules/product-page/ @navigreen311
+/frontend/src/modules/projects/ @navigreen311
+
+# Frontend tests
+/frontend/__tests__/ @navigreen311
+
+# Frontend config and build files
+/frontend/next.config.js @navigreen311
+/frontend/tailwind.config.ts @navigreen311
+/frontend/tsconfig.json @navigreen311
+/frontend/package.json @navigreen311
+/frontend/Dockerfile @navigreen311
+/frontend/Dockerfile.dev @navigreen311
+
+# =============================================================================
+# Shared contracts, events, and types
+# =============================================================================
+/shared/ @navigreen311
+
+# =============================================================================
+# Chrome Extension
+# =============================================================================
+/extension/ @navigreen311
+/extension/manifest.json @navigreen311
+/extension/background/ @navigreen311
+/extension/content/ @navigreen311
+/extension/popup/ @navigreen311
+/extension/sidebar/ @navigreen311
+
+# =============================================================================
+# Infrastructure & DevOps
+# =============================================================================
+/infra/ @navigreen311
+
+# Terraform (cloud infrastructure as code)
+/infra/terraform/ @navigreen311
+
+# Monitoring and observability
+/infra/monitoring/ @navigreen311
+
+# Deployment scripts
+/infra/scripts/ @navigreen311
+/infra/docker/ @navigreen311
+/infra/appspec.yml @navigreen311
+
+# =============================================================================
+# CI/CD Pipelines
+# =============================================================================
+/.github/workflows/ @navigreen311
+
+# =============================================================================
+# Docker Compose (local and production orchestration)
+# =============================================================================
+/docker-compose*.yml @navigreen311
+
+# =============================================================================
+# Build & Project Configuration
+# =============================================================================
+/Makefile @navigreen311
+
+# =============================================================================
+# Prompts (AI prompt templates and configurations)
+# =============================================================================
+/prompts/ @navigreen311
+
+# =============================================================================
+# Documentation
+# =============================================================================
+/docs/ @navigreen311
+*.md @navigreen311
+
+# =============================================================================
+# Project-level configuration
+# =============================================================================
+/CLAUDE.md @navigreen311

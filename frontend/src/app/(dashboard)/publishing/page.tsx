@@ -12,17 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
-
-const PLATFORMS = [
-  { value: "kdp", label: "Amazon KDP" },
-  { value: "ingram_spark", label: "IngramSpark" },
-  { value: "draft2digital", label: "Draft2Digital" },
-  { value: "smashwords", label: "Smashwords" },
-  { value: "apple_books", label: "Apple Books" },
-  { value: "barnes_noble", label: "Barnes & Noble" },
-  { value: "kobo", label: "Kobo" },
-  { value: "google_play", label: "Google Play Books" },
-];
+import { PUBLISHING_PLATFORMS } from "@/lib/constants";
 
 export default function PublishingDashboardPage() {
   const { data: accounts = [], isLoading: accountsLoading } = usePublishingAccounts();
@@ -32,7 +22,7 @@ export default function PublishingDashboardPage() {
   const activeListingsCount = listings.filter((l) => l.status === "active").length;
 
   const [showConnect, setShowConnect] = useState(false);
-  const [newPlatform, setNewPlatform] = useState("kdp");
+  const [newPlatform, setNewPlatform] = useState(PUBLISHING_PLATFORMS[0].value);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [connectTouched, setConnectTouched] = useState<Record<string, boolean>>({});
@@ -128,11 +118,13 @@ export default function PublishingDashboardPage() {
       </div>
 
       {/* Publishing Accounts */}
-      <section>
+      <section aria-labelledby="publishing-accounts-heading">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Publishing Accounts</h2>
+          <h2 id="publishing-accounts-heading" className="text-lg font-semibold text-gray-900">Publishing Accounts</h2>
           <button
             onClick={() => setShowConnect(!showConnect)}
+            aria-expanded={showConnect}
+            aria-label={showConnect ? "Cancel connecting account" : "Connect a new publishing account"}
             className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
           >
             {showConnect ? "Cancel" : "+ Connect Account"}
@@ -142,18 +134,20 @@ export default function PublishingDashboardPage() {
         {showConnect && (
           <form
             onSubmit={handleConnect}
+            aria-label="Connect new publishing account"
             className="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 p-5 space-y-4"
           >
             <h3 className="font-medium text-gray-900">Connect New Account</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                <label htmlFor="connect-platform" className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
                 <select
+                  id="connect-platform"
                   value={newPlatform}
                   onChange={(e) => setNewPlatform(e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 >
-                  {PLATFORMS.map((p) => (
+                  {PUBLISHING_PLATFORMS.map((p) => (
                     <option key={p.value} value={p.value}>
                       {p.label}
                     </option>
@@ -161,25 +155,33 @@ export default function PublishingDashboardPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="connect-account-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Account Name *
                 </label>
                 <input
+                  id="connect-account-name"
                   type="text"
+                  required
+                  aria-required="true"
+                  aria-invalid={showConnectError("name") ? "true" : undefined}
+                  aria-describedby={showConnectError("name") ? "connect-name-error" : undefined}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onBlur={() => setConnectTouched((prev) => ({ ...prev, name: true }))}
-                  placeholder="My KDP Account"
+                  placeholder="My Publishing Account"
                   className={`w-full rounded-md border px-3 py-2 text-sm ${connectErrorClass("name")}`}
                 />
                 {showConnectError("name") && (
-                  <p className="mt-1 text-xs text-red-500">{connectErrors.name}</p>
+                  <p id="connect-name-error" role="alert" className="mt-1 text-xs text-red-500">{connectErrors.name}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label htmlFor="connect-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
+                  id="connect-email"
                   type="email"
+                  aria-invalid={showConnectError("email") ? "true" : undefined}
+                  aria-describedby={showConnectError("email") ? "connect-email-error" : undefined}
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   onBlur={() => setConnectTouched((prev) => ({ ...prev, email: true }))}
@@ -187,7 +189,7 @@ export default function PublishingDashboardPage() {
                   className={`w-full rounded-md border px-3 py-2 text-sm ${connectErrorClass("email")}`}
                 />
                 {showConnectError("email") && (
-                  <p className="mt-1 text-xs text-red-500">{connectErrors.email}</p>
+                  <p id="connect-email-error" role="alert" className="mt-1 text-xs text-red-500">{connectErrors.email}</p>
                 )}
               </div>
             </div>
@@ -204,7 +206,7 @@ export default function PublishingDashboardPage() {
         )}
 
         {accountsLoading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading publishing accounts">
             {[...Array(3)].map((_, i) => (
               <Skeleton key={i} className="h-32" />
             ))}
@@ -217,6 +219,7 @@ export default function PublishingDashboardPage() {
             </p>
             <button
               onClick={() => setShowConnect(true)}
+              aria-label="Connect your first publishing account"
               className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
               Connect Account
@@ -232,8 +235,8 @@ export default function PublishingDashboardPage() {
       </section>
 
       {/* Listings */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Listings</h2>
+      <section aria-labelledby="listings-heading">
+        <h2 id="listings-heading" className="text-lg font-semibold text-gray-900 mb-4">Listings</h2>
         <ListingTable />
       </section>
     </div>

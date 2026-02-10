@@ -89,10 +89,15 @@ function BackupCodesDisplay({ codes }: { codes: string[] }) {
         </AlertDescription>
       </Alert>
 
-      <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/50 p-4">
+      <div
+        className="grid grid-cols-2 gap-2 rounded-md border bg-muted/50 p-4"
+        role="list"
+        aria-label="Backup codes"
+      >
         {codes.map((code) => (
           <code
             key={code}
+            role="listitem"
             className="rounded bg-background px-2 py-1 text-center text-sm font-mono"
           >
             {code}
@@ -101,10 +106,10 @@ function BackupCodesDisplay({ codes }: { codes: string[] }) {
       </div>
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={handleCopyAll}>
+        <Button variant="outline" size="sm" onClick={handleCopyAll} aria-label="Copy all backup codes to clipboard">
           {copied ? "Copied!" : "Copy All"}
         </Button>
-        <Button variant="outline" size="sm" onClick={handleDownload}>
+        <Button variant="outline" size="sm" onClick={handleDownload} aria-label="Download backup codes as text file">
           Download as .txt
         </Button>
       </div>
@@ -205,8 +210,8 @@ function MFASetupFlow({
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden="true" />
               Generating your MFA secret...
             </div>
           ) : error ? (
@@ -268,7 +273,7 @@ function MFASetupFlow({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={setupData.qr_code_url}
-                  alt="MFA QR Code"
+                  alt="Scan this QR code with your authenticator app to set up two-factor authentication"
                   width={200}
                   height={200}
                   className="h-[200px] w-[200px]"
@@ -278,11 +283,17 @@ function MFASetupFlow({
 
             {/* Manual Secret Key */}
             <div className="space-y-1.5">
-              <p className="text-sm font-medium">
+              <p id="manual-key-description" className="text-sm font-medium">
                 Can&apos;t scan the QR code? Enter this key manually:
               </p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 rounded border bg-muted px-3 py-2 text-sm font-mono select-all">
+                <code
+                  className="flex-1 rounded border bg-muted px-3 py-2 text-sm font-mono select-all"
+                  aria-describedby="manual-key-description"
+                  role="textbox"
+                  aria-readonly="true"
+                  aria-label="MFA secret key"
+                >
                   {setupData.secret}
                 </code>
               </div>
@@ -294,13 +305,15 @@ function MFASetupFlow({
         )}
 
         {/* Verification Input */}
-        <div className="space-y-3 border-t pt-4">
-          <p className="text-sm font-medium">
+        <fieldset className="space-y-3 border-t pt-4">
+          <legend className="sr-only">Verify authenticator setup</legend>
+          <label htmlFor="mfa-verify-code" className="text-sm font-medium">
             Enter the 6-digit code from your authenticator app to complete
             setup:
-          </p>
+          </label>
           <div className="flex gap-2">
             <Input
+              id="mfa-verify-code"
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
@@ -311,6 +324,9 @@ function MFASetupFlow({
                 setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))
               }
               className="max-w-[160px] text-center text-lg tracking-widest font-mono"
+              aria-required="true"
+              aria-describedby={error ? "mfa-verify-error" : undefined}
+              aria-invalid={!!error}
             />
             <Button
               onClick={handleVerify}
@@ -320,9 +336,11 @@ function MFASetupFlow({
             </Button>
           </div>
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <p id="mfa-verify-error" className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
           )}
-        </div>
+        </fieldset>
 
         {/* Cancel */}
         <div className="border-t pt-4">
@@ -392,17 +410,20 @@ function DisableMFADialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 py-2">
+        <fieldset className="space-y-3 py-2">
+          <legend className="sr-only">Confirm MFA disable</legend>
           <Input
+            id="disable-mfa-password"
             type="password"
             label="Password"
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={error ?? undefined}
+            aria-required="true"
             autoFocus
           />
-        </div>
+        </fieldset>
 
         <DialogFooter>
           <Button
@@ -452,7 +473,7 @@ export default function SecuritySettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-4">
+      <div className="animate-pulse space-y-4" aria-busy="true" aria-label="Loading security settings">
         <div className="h-10 bg-gray-200 rounded w-1/3" />
         <div className="h-40 bg-gray-100 rounded" />
       </div>
@@ -462,7 +483,7 @@ export default function SecuritySettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Security</h2>
+        <h2 id="security-settings-heading" className="text-lg font-semibold">Security</h2>
         <p className="text-sm text-gray-500">
           Manage your account security settings and two-factor authentication.
         </p>
@@ -494,6 +515,7 @@ export default function SecuritySettingsPage() {
                   viewBox="0 0 24 24"
                   strokeWidth={2}
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"

@@ -1,8 +1,38 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!-- IMPORTANT: Replace EXTENSION_ID with your actual Chrome Web Store extension ID before publishing -->
+<!--
+  SelfPublisherForge Extension — Auto-Update Manifest
+  ====================================================
+
+  This file tells Chrome where to check for new versions of the extension
+  when it is self-hosted (i.e., distributed outside the Chrome Web Store).
+
+  EXTENSION_ID placeholder:
+    The `appid` value below must be replaced with your actual 32-character
+    Chrome extension ID (all lowercase letters, e.g. "abcdefghijklmnopqrstuvwxyzabcdef").
+
+  How to find your extension ID:
+    1. Load the unpacked extension in chrome://extensions (enable Developer Mode).
+    2. The ID is displayed beneath the extension name on the extensions page.
+    3. Alternatively, after publishing to the Chrome Web Store, find the ID
+       in the Chrome Web Store Developer Dashboard under your extension listing.
+
+  Automated replacement:
+    The prepare-release.sh build script replaces EXTENSION_ID automatically.
+    Run:  ./scripts/prepare-release.sh <EXTENSION_ID> <VERSION>
+    See extension/README.md for the full release process.
+
+  Version field:
+    Update the `version` attribute in the <updatecheck> tag to match the
+    version you are publishing. The build script handles this as well.
+-->
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
   <app appid='EXTENSION_ID'>
-    <!-- Verify this endpoint serves a valid signed .crx package -->
+    <!--
+      codebase: URL where the signed .crx package is hosted.
+      version:  Must match the version in manifest.json for this release.
+      Chrome compares this version against the installed version to decide
+      whether an update is available.
+    -->
     <updatecheck codebase='https://selfpublisherforge.com/extension/selfpublisherforge-latest.crx' version='1.0.0' />
   </app>
 </gupdate>

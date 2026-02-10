@@ -1,17 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLaunchPlans, useEmailSequences, useSocialCalendar, useARCCampaigns, useRecentActivity } from "@/modules/marketing/hooks";
 import type { RecentActivityItem } from "@/modules/marketing/hooks";
 import { ARCTable } from "@/modules/marketing/components/ARCTable";
 import { SocialCalendar } from "@/modules/marketing/components/SocialCalendar";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Rocket, Mail, Activity } from "lucide-react";
+import { Rocket, Mail, Activity, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 type Tab = "overview" | "launch-plans" | "email" | "social" | "arc";
+
+interface DeleteTarget {
+  id: string;
+  name: string;
+  type: "launch-plan" | "email-sequence" | "arc-campaign";
+}
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -21,16 +30,89 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "arc", label: "ARC Campaigns" },
 ];
 
+const DELETE_CONFIG: Record<
+  DeleteTarget["type"],
+  { endpoint: string; queryKey: string[]; label: string }
+> = {
+  "launch-plan": {
+    endpoint: "/api/v1/marketing/launch-plans",
+    queryKey: ["marketing", "launch-plans"],
+    label: "launch plan",
+  },
+  "email-sequence": {
+    endpoint: "/api/v1/marketing/email-sequences",
+    queryKey: ["marketing", "email-sequences"],
+    label: "email sequence",
+  },
+  "arc-campaign": {
+    endpoint: "/api/v1/marketing/arc",
+    queryKey: ["marketing", "arc"],
+    label: "ARC campaign",
+  },
+};
+
 export default function MarketingDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const { data: launchPlans, isLoading: plansLoading } = useLaunchPlans();
   const { data: emailSequences, isLoading: seqLoading } = useEmailSequences();
   const { data: socialCalendar, isLoading: socialLoading } = useSocialCalendar();
   const { data: arcCampaigns, isLoading: arcLoading } = useARCCampaigns();
 
+  const handleDeleteRequest = useCallback((target: DeleteTarget) => {
+    setDeleteTarget(target);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+
+    const config = DELETE_CONFIG[deleteTarget.type];
+    setIsDeleting(true);
+
+    try {
+      await api.delete(`${config.endpoint}/${deleteTarget.id}`);
+      await queryClient.invalidateQueries({ queryKey: config.queryKey });
+    } catch {
+      // Error handling is managed by the global API interceptor
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, queryClient]);
+
+  const handleDeleteDialogChange = useCallback(
+    (open: boolean) => {
+      if (!open && !isDeleting) {
+        setDeleteTarget(null);
+      }
+    },
+    [isDeleting]
+  );
+
+  const deleteConfig = deleteTarget ? DELETE_CONFIG[deleteTarget.type] : null;
+
   return (
     <div className="space-y-6">
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={handleDeleteDialogChange}
+        title={`Delete ${deleteConfig?.label || "item"}?`}
+        description={
+          deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteConfirm}
+        loading={isDeleting}
+      />
+
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold">Marketing & Launch Command</h1>
@@ -73,6 +155,7 @@ export default function MarketingDashboard() {
         <LaunchPlansTab
           plans={launchPlans?.items || []}
           isLoading={plansLoading}
+          onDelete={handleDeleteRequest}
         />
       )}
 
@@ -80,6 +163,7 @@ export default function MarketingDashboard() {
         <EmailTab
           sequences={emailSequences?.items || []}
           isLoading={seqLoading}
+          onDelete={handleDeleteRequest}
         />
       )}
 
@@ -234,6 +318,7 @@ function OverviewTab({
 function LaunchPlansTab({
   plans,
   isLoading,
+  onDelete,
 }: {
   plans: Array<{
     id: string;
@@ -244,6 +329,7 @@ function LaunchPlansTab({
     created_at: string;
   }>;
   isLoading: boolean;
+  onDelete: (target: DeleteTarget) => void;
 }) {
   const router = useRouter();
 
@@ -297,28 +383,48 @@ function LaunchPlansTab({
       ) : (
         <div className="space-y-3">
           {plans.map((plan) => (
-            <Link
+            <div
               key={plan.id}
-              href={`/marketing/launch/${plan.id}`}
-              className="block bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-3"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">{plan.title}</h3>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-                    {plan.genre && <span>{plan.genre}</span>}
-                    <span>Launch: {formatDate(plan.launch_date)}</span>
+              <Link
+                href={`/marketing/launch/${plan.id}`}
+                className="flex-1 min-w-0"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{plan.title}</h3>
+                    <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                      {plan.genre && <span>{plan.genre}</span>}
+                      <span>Launch: {formatDate(plan.launch_date)}</span>
+                    </div>
                   </div>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      statusColors[plan.status] || ""
+                    }`}
+                  >
+                    {plan.status}
+                  </span>
                 </div>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    statusColors[plan.status] || ""
-                  }`}
-                >
-                  {plan.status}
-                </span>
-              </div>
-            </Link>
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete({
+                    id: plan.id,
+                    name: plan.title,
+                    type: "launch-plan",
+                  });
+                }}
+                className="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                aria-label={`Delete ${plan.title}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -329,6 +435,7 @@ function LaunchPlansTab({
 function EmailTab({
   sequences,
   isLoading,
+  onDelete,
 }: {
   sequences: Array<{
     id: string;
@@ -339,6 +446,7 @@ function EmailTab({
     created_at: string;
   }>;
   isLoading: boolean;
+  onDelete: (target: DeleteTarget) => void;
 }) {
   const router = useRouter();
 
@@ -384,27 +492,47 @@ function EmailTab({
       ) : (
         <div className="space-y-3">
           {sequences.map((seq) => (
-            <Link
+            <div
               key={seq.id}
-              href={`/marketing/email?id=${seq.id}`}
-              className="block bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-3"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">{seq.name}</h3>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {seq.sent_count} / {seq.recipient_count} sent
+              <Link
+                href={`/marketing/email?id=${seq.id}`}
+                className="flex-1 min-w-0"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{seq.name}</h3>
+                    <div className="text-sm text-gray-500 mt-1">
+                      {seq.sent_count} / {seq.recipient_count} sent
+                    </div>
                   </div>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      statusColors[seq.status] || ""
+                    }`}
+                  >
+                    {seq.status}
+                  </span>
                 </div>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    statusColors[seq.status] || ""
-                  }`}
-                >
-                  {seq.status}
-                </span>
-              </div>
-            </Link>
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete({
+                    id: seq.id,
+                    name: seq.name,
+                    type: "email-sequence",
+                  });
+                }}
+                className="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                aria-label={`Delete ${seq.name}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           ))}
         </div>
       )}

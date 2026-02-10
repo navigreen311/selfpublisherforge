@@ -106,3 +106,43 @@ infrastructure-as-code, and 2,183+ passing backend tests.
 ## [Unreleased]
 
 _No unreleased changes at this time._
+
+## [0.9.0] - 2026-02-10
+
+Comprehensive hardening release replacing stubs with real implementations, adding auth enforcement,
+real document generation, async database queries, form validation, accessibility improvements,
+monitoring fixes, and project governance documentation.
+
+### Added
+- Market intelligence auth enforcement on all endpoints with org_id multi-tenancy filtering
+- Real PDF generation with ReportLab (title pages, table of contents, chapters, ISBN barcodes)
+- Real XLSX export with openpyxl (multi-sheet workbooks with formatting)
+- PA-API 5.0 client with HMAC-SHA256 request signing for Amazon Product Advertising API
+- Celery task dispatch for publishing operations, analytics pipelines, and competitor finder workflows
+- Zod form validation schemas for all frontend forms
+- Confirmation dialogs for destructive operations across the UI
+- Focus trap for modal accessibility (keyboard navigation support)
+- Platform constants module for consistent naming across services
+- E2E smoke tests integrated into CI pipeline
+- Architecture Decision Records (ADRs) for documenting key design choices
+- CONTRIBUTING.md guide with development workflow and contribution standards
+- CODEOWNERS file for automated PR review assignment
+
+### Changed
+- Portfolio economics router uses real database queries (removed hardcoded placeholder data)
+- Audience service functions converted to async with real database queries
+- Chrome extension service refactored to use real data aggregation instead of mock data
+- Amazon Ads integration raises `AmazonAdsNotConfiguredError` instead of returning silent stubs
+- Stripe initialization changed to lazy loading with clear error messaging on misconfiguration
+- Config validation now warns about empty optional credentials at startup
+
+### Fixed
+- Frontend TypeScript errors including infinite query types and ReactNode type mismatches
+- OAuth callback page wrapped in proper Suspense boundary
+- Prometheus and AlertManager alert rules updated to use correct metric names
+- CI coverage thresholds now properly enforced across backend and frontend
+- Market intelligence multi-tenancy with consistent org_id filtering on all queries
+
+### Security
+- All market intelligence endpoints now require authentication (previously some were unprotected)
+- Added Terraform environment validation documentation for infrastructure security review

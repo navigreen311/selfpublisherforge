@@ -54,7 +54,7 @@ export default function OrganizationSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-4">
+      <div className="animate-pulse space-y-4" aria-busy="true" aria-label="Loading organization settings">
         <div className="h-10 bg-gray-200 rounded w-1/2" />
         <div className="h-40 bg-gray-100 rounded" />
       </div>
@@ -65,44 +65,58 @@ export default function OrganizationSettingsPage() {
     <div className="space-y-8">
       {/* Org Details */}
       <div>
-        <h2 className="text-lg font-semibold">Organization</h2>
+        <h2 id="org-settings-heading" className="text-lg font-semibold">Organization</h2>
         <p className="text-sm text-gray-500">
           Manage your organization settings and team.
         </p>
       </div>
 
       {isAdminOrOwner && (
-        <div className="rounded-lg border bg-white p-6">
-          <h3 className="text-sm font-semibold mb-4">General Settings</h3>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Organization Name
-              </label>
-              <input
-                {...register("name")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              />
-              {errors.name && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.name.message}
+        <section aria-labelledby="org-general-heading" className="rounded-lg border bg-white p-6">
+          <h3 id="org-general-heading" className="text-sm font-semibold mb-4">General Settings</h3>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" aria-label="Organization settings form">
+            <fieldset className="space-y-4">
+              <legend className="sr-only">Organization details</legend>
+              <div>
+                <label htmlFor="org-name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Organization Name
+                </label>
+                <input
+                  id="org-name"
+                  {...register("name")}
+                  aria-required="true"
+                  aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? "org-name-error" : undefined}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+                {errors.name && (
+                  <p id="org-name-error" className="mt-1 text-xs text-red-500" role="alert">
+                    {errors.name.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="org-slug" className="block text-sm font-medium text-gray-700 mb-1">
+                  Slug
+                </label>
+                <input
+                  id="org-slug"
+                  {...register("slug")}
+                  aria-required="true"
+                  aria-invalid={!!errors.slug}
+                  aria-describedby={errors.slug ? "org-slug-error" : "org-slug-hint"}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+                <p id="org-slug-hint" className="sr-only">
+                  Only lowercase letters, numbers, and hyphens are allowed.
                 </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Slug
-              </label>
-              <input
-                {...register("slug")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              />
-              {errors.slug && (
-                <p className="mt-1 text-xs text-red-500">
-                  {errors.slug.message}
-                </p>
-              )}
-            </div>
+                {errors.slug && (
+                  <p id="org-slug-error" className="mt-1 text-xs text-red-500" role="alert">
+                    {errors.slug.message}
+                  </p>
+                )}
+              </div>
+            </fieldset>
 
             {org && (
               <p className="text-xs text-gray-400">
@@ -119,13 +133,13 @@ export default function OrganizationSettingsPage() {
               {updateOrg.isPending ? "Saving..." : "Save Changes"}
             </button>
           </form>
-        </div>
+        </section>
       )}
 
       {/* Team Members */}
-      <div className="rounded-lg border bg-white p-6">
+      <section aria-labelledby="team-members-heading" className="rounded-lg border bg-white p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold">Team Members</h3>
+          <h3 id="team-members-heading" className="text-sm font-semibold">Team Members</h3>
           {isAdminOrOwner && (
             <button
               onClick={() => setInviteOpen(true)}
@@ -136,7 +150,7 @@ export default function OrganizationSettingsPage() {
           )}
         </div>
         {orgId && <MemberList orgId={orgId} />}
-      </div>
+      </section>
 
       {/* Invite Modal */}
       {orgId && (

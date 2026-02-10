@@ -3,7 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, FolderOpen, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Search,
+  FolderOpen,
+  AlertCircle,
+  MoreHorizontal,
+  Archive,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,9 +29,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useProjects, type Project } from "@/modules/projects/hooks";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import {
+  useProjects,
+  useDeleteProject,
+  useUpdateProject,
+  type Project,
+} from "@/modules/projects/hooks";
 
 const badgeVariant = (status: string) => {
   switch (status) {
@@ -66,6 +87,17 @@ export default function ProjectsPage() {
 
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = React.useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  // Archive confirmation state
+  const [archiveTarget, setArchiveTarget] = React.useState<Project | null>(null);
+  const [isArchiving, setIsArchiving] = React.useState(false);
+
+  const deleteProject = useDeleteProject();
+  const updateProject = useUpdateProject();
+
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
@@ -85,6 +117,31 @@ export default function ProjectsPage() {
     });
   }, [projects, typeFilter]);
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deleteProject.mutateAsync(deleteTarget.id);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleArchiveConfirm = async () => {
+    if (!archiveTarget) return;
+    setIsArchiving(true);
+    try {
+      await updateProject.mutateAsync({
+        id: archiveTarget.id,
+        data: { status: "archived" },
+      });
+    } finally {
+      setIsArchiving(false);
+      setArchiveTarget(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -94,7 +151,7 @@ export default function ProjectsPage() {
             Manage all your publishing projects
           </p>
         </div>
-        <Button asChild>
+        <Button asChild aria-label="Create a new project">
           <Link href="/projects/new">
             <Plus className="mr-2 h-4 w-4" /> New Project
           </Link>
@@ -110,10 +167,11 @@ export default function ProjectsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
+            aria-label="Search projects"
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[140px]" aria-label="Filter by project type">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
           <SelectContent>
@@ -124,7 +182,7 @@ export default function ProjectsPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[140px]" aria-label="Filter by project status">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -177,20 +235,80 @@ export default function ProjectsPage() {
       {!isLoading && !isError && filteredProjects.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project: Project) => (
-            <Link key={project.id} href={`/projects/${project.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-base">{project.title}</CardTitle>
+            <Card
+              key={project.id}
+              className="hover:shadow-md transition-shadow h-full"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="flex-1 min-w-0"
+                    aria-label={`Open project ${project.title}`}
+                  >
+                    <CardTitle className="text-base hover:underline cursor-pointer">
+                      {project.title}
+                    </CardTitle>
+                  </Link>
+                  <div className="flex items-center gap-2 ml-2 shrink-0">
                     <Badge variant={badgeVariant(project.status)}>
                       {project.status}
                     </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Actions for project ${project.title}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/projects/${project.id}`)}
+                          aria-label={`Open project ${project.title}`}
+                        >
+                          <FolderOpen className="mr-2 h-4 w-4" />
+                          Open
+                        </DropdownMenuItem>
+                        {project.status !== "archived" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setArchiveTarget(project)}
+                              aria-label={`Archive project ${project.title}`}
+                            >
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setDeleteTarget(project)}
+                          className="text-destructive focus:text-destructive"
+                          aria-label={`Delete project ${project.title}`}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <CardDescription className="capitalize">
-                    {project.type}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <CardDescription className="capitalize">
+                  {project.type}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link
+                  href={`/projects/${project.id}`}
+                  className="block cursor-pointer"
+                  aria-label={`View details for project ${project.title}`}
+                >
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>
                       {project.books?.length ?? 0}{" "}
@@ -201,12 +319,50 @@ export default function ProjectsPage() {
                       {new Date(project.updated_at).toLocaleDateString()}
                     </span>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                </Link>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Project"
+        description={
+          deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone and all associated data will be permanently removed.`
+            : ""
+        }
+        confirmText="Delete Project"
+        cancelText="Cancel"
+        variant="destructive"
+        loading={isDeleting}
+      />
+
+      {/* Archive Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!archiveTarget}
+        onOpenChange={(open) => {
+          if (!open) setArchiveTarget(null);
+        }}
+        onConfirm={handleArchiveConfirm}
+        title="Archive Project"
+        description={
+          archiveTarget
+            ? `Are you sure you want to archive "${archiveTarget.title}"? Archived projects can be restored later from the archived filter.`
+            : ""
+        }
+        confirmText="Archive Project"
+        cancelText="Cancel"
+        variant="default"
+        loading={isArchiving}
+      />
     </div>
   );
 }

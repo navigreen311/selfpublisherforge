@@ -49,6 +49,7 @@ export default function AgentDashboardPage() {
           {!showConfirmStop ? (
             <button
               onClick={() => setShowConfirmStop(true)}
+              aria-label="Emergency stop all running agent tasks"
               className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
               Emergency Stop
@@ -61,12 +62,14 @@ export default function AgentDashboardPage() {
               <button
                 onClick={handleEmergencyStop}
                 disabled={emergencyStop.isPending}
+                aria-label="Confirm emergency stop of all running tasks"
                 className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               >
                 {emergencyStop.isPending ? "Stopping..." : "Confirm"}
               </button>
               <button
                 onClick={() => setShowConfirmStop(false)}
+                aria-label="Cancel emergency stop"
                 className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
               >
                 Cancel
@@ -84,8 +87,8 @@ export default function AgentDashboardPage() {
       )}
 
       {/* Available agents */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4">Available Agents</h2>
+      <section aria-labelledby="available-agents-heading">
+        <h2 id="available-agents-heading" className="text-lg font-semibold mb-4">Available Agents</h2>
         {agentsLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
@@ -112,8 +115,8 @@ export default function AgentDashboardPage() {
 
       {/* Budget overview */}
       {budgets.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold mb-4">Budget Overview</h2>
+        <section aria-labelledby="budget-overview-heading">
+          <h2 id="budget-overview-heading" className="text-lg font-semibold mb-4">Budget Overview</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {budgets.map((budget) => (
               <BudgetMeter
@@ -127,11 +130,12 @@ export default function AgentDashboardPage() {
       )}
 
       {/* Recent tasks */}
-      <section>
+      <section aria-labelledby="recent-tasks-heading">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Recent Tasks</h2>
+          <h2 id="recent-tasks-heading" className="text-lg font-semibold">Recent Tasks</h2>
           <Link
             href="/agents/tasks"
+            aria-label="View all agent tasks"
             className="text-sm text-primary hover:underline"
           >
             View all

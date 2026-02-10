@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAdDashboard } from "@/modules/advertising/hooks";
 import { CampaignCard } from "@/modules/advertising/components/CampaignCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AD_PLATFORMS } from "@/lib/constants";
 
 export default function AdvertisingDashboardPage() {
   const { data: dashboard, isLoading, error } = useAdDashboard();
@@ -42,6 +43,7 @@ export default function AdvertisingDashboardPage() {
         <Link
           href="/advertising/campaigns"
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90"
+          aria-label="View all advertising campaigns"
         >
           View All Campaigns
         </Link>
@@ -78,7 +80,7 @@ export default function AdvertisingDashboardPage() {
             {Object.entries(d.platform_breakdown).map(([platform, perf]) => (
               <div key={platform} className="border rounded-lg p-4">
                 <h3 className="font-medium capitalize mb-3">
-                  {platform === "amazon" ? "Amazon Ads" : "Facebook Ads"}
+                  {AD_PLATFORMS[platform]?.displayName ?? platform}
                 </h3>
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
@@ -131,6 +133,7 @@ export default function AdvertisingDashboardPage() {
             <Link
               href="/advertising/campaigns"
               className="text-primary hover:underline mt-2 inline-block"
+              aria-label="Create your first advertising campaign"
             >
               Create your first campaign
             </Link>
