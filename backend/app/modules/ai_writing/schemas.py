@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+
+def _utcnow() -> datetime:
+    """Return timezone-aware UTC now (replaces deprecated datetime.utcnow)."""
+    return datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +59,7 @@ class GenerateResponse(BaseModel):
     tokens_used: int = 0
     quality_results: dict[str, Any] = Field(default_factory=dict)
     model_used: str = ""
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +159,7 @@ class OutlineResponse(BaseModel):
     book_id: UUID
     chapters: list[OutlineChapter]
     summary: str = ""
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=_utcnow)
 
 
 # ---------------------------------------------------------------------------
