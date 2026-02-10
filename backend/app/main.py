@@ -43,9 +43,14 @@ def create_app() -> FastAPI:
 def _register_routers(app: FastAPI):
     """Register all module API routers."""
     prefix = settings.API_V1_PREFIX
+    # Routers will be registered by each module worker
+    # Example: app.include_router(auth_router, prefix=f"{prefix}/auth", tags=["auth"])
 
-    # KDP Validation / Failure-Proofing
-    from app.modules.kdp_validation.router import router as kdp_validation_router
-    app.include_router(kdp_validation_router, prefix=prefix)
+    from app.modules.product_page_lab.router import router as product_page_router
+    app.include_router(
+        product_page_router,
+        prefix=f"{prefix}/product-page",
+        tags=["product-page"],
+    )
 
 app = create_app()
