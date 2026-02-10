@@ -1,51 +1,18 @@
 // Shared types across the application
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: "owner" | "admin" | "editor" | "writer" | "viewer";
-  org_id: string;
-}
+//
+// Re-export canonical types from api.ts and modules.ts so that imports
+// from "@/types" always resolve to the single source of truth.
+//
+// api.ts   -- enums, error shapes, request/response envelopes
+// modules.ts -- domain model interfaces (User, Book, Campaign, etc.)
 
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  plan_tier: "free" | "starter" | "pro" | "business" | "enterprise";
-}
+export type {
+  ApiError,
+  PaginatedResponse,
+  PaginatedSuccessResponse,
+  SuccessResponse,
+  PaginatedMeta,
+} from "./api";
 
-export interface Project {
-  id: string;
-  title: string;
-  type: "book" | "series" | "course";
-  status: "draft" | "active" | "archived";
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Book {
-  id: string;
-  project_id: string;
-  title: string;
-  subtitle?: string;
-  isbn?: string;
-  asin?: string;
-  format: "ebook" | "print" | "audio";
-  status: "draft" | "writing" | "editing" | "formatting" | "published";
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  next_cursor: string | null;
-  has_more: boolean;
-  total_count: number | null;
-}
-
-export interface ApiError {
-  error: {
-    code: string;
-    message: string;
-    details: string[];
-    request_id: string;
-  };
-}
+// Re-export all module domain types for convenience
+export * from "./modules";
