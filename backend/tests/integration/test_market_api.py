@@ -251,21 +251,65 @@ async def test_market_trends_with_category(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_market_snapshots(client: AsyncClient):
+async def test_market_snapshots_empty_when_no_data(client: AsyncClient):
+    """Snapshots now come from DB; with no rows inserted the list is empty."""
     resp = await client.get(f"{BASE}/snapshots")
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data, list)
-    assert len(data) > 0
+    assert len(data) == 0
+
+
+@pytest.mark.asyncio
+async def test_market_snapshots_with_seeded_data(client: AsyncClient, db_session):
+    """Insert snapshot rows via DB and verify the endpoint returns them."""
+    import uuid
+    from datetime import date, datetime, timezone
+
+    from app.models.market import MarketCategory, MarketSnapshot as MarketSnapshotDB
+
+    # Create a MarketCategory first (snapshot FK target)
+    cat = MarketCategory(
+        amazon_node_id="154606011",
+        name="Self-Help",
+    )
+    db_session.add(cat)
+    await db_session.flush()
+    await db_session.refresh(cat)
+
+    # Seed 5 snapshots
+    for i in range(5):
+        snap = MarketSnapshotDB(
+            category_id=cat.id,
+            snapshot_date=date(2025, 1, 1 + i),
+            metrics={
+                "avg_bsr": 50000.0 + i * 1000,
+                "avg_price": 9.99,
+                "book_count": 5000 + i * 100,
+                "avg_reviews": 200.0,
+                "competition_score": 55.0 + i,
+            },
+        )
+        db_session.add(snap)
+    await db_session.flush()
+
+    resp = await client.get(f"{BASE}/snapshots", params={"limit": 5})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) == 5
     snap = data[0]
     assert "category_id" in snap
     assert "avg_bsr" in snap
     assert "competition_score" in snap
+    assert snap["category_name"] == "Self-Help"
 
 
 @pytest.mark.asyncio
 async def test_market_snapshots_with_limit(client: AsyncClient):
+    """With no seeded data the endpoint returns an empty list."""
     resp = await client.get(f"{BASE}/snapshots", params={"limit": 5})
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 5
+    assert isinstance(data, list)
+    assert len(data) == 0

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Plus, Search, FolderOpen } from "lucide-react";
+import { Plus, Search, FolderOpen, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,51 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-
-interface ProjectItem {
-  id: string;
-  title: string;
-  type: "book" | "series" | "course";
-  status: "draft" | "active" | "archived";
-  booksCount: number;
-  updatedAt: string;
-}
-
-const sampleProjects: ProjectItem[] = [
-  {
-    id: "1",
-    title: "The Art of Self-Publishing",
-    type: "book",
-    status: "active",
-    booksCount: 1,
-    updatedAt: "2024-12-15",
-  },
-  {
-    id: "2",
-    title: "Summer Romance Series",
-    type: "series",
-    status: "draft",
-    booksCount: 3,
-    updatedAt: "2024-12-10",
-  },
-  {
-    id: "3",
-    title: "Writing Mastery Guide",
-    type: "book",
-    status: "active",
-    booksCount: 1,
-    updatedAt: "2024-12-08",
-  },
-  {
-    id: "4",
-    title: "Productivity Masterclass",
-    type: "course",
-    status: "archived",
-    booksCount: 5,
-    updatedAt: "2024-11-20",
-  },
-];
+import { useProjects, type Project } from "@/modules/projects/hooks";
 
 const badgeVariant = (status: string) => {
   switch (status) {
@@ -79,17 +37,51 @@ const badgeVariant = (status: string) => {
   }
 };
 
+function ProjectCardSkeleton() {
+  return (
+    <Card className="h-full">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+        <Skeleton className="h-4 w-16 mt-1" />
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ProjectsPage() {
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState("all");
 
-  const filteredProjects = sampleProjects.filter((p) => {
-    const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "all" || p.type === typeFilter;
-    const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: projects, isLoading, isError, error } = useProjects({
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    search: debouncedSearch || undefined,
   });
+
+  // Client-side type filter (the API may not support type filtering)
+  const filteredProjects = React.useMemo(() => {
+    if (!projects) return [];
+    return projects.filter((p: Project) => {
+      const matchesType = typeFilter === "all" || p.type === typeFilter;
+      return matchesType;
+    });
+  }, [projects, typeFilter]);
 
   return (
     <div className="space-y-6">
@@ -142,8 +134,34 @@ export default function ProjectsPage() {
         </Select>
       </div>
 
-      {/* Projects Grid */}
-      {filteredProjects.length === 0 ? (
+      {/* Error State */}
+      {isError && (
+        <Card className="border-destructive">
+          <CardContent className="flex items-center gap-3 py-6">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="font-medium text-destructive">
+                Failed to load projects
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {error?.message || "An unexpected error occurred. Please try again."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ProjectCardSkeleton key={i} />
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !isError && filteredProjects.length === 0 && (
         <EmptyState
           icon={FolderOpen}
           title="No projects found"
@@ -151,9 +169,12 @@ export default function ProjectsPage() {
           actionLabel="Create Project"
           onAction={() => (window.location.href = "/projects/new")}
         />
-      ) : (
+      )}
+
+      {/* Projects Grid */}
+      {!isLoading && !isError && filteredProjects.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProjects.map((project) => (
+          {filteredProjects.map((project: Project) => (
             <Link key={project.id} href={`/projects/${project.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                 <CardHeader className="pb-3">
@@ -170,12 +191,12 @@ export default function ProjectsPage() {
                 <CardContent>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>
-                      {project.booksCount}{" "}
-                      {project.booksCount === 1 ? "book" : "books"}
+                      {project.books?.length ?? 0}{" "}
+                      {(project.books?.length ?? 0) === 1 ? "book" : "books"}
                     </span>
                     <span>
                       Updated{" "}
-                      {new Date(project.updatedAt).toLocaleDateString()}
+                      {new Date(project.updated_at).toLocaleDateString()}
                     </span>
                   </div>
                 </CardContent>

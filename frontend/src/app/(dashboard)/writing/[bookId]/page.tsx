@@ -12,7 +12,9 @@ import {
   useUpdateChapter,
   useReorderChapters,
   useReadabilityScore,
+  useAutoSave,
   type ChapterContent,
+  type SaveStatus,
 } from "@/modules/writing/hooks";
 
 /**
@@ -45,6 +47,14 @@ export default function ManuscriptEditorPage() {
   const createChapter = useCreateChapter(bookId);
   const updateChapter = useUpdateChapter(bookId, activeChapterId || "");
   const reorderChapters = useReorderChapters(bookId);
+
+  // Auto-save: debounced save on content change
+  const { saveStatus, saveNow } = useAutoSave(
+    bookId,
+    activeChapterId,
+    editorContent,
+    1500
+  );
 
   // Select a chapter and load its content
   const handleSelectChapter = useCallback(
@@ -131,15 +141,27 @@ export default function ManuscriptEditorPage() {
     setAiSuggestion(undefined);
   }, []);
 
-  // Auto-save on blur / interval
+  // Manual save (triggers immediate debounced save)
   const handleSave = useCallback(() => {
-    if (activeChapterId && editorContent) {
-      updateChapter.mutate({ content: editorContent });
-    }
-  }, [activeChapterId, editorContent, updateChapter]);
+    saveNow();
+  }, [saveNow]);
 
   const activeChapter = chapters.find((c) => c.id === activeChapterId);
   const isLoading = manuscriptLoading || chaptersLoading;
+
+  const saveStatusLabel: Record<SaveStatus, string> = {
+    idle: "",
+    saving: "Saving...",
+    saved: "Saved",
+    error: "Save failed",
+  };
+
+  const saveStatusColor: Record<SaveStatus, string> = {
+    idle: "",
+    saving: "text-yellow-600",
+    saved: "text-green-600",
+    error: "text-red-600",
+  };
 
   return (
     <div className="flex h-[calc(100vh-8rem)] -m-6">
@@ -174,9 +196,24 @@ export default function ManuscriptEditorPage() {
                 {readability.flesch_reading_ease}
               </span>
             )}
+            {saveStatus !== "idle" && (
+              <span className={`text-xs font-medium ${saveStatusColor[saveStatus]}`}>
+                {saveStatus === "saving" && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 animate-pulse mr-1 align-middle" />
+                )}
+                {saveStatus === "saved" && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 align-middle" />
+                )}
+                {saveStatus === "error" && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1 align-middle" />
+                )}
+                {saveStatusLabel[saveStatus]}
+              </span>
+            )}
             <button
               onClick={handleSave}
-              className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              disabled={saveStatus === "saving"}
+              className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               Save
             </button>

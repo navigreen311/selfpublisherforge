@@ -52,7 +52,12 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> PricingAutomationService
 # ──────────────────── Pricing Rules ────────────────────
 
 
-@router.get("/rules", response_model=PaginatedResponse[PricingRuleResponse])
+@router.get(
+    "/rules",
+    response_model=PaginatedResponse[PricingRuleResponse],
+    summary="List pricing rules",
+    description="List all pricing rules for the current organization with optional filters.",
+)
 async def list_pricing_rules(
     status: RuleStatus | None = Query(default=None),
     book_id: UUID | None = Query(default=None),
@@ -77,6 +82,8 @@ async def list_pricing_rules(
     "/rules",
     response_model=PricingRuleResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Create pricing rule",
+    description="Create a new automated pricing rule for a book.",
 )
 async def create_pricing_rule(
     data: PricingRuleCreate,
@@ -88,7 +95,12 @@ async def create_pricing_rule(
     return await service.create_rule(org_id, data)
 
 
-@router.patch("/rules/{rule_id}", response_model=PricingRuleResponse)
+@router.patch(
+    "/rules/{rule_id}",
+    response_model=PricingRuleResponse,
+    summary="Update pricing rule",
+    description="Update an existing pricing rule's conditions or target price.",
+)
 async def update_pricing_rule(
     rule_id: UUID,
     data: PricingRuleUpdate,
@@ -106,7 +118,12 @@ async def update_pricing_rule(
     return rule
 
 
-@router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/rules/{rule_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete pricing rule",
+    description="Soft-delete a pricing rule.",
+)
 async def delete_pricing_rule(
     rule_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -126,7 +143,12 @@ async def delete_pricing_rule(
 # ──────────────────── Price Simulation ────────────────────
 
 
-@router.post("/simulate", response_model=PriceSimulationResponse)
+@router.post(
+    "/simulate",
+    response_model=PriceSimulationResponse,
+    summary="Simulate price change",
+    description="Simulate the revenue impact of a price change before applying it.",
+)
 async def simulate_price_change(
     data: PriceSimulationRequest,
     current_user: dict = Depends(get_current_user),
@@ -142,6 +164,8 @@ async def simulate_price_change(
 @router.get(
     "/competitors/{book_id}",
     response_model=CompetitorPriceSummary,
+    summary="Get competitor prices",
+    description="Get competitor pricing data and summary for a specific book.",
 )
 async def get_competitor_prices(
     book_id: UUID,
@@ -161,6 +185,8 @@ async def get_competitor_prices(
     "/ab-test",
     response_model=ABTestResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Create pricing A/B test",
+    description="Create a pricing A/B test to compare two price points.",
 )
 async def create_ab_test(
     data: ABTestCreate,
@@ -175,7 +201,12 @@ async def create_ab_test(
 # ──────────────────── Promotions ────────────────────
 
 
-@router.get("/promotions", response_model=PaginatedResponse[PromotionResponse])
+@router.get(
+    "/promotions",
+    response_model=PaginatedResponse[PromotionResponse],
+    summary="List promotions",
+    description="Get the promotional calendar with optional book and status filters.",
+)
 async def list_promotions(
     book_id: UUID | None = Query(default=None),
     status: PromotionStatus | None = Query(default=None),
@@ -200,6 +231,8 @@ async def list_promotions(
     "/promotions",
     response_model=PromotionResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Schedule promotion",
+    description="Schedule a new promotional price change for a book.",
 )
 async def create_promotion(
     data: PromotionCreate,
@@ -214,7 +247,12 @@ async def create_promotion(
 # ──────────────────── KU Calculator ────────────────────
 
 
-@router.post("/ku-calculator", response_model=KUCalculatorResponse)
+@router.post(
+    "/ku-calculator",
+    response_model=KUCalculatorResponse,
+    summary="KU vs. wide calculator",
+    description="Calculate Kindle Unlimited vs. wide distribution revenue projections.",
+)
 async def ku_calculator(
     data: KUCalculatorRequest,
     current_user: dict = Depends(get_current_user),

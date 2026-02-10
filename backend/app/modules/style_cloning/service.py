@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.content import StyleProfile
 from app.modules.style_cloning.conformity import check_conformity
 from app.modules.style_cloning.features import extract_all_features
 from app.modules.style_cloning.ingestion import (
@@ -34,65 +35,29 @@ from app.modules.style_cloning.schemas import (
 
 
 # ---------------------------------------------------------------------------
-# In-memory store (production would use the DB model from W02)
+# ORM -> Response conversion
 # ---------------------------------------------------------------------------
 
-class _ProfileRecord:
-    """Lightweight in-memory representation of a style_profile row."""
+def _to_response(profile: StyleProfile) -> ProfileResponse:
+    """Convert an ORM StyleProfile instance to a ProfileResponse schema."""
+    # Reconstruct StyleCard from the stored dict if present
+    style_card: Optional[StyleCard] = None
+    if profile.style_card is not None:
+        style_card = StyleCard(**profile.style_card)
 
-    def __init__(
-        self,
-        *,
-        id: uuid.UUID,
-        org_id: uuid.UUID,
-        name: str,
-        description: str = "",
-        genre: str = "",
-    ):
-        self.id = id
-        self.org_id = org_id
-        self.name = name
-        self.description = description
-        self.genre = genre
-        self.status: ProfileStatus = ProfileStatus.pending
-        self.word_count: int = 0
-        self.sample_count: int = 0
-        self.confidence: float = 0.0
-        self.style_card: Optional[StyleCard] = None
-        self.fingerprint: Optional[VoiceFingerprint] = None
-        self.sample_texts: list[str] = []
-        self.created_at: datetime = datetime.now(timezone.utc)
-        self.updated_at: datetime = datetime.now(timezone.utc)
-        self.deleted_at: Optional[datetime] = None
-
-
-# Module-level store — replaced by real DB in production
-_store: dict[uuid.UUID, _ProfileRecord] = {}
-
-
-def _reset_store() -> None:
-    """Reset the in-memory store (used in tests)."""
-    _store.clear()
-
-
-# ---------------------------------------------------------------------------
-# CRUD helpers
-# ---------------------------------------------------------------------------
-
-def _to_response(rec: _ProfileRecord) -> ProfileResponse:
     return ProfileResponse(
-        id=rec.id,
-        org_id=rec.org_id,
-        name=rec.name,
-        description=rec.description,
-        genre=rec.genre,
-        status=rec.status,
-        word_count=rec.word_count,
-        sample_count=rec.sample_count,
-        confidence=rec.confidence,
-        style_card=rec.style_card,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=profile.id,
+        org_id=profile.org_id,
+        name=profile.name,
+        description=profile.description or "",
+        genre=profile.genre or "",
+        status=ProfileStatus(profile.status),
+        word_count=profile.word_count,
+        sample_count=profile.sample_count,
+        confidence=profile.confidence,
+        style_card=style_card,
+        created_at=profile.created_at,
+        updated_at=profile.updated_at,
     )
 
 
@@ -100,30 +65,38 @@ def _to_response(rec: _ProfileRecord) -> ProfileResponse:
 # Pipeline orchestration
 # ---------------------------------------------------------------------------
 
-def _run_analysis(rec: _ProfileRecord) -> None:
-    """Run the full NLP pipeline on accumulated samples."""
+def _run_analysis(profile: StyleProfile) -> None:
+    """Run the full NLP pipeline on accumulated samples.
+
+    Mutates the ORM instance in place with analysis results.
+    """
+    sample_texts = profile.sample_texts or []
     segments: list[SegmentedText] = []
-    for text in rec.sample_texts:
+    for text in sample_texts:
         segments.append(ingest_text(text))
     if not segments:
-        rec.status = ProfileStatus.failed
+        profile.status = ProfileStatus.failed.value
         return
 
     merged = merge_segmented(segments)
-    rec.word_count = merged.word_count
-    rec.sample_count = len(rec.sample_texts)
-    rec.confidence = compute_confidence(merged.word_count)
+    profile.word_count = merged.word_count
+    profile.sample_count = len(sample_texts)
+    profile.confidence = compute_confidence(merged.word_count)
 
     try:
         features = extract_all_features(merged)
-        rec.fingerprint = generate_voice_fingerprint(features, merged)
-        rec.style_card = generate_style_card(features, merged)
-        rec.status = ProfileStatus.ready
+        fingerprint = generate_voice_fingerprint(features, merged)
+        style_card = generate_style_card(features, merged)
+
+        # Store as dicts in JSONB columns
+        profile.voice_fingerprint = fingerprint.model_dump()
+        profile.style_card = style_card.model_dump()
+        profile.status = ProfileStatus.ready.value
     except Exception:
-        rec.status = ProfileStatus.failed
+        profile.status = ProfileStatus.failed.value
         raise
     finally:
-        rec.updated_at = datetime.now(timezone.utc)
+        profile.updated_at = datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -131,113 +104,165 @@ def _run_analysis(rec: _ProfileRecord) -> None:
 # ---------------------------------------------------------------------------
 
 async def create_profile(
+    db: AsyncSession,
     org_id: uuid.UUID,
     request: CreateProfileRequest,
-    db: Optional[AsyncSession] = None,
 ) -> ProfileResponse:
     """Create a new style profile and optionally begin analysis."""
-    profile_id = uuid.uuid4()
-    rec = _ProfileRecord(
-        id=profile_id,
+    profile = StyleProfile(
         org_id=org_id,
         name=request.name,
         description=request.description,
         genre=request.genre,
+        status=ProfileStatus.pending.value,
+        sample_texts=request.sample_texts if request.sample_texts else None,
     )
 
     if request.sample_texts:
-        rec.sample_texts.extend(request.sample_texts)
-        rec.status = ProfileStatus.analyzing
-        _run_analysis(rec)
-    else:
-        rec.status = ProfileStatus.pending
+        profile.status = ProfileStatus.analyzing.value
+        _run_analysis(profile)
 
-    _store[profile_id] = rec
-    return _to_response(rec)
+    db.add(profile)
+    await db.flush()
+    await db.refresh(profile)
+    return _to_response(profile)
 
 
 async def list_profiles(
+    db: AsyncSession,
     org_id: uuid.UUID,
-    db: Optional[AsyncSession] = None,
 ) -> ProfileListResponse:
     """List all non-deleted profiles for an org."""
-    items = [
-        _to_response(r)
-        for r in _store.values()
-        if r.org_id == org_id and r.deleted_at is None
-    ]
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .order_by(StyleProfile.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    profiles = result.scalars().all()
+    items = [_to_response(p) for p in profiles]
     return ProfileListResponse(items=items, total=len(items))
 
 
 async def get_profile(
+    db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
-    db: Optional[AsyncSession] = None,
 ) -> Optional[ProfileResponse]:
     """Get a single profile by ID."""
-    rec = _store.get(profile_id)
-    if rec is None or rec.org_id != org_id or rec.deleted_at is not None:
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
         return None
-    return _to_response(rec)
+    return _to_response(profile)
 
 
 async def get_fingerprint(
+    db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
-    db: Optional[AsyncSession] = None,
 ) -> Optional[FingerprintResponse]:
     """Get the full voice fingerprint for a profile."""
-    rec = _store.get(profile_id)
-    if rec is None or rec.org_id != org_id or rec.deleted_at is not None:
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
         return None
-    if rec.fingerprint is None:
+    if profile.voice_fingerprint is None:
         return None
+    # Reconstruct VoiceFingerprint from the stored dict
+    fingerprint = VoiceFingerprint(**profile.voice_fingerprint)
     return FingerprintResponse(
-        profile_id=rec.id,
-        fingerprint=rec.fingerprint,
+        profile_id=profile.id,
+        fingerprint=fingerprint,
     )
 
 
 async def analyze_profile(
+    db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
     sample_texts: list[str],
-    db: Optional[AsyncSession] = None,
 ) -> Optional[ProfileResponse]:
     """Add samples and re-analyze."""
-    rec = _store.get(profile_id)
-    if rec is None or rec.org_id != org_id or rec.deleted_at is not None:
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
         return None
-    rec.sample_texts.extend(sample_texts)
-    rec.status = ProfileStatus.analyzing
-    _run_analysis(rec)
-    return _to_response(rec)
+
+    # Append new sample texts to existing ones
+    existing_samples = profile.sample_texts or []
+    profile.sample_texts = existing_samples + sample_texts
+    profile.status = ProfileStatus.analyzing.value
+    _run_analysis(profile)
+
+    await db.flush()
+    await db.refresh(profile)
+    return _to_response(profile)
 
 
 async def delete_profile(
+    db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
-    db: Optional[AsyncSession] = None,
 ) -> bool:
     """Soft delete a profile."""
-    rec = _store.get(profile_id)
-    if rec is None or rec.org_id != org_id or rec.deleted_at is not None:
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
         return False
-    rec.deleted_at = datetime.now(timezone.utc)
-    rec.updated_at = rec.deleted_at
+
+    now = datetime.now(timezone.utc)
+    profile.deleted_at = now
+    profile.updated_at = now
+    await db.flush()
     return True
 
 
 async def conformity_check(
+    db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
     text: str,
-    db: Optional[AsyncSession] = None,
 ) -> Optional[ConformityCheckResult]:
     """Check text conformity against a profile's fingerprint."""
-    rec = _store.get(profile_id)
-    if rec is None or rec.org_id != org_id or rec.deleted_at is not None:
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
         return None
-    if rec.fingerprint is None:
+    if profile.voice_fingerprint is None:
         return None
-    return check_conformity(rec.fingerprint, text)
+
+    # Reconstruct VoiceFingerprint from the stored dict
+    fingerprint = VoiceFingerprint(**profile.voice_fingerprint)
+    return check_conformity(fingerprint, text)

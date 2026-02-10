@@ -1,7 +1,7 @@
 """Integration tests for the Style Cloning API endpoints.
 
 Tests cover the full CRUD lifecycle and analysis pipeline
-through the FastAPI router.
+through the FastAPI router, using in-memory SQLite and mocked auth.
 """
 
 from __future__ import annotations
@@ -11,9 +11,65 @@ import uuid
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from unittest.mock import patch
 
-from app.main import create_app
-from app.modules.style_cloning import service as style_service
+from app.database import Base, get_db
+from app.core.dependencies import get_current_user
+
+
+# ---------------------------------------------------------------------------
+# In-memory SQLite engine for tests
+# ---------------------------------------------------------------------------
+
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+TestSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup_database():
+    """Create all tables before each test and drop them afterwards."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+async def _override_get_db():
+    async with TestSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+# ---------------------------------------------------------------------------
+# Auth fixtures
+# ---------------------------------------------------------------------------
+
+_ORG_A = uuid.uuid4()
+_ORG_B = uuid.uuid4()
+_USER_A = {"user_id": str(uuid.uuid4()), "org_id": _ORG_A, "role": "admin"}
+_USER_B = {"user_id": str(uuid.uuid4()), "org_id": _ORG_B, "role": "admin"}
+
+# Track which user is "current" so org isolation tests can switch
+_current_user = dict(_USER_A)
+
+
+def _set_current_user(user: dict):
+    _current_user.clear()
+    _current_user.update(user)
+
+
+def _override_current_user():
+    return dict(_current_user)
 
 
 # ---------------------------------------------------------------------------
@@ -22,13 +78,14 @@ from app.modules.style_cloning import service as style_service
 
 @pytest_asyncio.fixture
 async def fastapi_app():
-    """Create a fresh app instance with the style-cloning router registered."""
+    """Create a fresh app instance with overridden dependencies."""
+    from app.main import create_app
     application = create_app()
-
-    # Reset the in-memory store before each test
-    style_service._reset_store()
-
+    application.dependency_overrides[get_db] = _override_get_db
+    application.dependency_overrides[get_current_user] = _override_current_user
+    _set_current_user(_USER_A)
     yield application
+    application.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture
@@ -36,16 +93,6 @@ async def client(fastapi_app):
     transport = ASGITransport(app=fastapi_app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-
-
-@pytest.fixture
-def org_id() -> str:
-    return str(uuid.uuid4())
-
-
-@pytest.fixture
-def headers(org_id: str) -> dict[str, str]:
-    return {"X-Org-Id": org_id}
 
 
 SAMPLE_TEXT = (
@@ -68,11 +115,10 @@ SAMPLE_TEXT = (
 class TestProfileCRUD:
 
     @pytest.mark.asyncio
-    async def test_create_profile_without_samples(self, client: AsyncClient, headers: dict):
+    async def test_create_profile_without_samples(self, client: AsyncClient):
         response = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Test Author", "description": "A test profile", "genre": "Fiction"},
-            headers=headers,
         )
         assert response.status_code == 201
         data = response.json()
@@ -81,14 +127,13 @@ class TestProfileCRUD:
         assert data["word_count"] == 0
 
     @pytest.mark.asyncio
-    async def test_create_profile_with_samples(self, client: AsyncClient, headers: dict):
+    async def test_create_profile_with_samples(self, client: AsyncClient):
         response = await client.post(
             "/api/v1/style-profiles",
             json={
                 "name": "Analyzed Author",
                 "sample_texts": [SAMPLE_TEXT],
             },
-            headers=headers,
         )
         assert response.status_code == 201
         data = response.json()
@@ -99,96 +144,85 @@ class TestProfileCRUD:
         assert data["style_card"] is not None
 
     @pytest.mark.asyncio
-    async def test_list_profiles(self, client: AsyncClient, headers: dict):
+    async def test_list_profiles(self, client: AsyncClient):
         # Create two profiles
         await client.post(
             "/api/v1/style-profiles",
             json={"name": "Profile A"},
-            headers=headers,
         )
         await client.post(
             "/api/v1/style-profiles",
             json={"name": "Profile B"},
-            headers=headers,
         )
 
-        response = await client.get("/api/v1/style-profiles", headers=headers)
+        response = await client.get("/api/v1/style-profiles")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 2
         assert len(data["items"]) == 2
 
     @pytest.mark.asyncio
-    async def test_get_profile(self, client: AsyncClient, headers: dict):
+    async def test_get_profile(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Get Me"},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         response = await client.get(
             f"/api/v1/style-profiles/{profile_id}",
-            headers=headers,
         )
         assert response.status_code == 200
         assert response.json()["name"] == "Get Me"
 
     @pytest.mark.asyncio
-    async def test_get_nonexistent_profile_returns_404(self, client: AsyncClient, headers: dict):
+    async def test_get_nonexistent_profile_returns_404(self, client: AsyncClient):
         fake_id = str(uuid.uuid4())
         response = await client.get(
             f"/api/v1/style-profiles/{fake_id}",
-            headers=headers,
         )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_delete_profile(self, client: AsyncClient, headers: dict):
+    async def test_delete_profile(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Delete Me"},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         delete_resp = await client.delete(
             f"/api/v1/style-profiles/{profile_id}",
-            headers=headers,
         )
         assert delete_resp.status_code == 204
 
         # Should no longer be found
         get_resp = await client.get(
             f"/api/v1/style-profiles/{profile_id}",
-            headers=headers,
         )
         assert get_resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_returns_404(self, client: AsyncClient, headers: dict):
+    async def test_delete_nonexistent_returns_404(self, client: AsyncClient):
         fake_id = str(uuid.uuid4())
         response = await client.delete(
             f"/api/v1/style-profiles/{fake_id}",
-            headers=headers,
         )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_deleted_profile_excluded_from_list(self, client: AsyncClient, headers: dict):
+    async def test_deleted_profile_excluded_from_list(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Will Delete"},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         await client.delete(
             f"/api/v1/style-profiles/{profile_id}",
-            headers=headers,
         )
 
-        list_resp = await client.get("/api/v1/style-profiles", headers=headers)
+        list_resp = await client.get("/api/v1/style-profiles")
         assert list_resp.json()["total"] == 0
 
 
@@ -199,18 +233,16 @@ class TestProfileCRUD:
 class TestAnalysis:
 
     @pytest.mark.asyncio
-    async def test_analyze_adds_samples(self, client: AsyncClient, headers: dict):
+    async def test_analyze_adds_samples(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Incremental"},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         analyze_resp = await client.post(
             f"/api/v1/style-profiles/{profile_id}/analyze",
             json={"sample_texts": [SAMPLE_TEXT]},
-            headers=headers,
         )
         assert analyze_resp.status_code == 200
         data = analyze_resp.json()
@@ -218,17 +250,15 @@ class TestAnalysis:
         assert data["word_count"] > 0
 
     @pytest.mark.asyncio
-    async def test_get_fingerprint(self, client: AsyncClient, headers: dict):
+    async def test_get_fingerprint(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Fingerprinted", "sample_texts": [SAMPLE_TEXT]},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         fp_resp = await client.get(
             f"/api/v1/style-profiles/{profile_id}/fingerprint",
-            headers=headers,
         )
         assert fp_resp.status_code == 200
         data = fp_resp.json()
@@ -244,18 +274,16 @@ class TestAnalysis:
 
     @pytest.mark.asyncio
     async def test_fingerprint_not_available_before_analysis(
-        self, client: AsyncClient, headers: dict
+        self, client: AsyncClient
     ):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "No Analysis"},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         fp_resp = await client.get(
             f"/api/v1/style-profiles/{profile_id}/fingerprint",
-            headers=headers,
         )
         assert fp_resp.status_code == 404
 
@@ -267,18 +295,16 @@ class TestAnalysis:
 class TestConformityCheckAPI:
 
     @pytest.mark.asyncio
-    async def test_conformity_check_endpoint(self, client: AsyncClient, headers: dict):
+    async def test_conformity_check_endpoint(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Conformity Test", "sample_texts": [SAMPLE_TEXT]},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         check_resp = await client.post(
             f"/api/v1/style-profiles/{profile_id}/conformity-check",
             json={"text": SAMPLE_TEXT},
-            headers=headers,
         )
         assert check_resp.status_code == 200
         data = check_resp.json()
@@ -290,19 +316,17 @@ class TestConformityCheckAPI:
 
     @pytest.mark.asyncio
     async def test_conformity_check_on_unanalyzed_profile(
-        self, client: AsyncClient, headers: dict
+        self, client: AsyncClient
     ):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Unanalyzed"},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         check_resp = await client.post(
             f"/api/v1/style-profiles/{profile_id}/conformity-check",
             json={"text": "Some text to check."},
-            headers=headers,
         )
         assert check_resp.status_code == 404
 
@@ -314,18 +338,16 @@ class TestConformityCheckAPI:
 class TestGenerateSample:
 
     @pytest.mark.asyncio
-    async def test_generate_sample_endpoint(self, client: AsyncClient, headers: dict):
+    async def test_generate_sample_endpoint(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Sample Gen", "sample_texts": [SAMPLE_TEXT]},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         gen_resp = await client.post(
             f"/api/v1/style-profiles/{profile_id}/generate-sample",
             json={"prompt": "Write a paragraph about a sunset.", "max_words": 100},
-            headers=headers,
         )
         assert gen_resp.status_code == 200
         data = gen_resp.json()
@@ -334,19 +356,17 @@ class TestGenerateSample:
 
     @pytest.mark.asyncio
     async def test_generate_sample_unanalyzed_returns_400(
-        self, client: AsyncClient, headers: dict
+        self, client: AsyncClient
     ):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "No Samples"},
-            headers=headers,
         )
         profile_id = create_resp.json()["id"]
 
         gen_resp = await client.post(
             f"/api/v1/style-profiles/{profile_id}/generate-sample",
             json={"prompt": "Write something"},
-            headers=headers,
         )
         assert gen_resp.status_code == 400
 
@@ -359,37 +379,32 @@ class TestOrgIsolation:
 
     @pytest.mark.asyncio
     async def test_profiles_isolated_by_org(self, client: AsyncClient):
-        org_a = str(uuid.uuid4())
-        org_b = str(uuid.uuid4())
-
+        # Create as user A
+        _set_current_user(_USER_A)
         await client.post(
             "/api/v1/style-profiles",
             json={"name": "Org A Profile"},
-            headers={"X-Org-Id": org_a},
         )
 
-        # Org B should not see Org A's profile
-        list_resp = await client.get(
-            "/api/v1/style-profiles",
-            headers={"X-Org-Id": org_b},
-        )
+        # Switch to user B - should not see user A's profile
+        _set_current_user(_USER_B)
+        list_resp = await client.get("/api/v1/style-profiles")
         assert list_resp.json()["total"] == 0
 
     @pytest.mark.asyncio
     async def test_cannot_access_other_org_profile(self, client: AsyncClient):
-        org_a = str(uuid.uuid4())
-        org_b = str(uuid.uuid4())
-
+        # Create as user A
+        _set_current_user(_USER_A)
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Secret"},
-            headers={"X-Org-Id": org_a},
         )
         profile_id = create_resp.json()["id"]
 
+        # Switch to user B
+        _set_current_user(_USER_B)
         get_resp = await client.get(
             f"/api/v1/style-profiles/{profile_id}",
-            headers={"X-Org-Id": org_b},
         )
         assert get_resp.status_code == 404
 
@@ -401,18 +416,9 @@ class TestOrgIsolation:
 class TestValidation:
 
     @pytest.mark.asyncio
-    async def test_missing_org_header_returns_422(self, client: AsyncClient):
-        response = await client.post(
-            "/api/v1/style-profiles",
-            json={"name": "No Org"},
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_empty_name_returns_422(self, client: AsyncClient, headers: dict):
+    async def test_empty_name_returns_422(self, client: AsyncClient):
         response = await client.post(
             "/api/v1/style-profiles",
             json={"name": ""},
-            headers=headers,
         )
         assert response.status_code == 422

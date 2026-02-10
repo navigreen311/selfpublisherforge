@@ -50,7 +50,16 @@ router = APIRouter()
 
 # ---------- Dashboard ----------
 
-@router.get("/dashboard", response_model=DashboardData)
+@router.get(
+    "/dashboard",
+    response_model=DashboardData,
+    summary="Get analytics dashboard",
+    description="Main analytics dashboard with KPIs, charts, and trends.",
+    responses={
+        200: {"description": "Dashboard data including KPIs, charts, and recent activity"},
+        401: {"description": "Not authenticated"},
+    },
+)
 async def get_dashboard(
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
@@ -73,7 +82,12 @@ async def get_dashboard(
 
 # ---------- Revenue ----------
 
-@router.get("/revenue", response_model=RevenueResponse)
+@router.get(
+    "/revenue",
+    response_model=RevenueResponse,
+    summary="Get revenue data",
+    description="Revenue data filtered by book, date range, platform, and aggregation period.",
+)
 async def get_revenue(
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
@@ -96,7 +110,12 @@ async def get_revenue(
 
 # ---------- Royalties ----------
 
-@router.get("/royalties", response_model=PaginatedResponse[RoyaltyRecordResponse])
+@router.get(
+    "/royalties",
+    response_model=PaginatedResponse[RoyaltyRecordResponse],
+    summary="List royalty records",
+    description="List royalty records with pagination and optional platform filter.",
+)
 async def get_royalties(
     cursor: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
@@ -110,7 +129,12 @@ async def get_royalties(
     )
 
 
-@router.post("/royalties/import", response_model=RoyaltyImportResponse)
+@router.post(
+    "/royalties/import",
+    response_model=RoyaltyImportResponse,
+    summary="Import royalty data",
+    description="Import royalty data from a base64-encoded CSV file.",
+)
 async def import_royalties(
     request: RoyaltyImportRequest,
     db: AsyncSession = Depends(get_db),
@@ -124,7 +148,12 @@ async def import_royalties(
 
 # ---------- Portfolio ----------
 
-@router.get("/portfolio", response_model=PortfolioMetrics)
+@router.get(
+    "/portfolio",
+    response_model=PortfolioMetrics,
+    summary="Get portfolio metrics",
+    description="Portfolio-level metrics including total books, revenue, and ROI.",
+)
 async def get_portfolio(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -135,7 +164,13 @@ async def get_portfolio(
 
 # ---------- Reports ----------
 
-@router.post("/reports/generate", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/reports/generate",
+    response_model=ReportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate report",
+    description="Generate a custom analytics report in PDF or XLSX format.",
+)
 async def generate_report(
     request: ReportRequest,
     db: AsyncSession = Depends(get_db),
@@ -147,7 +182,12 @@ async def generate_report(
     )
 
 
-@router.get("/reports", response_model=PaginatedResponse[ReportResponse])
+@router.get(
+    "/reports",
+    response_model=PaginatedResponse[ReportResponse],
+    summary="List reports",
+    description="List previously generated reports with pagination.",
+)
 async def list_reports(
     cursor: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
@@ -160,7 +200,11 @@ async def list_reports(
     )
 
 
-@router.get("/reports/{report_id}/download")
+@router.get(
+    "/reports/{report_id}/download",
+    summary="Download report",
+    description="Download a completed report file (PDF or XLSX).",
+)
 async def download_report(
     report_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -202,7 +246,13 @@ async def download_report(
 
 # ---------- Events ----------
 
-@router.post("/events", response_model=AnalyticsEventResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/events",
+    response_model=AnalyticsEventResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record analytics event",
+    description="Record a custom analytics event for tracking.",
+)
 async def record_event(
     event: AnalyticsEventCreate,
     db: AsyncSession = Depends(get_db),
@@ -214,7 +264,12 @@ async def record_event(
 
 # ---------- Trends ----------
 
-@router.get("/trends", response_model=TrendData)
+@router.get(
+    "/trends",
+    response_model=TrendData,
+    summary="Get trend data",
+    description="Trend data for key metrics over a configurable time period.",
+)
 async def get_trends(
     metric: str = Query(default="revenue"),
     start_date: date | None = Query(default=None),

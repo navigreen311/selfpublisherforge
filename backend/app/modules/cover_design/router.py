@@ -55,6 +55,7 @@ async def _get_org_id() -> UUID:
     response_model=SuccessResponse[CoverResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Generate a cover concept via AI",
+    description="Generate an AI cover concept based on genre, title, and style preferences.",
 )
 async def generate_cover(
     request: CoverGenerateRequest,
@@ -69,6 +70,7 @@ async def generate_cover(
     "/templates",
     response_model=SuccessResponse[list[CoverTemplateResponse]],
     summary="List cover templates, optionally filtered by genre",
+    description="List available cover design templates with optional genre filter.",
 )
 async def list_templates(
     genre: CoverGenre | None = Query(None, description="Filter templates by genre"),
@@ -81,6 +83,7 @@ async def list_templates(
     "/analyze-competitors",
     response_model=SuccessResponse[CompetitorAnalysisResponse],
     summary="Analyse competitor covers in a niche",
+    description="Analyse competitor covers to identify trends, color palettes, and design patterns.",
 )
 async def analyze_competitors(
     request: CompetitorCoverAnalysisRequest,
@@ -94,6 +97,7 @@ async def analyze_competitors(
     response_model=SuccessResponse[list[CoverResponse]],
     status_code=status.HTTP_201_CREATED,
     summary="Generate variations of an existing cover",
+    description="Generate style or color variations of an existing cover design.",
 )
 async def create_variations(
     cover_id: UUID,
@@ -112,6 +116,7 @@ async def create_variations(
     "/book/{book_id}",
     response_model=SuccessResponse[list[CoverResponse]],
     summary="List covers for a specific book",
+    description="List all cover designs associated with a specific book.",
 )
 async def list_covers_for_book(
     book_id: UUID,
@@ -126,6 +131,7 @@ async def list_covers_for_book(
     "/{cover_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a cover (soft-delete)",
+    description="Soft-delete a cover design. The record is retained but hidden from listings.",
 )
 async def delete_cover(
     cover_id: UUID,

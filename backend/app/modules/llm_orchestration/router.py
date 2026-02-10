@@ -21,7 +21,11 @@ from app.modules.llm_orchestration.router_config import (
 router = APIRouter()
 
 
-@router.get("/status")
+@router.get(
+    "/status",
+    summary="LLM orchestration status",
+    description="Health and status check for the LLM orchestration layer.",
+)
 async def llm_status():
     """Health/status check for the LLM orchestration layer."""
     return {
@@ -32,7 +36,11 @@ async def llm_status():
     }
 
 
-@router.get("/models")
+@router.get(
+    "/models",
+    summary="List supported LLM models",
+    description="List all supported models with their provider mappings.",
+)
 async def list_models():
     """List all supported models with their provider mappings."""
     return {
@@ -46,7 +54,11 @@ async def list_models():
     }
 
 
-@router.get("/routes")
+@router.get(
+    "/routes",
+    summary="List task routing config",
+    description="List task-type to model routing configuration with fallback chains.",
+)
 async def list_routes():
     """List task-type routing configuration."""
     return {

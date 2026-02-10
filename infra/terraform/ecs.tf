@@ -37,10 +37,14 @@ resource "aws_iam_role_policy" "ecs_task_execution_extra" {
       {
         Effect = "Allow"
         Action = [
-          "ssm:GetParameters",
           "secretsmanager:GetSecretValue",
         ]
-        Resource = "*"
+        Resource = [
+          aws_secretsmanager_secret.db_password.arn,
+          aws_secretsmanager_secret.jwt_secret.arn,
+          aws_secretsmanager_secret.app_secret_key.arn,
+          aws_secretsmanager_secret.database_url.arn,
+        ]
       }
     ]
   })
@@ -164,8 +168,9 @@ resource "aws_ecs_task_definition" "api" {
       ]
 
       secrets = [
-        { name = "DATABASE_URL", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/database-url" },
-        { name = "SECRET_KEY", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/secret-key" },
+        { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
+        { name = "SECRET_KEY", valueFrom = aws_secretsmanager_secret.app_secret_key.arn },
+        { name = "JWT_SECRET", valueFrom = aws_secretsmanager_secret.jwt_secret.arn },
       ]
 
       logConfiguration = {
@@ -254,8 +259,8 @@ resource "aws_ecs_task_definition" "worker" {
       ]
 
       secrets = [
-        { name = "DATABASE_URL", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/database-url" },
-        { name = "SECRET_KEY", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/secret-key" },
+        { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
+        { name = "SECRET_KEY", valueFrom = aws_secretsmanager_secret.app_secret_key.arn },
       ]
 
       logConfiguration = {
@@ -294,8 +299,8 @@ resource "aws_ecs_task_definition" "beat" {
       ]
 
       secrets = [
-        { name = "DATABASE_URL", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/database-url" },
-        { name = "SECRET_KEY", valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/secret-key" },
+        { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
+        { name = "SECRET_KEY", valueFrom = aws_secretsmanager_secret.app_secret_key.arn },
       ]
 
       logConfiguration = {

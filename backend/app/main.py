@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
+        description="AI-powered self-publishing platform API for market research, writing, production, and growth.",
         version=settings.APP_VERSION,
         docs_url=f"{settings.API_V1_PREFIX}/docs",
         redoc_url=f"{settings.API_V1_PREFIX}/redoc",
@@ -38,9 +39,10 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
 
     # Health check
-    @app.get("/health")
-    @app.get(f"{settings.API_V1_PREFIX}/health")
+    @app.get("/health", summary="Health check", tags=["health"])
+    @app.get(f"{settings.API_V1_PREFIX}/health", summary="Health check (prefixed)", tags=["health"])
     async def health():
+        """Return service health status and version."""
         return {"status": "healthy", "version": settings.APP_VERSION}
 
     # Register module routers

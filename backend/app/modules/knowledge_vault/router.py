@@ -45,6 +45,7 @@ def _org_id(current_user: dict) -> UUID:
     "/search",
     response_model=SearchResult,
     summary="Full-text search via Elasticsearch",
+    description="Search knowledge entries using full-text search with optional tag and source filters.",
 )
 async def search_entries(
     payload: SearchRequest,
@@ -73,6 +74,7 @@ async def search_entries(
     response_model=ImportResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Import from URL or file with AI extraction",
+    description="Import a knowledge entry from a URL or uploaded file with optional AI fact extraction.",
 )
 async def import_entry(
     payload: ImportRequest,
@@ -105,6 +107,7 @@ async def import_entry(
     "/tags",
     response_model=TagListResponse,
     summary="List all tags",
+    description="List all unique tags used across the organization's knowledge entries.",
 )
 async def list_tags(
     current_user: dict = Depends(get_current_user),
@@ -119,6 +122,7 @@ async def list_tags(
     "/suggestions",
     response_model=SuggestionsResponse,
     summary="AI-suggested research topics",
+    description="Get AI-suggested research topics based on existing knowledge entries.",
 )
 async def get_suggestions(
     current_user: dict = Depends(get_current_user),
@@ -135,6 +139,7 @@ async def get_suggestions(
     response_model=KnowledgeEntryResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a knowledge entry",
+    description="Create a new knowledge entry with title, content, and tags.",
 )
 async def create_entry(
     payload: CreateEntryRequest,
@@ -151,6 +156,7 @@ async def create_entry(
     "",
     response_model=PaginatedResponse[KnowledgeEntryResponse],
     summary="List knowledge entries",
+    description="List knowledge entries with pagination and optional tag/source filters.",
 )
 async def list_entries(
     tag: list[str] | None = Query(default=None),
@@ -181,6 +187,7 @@ async def list_entries(
     "/{entry_id}",
     response_model=KnowledgeEntryResponse,
     summary="Get knowledge entry detail",
+    description="Get full details of a specific knowledge entry by ID.",
 )
 async def get_entry(
     entry_id: UUID,
@@ -199,6 +206,7 @@ async def get_entry(
     "/{entry_id}",
     response_model=KnowledgeEntryResponse,
     summary="Update a knowledge entry",
+    description="Update the title, content, or tags of a knowledge entry.",
 )
 async def update_entry(
     entry_id: UUID,
@@ -218,6 +226,7 @@ async def update_entry(
     "/{entry_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Soft-delete a knowledge entry",
+    description="Soft-delete a knowledge entry. The record is retained but hidden.",
 )
 async def delete_entry(
     entry_id: UUID,
@@ -235,6 +244,7 @@ async def delete_entry(
     "/{entry_id}/summarize",
     response_model=SummarizeResponse,
     summary="AI-summarize a knowledge entry",
+    description="Generate an AI summary of a knowledge entry's content.",
 )
 async def summarize_entry(
     entry_id: UUID,

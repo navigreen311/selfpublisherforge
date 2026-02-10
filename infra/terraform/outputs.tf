@@ -151,3 +151,49 @@ output "ecs_security_group_id" {
   description = "ID of the ECS security group"
   value       = aws_security_group.ecs.id
 }
+
+# -----------------------------------------------------------------------------
+# OpenSearch
+# -----------------------------------------------------------------------------
+output "opensearch_endpoint" {
+  description = "Endpoint of the OpenSearch domain"
+  value       = aws_opensearch_domain.main.endpoint
+}
+
+output "opensearch_dashboard_endpoint" {
+  description = "Dashboard endpoint of the OpenSearch domain"
+  value       = aws_opensearch_domain.main.dashboard_endpoint
+}
+
+output "opensearch_domain_arn" {
+  description = "ARN of the OpenSearch domain"
+  value       = aws_opensearch_domain.main.arn
+}
+
+output "opensearch_domain_id" {
+  description = "ID of the OpenSearch domain"
+  value       = aws_opensearch_domain.main.domain_id
+}
+
+# -----------------------------------------------------------------------------
+# Secrets Manager
+# -----------------------------------------------------------------------------
+output "db_password_secret_arn" {
+  description = "ARN of the Secrets Manager secret for the database password"
+  value       = aws_secretsmanager_secret.db_password.arn
+}
+
+output "jwt_secret_arn" {
+  description = "ARN of the Secrets Manager secret for the JWT signing key"
+  value       = aws_secretsmanager_secret.jwt_secret.arn
+}
+
+output "app_secret_key_arn" {
+  description = "ARN of the Secrets Manager secret for the application secret key"
+  value       = aws_secretsmanager_secret.app_secret_key.arn
+}
+
+output "database_url_secret_arn" {
+  description = "ARN of the Secrets Manager secret for the full database URL"
+  value       = aws_secretsmanager_secret.database_url.arn
+}

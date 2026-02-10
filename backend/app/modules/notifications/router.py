@@ -27,7 +27,12 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-@router.get("", response_model=PaginatedResponse[NotificationOut])
+@router.get(
+    "",
+    response_model=PaginatedResponse[NotificationOut],
+    summary="List notifications",
+    description="List the authenticated user's notifications, paginated and newest first.",
+)
 async def list_notifications(
     cursor: str | None = Query(None, description="Pagination cursor (ISO datetime)"),
     limit: int = Query(20, ge=1, le=100, description="Page size"),
@@ -45,7 +50,12 @@ async def list_notifications(
     )
 
 
-@router.patch("/{notification_id}/read", response_model=NotificationOut)
+@router.patch(
+    "/{notification_id}/read",
+    response_model=NotificationOut,
+    summary="Mark notification read",
+    description="Mark a single notification as read.",
+)
 async def mark_notification_read(
     notification_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -56,7 +66,12 @@ async def mark_notification_read(
     return NotificationOut.model_validate(notification)
 
 
-@router.post("/read-all", response_model=MessageResponse)
+@router.post(
+    "/read-all",
+    response_model=MessageResponse,
+    summary="Mark all notifications read",
+    description="Mark all of the authenticated user's notifications as read.",
+)
 async def mark_all_notifications_read(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -71,7 +86,12 @@ async def mark_all_notifications_read(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/unread-count", response_model=UnreadCountOut)
+@router.get(
+    "/unread-count",
+    response_model=UnreadCountOut,
+    summary="Get unread count",
+    description="Get the number of unread notifications for the authenticated user.",
+)
 async def get_unread_count(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -86,7 +106,12 @@ async def get_unread_count(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/preferences", response_model=list[NotificationPreferenceOut])
+@router.get(
+    "/preferences",
+    response_model=list[NotificationPreferenceOut],
+    summary="Get notification preferences",
+    description="Get all notification preferences for the authenticated user.",
+)
 async def get_preferences(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -96,7 +121,12 @@ async def get_preferences(
     return [NotificationPreferenceOut.model_validate(p) for p in prefs]
 
 
-@router.patch("/preferences", response_model=list[NotificationPreferenceOut])
+@router.patch(
+    "/preferences",
+    response_model=list[NotificationPreferenceOut],
+    summary="Update notification preferences",
+    description="Create or update notification preferences for the authenticated user.",
+)
 async def update_preferences(
     body: NotificationPreferenceUpdate,
     current_user: dict = Depends(get_current_user),

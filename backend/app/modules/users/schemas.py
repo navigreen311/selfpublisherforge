@@ -24,6 +24,7 @@ class UserProfile(TimestampMixin):
     org_id: UUID
     preferences: dict[str, Any] | None = Field(default_factory=dict)
     is_active: bool = True
+    mfa_enabled: bool = False
 
 
 class UpdateUserRequest(BaseModel):

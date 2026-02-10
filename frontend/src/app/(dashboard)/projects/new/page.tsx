@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { toast } from "sonner";
+import { useCreateProject } from "@/modules/projects/hooks";
 
 const genres = [
   "Fiction",
@@ -39,22 +41,30 @@ const genres = [
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const createProject = useCreateProject();
   const [title, setTitle] = React.useState("");
   const [type, setType] = React.useState("");
   const [genre, setGenre] = React.useState("");
   const [penName, setPenName] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !type) return;
 
-    setIsSubmitting(true);
-    // In a real app, this would call the API
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSubmitting(false);
-    router.push("/projects");
+    try {
+      const result = await createProject.mutateAsync({
+        title,
+        type: type as "book" | "series" | "course",
+        genre: genre || undefined,
+        pen_name: penName || undefined,
+        description: description || undefined,
+      });
+      toast.success("Project created successfully");
+      router.push(`/projects/${result.id}`);
+    } catch {
+      toast.error("Failed to create project. Please try again.");
+    }
   };
 
   return (
@@ -145,8 +155,11 @@ export default function NewProjectPage() {
             <Button variant="outline" type="button" asChild>
               <Link href="/projects">Cancel</Link>
             </Button>
-            <Button type="submit" disabled={!title || !type || isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Project"}
+            <Button
+              type="submit"
+              disabled={!title || !type || createProject.isPending}
+            >
+              {createProject.isPending ? "Creating..." : "Create Project"}
             </Button>
           </CardFooter>
         </Card>

@@ -23,6 +23,7 @@ from app.modules.agent_system.models import Agent, AgentTask, AgentWorkflow, Age
 from app.modules.analytics.models import AnalyticsEvent, RoyaltyRecord, PortfolioMetricSnapshot, Report
 from app.modules.review_intelligence.models import BookReview, ReviewAlert, ReviewVelocitySnapshot, ReputationScore
 from app.modules.competitor_finder.models import CompetitorAnalysis, WeaknessSignal, OpportunityBlueprint, GapAnalysisResult, CompetitorAlert
+from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
 
 __all__ = [
     # Domain models
@@ -46,4 +47,5 @@ __all__ = [
     "AnalyticsEvent", "RoyaltyRecord", "PortfolioMetricSnapshot", "Report",
     "BookReview", "ReviewAlert", "ReviewVelocitySnapshot", "ReputationScore",
     "CompetitorAnalysis", "WeaknessSignal", "OpportunityBlueprint", "GapAnalysisResult", "CompetitorAlert",
+    "ExportJob", "FormattingTemplateModel",
 ]

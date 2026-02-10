@@ -8,8 +8,10 @@ from __future__ import annotations
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import get_db
 from app.modules.market_intelligence.schemas import (
     CategoryAnalysis,
     CategoryNode,
@@ -38,7 +40,12 @@ def _service() -> MarketIntelligenceService:
 # ------------------------------------------------------------------
 
 
-@router.get("/categories", response_model=list[CategoryNode])
+@router.get(
+    "/categories",
+    response_model=list[CategoryNode],
+    summary="Browse categories",
+    description="Browse Amazon category taxonomy as a tree structure.",
+)
 async def browse_categories(
     root_id: Optional[str] = Query(None, description="Parent category ID"),
     marketplace: str = Query("US"),
@@ -48,7 +55,12 @@ async def browse_categories(
     return await svc.get_categories(root_id=root_id, marketplace=marketplace)
 
 
-@router.get("/categories/{category_id}/analysis", response_model=CategoryAnalysis)
+@router.get(
+    "/categories/{category_id}/analysis",
+    response_model=CategoryAnalysis,
+    summary="Category analysis",
+    description="Category analysis with BSR distribution and competition score.",
+)
 async def category_analysis(
     category_id: str,
     marketplace: str = Query("US"),
@@ -63,14 +75,24 @@ async def category_analysis(
 # ------------------------------------------------------------------
 
 
-@router.post("/keywords/research", response_model=KeywordResearchResponse)
+@router.post(
+    "/keywords/research",
+    response_model=KeywordResearchResponse,
+    summary="Keyword research",
+    description="Research keywords for search volume, competition, CPC, and trends.",
+)
 async def keyword_research(request: KeywordResearchRequest):
     """Keyword research: search volume, competition, CPC, trends."""
     svc = _service()
     return await svc.research_keywords(request)
 
 
-@router.get("/keywords/suggestions", response_model=list[KeywordData])
+@router.get(
+    "/keywords/suggestions",
+    response_model=list[KeywordData],
+    summary="Keyword suggestions",
+    description="Get AI-suggested keywords for a genre or niche.",
+)
 async def keyword_suggestions(
     genre: str = Query(..., min_length=1),
     niche: Optional[str] = Query(None),
@@ -89,7 +111,12 @@ async def keyword_suggestions(
 # ------------------------------------------------------------------
 
 
-@router.post("/analyze-niche", response_model=NicheAnalysisResponse)
+@router.post(
+    "/analyze-niche",
+    response_model=NicheAnalysisResponse,
+    summary="Analyze niche",
+    description="Comprehensive niche analysis with scoring, demand signals, and gap analysis.",
+)
 async def analyze_niche(request: NicheAnalysisRequest):
     """Comprehensive niche analysis with scoring and gap analysis."""
     svc = _service()
@@ -101,30 +128,53 @@ async def analyze_niche(request: NicheAnalysisRequest):
 # ------------------------------------------------------------------
 
 
-@router.get("/competitors", response_model=list[CompetitorListItem])
+@router.get(
+    "/competitors",
+    response_model=list[CompetitorListItem],
+    summary="List tracked competitors",
+    description="List all tracked competitor books for a marketplace.",
+)
 async def list_competitors(
     marketplace: str = Query("US"),
+    db: AsyncSession = Depends(get_db),
 ):
     """List tracked competitor books."""
     svc = _service()
-    return await svc.list_competitors(marketplace=marketplace)
+    return await svc.list_competitors(db=db, marketplace=marketplace)
 
 
-@router.post("/competitors/track", response_model=CompetitorDetail, status_code=201)
-async def track_competitor(request: CompetitorTrackRequest):
+@router.post(
+    "/competitors/track",
+    response_model=CompetitorDetail,
+    status_code=201,
+    summary="Track competitor",
+    description="Start tracking a competitor book by ASIN.",
+)
+async def track_competitor(
+    request: CompetitorTrackRequest,
+    db: AsyncSession = Depends(get_db),
+):
     """Start tracking a competitor by ASIN."""
     svc = _service()
     try:
-        return await svc.track_competitor(request)
+        return await svc.track_competitor(db=db, request=request)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@router.get("/competitors/{competitor_id}", response_model=CompetitorDetail)
-async def get_competitor(competitor_id: UUID):
+@router.get(
+    "/competitors/{competitor_id}",
+    response_model=CompetitorDetail,
+    summary="Get competitor detail",
+    description="Get competitor detail including BSR history and pricing data.",
+)
+async def get_competitor(
+    competitor_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
     """Competitor detail with BSR history."""
     svc = _service()
-    detail = await svc.get_competitor(competitor_id)
+    detail = await svc.get_competitor(db=db, competitor_id=competitor_id)
     if not detail:
         raise HTTPException(status_code=404, detail="Competitor not found")
     return detail
@@ -135,7 +185,12 @@ async def get_competitor(competitor_id: UUID):
 # ------------------------------------------------------------------
 
 
-@router.get("/trends", response_model=MarketTrendsResponse)
+@router.get(
+    "/trends",
+    response_model=MarketTrendsResponse,
+    summary="Market trends",
+    description="Market trend data for categories and keywords over a configurable period.",
+)
 async def market_trends(
     category_id: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
@@ -148,11 +203,17 @@ async def market_trends(
     )
 
 
-@router.get("/snapshots", response_model=list[MarketSnapshot])
+@router.get(
+    "/snapshots",
+    response_model=list[MarketSnapshot],
+    summary="Daily market snapshots",
+    description="Daily category snapshots with BSR and pricing aggregates.",
+)
 async def market_snapshots(
     category_id: Optional[str] = Query(None),
     limit: int = Query(30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
 ):
     """Daily category snapshots."""
     svc = _service()
-    return await svc.get_snapshots(category_id=category_id, limit=limit)
+    return await svc.get_snapshots(db=db, category_id=category_id, limit=limit)

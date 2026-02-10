@@ -15,6 +15,7 @@ export interface UserProfile {
   org_id: string;
   preferences: Record<string, unknown>;
   is_active: boolean;
+  mfa_enabled: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -159,12 +159,11 @@ variable "db_name" {
 variable "db_username" {
   description = "Master username for the RDS instance"
   type        = string
-  default     = "spf_admin"
   sensitive   = true
 }
 
 variable "db_password" {
-  description = "Master password for the RDS instance"
+  description = "Master password for the RDS instance — pass via TF_VAR_db_password env variable"
   type        = string
   sensitive   = true
 }
@@ -245,4 +244,19 @@ variable "certificate_arn" {
   description = "ARN of the ACM certificate for HTTPS"
   type        = string
   default     = ""
+}
+
+# -----------------------------------------------------------------------------
+# Secrets (pass via TF_VAR_ environment variables — never commit values)
+# -----------------------------------------------------------------------------
+variable "jwt_secret_key" {
+  description = "JWT signing secret — pass via TF_VAR_jwt_secret_key env variable"
+  type        = string
+  sensitive   = true
+}
+
+variable "app_secret_key" {
+  description = "Application secret key (Django SECRET_KEY) — pass via TF_VAR_app_secret_key env variable"
+  type        = string
+  sensitive   = true
 }

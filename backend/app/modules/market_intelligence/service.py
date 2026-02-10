@@ -12,6 +12,14 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.market import (
+    CompetitorBook,
+    MarketCategory,
+    MarketSnapshot as MarketSnapshotDB,
+)
 from app.modules.market_intelligence.amazon_client import (
     AmazonClientBase,
     get_amazon_client,
@@ -215,38 +223,37 @@ class MarketIntelligenceService:
         )
 
     # ------------------------------------------------------------------
-    # Competitors
+    # Competitors (DB-backed)
     # ------------------------------------------------------------------
 
-    # In-memory store for development (would use DB in production)
-    _tracked: dict[str, CompetitorDetail] = {}
-
-    async def list_competitors(self, marketplace: str = "US") -> list[CompetitorListItem]:
-        return [
-            CompetitorListItem(
-                id=c.id,
-                asin=c.asin,
-                title=c.title,
-                author=c.author,
-                bsr=c.bsr,
-                price=c.price,
-                reviews_count=c.reviews_count,
-                rating=c.rating,
-                marketplace=c.marketplace,
-                tracked_since=c.tracked_since,
-            )
-            for c in self._tracked.values()
-            if c.marketplace == marketplace
-        ]
+    async def list_competitors(
+        self, db: AsyncSession, org_id: Optional[uuid.UUID] = None, marketplace: str = "US"
+    ) -> list[CompetitorListItem]:
+        """List tracked competitor books from the database."""
+        query = select(CompetitorBook).where(CompetitorBook.deleted_at.is_(None))
+        if org_id is not None:
+            query = query.where(CompetitorBook.org_id == org_id)
+        result = await db.execute(query)
+        rows = result.scalars().all()
+        return [self._map_db_competitor_list_item(row, marketplace) for row in rows]
 
     async def track_competitor(
-        self, request: CompetitorTrackRequest
+        self, db: AsyncSession, request: CompetitorTrackRequest, org_id: Optional[uuid.UUID] = None
     ) -> CompetitorDetail:
-        # Check if already tracked
-        for existing in self._tracked.values():
-            if existing.asin == request.asin and existing.marketplace == request.marketplace:
-                return existing
+        """Start tracking a competitor by ASIN. Uses DB persistence."""
+        # Check if already tracked in DB
+        existing_query = select(CompetitorBook).where(
+            CompetitorBook.asin == request.asin,
+            CompetitorBook.deleted_at.is_(None),
+        )
+        if org_id is not None:
+            existing_query = existing_query.where(CompetitorBook.org_id == org_id)
+        result = await db.execute(existing_query)
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            return self._map_db_competitor_detail(existing, request.marketplace)
 
+        # Fetch from Amazon client
         product = await self._client.get_product_detail(
             request.asin, marketplace=request.marketplace
         )
@@ -257,32 +264,45 @@ class MarketIntelligenceService:
             request.asin, days=30, marketplace=request.marketplace
         )
 
-        now = datetime.now(tz=timezone.utc)
-        detail = CompetitorDetail(
-            id=uuid.uuid4(),
+        # Serialize BSR history for JSONB storage
+        bsr_history_json = [
+            {"date": pt.date.isoformat(), "bsr": pt.bsr, "price": pt.price}
+            for pt in bsr_history
+        ]
+
+        # Create CompetitorBook in DB
+        book = CompetitorBook(
+            org_id=org_id,
             asin=product.asin,
             title=product.title,
-            author=product.author,
-            bsr=product.bsr,
+            author=product.author or "",
+            bsr_current=product.bsr,
+            bsr_history=bsr_history_json,
             price=product.price,
             reviews_count=product.reviews_count,
             rating=product.rating,
-            image_url=product.image_url,
-            marketplace=request.marketplace,
-            bsr_history=bsr_history,
-            tracked_since=now,
-            last_updated=now,
+            cover_url=product.image_url,
+            metadata_json={"marketplace": request.marketplace},
         )
-        self._tracked[f"{request.asin}:{request.marketplace}"] = detail
-        return detail
+        db.add(book)
+        await db.flush()
+        await db.refresh(book)
+
+        return self._map_db_competitor_detail(book, request.marketplace)
 
     async def get_competitor(
-        self, competitor_id: uuid.UUID
+        self, db: AsyncSession, competitor_id: uuid.UUID
     ) -> Optional[CompetitorDetail]:
-        for c in self._tracked.values():
-            if c.id == competitor_id:
-                return c
-        return None
+        """Get a single competitor by ID from the database."""
+        query = select(CompetitorBook).where(
+            CompetitorBook.id == competitor_id,
+            CompetitorBook.deleted_at.is_(None),
+        )
+        result = await db.execute(query)
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return self._map_db_competitor_detail(row)
 
     # ------------------------------------------------------------------
     # Trends & Snapshots
@@ -342,38 +362,37 @@ class MarketIntelligenceService:
 
     async def get_snapshots(
         self,
+        db: AsyncSession,
         category_id: Optional[str] = None,
         limit: int = 30,
     ) -> list[MarketSnapshot]:
-        """Return recent market snapshots.
+        """Return recent market snapshots from the database.
 
-        In production these would come from the database (populated by
-        the Celery task ``generate_market_snapshot``).  Here we generate
-        synthetic data.
+        If no snapshots exist yet, returns an empty list.
         """
-        import random as _random
-        from datetime import timedelta
-
-        now = datetime.now(tz=timezone.utc)
-        rng = _random.Random(42)
-        cat_id = category_id or "154606011"
-        snapshots: list[MarketSnapshot] = []
-
-        for i in range(limit):
-            snapshots.append(
-                MarketSnapshot(
-                    id=uuid.uuid4(),
-                    category_id=cat_id,
-                    category_name="Self-Help",
-                    snapshot_date=now - timedelta(days=i),
-                    avg_bsr=round(rng.uniform(10000, 80000), 2),
-                    avg_price=round(rng.uniform(4.99, 14.99), 2),
-                    book_count=rng.randint(1000, 20000),
-                    avg_reviews=round(rng.uniform(50, 500), 2),
-                    competition_score=round(rng.uniform(30, 85), 2),
+        query = (
+            select(MarketSnapshotDB)
+            .where(MarketSnapshotDB.deleted_at.is_(None))
+            .order_by(MarketSnapshotDB.snapshot_date.desc())
+            .limit(limit)
+        )
+        if category_id:
+            # Find MarketCategory by amazon_node_id, then filter snapshots
+            cat_result = await db.execute(
+                select(MarketCategory).where(
+                    MarketCategory.amazon_node_id == category_id,
+                    MarketCategory.deleted_at.is_(None),
                 )
             )
-        return snapshots
+            cat_obj = cat_result.scalar_one_or_none()
+            if cat_obj:
+                query = query.where(MarketSnapshotDB.category_id == cat_obj.id)
+            else:
+                # Category not found in DB -- return empty list
+                return []
+        result = await db.execute(query)
+        rows = result.scalars().all()
+        return [self._map_db_snapshot(r) for r in rows]
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -485,3 +504,85 @@ class MarketIntelligenceService:
                 )
 
         return gaps
+
+    @staticmethod
+    def _map_db_competitor_list_item(
+        book: CompetitorBook, marketplace: str = "US"
+    ) -> CompetitorListItem:
+        """Map a CompetitorBook ORM row to a CompetitorListItem schema."""
+        # Extract marketplace from metadata_json if available
+        meta = book.metadata_json or {}
+        mp = meta.get("marketplace", marketplace)
+        return CompetitorListItem(
+            id=book.id,
+            asin=book.asin,
+            title=book.title,
+            author=book.author or "",
+            bsr=book.bsr_current,
+            price=float(book.price) if book.price is not None else None,
+            reviews_count=book.reviews_count,
+            rating=book.rating,
+            marketplace=mp,
+            tracked_since=book.created_at,
+        )
+
+    @staticmethod
+    def _map_db_competitor_detail(
+        book: CompetitorBook, marketplace: str = "US"
+    ) -> CompetitorDetail:
+        """Map a CompetitorBook ORM row to a CompetitorDetail schema."""
+        meta = book.metadata_json or {}
+        mp = meta.get("marketplace", marketplace)
+
+        # Deserialize BSR history from JSONB
+        bsr_history: list[BSRHistoryPoint] = []
+        raw_history = book.bsr_history
+        if isinstance(raw_history, list):
+            for pt in raw_history:
+                bsr_history.append(
+                    BSRHistoryPoint(
+                        date=pt["date"],
+                        bsr=pt["bsr"],
+                        price=pt.get("price"),
+                    )
+                )
+
+        return CompetitorDetail(
+            id=book.id,
+            asin=book.asin,
+            title=book.title,
+            author=book.author or "",
+            bsr=book.bsr_current,
+            price=float(book.price) if book.price is not None else None,
+            reviews_count=book.reviews_count,
+            rating=book.rating,
+            image_url=book.cover_url,
+            category=book.category,
+            marketplace=mp,
+            bsr_history=bsr_history,
+            tracked_since=book.created_at,
+            last_updated=book.updated_at,
+        )
+
+    @staticmethod
+    def _map_db_snapshot(snap: MarketSnapshotDB) -> MarketSnapshot:
+        """Map a MarketSnapshot ORM row to a MarketSnapshot schema."""
+        metrics = snap.metrics or {}
+        # Access the related category for name and amazon_node_id
+        cat = snap.category
+        category_id_str = cat.amazon_node_id if cat and cat.amazon_node_id else str(snap.category_id)
+        category_name = cat.name if cat else "Unknown"
+
+        return MarketSnapshot(
+            id=snap.id,
+            category_id=category_id_str,
+            category_name=category_name,
+            snapshot_date=datetime.combine(snap.snapshot_date, datetime.min.time(), tzinfo=timezone.utc)
+            if not isinstance(snap.snapshot_date, datetime)
+            else snap.snapshot_date,
+            avg_bsr=metrics.get("avg_bsr", 0.0),
+            avg_price=metrics.get("avg_price", 0.0),
+            book_count=metrics.get("book_count", 0),
+            avg_reviews=metrics.get("avg_reviews", 0.0),
+            competition_score=metrics.get("competition_score", 0.0),
+        )

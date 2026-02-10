@@ -49,6 +49,7 @@ async def _get_org_id() -> UUID:
     response_model=SuccessResponse[ExtractedDataResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Save extracted Amazon product data",
+    description="Save product data extracted by the Chrome extension from an Amazon page.",
 )
 async def save_extracted_data(
     request: ExtractDataRequest,
@@ -63,6 +64,7 @@ async def save_extracted_data(
     "/quick-research",
     response_model=SuccessResponse[QuickResearchResponse],
     summary="Quick niche research data for the extension sidebar",
+    description="Return quick niche research data (competition, demand) for the extension sidebar.",
 )
 async def quick_research(
     asin: str | None = Query(None, min_length=10, max_length=10),
@@ -87,6 +89,7 @@ async def quick_research(
     response_model=SuccessResponse[ClipSaveResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Save a clip to the Knowledge Vault",
+    description="Save a text or image clip from the browser to the Knowledge Vault.",
 )
 async def save_clip(
     request: ClipSaveRequest,

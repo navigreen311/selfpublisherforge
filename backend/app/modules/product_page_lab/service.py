@@ -6,15 +6,17 @@ Look Inside analysis, and mobile checks.
 
 from __future__ import annotations
 
+import math
 import re
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundError, ValidationError
 from app.modules.product_page_lab.analyzer import analyze_listing
 from app.modules.product_page_lab.blurb_generator import (
     generate_blurb_variants_ai,
@@ -25,7 +27,9 @@ from app.modules.product_page_lab.models import ABTest
 from app.modules.product_page_lab.schemas import (
     ABTestCreateRequest,
     ABTestResponse,
+    ABTestResultsResponse,
     ABTestStatus,
+    ABTestUpdateRequest,
     ABTestVariantResult,
     BlurbGenerateRequest,
     BlurbGenerateResponse,
@@ -40,6 +44,10 @@ from app.modules.product_page_lab.schemas import (
     MobileCheckResult,
     Recommendation,
 )
+
+# Minimum total impressions across both variants before statistical
+# significance can be meaningfully assessed.
+_MIN_SAMPLE_SIZE = 100
 
 
 # ---------------------------------------------------------------------------
@@ -138,8 +146,6 @@ async def create_ab_test(
     db: AsyncSession,
 ) -> ABTestResponse:
     """Create a new A/B test for blurb variants."""
-    now = datetime.utcnow()
-
     ab_test = ABTest(
         id=uuid.uuid4(),
         org_id=org_id,
@@ -159,24 +165,97 @@ async def create_ab_test(
 
     db.add(ab_test)
     await db.flush()
+    await db.refresh(ab_test)
 
     return _ab_test_to_response(ab_test)
+
+
+async def list_ab_tests(
+    org_id: UUID,
+    db: AsyncSession,
+    book_id: Optional[UUID] = None,
+    status: Optional[ABTestStatus] = None,
+) -> list[ABTestResponse]:
+    """List A/B tests for an organisation, with optional filtering."""
+    stmt = select(ABTest).where(
+        ABTest.org_id == org_id,
+        ABTest.deleted_at.is_(None),
+    )
+
+    if book_id is not None:
+        stmt = stmt.where(ABTest.book_id == book_id)
+
+    if status is not None:
+        stmt = stmt.where(ABTest.status == status.value)
+
+    stmt = stmt.order_by(ABTest.created_at.desc())
+
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+
+    return [_ab_test_to_response(row) for row in rows]
 
 
 async def get_ab_test(
     test_id: UUID,
     db: AsyncSession,
-) -> Optional[ABTestResponse]:
-    """Get A/B test by ID with results."""
-    result = await db.execute(
-        select(ABTest).where(
-            ABTest.id == test_id,
-            ABTest.deleted_at.is_(None),
-        )
+) -> ABTestResponse:
+    """Get A/B test by ID with results.
+
+    Raises ``NotFoundError`` when the test does not exist.
+    """
+    ab_test = await _fetch_ab_test(test_id, db)
+    return _ab_test_to_response(ab_test)
+
+
+async def update_ab_test(
+    test_id: UUID,
+    request: ABTestUpdateRequest,
+    db: AsyncSession,
+) -> ABTestResponse:
+    """Update an existing A/B test.
+
+    Only tests in DRAFT or PAUSED status may have their content changed.
+    Status transitions are validated (e.g. cannot move a COMPLETED test
+    back to DRAFT).
+    """
+    ab_test = await _fetch_ab_test(test_id, db)
+
+    # Validate content changes only allowed when not running/completed
+    content_fields_changing = (
+        request.variant_a is not None
+        or request.variant_b is not None
     )
-    ab_test = result.scalar_one_or_none()
-    if ab_test is None:
-        return None
+    if content_fields_changing and ab_test.status in (
+        ABTestStatus.RUNNING.value,
+        ABTestStatus.COMPLETED.value,
+    ):
+        raise ValidationError(
+            message="Cannot modify variant content while the test is running or completed.",
+        )
+
+    # Validate status transition
+    if request.status is not None:
+        _validate_status_transition(ab_test.status, request.status.value)
+
+    # Apply updates
+    if request.name is not None:
+        ab_test.name = request.name
+    if request.variant_a is not None:
+        ab_test.variant_a_content = request.variant_a
+    if request.variant_b is not None:
+        ab_test.variant_b_content = request.variant_b
+    if request.duration_days is not None:
+        ab_test.duration_days = request.duration_days
+    if request.status is not None:
+        ab_test.status = request.status.value
+        if request.status == ABTestStatus.RUNNING and ab_test.started_at is None:
+            ab_test.started_at = datetime.utcnow()
+        elif request.status == ABTestStatus.COMPLETED and ab_test.completed_at is None:
+            ab_test.completed_at = datetime.utcnow()
+
+    await db.flush()
+    await db.refresh(ab_test)
 
     return _ab_test_to_response(ab_test)
 
@@ -184,23 +263,134 @@ async def get_ab_test(
 async def start_ab_test(
     test_id: UUID,
     db: AsyncSession,
-) -> Optional[ABTestResponse]:
-    """Start an A/B test."""
-    result = await db.execute(
-        select(ABTest).where(
-            ABTest.id == test_id,
-            ABTest.deleted_at.is_(None),
-        )
-    )
-    ab_test = result.scalar_one_or_none()
-    if ab_test is None:
-        return None
+) -> ABTestResponse:
+    """Start an A/B test.
 
-    ab_test.status = ABTestStatus.RUNNING
-    ab_test.started_at = datetime.utcnow()
+    Raises ``NotFoundError`` when the test does not exist.
+    Raises ``ValidationError`` if the test is not in DRAFT or PAUSED status.
+    """
+    ab_test = await _fetch_ab_test(test_id, db)
+
+    if ab_test.status not in (ABTestStatus.DRAFT.value, ABTestStatus.PAUSED.value):
+        raise ValidationError(
+            message=f"Cannot start a test with status '{ab_test.status}'. "
+                    f"Only DRAFT or PAUSED tests can be started.",
+        )
+
+    ab_test.status = ABTestStatus.RUNNING.value
+    ab_test.started_at = ab_test.started_at or datetime.utcnow()
     await db.flush()
+    await db.refresh(ab_test)
 
     return _ab_test_to_response(ab_test)
+
+
+async def get_test_results(
+    test_id: UUID,
+    db: AsyncSession,
+) -> ABTestResultsResponse:
+    """Return detailed test metrics with statistical significance analysis.
+
+    Computes click-through rates, a two-proportion z-test for statistical
+    significance, and remaining time estimates.
+    """
+    ab_test = await _fetch_ab_test(test_id, db)
+
+    # Auto-complete tests that have exceeded their duration
+    if (
+        ab_test.status == ABTestStatus.RUNNING.value
+        and ab_test.started_at is not None
+    ):
+        end_date = ab_test.started_at + timedelta(days=ab_test.duration_days)
+        if datetime.utcnow() >= end_date:
+            ab_test.status = ABTestStatus.COMPLETED.value
+            ab_test.completed_at = datetime.utcnow()
+            await db.flush()
+            await db.refresh(ab_test)
+
+    # Compute rates
+    a_ctr = (
+        ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100
+        if ab_test.variant_a_impressions > 0
+        else 0.0
+    )
+    b_ctr = (
+        ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100
+        if ab_test.variant_b_impressions > 0
+        else 0.0
+    )
+    a_conv = (
+        ab_test.variant_a_clicks / ab_test.variant_a_impressions
+        if ab_test.variant_a_impressions > 0
+        else 0.0
+    )
+    b_conv = (
+        ab_test.variant_b_clicks / ab_test.variant_b_impressions
+        if ab_test.variant_b_impressions > 0
+        else 0.0
+    )
+
+    total_impressions = ab_test.variant_a_impressions + ab_test.variant_b_impressions
+    sample_sufficient = total_impressions >= _MIN_SAMPLE_SIZE
+
+    # Statistical significance via two-proportion z-test
+    confidence = _compute_z_test_confidence(
+        ab_test.variant_a_impressions,
+        ab_test.variant_a_clicks,
+        ab_test.variant_b_impressions,
+        ab_test.variant_b_clicks,
+    )
+    is_significant = confidence >= 95.0 and sample_sufficient
+
+    # Determine winner
+    winner = None
+    if ab_test.status == ABTestStatus.COMPLETED.value or is_significant:
+        if a_ctr > b_ctr:
+            winner = "A"
+        elif b_ctr > a_ctr:
+            winner = "B"
+        else:
+            winner = "tie"
+
+    # Time calculations
+    days_running: Optional[int] = None
+    days_remaining: Optional[int] = None
+    if ab_test.started_at is not None:
+        delta = datetime.utcnow() - ab_test.started_at
+        days_running = max(0, delta.days)
+        if ab_test.status == ABTestStatus.RUNNING.value:
+            days_remaining = max(0, ab_test.duration_days - delta.days)
+
+    return ABTestResultsResponse(
+        test_id=ab_test.id,
+        name=ab_test.name,
+        status=ABTestStatus(ab_test.status),
+        variant_a=ABTestVariantResult(
+            variant_label="A",
+            content=ab_test.variant_a_content,
+            impressions=ab_test.variant_a_impressions,
+            clicks=ab_test.variant_a_clicks,
+            click_through_rate=round(a_ctr, 2),
+            conversion_rate=round(a_conv * 100, 2),
+            estimated_score=round(min(100.0, a_ctr * 10), 1),
+        ),
+        variant_b=ABTestVariantResult(
+            variant_label="B",
+            content=ab_test.variant_b_content,
+            impressions=ab_test.variant_b_impressions,
+            clicks=ab_test.variant_b_clicks,
+            click_through_rate=round(b_ctr, 2),
+            conversion_rate=round(b_conv * 100, 2),
+            estimated_score=round(min(100.0, b_ctr * 10), 1),
+        ),
+        winner=winner,
+        confidence=round(confidence, 2) if confidence else None,
+        is_statistically_significant=is_significant,
+        sample_size_sufficient=sample_sufficient,
+        minimum_sample_needed=_MIN_SAMPLE_SIZE,
+        days_running=days_running,
+        days_remaining=days_remaining,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -314,18 +504,91 @@ async def get_conversion_scores(
 ) -> ConversionScores:
     """Get aggregate conversion optimization scores for a book.
 
-    In production this would pull from cached analysis results.
-    For now returns a placeholder.
+    Derives a blurb score from the best-performing completed A/B test
+    for the given book.  Other score dimensions (listing, mobile,
+    look-inside) are not persisted yet and remain ``None``.
     """
+    # Pull the most recent completed A/B test for this book to derive
+    # a blurb conversion score.
+    result = await db.execute(
+        select(ABTest).where(
+            ABTest.book_id == book_id,
+            ABTest.status == ABTestStatus.COMPLETED.value,
+            ABTest.deleted_at.is_(None),
+        ).order_by(ABTest.completed_at.desc())
+    )
+    completed_tests = result.scalars().all()
+
+    blurb_score: Optional[float] = None
+    last_analyzed: Optional[datetime] = None
+    recommendations_count = 0
+
+    if completed_tests:
+        # Use the best CTR across all completed tests for this book.
+        best_ctr = 0.0
+        for test in completed_tests:
+            a_ctr = (
+                test.variant_a_clicks / test.variant_a_impressions * 100
+                if test.variant_a_impressions > 0
+                else 0.0
+            )
+            b_ctr = (
+                test.variant_b_clicks / test.variant_b_impressions * 100
+                if test.variant_b_impressions > 0
+                else 0.0
+            )
+            best_ctr = max(best_ctr, a_ctr, b_ctr)
+
+        # Normalise CTR to a 0-100 score (10% CTR -> 100 score).
+        blurb_score = round(min(100.0, best_ctr * 10), 1)
+        last_analyzed = completed_tests[0].completed_at
+
+        # Count tests where neither variant exceeds 5% CTR as needing attention.
+        for test in completed_tests:
+            a_ctr = (
+                test.variant_a_clicks / test.variant_a_impressions * 100
+                if test.variant_a_impressions > 0
+                else 0.0
+            )
+            b_ctr = (
+                test.variant_b_clicks / test.variant_b_impressions * 100
+                if test.variant_b_impressions > 0
+                else 0.0
+            )
+            if max(a_ctr, b_ctr) < 5.0:
+                recommendations_count += 1
+
+    # Count active (running) tests that have not been analysed yet.
+    running_result = await db.execute(
+        select(func.count()).select_from(ABTest).where(
+            ABTest.book_id == book_id,
+            ABTest.status == ABTestStatus.RUNNING.value,
+            ABTest.deleted_at.is_(None),
+        )
+    )
+    running_count = running_result.scalar() or 0
+    if running_count > 0 and blurb_score is None:
+        recommendations_count += 1  # Suggest waiting for results
+
+    # Overall score is the average of available dimensions.
+    available_scores = [
+        s for s in [blurb_score] if s is not None
+    ]
+    overall_score = (
+        round(sum(available_scores) / len(available_scores), 1)
+        if available_scores
+        else 0.0
+    )
+
     return ConversionScores(
         book_id=book_id,
         listing_score=None,
-        blurb_score=None,
+        blurb_score=blurb_score,
         mobile_score=None,
         look_inside_score=None,
-        overall_score=0.0,
-        last_analyzed_at=None,
-        recommendations_count=0,
+        overall_score=overall_score,
+        last_analyzed_at=last_analyzed,
+        recommendations_count=recommendations_count,
     )
 
 
@@ -348,6 +611,99 @@ def _extract_asin_from_url(url: str) -> Optional[str]:
     return None
 
 
+async def _fetch_ab_test(test_id: UUID, db: AsyncSession) -> ABTest:
+    """Fetch a single non-deleted ABTest or raise ``NotFoundError``."""
+    result = await db.execute(
+        select(ABTest).where(
+            ABTest.id == test_id,
+            ABTest.deleted_at.is_(None),
+        )
+    )
+    ab_test = result.scalar_one_or_none()
+    if ab_test is None:
+        raise NotFoundError(resource="ABTest", detail=f"A/B test {test_id} not found.")
+    return ab_test
+
+
+def _validate_status_transition(current: str, target: str) -> None:
+    """Validate that the status transition is allowed.
+
+    Allowed transitions:
+        draft   -> running, paused
+        running -> paused, completed
+        paused  -> running, completed
+        completed -> (none)
+    """
+    allowed: dict[str, set[str]] = {
+        ABTestStatus.DRAFT.value: {ABTestStatus.RUNNING.value, ABTestStatus.PAUSED.value},
+        ABTestStatus.RUNNING.value: {ABTestStatus.PAUSED.value, ABTestStatus.COMPLETED.value},
+        ABTestStatus.PAUSED.value: {ABTestStatus.RUNNING.value, ABTestStatus.COMPLETED.value},
+        ABTestStatus.COMPLETED.value: set(),
+    }
+    if target not in allowed.get(current, set()):
+        raise ValidationError(
+            message=f"Cannot transition from '{current}' to '{target}'.",
+        )
+
+
+def _compute_z_test_confidence(
+    n_a: int,
+    x_a: int,
+    n_b: int,
+    x_b: int,
+) -> float:
+    """Compute confidence level using a two-proportion z-test.
+
+    Returns a confidence percentage (0-100).  Returns 0.0 when there are
+    insufficient observations.
+    """
+    if n_a <= 0 or n_b <= 0:
+        return 0.0
+
+    p_a = x_a / n_a
+    p_b = x_b / n_b
+    p_pool = (x_a + x_b) / (n_a + n_b)
+
+    # Avoid division-by-zero when pooled proportion is 0 or 1.
+    if p_pool <= 0 or p_pool >= 1:
+        return 0.0
+
+    se = math.sqrt(p_pool * (1 - p_pool) * (1 / n_a + 1 / n_b))
+    if se == 0:
+        return 0.0
+
+    z = abs(p_a - p_b) / se
+
+    # Approximate two-tailed p-value -> confidence using the standard
+    # normal CDF.  We use an approximation good enough for A/B testing
+    # dashboards.  For |z| > 3.5 we cap at 99.95%.
+    if z > 3.5:
+        return 99.95
+    # Abramowitz-Stegun rational approximation of the normal CDF.
+    p_value = 2.0 * _normal_sf(z)
+    confidence = (1.0 - p_value) * 100
+    return max(0.0, min(100.0, confidence))
+
+
+def _normal_sf(z: float) -> float:
+    """Survival function (1 - CDF) of the standard normal distribution.
+
+    Uses the Abramowitz-Stegun approximation (formula 26.2.17) which is
+    accurate to about 1e-5.
+    """
+    if z < 0:
+        return 1.0 - _normal_sf(-z)
+    b0 = 0.2316419
+    b1 = 0.319381530
+    b2 = -0.356563782
+    b3 = 1.781477937
+    b4 = -1.821255978
+    b5 = 1.330274429
+    t = 1.0 / (1.0 + b0 * z)
+    phi = math.exp(-0.5 * z * z) / math.sqrt(2 * math.pi)
+    return phi * t * (b1 + t * (b2 + t * (b3 + t * (b4 + t * b5))))
+
+
 def _ab_test_to_response(ab_test: ABTest) -> ABTestResponse:
     """Convert an ABTest model to response schema."""
     # Calculate CTR
@@ -362,33 +718,53 @@ def _ab_test_to_response(ab_test: ABTest) -> ABTestResponse:
         else 0.0
     )
 
-    # Determine winner if test is completed
+    # Conversion rate (proportion as percentage)
+    a_conv = (
+        ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100
+        if ab_test.variant_a_impressions > 0
+        else 0.0
+    )
+    b_conv = (
+        ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100
+        if ab_test.variant_b_impressions > 0
+        else 0.0
+    )
+
+    # Estimated score normalised to 0-100 (10% CTR -> score 100)
+    a_score = round(min(100.0, a_ctr * 10), 1)
+    b_score = round(min(100.0, b_ctr * 10), 1)
+
+    # Determine winner and confidence if test is completed
     winner = None
     confidence = None
-    if ab_test.status == ABTestStatus.COMPLETED:
+    if ab_test.status in (ABTestStatus.COMPLETED.value, ABTestStatus.COMPLETED):
+        confidence = _compute_z_test_confidence(
+            ab_test.variant_a_impressions,
+            ab_test.variant_a_clicks,
+            ab_test.variant_b_impressions,
+            ab_test.variant_b_clicks,
+        )
         if a_ctr > b_ctr:
             winner = "A"
         elif b_ctr > a_ctr:
             winner = "B"
         else:
             winner = "tie"
-        # Simplified confidence (in production use proper statistical testing)
-        total_impressions = ab_test.variant_a_impressions + ab_test.variant_b_impressions
-        confidence = min(95.0, 50.0 + (total_impressions / 100) * 5)
+        confidence = round(confidence, 2)
 
     return ABTestResponse(
         id=ab_test.id,
         book_id=ab_test.book_id,
         name=ab_test.name,
-        status=ab_test.status,
+        status=ABTestStatus(ab_test.status) if isinstance(ab_test.status, str) else ab_test.status,
         variant_a=ABTestVariantResult(
             variant_label="A",
             content=ab_test.variant_a_content,
             impressions=ab_test.variant_a_impressions,
             clicks=ab_test.variant_a_clicks,
             click_through_rate=round(a_ctr, 2),
-            conversion_rate=0.0,
-            estimated_score=0.0,
+            conversion_rate=round(a_conv, 2),
+            estimated_score=a_score,
         ),
         variant_b=ABTestVariantResult(
             variant_label="B",
@@ -396,8 +772,8 @@ def _ab_test_to_response(ab_test: ABTest) -> ABTestResponse:
             impressions=ab_test.variant_b_impressions,
             clicks=ab_test.variant_b_clicks,
             click_through_rate=round(b_ctr, 2),
-            conversion_rate=0.0,
-            estimated_score=0.0,
+            conversion_rate=round(b_conv, 2),
+            estimated_score=b_score,
         ),
         winner=winner,
         confidence=confidence,

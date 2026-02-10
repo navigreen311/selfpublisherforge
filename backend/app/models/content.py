@@ -13,7 +13,7 @@ from sqlalchemy import (
     Text,
     Enum as SAEnum,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
@@ -123,7 +123,15 @@ class StyleProfile(TenantModel):
     voice_fingerprint: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     vocabulary_stats: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     sentence_patterns: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
-    sample_sources: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
+    sample_sources: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    genre: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", server_default="pending")
+    word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    sample_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    confidence: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+    style_card: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    sample_texts: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
     organization = relationship(

@@ -82,6 +82,15 @@ class ABTestCreateRequest(BaseModel):
     duration_days: int = Field(default=7, ge=1, le=90)
 
 
+class ABTestUpdateRequest(BaseModel):
+    """Request to update an existing A/B test."""
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    variant_a: Optional[str] = Field(None, min_length=10, max_length=5000)
+    variant_b: Optional[str] = Field(None, min_length=10, max_length=5000)
+    duration_days: Optional[int] = Field(None, ge=1, le=90)
+    status: Optional[ABTestStatus] = None
+
+
 class LookInsideAnalyzeRequest(BaseModel):
     """Request to analyze the Look Inside preview effectiveness."""
     book_id: Optional[UUID] = None
@@ -232,6 +241,22 @@ class ABTestResponse(BaseModel):
     completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+
+
+class ABTestResultsResponse(BaseModel):
+    """Detailed A/B test results with statistical analysis."""
+    test_id: UUID
+    name: str
+    status: ABTestStatus
+    variant_a: ABTestVariantResult
+    variant_b: ABTestVariantResult
+    winner: Optional[str] = None
+    confidence: Optional[float] = None
+    is_statistically_significant: bool = False
+    sample_size_sufficient: bool = False
+    minimum_sample_needed: int = 100
+    days_running: Optional[int] = None
+    days_remaining: Optional[int] = None
 
 
 class LookInsideSection(BaseModel):

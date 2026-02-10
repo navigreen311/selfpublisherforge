@@ -43,7 +43,12 @@ from app.modules.review_intelligence.velocity import compute_velocity_from_snaps
 router = APIRouter()
 
 
-@router.get("", response_model=PaginatedResponse[ReviewRead])
+@router.get(
+    "",
+    response_model=PaginatedResponse[ReviewRead],
+    summary="List reviews",
+    description="List reviews for the organization's books with optional filters.",
+)
 async def list_reviews_endpoint(
     cursor: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
@@ -80,7 +85,12 @@ async def list_reviews_endpoint(
     )
 
 
-@router.get("/book/{book_id}", response_model=PaginatedResponse[ReviewRead])
+@router.get(
+    "/book/{book_id}",
+    response_model=PaginatedResponse[ReviewRead],
+    summary="Get book reviews",
+    description="Get reviews for a specific book with sentiment analysis and filters.",
+)
 async def get_book_reviews_endpoint(
     book_id: UUID,
     cursor: Optional[str] = Query(None),
@@ -114,7 +124,12 @@ async def get_book_reviews_endpoint(
     )
 
 
-@router.get("/sentiment/{book_id}", response_model=SentimentBreakdown)
+@router.get(
+    "/sentiment/{book_id}",
+    response_model=SentimentBreakdown,
+    summary="Get sentiment breakdown",
+    description="Get sentiment breakdown (positive/neutral/negative) and key themes for a book.",
+)
 async def get_sentiment_endpoint(
     book_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -124,7 +139,12 @@ async def get_sentiment_endpoint(
     return await get_sentiment_breakdown(db, current_user["org_id"], book_id)
 
 
-@router.get("/velocity/{book_id}", response_model=VelocityReport)
+@router.get(
+    "/velocity/{book_id}",
+    response_model=VelocityReport,
+    summary="Get review velocity",
+    description="Get review velocity (rate of new reviews) over time for a book.",
+)
 async def get_velocity_endpoint(
     book_id: UUID,
     period: VelocityPeriod = Query(VelocityPeriod.WEEKLY),
@@ -138,7 +158,12 @@ async def get_velocity_endpoint(
     )
 
 
-@router.get("/alerts", response_model=PaginatedResponse[ReviewAlertRead])
+@router.get(
+    "/alerts",
+    response_model=PaginatedResponse[ReviewAlertRead],
+    summary="List review alerts",
+    description="List active review alerts such as negative reviews, velocity drops, and competitor surges.",
+)
 async def list_alerts_endpoint(
     cursor: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
@@ -169,7 +194,12 @@ async def list_alerts_endpoint(
     )
 
 
-@router.patch("/alerts/{alert_id}/acknowledge", response_model=ReviewAlertRead)
+@router.patch(
+    "/alerts/{alert_id}/acknowledge",
+    response_model=ReviewAlertRead,
+    summary="Acknowledge review alert",
+    description="Acknowledge a review alert to dismiss it from the active list.",
+)
 async def acknowledge_alert_endpoint(
     alert_id: UUID,
     body: AlertAcknowledgeRequest,
@@ -188,7 +218,12 @@ async def acknowledge_alert_endpoint(
     return ReviewAlertRead.model_validate(alert)
 
 
-@router.post("/analyze", response_model=BatchAnalysisResponse)
+@router.post(
+    "/analyze",
+    response_model=BatchAnalysisResponse,
+    summary="Batch analyze reviews",
+    description="AI-analyze a batch of reviews to extract themes, complaints, and praise.",
+)
 async def analyze_reviews_endpoint(
     body: BatchAnalysisRequest,
     current_user: dict = Depends(get_current_user),
@@ -198,7 +233,12 @@ async def analyze_reviews_endpoint(
     return await analyze_reviews_batch(db, current_user["org_id"], body)
 
 
-@router.get("/reputation/{book_id}", response_model=ReputationHealthMetrics)
+@router.get(
+    "/reputation/{book_id}",
+    response_model=ReputationHealthMetrics,
+    summary="Get reputation score",
+    description="Get reputation score and health metrics for a book based on review data.",
+)
 async def get_reputation_endpoint(
     book_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -208,7 +248,12 @@ async def get_reputation_endpoint(
     return await compute_reputation_score(db, current_user["org_id"], book_id)
 
 
-@router.post("/acquisition/tips", response_model=AcquisitionTipsResponse)
+@router.post(
+    "/acquisition/tips",
+    response_model=AcquisitionTipsResponse,
+    summary="Get review acquisition tips",
+    description="Get AI-generated tips for improving review acquisition rate.",
+)
 async def get_acquisition_tips_endpoint(
     body: AcquisitionTipsRequest,
     current_user: dict = Depends(get_current_user),

@@ -26,7 +26,10 @@ db_allocated_storage    = 20
 db_max_allocated_storage = 50
 db_multi_az             = false
 db_backup_retention     = 3
-db_password             = "CHANGE_ME_STAGING_PASSWORD"
+# db_password      - SET VIA TF_VAR_db_password ENVIRONMENT VARIABLE — never commit secrets
+# db_username      - SET VIA TF_VAR_db_username ENVIRONMENT VARIABLE — never commit secrets
+# jwt_secret_key   - SET VIA TF_VAR_jwt_secret_key ENVIRONMENT VARIABLE — never commit secrets
+# app_secret_key   - SET VIA TF_VAR_app_secret_key ENVIRONMENT VARIABLE — never commit secrets
 
 # Redis — smaller instance for staging
 redis_node_type       = "cache.t3.small"

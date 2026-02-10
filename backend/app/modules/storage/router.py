@@ -33,7 +33,13 @@ def _service(db: AsyncSession) -> StorageService:
 # POST /upload — get presigned upload URL
 # ---------------------------------------------------------------------------
 
-@router.post("/upload", response_model=UploadResponse, status_code=201)
+@router.post(
+    "/upload",
+    response_model=UploadResponse,
+    status_code=201,
+    summary="Request presigned upload URL",
+    description="Validate file metadata and return a presigned S3 PUT URL for direct upload.",
+)
 async def request_upload(
     body: UploadRequest,
     current_user: dict = Depends(get_current_user),
@@ -54,7 +60,12 @@ async def request_upload(
 # POST /upload/complete — confirm upload
 # ---------------------------------------------------------------------------
 
-@router.post("/upload/complete", response_model=AssetResponse)
+@router.post(
+    "/upload/complete",
+    response_model=AssetResponse,
+    summary="Complete file upload",
+    description="Confirm that the file has been uploaded to S3 and mark the asset as uploaded.",
+)
 async def complete_upload(
     body: UploadCompleteRequest,
     current_user: dict = Depends(get_current_user),
@@ -72,7 +83,12 @@ async def complete_upload(
 # GET /assets — list org assets (paginated, filterable by type)
 # ---------------------------------------------------------------------------
 
-@router.get("/assets", response_model=PaginatedResponse[AssetResponse])
+@router.get(
+    "/assets",
+    response_model=PaginatedResponse[AssetResponse],
+    summary="List assets",
+    description="List assets belonging to the organization with optional type filter.",
+)
 async def list_assets(
     asset_type: AssetType | None = None,
     cursor: str | None = None,
@@ -94,7 +110,12 @@ async def list_assets(
 # GET /assets/{id} — get asset details + download URL
 # ---------------------------------------------------------------------------
 
-@router.get("/assets/{asset_id}", response_model=AssetResponse)
+@router.get(
+    "/assets/{asset_id}",
+    response_model=AssetResponse,
+    summary="Get asset detail",
+    description="Return asset details including a presigned download URL.",
+)
 async def get_asset(
     asset_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -112,7 +133,12 @@ async def get_asset(
 # DELETE /assets/{id} — soft-delete asset
 # ---------------------------------------------------------------------------
 
-@router.delete("/assets/{asset_id}", response_model=MessageResponse)
+@router.delete(
+    "/assets/{asset_id}",
+    response_model=MessageResponse,
+    summary="Delete asset",
+    description="Soft-delete an asset by setting a deleted_at timestamp.",
+)
 async def delete_asset(
     asset_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -131,7 +157,12 @@ async def delete_asset(
 # POST /assets/{id}/process — trigger processing
 # ---------------------------------------------------------------------------
 
-@router.post("/assets/{asset_id}/process", response_model=AssetResponse)
+@router.post(
+    "/assets/{asset_id}/process",
+    response_model=AssetResponse,
+    summary="Process asset",
+    description="Trigger asynchronous processing (image resize, PDF parse, etc.) on an asset.",
+)
 async def process_asset(
     asset_id: UUID,
     body: ProcessRequest | None = None,

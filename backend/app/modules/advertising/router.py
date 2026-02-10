@@ -38,7 +38,12 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> AdvertisingService:
 
 # ─── Campaign Endpoints ──────────────────────────────────────────────────────
 
-@router.get("/campaigns", response_model=PaginatedResponse[CampaignWithPerformance])
+@router.get(
+    "/campaigns",
+    response_model=PaginatedResponse[CampaignWithPerformance],
+    summary="List ad campaigns",
+    description="List ad campaigns across platforms with optional filters and performance summaries.",
+)
 async def list_campaigns(
     platform: AdPlatform | None = None,
     campaign_status: CampaignStatus | None = Query(None, alias="status"),
@@ -70,7 +75,13 @@ async def list_campaigns(
     )
 
 
-@router.post("/campaigns", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/campaigns",
+    response_model=CampaignResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create ad campaign",
+    description="Create a new advertising campaign on a supported platform.",
+)
 async def create_campaign(
     data: CampaignCreate,
     current_user: dict = Depends(get_current_user),
@@ -83,7 +94,12 @@ async def create_campaign(
     )
 
 
-@router.get("/campaigns/{campaign_id}", response_model=CampaignWithPerformance)
+@router.get(
+    "/campaigns/{campaign_id}",
+    response_model=CampaignWithPerformance,
+    summary="Get campaign detail",
+    description="Get campaign detail with aggregated performance metrics.",
+)
 async def get_campaign(
     campaign_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -102,7 +118,12 @@ async def get_campaign(
     return campaign
 
 
-@router.patch("/campaigns/{campaign_id}", response_model=CampaignResponse)
+@router.patch(
+    "/campaigns/{campaign_id}",
+    response_model=CampaignResponse,
+    summary="Update campaign",
+    description="Update an existing campaign's settings, budget, or targeting.",
+)
 async def update_campaign(
     campaign_id: UUID,
     data: CampaignUpdate,
@@ -125,7 +146,12 @@ async def update_campaign(
 
 # ─── Performance Endpoints ────────────────────────────────────────────────────
 
-@router.get("/campaigns/{campaign_id}/performance", response_model=list[AdPerformance])
+@router.get(
+    "/campaigns/{campaign_id}/performance",
+    response_model=list[AdPerformance],
+    summary="Get campaign performance",
+    description="Get detailed performance data including impressions, clicks, spend, sales, and ACOS.",
+)
 async def get_campaign_performance(
     campaign_id: UUID,
     date_from: str | None = None,
@@ -158,7 +184,12 @@ async def get_campaign_performance(
 
 # ─── Optimization Endpoint ───────────────────────────────────────────────────
 
-@router.post("/campaigns/{campaign_id}/optimize", response_model=OptimizationSuggestion)
+@router.post(
+    "/campaigns/{campaign_id}/optimize",
+    response_model=OptimizationSuggestion,
+    summary="AI-optimize campaign",
+    description="Generate AI-powered bid and targeting optimization suggestions for a campaign.",
+)
 async def optimize_campaign(
     campaign_id: UUID,
     request: OptimizationRequest | None = None,
@@ -184,7 +215,12 @@ async def optimize_campaign(
 
 # ─── Keyword Bid Endpoints ───────────────────────────────────────────────────
 
-@router.get("/keyword-bids", response_model=list[KeywordBidResponse])
+@router.get(
+    "/keyword-bids",
+    response_model=list[KeywordBidResponse],
+    summary="List keyword bids",
+    description="Get current keyword bids, optionally filtered by campaign.",
+)
 async def list_keyword_bids(
     campaign_id: UUID | None = None,
     current_user: dict = Depends(get_current_user),
@@ -197,7 +233,12 @@ async def list_keyword_bids(
     )
 
 
-@router.patch("/keyword-bids", response_model=list[KeywordBidResponse])
+@router.patch(
+    "/keyword-bids",
+    response_model=list[KeywordBidResponse],
+    summary="Bulk update keyword bids",
+    description="Bulk update keyword bid amounts across campaigns.",
+)
 async def update_keyword_bids(
     data: KeywordBidBulkUpdate,
     current_user: dict = Depends(get_current_user),
@@ -212,7 +253,12 @@ async def update_keyword_bids(
 
 # ─── Creative Endpoints ──────────────────────────────────────────────────────
 
-@router.post("/creatives/generate", response_model=CreativeGenerateResponse)
+@router.post(
+    "/creatives/generate",
+    response_model=CreativeGenerateResponse,
+    summary="Generate ad creatives",
+    description="AI-generate ad copy and headlines from book data.",
+)
 async def generate_creatives(
     request: CreativeGenerateRequest,
     current_user: dict = Depends(get_current_user),
@@ -225,7 +271,12 @@ async def generate_creatives(
     )
 
 
-@router.get("/creatives", response_model=list[AdCreativeResponse])
+@router.get(
+    "/creatives",
+    response_model=list[AdCreativeResponse],
+    summary="List ad creatives",
+    description="List ad creatives with performance data, optionally filtered by campaign.",
+)
 async def list_creatives(
     campaign_id: UUID | None = None,
     current_user: dict = Depends(get_current_user),
@@ -240,7 +291,16 @@ async def list_creatives(
 
 # ─── Dashboard Endpoint ──────────────────────────────────────────────────────
 
-@router.get("/dashboard", response_model=AdDashboard)
+@router.get(
+    "/dashboard",
+    response_model=AdDashboard,
+    summary="Get ad dashboard",
+    description="Get aggregate advertising performance dashboard across all campaigns.",
+    responses={
+        200: {"description": "Dashboard data including spend, revenue, ACOS, and trends"},
+        401: {"description": "Not authenticated"},
+    },
+)
 async def get_dashboard(
     current_user: dict = Depends(get_current_user),
     service: AdvertisingService = Depends(_get_service),

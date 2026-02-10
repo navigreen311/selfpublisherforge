@@ -117,7 +117,12 @@ class StorageService:
     async def complete_upload(
         self, *, asset_id: uuid.UUID, org_id: uuid.UUID
     ) -> AssetResponse:
-        """Mark the asset as uploaded after the client finishes the PUT."""
+        """Called after S3 upload finishes.
+
+        1. Verify the object exists in S3.
+        2. Transition status from PENDING -> UPLOADED.
+        3. Trigger post-upload processing (metadata extraction, etc.).
+        """
         asset = await self._get_asset_or_404(asset_id, org_id)
 
         if asset.status != AssetStatus.PENDING.value:
@@ -127,9 +132,9 @@ class StorageService:
                 message=f"Asset is in '{asset.status}' state, expected 'pending'.",
             )
 
-        # Optionally verify the object actually exists in S3
+        # Verify the object actually exists in S3
         try:
-            self.s3.head_object(Bucket=self.bucket, Key=asset.s3_key)
+            head = self.s3.head_object(Bucket=self.bucket, Key=asset.s3_key)
         except ClientError:
             raise AppException(
                 status_code=400,
@@ -137,11 +142,21 @@ class StorageService:
                 message="The file has not been uploaded to storage yet.",
             )
 
+        # Back-fill the actual file size from S3 if available
+        actual_size = head.get("ContentLength")
+        if actual_size is not None:
+            asset.size = actual_size
+
+        # Transition: PENDING -> UPLOADED
         asset.status = AssetStatus.UPLOADED.value
         await self.db.flush()
         await self.db.refresh(asset)
 
-        return self._to_response(asset)
+        # Automatically trigger post-upload processing
+        return await self.trigger_processing(
+            asset_id=asset_id,
+            org_id=org_id,
+        )
 
     # -- List assets --------------------------------------------------------
 
@@ -235,7 +250,11 @@ class StorageService:
         action: str = "auto",
         options: dict | None = None,
     ) -> AssetResponse:
-        """Mark the asset as PROCESSING and (in production) enqueue a Celery task."""
+        """Process an uploaded file: update status, extract metadata, mark completed.
+
+        Lifecycle:  UPLOADED | READY  -->  PROCESSING  -->  READY
+        If anything goes wrong during processing the status is set to FAILED.
+        """
         asset = await self._get_asset_or_404(asset_id, org_id)
 
         if asset.status not in (AssetStatus.UPLOADED.value, AssetStatus.READY.value):
@@ -245,14 +264,95 @@ class StorageService:
                 message=f"Cannot process asset in '{asset.status}' state.",
             )
 
+        # 1. Transition to PROCESSING
         asset.status = AssetStatus.PROCESSING.value
         await self.db.flush()
-        await self.db.refresh(asset)
 
-        # TODO: Dispatch Celery task based on action + asset_type
-        # e.g. tasks.process_asset.delay(str(asset_id), action, options)
+        try:
+            # 2. Extract metadata based on content type
+            metadata = self._extract_metadata(asset, action=action, options=options)
+
+            # 3. Populate legacy / convenience columns from extracted metadata
+            if asset.content_type and not asset.mime_type:
+                asset.mime_type = asset.content_type
+            if asset.size and not asset.file_size:
+                asset.file_size = asset.size
+            if asset.s3_key and not asset.file_url:
+                asset.file_url = self._generate_download_url(asset.s3_key)
+
+            # 4. Persist extracted metadata on the asset record
+            asset.metadata_ = metadata
+
+            # 5. Mark as READY (processing complete)
+            asset.status = AssetStatus.READY.value
+            await self.db.flush()
+            await self.db.refresh(asset)
+
+        except Exception:
+            # On any processing failure, mark the asset as FAILED
+            asset.status = AssetStatus.FAILED.value
+            await self.db.flush()
+            await self.db.refresh(asset)
+            raise AppException(
+                status_code=500,
+                code="PROCESSING_FAILED",
+                message="Asset processing failed unexpectedly.",
+            )
 
         return self._to_response(asset)
+
+    # -- Metadata extraction ------------------------------------------------
+
+    @staticmethod
+    def _extract_metadata(
+        asset: ContentAsset,
+        *,
+        action: str = "auto",
+        options: dict | None = None,
+    ) -> dict[str, Any]:
+        """Derive metadata dict from the asset's content_type and file_name.
+
+        This runs synchronously for now (cheap heuristics).  When heavier
+        processing is needed (e.g. PDF page-count extraction, image dimension
+        detection) this would dispatch to a Celery worker instead.
+        """
+        metadata: dict[str, Any] = {
+            "action": action,
+            "file_name": asset.file_name,
+            "content_type": asset.content_type,
+            "size": asset.size,
+        }
+
+        if options:
+            metadata["options"] = options
+
+        ct = asset.content_type or ""
+
+        if ct.startswith("image/"):
+            metadata["type"] = "image"
+            metadata["category"] = "visual"
+            # Could be extended with Pillow to extract width/height/dpi
+        elif ct == "application/pdf":
+            metadata["type"] = "document"
+            metadata["category"] = "manuscript"
+        elif ct in ("application/epub+zip",):
+            metadata["type"] = "ebook"
+            metadata["category"] = "manuscript"
+        elif ct in (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/rtf",
+            "text/rtf",
+            "text/plain",
+        ):
+            metadata["type"] = "document"
+            metadata["category"] = "manuscript"
+        elif ct == "application/x-mobipocket-ebook":
+            metadata["type"] = "ebook"
+            metadata["category"] = "export"
+        else:
+            metadata["type"] = "unknown"
+
+        return metadata
 
     # -- Private helpers ----------------------------------------------------
 
@@ -309,7 +409,7 @@ class StorageService:
             status=AssetStatus(asset.status),
             s3_key=asset.s3_key,
             download_url=download_url,
-            metadata=None,
+            metadata=asset.metadata_,
             created_at=asset.created_at,
             updated_at=asset.updated_at,
         )

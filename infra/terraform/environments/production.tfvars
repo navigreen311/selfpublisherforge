@@ -26,7 +26,10 @@ db_allocated_storage     = 50
 db_max_allocated_storage = 200
 db_multi_az              = true
 db_backup_retention      = 7
-db_password              = "CHANGE_ME_PRODUCTION_PASSWORD"
+# db_password      - SET VIA TF_VAR_db_password ENVIRONMENT VARIABLE — never commit secrets
+# db_username      - SET VIA TF_VAR_db_username ENVIRONMENT VARIABLE — never commit secrets
+# jwt_secret_key   - SET VIA TF_VAR_jwt_secret_key ENVIRONMENT VARIABLE — never commit secrets
+# app_secret_key   - SET VIA TF_VAR_app_secret_key ENVIRONMENT VARIABLE — never commit secrets
 
 # Redis — production-grade
 redis_node_type       = "cache.t3.medium"

@@ -1,0 +1,253 @@
+import React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom";
+
+// ─── Mocks ──────────────────────────────────────────────────────────────────
+
+// Mock next/link to render a plain anchor
+jest.mock("next/link", () => {
+  return function MockLink({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  };
+});
+
+// Mock lucide-react icons used in the component
+jest.mock("lucide-react", () => ({
+  Mail: (props: React.SVGAttributes<SVGElement>) => (
+    <svg data-testid="mail-icon" {...props} />
+  ),
+}));
+
+// Mock Radix UI Slot so that <Button asChild> renders children correctly
+jest.mock("@radix-ui/react-slot", () => ({
+  Slot: React.forwardRef(
+    (
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLDivElement>
+    ) => {
+      if (React.isValidElement(children)) {
+        return React.cloneElement(children, {
+          ...props,
+          ref,
+        } as Record<string, unknown>);
+      }
+      return (
+        <div ref={ref} {...props}>
+          {children}
+        </div>
+      );
+    }
+  ),
+}));
+
+// Mock the API module
+const mockPost = jest.fn();
+jest.mock("@/lib/api", () => ({
+  api: {
+    get: jest.fn().mockResolvedValue({ data: {} }),
+    post: (...args: unknown[]) => mockPost(...args),
+    put: jest.fn().mockResolvedValue({ data: {} }),
+    patch: jest.fn().mockResolvedValue({ data: {} }),
+    delete: jest.fn().mockResolvedValue({ data: {} }),
+    interceptors: {
+      request: { use: jest.fn() },
+      response: { use: jest.fn() },
+    },
+  },
+}));
+
+// ─── Import after mocks ─────────────────────────────────────────────────────
+
+import ForgotPasswordPage from "../page";
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
+describe("ForgotPasswordPage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPost.mockResolvedValue({ data: {} });
+  });
+
+  it("renders the email input form", () => {
+    render(<ForgotPasswordPage />);
+
+    expect(
+      screen.getByText("Forgot your password?")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("you@example.com")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /send reset link/i })
+    ).toBeInTheDocument();
+  });
+
+  it("renders a description explaining the form purpose", () => {
+    render(<ForgotPasswordPage />);
+
+    expect(
+      screen.getByText(/enter your email address and we/i)
+    ).toBeInTheDocument();
+  });
+
+  it("shows success message after successful submission", async () => {
+    const user = userEvent.setup();
+    mockPost.mockResolvedValue({ data: {} });
+    render(<ForgotPasswordPage />);
+
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "test@example.com"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /send reset link/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+    });
+
+    // Verify the API was called with the correct payload
+    expect(mockPost).toHaveBeenCalledWith(
+      "/api/v1/auth/forgot-password",
+      { email: "test@example.com" }
+    );
+  });
+
+  it("shows success even for non-existent email (no enumeration)", async () => {
+    const user = userEvent.setup();
+    // Simulate a server error (e.g., email not found) — the page should
+    // still show the success message to prevent email enumeration attacks.
+    mockPost.mockRejectedValue(new Error("Not Found"));
+    render(<ForgotPasswordPage />);
+
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "nonexistent@example.com"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /send reset link/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+    });
+  });
+
+  it("has link back to login from the initial form", () => {
+    render(<ForgotPasswordPage />);
+
+    const signInLink = screen.getByRole("link", { name: /sign in/i });
+    expect(signInLink).toBeInTheDocument();
+    expect(signInLink).toHaveAttribute("href", "/login");
+  });
+
+  it("has link back to sign in from the success screen", async () => {
+    const user = userEvent.setup();
+    mockPost.mockResolvedValue({ data: {} });
+    render(<ForgotPasswordPage />);
+
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "test@example.com"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /send reset link/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+    });
+
+    const backLink = screen.getByRole("link", { name: /back to sign in/i });
+    expect(backLink).toBeInTheDocument();
+    expect(backLink).toHaveAttribute("href", "/login");
+  });
+
+  it("displays the submitted email in the success message", async () => {
+    const user = userEvent.setup();
+    mockPost.mockResolvedValue({ data: {} });
+    render(<ForgotPasswordPage />);
+
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "myemail@domain.com"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /send reset link/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("myemail@domain.com")).toBeInTheDocument();
+    });
+  });
+
+  it("allows retrying after viewing the success message", async () => {
+    const user = userEvent.setup();
+    mockPost.mockResolvedValue({ data: {} });
+    render(<ForgotPasswordPage />);
+
+    // Submit the form
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "test@example.com"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /send reset link/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+    });
+
+    // Click "Try again" to go back to the form
+    const tryAgainButton = screen.getByRole("button", { name: /try again/i });
+    await user.click(tryAgainButton);
+
+    // Should be back on the form
+    expect(
+      screen.getByPlaceholderText("you@example.com")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /send reset link/i })
+    ).toBeInTheDocument();
+  });
+
+  it("disables the submit button while loading", async () => {
+    const user = userEvent.setup();
+    // Make the API call hang indefinitely
+    mockPost.mockReturnValue(new Promise(() => {}));
+    render(<ForgotPasswordPage />);
+
+    await user.type(
+      screen.getByPlaceholderText("you@example.com"),
+      "test@example.com"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /send reset link/i })
+    );
+
+    // The button should be disabled and show loading text
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /sending reset link/i })
+      ).toBeDisabled();
+    });
+  });
+});

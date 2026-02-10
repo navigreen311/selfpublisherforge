@@ -38,7 +38,11 @@ manager = ConnectionManager(redis_url=get_settings().REDIS_URL)
 # (WebSocket-only routes are excluded from the spec by default).
 # ---------------------------------------------------------------------------
 
-@router.get("/api/v1/ws/status")
+@router.get(
+    "/api/v1/ws/status",
+    summary="WebSocket subsystem status",
+    description="Return status information for the WebSocket subsystem including active channels and rooms.",
+)
 async def ws_status() -> dict[str, Any]:
     """Return basic status information for the WebSocket subsystem."""
     return {

@@ -1,11 +1,11 @@
 # =============================================================================
-# Deploy to Staging — On merge to develop or manual dispatch
+# Deploy to Staging — On merge to main or manual dispatch
 # =============================================================================
 name: Deploy to Staging
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
   workflow_dispatch:
     inputs:
       version:

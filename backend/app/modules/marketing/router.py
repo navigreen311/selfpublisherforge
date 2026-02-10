@@ -74,6 +74,7 @@ def _get_user_id() -> uuid.UUID:
     response_model=SuccessResponse[LaunchPlanResponse],
     status_code=status.HTTP_201_CREATED,
     summary="AI-generate a launch plan",
+    description="AI-generate a book launch plan with milestones, channels, and budget allocation.",
 )
 async def generate_launch_plan(
     request: GenerateLaunchPlanRequest,
@@ -99,6 +100,7 @@ async def generate_launch_plan(
     "/launch-plans",
     response_model=PaginatedResponse[LaunchPlanSummary],
     summary="List launch plans",
+    description="List launch plans with optional status filter and pagination.",
 )
 async def list_launch_plans(
     status_filter: str | None = Query(None, alias="status"),
@@ -138,6 +140,7 @@ async def list_launch_plans(
     "/launch-plans/{plan_id}",
     response_model=SuccessResponse[LaunchPlanResponse],
     summary="Get launch plan detail",
+    description="Get full launch plan details including milestones and tasks.",
 )
 async def get_launch_plan(
     plan_id: uuid.UUID,
@@ -158,6 +161,7 @@ async def get_launch_plan(
     "/launch-plans/{plan_id}",
     response_model=SuccessResponse[LaunchPlanResponse],
     summary="Update launch plan",
+    description="Update launch plan status, milestones, or settings.",
 )
 async def update_launch_plan(
     plan_id: uuid.UUID,
@@ -184,6 +188,7 @@ async def update_launch_plan(
     response_model=SuccessResponse[EmailSequenceResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Create email sequence",
+    description="Create a new email marketing sequence with subject lines and body content.",
 )
 async def create_email_sequence(
     data: EmailSequenceCreate,
@@ -200,6 +205,7 @@ async def create_email_sequence(
     "/email-sequences",
     response_model=PaginatedResponse[EmailSequenceSummary],
     summary="List email sequences",
+    description="List email sequences with optional status filter and pagination.",
 )
 async def list_email_sequences(
     status_filter: str | None = Query(None, alias="status"),
@@ -239,6 +245,7 @@ async def list_email_sequences(
     "/email-sequences/{sequence_id}",
     response_model=SuccessResponse[EmailSequenceResponse],
     summary="Update email sequence",
+    description="Update an email sequence's content, schedule, or status.",
 )
 async def update_email_sequence(
     sequence_id: uuid.UUID,
@@ -260,6 +267,7 @@ async def update_email_sequence(
     "/email-sequences/{sequence_id}/send",
     response_model=SuccessResponse[EmailSequenceResponse],
     summary="Trigger email sequence send",
+    description="Trigger sending an email sequence to specified recipients.",
 )
 async def trigger_email_send(
     sequence_id: uuid.UUID,
@@ -292,6 +300,7 @@ async def trigger_email_send(
     response_model=SuccessResponse[list[SocialPostResponse]],
     status_code=status.HTTP_201_CREATED,
     summary="Generate social media content",
+    description="AI-generate social media posts for multiple platforms from book data.",
 )
 async def generate_social_content(
     request: GenerateSocialContentRequest,
@@ -317,6 +326,7 @@ async def generate_social_content(
     "/social/calendar",
     response_model=SocialCalendarResponse,
     summary="Get social media calendar",
+    description="Get scheduled social media posts filtered by date range and platform.",
 )
 async def get_social_calendar(
     start_date: datetime | None = Query(None),
@@ -357,6 +367,7 @@ async def get_social_calendar(
     response_model=SuccessResponse[ARCCampaignResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Create ARC campaign",
+    description="Create an Advanced Reader Copy campaign for pre-launch review gathering.",
 )
 async def create_arc_campaign(
     data: ARCCampaignCreate,
@@ -373,6 +384,7 @@ async def create_arc_campaign(
     "/arc",
     response_model=PaginatedResponse[ARCCampaignSummary],
     summary="List ARC campaigns",
+    description="List ARC campaigns with optional status filter and pagination.",
 )
 async def list_arc_campaigns(
     status_filter: str | None = Query(None, alias="status"),
@@ -412,6 +424,7 @@ async def list_arc_campaigns(
     "/arc/{campaign_id}/send",
     response_model=SuccessResponse[ARCCampaignResponse],
     summary="Send ARC copies to recipients",
+    description="Send ARC copies to selected recipients with an optional custom message.",
 )
 async def send_arc_copies(
     campaign_id: uuid.UUID,

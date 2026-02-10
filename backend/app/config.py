@@ -42,9 +42,16 @@ class Settings(BaseSettings):
     STRIPE_PRICE_BUSINESS: str = ""
     STRIPE_PRICE_ENTERPRISE: str = ""
 
-    # Email
+    # Email — SendGrid
     SENDGRID_API_KEY: str = "YOUR_SENDGRID_API_KEY_HERE"
     FROM_EMAIL: str = "noreply@selfpublisherforge.com"
+
+    # Email — SMTP (fallback / alternative to SendGrid)
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASS: str | None = None
+    SMTP_FROM: str = "noreply@selfpublisherforge.com"
 
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"

@@ -363,3 +363,148 @@ export function useRecordWritingSession() {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Book listing
+// ---------------------------------------------------------------------------
+
+export interface BookEntry {
+  id: string;
+  title: string;
+  subtitle?: string;
+  status: string;
+  format?: string;
+  project_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  metadata?: Record<string, unknown>;
+  /** Populated by the backend join or computed field */
+  chapter_count?: number;
+  word_count?: number;
+}
+
+export function useBooks() {
+  return useQuery<BookEntry[]>({
+    queryKey: ["books"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/books");
+      return data;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Writing sessions listing
+// ---------------------------------------------------------------------------
+
+export interface WritingSessionEntry {
+  id: string;
+  user_id: string;
+  book_id: string;
+  words_written: number;
+  duration_minutes: number;
+  chapter_id?: string | null;
+  notes?: string;
+  created_at: string;
+  /** Populated via join or separate lookup */
+  book_title?: string;
+}
+
+export function useWritingSessions(bookId?: string) {
+  return useQuery<WritingSessionEntry[]>({
+    queryKey: ["writing-sessions", bookId],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (bookId) {
+        params.book_id = bookId;
+      }
+      const { data } = await api.get("/api/v1/writing-sessions", { params });
+      return data;
+    },
+    enabled: bookId === undefined || !!bookId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Auto-save hook (debounced)
+// ---------------------------------------------------------------------------
+
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+export function useAutoSave(
+  bookId: string,
+  chapterId: string | null,
+  content: string,
+  /** Debounce delay in milliseconds (default 1500ms) */
+  delay = 1500
+) {
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef<string>("");
+  const qc = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (payload: { content: string }) => {
+      const { data } = await api.put(
+        `/api/v1/books/${bookId}/manuscript/chapters/${chapterId}`,
+        payload
+      );
+      return data as ChapterContent;
+    },
+    onSuccess: () => {
+      setSaveStatus("saved");
+      lastSavedRef.current = content;
+      qc.invalidateQueries({ queryKey: ["chapters", bookId] });
+      qc.invalidateQueries({ queryKey: ["manuscript", bookId] });
+      // Reset to idle after 2 seconds
+      setTimeout(() => {
+        setSaveStatus((prev) => (prev === "saved" ? "idle" : prev));
+      }, 2000);
+    },
+    onError: () => {
+      setSaveStatus("error");
+    },
+  });
+
+  useEffect(() => {
+    // Do not auto-save when there is no active chapter or content is empty
+    if (!chapterId || !bookId) return;
+    // Do not save if content has not changed from last save
+    if (content === lastSavedRef.current) return;
+
+    // Clear existing debounce timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(() => {
+      setSaveStatus("saving");
+      mutation.mutate({ content });
+    }, delay);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, chapterId, bookId, delay]);
+
+  // Expose an imperative save for the manual "Save" button
+  const saveNow = useCallback(() => {
+    if (!chapterId || !bookId) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setSaveStatus("saving");
+    mutation.mutate({ content });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterId, bookId, content]);
+
+  // Reset when chapter changes
+  useEffect(() => {
+    lastSavedRef.current = content;
+    setSaveStatus("idle");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterId]);
+
+  return { saveStatus, saveNow };
+}

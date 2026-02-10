@@ -4,14 +4,18 @@
 
 SelfPublisherForge is a modular, AI-powered self-publishing platform built with:
 
-- **Backend**: FastAPI (Python 3.11+), SQLAlchemy 2.0 async, Celery workers
-- **Frontend**: Next.js 14 (React 18), TanStack React Query, Zustand, Tailwind CSS
-- **Database**: PostgreSQL (primary), Redis (cache, rate limiting, pub/sub)
-- **Search**: Elasticsearch 8.x
-- **AI**: Anthropic Claude, OpenAI GPT, LangChain orchestration
-- **Storage**: AWS S3
-- **Payments**: Stripe
+- **Backend**: FastAPI (Python 3.12+), SQLAlchemy 2.0 async, Celery workers
+- **Frontend**: Next.js 14 (React 18), TanStack React Query, Zustand, Tailwind CSS, shadcn/ui
+- **Database**: PostgreSQL 16 (primary), Redis 7 (cache, rate limiting, pub/sub, task broker)
+- **Search**: Elasticsearch 8.x / OpenSearch
+- **AI**: Anthropic Claude (primary), OpenAI GPT (fallback), multi-provider LLM orchestration
+- **Storage**: AWS S3 / Cloudflare R2
+- **Payments**: Stripe (subscriptions, invoices, webhooks)
 - **Email**: SendGrid
+- **Infrastructure**: Docker, AWS (ECS Fargate, RDS, ElastiCache, S3, ALB, CloudFront), Terraform
+- **CI/CD**: GitHub Actions (CI, staging deploy, production blue-green deploy)
+- **Monitoring**: Prometheus, Datadog, Grafana, CloudWatch
+- **Chrome Extension**: Manifest V3 extension for Amazon marketplace research
 
 ---
 
@@ -202,3 +206,182 @@ selfpublisherforge/
 | Rate limiting | Redis sliding window | Accurate, distributed, low latency |
 | Auth | JWT (access + refresh) | Stateless, scales horizontally, short-lived access tokens |
 | Multi-tenancy | Row-level (org_id) | Simple, no schema-per-tenant overhead, enforced at ORM level |
+| AI provider strategy | Anthropic Claude (primary) + OpenAI (fallback) | Best-in-class quality, failover resilience, cost tracking per request |
+| Event system | Redis Streams | Lightweight, no extra infrastructure, supports consumer groups |
+| Search engine | Elasticsearch 8.x | Mature full-text search, used primarily by Knowledge Vault |
+| IaC | Terraform | Declarative, multi-environment support, state locking via DynamoDB |
+| Deployment | ECS Fargate + CodeDeploy | Serverless containers, blue-green deploys, auto-rollback |
+| Monitoring | Prometheus + Datadog | Open-source metrics collection with enterprise APM overlay |
+
+---
+
+## Infrastructure Architecture
+
+### AWS Production Environment
+
+```
+Internet
+  |
+  v
+CloudFront (CDN)
+  |
+  v
+Application Load Balancer
+  |
+  +---> ECS Fargate: API Service (2-10 instances, auto-scaled)
+  |       |
+  |       +---> RDS PostgreSQL 16 (multi-AZ)
+  |       +---> ElastiCache Redis 7
+  |       +---> OpenSearch (Elasticsearch-compatible)
+  |       +---> S3 (asset storage)
+  |       +---> External APIs (Anthropic, OpenAI, Stripe, SendGrid, Amazon)
+  |
+  +---> ECS Fargate: Frontend Service (Next.js SSR)
+  |
+  +---> ECS Fargate: Celery Worker (2 instances)
+  |
+  +---> ECS Fargate: Celery Beat (1 instance, scheduler)
+```
+
+### Local Development Environment (Docker Compose)
+
+12 services running in a single Docker network:
+
+| Service | Image | Port | Purpose |
+|---|---|---|---|
+| backend | Custom (FastAPI) | 8000 | API server with hot reload |
+| frontend | Custom (Next.js) | 3000 | Frontend dev server |
+| postgres | postgres:16-alpine | 5432 | Primary database |
+| redis | redis:7-alpine | 6379 | Cache, broker, pub/sub |
+| elasticsearch | elasticsearch:8.15.0 | 9200 | Full-text search |
+| celery-worker | Custom (backend) | -- | Background task processing |
+| celery-beat | Custom (backend) | -- | Scheduled task triggers |
+| flower | Custom (backend) | 5555 | Celery monitoring UI |
+| prometheus | prom/prometheus | 9090 | Metrics aggregation |
+| postgres-exporter | prometheuscommunity/postgres-exporter | 9187 | PostgreSQL metrics |
+| redis-exporter | oliver006/redis_exporter | 9121 | Redis metrics |
+| node-exporter | prom/node-exporter | 9100 | System metrics |
+
+---
+
+## Celery Task Modules
+
+Background tasks are organized by feature domain in `backend/app/tasks/`:
+
+| Task Module | Responsibilities |
+|---|---|
+| `advertising.py` | Ad campaign sync, bid optimization, creative generation |
+| `agent_system.py` | Agent task execution, governance checks, audit logging |
+| `analytics.py` | Revenue aggregation, royalty import, report generation |
+| `competitor_finder.py` | Competitive analysis, review scraping, gap detection |
+| `knowledge_vault.py` | Document import, AI extraction, search indexing |
+| `market_intelligence.py` | BSR tracking, niche analysis, trend computation |
+| `marketing.py` | Email sequence dispatch, ARC management, social posting |
+| `notifications.py` | Email delivery, in-app notification dispatch |
+| `portfolio_economics.py` | Backlist analysis, audience profiling, seasonal scoring |
+| `pricing_automation.py` | Price strategy execution, KU calculations, simulation |
+| `production_pipeline.py` | EPUB/PDF generation, format conversion |
+| `publishing_ops.py` | Platform sync, listing updates, distribution |
+| `review_intelligence.py` | Sentiment analysis, velocity tracking, alert evaluation |
+| `style_cloning.py` | Voice fingerprint extraction, style profile generation |
+| `dead_letter.py` | Failed task retry, dead letter queue management |
+| `scheduler.py` | Beat schedule configuration for recurring tasks |
+
+---
+
+## Chrome Extension Architecture
+
+The Chrome extension (`extension/`) is a Manifest V3 extension for Amazon marketplace research:
+
+```
+extension/
+  background/          # Service worker for API communication and state management
+  content/             # Content scripts injected into Amazon product pages
+    amazon-extractor.js  # Extracts ASIN, BSR, pricing, reviews, category data
+  popup/               # Extension popup for quick actions
+  sidebar/             # Side panel for detailed research view
+  icons/               # Extension icons (16, 48, 128px)
+  styles/              # Shared CSS
+  manifest.json        # Extension configuration
+```
+
+**Supported Marketplaces**: amazon.com, amazon.co.uk, amazon.de, amazon.fr, amazon.ca, amazon.com.au, amazon.co.jp, amazon.it, amazon.es, amazon.in
+
+**Capabilities**: Product data extraction, BSR tracking, niche research, clip saving to SelfPublisherForge account via API.
+
+---
+
+## Security Architecture
+
+| Layer | Implementation |
+|---|---|
+| Authentication | JWT access tokens (15 min) + refresh tokens (7 days) |
+| MFA | TOTP-based multi-factor authentication |
+| Authorization | Role-based access control per organization |
+| Data isolation | Row-level multi-tenancy via `org_id` on all tenant-scoped models |
+| Rate limiting | Redis sliding window per endpoint and per user |
+| Secrets | AWS SSM Parameter Store (production), `.env` files (development) |
+| API security | CORS whitelist, request validation via Pydantic, structured error responses |
+| Dependency scanning | pip-audit (backend), npm audit (frontend) in CI pipeline |
+| Input validation | Pydantic schemas on all API endpoints |
+
+---
+
+## Testing Strategy
+
+### Backend (2,183+ tests passing)
+
+| Test Type | Location | Scope |
+|---|---|---|
+| Unit tests | `tests/unit/` | Individual service methods, utility functions |
+| Module tests | `tests/test_*.py` | Per-module tests (agent system, analytics, tasks, etc.) |
+| Integration tests | `tests/integration/` | Cross-module interactions, database queries |
+| E2E tests | `tests/e2e/` | Full API request/response flows |
+| Smoke tests | `tests/test_smoke.py` | Basic health and import validation |
+
+**Test infrastructure**: Pytest with async support, PostgreSQL and Redis service containers in CI, coverage reporting via `pytest-cov`.
+
+### Frontend
+
+| Test Type | Tool | Scope |
+|---|---|---|
+| Unit tests | Jest | Component rendering, hooks, utilities |
+| E2E tests | Playwright | Full user flows against staging |
+
+---
+
+## CI/CD Pipeline
+
+```
+Pull Request
+  |
+  v
+CI Pipeline (ci.yml)
+  +---> Backend: ruff lint -> ruff format -> mypy -> pytest (2,183+ tests) -> pip-audit
+  +---> Frontend: ESLint -> tsc -> Jest -> npm audit
+  +---> Docker: Build validation (API + frontend images)
+  +---> Integration: Cross-module tests with PostgreSQL + Redis
+  |
+  v
+Merge to main
+  |
+  v
+Staging Deploy (deploy-staging.yml)
+  +---> Build & push images to ECR
+  +---> Update ECS task definitions
+  +---> Deploy API, frontend, worker, beat services
+  +---> Run Playwright E2E tests against staging
+  +---> Slack notification
+  |
+  v
+Tag push (v*.*.*)
+  |
+  v
+Production Deploy (deploy-production.yml)
+  +---> Build & push versioned images to ECR
+  +---> Save current task definitions for rollback
+  +---> Blue-green deploy via CodeDeploy
+  +---> Health check + error rate monitoring
+  +---> Auto-rollback if >1% error rate
+  +---> Slack notification
+```

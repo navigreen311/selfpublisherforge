@@ -89,7 +89,12 @@ def _compute_budget_pcts(budget) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get("", response_model=AgentListResponse)
+@router.get(
+    "",
+    response_model=AgentListResponse,
+    summary="List agents",
+    description="List available AI agent types for the organization.",
+)
 async def list_agents(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -102,7 +107,12 @@ async def list_agents(
     )
 
 
-@router.get("/{agent_id}/config", response_model=AgentResponse)
+@router.get(
+    "/{agent_id}/config",
+    response_model=AgentResponse,
+    summary="Get agent config",
+    description="Get configuration details for a specific agent.",
+)
 async def get_agent_config(
     agent_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -115,7 +125,12 @@ async def get_agent_config(
     return AgentResponse.model_validate(agent)
 
 
-@router.patch("/{agent_id}/config", response_model=AgentResponse)
+@router.patch(
+    "/{agent_id}/config",
+    response_model=AgentResponse,
+    summary="Update agent config",
+    description="Update agent configuration including permissions, model, and budget. Requires admin or owner role.",
+)
 async def update_agent_config(
     agent_id: UUID,
     payload: AgentConfigUpdate,
@@ -142,7 +157,13 @@ async def update_agent_config(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/tasks",
+    response_model=TaskResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create agent task",
+    description="Create a new task for an AI agent to execute.",
+)
 async def create_task(
     payload: TaskCreate,
     request: Request,
@@ -165,7 +186,12 @@ async def create_task(
     return TaskResponse.model_validate(task)
 
 
-@router.get("/tasks", response_model=TaskListResponse)
+@router.get(
+    "/tasks",
+    response_model=TaskListResponse,
+    summary="List agent tasks",
+    description="List tasks with optional filters by status, agent, and priority.",
+)
 async def list_tasks(
     status_filter: TaskStatus | None = Query(None, alias="status"),
     agent_id: UUID | None = Query(None),
@@ -193,7 +219,12 @@ async def list_tasks(
     )
 
 
-@router.get("/tasks/{task_id}", response_model=TaskResponse)
+@router.get(
+    "/tasks/{task_id}",
+    response_model=TaskResponse,
+    summary="Get task detail",
+    description="Get task detail including input, output, and execution metadata.",
+)
 async def get_task(
     task_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -206,7 +237,12 @@ async def get_task(
     return TaskResponse.model_validate(task)
 
 
-@router.post("/tasks/{task_id}/approve", response_model=TaskResponse)
+@router.post(
+    "/tasks/{task_id}/approve",
+    response_model=TaskResponse,
+    summary="Approve task output",
+    description="Approve an agent task's output for use.",
+)
 async def approve_task(
     task_id: UUID,
     payload: TaskApproveRequest,
@@ -232,7 +268,12 @@ async def approve_task(
     return TaskResponse.model_validate(task)
 
 
-@router.post("/tasks/{task_id}/reject", response_model=TaskResponse)
+@router.post(
+    "/tasks/{task_id}/reject",
+    response_model=TaskResponse,
+    summary="Reject task output",
+    description="Reject a task's output and optionally request regeneration.",
+)
 async def reject_task(
     task_id: UUID,
     payload: TaskRejectRequest,
@@ -258,7 +299,12 @@ async def reject_task(
     return TaskResponse.model_validate(task)
 
 
-@router.post("/tasks/{task_id}/cancel", response_model=TaskResponse)
+@router.post(
+    "/tasks/{task_id}/cancel",
+    response_model=TaskResponse,
+    summary="Cancel task",
+    description="Cancel a running or pending agent task.",
+)
 async def cancel_task(
     task_id: UUID,
     payload: TaskCancelRequest,
@@ -289,7 +335,13 @@ async def cancel_task(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/workflows", response_model=WorkflowResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/workflows",
+    response_model=WorkflowResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create workflow",
+    description="Create a multi-step agent workflow with dependent tasks.",
+)
 async def create_workflow(
     payload: WorkflowCreate,
     request: Request,
@@ -307,7 +359,12 @@ async def create_workflow(
     return WorkflowResponse.model_validate(workflow)
 
 
-@router.get("/workflows", response_model=WorkflowListResponse)
+@router.get(
+    "/workflows",
+    response_model=WorkflowListResponse,
+    summary="List workflows",
+    description="List agent workflows with pagination.",
+)
 async def list_workflows(
     cursor: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
@@ -334,7 +391,12 @@ async def list_workflows(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/budgets", response_model=BudgetListResponse)
+@router.get(
+    "/budgets",
+    response_model=BudgetListResponse,
+    summary="Get agent budgets",
+    description="Get budget status (token/USD limits and usage) for all agents.",
+)
 async def get_budgets(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -352,7 +414,12 @@ async def get_budgets(
     return BudgetListResponse(items=items)
 
 
-@router.patch("/budgets", response_model=BudgetStatus)
+@router.patch(
+    "/budgets",
+    response_model=BudgetStatus,
+    summary="Update agent budget",
+    description="Update budget limits for a specific agent. Requires admin or owner role.",
+)
 async def update_budgets(
     agent_id: UUID = Query(...),
     payload: BudgetUpdate = ...,
@@ -385,7 +452,12 @@ async def update_budgets(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/emergency-stop", response_model=EmergencyStopResponse)
+@router.post(
+    "/emergency-stop",
+    response_model=EmergencyStopResponse,
+    summary="Emergency stop all agents",
+    description="Immediately cancel all running tasks and workflows. Requires admin or owner role.",
+)
 async def emergency_stop(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -410,7 +482,12 @@ async def emergency_stop(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/audit", response_model=AuditListResponse)
+@router.get(
+    "/audit",
+    response_model=AuditListResponse,
+    summary="Get audit trail",
+    description="Get paginated audit trail of agent actions with optional filters.",
+)
 async def get_audit_trail(
     action: AuditAction | None = Query(None),
     actor_id: UUID | None = Query(None),

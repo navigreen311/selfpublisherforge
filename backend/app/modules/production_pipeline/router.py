@@ -49,6 +49,7 @@ def _get_org_id(org_id: str = Query(..., alias="org_id")) -> uuid.UUID:
     response_model=TemplateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Save a pipeline template",
+    description="Save a reusable pipeline template with predefined stages and tasks.",
 )
 async def create_template(
     payload: CreateTemplate,
@@ -63,6 +64,7 @@ async def create_template(
     "/templates",
     response_model=list[TemplateResponse],
     summary="List pipeline templates",
+    description="List all available pipeline templates for the organization.",
 )
 async def list_templates(
     org_id: uuid.UUID = Depends(_get_org_id),
@@ -79,6 +81,7 @@ async def list_templates(
     response_model=PipelineResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new production pipeline",
+    description="Create a new production pipeline for a book, optionally from a template.",
 )
 async def create_pipeline(
     payload: CreatePipeline,
@@ -93,6 +96,7 @@ async def create_pipeline(
     "",
     response_model=PaginatedPipelines,
     summary="List pipelines (paginated, filterable)",
+    description="List production pipelines with optional status and book filters.",
 )
 async def list_pipelines(
     org_id: uuid.UUID = Depends(_get_org_id),
@@ -111,6 +115,7 @@ async def list_pipelines(
     "/{pipeline_id}",
     response_model=PipelineResponse,
     summary="Get pipeline detail with tasks",
+    description="Get full pipeline detail including all tasks and their statuses.",
 )
 async def get_pipeline(
     pipeline_id: uuid.UUID,
@@ -127,6 +132,7 @@ async def get_pipeline(
     "/{pipeline_id}",
     response_model=PipelineResponse,
     summary="Update pipeline settings",
+    description="Update pipeline status, due date, or other settings.",
 )
 async def update_pipeline(
     pipeline_id: uuid.UUID,
@@ -151,6 +157,7 @@ async def update_pipeline(
     response_model=TaskResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Add a task to a pipeline",
+    description="Add a new task to an existing pipeline with stage and dependency info.",
 )
 async def add_task(
     pipeline_id: uuid.UUID,
@@ -171,6 +178,7 @@ async def add_task(
     "/{pipeline_id}/tasks/{task_id}",
     response_model=TaskResponse,
     summary="Update task status/assignee",
+    description="Update a task's status, assignee, or completion state.",
 )
 async def update_task(
     pipeline_id: uuid.UUID,
@@ -195,6 +203,7 @@ async def update_task(
     "/{pipeline_id}/timeline",
     response_model=TimelineView,
     summary="Get Gantt-style timeline for a pipeline",
+    description="Get a Gantt-style timeline view with task dependencies and dates.",
 )
 async def get_timeline(
     pipeline_id: uuid.UUID,
