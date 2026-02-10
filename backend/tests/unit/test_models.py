@@ -8,7 +8,7 @@ from datetime import datetime, date, timezone
 
 import pytest
 
-# ── Organization ───────────────────────────────────────────────────────
+# -- Organization -----------------------------------------------------------
 from app.models.organization import Organization, PlanTier, SubscriptionStatus
 
 
@@ -71,7 +71,7 @@ class TestSubscriptionStatusEnum:
         assert SubscriptionStatus.UNPAID.value == "unpaid"
 
 
-# ── User ───────────────────────────────────────────────────────────────
+# -- User -------------------------------------------------------------------
 from app.models.user import User, ApiKey, UserSession, UserRole
 
 
@@ -208,7 +208,7 @@ class TestUserSession:
         assert UserSession.__tablename__ == "user_sessions"
 
 
-# ── Project ────────────────────────────────────────────────────────────
+# -- Project ----------------------------------------------------------------
 from app.models.project import (
     Project, Book, Series, PenName, BookVersion,
     ProjectType, ProjectStatus, BookFormat, BookStatus, SeriesStatus,
@@ -362,7 +362,7 @@ class TestBookVersion:
         assert BookVersion.__tablename__ == "book_versions"
 
 
-# ── Content ────────────────────────────────────────────────────────────
+# -- Content ----------------------------------------------------------------
 from app.models.content import (
     Manuscript, Chapter, StyleProfile, WritingSession, ContentAsset,
     ContentType, ManuscriptStatus, ChapterStatus, AssetType,
@@ -496,7 +496,7 @@ class TestAssetTypeEnum:
         assert AssetType.VIDEO.value == "video"
 
 
-# ── Market ─────────────────────────────────────────────────────────────
+# -- Market -----------------------------------------------------------------
 from app.models.market import (
     MarketCategory, MarketKeyword, CompetitorBook,
     CompetitorReview, MarketSnapshot,
@@ -633,7 +633,7 @@ class TestMarketSnapshot:
         assert MarketSnapshot.__tablename__ == "market_snapshots"
 
 
-# ── Publishing ─────────────────────────────────────────────────────────
+# -- Publishing -------------------------------------------------------------
 from app.models.publishing import (
     PublishingAccount, Listing, UploadValidation,
     ComplianceScan, PricingRule,
@@ -765,7 +765,7 @@ class TestPricingRule:
         assert PricingRule.__tablename__ == "pricing_rules"
 
 
-# ── Marketing ──────────────────────────────────────────────────────────
+# -- Marketing --------------------------------------------------------------
 from app.models.marketing import (
     Campaign, AdCreative, LaunchPlan, EmailSequence, ReaderPanel,
     CampaignPlatform, CampaignStatus, AdCreativeType, LaunchPlanStatus,
@@ -838,20 +838,29 @@ class TestAdCreative:
 class TestLaunchPlan:
     def test_instantiation(self):
         lp = LaunchPlan(
+            org_id=uuid.uuid4(),
             book_id=uuid.uuid4(),
+            title="Launch Plan",
+            created_by=uuid.uuid4(),
         )
         assert lp.launch_date is None
 
     def test_phases_jsonb(self):
         lp = LaunchPlan(
+            org_id=uuid.uuid4(),
             book_id=uuid.uuid4(),
+            title="Launch Plan",
+            created_by=uuid.uuid4(),
             phases={"pre_launch": {"duration": 30}, "launch": {"duration": 7}},
         )
         assert lp.phases["pre_launch"]["duration"] == 30
 
     def test_checklist_jsonb(self):
         lp = LaunchPlan(
+            org_id=uuid.uuid4(),
             book_id=uuid.uuid4(),
+            title="Launch Plan",
+            created_by=uuid.uuid4(),
             checklist={"cover_ready": True, "blurb_ready": False},
         )
         assert lp.checklist["cover_ready"] is True
@@ -865,18 +874,24 @@ class TestEmailSequence:
         es = EmailSequence(
             org_id=uuid.uuid4(),
             name="Welcome Series",
+            created_by=uuid.uuid4(),
         )
         assert es.name == "Welcome Series"
 
     def test_default_subscriber_count(self):
         """subscriber_count defaults to 0 at DB level via server_default."""
-        es = EmailSequence(org_id=uuid.uuid4(), name="Test")
+        es = EmailSequence(
+            org_id=uuid.uuid4(),
+            name="Test",
+            created_by=uuid.uuid4(),
+        )
         assert es.subscriber_count == 0 or es.subscriber_count is None
 
     def test_emails_jsonb(self):
         es = EmailSequence(
             org_id=uuid.uuid4(),
             name="Test",
+            created_by=uuid.uuid4(),
             emails=[{"subject": "Welcome", "body": "Hello!"}],
         )
         assert es.emails[0]["subject"] == "Welcome"
@@ -918,7 +933,7 @@ class TestReaderPanel:
         assert ReaderPanel.__tablename__ == "reader_panels"
 
 
-# ── Agent ──────────────────────────────────────────────────────────────
+# -- Agent ------------------------------------------------------------------
 from app.models.agent import (
     Agent, AgentTask, AgentWorkflow, AgentBudget, AuditTrail,
     AgentType, PermissionLevel, AgentTaskStatus, BudgetType, ActorType,
@@ -1116,7 +1131,7 @@ class TestActorTypeEnum:
         assert ActorType.SYSTEM.value == "system"
 
 
-# ── Analytics ──────────────────────────────────────────────────────────
+# -- Analytics --------------------------------------------------------------
 from app.models.analytics import (
     AnalyticsEvent, RoyaltyRecord, PortfolioMetric,
     ABTest, Report, ABTestStatus, ReportStatus,
@@ -1292,40 +1307,51 @@ class TestReportStatusEnum:
         assert ReportStatus.FAILED.value == "failed"
 
 
-# ── __init__.py imports ────────────────────────────────────────────────
+# -- __init__.py imports ----------------------------------------------------
 class TestModelsInit:
-    """Verify that all models are importable from the models package."""
+    """Verify that all domain models are importable from the models package."""
 
-    def test_all_models_importable(self):
+    def test_domain_models_importable(self):
+        """Verify domain models are importable via their aliased names."""
         from app.models import (
             Organization,
             User, ApiKey, UserSession,
             Project, Book, Series, PenName, BookVersion,
             Manuscript, Chapter, StyleProfile, WritingSession, ContentAsset,
             MarketCategory, MarketKeyword, CompetitorBook, CompetitorReview, MarketSnapshot,
-            PublishingAccount, Listing, UploadValidation, ComplianceScan, PricingRule,
-            Campaign, AdCreative, LaunchPlan, EmailSequence, ReaderPanel,
-            Agent, AgentTask, AgentWorkflow, AgentBudget, AuditTrail,
-            AnalyticsEvent, RoyaltyRecord, PortfolioMetric, ABTest, Report,
+            PublishingAccount, Listing, UploadValidation, ComplianceScan,
+            ReaderPanel,
+            PortfolioMetric,
         )
-        # Just verify they're all classes
+        # Verify they are all classes with expected tablenames
         assert Organization.__tablename__ == "organizations"
         assert User.__tablename__ == "users"
-        assert Report.__tablename__ == "reports"
+        assert ReaderPanel.__tablename__ == "reader_panels"
+        assert PortfolioMetric.__tablename__ == "portfolio_metrics"
 
-    def test_all_enums_importable(self):
+    def test_aliased_models_importable(self):
+        """Verify aliased domain model imports work."""
         from app.models import (
-            PlanTier, SubscriptionStatus, UserRole,
-            ProjectType, ProjectStatus, BookFormat, BookStatus, SeriesStatus,
-            ContentType, ManuscriptStatus, ChapterStatus, AssetType,
-            PublishingPlatform, PublishingAccountStatus, ListingStatus,
-            ValidationType, ScanType, RiskLevel,
-            CampaignPlatform, CampaignStatus, AdCreativeType, LaunchPlanStatus,
-            AgentType, PermissionLevel, AgentTaskStatus, BudgetType, ActorType,
-            ABTestStatus, ReportStatus,
+            PublishingPricingRule,
+            MarketingCampaign,
+            MarketingAdCreative,
+            MarketingLaunchPlan,
+            MarketingEmailSequence,
+            DomainAgent,
+            DomainAgentTask,
+            DomainAgentWorkflow,
+            DomainAgentBudget,
+            DomainAuditTrail,
+            DomainAnalyticsEvent,
+            DomainRoyaltyRecord,
+            DomainABTest,
+            DomainReport,
         )
-        assert PlanTier.FREE.value == "free"
-        assert ReportStatus.PENDING.value == "pending"
+        assert MarketingCampaign.__tablename__ == "campaigns"
+        assert MarketingAdCreative.__tablename__ == "ad_creatives"
+        assert MarketingLaunchPlan.__tablename__ == "launch_plans"
+        assert DomainAgent.__tablename__ == "agents"
+        assert DomainReport.__tablename__ == "reports"
 
     def test_model_count(self):
         """Verify we have all 30+ models defined."""
@@ -1337,7 +1363,7 @@ class TestModelsInit:
         assert len(table_names) >= 30, f"Expected at least 30 tables, got {len(table_names)}: {table_names}"
 
 
-# ── Soft Delete Behavior ──────────────────────────────────────────────
+# -- Soft Delete Behavior ---------------------------------------------------
 class TestSoftDeleteBehavior:
     """Test that all models with BaseModel have deleted_at support."""
 
@@ -1382,3 +1408,108 @@ class TestSoftDeleteBehavior:
             event_type="test",
         )
         assert event.deleted_at is None
+
+
+# -- BaseModel / TenantModel inheritance -----------------------------------
+class TestBaseModelInheritance:
+    """Verify all models properly inherit from BaseModel or TenantModel."""
+
+    def test_organization_has_base_columns(self):
+        """Organization should inherit id, created_at, updated_at, deleted_at from BaseModel."""
+        from app.database import BaseModel
+        assert issubclass(Organization, BaseModel)
+        org = Organization(name="Test", slug="test-inherit")
+        # id should have a default factory (uuid4)
+        assert hasattr(org, "id")
+        assert hasattr(org, "created_at")
+        assert hasattr(org, "updated_at")
+        assert hasattr(org, "deleted_at")
+
+    def test_project_is_tenant_model(self):
+        """Project should inherit from TenantModel which adds org_id."""
+        from app.database import TenantModel
+        assert issubclass(Project, TenantModel)
+        proj = Project(org_id=uuid.uuid4(), title="Test", type=ProjectType.BOOK)
+        assert hasattr(proj, "org_id")
+
+    def test_campaign_is_tenant_model(self):
+        """Campaign should inherit from TenantModel."""
+        from app.database import TenantModel
+        assert issubclass(Campaign, TenantModel)
+
+    def test_book_is_base_model(self):
+        """Book should inherit from BaseModel (not TenantModel)."""
+        from app.database import BaseModel, TenantModel
+        assert issubclass(Book, BaseModel)
+        assert not issubclass(Book, TenantModel)
+
+    def test_reader_panel_is_tenant_model(self):
+        """ReaderPanel should inherit from TenantModel."""
+        from app.database import TenantModel
+        assert issubclass(ReaderPanel, TenantModel)
+
+
+# -- Foreign key consistency -----------------------------------------------
+class TestForeignKeyConsistency:
+    """Verify that foreign key references point to existing tables."""
+
+    def test_user_fk_to_organizations(self):
+        """User.org_id should reference organizations table."""
+        from app.database import Base
+        import app.models  # noqa: F401
+        users_table = Base.metadata.tables["users"]
+        fk_targets = {
+            str(fk.column)
+            for col in users_table.columns
+            for fk in col.foreign_keys
+        }
+        assert "organizations.id" in fk_targets
+
+    def test_book_fk_to_projects(self):
+        """Book.project_id should reference projects table."""
+        from app.database import Base
+        import app.models  # noqa: F401
+        books_table = Base.metadata.tables["books"]
+        fk_targets = {
+            str(fk.column)
+            for col in books_table.columns
+            for fk in col.foreign_keys
+        }
+        assert "projects.id" in fk_targets
+
+    def test_manuscript_fk_to_books(self):
+        """Manuscript.book_id should reference books table."""
+        from app.database import Base
+        import app.models  # noqa: F401
+        manuscripts_table = Base.metadata.tables["manuscripts"]
+        fk_targets = {
+            str(fk.column)
+            for col in manuscripts_table.columns
+            for fk in col.foreign_keys
+        }
+        assert "books.id" in fk_targets
+
+    def test_listing_fk_to_books_and_accounts(self):
+        """Listing should reference both books and publishing_accounts."""
+        from app.database import Base
+        import app.models  # noqa: F401
+        listings_table = Base.metadata.tables["listings"]
+        fk_targets = {
+            str(fk.column)
+            for col in listings_table.columns
+            for fk in col.foreign_keys
+        }
+        assert "books.id" in fk_targets
+        assert "publishing_accounts.id" in fk_targets
+
+    def test_campaign_fk_to_books(self):
+        """Campaign.book_id should reference books table."""
+        from app.database import Base
+        import app.models  # noqa: F401
+        campaigns_table = Base.metadata.tables["campaigns"]
+        fk_targets = {
+            str(fk.column)
+            for col in campaigns_table.columns
+            for fk in col.foreign_keys
+        }
+        assert "books.id" in fk_targets
