@@ -386,6 +386,10 @@ class TaskExecutor:
                 threshold = (agent.config or {}).get("quality_threshold", 0.7)
                 validate_quality(quality, threshold=threshold)
             except QualityBelowSLA:
+                logger.warning(
+                    "Task %s quality score %.2f below threshold %.2f — routing to approval",
+                    task.id, quality, threshold,
+                )
                 task.status = TaskStatus.AWAITING_APPROVAL
                 task.output_data["quality_warning"] = (
                     f"Quality score {quality:.2f} below threshold {threshold:.2f}"
@@ -431,18 +435,21 @@ class TaskExecutor:
             )
 
         except PermissionDenied as exc:
+            logger.warning("Task %s failed: permission denied — %s", task.id, exc.message)
             task.status = TaskStatus.FAILED
             task.error_message = f"Permission denied: {exc.message}"
             task.completed_at = datetime.now(timezone.utc)
             await self._audit_failure(task, exc.message, ip_address)
 
         except BudgetExceeded as exc:
+            logger.warning("Task %s failed: budget exceeded — %s", task.id, exc.message)
             task.status = TaskStatus.FAILED
             task.error_message = f"Budget exceeded: {exc.message}"
             task.completed_at = datetime.now(timezone.utc)
             await self._audit_failure(task, exc.message, ip_address)
 
         except Exception as exc:
+            logger.error("Task %s failed with unexpected error: %s", task.id, exc, exc_info=True)
             task.status = TaskStatus.FAILED
             task.error_message = f"Execution error: {str(exc)}"
             task.completed_at = datetime.now(timezone.utc)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
   useTasks,
   useCreateTask,
@@ -11,6 +12,17 @@ import {
 } from "@/modules/agents/hooks";
 import { TaskList } from "@/modules/agents/components/TaskList";
 import { TaskDetail } from "@/modules/agents/components/TaskDetail";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { AgentTask, TaskStatus } from "@/modules/agents/types";
 
 const STATUS_OPTIONS: { value: TaskStatus | ""; label: string }[] = [
@@ -32,6 +44,13 @@ export default function TasksPage() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAgentId, setNewTaskAgentId] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
+
+  // Dialog state
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: agentsData } = useAgents();
   const { data: tasksData, isLoading } = useTasks(
@@ -65,34 +84,70 @@ export default function TasksPage() {
     );
   };
 
+  const openApproveDialog = (taskId: string) => {
+    setSelectedTaskId(taskId);
+    setShowApproveDialog(true);
+  };
+
+  const openRejectDialog = (taskId: string) => {
+    setSelectedTaskId(taskId);
+    setRejectionReason("");
+    setShowRejectDialog(true);
+  };
+
+  const handleApproveConfirm = () => {
+    if (!selectedTaskId) return;
+    setIsProcessing(true);
+    approveTask.mutate(
+      { taskId: selectedTaskId },
+      {
+        onSuccess: (updatedTask) => {
+          setIsProcessing(false);
+          setShowApproveDialog(false);
+          setSelectedTaskId(null);
+          // If we're in detail view, update the selected task
+          if (selectedTask && selectedTask.id === selectedTaskId) {
+            setSelectedTask(updatedTask);
+          }
+        },
+        onError: () => {
+          setIsProcessing(false);
+        },
+      }
+    );
+  };
+
+  const handleRejectConfirm = () => {
+    if (!selectedTaskId || !rejectionReason.trim()) return;
+    setIsProcessing(true);
+    rejectTask.mutate(
+      { taskId: selectedTaskId, reason: rejectionReason.trim() },
+      {
+        onSuccess: (updatedTask) => {
+          setIsProcessing(false);
+          setShowRejectDialog(false);
+          setSelectedTaskId(null);
+          setRejectionReason("");
+          // If we're in detail view, update the selected task
+          if (selectedTask && selectedTask.id === selectedTaskId) {
+            setSelectedTask(updatedTask);
+          }
+        },
+        onError: () => {
+          setIsProcessing(false);
+        },
+      }
+    );
+  };
+
   if (selectedTask) {
     return (
       <div className="space-y-4">
         <TaskDetail
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
-          onApprove={() => {
-            approveTask.mutate(
-              { taskId: selectedTask.id },
-              {
-                onSuccess: (updatedTask) => {
-                  setSelectedTask(updatedTask);
-                },
-              }
-            );
-          }}
-          onReject={() => {
-            const reason = prompt("Reason for rejection:");
-            if (!reason) return;
-            rejectTask.mutate(
-              { taskId: selectedTask.id, reason },
-              {
-                onSuccess: (updatedTask) => {
-                  setSelectedTask(updatedTask);
-                },
-              }
-            );
-          }}
+          onApprove={() => openApproveDialog(selectedTask.id)}
+          onReject={() => openRejectDialog(selectedTask.id)}
           onCancel={() => {
             cancelTask.mutate(
               { taskId: selectedTask.id, reason: "Cancelled by user" },
@@ -104,6 +159,81 @@ export default function TasksPage() {
             );
           }}
         />
+
+        {/* Approve dialog */}
+        <ConfirmDialog
+          open={showApproveDialog}
+          onOpenChange={(open) => {
+            setShowApproveDialog(open);
+            if (!open) setSelectedTaskId(null);
+          }}
+          onConfirm={handleApproveConfirm}
+          title="Approve Task"
+          description="Approve this task? The agent will proceed with execution once approved."
+          confirmText="Approve"
+          cancelText="Cancel"
+          variant="default"
+          loading={isProcessing}
+        />
+
+        {/* Reject dialog */}
+        <Dialog
+          open={showRejectDialog}
+          onOpenChange={(open) => {
+            if (!isProcessing) {
+              setShowRejectDialog(open);
+              if (!open) {
+                setSelectedTaskId(null);
+                setRejectionReason("");
+              }
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Task</DialogTitle>
+              <DialogDescription>
+                Provide a reason for rejecting this task. The agent will be
+                notified of the rejection.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Enter rejection reason..."
+                rows={3}
+                aria-label="Rejection reason"
+                disabled={isProcessing}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectDialog(false);
+                  setSelectedTaskId(null);
+                  setRejectionReason("");
+                }}
+                disabled={isProcessing}
+                aria-label="Cancel rejection"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRejectConfirm}
+                disabled={isProcessing || !rejectionReason.trim()}
+                aria-label="Confirm rejection"
+              >
+                {isProcessing && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {isProcessing ? "Processing..." : "Reject"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -120,6 +250,7 @@ export default function TasksPage() {
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          aria-label={showCreateForm ? "Cancel creating task" : "Create new task"}
         >
           {showCreateForm ? "Cancel" : "New Task"}
         </button>
@@ -177,6 +308,7 @@ export default function TasksPage() {
             type="submit"
             disabled={createTask.isPending}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            aria-label="Submit new task"
           >
             {createTask.isPending ? "Creating..." : "Create Task"}
           </button>
@@ -189,6 +321,7 @@ export default function TasksPage() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "")}
           className="rounded-md border px-3 py-1.5 text-sm"
+          aria-label="Filter tasks by status"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -208,18 +341,88 @@ export default function TasksPage() {
         <TaskList
           tasks={tasks}
           onSelect={setSelectedTask}
-          onApprove={(task) =>
-            approveTask.mutate({ taskId: task.id })
-          }
-          onReject={(task) => {
-            const reason = prompt("Reason for rejection:");
-            if (reason) rejectTask.mutate({ taskId: task.id, reason });
-          }}
+          onApprove={(task) => openApproveDialog(task.id)}
+          onReject={(task) => openRejectDialog(task.id)}
           onCancel={(task) =>
             cancelTask.mutate({ taskId: task.id, reason: "Cancelled by user" })
           }
         />
       )}
+
+      {/* Approve dialog */}
+      <ConfirmDialog
+        open={showApproveDialog}
+        onOpenChange={(open) => {
+          setShowApproveDialog(open);
+          if (!open) setSelectedTaskId(null);
+        }}
+        onConfirm={handleApproveConfirm}
+        title="Approve Task"
+        description="Approve this task? The agent will proceed with execution once approved."
+        confirmText="Approve"
+        cancelText="Cancel"
+        variant="default"
+        loading={isProcessing}
+      />
+
+      {/* Reject dialog */}
+      <Dialog
+        open={showRejectDialog}
+        onOpenChange={(open) => {
+          if (!isProcessing) {
+            setShowRejectDialog(open);
+            if (!open) {
+              setSelectedTaskId(null);
+              setRejectionReason("");
+            }
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Task</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting this task. The agent will be
+              notified of the rejection.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              rows={3}
+              aria-label="Rejection reason"
+              disabled={isProcessing}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRejectDialog(false);
+                setSelectedTaskId(null);
+                setRejectionReason("");
+              }}
+              disabled={isProcessing}
+              aria-label="Cancel rejection"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectConfirm}
+              disabled={isProcessing || !rejectionReason.trim()}
+              aria-label="Confirm rejection"
+            >
+              {isProcessing && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isProcessing ? "Processing..." : "Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

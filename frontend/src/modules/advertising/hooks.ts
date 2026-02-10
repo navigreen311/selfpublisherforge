@@ -3,7 +3,9 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { extractApiError } from "@/hooks/use-api";
 
 const QUERY_KEYS = {
   campaigns: ["ads", "campaigns"] as const,
@@ -203,6 +205,9 @@ export function useCreateCampaign() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.campaigns });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -220,6 +225,9 @@ export function useUpdateCampaign(id: string) {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.campaign(id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.campaigns });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }
@@ -259,6 +267,9 @@ export function useOptimizeCampaign(campaignId: string) {
       );
       return data;
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -290,6 +301,9 @@ export function useUpdateKeywordBids() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ads", "keyword-bids"] });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }
@@ -332,6 +346,9 @@ export function useGenerateCreatives() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ads", "creatives"] });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }

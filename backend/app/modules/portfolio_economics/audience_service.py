@@ -6,6 +6,7 @@ Provides:
 - Audience growth tracking
 - Churn prediction model
 """
+import logging
 from collections import defaultdict
 from datetime import datetime, date, timedelta, timezone
 from uuid import UUID, uuid4
@@ -18,6 +19,8 @@ from app.modules.analytics.models import AnalyticsEvent, RoyaltyRecord
 from app.modules.review_intelligence.models import BookReview
 from app.models.project import Book
 from app.models.market import CompetitorBook
+
+logger = logging.getLogger(__name__)
 
 from app.modules.portfolio_economics.schemas import (
     AudienceAnalyzeRequest,
@@ -295,8 +298,10 @@ async def build_audience_personas(
         async with async_session() as db:
             insights = await _fetch_book_insights(db, request.book_id, request.genre)
     except Exception:
-        # If the database is unreachable or query fails, continue with defaults
-        pass
+        logger.warning(
+            "build_audience_personas: database query for book insights failed, using defaults",
+            exc_info=True,
+        )
 
     personas = []
     for template in templates:
@@ -458,8 +463,10 @@ async def build_also_bought_intelligence(
                         overlap_score=round(max(0.0, 0.9 - (i * 0.12)), 2),
                     ))
     except Exception:
-        # If DB is unreachable, fall through to genre-based fallback
-        pass
+        logger.warning(
+            "build_also_bought_intelligence: database query for competitor data failed, falling back to genre-based defaults",
+            exc_info=True,
+        )
 
     # Fallback: genre-based representative data when no DB records found
     if not also_bought_items:
@@ -596,8 +603,10 @@ async def get_audience_growth(
                     daily_engagement_events[d] = int(row.engagement_events) if row.engagement_events else 0
                     daily_total_events[d] = int(row.total_events) if row.total_events else 0
     except Exception:
-        # If the database is unreachable, we'll return empty data below
-        pass
+        logger.warning(
+            "get_audience_growth: database query for royalty/analytics data failed, returning empty growth data",
+            exc_info=True,
+        )
 
     has_data = bool(daily_units or daily_engagement_events)
 

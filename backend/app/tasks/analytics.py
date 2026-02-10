@@ -292,20 +292,25 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                             # The credentials_encrypted field may hold a
                             # base64-encoded CSV payload that was uploaded
                             # for batch processing but not yet imported.
-                            # Try to treat it as pending CSV import data.
-                            logger.warning(
-                                "CSV import queue not yet implemented for account %s "
-                                "(platform=%s); pending API integration.",
-                                account.id,
-                                acct_platform,
-                            )
-                            csv_records = await _try_csv_import(
-                                db,
-                                org_id=UUID(org_id),
-                                analytics_platform_key=analytics_platform_key,
-                                csv_data=None,  # No pending queue yet
-                            )
-                            records_for_account += csv_records
+                            # Use the CSV import queue module if available.
+                            csv_data = account.credentials_encrypted
+                            try:
+                                from app.modules.analytics.csv_queue import process_csv_import
+                                count = await process_csv_import(db, account.id, account.platform, csv_data)
+                                logger.info("CSV import completed: %d records for account %s", count, account.id)
+                                records_for_account += count
+                            except ImportError:
+                                logger.warning("CSV import queue module not available; skipping for account %s", account.id)
+                                # Fall back to the legacy _try_csv_import helper
+                                csv_records = await _try_csv_import(
+                                    db,
+                                    org_id=UUID(org_id),
+                                    analytics_platform_key=analytics_platform_key,
+                                    csv_data=None,
+                                )
+                                records_for_account += csv_records
+                            except Exception as exc:
+                                logger.error("CSV import failed for account %s: %s", account.id, exc)
 
                         # --------------------------------------------------
                         # 2b. Attempt API sync if env-var credentials exist
@@ -850,12 +855,67 @@ def _parse_kdp_royalty_response(
 async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
     """Fetch royalty/compensation data from the IngramSpark publisher REST API.
 
-    Requires ``INGRAM_SPARK_API_KEY`` and ``INGRAM_SPARK_API_SECRET`` env vars.
-    Uses HMAC-SHA256 request signing for authentication.
+    Prefers the new ``IngramSparkClient`` from ``app.modules.analytics.ingram_client``
+    when available.  Falls back to the legacy env-var / HMAC approach if the
+    module is not yet installed or the client factory returns ``None``.
+
+    Requires ``INGRAM_SPARK_API_KEY`` and ``INGRAM_SPARK_API_SECRET`` env vars
+    for the legacy path.
 
     The function targets the previous full calendar month and returns a list of
     normalised royalty record dicts ready for upsert into ``royalty_records``.
     """
+
+    # ------------------------------------------------------------------
+    # Try the new IngramSparkClient first.
+    # ------------------------------------------------------------------
+    try:
+        from app.modules.analytics.ingram_client import get_ingram_client
+
+        client = get_ingram_client()
+        if client is not None:
+            now = datetime.now(timezone.utc)
+            first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_end = first_of_this_month - timedelta(microseconds=1)
+            period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
+
+            logger.info(
+                "Fetching IngramSpark royalties via IngramSparkClient for account %s, "
+                "period %s to %s",
+                account.id,
+                period_start.strftime("%Y-%m-%d"),
+                period_end.strftime("%Y-%m-%d"),
+            )
+            royalties = await client.fetch_royalties(period_start, period_end)
+            logger.info(
+                "IngramSparkClient returned %d royalty records for account %s.",
+                len(royalties),
+                account.id,
+            )
+            return royalties
+        else:
+            logger.info(
+                "IngramSparkClient not configured (get_ingram_client() returned None); "
+                "falling back to legacy API path for account %s.",
+                account.id,
+            )
+    except ImportError:
+        logger.info(
+            "ingram_client module not available; falling back to legacy API path "
+            "for account %s.",
+            account.id,
+        )
+    except Exception as exc:
+        logger.error(
+            "IngramSparkClient failed for account %s: %s; falling back to legacy API path.",
+            account.id,
+            exc,
+            exc_info=True,
+        )
+
+    # ------------------------------------------------------------------
+    # Legacy path: direct env-var / HMAC authentication.
+    # ------------------------------------------------------------------
     api_key = os.environ.get("INGRAM_SPARK_API_KEY", "")
     api_secret = os.environ.get("INGRAM_SPARK_API_SECRET", "")
     if not api_key:
@@ -1130,12 +1190,66 @@ def _parse_ingramspark_response(
 async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
     """Fetch royalty/payout data from the Draft2Digital partner API.
 
-    Requires ``D2D_API_KEY`` env var.  The API key is passed as a Bearer
-    token in the ``Authorization`` header.
+    Prefers the new ``D2DClient`` from ``app.modules.analytics.d2d_client``
+    when available.  Falls back to the legacy env-var / Bearer-token approach
+    if the module is not yet installed or the client factory returns ``None``.
+
+    Requires ``D2D_API_KEY`` env var for the legacy path.
 
     The function targets the previous full calendar month and returns a list of
     normalised royalty record dicts ready for upsert into ``royalty_records``.
     """
+
+    # ------------------------------------------------------------------
+    # Try the new D2DClient first.
+    # ------------------------------------------------------------------
+    try:
+        from app.modules.analytics.d2d_client import get_d2d_client
+
+        client = get_d2d_client()
+        if client is not None:
+            now = datetime.now(timezone.utc)
+            first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_end = first_of_this_month - timedelta(microseconds=1)
+            period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
+
+            logger.info(
+                "Fetching D2D royalties via D2DClient for account %s, "
+                "period %s to %s",
+                account.id,
+                period_start.strftime("%Y-%m-%d"),
+                period_end.strftime("%Y-%m-%d"),
+            )
+            royalties = await client.fetch_royalties(period_start, period_end)
+            logger.info(
+                "D2DClient returned %d royalty records for account %s.",
+                len(royalties),
+                account.id,
+            )
+            return royalties
+        else:
+            logger.info(
+                "D2DClient not configured (get_d2d_client() returned None); "
+                "falling back to legacy API path for account %s.",
+                account.id,
+            )
+    except ImportError:
+        logger.info(
+            "d2d_client module not available; falling back to legacy API path "
+            "for account %s.",
+            account.id,
+        )
+    except Exception as exc:
+        logger.error(
+            "D2DClient failed for account %s: %s; falling back to legacy API path.",
+            account.id,
+            exc,
+            exc_info=True,
+        )
+
+    # ------------------------------------------------------------------
+    # Legacy path: direct env-var / Bearer-token authentication.
+    # ------------------------------------------------------------------
     api_key = os.environ.get("D2D_API_KEY", "")
     if not api_key:
         logger.warning(

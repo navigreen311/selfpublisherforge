@@ -1,6 +1,7 @@
 """FastAPI router for Advertising Intelligence endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
@@ -33,6 +34,13 @@ from app.modules.advertising.schemas import (
     FacebookCampaignMetrics,
 )
 from app.modules.advertising.facebook_ads import FacebookAdsError
+
+try:
+    from app.modules.advertising.facebook_ads import FacebookAdsClient
+    _facebook_client = FacebookAdsClient()
+except Exception:
+    _facebook_client = None
+
 from app.modules.advertising.service import AdvertisingService
 
 router = APIRouter()
@@ -491,3 +499,126 @@ async def get_facebook_campaign_metrics(
                 detail="Facebook campaign not found",
             )
         raise HTTPException(status_code=status_code, detail=str(exc))
+
+
+@router.put(
+    "/facebook/campaigns/{campaign_id}",
+    response_model=FacebookCampaignResponse,
+    summary="Update Facebook campaign (PUT)",
+    description="Update an existing Facebook Ads campaign's name, status, or budget using PUT.",
+)
+async def put_facebook_campaign(
+    campaign_id: str,
+    data: FacebookCampaignUpdate,
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Update a Facebook Ads campaign via PUT."""
+    try:
+        return await service.facebook_update_campaign(
+            org_id=current_user["org_id"],
+            external_campaign_id=campaign_id,
+            data=data,
+        )
+    except FacebookAdsError as exc:
+        status_code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        if status_code == 404 or (exc.fb_error and exc.fb_error.get("code") == 100):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Facebook campaign not found",
+            )
+        raise HTTPException(status_code=status_code, detail=str(exc))
+
+
+@router.get(
+    "/facebook/campaigns/{campaign_id}/insights",
+    response_model=FacebookCampaignMetrics,
+    summary="Get Facebook campaign insights",
+    description="Get performance insights (impressions, clicks, spend, CTR, CPC, etc.) for a Facebook campaign.",
+)
+async def get_facebook_campaign_insights(
+    campaign_id: str,
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Get performance insights for a Facebook Ads campaign."""
+    from datetime import datetime as dt
+
+    for label, value in [("start_date", start_date), ("end_date", end_date)]:
+        try:
+            dt.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid {label} format. Use YYYY-MM-DD.",
+            )
+
+    try:
+        return await service.facebook_get_campaign_metrics(
+            org_id=current_user["org_id"],
+            external_campaign_id=campaign_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except FacebookAdsError as exc:
+        status_code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        if status_code == 404 or (exc.fb_error and exc.fb_error.get("code") == 100):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Facebook campaign not found",
+            )
+        raise HTTPException(status_code=status_code, detail=str(exc))
+
+
+class FacebookAudienceCreate(BaseModel):
+    """Request body for creating a Facebook custom audience."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Audience name")
+    description: str = Field("", max_length=1000, description="Audience description")
+    source_type: str = Field(
+        "CUSTOM",
+        description="Audience source type (CUSTOM, WEBSITE, APP, OFFLINE, ENGAGEMENT)",
+    )
+
+
+class FacebookAudienceResponse(BaseModel):
+    """Response body for a created Facebook custom audience."""
+
+    audience_id: str
+    name: str
+    source_type: str
+    created: bool = True
+
+
+@router.post(
+    "/facebook/audiences",
+    response_model=FacebookAudienceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Facebook custom audience",
+    description="Create a custom audience on Facebook for ad targeting.",
+)
+async def create_facebook_audience(
+    data: FacebookAudienceCreate,
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a Facebook custom audience."""
+    if _facebook_client is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Facebook Ads client is not available. Check credentials configuration.",
+        )
+
+    try:
+        result = await _facebook_client.create_custom_audience(
+            name=data.name,
+            description=data.description,
+            source_type=data.source_type,
+        )
+        return result
+    except FacebookAdsError as exc:
+        raise HTTPException(
+            status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        )

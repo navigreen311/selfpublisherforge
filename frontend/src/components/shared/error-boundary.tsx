@@ -10,33 +10,88 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
 
+const ERROR_REPORTING_URL = process.env.NEXT_PUBLIC_ERROR_REPORTING_URL;
+
 const REPORT_ISSUE_URL =
   "https://github.com/selfpublisherforge/selfpublisherforge/issues/new?template=bug_report.md";
+
+// ─── Rate Limiter ────────────────────────────────────────────────────────────
+
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+
+/** Timestamps of recently reported errors, used for rate limiting. */
+const errorTimestamps: number[] = [];
+
+/**
+ * Returns `true` if the error can be reported without exceeding the rate
+ * limit of {@link RATE_LIMIT_MAX} errors per {@link RATE_LIMIT_WINDOW_MS}.
+ */
+function isWithinRateLimit(): boolean {
+  const now = Date.now();
+
+  // Evict timestamps outside the current window
+  while (errorTimestamps.length > 0 && errorTimestamps[0] <= now - RATE_LIMIT_WINDOW_MS) {
+    errorTimestamps.shift();
+  }
+
+  if (errorTimestamps.length >= RATE_LIMIT_MAX) {
+    return false;
+  }
+
+  errorTimestamps.push(now);
+  return true;
+}
 
 // ─── Error Reporting ─────────────────────────────────────────────────────────
 
 /**
+ * Sends an error payload to the configured reporting endpoint using
+ * `navigator.sendBeacon()` for non-blocking delivery.
+ */
+function sendErrorToEndpoint(error: Error, errorInfo?: React.ErrorInfo): void {
+  if (!ERROR_REPORTING_URL) {
+    return;
+  }
+
+  if (!isWithinRateLimit()) {
+    return;
+  }
+
+  const payload = JSON.stringify({
+    message: error.message,
+    name: error.name,
+    stack: error.stack ?? null,
+    componentStack: errorInfo?.componentStack ?? null,
+    url: typeof window !== "undefined" ? window.location.href : null,
+    userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+    timestamp: new Date().toISOString(),
+  });
+
+  try {
+    const blob = new Blob([payload], { type: "application/json" });
+    navigator.sendBeacon(ERROR_REPORTING_URL, blob);
+  } catch {
+    // Silently swallow beacon failures — we must not throw from the
+    // error reporter itself.
+  }
+}
+
+/**
  * Centralized error reporting function.
  * In development, logs to console. In production, dispatches to an
- * external error-tracking service.
+ * external error-tracking service via a configurable endpoint.
  */
-function reportError(error: Error, errorInfo: React.ErrorInfo): void {
+function reportError(error: Error, errorInfo?: React.ErrorInfo): void {
   if (IS_DEVELOPMENT) {
     // eslint-disable-next-line no-console
     console.error("[ErrorBoundary] Caught error:", error);
-    // eslint-disable-next-line no-console
-    console.error("[ErrorBoundary] Component stack:", errorInfo.componentStack);
+    if (errorInfo?.componentStack) {
+      // eslint-disable-next-line no-console
+      console.error("[ErrorBoundary] Component stack:", errorInfo.componentStack);
+    }
   } else {
-    // TODO: Integrate production error reporting service (Sentry, DataDog, etc.)
-    // Example Sentry integration:
-    //   Sentry.captureException(error, {
-    //     contexts: { react: { componentStack: errorInfo.componentStack } },
-    //   });
-    //
-    // Example DataDog integration:
-    //   datadogRum.addError(error, {
-    //     componentStack: errorInfo.componentStack,
-    //   });
+    sendErrorToEndpoint(error, errorInfo);
   }
 }
 
@@ -103,6 +158,7 @@ class ErrorBoundaryInner extends React.Component<
           className="flex items-center justify-center min-h-[40vh] p-6"
           role="alert"
           aria-label="Application error"
+          data-testid="error-boundary"
         >
           <Card className="w-full max-w-md">
             <CardContent className="pt-6">

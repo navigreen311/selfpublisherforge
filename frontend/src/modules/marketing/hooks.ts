@@ -9,7 +9,9 @@
 
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { extractApiError } from "@/hooks/use-api";
 import type { SuccessResponse } from "@/types/api";
 
 const MARKETING_KEYS = {
@@ -213,6 +215,9 @@ export function useGenerateLaunchPlan() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.launchPlans });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -227,6 +232,9 @@ export function useUpdateLaunchPlan(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.launchPlan(id) });
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.launchPlans });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }
@@ -256,6 +264,9 @@ export function useCreateEmailSequence() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequences });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -270,6 +281,9 @@ export function useUpdateEmailSequence(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequences });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -283,6 +297,9 @@ export function useTriggerEmailSend(sequenceId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequences });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }
@@ -312,6 +329,9 @@ export function useGenerateSocialContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.socialCalendar });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -340,6 +360,9 @@ export function useCreateARCCampaign() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaigns });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -353,6 +376,9 @@ export function useSendARCCopies(campaignId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaigns });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }

@@ -100,7 +100,10 @@ def check_permission(
     except PermissionDenied:
         raise
     except Exception:
-        logger.exception("Permission check failed for action — denying by default")
+        logger.exception(
+            "Permission check failed for agent '%s' action '%s' (role=%s) — denying by default",
+            agent.name, action, user_role,
+        )
         return False  # Fail closed: deny permission on error
 
 

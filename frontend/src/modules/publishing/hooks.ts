@@ -1,7 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { extractApiError } from "@/hooks/use-api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -189,6 +191,9 @@ export function useCreateAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: publishingKeys.accounts() });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -200,6 +205,9 @@ export function useDeleteAccount() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: publishingKeys.accounts() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }
@@ -214,6 +222,9 @@ export function useExportEpub() {
       const { data } = await api.post("/api/v1/publishing/export/epub", payload);
       return data;
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -222,6 +233,9 @@ export function useExportPdf() {
     mutationFn: async (payload) => {
       const { data } = await api.post("/api/v1/publishing/export/pdf", payload);
       return data;
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }
@@ -249,6 +263,9 @@ export function useCreateTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: publishingKeys.templates() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }
@@ -278,6 +295,9 @@ export function useUpdateMetadata(bookId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: publishingKeys.metadata(bookId) });
     },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }
 
@@ -304,6 +324,9 @@ export function useSyncListing() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: publishingKeys.listings() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
     },
   });
 }

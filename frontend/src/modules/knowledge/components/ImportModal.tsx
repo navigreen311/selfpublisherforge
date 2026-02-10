@@ -1,8 +1,27 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { X, Upload, Link as LinkIcon, Loader2 } from "lucide-react";
 import { useImportEntry } from "../hooks";
+
+const ACCEPTED_EXTENSIONS = [".pdf", ".epub", ".txt", ".md", ".docx", ".html"];
+const ACCEPTED_FORMATS_LABEL = "PDF, EPUB, TXT, MD, DOCX, or HTML";
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isValidUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
+function hasValidExtension(name: string): boolean {
+  const lower = name.toLowerCase();
+  return ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
 
 interface ImportModalProps {
   open: boolean;
@@ -12,15 +31,50 @@ interface ImportModalProps {
 export function ImportModal({ open, onClose }: ImportModalProps) {
   const [tab, setTab] = useState<"url" | "file">("url");
   const [url, setUrl] = useState("");
+  const [urlTouched, setUrlTouched] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [fileSize, setFileSize] = useState<number>(0);
   const [fileBase64, setFileBase64] = useState("");
+  const [fileError, setFileError] = useState("");
   const [extractFacts, setExtractFacts] = useState(true);
   const importMutation = useImportEntry();
+
+  const urlError = useMemo(() => {
+    if (!urlTouched || url.trim() === "") return "";
+    if (!isValidUrl(url)) return "URL must start with http:// or https://";
+    return "";
+  }, [url, urlTouched]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Reset previous state
+    setFileError("");
+    setFileName("");
+    setFileSize(0);
+    setFileBase64("");
+
+    // Validate format
+    if (!hasValidExtension(file.name)) {
+      setFileError(
+        `File must be ${ACCEPTED_FORMATS_LABEL} (max ${formatFileSize(MAX_FILE_SIZE_BYTES)})`
+      );
+      e.target.value = "";
+      return;
+    }
+
+    // Validate size
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setFileError(
+        `File is too large (${formatFileSize(file.size)}). Maximum allowed size is ${formatFileSize(MAX_FILE_SIZE_BYTES)}.`
+      );
+      e.target.value = "";
+      return;
+    }
+
     setFileName(file.name);
+    setFileSize(file.size);
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -30,9 +84,20 @@ export function ImportModal({ open, onClose }: ImportModalProps) {
     reader.readAsDataURL(file);
   }, []);
 
+  const isSubmitDisabled = useMemo(() => {
+    if (importMutation.isPending) return true;
+    if (tab === "url") {
+      return !url.trim() || !isValidUrl(url);
+    }
+    // file tab
+    return !fileName || !fileBase64 || !!fileError;
+  }, [importMutation.isPending, tab, url, fileName, fileBase64, fileError]);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      if (isSubmitDisabled) return;
+
       if (tab === "url" && url.trim()) {
         await importMutation.mutateAsync({
           url: url.trim(),
@@ -47,10 +112,13 @@ export function ImportModal({ open, onClose }: ImportModalProps) {
       }
       onClose();
       setUrl("");
+      setUrlTouched(false);
       setFileName("");
+      setFileSize(0);
       setFileBase64("");
+      setFileError("");
     },
-    [tab, url, fileName, fileBase64, extractFacts, importMutation, onClose]
+    [isSubmitDisabled, tab, url, fileName, fileBase64, extractFacts, importMutation, onClose]
   );
 
   if (!open) return null;
@@ -98,28 +166,62 @@ export function ImportModal({ open, onClose }: ImportModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {tab === "url" ? (
             <div>
-              <label className="block text-sm font-medium mb-1">URL</label>
+              <label htmlFor="import-url" className="block text-sm font-medium mb-1">
+                URL
+              </label>
               <input
+                id="import-url"
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                onBlur={() => setUrlTouched(true)}
                 placeholder="https://example.com/article"
-                className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className={`w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                  urlError ? "border-red-500" : ""
+                }`}
+                aria-invalid={urlError ? "true" : undefined}
+                aria-describedby={urlError ? "url-error" : undefined}
                 required
               />
+              {urlError && (
+                <p id="url-error" className="mt-1 text-xs text-red-500" role="alert">
+                  {urlError}
+                </p>
+              )}
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium mb-1">File (PDF, DOCX, TXT)</label>
+              <label htmlFor="import-file" className="block text-sm font-medium mb-1">
+                File ({ACCEPTED_FORMATS_LABEL})
+              </label>
               <input
+                id="import-file"
                 type="file"
-                accept=".pdf,.docx,.txt"
+                accept={ACCEPTED_EXTENSIONS.join(",")}
                 onChange={handleFileChange}
-                className="w-full border rounded-lg px-3 py-2 text-sm bg-background file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-primary file:text-primary-foreground"
+                className={`w-full border rounded-lg px-3 py-2 text-sm bg-background file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-primary file:text-primary-foreground ${
+                  fileError ? "border-red-500" : ""
+                }`}
+                aria-invalid={fileError ? "true" : undefined}
+                aria-describedby={
+                  fileError ? "file-error" : fileName ? "file-info" : "file-hint"
+                }
                 required
               />
-              {fileName && (
-                <p className="mt-1 text-xs text-muted-foreground">Selected: {fileName}</p>
+              {fileError && (
+                <p id="file-error" className="mt-1 text-xs text-red-500" role="alert">
+                  {fileError}
+                </p>
+              )}
+              {!fileError && fileName && (
+                <p id="file-info" className="mt-1 text-xs text-muted-foreground">
+                  Selected: {fileName} ({formatFileSize(fileSize)})
+                </p>
+              )}
+              {!fileError && !fileName && (
+                <p id="file-hint" className="mt-1 text-xs text-muted-foreground">
+                  File must be {ACCEPTED_FORMATS_LABEL} (max {formatFileSize(MAX_FILE_SIZE_BYTES)})
+                </p>
               )}
             </div>
           )}
@@ -139,7 +241,7 @@ export function ImportModal({ open, onClose }: ImportModalProps) {
 
           <button
             type="submit"
-            disabled={importMutation.isPending}
+            disabled={isSubmitDisabled}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
           >
             {importMutation.isPending ? (

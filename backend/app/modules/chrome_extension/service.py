@@ -438,7 +438,12 @@ async def _enrich_keywords_from_market_data(
                 )
             else:
                 enriched.append(kw)
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Failed to enrich keyword %r from MarketKeyword data: %s",
+                kw.keyword,
+                exc,
+            )
             enriched.append(kw)
 
     return enriched
