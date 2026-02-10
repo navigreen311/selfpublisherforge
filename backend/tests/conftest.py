@@ -1,65 +1,31 @@
-"""Shared test fixtures for Review Intelligence tests."""
+"""Shared test fixtures for the analytics module tests."""
+
+from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator
-from unittest.mock import MagicMock
+from datetime import datetime, timezone
+from typing import Any, AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import event
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
 
-from app.database import Base
-
-
-# Use an in-memory SQLite database for tests
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-
-@pytest_asyncio.fixture
-async def db_engine():
-    """Create a test database engine."""
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield engine
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
-
-
-@pytest_asyncio.fixture
-async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create a test database session."""
-    session_factory = async_sessionmaker(
-        db_engine, class_=AsyncSession, expire_on_commit=False
-    )
-    async with session_factory() as session:
-        yield session
+from app.main import create_app
 
 
 @pytest.fixture
 def org_id() -> uuid.UUID:
-    """A test organization ID."""
-    return uuid.uuid4()
-
-
-@pytest.fixture
-def book_id() -> uuid.UUID:
-    """A test book ID."""
     return uuid.uuid4()
 
 
 @pytest.fixture
 def user_id() -> uuid.UUID:
-    """A test user ID."""
     return uuid.uuid4()
 
 
 @pytest.fixture
-def current_user(org_id, user_id):
-    """Mock current user dict as returned by get_current_user."""
+def mock_user(org_id: uuid.UUID, user_id: uuid.UUID) -> dict[str, Any]:
     return {
         "user_id": user_id,
         "org_id": org_id,
@@ -67,30 +33,34 @@ def current_user(org_id, user_id):
     }
 
 
-def make_review(
-    org_id: uuid.UUID,
-    book_id: uuid.UUID,
-    star_rating: float = 4.0,
-    body: str = "Great book!",
-    sentiment: str | None = None,
-    sentiment_score: float | None = None,
-    is_competitor: bool = False,
-    review_date: datetime | None = None,
-    source: str = "amazon",
-):
-    """Helper to create a BookReview instance for testing."""
-    from app.modules.review_intelligence.models import BookReview
+@pytest.fixture
+def mock_db() -> AsyncMock:
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    db.close = AsyncMock()
+    return db
 
-    return BookReview(
-        org_id=org_id,
-        book_id=book_id,
-        source=source,
-        star_rating=star_rating,
-        body=body,
-        sentiment=sentiment,
-        sentiment_score=sentiment_score,
-        is_competitor=is_competitor,
-        review_date=review_date or datetime.now(timezone.utc),
-        title="Test Review",
-        verified_purchase=True,
-    )
+
+@pytest_asyncio.fixture
+async def app():
+    """Create a test FastAPI application."""
+    return create_app()
+
+
+@pytest_asyncio.fixture
+async def client(app, mock_db, mock_user) -> AsyncGenerator[AsyncClient, None]:
+    """Create an async test client with mocked dependencies."""
+    from app.database import get_db
+    from app.core.dependencies import get_current_user
+
+    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
