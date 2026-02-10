@@ -6,7 +6,7 @@ import base64
 import io
 import logging
 import re
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -137,8 +137,8 @@ async def extract_key_facts(content: str) -> dict[str, Any]:
     try:
         import anthropic
 
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        message = client.messages.create(
+        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        message = await client.messages.create(
             model=settings.DEFAULT_LLM_MODEL,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
@@ -174,8 +174,8 @@ async def summarize_content(content: str) -> dict[str, Any]:
     try:
         import anthropic
 
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        message = client.messages.create(
+        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        message = await client.messages.create(
             model=settings.DEFAULT_LLM_MODEL,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
@@ -211,8 +211,8 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
     try:
         import anthropic
 
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        message = client.messages.create(
+        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        message = await client.messages.create(
             model=settings.DEFAULT_LLM_MODEL,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
