@@ -677,6 +677,26 @@ class TestAnalyzeListing:
     @pytest.mark.asyncio
     async def test_asin_extraction_from_url(self, db_session):
         """analyze_amazon_listing should extract ASIN from a URL."""
+        # Seed a Book with matching ASIN so the DB lookup succeeds
+        from app.models.project import Book, Project, ProjectType, ProjectStatus, BookFormat, BookStatus
+        project = Project(
+            org_id=ORG_ID,
+            title="Test Project",
+            type=ProjectType.BOOK,
+            status=ProjectStatus.ACTIVE,
+        )
+        db_session.add(project)
+        await db_session.flush()
+        book = Book(
+            project_id=project.id,
+            title="Test Book for ASIN Lookup",
+            asin="B09V2KKG1D",
+            format=BookFormat.EBOOK,
+            status=BookStatus.DRAFT,
+        )
+        db_session.add(book)
+        await db_session.flush()
+
         request = ListingAnalyzeRequest(
             url="https://www.amazon.com/dp/B09V2KKG1D"
         )

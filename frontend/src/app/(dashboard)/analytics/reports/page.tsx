@@ -1,23 +1,50 @@
 "use client";
 
+import { useState } from "react";
 import { useReports, useDownloadReport } from "@/modules/analytics/hooks";
 import { ReportBuilder } from "@/modules/analytics/components/ReportBuilder";
 
 export default function ReportsPage() {
   const { data: reports, isLoading } = useReports();
   const downloadReport = useDownloadReport();
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const handleDownload = (reportId: string, fileName: string) => {
+    setDownloadError(null);
+
     downloadReport.mutate(reportId, {
       onSuccess: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+        // Validate the blob before attempting to create a download URL
+        if (!blob || blob.size === 0) {
+          setDownloadError("Downloaded file is empty. Please try again or regenerate the report.");
+          return;
+        }
+
+        let url: string | undefined;
+        try {
+          url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } catch (err) {
+          setDownloadError(
+            err instanceof Error
+              ? `Failed to prepare download: ${err.message}`
+              : "Failed to prepare download. Please try again."
+          );
+        } finally {
+          if (url) {
+            window.URL.revokeObjectURL(url);
+          }
+        }
+      },
+      onError: (error) => {
+        setDownloadError(
+          error.message || "Failed to download report. Please try again."
+        );
       },
     });
   };
@@ -33,6 +60,30 @@ export default function ReportsPage() {
           Back to Dashboard
         </a>
       </div>
+
+      {downloadError && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-4">
+          <div className="flex">
+            <div className="flex-1">
+              <p className="text-sm text-red-800">{downloadError}</p>
+            </div>
+            <button
+              type="button"
+              className="ml-3 text-red-500 hover:text-red-700"
+              onClick={() => setDownloadError(null)}
+            >
+              <span className="sr-only">Dismiss</span>
+              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Report Builder */}

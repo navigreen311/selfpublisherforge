@@ -406,3 +406,186 @@ resource "aws_lb_listener_rule" "health" {
     }
   }
 }
+
+# =============================================================================
+# S3 Gateway VPC Endpoint — routes S3 traffic through VPC instead of NAT
+# =============================================================================
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = aws_route_table.private[*].id
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-s3-endpoint"
+  }
+}
+
+# =============================================================================
+# VPC Flow Logs — security audit trail for all network traffic
+# =============================================================================
+resource "aws_cloudwatch_log_group" "flow_log" {
+  name              = "/vpc/${var.project_name}-${var.environment}-flow-logs"
+  retention_in_days = var.flow_log_retention_days
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-flow-log-group"
+  }
+}
+
+resource "aws_iam_role" "flow_log" {
+  name = "${var.project_name}-${var.environment}-vpc-flow-log-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-vpc-flow-log-role"
+  }
+}
+
+resource "aws_iam_role_policy" "flow_log" {
+  name = "${var.project_name}-${var.environment}-vpc-flow-log-policy"
+  role = aws_iam_role.flow_log.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Effect   = "Allow"
+        Resource = "${aws_cloudwatch_log_group.flow_log.arn}:*"
+      }
+    ]
+  })
+}
+
+resource "aws_flow_log" "main" {
+  vpc_id          = aws_vpc.main.id
+  traffic_type    = "ALL"
+  iam_role_arn    = aws_iam_role.flow_log.arn
+  log_destination = aws_cloudwatch_log_group.flow_log.arn
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-vpc-flow-log"
+  }
+}
+
+# =============================================================================
+# WAF v2 Web ACL — DDoS and common exploit protection for the ALB
+# =============================================================================
+resource "aws_wafv2_web_acl" "main" {
+  name        = "${var.project_name}-${var.environment}-web-acl"
+  description = "WAF Web ACL for ${var.project_name} ${var.environment} ALB"
+  scope       = "REGIONAL"
+
+  default_action {
+    allow {}
+  }
+
+  # ---------------------------------------------------------------------------
+  # Rule 1: AWS Managed — Common Rule Set (XSS, SQLi, etc.)
+  # ---------------------------------------------------------------------------
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.project_name}-${var.environment}-common-rules"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Rule 2: AWS Managed — Known Bad Inputs (Log4j, etc.)
+  # ---------------------------------------------------------------------------
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.project_name}-${var.environment}-known-bad-inputs"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Rule 3: Rate Limiting — block IPs exceeding threshold
+  # ---------------------------------------------------------------------------
+  rule {
+    name     = "RateLimitRule"
+    priority = 3
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = var.waf_rate_limit
+        aggregate_key_type = "IP"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.project_name}-${var.environment}-rate-limit"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${var.project_name}-${var.environment}-web-acl"
+    sampled_requests_enabled   = true
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-web-acl"
+  }
+}
+
+resource "aws_wafv2_web_acl_association" "alb" {
+  resource_arn = aws_lb.main.arn
+  web_acl_arn  = aws_wafv2_web_acl.main.arn
+}

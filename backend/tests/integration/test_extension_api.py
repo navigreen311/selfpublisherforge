@@ -5,7 +5,36 @@ import uuid
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_current_user
+from app.database import get_db
+
+_TEST_ORG_ID = uuid.uuid4()
+_TEST_USER = {"user_id": str(uuid.uuid4()), "org_id": _TEST_ORG_ID, "role": "admin"}
+
+
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession):
+    """Yield an HTTP test client with auth and DB overridden."""
+    from app.main import create_app
+
+    async def _override_get_db():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    app = create_app()
+    app.dependency_overrides[get_current_user] = lambda: _TEST_USER
+    app.dependency_overrides[get_db] = _override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------

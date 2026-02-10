@@ -15,13 +15,38 @@ from app.modules.llm_orchestration.cost_tracker import CostTracker
 from app.modules.llm_orchestration.cache import SemanticCache
 from app.modules.llm_orchestration.quality import QualityAssurance
 from app.modules.llm_orchestration.router import router
+from app.modules.llm_orchestration.service import LLMOrchestrationService
+from app.modules.llm_orchestration.schemas import (
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
+    CompletionRequest,
+    CompletionResponse,
+    CostEstimate,
+    CostEstimateRequest,
+    ModelConfig,
+    QualityReport,
+    UsageStats,
+)
 
 __all__ = [
     "LLMOrchestrator",
+    "LLMOrchestrationService",
     "ModelRouter",
     "TaskType",
     "CostTracker",
     "SemanticCache",
     "QualityAssurance",
     "router",
+    # Schemas
+    "ChatMessage",
+    "ChatRequest",
+    "ChatResponse",
+    "CompletionRequest",
+    "CompletionResponse",
+    "CostEstimate",
+    "CostEstimateRequest",
+    "ModelConfig",
+    "QualityReport",
+    "UsageStats",
 ]

@@ -12,7 +12,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from app.database import Base, get_db
 from app.core.dependencies import get_current_user
@@ -345,10 +345,29 @@ class TestGenerateSample:
         )
         profile_id = create_resp.json()["id"]
 
-        gen_resp = await client.post(
-            f"/api/v1/style-profiles/{profile_id}/generate-sample",
-            json={"prompt": "Write a paragraph about a sunset.", "max_words": 100},
+        from app.modules.llm_orchestration.providers.base import LLMResponse
+
+        mock_response = LLMResponse(
+            model_id="claude-sonnet-4-5-20250929",
+            content="The sunset painted the sky in hues of amber and rose.",
+            input_tokens=100,
+            output_tokens=50,
+            total_tokens=150,
+            latency_ms=200.0,
+            finish_reason="end_turn",
         )
+
+        with patch(
+            "app.modules.style_cloning.router.AnthropicProvider"
+        ) as MockProvider:
+            mock_instance = MockProvider.return_value
+            mock_instance.generate = AsyncMock(return_value=mock_response)
+
+            gen_resp = await client.post(
+                f"/api/v1/style-profiles/{profile_id}/generate-sample",
+                json={"prompt": "Write a paragraph about a sunset.", "max_words": 100},
+            )
+
         assert gen_resp.status_code == 200
         data = gen_resp.json()
         assert "generated_text" in data

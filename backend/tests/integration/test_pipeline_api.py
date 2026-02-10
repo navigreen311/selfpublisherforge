@@ -11,6 +11,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.dependencies import get_current_user
 from app.database import Base, get_db
 from app.main import create_app
 
@@ -22,6 +23,7 @@ TestSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_com
 
 ORG_ID = "00000000-0000-0000-0000-000000000001"
 BOOK_ID = "00000000-0000-0000-0000-000000000099"
+_TEST_USER = {"user_id": str(uuid.uuid4()), "org_id": uuid.UUID(ORG_ID), "role": "admin"}
 
 
 async def override_get_db():
@@ -47,6 +49,7 @@ async def fastapi_app():
 
     application = create_app()
     application.dependency_overrides[get_db] = override_get_db
+    application.dependency_overrides[get_current_user] = lambda: _TEST_USER
     yield application
 
     async with engine.begin() as conn:

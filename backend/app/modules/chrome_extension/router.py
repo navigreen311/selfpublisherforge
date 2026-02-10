@@ -12,6 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.chrome_extension import service
 from app.modules.chrome_extension.schemas import (
@@ -27,22 +28,6 @@ from shared.contracts.api import SuccessResponse
 
 router = APIRouter(prefix="/extension", tags=["chrome-extension"])
 
-# ---------------------------------------------------------------------------
-# Placeholder dependency
-# ---------------------------------------------------------------------------
-
-_PLACEHOLDER_ORG_ID = UUID("00000000-0000-0000-0000-000000000001")
-
-
-async def _get_org_id() -> UUID:
-    """Return the current organisation ID (placeholder for auth)."""
-    return _PLACEHOLDER_ORG_ID
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
-
 
 @router.post(
     "/extract",
@@ -54,9 +39,9 @@ async def _get_org_id() -> UUID:
 async def save_extracted_data(
     request: ExtractDataRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ):
-    result = await service.save_extracted_data(db, org_id, request)
+    result = await service.save_extracted_data(db, current_user["org_id"], request)
     return SuccessResponse(data=result)
 
 
@@ -72,7 +57,7 @@ async def quick_research(
     category: str | None = Query(None),
     marketplace: AmazonMarketplace = Query(AmazonMarketplace.US),
     db: AsyncSession = Depends(get_db),
-    org_id: UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ):
     query = QuickResearchQuery(
         asin=asin,
@@ -80,7 +65,7 @@ async def quick_research(
         category=category,
         marketplace=marketplace,
     )
-    result = await service.get_quick_research(db, org_id, query)
+    result = await service.get_quick_research(db, current_user["org_id"], query)
     return SuccessResponse(data=result)
 
 
@@ -94,7 +79,7 @@ async def quick_research(
 async def save_clip(
     request: ClipSaveRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ):
-    result = await service.save_clip(db, org_id, request)
+    result = await service.save_clip(db, current_user["org_id"], request)
     return SuccessResponse(data=result)

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { extractApiError } from "@/hooks/use-api";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,6 +85,20 @@ interface CreateProjectStepProps {
   genre: string;
   setGenre: (v: string) => void;
   isCreated: boolean;
+  touched: Record<string, boolean>;
+  onBlur: (field: string) => void;
+}
+
+function getProjectTitleError(title: string): string | undefined {
+  const trimmed = title.trim();
+  if (!trimmed) return "Project title is required.";
+  if (trimmed.length < 3) return "Project title must be at least 3 characters.";
+  return undefined;
+}
+
+function getGenreError(genre: string): string | undefined {
+  if (!genre) return "Please select a genre.";
+  return undefined;
 }
 
 function CreateProjectStep({
@@ -94,7 +109,12 @@ function CreateProjectStep({
   genre,
   setGenre,
   isCreated,
+  touched,
+  onBlur,
 }: CreateProjectStepProps) {
+  const titleError = touched.title ? getProjectTitleError(title) : undefined;
+  const genreError = touched.genre ? getGenreError(genre) : undefined;
+
   return (
     <div className="space-y-4 py-2">
       <div className="flex items-center gap-3 mb-4">
@@ -119,6 +139,8 @@ function CreateProjectStep({
             placeholder="My First Book"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => onBlur("title")}
+            error={titleError}
           />
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Project Type</label>
@@ -135,8 +157,18 @@ function CreateProjectStep({
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Genre</label>
-            <Select value={genre} onValueChange={setGenre}>
-              <SelectTrigger>
+            <Select
+              value={genre}
+              onValueChange={(v) => {
+                setGenre(v);
+                onBlur("genre");
+              }}
+            >
+              <SelectTrigger
+                className={cn(
+                  genreError && "border-destructive focus:ring-destructive"
+                )}
+              >
                 <SelectValue placeholder="Select genre" />
               </SelectTrigger>
               <SelectContent>
@@ -147,6 +179,9 @@ function CreateProjectStep({
                 <SelectItem value="self-help">Self-Help</SelectItem>
               </SelectContent>
             </Select>
+            {genreError && (
+              <p className="text-sm text-destructive">{genreError}</p>
+            )}
           </div>
         </>
       )}
@@ -164,6 +199,16 @@ interface ConnectKDPStepProps {
   isConnecting: boolean;
   isConnected: boolean;
   onConnect: () => void;
+  touched: Record<string, boolean>;
+  onBlur: (field: string) => void;
+}
+
+function getKdpEmailError(email: string): string | undefined {
+  const trimmed = email.trim();
+  if (!trimmed) return undefined; // KDP step is optional, email only required for connect
+  // Basic email check
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Please enter a valid email address.";
+  return undefined;
 }
 
 function ConnectKDPStep({
@@ -172,7 +217,11 @@ function ConnectKDPStep({
   isConnecting,
   isConnected,
   onConnect,
+  touched,
+  onBlur,
 }: ConnectKDPStepProps) {
+  const emailError = touched.kdpEmail ? getKdpEmailError(kdpEmail) : undefined;
+
   return (
     <div className="space-y-4 py-2">
       <div className="flex items-center gap-3 mb-4">
@@ -198,6 +247,8 @@ function ConnectKDPStep({
             placeholder="your-kdp-email@example.com"
             value={kdpEmail}
             onChange={(e) => setKdpEmail(e.target.value)}
+            onBlur={() => onBlur("kdpEmail")}
+            error={emailError}
           />
           <div className="rounded-lg border border-dashed p-6 text-center">
             <p className="text-sm text-muted-foreground mb-3">
@@ -207,7 +258,7 @@ function ConnectKDPStep({
             <Button
               variant="outline"
               onClick={onConnect}
-              disabled={isConnecting || !kdpEmail.trim()}
+              disabled={isConnecting || !kdpEmail.trim() || !!emailError}
             >
               {isConnecting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -319,6 +370,13 @@ export default function OnboardingPage() {
   // -- Step 4 state: AI Generation --
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
 
+  // -- Field-level touched tracking for validation UX --
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const handleFieldBlur = useCallback((field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  }, []);
+
   // -- Mutations --
 
   // Step 2: Create a project via POST /api/v1/books
@@ -396,10 +454,18 @@ export default function OnboardingPage() {
 
   const handleCreateProject = useCallback(async () => {
     if (projectCreated) return; // Already created, just advance
-    if (!bookTitle.trim()) {
-      toast.error("Please enter a project title.");
+
+    // Mark all project fields as touched to reveal errors
+    setTouched((prev) => ({ ...prev, title: true, genre: true }));
+
+    const titleErr = getProjectTitleError(bookTitle);
+    const genreErr = getGenreError(genre);
+
+    if (titleErr || genreErr) {
+      toast.error(titleErr || genreErr || "Please fix the errors before continuing.");
       throw new Error("Validation failed");
     }
+
     await createProjectMutation.mutateAsync({
       title: bookTitle.trim(),
       type: projectType,
@@ -443,6 +509,8 @@ export default function OnboardingPage() {
           genre={genre}
           setGenre={setGenre}
           isCreated={projectCreated}
+          touched={touched}
+          onBlur={handleFieldBlur}
         />
       ),
       onBeforeNext: handleCreateProject,
@@ -458,6 +526,8 @@ export default function OnboardingPage() {
           isConnecting={connectKdpMutation.isPending}
           isConnected={kdpConnected}
           onConnect={handleConnectKdp}
+          touched={touched}
+          onBlur={handleFieldBlur}
         />
       ),
       isOptional: true,

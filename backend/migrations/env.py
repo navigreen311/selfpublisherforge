@@ -23,6 +23,14 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Override sqlalchemy.url from the DATABASE_URL environment variable if set;
+# otherwise fall back to a local development default.
+database_url = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/selfpublisherforge",
+)
+config.set_main_option("sqlalchemy.url", database_url)
+
 target_metadata = Base.metadata
 
 

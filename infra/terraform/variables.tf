@@ -225,10 +225,25 @@ variable "log_retention_days" {
   default     = 30
 }
 
+variable "flow_log_retention_days" {
+  description = "CloudWatch log retention in days for VPC Flow Logs"
+  type        = number
+  default     = 14
+}
+
 variable "alarm_sns_topic_arn" {
   description = "ARN of the SNS topic for CloudWatch alarms"
   type        = string
   default     = ""
+}
+
+# -----------------------------------------------------------------------------
+# WAF
+# -----------------------------------------------------------------------------
+variable "waf_rate_limit" {
+  description = "Maximum number of requests per 5-minute period per IP before WAF blocks"
+  type        = number
+  default     = 2000
 }
 
 # -----------------------------------------------------------------------------

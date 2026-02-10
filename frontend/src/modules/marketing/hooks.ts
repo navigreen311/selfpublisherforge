@@ -1,9 +1,15 @@
 /**
  * React Query hooks for the Marketing & Launch Command module.
+ *
+ * Response conventions:
+ *   - Single-item endpoints return SuccessResponse<T> = { data: T }   -> use `resp.data.data`
+ *   - Paginated endpoints return PaginatedResponse<T> = { items, … }  -> use `resp.data`
+ *   - Direct-shape endpoints (e.g. SocialCalendar)                    -> use `resp.data`
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { SuccessResponse } from "@/types/api";
 
 const MARKETING_KEYS = {
   launchPlans: ["marketing", "launch-plans"] as const,
@@ -188,8 +194,8 @@ export function useLaunchPlan(id: string) {
   return useQuery({
     queryKey: MARKETING_KEYS.launchPlan(id),
     queryFn: async () => {
-      const { data } = await api.get(`/api/v1/marketing/launch-plans/${id}`);
-      return data.data as LaunchPlan;
+      const { data } = await api.get<SuccessResponse<LaunchPlan>>(`/api/v1/marketing/launch-plans/${id}`);
+      return data.data;
     },
     enabled: !!id,
   });
@@ -200,8 +206,8 @@ export function useGenerateLaunchPlan() {
 
   return useMutation({
     mutationFn: async (request: GenerateLaunchPlanRequest) => {
-      const { data } = await api.post("/api/v1/marketing/launch-plan/generate", request);
-      return data.data as LaunchPlan;
+      const { data } = await api.post<SuccessResponse<LaunchPlan>>("/api/v1/marketing/launch-plan/generate", request);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.launchPlans });
@@ -214,8 +220,8 @@ export function useUpdateLaunchPlan(id: string) {
 
   return useMutation({
     mutationFn: async (updates: Partial<LaunchPlan>) => {
-      const { data } = await api.patch(`/api/v1/marketing/launch-plans/${id}`, updates);
-      return data.data as LaunchPlan;
+      const { data } = await api.patch<SuccessResponse<LaunchPlan>>(`/api/v1/marketing/launch-plans/${id}`, updates);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.launchPlan(id) });
@@ -243,8 +249,8 @@ export function useCreateEmailSequence() {
 
   return useMutation({
     mutationFn: async (sequence: Partial<EmailSequence>) => {
-      const { data } = await api.post("/api/v1/marketing/email-sequences", sequence);
-      return data.data as EmailSequence;
+      const { data } = await api.post<SuccessResponse<EmailSequence>>("/api/v1/marketing/email-sequences", sequence);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequences });
@@ -257,8 +263,8 @@ export function useUpdateEmailSequence(id: string) {
 
   return useMutation({
     mutationFn: async (updates: Partial<EmailSequence>) => {
-      const { data } = await api.patch(`/api/v1/marketing/email-sequences/${id}`, updates);
-      return data.data as EmailSequence;
+      const { data } = await api.patch<SuccessResponse<EmailSequence>>(`/api/v1/marketing/email-sequences/${id}`, updates);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequences });
@@ -271,8 +277,8 @@ export function useTriggerEmailSend(sequenceId: string) {
 
   return useMutation({
     mutationFn: async (payload: { recipient_emails: string[]; personalization?: Record<string, string> }) => {
-      const { data } = await api.post(`/api/v1/marketing/email-sequences/${sequenceId}/send`, payload);
-      return data.data as EmailSequence;
+      const { data } = await api.post<SuccessResponse<EmailSequence>>(`/api/v1/marketing/email-sequences/${sequenceId}/send`, payload);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequences });
@@ -299,8 +305,8 @@ export function useGenerateSocialContent() {
 
   return useMutation({
     mutationFn: async (request: GenerateSocialContentRequest) => {
-      const { data } = await api.post("/api/v1/marketing/social/generate", request);
-      return data.data as SocialPost[];
+      const { data } = await api.post<SuccessResponse<SocialPost[]>>("/api/v1/marketing/social/generate", request);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.socialCalendar });
@@ -327,8 +333,8 @@ export function useCreateARCCampaign() {
 
   return useMutation({
     mutationFn: async (campaign: Partial<ARCCampaign> & { book_id: string; recipients?: { name: string; email: string }[] }) => {
-      const { data } = await api.post("/api/v1/marketing/arc", campaign);
-      return data.data as ARCCampaign;
+      const { data } = await api.post<SuccessResponse<ARCCampaign>>("/api/v1/marketing/arc", campaign);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaigns });
@@ -341,8 +347,8 @@ export function useSendARCCopies(campaignId: string) {
 
   return useMutation({
     mutationFn: async (payload: { recipient_ids?: string[]; custom_message?: string }) => {
-      const { data } = await api.post(`/api/v1/marketing/arc/${campaignId}/send`, payload);
-      return data.data as ARCCampaign;
+      const { data } = await api.post<SuccessResponse<ARCCampaign>>(`/api/v1/marketing/arc/${campaignId}/send`, payload);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaigns });

@@ -2,10 +2,83 @@
 from __future__ import annotations
 
 import uuid
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_current_user
+from app.database import get_db
+
+_TEST_ORG_ID = uuid.uuid4()
+_TEST_USER = {"user_id": str(uuid.uuid4()), "org_id": _TEST_ORG_ID, "role": "admin"}
+
+# Mock return value for DALL-E image generation
+_MOCK_IMAGE_RESULT = {
+    "image_url": "https://example.com/generated-cover.png",
+    "thumbnail_url": "https://example.com/generated-cover-thumb.png",
+    "prompt_used": "test prompt",
+    "width_px": 1600,
+    "height_px": 2560,
+    "dpi": 300,
+    "status": "success",
+    "error": None,
+}
+
+
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession):
+    """Yield an HTTP test client with auth and DB overridden."""
+    from app.main import create_app
+
+    async def _override_get_db():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    app = create_app()
+    app.dependency_overrides[get_current_user] = lambda: _TEST_USER
+    app.dependency_overrides[get_db] = _override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _mock_image_generation():
+    """Mock DALL-E image generation to avoid external API calls."""
+
+    async def _mock_generate(prompt, dimensions=None, platform=None):
+        return {**_MOCK_IMAGE_RESULT, "prompt_used": prompt}
+
+    async def _mock_variations(original_prompt, variation_type, count=3, instructions=None):
+        return [
+            {
+                **_MOCK_IMAGE_RESULT,
+                "prompt_used": f"{original_prompt} variation {i}",
+                "variation_index": i,
+                "variation_type": variation_type,
+            }
+            for i in range(count)
+        ]
+
+    with (
+        patch(
+            "app.modules.cover_design.service.generate_cover_image",
+            side_effect=_mock_generate,
+        ),
+        patch(
+            "app.modules.cover_design.service.generate_variations",
+            side_effect=_mock_variations,
+        ),
+    ):
+        yield
 
 
 # ---------------------------------------------------------------------------

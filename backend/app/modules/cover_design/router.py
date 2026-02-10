@@ -15,6 +15,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.cover_design import service
 from app.modules.cover_design.schemas import (
@@ -30,25 +31,6 @@ from shared.contracts.api import SuccessResponse
 
 router = APIRouter(prefix="/covers", tags=["covers"])
 
-# ---------------------------------------------------------------------------
-# Placeholder dependency — will be replaced by real auth in production
-# ---------------------------------------------------------------------------
-
-_PLACEHOLDER_ORG_ID = UUID("00000000-0000-0000-0000-000000000001")
-
-
-async def _get_org_id() -> UUID:
-    """Return the current organisation ID.
-
-    In production this is extracted from the JWT token via the auth middleware.
-    """
-    return _PLACEHOLDER_ORG_ID
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
-
 
 @router.post(
     "/generate",
@@ -60,9 +42,9 @@ async def _get_org_id() -> UUID:
 async def generate_cover(
     request: CoverGenerateRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ):
-    cover = await service.generate_cover(db, org_id, request)
+    cover = await service.generate_cover(db, current_user["org_id"], request)
     return SuccessResponse(data=cover)
 
 
@@ -103,10 +85,10 @@ async def create_variations(
     cover_id: UUID,
     request: CoverVariationRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ):
     try:
-        variations = await service.create_variations(db, org_id, cover_id, request)
+        variations = await service.create_variations(db, current_user["org_id"], cover_id, request)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return SuccessResponse(data=variations)
@@ -121,9 +103,9 @@ async def create_variations(
 async def list_covers_for_book(
     book_id: UUID,
     db: AsyncSession = Depends(get_db),
-    org_id: UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ):
-    covers = await service.list_covers_for_book(db, org_id, book_id)
+    covers = await service.list_covers_for_book(db, current_user["org_id"], book_id)
     return SuccessResponse(data=covers)
 
 
@@ -136,9 +118,9 @@ async def list_covers_for_book(
 async def delete_cover(
     cover_id: UUID,
     db: AsyncSession = Depends(get_db),
-    org_id: UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ):
-    deleted = await service.delete_cover(db, org_id, cover_id)
+    deleted = await service.delete_cover(db, current_user["org_id"], cover_id)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

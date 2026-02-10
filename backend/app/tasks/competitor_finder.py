@@ -155,11 +155,16 @@ def process_batch_analysis(
 def check_competitor_alerts(self, org_id: str | None = None) -> dict:
     """Periodic task to check for competitor changes and generate alerts.
 
-    Checks for:
-    - Price changes (significant drops or increases)
-    - BSR shifts (significant rank improvements or drops)
-    - New books appearing in tracked categories
-    - Review count spikes
+    Compares each tracked competitor book's current data against its most
+    recent historical snapshot and fires alerts when thresholds are exceeded.
+
+    Alert conditions:
+    - Price change > 20%: price_change alert (critical if > 50%)
+    - BSR improvement > 50 positions: bsr_shift alert
+    - New reviews (review count increase): review_spike alert
+    - Rating drop > 0.3 stars: rating_drop alert (critical if > 1.0)
+
+    Returns a dict with books_checked, alerts_created, and alert_summary.
     """
     import asyncio
     from app.database import async_session
@@ -168,6 +173,11 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
     from sqlalchemy import select
 
     logger.info("Running competitor alert check, org_id=%s", org_id)
+
+    # Alert thresholds
+    PRICE_CHANGE_THRESHOLD = 0.20   # 20% price change
+    BSR_IMPROVEMENT_THRESHOLD = 50  # 50 positions improvement
+    RATING_DROP_THRESHOLD = 0.3     # 0.3 star drop
 
     async def _run():
         async with async_session() as db:
@@ -181,19 +191,215 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                 books = list(result.scalars().all())
 
                 alerts_created = 0
+                alert_summary: list[str] = []
 
                 for book in books:
-                    # ASSUMPTION: In a production system, we would compare current
-                    # data with historical snapshots stored in a separate table.
-                    # For now, this is a placeholder for the alert detection logic.
-                    pass
+                    # Extract the most recent historical snapshot from bsr_history.
+                    # bsr_history is a list of dicts: [{"date": ..., "bsr": ..., "price": ...}, ...]
+                    history = book.bsr_history or []
+                    if not history:
+                        continue
+
+                    # The last entry in bsr_history is the most recent snapshot
+                    latest_snapshot = history[-1] if isinstance(history, list) else None
+                    if not latest_snapshot or not isinstance(latest_snapshot, dict):
+                        continue
+
+                    snapshot_price = latest_snapshot.get("price")
+                    snapshot_bsr = latest_snapshot.get("bsr")
+
+                    # Also pull previous review count and rating from metadata_json
+                    # if available, since bsr_history only tracks bsr and price.
+                    meta = book.metadata_json or {}
+                    snapshot_reviews_count = meta.get("last_reviews_count")
+                    snapshot_rating = meta.get("last_rating")
+
+                    # --- Price change detection (>20% change) ---
+                    if (
+                        book.price is not None
+                        and snapshot_price is not None
+                        and float(snapshot_price) > 0
+                    ):
+                        current_price = float(book.price)
+                        previous_price = float(snapshot_price)
+                        price_pct_change = abs(current_price - previous_price) / previous_price
+
+                        if price_pct_change > PRICE_CHANGE_THRESHOLD:
+                            direction = "increased" if current_price > previous_price else "decreased"
+                            severity = (
+                                AlertSeverity.CRITICAL
+                                if price_pct_change > 0.50
+                                else AlertSeverity.WARNING
+                            )
+                            alert = CompetitorAlert(
+                                org_id=book.org_id,
+                                book_id=book.id,
+                                alert_type=AlertType.PRICE_CHANGE.value,
+                                severity=severity.value,
+                                title=f"Price {direction} {price_pct_change:.0%} for '{book.title}'",
+                                description=(
+                                    f"Price {direction} from ${previous_price:.2f} to "
+                                    f"${current_price:.2f} ({price_pct_change:.0%} change)."
+                                ),
+                                data={
+                                    "previous_price": previous_price,
+                                    "current_price": current_price,
+                                    "change_pct": round(price_pct_change, 4),
+                                    "direction": direction,
+                                    "asin": book.asin,
+                                },
+                            )
+                            db.add(alert)
+                            alerts_created += 1
+                            msg = (
+                                f"Price {direction} {price_pct_change:.0%} for "
+                                f"'{book.title}' (ASIN: {book.asin})"
+                            )
+                            alert_summary.append(msg)
+                            logger.info("Alert generated: %s", msg)
+
+                    # --- BSR improvement detection (>50 positions) ---
+                    if (
+                        book.bsr_current is not None
+                        and snapshot_bsr is not None
+                    ):
+                        current_bsr = int(book.bsr_current)
+                        previous_bsr = int(snapshot_bsr)
+                        bsr_improvement = previous_bsr - current_bsr
+
+                        if bsr_improvement > BSR_IMPROVEMENT_THRESHOLD:
+                            severity = (
+                                AlertSeverity.CRITICAL
+                                if bsr_improvement > 500
+                                else AlertSeverity.WARNING
+                                if bsr_improvement > 100
+                                else AlertSeverity.INFO
+                            )
+                            alert = CompetitorAlert(
+                                org_id=book.org_id,
+                                book_id=book.id,
+                                alert_type=AlertType.BSR_SHIFT.value,
+                                severity=severity.value,
+                                title=f"BSR improved by {bsr_improvement} positions for '{book.title}'",
+                                description=(
+                                    f"BSR improved from #{previous_bsr:,} to #{current_bsr:,} "
+                                    f"({bsr_improvement:,} positions). This competitor is gaining traction."
+                                ),
+                                data={
+                                    "previous_bsr": previous_bsr,
+                                    "current_bsr": current_bsr,
+                                    "improvement": bsr_improvement,
+                                    "asin": book.asin,
+                                },
+                            )
+                            db.add(alert)
+                            alerts_created += 1
+                            msg = (
+                                f"BSR improved by {bsr_improvement:,} positions for "
+                                f"'{book.title}' (ASIN: {book.asin})"
+                            )
+                            alert_summary.append(msg)
+                            logger.info("Alert generated: %s", msg)
+
+                    # --- New reviews detection (review count increase) ---
+                    if (
+                        snapshot_reviews_count is not None
+                        and book.reviews_count > int(snapshot_reviews_count)
+                    ):
+                        new_review_count = book.reviews_count - int(snapshot_reviews_count)
+                        severity = (
+                            AlertSeverity.WARNING
+                            if new_review_count >= 10
+                            else AlertSeverity.INFO
+                        )
+                        alert = CompetitorAlert(
+                            org_id=book.org_id,
+                            book_id=book.id,
+                            alert_type=AlertType.REVIEW_SPIKE.value,
+                            severity=severity.value,
+                            title=f"{new_review_count} new review(s) for '{book.title}'",
+                            description=(
+                                f"Review count went from {int(snapshot_reviews_count):,} to "
+                                f"{book.reviews_count:,} ({new_review_count:,} new)."
+                            ),
+                            data={
+                                "previous_reviews": int(snapshot_reviews_count),
+                                "current_reviews": book.reviews_count,
+                                "new_reviews": new_review_count,
+                                "asin": book.asin,
+                            },
+                        )
+                        db.add(alert)
+                        alerts_created += 1
+                        msg = (
+                            f"{new_review_count} new review(s) for "
+                            f"'{book.title}' (ASIN: {book.asin})"
+                        )
+                        alert_summary.append(msg)
+                        logger.info("Alert generated: %s", msg)
+
+                    # --- Rating drop detection (>0.3 stars) ---
+                    if (
+                        book.rating is not None
+                        and snapshot_rating is not None
+                    ):
+                        current_rating = float(book.rating)
+                        previous_rating = float(snapshot_rating)
+                        rating_drop = previous_rating - current_rating
+
+                        if rating_drop > RATING_DROP_THRESHOLD:
+                            severity = (
+                                AlertSeverity.CRITICAL
+                                if rating_drop > 1.0
+                                else AlertSeverity.WARNING
+                            )
+                            alert = CompetitorAlert(
+                                org_id=book.org_id,
+                                book_id=book.id,
+                                alert_type="rating_drop",
+                                severity=severity.value,
+                                title=f"Rating dropped by {rating_drop:.1f} stars for '{book.title}'",
+                                description=(
+                                    f"Rating fell from {previous_rating:.1f} to "
+                                    f"{current_rating:.1f} ({rating_drop:.1f} star drop)."
+                                ),
+                                data={
+                                    "previous_rating": previous_rating,
+                                    "current_rating": current_rating,
+                                    "drop": round(rating_drop, 2),
+                                    "asin": book.asin,
+                                },
+                            )
+                            db.add(alert)
+                            alerts_created += 1
+                            msg = (
+                                f"Rating dropped by {rating_drop:.1f} stars for "
+                                f"'{book.title}' (ASIN: {book.asin})"
+                            )
+                            alert_summary.append(msg)
+                            logger.info("Alert generated: %s", msg)
+
+                    # Update metadata_json with current values as the new baseline
+                    # for next alert check cycle (reviews_count and rating).
+                    updated_meta = dict(meta)
+                    updated_meta["last_reviews_count"] = book.reviews_count
+                    if book.rating is not None:
+                        updated_meta["last_rating"] = float(book.rating)
+                    book.metadata_json = updated_meta
 
                 await db.commit()
+
+                logger.info(
+                    "Competitor alert check complete: %d books checked, %d alerts created",
+                    len(books),
+                    alerts_created,
+                )
 
                 return {
                     "status": "completed",
                     "books_checked": len(books),
                     "alerts_created": alerts_created,
+                    "alert_summary": alert_summary,
                 }
             except Exception as e:
                 await db.rollback()

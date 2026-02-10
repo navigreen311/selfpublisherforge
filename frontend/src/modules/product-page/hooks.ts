@@ -1,7 +1,16 @@
 "use client";
 
+/**
+ * React Query hooks for the Product Page Conversion Lab.
+ *
+ * All product-page endpoints return SuccessResponse<T> = { data: T }.
+ * After Axios destructuring (`const { data } = await api.get<SuccessResponse<T>>(...)`),
+ * the inner payload is accessed via `data.data`.
+ */
+
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { SuccessResponse } from "@/types/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -228,7 +237,7 @@ const BASE = "/api/v1/product-page";
 export function useAnalyzeListing() {
   return useMutation<ListingAnalysis, Error, AnalyzeListingRequest>({
     mutationFn: async (req) => {
-      const { data } = await api.post(`${BASE}/analyze`, req);
+      const { data } = await api.post<SuccessResponse<ListingAnalysis>>(`${BASE}/analyze`, req);
       return data.data;
     },
   });
@@ -238,7 +247,7 @@ export function useAnalyzeListing() {
 export function useGenerateBlurb() {
   return useMutation<BlurbGenerateResponse, Error, GenerateBlurbRequest>({
     mutationFn: async (req) => {
-      const { data } = await api.post(`${BASE}/blurb/generate`, req);
+      const { data } = await api.post<SuccessResponse<BlurbGenerateResponse>>(`${BASE}/blurb/generate`, req);
       return data.data;
     },
   });
@@ -248,7 +257,7 @@ export function useGenerateBlurb() {
 export function useCreateABTest() {
   return useMutation<ABTestResponse, Error, CreateABTestRequest>({
     mutationFn: async (req) => {
-      const { data } = await api.post(`${BASE}/blurb/ab-test`, req);
+      const { data } = await api.post<SuccessResponse<ABTestResponse>>(`${BASE}/blurb/ab-test`, req);
       return data.data;
     },
   });
@@ -259,7 +268,7 @@ export function useABTestResults(testId: string | undefined) {
   return useQuery<ABTestResponse>({
     queryKey: ["ab-test", testId],
     queryFn: async () => {
-      const { data } = await api.get(`${BASE}/blurb/ab-test/${testId}`);
+      const { data } = await api.get<SuccessResponse<ABTestResponse>>(`${BASE}/blurb/ab-test/${testId}`);
       return data.data;
     },
     enabled: !!testId,
@@ -270,7 +279,7 @@ export function useABTestResults(testId: string | undefined) {
 export function useAnalyzeLookInside() {
   return useMutation<LookInsideAnalysis, Error, LookInsideAnalyzeRequest>({
     mutationFn: async (req) => {
-      const { data } = await api.post(`${BASE}/look-inside/analyze`, req);
+      const { data } = await api.post<SuccessResponse<LookInsideAnalysis>>(`${BASE}/look-inside/analyze`, req);
       return data.data;
     },
   });
@@ -280,7 +289,7 @@ export function useAnalyzeLookInside() {
 export function useMobileCheck() {
   return useMutation<MobileCheckResult, Error, MobileCheckRequest>({
     mutationFn: async (req) => {
-      const { data } = await api.post(`${BASE}/mobile-check`, req);
+      const { data } = await api.post<SuccessResponse<MobileCheckResult>>(`${BASE}/mobile-check`, req);
       return data.data;
     },
   });
@@ -291,7 +300,7 @@ export function useConversionScores(bookId: string | undefined) {
   return useQuery<ConversionScores>({
     queryKey: ["conversion-scores", bookId],
     queryFn: async () => {
-      const { data } = await api.get(`${BASE}/scores/${bookId}`);
+      const { data } = await api.get<SuccessResponse<ConversionScores>>(`${BASE}/scores/${bookId}`);
       return data.data;
     },
     enabled: !!bookId,

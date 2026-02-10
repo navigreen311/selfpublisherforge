@@ -1,14 +1,16 @@
 """AI cover generation module.
 
-Builds prompts from genre/mood/elements, calls the image-generation API
-(OpenAI DALL-E 3 with a Midjourney-style placeholder), and post-processes
-the result (resize, thumbnail, upload to S3).
+Builds prompts from genre/mood/elements, calls the OpenAI DALL-E 3
+image-generation API, and post-processes the result (resize, thumbnail,
+upload to S3).
 """
 from __future__ import annotations
 
 import logging
-import uuid
+import os
 from typing import Any
+
+import openai
 
 from app.config import get_settings
 from app.modules.cover_design.schemas import (
@@ -164,8 +166,16 @@ _GENRE_PROMPT_FRAGMENTS: dict[CoverGenre, str] = {
 
 
 # ---------------------------------------------------------------------------
-# Image generation (DALL-E 3 / placeholder)
+# Image generation (DALL-E 3)
 # ---------------------------------------------------------------------------
+
+
+def _get_openai_api_key() -> str | None:
+    """Return the OpenAI API key if it is configured, else ``None``."""
+    key = getattr(settings, "OPENAI_API_KEY", None) or os.getenv("OPENAI_API_KEY")
+    if key and key not in ("", "YOUR_OPENAI_API_KEY_HERE"):
+        return key
+    return None
 
 
 async def generate_cover_image(
@@ -173,54 +183,130 @@ async def generate_cover_image(
     dimensions: CoverDimensions | None = None,
     platform: CoverPlatform = CoverPlatform.AMAZON_KDP,
 ) -> dict[str, Any]:
-    """Call the image generation API and return image metadata.
+    """Call the OpenAI DALL-E 3 API and return image metadata.
 
     Returns a dict with keys:
-        - image_url: str — URL (or local path) of the generated image
-        - thumbnail_url: str | None — URL of a smaller thumbnail
-        - prompt_used: str — the prompt actually sent
+        - image_url: str — URL of the generated image
+        - thumbnail_url: str | None — URL of a smaller preview
+        - prompt_used: str — the prompt actually sent (or DALL-E revised prompt)
         - width_px, height_px, dpi: int — final dimensions
-
-    NOTE: In production this calls OpenAI DALL-E 3 (or a Midjourney proxy).
-    The current implementation returns a *placeholder* so that the rest of the
-    pipeline can be tested without burning API credits.
+        - status: str — "success" or "error"
+        - error: str | None — error message when status is "error"
     """
     if dimensions is None:
         dimensions = get_dimensions_for_platform(platform)
 
-    # Map our desired dimensions to DALL-E 3 supported sizes
+    # Map our desired dimensions to a DALL-E 3 supported size string
     dalle_size = _pick_dalle_size(dimensions.width_px, dimensions.height_px)
 
-    # ----- Placeholder implementation -----
-    # In production, uncomment the openai call below:
-    #
-    # import openai
-    # client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-    # response = await client.images.generate(
-    #     model="dall-e-3",
-    #     prompt=prompt,
-    #     size=dalle_size,
-    #     quality="hd",
-    #     n=1,
-    # )
-    # image_url = response.data[0].url
-    # revised_prompt = response.data[0].revised_prompt
+    # Verify the API key is available
+    api_key = _get_openai_api_key()
+    if api_key is None:
+        logger.warning(
+            "OPENAI_API_KEY is not configured — cannot generate cover image. "
+            "Set the key in your .env file or environment variables."
+        )
+        return {
+            "image_url": None,
+            "thumbnail_url": None,
+            "prompt_used": prompt,
+            "width_px": dimensions.width_px,
+            "height_px": dimensions.height_px,
+            "dpi": dimensions.dpi,
+            "status": "error",
+            "error": "OPENAI_API_KEY is not configured.",
+        }
 
-    image_id = uuid.uuid4().hex[:12]
-    image_url = f"https://placeholder.selfpublisherforge.com/covers/{image_id}.png"
-    thumbnail_url = f"https://placeholder.selfpublisherforge.com/covers/{image_id}_thumb.png"
-    revised_prompt = prompt
+    try:
+        client = openai.AsyncOpenAI(api_key=api_key)
+        response = await client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size=dalle_size,
+            quality="hd",
+            n=1,
+        )
 
-    logger.info("Generated placeholder cover image: %s", image_url)
+        image_url = response.data[0].url
+        revised_prompt = response.data[0].revised_prompt or prompt
 
-    return {
-        "image_url": image_url,
-        "thumbnail_url": thumbnail_url,
-        "prompt_used": revised_prompt,
-        "width_px": dimensions.width_px,
-        "height_px": dimensions.height_px,
-        "dpi": dimensions.dpi,
-    }
+        # Use the same URL for the thumbnail for now; downstream
+        # post-processing (S3 upload / resize) can produce a real thumbnail.
+        thumbnail_url = image_url
+
+        logger.info("Generated DALL-E 3 cover image successfully.")
+
+        return {
+            "image_url": image_url,
+            "thumbnail_url": thumbnail_url,
+            "prompt_used": revised_prompt,
+            "width_px": dimensions.width_px,
+            "height_px": dimensions.height_px,
+            "dpi": dimensions.dpi,
+            "status": "success",
+            "error": None,
+        }
+
+    except openai.AuthenticationError:
+        logger.warning("OpenAI authentication failed — check your OPENAI_API_KEY.")
+        return {
+            "image_url": None,
+            "thumbnail_url": None,
+            "prompt_used": prompt,
+            "width_px": dimensions.width_px,
+            "height_px": dimensions.height_px,
+            "dpi": dimensions.dpi,
+            "status": "error",
+            "error": "OpenAI authentication failed. Please verify your API key.",
+        }
+    except openai.RateLimitError:
+        logger.warning("OpenAI rate limit reached while generating cover image.")
+        return {
+            "image_url": None,
+            "thumbnail_url": None,
+            "prompt_used": prompt,
+            "width_px": dimensions.width_px,
+            "height_px": dimensions.height_px,
+            "dpi": dimensions.dpi,
+            "status": "error",
+            "error": "Rate limit reached. Please try again later.",
+        }
+    except openai.BadRequestError as exc:
+        logger.warning("OpenAI rejected the cover prompt: %s", exc)
+        return {
+            "image_url": None,
+            "thumbnail_url": None,
+            "prompt_used": prompt,
+            "width_px": dimensions.width_px,
+            "height_px": dimensions.height_px,
+            "dpi": dimensions.dpi,
+            "status": "error",
+            "error": f"Image generation request was rejected: {exc}",
+        }
+    except openai.APIError as exc:
+        logger.exception("OpenAI API error during cover generation: %s", exc)
+        return {
+            "image_url": None,
+            "thumbnail_url": None,
+            "prompt_used": prompt,
+            "width_px": dimensions.width_px,
+            "height_px": dimensions.height_px,
+            "dpi": dimensions.dpi,
+            "status": "error",
+            "error": f"OpenAI API error: {exc}",
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Unexpected error during cover image generation: %s", exc)
+        return {
+            "image_url": None,
+            "thumbnail_url": None,
+            "prompt_used": prompt,
+            "width_px": dimensions.width_px,
+            "height_px": dimensions.height_px,
+            "dpi": dimensions.dpi,
+            "status": "error",
+            "error": f"Unexpected error: {exc}",
+        }
 
 
 def _pick_dalle_size(width: int, height: int) -> str:

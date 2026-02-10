@@ -19,8 +19,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.core.dependencies import get_current_user
 from app.database import Base, get_db
 from app.main import create_app
+
+_TEST_USER = {"user_id": uuid.uuid4(), "org_id": uuid.uuid4(), "role": "admin"}
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +68,7 @@ async def client(engine: AsyncEngine) -> AsyncGenerator[AsyncClient, None]:
 
     app = create_app()
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: _TEST_USER
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

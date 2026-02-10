@@ -51,8 +51,8 @@ resource "aws_elasticache_cluster" "redis" {
   security_group_ids   = [aws_security_group.redis.id]
 
   snapshot_retention_limit = var.environment == "production" ? 7 : 1
-  snapshot_window          = "02:00-03:00"
-  maintenance_window       = "sun:03:00-sun:04:00"
+  snapshot_window          = "05:00-06:00"   # Avoids overlap with RDS backup window (02:00-03:00)
+  maintenance_window       = "sun:06:00-sun:07:00"  # Avoids overlap with snapshot and RDS windows
 
   auto_minor_version_upgrade = true
 

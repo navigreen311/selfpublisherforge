@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.database import get_db
+from app.modules.llm_orchestration.providers.anthropic import AnthropicProvider
+from app.modules.llm_orchestration.providers.base import LLMRequest
+from app.modules.llm_orchestration.router_config import ModelID
 from app.modules.style_cloning import service
 from app.modules.style_cloning.schemas import (
     AnalyzeRequest,
@@ -20,6 +24,8 @@ from app.modules.style_cloning.schemas import (
     ProfileListResponse,
     ProfileResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -128,24 +134,78 @@ async def generate_sample(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Generate sample text using the voice profile.
-
-    In production this calls the LLM orchestration layer with the style
-    card injected as system context.  For now we return a placeholder.
-    """
+    """Generate sample text using the voice profile's style card as LLM context."""
     org_id = current_user["org_id"]
     profile = await service.get_profile(db, profile_id, org_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
     if profile.style_card is None:
         raise HTTPException(status_code=400, detail="Profile not analyzed yet")
+
+    # Build system prompt from style card fields
+    card = profile.style_card
+    system_parts = [
+        "You are a ghostwriter. Your task is to write text that precisely matches "
+        "the following author's voice and style.",
+        f"\nStyle summary: {card.summary}",
+    ]
+    if card.tone:
+        system_parts.append(f"Tone: {card.tone}")
+    if card.pacing:
+        system_parts.append(f"Pacing: {card.pacing}")
+    if card.vocabulary_level:
+        system_parts.append(f"Vocabulary level: {card.vocabulary_level}")
+    if card.sentence_style:
+        system_parts.append(f"Sentence style: {card.sentence_style}")
+    if card.paragraph_style:
+        system_parts.append(f"Paragraph style: {card.paragraph_style}")
+    if card.rhetorical_style:
+        system_parts.append(f"Rhetorical style: {card.rhetorical_style}")
+    if card.dialogue_style:
+        system_parts.append(f"Dialogue style: {card.dialogue_style}")
+    system_parts.append(
+        f"\nWrite approximately {body.max_words} words. "
+        "Stay faithful to the described voice. Do not add meta-commentary."
+    )
+    system_prompt = "\n".join(system_parts)
+
+    # Call the LLM via the Anthropic provider
+    try:
+        provider = AnthropicProvider()
+        request = LLMRequest(
+            prompt=body.prompt,
+            system_prompt=system_prompt,
+            model_id=ModelID.CLAUDE_SONNET.value,
+            max_tokens=body.max_words * 6,  # generous token budget (~1.5 tokens/word * 4x margin)
+            temperature=0.7,
+        )
+        response = await provider.generate(request)
+
+        if not response.succeeded:
+            error_detail = response.metadata.get("error", "LLM generation failed")
+            logger.error(
+                "LLM generation failed for profile %s: %s", profile_id, error_detail
+            )
+            raise HTTPException(
+                status_code=502,
+                detail=f"Text generation failed: {error_detail}",
+            )
+
+        generated_text = response.content
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Unexpected error during LLM generation for profile %s", profile_id)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Text generation failed: {exc}",
+        )
+
     return {
         "profile_id": str(profile_id),
         "prompt": body.prompt,
-        "generated_text": (
-            f"[Sample generation placeholder — would use LLM with style card: "
-            f"{profile.style_card.summary[:120]}...]"
-        ),
+        "generated_text": generated_text,
     }
 
 

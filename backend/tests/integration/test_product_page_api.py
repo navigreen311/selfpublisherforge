@@ -7,12 +7,111 @@ request validation, response shapes, and HTTP status codes.
 from __future__ import annotations
 
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_current_user
+from app.database import get_db
+from app.modules.product_page_lab.schemas import (
+    BlurbAnalysis,
+    CategoryAnalysis,
+    KeywordAnalysis,
+    ListingAnalysis,
+    PriceAnalysis,
+    Recommendation,
+    TitleAnalysis,
+)
 
 API_PREFIX = "/api/v1/product-page"
+
+_TEST_ORG_ID = uuid.uuid4()
+_TEST_USER = {"user_id": str(uuid.uuid4()), "org_id": _TEST_ORG_ID, "role": "admin"}
+
+
+def _make_listing_analysis(asin: str | None = None) -> ListingAnalysis:
+    """Build a realistic ``ListingAnalysis`` instance for mocking."""
+    return ListingAnalysis(
+        asin=asin,
+        title="Mock Title",
+        title_score=75.0,
+        blurb_score=68.0,
+        keyword_score=70.0,
+        category_score=60.0,
+        price_score=80.0,
+        overall_score=70.6,
+        title_analysis=TitleAnalysis(
+            score=75.0,
+            length=10,
+            has_keywords=True,
+            keyword_matches=["romance"],
+            power_words=["captivating"],
+            issues=[],
+        ),
+        blurb_analysis=BlurbAnalysis(
+            score=68.0,
+            word_count=50,
+            has_hook=True,
+            has_bullet_points=False,
+            has_cta=False,
+            has_html_formatting=False,
+            readability_grade=8.0,
+            emotional_words=["love"],
+            issues=[],
+        ),
+        keyword_analysis=KeywordAnalysis(
+            score=70.0,
+            keywords_found=["romance"],
+            keyword_density=1.5,
+            missing_high_value_keywords=[],
+            over_stuffed=False,
+        ),
+        category_analysis=CategoryAnalysis(
+            score=60.0,
+            current_categories=["Romance"],
+            suggested_categories=[],
+        ),
+        price_analysis=PriceAnalysis(
+            score=80.0,
+            current_price=3.99,
+            genre_avg_price=4.99,
+            suggested_range="$2.99 - $4.99",
+            issues=[],
+        ),
+        recommendations=[
+            Recommendation(
+                area="blurb",
+                severity="warning",
+                message="Blurb could be improved.",
+                suggestion="Add a call to action.",
+            ),
+        ],
+    )
+
+
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession):
+    """Yield an HTTP test client with auth and DB overridden."""
+    from app.main import create_app
+
+    async def _override_get_db():
+        try:
+            yield db_session
+            await db_session.commit()
+        except Exception:
+            await db_session.rollback()
+            raise
+
+    app = create_app()
+    app.dependency_overrides[get_current_user] = lambda: _TEST_USER
+    app.dependency_overrides[get_db] = _override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
 
 
 # ===========================================================================
@@ -24,10 +123,16 @@ class TestAnalyzeListing:
 
     @pytest.mark.asyncio
     async def test_analyze_with_asin(self, client: AsyncClient):
-        response = await client.post(
-            f"{API_PREFIX}/analyze",
-            json={"asin": "B09V2KKG1D"},
-        )
+        mock_result = _make_listing_analysis(asin="B09V2KKG1D")
+        with patch(
+            "app.modules.product_page_lab.router.service.analyze_amazon_listing",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            response = await client.post(
+                f"{API_PREFIX}/analyze",
+                json={"asin": "B09V2KKG1D"},
+            )
         assert response.status_code == 200
         data = response.json()["data"]
         assert "overall_score" in data
@@ -41,10 +146,16 @@ class TestAnalyzeListing:
 
     @pytest.mark.asyncio
     async def test_analyze_with_url(self, client: AsyncClient):
-        response = await client.post(
-            f"{API_PREFIX}/analyze",
-            json={"url": "https://www.amazon.com/dp/B09V2KKG1D"},
-        )
+        mock_result = _make_listing_analysis(asin="B09V2KKG1D")
+        with patch(
+            "app.modules.product_page_lab.router.service.analyze_amazon_listing",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            response = await client.post(
+                f"{API_PREFIX}/analyze",
+                json={"url": "https://www.amazon.com/dp/B09V2KKG1D"},
+            )
         assert response.status_code == 200
         data = response.json()["data"]
         assert data["asin"] == "B09V2KKG1D"

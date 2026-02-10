@@ -6,6 +6,7 @@ Look Inside analysis, and mobile checks.
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 import uuid
@@ -17,6 +18,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError, ValidationError
+from app.models.project import Book
+from app.models.publishing import Listing
 from app.modules.product_page_lab.analyzer import analyze_listing
 from app.modules.product_page_lab.blurb_generator import (
     generate_blurb_variants_ai,
@@ -45,6 +48,8 @@ from app.modules.product_page_lab.schemas import (
     Recommendation,
 )
 
+logger = logging.getLogger(__name__)
+
 # Minimum total impressions across both variants before statistical
 # significance can be meaningfully assessed.
 _MIN_SAMPLE_SIZE = 100
@@ -58,26 +63,108 @@ async def analyze_amazon_listing(
     request: ListingAnalyzeRequest,
     db: AsyncSession,
 ) -> ListingAnalysis:
-    """Analyze an Amazon listing by ASIN or URL.
+    """Analyze an Amazon listing by ASIN, URL, or book ID.
 
-    In a production system this would scrape or use the Amazon Product
-    Advertising API. For now we accept the listing data inline or
-    return a scaffold analysis when only an ASIN/URL is provided.
+    Resolves listing data from the database using the book's title,
+    subtitle, and any associated ``Listing.listing_data`` JSONB fields
+    (description/blurb, keywords, categories, price, genre).  When no
+    stored data can be found, raises ``ValidationError``.
     """
     asin = request.asin
     if not asin and request.url:
         asin = _extract_asin_from_url(request.url)
 
-    # In production, we would fetch listing data from Amazon here.
-    # For the MVP we return a scaffold analysis with placeholder data.
+    # Attempt to resolve a Book record from the database.
+    book: Optional[Book] = None
+
+    if request.book_id is not None:
+        result = await db.execute(
+            select(Book).where(
+                Book.id == request.book_id,
+                Book.deleted_at.is_(None),
+            )
+        )
+        book = result.scalar_one_or_none()
+        if book is None:
+            raise NotFoundError(
+                resource="Book",
+                detail=f"Book {request.book_id} not found.",
+            )
+
+    if book is None and asin:
+        result = await db.execute(
+            select(Book).where(
+                Book.asin == asin,
+                Book.deleted_at.is_(None),
+            )
+        )
+        book = result.scalar_one_or_none()
+
+    if book is None:
+        raise ValidationError(
+            message=(
+                "No book data found for the given ASIN or URL. "
+                "Please provide a valid book_id, or ensure the ASIN "
+                "is associated with a book in the system."
+            ),
+        )
+
+    # Gather listing data from the first associated Listing record.
+    listing_result = await db.execute(
+        select(Listing).where(
+            Listing.book_id == book.id,
+            Listing.deleted_at.is_(None),
+        ).order_by(Listing.updated_at.desc())
+    )
+    listing: Optional[Listing] = listing_result.scalars().first()
+
+    listing_data: dict = {}
+    if listing is not None and listing.listing_data:
+        listing_data = listing.listing_data
+
+    # Build the full title from the book record, including subtitle
+    # and any override stored in listing_data.
+    title = listing_data.get("title") or book.title or ""
+    if book.subtitle and book.subtitle not in title:
+        title = f"{title}: {book.subtitle}"
+
+    blurb = listing_data.get("description") or listing_data.get("blurb") or ""
+    keywords = listing_data.get("keywords") or []
+    categories = listing_data.get("categories") or []
+    price = listing_data.get("current_price") or listing_data.get("price")
+    genre = listing_data.get("genre")
+    resolved_asin = asin or book.asin
+
+    # Extract book metadata if available (metadata_ column is JSONB).
+    book_meta: dict = {}
+    if hasattr(book, "metadata_") and book.metadata_:
+        book_meta = book.metadata_
+
+    # Fall back to book metadata for fields not present in listing_data.
+    if not blurb:
+        blurb = book_meta.get("description") or book_meta.get("blurb") or ""
+    if not keywords:
+        keywords = book_meta.get("keywords") or []
+    if not categories:
+        categories = book_meta.get("categories") or []
+    if price is None:
+        price = book_meta.get("price")
+    if not genre:
+        genre = book_meta.get("genre")
+
+    logger.info(
+        "Analyzing listing for book %s (ASIN=%s): title_len=%d, blurb_len=%d, keywords=%d",
+        book.id, resolved_asin, len(title), len(blurb), len(keywords),
+    )
+
     analysis = analyze_listing(
-        title="",
-        blurb="",
-        keywords=[],
-        categories=[],
-        price=None,
-        genre=None,
-        asin=asin,
+        title=title,
+        blurb=blurb,
+        keywords=keywords,
+        categories=categories,
+        price=price,
+        genre=genre,
+        asin=resolved_asin,
     )
 
     return analysis
@@ -92,7 +179,13 @@ async def analyze_listing_with_data(
     genre: Optional[str] = None,
     asin: Optional[str] = None,
 ) -> ListingAnalysis:
-    """Analyze a listing with provided data (no scraping needed)."""
+    """Analyze a listing using directly provided data.
+
+    This bypass function accepts all listing fields inline, runs the
+    full algorithmic analysis pipeline, and returns scored results with
+    actionable recommendations.  No database or external API access is
+    required.
+    """
     return analyze_listing(
         title=title,
         blurb=blurb,

@@ -345,7 +345,7 @@ resource "aws_ecs_service" "api" {
   }
 
   deployment_maximum_percent         = 200
-  deployment_minimum_healthy_percent = 100
+  deployment_minimum_healthy_percent = 50
 
   depends_on = [aws_lb_listener.http]
 
@@ -413,7 +413,8 @@ resource "aws_ecs_service" "worker" {
   }
 }
 
-# Beat Service (single instance)
+# Beat Service (single instance — do NOT auto-scale; running more than one beat
+# scheduler would cause duplicate periodic task executions)
 resource "aws_ecs_service" "beat" {
   name            = "${var.project_name}-beat-${var.environment}"
   cluster         = aws_ecs_cluster.main.id
@@ -440,6 +441,7 @@ resource "aws_ecs_service" "beat" {
 # -----------------------------------------------------------------------------
 # Auto-Scaling for API Service
 # -----------------------------------------------------------------------------
+
 resource "aws_appautoscaling_target" "api" {
   max_capacity       = var.api_max_count
   min_capacity       = var.api_min_count
@@ -481,3 +483,55 @@ resource "aws_appautoscaling_policy" "api_memory" {
     scale_out_cooldown = 60
   }
 }
+
+# -----------------------------------------------------------------------------
+# Auto-Scaling for Celery Worker Service
+# -----------------------------------------------------------------------------
+
+resource "aws_appautoscaling_target" "worker" {
+  max_capacity       = var.environment == "production" ? 6 : 2
+  min_capacity       = 1
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.worker.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "worker_cpu" {
+  name               = "${var.project_name}-${var.environment}-worker-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.worker.resource_id
+  scalable_dimension = aws_appautoscaling_target.worker.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.worker.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 70.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+  }
+}
+
+resource "aws_appautoscaling_policy" "worker_memory" {
+  name               = "${var.project_name}-${var.environment}-worker-memory"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.worker.resource_id
+  scalable_dimension = aws_appautoscaling_target.worker.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.worker.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
+    }
+    target_value       = 80.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+  }
+}
+
+# NOTE: The Celery Beat service is intentionally NOT auto-scaled.
+# Beat is a scheduler that dispatches periodic tasks to the worker queue.
+# Running multiple beat instances would cause every scheduled task to be
+# enqueued multiple times, resulting in duplicate work. Always keep
+# desired_count = 1 for the beat service.

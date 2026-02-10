@@ -16,6 +16,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.marketing.arc_manager import ARCManager
 from app.modules.marketing.email_builder import EmailBuilder
@@ -48,24 +49,6 @@ router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# Dependency helpers
-# ---------------------------------------------------------------------------
-
-def _get_org_id() -> uuid.UUID:
-    """Get org_id from the current user context.
-
-    ASSUMPTION: In production, this comes from the auth middleware / JWT.
-    Using a placeholder for now; will be replaced when auth module is wired.
-    """
-    return uuid.UUID("00000000-0000-0000-0000-000000000001")
-
-
-def _get_user_id() -> uuid.UUID:
-    """Get user_id from the current user context."""
-    return uuid.UUID("00000000-0000-0000-0000-000000000002")
-
-
-# ---------------------------------------------------------------------------
 # Launch Plan Endpoints
 # ---------------------------------------------------------------------------
 
@@ -79,16 +62,15 @@ def _get_user_id() -> uuid.UUID:
 async def generate_launch_plan(
     request: GenerateLaunchPlanRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
-    user_id: uuid.UUID = Depends(_get_user_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     planner = LaunchPlanner()
     plan_data = await planner.generate_plan(request)
 
     service = MarketingService(db)
     plan = await service.save_generated_plan(
-        org_id=org_id,
-        user_id=user_id,
+        org_id=current_user["org_id"],
+        user_id=current_user["user_id"],
         plan_data=plan_data,
         ai_metadata={"generator": "template", "request": request.model_dump(mode="json")},
     )
@@ -107,7 +89,7 @@ async def list_launch_plans(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     from app.models.marketing import LaunchPlanStatus
 
@@ -123,7 +105,7 @@ async def list_launch_plans(
 
     service = MarketingService(db)
     plans, total = await service.list_launch_plans(
-        org_id=org_id,
+        org_id=current_user["org_id"],
         status=plan_status,
         limit=limit,
         offset=offset,
@@ -145,10 +127,10 @@ async def list_launch_plans(
 async def get_launch_plan(
     plan_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     service = MarketingService(db)
-    plan = await service.get_launch_plan(plan_id, org_id)
+    plan = await service.get_launch_plan(plan_id, current_user["org_id"])
     if not plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -167,10 +149,10 @@ async def update_launch_plan(
     plan_id: uuid.UUID,
     data: LaunchPlanUpdate,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     service = MarketingService(db)
-    plan = await service.update_launch_plan(plan_id, org_id, data)
+    plan = await service.update_launch_plan(plan_id, current_user["org_id"], data)
     if not plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -193,11 +175,10 @@ async def update_launch_plan(
 async def create_email_sequence(
     data: EmailSequenceCreate,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
-    user_id: uuid.UUID = Depends(_get_user_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     service = MarketingService(db)
-    sequence = await service.create_email_sequence(org_id, user_id, data)
+    sequence = await service.create_email_sequence(current_user["org_id"], current_user["user_id"], data)
     return {"data": sequence}
 
 
@@ -212,7 +193,7 @@ async def list_email_sequences(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     from app.models.marketing import EmailSequenceStatus
 
@@ -228,7 +209,7 @@ async def list_email_sequences(
 
     service = MarketingService(db)
     sequences, total = await service.list_email_sequences(
-        org_id=org_id,
+        org_id=current_user["org_id"],
         status=seq_status,
         limit=limit,
         offset=offset,
@@ -251,10 +232,10 @@ async def update_email_sequence(
     sequence_id: uuid.UUID,
     data: EmailSequenceUpdate,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     service = MarketingService(db)
-    sequence = await service.update_email_sequence(sequence_id, org_id, data)
+    sequence = await service.update_email_sequence(sequence_id, current_user["org_id"], data)
     if not sequence:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -273,12 +254,12 @@ async def trigger_email_send(
     sequence_id: uuid.UUID,
     data: TriggerEmailSendRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     service = MarketingService(db)
     sequence = await service.trigger_email_send(
         sequence_id=sequence_id,
-        org_id=org_id,
+        org_id=current_user["org_id"],
         recipient_emails=data.recipient_emails,
         personalization=data.personalization,
         schedule_at=data.schedule_at,
@@ -305,16 +286,15 @@ async def trigger_email_send(
 async def generate_social_content(
     request: GenerateSocialContentRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
-    user_id: uuid.UUID = Depends(_get_user_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     generator = SocialContentGenerator()
     posts_data = await generator.generate_content(request)
 
     service = MarketingService(db)
     posts = await service.create_social_posts_batch(
-        org_id=org_id,
-        user_id=user_id,
+        org_id=current_user["org_id"],
+        user_id=current_user["user_id"],
         posts_data=posts_data,
         ai_metadata={"generator": "template", "request": request.model_dump(mode="json")},
     )
@@ -333,7 +313,7 @@ async def get_social_calendar(
     end_date: datetime | None = Query(None),
     platform: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     from app.models.marketing import SocialPlatform
 
@@ -349,7 +329,7 @@ async def get_social_calendar(
 
     service = MarketingService(db)
     calendar_data = await service.get_social_calendar(
-        org_id=org_id,
+        org_id=current_user["org_id"],
         start_date=start_date,
         end_date=end_date,
         platform=social_platform,
@@ -372,11 +352,10 @@ async def get_social_calendar(
 async def create_arc_campaign(
     data: ARCCampaignCreate,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
-    user_id: uuid.UUID = Depends(_get_user_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     service = MarketingService(db)
-    campaign = await service.create_arc_campaign(org_id, user_id, data)
+    campaign = await service.create_arc_campaign(current_user["org_id"], current_user["user_id"], data)
     return {"data": campaign}
 
 
@@ -391,7 +370,7 @@ async def list_arc_campaigns(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     from app.models.marketing import ARCCampaignStatus
 
@@ -407,7 +386,7 @@ async def list_arc_campaigns(
 
     service = MarketingService(db)
     campaigns, total = await service.list_arc_campaigns(
-        org_id=org_id,
+        org_id=current_user["org_id"],
         status=arc_status,
         limit=limit,
         offset=offset,
@@ -430,12 +409,12 @@ async def send_arc_copies(
     campaign_id: uuid.UUID,
     data: SendARCRequest,
     db: AsyncSession = Depends(get_db),
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     service = MarketingService(db)
     campaign = await service.send_arc_copies(
         campaign_id=campaign_id,
-        org_id=org_id,
+        org_id=current_user["org_id"],
         recipient_ids=data.recipient_ids,
         custom_message=data.custom_message,
     )

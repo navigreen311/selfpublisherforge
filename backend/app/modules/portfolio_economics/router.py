@@ -5,7 +5,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Query, HTTPException, status
 
-from shared.contracts.api import SuccessResponse, PaginatedResponse
+from app.schemas.responses import SuccessResponse
+from app.core.pagination import PaginatedResponse
 from app.modules.portfolio_economics.schemas import (
     # Portfolio
     GreenlightRequest,

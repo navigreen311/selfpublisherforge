@@ -8,6 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.production_pipeline import service
 from app.modules.production_pipeline.models import PipelineStatus
@@ -27,19 +28,6 @@ from app.modules.production_pipeline.workflow import WorkflowError
 
 router = APIRouter()
 
-# ── Helpers ───────────────────────────────────────────────────────────────
-
-
-def _get_org_id(org_id: str = Query(..., alias="org_id")) -> uuid.UUID:
-    """Extract org_id from query parameter (placeholder for auth middleware)."""
-    try:
-        return uuid.UUID(org_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid org_id format.",
-        )
-
 
 # ── Template endpoints (MUST be before /{pipeline_id} routes) ─────────────
 
@@ -53,10 +41,10 @@ def _get_org_id(org_id: str = Query(..., alias="org_id")) -> uuid.UUID:
 )
 async def create_template(
     payload: CreateTemplate,
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    template = await service.create_template(db, org_id, payload)
+    template = await service.create_template(db, current_user["org_id"], payload)
     return template
 
 
@@ -67,10 +55,10 @@ async def create_template(
     description="List all available pipeline templates for the organization.",
 )
 async def list_templates(
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await service.list_templates(db, org_id)
+    return await service.list_templates(db, current_user["org_id"])
 
 
 # ── Pipeline endpoints ────────────────────────────────────────────────────
@@ -85,10 +73,10 @@ async def list_templates(
 )
 async def create_pipeline(
     payload: CreatePipeline,
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    pipeline = await service.create_pipeline(db, org_id, payload)
+    pipeline = await service.create_pipeline(db, current_user["org_id"], payload)
     return pipeline
 
 
@@ -99,7 +87,7 @@ async def create_pipeline(
     description="List production pipelines with optional status and book filters.",
 )
 async def list_pipelines(
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     pipeline_status: Optional[PipelineStatus] = Query(None, alias="status"),
@@ -107,7 +95,7 @@ async def list_pipelines(
     db: AsyncSession = Depends(get_db),
 ):
     return await service.list_pipelines(
-        db, org_id, page=page, page_size=page_size, status=pipeline_status, book_id=book_id
+        db, current_user["org_id"], page=page, page_size=page_size, status=pipeline_status, book_id=book_id
     )
 
 
@@ -119,10 +107,10 @@ async def list_pipelines(
 )
 async def get_pipeline(
     pipeline_id: uuid.UUID,
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    pipeline = await service.get_pipeline(db, pipeline_id, org_id)
+    pipeline = await service.get_pipeline(db, pipeline_id, current_user["org_id"])
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found.")
     return pipeline
@@ -137,11 +125,11 @@ async def get_pipeline(
 async def update_pipeline(
     pipeline_id: uuid.UUID,
     payload: UpdatePipeline,
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        pipeline = await service.update_pipeline(db, pipeline_id, org_id, payload)
+        pipeline = await service.update_pipeline(db, pipeline_id, current_user["org_id"], payload)
     except WorkflowError as e:
         raise HTTPException(status_code=422, detail=str(e))
     if not pipeline:
@@ -162,11 +150,11 @@ async def update_pipeline(
 async def add_task(
     pipeline_id: uuid.UUID,
     payload: CreateTask,
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        task = await service.add_task(db, pipeline_id, org_id, payload)
+        task = await service.add_task(db, pipeline_id, current_user["org_id"], payload)
     except WorkflowError as e:
         raise HTTPException(status_code=422, detail=str(e))
     if not task:
@@ -184,11 +172,11 @@ async def update_task(
     pipeline_id: uuid.UUID,
     task_id: uuid.UUID,
     payload: UpdateTask,
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        task = await service.update_task(db, pipeline_id, task_id, org_id, payload)
+        task = await service.update_task(db, pipeline_id, task_id, current_user["org_id"], payload)
     except WorkflowError as e:
         raise HTTPException(status_code=422, detail=str(e))
     if not task:
@@ -207,10 +195,10 @@ async def update_task(
 )
 async def get_timeline(
     pipeline_id: uuid.UUID,
-    org_id: uuid.UUID = Depends(_get_org_id),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    timeline = await service.get_timeline(db, pipeline_id, org_id)
+    timeline = await service.get_timeline(db, pipeline_id, current_user["org_id"])
     if not timeline:
         raise HTTPException(status_code=404, detail="Pipeline not found.")
     return timeline

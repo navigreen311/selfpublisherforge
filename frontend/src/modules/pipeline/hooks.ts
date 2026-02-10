@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/lib/store";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -108,10 +109,6 @@ export const pipelineKeys = {
   templates: () => [...pipelineKeys.all, "templates"] as const,
 };
 
-// ── Placeholder org_id (replaced by auth context in production) ─────────
-
-const ORG_ID = "00000000-0000-0000-0000-000000000001";
-
 // ── Hooks ────────────────────────────────────────────────────────────────
 
 export function usePipelines(
@@ -120,11 +117,13 @@ export function usePipelines(
   status?: PipelineStatus,
   bookId?: string
 ) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   return useQuery<PaginatedPipelines>({
     queryKey: pipelineKeys.list({ page, pageSize, status, bookId }),
     queryFn: async () => {
       const params: Record<string, string | number> = {
-        org_id: ORG_ID,
+        org_id: orgId!,
         page,
         page_size: pageSize,
       };
@@ -133,48 +132,58 @@ export function usePipelines(
       const { data } = await api.get("/api/v1/pipelines", { params });
       return data;
     },
+    enabled: !!orgId,
   });
 }
 
 export function usePipeline(id: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   return useQuery<Pipeline>({
     queryKey: pipelineKeys.detail(id),
     queryFn: async () => {
       const { data } = await api.get(`/api/v1/pipelines/${id}`, {
-        params: { org_id: ORG_ID },
+        params: { org_id: orgId },
       });
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
 
 export function useTimeline(id: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   return useQuery<TimelineView>({
     queryKey: pipelineKeys.timeline(id),
     queryFn: async () => {
       const { data } = await api.get(`/api/v1/pipelines/${id}/timeline`, {
-        params: { org_id: ORG_ID },
+        params: { org_id: orgId },
       });
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
 
 export function usePipelineTemplates() {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   return useQuery<PipelineTemplate[]>({
     queryKey: pipelineKeys.templates(),
     queryFn: async () => {
       const { data } = await api.get("/api/v1/pipelines/templates", {
-        params: { org_id: ORG_ID },
+        params: { org_id: orgId },
       });
       return data;
     },
+    enabled: !!orgId,
   });
 }
 
 export function useCreatePipeline() {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
@@ -186,7 +195,7 @@ export function useCreatePipeline() {
       settings?: Record<string, unknown>;
     }) => {
       const { data } = await api.post("/api/v1/pipelines", payload, {
-        params: { org_id: ORG_ID },
+        params: { org_id: orgId },
       });
       return data as Pipeline;
     },
@@ -197,6 +206,8 @@ export function useCreatePipeline() {
 }
 
 export function useUpdatePipeline(id: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
@@ -207,7 +218,7 @@ export function useUpdatePipeline(id: string) {
       settings?: Record<string, unknown>;
     }) => {
       const { data } = await api.patch(`/api/v1/pipelines/${id}`, payload, {
-        params: { org_id: ORG_ID },
+        params: { org_id: orgId },
       });
       return data as Pipeline;
     },
@@ -219,6 +230,8 @@ export function useUpdatePipeline(id: string) {
 }
 
 export function useAddTask(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
@@ -233,7 +246,7 @@ export function useAddTask(pipelineId: string) {
       const { data } = await api.post(
         `/api/v1/pipelines/${pipelineId}/tasks`,
         payload,
-        { params: { org_id: ORG_ID } }
+        { params: { org_id: orgId } }
       );
       return data as PipelineTask;
     },
@@ -246,6 +259,8 @@ export function useAddTask(pipelineId: string) {
 }
 
 export function useUpdateTask(pipelineId: string, taskId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
@@ -261,7 +276,7 @@ export function useUpdateTask(pipelineId: string, taskId: string) {
       const { data } = await api.patch(
         `/api/v1/pipelines/${pipelineId}/tasks/${taskId}`,
         payload,
-        { params: { org_id: ORG_ID } }
+        { params: { org_id: orgId } }
       );
       return data as PipelineTask;
     },
@@ -277,6 +292,8 @@ export function useUpdateTask(pipelineId: string, taskId: string) {
 }
 
 export function useCreateTemplate() {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
@@ -294,7 +311,7 @@ export function useCreateTemplate() {
       is_public?: boolean;
     }) => {
       const { data } = await api.post("/api/v1/pipelines/templates", payload, {
-        params: { org_id: ORG_ID },
+        params: { org_id: orgId },
       });
       return data as PipelineTemplate;
     },

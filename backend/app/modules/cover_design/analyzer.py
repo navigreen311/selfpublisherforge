@@ -5,8 +5,14 @@ imagery style, and provides recommendations for a given niche.
 """
 from __future__ import annotations
 
+import io
 import logging
+import math
+from collections import Counter
 from typing import Any
+
+import httpx
+from PIL import Image, ImageStat
 
 from app.modules.cover_design.schemas import (
     ColorAnalysis,
@@ -17,9 +23,13 @@ from app.modules.cover_design.schemas import (
 
 logger = logging.getLogger(__name__)
 
+_IMAGE_DOWNLOAD_TIMEOUT = 15.0  # seconds
+_QUANTIZE_COLOUR_COUNT = 8  # max dominant colours to extract
+_ANALYSIS_THUMBNAIL_SIZE = (150, 150)  # resize target for fast processing
+
 
 # ---------------------------------------------------------------------------
-# Named colour lookup (simplified)
+# Named colour lookup
 # ---------------------------------------------------------------------------
 
 _NAMED_COLOURS: dict[str, str] = {
@@ -42,8 +52,121 @@ _NAMED_COLOURS: dict[str, str] = {
 
 
 def _closest_named_colour(hex_code: str) -> str | None:
-    """Return the closest named colour (very simplified lookup)."""
-    return _NAMED_COLOURS.get(hex_code.upper())
+    """Return the closest named colour using Euclidean distance in RGB space."""
+    exact = _NAMED_COLOURS.get(hex_code.upper())
+    if exact:
+        return exact
+
+    try:
+        r1 = int(hex_code[1:3], 16)
+        g1 = int(hex_code[3:5], 16)
+        b1 = int(hex_code[5:7], 16)
+    except (ValueError, IndexError):
+        return None
+
+    best_name: str | None = None
+    best_dist = float("inf")
+    for ref_hex, name in _NAMED_COLOURS.items():
+        r2 = int(ref_hex[1:3], 16)
+        g2 = int(ref_hex[3:5], 16)
+        b2 = int(ref_hex[5:7], 16)
+        dist = math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
+        if dist < best_dist:
+            best_dist = dist
+            best_name = name
+
+    # Only assign a name if the colour is reasonably close (threshold ~80 in RGB space)
+    if best_dist <= 80:
+        return best_name
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Image downloading
+# ---------------------------------------------------------------------------
+
+
+async def _download_image(url: str) -> Image.Image:
+    """Download an image from *url* and return a PIL Image.
+
+    Raises ``httpx.HTTPStatusError`` on non-2xx responses and
+    ``PIL.UnidentifiedImageError`` if the payload is not a valid image.
+    """
+    async with httpx.AsyncClient(follow_redirects=True, timeout=_IMAGE_DOWNLOAD_TIMEOUT) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        return Image.open(io.BytesIO(response.content))
+
+
+# ---------------------------------------------------------------------------
+# Colour extraction helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_dominant_colors(img: Image.Image, max_colors: int = _QUANTIZE_COLOUR_COUNT) -> list[ColorAnalysis]:
+    """Extract dominant colours from a PIL Image using quantization.
+
+    The image is resized to a small thumbnail first to speed up processing,
+    then quantized to *max_colors* colours.  The pixel frequency of each
+    quantized colour is converted to a percentage.
+    """
+    # Work on a small copy in RGB mode
+    working = img.copy()
+    working = working.convert("RGB")
+    working.thumbnail(_ANALYSIS_THUMBNAIL_SIZE)
+
+    # Quantize to a limited palette
+    quantized = working.quantize(colors=max_colors, method=Image.Quantize.MEDIANCUT)
+    palette_data = quantized.getpalette()
+    if palette_data is None:
+        return []
+
+    # Count pixel frequencies per palette index
+    pixel_counts: Counter[int] = Counter(quantized.getdata())
+    total_pixels = sum(pixel_counts.values()) or 1
+
+    colors: list[ColorAnalysis] = []
+    for index, count in pixel_counts.most_common(max_colors):
+        r = palette_data[index * 3]
+        g = palette_data[index * 3 + 1]
+        b = palette_data[index * 3 + 2]
+        hex_code = f"#{r:02X}{g:02X}{b:02X}"
+        percentage = round((count / total_pixels) * 100, 1)
+        name = _closest_named_colour(hex_code)
+        colors.append(ColorAnalysis(hex_code=hex_code, percentage=percentage, name=name))
+
+    return colors
+
+
+def _compute_brightness(img: Image.Image) -> float:
+    """Return perceived brightness (0-255) of the image."""
+    grey = img.convert("L")
+    stat = ImageStat.Stat(grey)
+    return stat.mean[0]
+
+
+def _compute_contrast(img: Image.Image) -> float:
+    """Return the standard deviation of luminance as a simple contrast metric."""
+    grey = img.convert("L")
+    stat = ImageStat.Stat(grey)
+    return stat.stddev[0]
+
+
+def _infer_mood_from_image(brightness: float, contrast: float) -> str:
+    """Infer a coarse mood descriptor from brightness and contrast values."""
+    if brightness < 80:
+        mood = "Dark"
+    elif brightness < 160:
+        mood = "Balanced"
+    else:
+        mood = "Bright"
+
+    if contrast > 70:
+        mood += ", high-contrast"
+    elif contrast < 35:
+        mood += ", muted"
+
+    return mood
 
 
 # ---------------------------------------------------------------------------
@@ -56,30 +179,42 @@ async def analyze_single_cover(
 ) -> CompetitorCoverAnalysis:
     """Analyse a single competitor cover image.
 
-    In production this would:
-    1. Download the image
-    2. Use Pillow/OpenCV for colour extraction
-    3. Optionally call a vision LLM (GPT-4V / Claude) for text placement
-       and imagery-style analysis
-
-    For now we return a structured placeholder that demonstrates the schema.
+    Downloads the image, extracts dominant colours, brightness, contrast,
+    and infers a basic mood from the image data.  If the image cannot be
+    downloaded or processed, a partial result with error information is
+    returned instead of raising.
     """
-    # Placeholder colour analysis
-    dominant_colors = [
-        ColorAnalysis(hex_code="#1B1B3A", percentage=40.0, name="Dark Navy"),
-        ColorAnalysis(hex_code="#FFD700", percentage=25.0, name="Gold"),
-        ColorAnalysis(hex_code="#FFFFFF", percentage=20.0, name="White"),
-        ColorAnalysis(hex_code="#2C3E50", percentage=15.0, name="Charcoal"),
-    ]
+    try:
+        img = await _download_image(image_url)
+    except Exception:
+        logger.exception("Failed to download cover image: %s", image_url)
+        return CompetitorCoverAnalysis(
+            image_url=image_url,
+            dominant_colors=[],
+            overall_mood="Unable to analyse — image download failed",
+        )
+
+    try:
+        dominant_colors = _extract_dominant_colors(img)
+        brightness = _compute_brightness(img)
+        contrast = _compute_contrast(img)
+        mood = _infer_mood_from_image(brightness, contrast)
+    except Exception:
+        logger.exception("Failed to process cover image: %s", image_url)
+        return CompetitorCoverAnalysis(
+            image_url=image_url,
+            dominant_colors=[],
+            overall_mood="Unable to analyse — image processing failed",
+        )
 
     return CompetitorCoverAnalysis(
         image_url=image_url,
         dominant_colors=dominant_colors,
-        text_placement="Title centred upper third, author name bottom centre",
-        imagery_style="Photographic with overlay filter",
-        overall_mood="Dark, dramatic, professional",
-        font_style="Bold sans-serif title, light serif author name",
-        effectiveness_score=7.5,
+        text_placement=None,  # requires vision-model analysis
+        imagery_style=None,  # requires vision-model analysis
+        overall_mood=mood,
+        font_style=None,  # requires vision-model analysis
+        effectiveness_score=None,  # requires vision-model analysis
     )
 
 
@@ -114,27 +249,10 @@ async def analyze_competitor_covers(
             analysis = await analyze_single_cover(url)
             analyses.append(analysis)
     else:
-        # Placeholder: in production we would search for covers in this niche
         logger.info(
-            "No image URLs provided; generating placeholder analysis for %s / %s",
+            "No image URLs provided for %s / %s — automated cover search is not yet available.",
             genre,
             niche_keywords,
-        )
-        analyses.append(
-            CompetitorCoverAnalysis(
-                image_url=None,
-                dominant_colors=[
-                    ColorAnalysis(hex_code="#1B1B3A", percentage=35.0, name="Dark Navy"),
-                    ColorAnalysis(hex_code="#E74C3C", percentage=30.0, name="Crimson"),
-                    ColorAnalysis(hex_code="#FFFFFF", percentage=20.0, name="White"),
-                    ColorAnalysis(hex_code="#000000", percentage=15.0, name="Black"),
-                ],
-                text_placement="Title upper third, centred",
-                imagery_style="Mixed photographic and illustrated",
-                overall_mood="Dramatic",
-                font_style="Bold display fonts",
-                effectiveness_score=7.0,
-            )
         )
 
     # Synthesise trends and recommendations

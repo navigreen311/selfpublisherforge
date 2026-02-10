@@ -1,6 +1,15 @@
 # =============================================================================
 # Production Environment — Terraform variable overrides
 # =============================================================================
+#
+# VALIDATION: Before applying this configuration, ensure the following
+# required values are set:
+#   - domain_name       (must not be empty)
+#   - certificate_arn   (must not be empty)
+#   - alarm_sns_topic_arn (must not be empty)
+#   - TF_VAR_db_password, TF_VAR_db_username, TF_VAR_jwt_secret_key,
+#     TF_VAR_app_secret_key must be set as environment variables.
+# =============================================================================
 
 environment = "production"
 aws_region  = "us-east-1"
@@ -38,9 +47,9 @@ redis_num_cache_nodes = 1
 # Logging
 log_retention_days = 30
 
-# Domain (set to actual production domain)
-domain_name     = ""
-certificate_arn = ""
+# Domain — MUST be set before production deployment
+domain_name     = ""  # REQUIRED: Set to your domain (e.g., "app.selfpublisherforge.com")
+certificate_arn = ""  # REQUIRED: Set to your ACM certificate ARN (e.g., "arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234")
 
 # Monitoring
-alarm_sns_topic_arn = ""
+alarm_sns_topic_arn = ""  # REQUIRED: Set to your SNS topic ARN for CloudWatch alarms

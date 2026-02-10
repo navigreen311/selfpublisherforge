@@ -10,6 +10,13 @@ global:
   external_labels:
     project: selfpublisherforge
 
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
 # Alert rules
 rule_files:
   - "alerts.yml"

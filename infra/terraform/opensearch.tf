@@ -133,12 +133,13 @@ resource "aws_opensearch_domain" "main" {
     security_group_ids = [aws_security_group.opensearch.id]
   }
 
+  # Access policy: restrict to ECS task role only (least-privilege principle)
   access_policies = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect    = "Allow"
-        Principal = { AWS = "*" }
+        Principal = { AWS = aws_iam_role.ecs_task.arn }
         Action    = "es:*"
         Resource  = "arn:aws:es:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:domain/${var.project_name}-${var.environment}/*"
       }
@@ -169,3 +170,85 @@ resource "aws_opensearch_domain" "main" {
     aws_cloudwatch_log_resource_policy.opensearch,
   ]
 }
+
+# -----------------------------------------------------------------------------
+# ILM (Index Lifecycle Management) Policy — Suggested Configuration
+# -----------------------------------------------------------------------------
+# OpenSearch ISM (Index State Management) can be configured via the OpenSearch
+# API after the domain is provisioned. Below is an example ISM policy that
+# manages index retention with hot/warm/delete phases.
+#
+# To apply this policy, use the OpenSearch ISM API:
+#   PUT _plugins/_ism/policies/index_retention_policy
+#
+# Example ISM policy JSON:
+# {
+#   "policy": {
+#     "description": "Index retention policy for SelfPublisherForge",
+#     "default_state": "hot",
+#     "states": [
+#       {
+#         "name": "hot",
+#         "actions": [
+#           {
+#             "rollover": {
+#               "min_index_age": "7d",
+#               "min_primary_shard_size": "30gb"
+#             }
+#           }
+#         ],
+#         "transitions": [
+#           {
+#             "state_name": "warm",
+#             "conditions": {
+#               "min_index_age": "30d"
+#             }
+#           }
+#         ]
+#       },
+#       {
+#         "name": "warm",
+#         "actions": [
+#           {
+#             "replica_count": {
+#               "number_of_replicas": 0
+#             }
+#           },
+#           {
+#             "force_merge": {
+#               "max_num_segments": 1
+#             }
+#           }
+#         ],
+#         "transitions": [
+#           {
+#             "state_name": "delete",
+#             "conditions": {
+#               "min_index_age": "90d"
+#             }
+#           }
+#         ]
+#       },
+#       {
+#         "name": "delete",
+#         "actions": [
+#           {
+#             "delete": {}
+#           }
+#         ],
+#         "transitions": []
+#       }
+#     ],
+#     "ism_template": [
+#       {
+#         "index_patterns": ["knowledge-vault-*", "market-intel-*"],
+#         "priority": 100
+#       }
+#     ]
+#   }
+# }
+#
+# To apply the policy to existing indices:
+#   POST _plugins/_ism/add/<index-pattern>
+#   { "policy_id": "index_retention_policy" }
+# -----------------------------------------------------------------------------

@@ -22,6 +22,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.product_page_lab import service
 from app.modules.product_page_lab.schemas import (
@@ -101,11 +102,9 @@ async def generate_blurb(
 async def create_ab_test(
     request: ABTestCreateRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse[ABTestResponse]:
-    # In production, org_id would come from the authenticated user
-    from uuid import uuid4
-    org_id = uuid4()  # Placeholder until auth is wired
-    result = await service.create_ab_test(request, org_id, db)
+    result = await service.create_ab_test(request, current_user["org_id"], db)
     return SuccessResponse(data=result)
 
 
@@ -122,11 +121,9 @@ async def list_ab_tests(
         None, alias="status", description="Filter by test status"
     ),
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse[list[ABTestResponse]]:
-    # In production, org_id would come from the authenticated user
-    from uuid import uuid4
-    org_id = uuid4()  # Placeholder until auth is wired
-    results = await service.list_ab_tests(org_id, db, book_id=book_id, status=test_status)
+    results = await service.list_ab_tests(current_user["org_id"], db, book_id=book_id, status=test_status)
     return SuccessResponse(data=results)
 
 

@@ -1,8 +1,11 @@
 "use client";
 
-import { use } from "react";
+import { use, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLaunchPlan, useUpdateLaunchPlan } from "@/modules/marketing/hooks";
+import type { LaunchPlan, PhaseTask } from "@/modules/marketing/hooks";
 import { LaunchTimeline } from "@/modules/marketing/components/LaunchTimeline";
+import { api } from "@/lib/api";
 import Link from "next/link";
 
 interface LaunchPlanDetailPageProps {
@@ -11,6 +14,7 @@ interface LaunchPlanDetailPageProps {
 
 export default function LaunchPlanDetailPage({ params }: LaunchPlanDetailPageProps) {
   const { id } = use(params);
+  const queryClient = useQueryClient();
   const { data: plan, isLoading, error } = useLaunchPlan(id);
   const updateMutation = useUpdateLaunchPlan(id);
 
@@ -24,11 +28,44 @@ export default function LaunchPlanDetailPage({ params }: LaunchPlanDetailPagePro
     });
   };
 
-  const handleTaskStatusChange = (taskId: string, newStatus: string) => {
-    // In a full implementation, this would call an API to update the task status.
-    // For now, we optimistically update through the plan update endpoint.
-    console.log(`Task ${taskId} status changed to ${newStatus}`);
-  };
+  const handleTaskStatusChange = useCallback(
+    async (taskId: string, newStatus: string) => {
+      const queryKey = ["marketing", "launch-plans", id];
+
+      // Snapshot the previous value for rollback on error
+      const previousPlan = queryClient.getQueryData<LaunchPlan>(queryKey);
+
+      // Optimistically update the local cache
+      queryClient.setQueryData<LaunchPlan>(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          phases: old.phases.map((phase) => ({
+            ...phase,
+            tasks: phase.tasks.map((task) =>
+              task.id === taskId ? { ...task, status: newStatus as PhaseTask["status"] } : task
+            ),
+          })),
+        };
+      });
+
+      try {
+        await api.patch(
+          `/api/v1/marketing/launch-plans/${id}/tasks/${taskId}`,
+          { status: newStatus }
+        );
+        // Invalidate to refetch the latest server state
+        queryClient.invalidateQueries({ queryKey });
+      } catch (err) {
+        // Revert to the previous state on failure
+        if (previousPlan) {
+          queryClient.setQueryData<LaunchPlan>(queryKey, previousPlan);
+        }
+        alert("Failed to update task status. Please try again.");
+      }
+    },
+    [id, queryClient]
+  );
 
   const handleStatusChange = (newStatus: "draft" | "active" | "completed" | "archived") => {
     updateMutation.mutate({ status: newStatus });

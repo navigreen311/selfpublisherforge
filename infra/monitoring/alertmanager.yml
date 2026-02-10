@@ -1,0 +1,142 @@
+# =============================================================================
+# Alertmanager Configuration -- SelfPublisherForge
+# =============================================================================
+# Environment variables referenced below must be set on the alertmanager
+# container (or via an .env file):
+#   SMTP_SMARTHOST       - e.g. smtp.example.com:587
+#   SMTP_FROM            - sender address, e.g. alerts@selfpublisherforge.com
+#   SMTP_AUTH_USERNAME   - SMTP login
+#   SMTP_AUTH_PASSWORD   - SMTP password
+#   ALERT_EMAIL_TO       - recipient address for alert emails
+#   SLACK_WEBHOOK_URL    - Slack incoming-webhook URL for #alerts channel
+#   SLACK_WEBHOOK_URL_CRITICAL - Slack incoming-webhook URL for #incidents channel
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: "${SMTP_SMARTHOST}"
+  smtp_from: "${SMTP_FROM}"
+  smtp_auth_username: "${SMTP_AUTH_USERNAME}"
+  smtp_auth_password: "${SMTP_AUTH_PASSWORD}"
+  smtp_require_tls: true
+
+# ---------------------------------------------------------------------------
+# Notification templates
+# ---------------------------------------------------------------------------
+templates:
+  - "/etc/alertmanager/templates/*.tmpl"
+
+# ---------------------------------------------------------------------------
+# Routing tree
+# ---------------------------------------------------------------------------
+route:
+  receiver: default-slack
+  group_by: ["alertname", "service"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # P0 Critical -- page immediately via email + Slack #incidents
+    - receiver: critical-pager
+      match:
+        severity: P0
+      group_wait: 10s
+      repeat_interval: 15m
+      continue: false
+
+    # P1 Urgent -- Slack #alerts + email
+    - receiver: urgent-slack
+      match:
+        severity: P1
+      group_wait: 30s
+      repeat_interval: 1h
+      continue: false
+
+    # P2 Warning -- Slack #alerts only
+    - receiver: default-slack
+      match:
+        severity: P2
+      repeat_interval: 4h
+      continue: false
+
+    # P3 Informational -- Slack #monitoring, low-noise
+    - receiver: informational-slack
+      match:
+        severity: P3
+      repeat_interval: 12h
+      continue: false
+
+# ---------------------------------------------------------------------------
+# Inhibition rules
+# ---------------------------------------------------------------------------
+inhibit_rules:
+  # If a P0 is firing for a service, suppress P1/P2/P3 for the same service
+  - source_match:
+      severity: P0
+    target_match_re:
+      severity: "P1|P2|P3"
+    equal: ["service"]
+
+  - source_match:
+      severity: P1
+    target_match_re:
+      severity: "P2|P3"
+    equal: ["service"]
+
+# ---------------------------------------------------------------------------
+# Receivers
+# ---------------------------------------------------------------------------
+receivers:
+  - name: critical-pager
+    email_configs:
+      - to: "${ALERT_EMAIL_TO}"
+        send_resolved: true
+        headers:
+          Subject: "[P0 CRITICAL] {{ .GroupLabels.alertname }} - SelfPublisherForge"
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL_CRITICAL}"
+        channel: "#incidents"
+        title: "P0 CRITICAL: {{ .GroupLabels.alertname }}"
+        text: >-
+          *Service:* {{ .CommonLabels.service }}
+          *Details:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+  - name: urgent-slack
+    email_configs:
+      - to: "${ALERT_EMAIL_TO}"
+        send_resolved: true
+        headers:
+          Subject: "[P1 URGENT] {{ .GroupLabels.alertname }} - SelfPublisherForge"
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#alerts"
+        title: "P1 URGENT: {{ .GroupLabels.alertname }}"
+        text: >-
+          *Service:* {{ .CommonLabels.service }}
+          *Details:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+
+  - name: default-slack
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#alerts"
+        title: "P2 WARNING: {{ .GroupLabels.alertname }}"
+        text: >-
+          *Service:* {{ .CommonLabels.service }}
+          *Details:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+
+  - name: informational-slack
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#monitoring"
+        title: "P3 INFO: {{ .GroupLabels.alertname }}"
+        text: >-
+          *Service:* {{ .CommonLabels.service }}
+          *Details:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+        send_resolved: false
+        color: '{{ if eq .Status "firing" }}#439FE0{{ else }}good{{ end }}'

@@ -6,6 +6,8 @@ orchestrator, quality checks the result, and records the outcome.
 
 from __future__ import annotations
 
+import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -16,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.agent_system.models import (
     Agent,
     AgentTask,
+    AgentType,
     AuditAction,
     PermissionLevel,
     TaskStatus,
@@ -31,10 +34,53 @@ from app.modules.agent_system.governance import (
     validate_quality,
 )
 from app.modules.agent_system.audit import record_audit
+from app.modules.llm_orchestration.orchestrator import (
+    GenerationOptions,
+    GenerationResult,
+    LLMOrchestrator,
+)
+from app.modules.llm_orchestration.router_config import (
+    ModelRouter,
+    ProviderName,
+    TaskType,
+)
+from app.modules.llm_orchestration.cost_tracker import CostTracker
+from app.modules.llm_orchestration.cache import SemanticCache
+from app.modules.llm_orchestration.quality import QualityAssurance
+from app.modules.llm_orchestration.providers.anthropic import AnthropicProvider
+from app.modules.llm_orchestration.providers.base import LLMRequest, LLMResponse
+
+logger = logging.getLogger(__name__)
+
+# Mapping from AgentType to the orchestrator's TaskType so that the model
+# router picks an appropriate model chain for each kind of agent work.
+_AGENT_TYPE_TO_TASK_TYPE: dict[AgentType, TaskType] = {
+    AgentType.RESEARCH: TaskType.MARKET_ANALYSIS,
+    AgentType.WRITING_ASSISTANT: TaskType.LONG_FORM_WRITING,
+    AgentType.EDITOR: TaskType.QUICK_EDITS_GRAMMAR,
+    AgentType.MARKETING_COPY: TaskType.BLURB_AD_COPY,
+}
+
+
+def _get_orchestrator() -> LLMOrchestrator:
+    """Build an LLMOrchestrator wired to the Anthropic provider.
+
+    A fresh instance is created per call to avoid stale state. The
+    underlying Anthropic SDK client manages its own connection pool.
+    """
+    anthropic_provider = AnthropicProvider()
+    orchestrator = LLMOrchestrator(
+        providers={ProviderName.ANTHROPIC: anthropic_provider},
+        router=ModelRouter(),
+        cache=SemanticCache(),
+        cost_tracker=CostTracker(),
+        quality=QualityAssurance(),
+    )
+    return orchestrator
 
 
 # ---------------------------------------------------------------------------
-# LLM Orchestration stub
+# LLM execution via the orchestration layer
 # ---------------------------------------------------------------------------
 
 async def _call_llm(
@@ -43,35 +89,187 @@ async def _call_llm(
     user_prompt: str,
     max_tokens: int = 4096,
     temperature: float = 0.7,
+    *,
+    agent_type: AgentType | None = None,
 ) -> dict[str, Any]:
-    """Stub for the LLM orchestration layer.
+    """Execute an LLM request through the orchestration layer.
 
-    In production this would delegate to the llm_orchestration module.
+    Routes through the full LLMOrchestrator pipeline (model routing,
+    caching, cost tracking, quality assurance) when the agent type maps
+    to a known TaskType. Falls back to a direct provider call when the
+    orchestrator route is unavailable.
+
     Returns a dict with keys: text, tokens_used, cost_usd, model.
     """
-    # Placeholder – real implementation calls Anthropic / OpenAI via
-    # the llm_orchestration module.
-    estimated_tokens = min(max_tokens, len(user_prompt.split()) * 4)
-    estimated_cost = estimated_tokens * 0.000003  # rough estimate
+    # Attempt orchestrated generation when we can resolve a TaskType
+    task_type: TaskType | None = None
+    if agent_type is not None:
+        task_type = _AGENT_TYPE_TO_TASK_TYPE.get(agent_type)
 
-    return {
-        "text": f"[LLM output for: {user_prompt[:80]}...]",
-        "tokens_used": estimated_tokens,
-        "cost_usd": estimated_cost,
-        "model": model_id,
-    }
+    if task_type is not None:
+        try:
+            orchestrator = _get_orchestrator()
+            options = GenerationOptions(
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt,
+                skip_cache=False,
+                skip_quality_check=False,
+            )
+
+            result: GenerationResult = await orchestrator.generate(
+                task_type=task_type.value,
+                prompt=user_prompt,
+                options=options,
+            )
+
+            if result.succeeded:
+                return {
+                    "text": result.content,
+                    "tokens_used": result.total_tokens,
+                    "cost_usd": result.cost_usd,
+                    "model": result.model_id or model_id,
+                }
+
+            # Orchestrator exhausted all models -- fall through to direct call
+            logger.warning(
+                "Orchestrated generation failed (error=%s), falling back to direct provider call",
+                result.metadata.get("error", "unknown"),
+            )
+        except Exception:
+            logger.exception("Orchestrator raised an unexpected error; falling back to direct provider call")
+
+    # Direct provider call as fallback (or when no TaskType mapping exists)
+    try:
+        provider = AnthropicProvider()
+        request = LLMRequest(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            model_id=model_id,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        response: LLMResponse = await provider.generate(request)
+
+        if response.succeeded:
+            cost_usd = response.total_tokens * 0.000003  # conservative fallback estimate
+            return {
+                "text": response.content,
+                "tokens_used": response.total_tokens,
+                "cost_usd": cost_usd,
+                "model": response.model_id or model_id,
+            }
+
+        raise RuntimeError(
+            f"LLM provider returned an error: {response.metadata.get('error', response.finish_reason)}"
+        )
+    except Exception as exc:
+        logger.exception("Direct LLM provider call failed")
+        raise RuntimeError(f"LLM execution failed: {exc}") from exc
 
 
-async def _compute_quality_score(output_text: str) -> float:
-    """Stub for quality evaluation.
+# ---------------------------------------------------------------------------
+# Quality evaluation via heuristics
+# ---------------------------------------------------------------------------
 
-    In production this could run a secondary LLM check, grammar check, etc.
-    Returns a float 0.0-1.0.
+async def _compute_quality_score(
+    output_text: str,
+    *,
+    expected_min_words: int = 50,
+    keywords: list[str] | None = None,
+) -> float:
+    """Evaluate the quality of LLM output using deterministic heuristics.
+
+    Scoring dimensions (each contributes to the final 0.0-1.0 score):
+      - Length adequacy:   is the output long enough relative to expectations?
+      - Sentence structure: does it contain well-formed sentences?
+      - Vocabulary richness: type-token ratio as a proxy for coherence.
+      - Formatting signals:  presence of paragraphs, lists, or headings.
+      - Keyword relevance:   overlap with expected keywords (when provided).
+
+    Returns a float between 0.0 and 1.0.
     """
-    # Placeholder – always returns a reasonable score
-    if not output_text or len(output_text.strip()) < 10:
-        return 0.3
-    return 0.85
+    if not output_text or not output_text.strip():
+        return 0.0
+
+    text = output_text.strip()
+    words = re.findall(r"[a-zA-Z']+", text)
+    word_count = len(words)
+
+    if word_count < 5:
+        return 0.05
+
+    # --- 1. Length adequacy (0.0 - 1.0), weight 0.30 ---
+    # Ramp linearly up to the expected minimum, then cap at 1.0 for
+    # outputs up to 4x the minimum (very long isn't necessarily better).
+    if word_count >= expected_min_words:
+        length_score = 1.0
+    else:
+        length_score = word_count / expected_min_words
+    # Slight penalty for extremely short outputs even relative to minimum
+    if word_count < 20:
+        length_score *= 0.6
+
+    # --- 2. Sentence structure (0.0 - 1.0), weight 0.25 ---
+    sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
+    sentence_count = len(sentences)
+    if sentence_count == 0:
+        structure_score = 0.1
+    else:
+        avg_sentence_len = word_count / sentence_count
+        # Ideal average sentence length is 10-25 words
+        if 10 <= avg_sentence_len <= 25:
+            structure_score = 1.0
+        elif 5 <= avg_sentence_len < 10 or 25 < avg_sentence_len <= 40:
+            structure_score = 0.7
+        else:
+            structure_score = 0.4
+
+    # --- 3. Vocabulary richness / coherence (0.0 - 1.0), weight 0.20 ---
+    unique_words = set(w.lower() for w in words)
+    if word_count > 0:
+        ttr = len(unique_words) / word_count  # type-token ratio
+    else:
+        ttr = 0.0
+    # A TTR between 0.3 and 0.8 is typical for well-written prose
+    if 0.3 <= ttr <= 0.8:
+        vocab_score = 1.0
+    elif 0.2 <= ttr < 0.3 or 0.8 < ttr <= 0.95:
+        vocab_score = 0.7
+    else:
+        vocab_score = 0.4
+
+    # --- 4. Formatting signals (0.0 - 1.0), weight 0.10 ---
+    formatting_score = 0.5  # baseline
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    if len(paragraphs) > 1:
+        formatting_score += 0.2  # multi-paragraph structure
+    if re.search(r'(?m)^[-*]\s', text):
+        formatting_score += 0.15  # bullet/list items
+    if re.search(r'(?m)^#{1,6}\s', text):
+        formatting_score += 0.15  # markdown headings
+    formatting_score = min(formatting_score, 1.0)
+
+    # --- 5. Keyword relevance (0.0 - 1.0), weight 0.15 ---
+    if keywords:
+        text_lower = text.lower()
+        matched = sum(1 for kw in keywords if kw.lower() in text_lower)
+        keyword_score = matched / len(keywords) if keywords else 0.0
+    else:
+        # No keywords supplied -- assume neutral (full marks)
+        keyword_score = 1.0
+
+    # --- Weighted combination ---
+    score = (
+        0.30 * length_score
+        + 0.25 * structure_score
+        + 0.20 * vocab_score
+        + 0.10 * formatting_score
+        + 0.15 * keyword_score
+    )
+
+    # Clamp to [0.0, 1.0]
+    return max(0.0, min(1.0, round(score, 4)))
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +343,7 @@ class TaskExecutor:
                 user_prompt=user_prompt,
                 max_tokens=agent.max_tokens,
                 temperature=agent.temperature,
+                agent_type=agent.agent_type,
             )
 
             # 5. Record output
@@ -156,7 +355,26 @@ class TaskExecutor:
             task.cost_usd = llm_result["cost_usd"]
 
             # 6. Quality check
-            quality = await _compute_quality_score(llm_result["text"])
+            # Extract keywords from the task title and input data for relevance scoring.
+            quality_keywords: list[str] = []
+            if task.title:
+                quality_keywords.extend(
+                    w for w in task.title.split() if len(w) > 3
+                )
+            if task.input_data:
+                kw_field = task.input_data.get("keywords")
+                if isinstance(kw_field, list):
+                    quality_keywords.extend(kw_field)
+
+            # Set expected minimum word count based on the agent's max_tokens
+            # (rough heuristic: ~0.75 words per token for English prose).
+            expected_min_words = max(30, int(agent.max_tokens * 0.1))
+
+            quality = await _compute_quality_score(
+                llm_result["text"],
+                expected_min_words=expected_min_words,
+                keywords=quality_keywords or None,
+            )
             task.quality_score = quality
 
             try:

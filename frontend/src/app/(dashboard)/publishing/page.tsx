@@ -6,6 +6,7 @@ import { ListingTable } from "@/modules/publishing/components/ListingTable";
 import {
   usePublishingAccounts,
   useCreateAccount,
+  useListings,
   type CreateAccountPayload,
 } from "@/modules/publishing/hooks";
 import { toast } from "sonner";
@@ -24,7 +25,10 @@ const PLATFORMS = [
 
 export default function PublishingDashboardPage() {
   const { data: accounts = [], isLoading: accountsLoading } = usePublishingAccounts();
+  const { data: listings = [], isLoading: listingsLoading, isError: listingsError } = useListings();
   const createAccount = useCreateAccount();
+
+  const activeListingsCount = listings.filter((l) => l.status === "active").length;
 
   const [showConnect, setShowConnect] = useState(false);
   const [newPlatform, setNewPlatform] = useState("kdp");
@@ -87,7 +91,13 @@ export default function PublishingDashboardPage() {
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-gray-900">Active Listings</h3>
-          <p className="mt-1 text-3xl font-bold text-green-600">0</p>
+          {listingsLoading ? (
+            <p className="mt-1 text-sm text-gray-400">Loading...</p>
+          ) : listingsError ? (
+            <p className="mt-1 text-sm text-red-500">Failed to load</p>
+          ) : (
+            <p className="mt-1 text-3xl font-bold text-green-600">{activeListingsCount}</p>
+          )}
         </div>
       </div>
 

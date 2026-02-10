@@ -171,6 +171,33 @@ services:
     networks:
       - spf-network
 
+  elasticsearch-exporter:
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.7.0
+    command:
+      - '--es.uri=http://elasticsearch:9200'
+      - '--es.all'
+      - '--es.indices'
+    ports:
+      - "9114:9114"
+    depends_on:
+      - elasticsearch
+    networks:
+      - spf-network
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infra/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - spf-network
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -183,6 +210,8 @@ services:
       - postgres-exporter
       - redis-exporter
       - node-exporter
+      - elasticsearch-exporter
+      - alertmanager
     networks:
       - spf-network
 

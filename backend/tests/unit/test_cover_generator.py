@@ -1,6 +1,8 @@
 """Unit tests for the cover generator module."""
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 import pytest_asyncio
 
@@ -22,6 +24,42 @@ from app.modules.cover_design.templates import (
     get_template_by_id,
     get_templates_by_genre,
 )
+
+
+def _fake_dalle_response():
+    """Build a mock OpenAI DALL-E 3 response object."""
+    image_datum = MagicMock()
+    image_datum.url = "https://fake-dalle.openai.test/generated-image.png"
+    image_datum.revised_prompt = "A revised test prompt"
+    response = MagicMock()
+    response.data = [image_datum]
+    return response
+
+
+@pytest.fixture(autouse=True)
+def _mock_openai_dalle(monkeypatch):
+    """Patch the OpenAI DALL-E call so no real API request is made.
+
+    This fixture:
+    1. Makes ``_get_openai_api_key`` return a fake key so the early-return
+       "not configured" branch is skipped.
+    2. Replaces ``openai.AsyncOpenAI`` with a mock whose
+       ``images.generate`` coroutine returns a fake response.
+    """
+    monkeypatch.setattr(
+        "app.modules.cover_design.generator._get_openai_api_key",
+        lambda: "sk-fake-test-key",
+    )
+
+    mock_client_instance = MagicMock()
+    mock_client_instance.images.generate = AsyncMock(
+        return_value=_fake_dalle_response()
+    )
+    mock_client_cls = MagicMock(return_value=mock_client_instance)
+    monkeypatch.setattr(
+        "app.modules.cover_design.generator.openai.AsyncOpenAI",
+        mock_client_cls,
+    )
 
 
 # ---------------------------------------------------------------------------
