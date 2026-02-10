@@ -14,6 +14,7 @@ from app.modules.llm_orchestration.router_config import ModelRouter, TaskType
 from app.modules.llm_orchestration.cost_tracker import CostTracker
 from app.modules.llm_orchestration.cache import SemanticCache
 from app.modules.llm_orchestration.quality import QualityAssurance
+from app.modules.llm_orchestration.router import router
 
 __all__ = [
     "LLMOrchestrator",
@@ -22,4 +23,5 @@ __all__ = [
     "CostTracker",
     "SemanticCache",
     "QualityAssurance",
+    "router",
 ]
