@@ -7,13 +7,14 @@ role validation, session management, and API key operations.
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
+import hashlib
+import json
 import secrets
 
-from sqlalchemy import select, update, delete, func, and_
+from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.schemas.common import UserRole
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,7 +50,8 @@ class UserService:
     async def get_user_profile(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
         """Retrieve user profile by id."""
         result = await db.execute(
-            select_from_table("users").where_col("id", user_id)
+            sa_text("SELECT * FROM users WHERE id = :uid AND deleted_at IS NULL"),
+            {"uid": user_id},
         )
         row = result.mappings().first()
         if not row:
@@ -76,8 +78,6 @@ class UserService:
             )
         data["updated_at"] = datetime.now(timezone.utc)
 
-        from sqlalchemy import text as sa_text
-
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["user_id"] = user_id
         await db.execute(
@@ -94,15 +94,13 @@ class UserService:
         preferences: dict[str, Any],
     ) -> dict[str, Any]:
         """Merge-update the JSONB preferences column."""
-        from sqlalchemy import text as sa_text
-
         await db.execute(
             sa_text(
                 "UPDATE users SET preferences = COALESCE(preferences, '{}'::jsonb) || :prefs::jsonb, "
                 "updated_at = :now WHERE id = :user_id"
             ),
             {
-                "prefs": __import__("json").dumps(preferences),
+                "prefs": json.dumps(preferences),
                 "now": datetime.now(timezone.utc),
                 "user_id": user_id,
             },
@@ -115,8 +113,6 @@ class UserService:
     @staticmethod
     async def list_sessions(db: AsyncSession, user_id: UUID) -> list[dict[str, Any]]:
         """Return all active sessions for the user."""
-        from sqlalchemy import text as sa_text
-
         result = await db.execute(
             sa_text(
                 "SELECT id, ip_address, user_agent, created_at, last_active_at "
@@ -134,8 +130,6 @@ class UserService:
         session_id: UUID,
     ) -> None:
         """Soft-revoke a session."""
-        from sqlalchemy import text as sa_text
-
         result = await db.execute(
             sa_text(
                 "UPDATE user_sessions SET revoked_at = :now "
@@ -159,8 +153,6 @@ class UserService:
     @staticmethod
     async def get_org(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
         """Return organization details."""
-        from sqlalchemy import text as sa_text
-
         result = await db.execute(
             sa_text("SELECT * FROM organizations WHERE id = :oid AND deleted_at IS NULL"),
             {"oid": org_id},
@@ -196,8 +188,6 @@ class UserService:
                 message="No fields to update",
             )
 
-        from sqlalchemy import text as sa_text
-
         data["updated_at"] = datetime.now(timezone.utc)
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["oid"] = org_id
@@ -211,8 +201,6 @@ class UserService:
     @staticmethod
     async def list_members(db: AsyncSession, org_id: UUID) -> list[dict[str, Any]]:
         """Return all active members of an organization."""
-        from sqlalchemy import text as sa_text
-
         result = await db.execute(
             sa_text(
                 "SELECT u.id AS user_id, u.email, u.name, u.role, u.created_at AS joined_at "
@@ -246,8 +234,6 @@ class UserService:
                 code="ROLE_ESCALATION",
                 message="Cannot invite to a role equal or higher than your own",
             )
-
-        from sqlalchemy import text as sa_text
 
         # Check duplicate pending invites
         existing = await db.execute(
@@ -314,8 +300,6 @@ class UserService:
                 message="Cannot change your own role",
             )
 
-        from sqlalchemy import text as sa_text
-
         result = await db.execute(
             sa_text(
                 "UPDATE users SET role = :role, updated_at = :now "
@@ -357,8 +341,6 @@ class UserService:
                 code="SELF_REMOVE",
                 message="Cannot remove yourself from the organization",
             )
-
-        from sqlalchemy import text as sa_text
 
         # Check target role — can't remove someone of equal/higher rank
         target_result = await db.execute(
@@ -418,9 +400,6 @@ class UserService:
         if data.get("expires_in_days"):
             expires_at = now + timedelta(days=data["expires_in_days"])
 
-        from sqlalchemy import text as sa_text
-        import json
-
         await db.execute(
             sa_text(
                 "INSERT INTO api_keys (id, org_id, name, key_hash, prefix, scopes, "
@@ -432,7 +411,7 @@ class UserService:
                 "id": key_id,
                 "oid": org_id,
                 "name": data["name"],
-                "key_hash": __import__("hashlib").sha256(raw_key.encode()).hexdigest(),
+                "key_hash": hashlib.sha256(raw_key.encode()).hexdigest(),
                 "prefix": prefix,
                 "scopes": json.dumps(data.get("scopes", ["read"])),
                 "created_by": current_user["user_id"],
@@ -456,8 +435,6 @@ class UserService:
     @staticmethod
     async def list_api_keys(db: AsyncSession, org_id: UUID) -> list[dict[str, Any]]:
         """List all API keys for the organization."""
-        from sqlalchemy import text as sa_text
-
         result = await db.execute(
             sa_text(
                 "SELECT id, name, prefix, scopes, created_at, expires_at, "
@@ -472,7 +449,6 @@ class UserService:
             row = dict(r)
             # scopes may come back as a JSON string
             if isinstance(row.get("scopes"), str):
-                import json
                 row["scopes"] = json.loads(row["scopes"])
             rows.append(row)
         return rows
@@ -492,8 +468,6 @@ class UserService:
                 message="Only owner or admin can revoke API keys",
             )
 
-        from sqlalchemy import text as sa_text
-
         result = await db.execute(
             sa_text(
                 "UPDATE api_keys SET is_active = false, updated_at = :now "
@@ -512,69 +486,3 @@ class UserService:
                 message="API key not found or already revoked",
             )
 
-
-# ─── Helpers for raw SQL queries ──────────────────────────────────────────────
-
-class _TableSelect:
-    """Minimal fluent helper for building raw SELECT statements."""
-
-    def __init__(self, table: str):
-        self._table = table
-        self._where: list[str] = []
-        self._params: dict[str, Any] = {}
-
-    def where_col(self, col: str, value: Any) -> "_TableSelect":
-        param_name = f"_w_{col}"
-        self._where.append(f"{col} = :{param_name}")
-        self._params[param_name] = value
-        return self
-
-    def build(self) -> tuple[str, dict[str, Any]]:
-        sql = f"SELECT * FROM {self._table}"
-        if self._where:
-            sql += " WHERE " + " AND ".join(self._where)
-            sql += " AND deleted_at IS NULL"
-        return sql, self._params
-
-
-def select_from_table(table: str) -> "_RunnableSelect":
-    return _RunnableSelect(table)
-
-
-class _RunnableSelect:
-    """Wraps _TableSelect to be awaitable in a db.execute context."""
-
-    def __init__(self, table: str):
-        self._ts = _TableSelect(table)
-
-    def where_col(self, col: str, value: Any) -> "_RunnableSelect":
-        self._ts.where_col(col, value)
-        return self
-
-    def __await__(self):
-        raise TypeError("Use db.execute(select_from_table(...).to_text(), params)")
-
-    def to_text(self):
-        from sqlalchemy import text as sa_text
-        sql, params = self._ts.build()
-        return sa_text(sql), params
-
-
-# Override get_user_profile to use raw SQL properly
-async def _get_user_profile(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
-    from sqlalchemy import text as sa_text
-    result = await db.execute(
-        sa_text("SELECT * FROM users WHERE id = :uid AND deleted_at IS NULL"),
-        {"uid": user_id},
-    )
-    row = result.mappings().first()
-    if not row:
-        raise AppException(
-            status_code=404,
-            code="USER_NOT_FOUND",
-            message="User not found",
-        )
-    return dict(row)
-
-# Patch the static method
-UserService.get_user_profile = staticmethod(_get_user_profile)
