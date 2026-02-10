@@ -46,7 +46,11 @@ def _register_routers(app: FastAPI):
     # Routers will be registered by each module worker
     # Example: app.include_router(auth_router, prefix=f"{prefix}/auth", tags=["auth"])
 
-    from app.modules.ai_writing.router import router as ai_writing_router
-    app.include_router(ai_writing_router, prefix=prefix, tags=["ai-writing"])
+    from app.modules.style_cloning.router import router as style_cloning_router
+    app.include_router(
+        style_cloning_router,
+        prefix=f"{prefix}/style-profiles",
+        tags=["style-cloning"],
+    )
 
 app = create_app()
