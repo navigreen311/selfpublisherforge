@@ -100,7 +100,7 @@ def _register_routers(app: FastAPI):
 
     # Tier 4: Optimization
     from app.modules.product_page_lab.router import router as product_page_router
-    app.include_router(product_page_router, prefix=prefix, tags=["product-page"])
+    app.include_router(product_page_router, prefix=f"{prefix}/product-page", tags=["product-page"])
 
     from app.modules.pricing_automation.router import router as pricing_router
     app.include_router(pricing_router, prefix=prefix, tags=["pricing"])
