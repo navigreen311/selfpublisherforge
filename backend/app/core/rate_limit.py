@@ -1,168 +1,225 @@
-"""Rate limiting middleware using Redis sliding window counters.
+"""
+Redis-based rate limiter with sliding window algorithm.
 
-Tier limits (requests per minute):
-  - free:       60
-  - starter:    120
-  - pro:        300
-  - business:   600
-  - enterprise: 1000
+Supports tier-based limits and endpoint-specific overrides.
 """
 
 from __future__ import annotations
 
 import time
+from enum import Enum
 from typing import Any
 
-from fastapi import HTTPException, Request, Response, status
+import redis.asyncio as redis
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from redis.asyncio import Redis
+from starlette.responses import JSONResponse
 
 from app.config import get_settings
 
-# ---------------------------------------------------------------------------
-# Tier -> requests per minute mapping
-# ---------------------------------------------------------------------------
-TIER_RATE_LIMITS: dict[str, int] = {
-    "free": 60,
-    "starter": 120,
-    "pro": 300,
-    "business": 600,
-    "enterprise": 1000,
+
+class RateLimitTier(str, Enum):
+    """Rate limit tiers mapped to subscription plans."""
+
+    FREE = "free"
+    PRO = "pro"
+    ENTERPRISE = "enterprise"
+
+
+# Default requests-per-minute by tier
+DEFAULT_TIER_LIMITS: dict[RateLimitTier, int] = {
+    RateLimitTier.FREE: 60,
+    RateLimitTier.PRO: 300,
+    RateLimitTier.ENTERPRISE: 1000,
 }
 
-DEFAULT_RATE_LIMIT = TIER_RATE_LIMITS["free"]
-WINDOW_SECONDS = 60
+# Endpoint-specific overrides (path prefix -> requests per minute).
+# AI generation endpoints get lower limits.
+ENDPOINT_OVERRIDES: dict[str, dict[RateLimitTier, int]] = {
+    "/api/v1/ai/": {
+        RateLimitTier.FREE: 10,
+        RateLimitTier.PRO: 60,
+        RateLimitTier.ENTERPRISE: 200,
+    },
+    "/api/v1/generation/": {
+        RateLimitTier.FREE: 10,
+        RateLimitTier.PRO: 60,
+        RateLimitTier.ENTERPRISE: 200,
+    },
+}
+
+WINDOW_SIZE = 60  # seconds (1 minute)
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Sliding-window rate limiter backed by Redis.
+class SlidingWindowRateLimiter:
+    """
+    Sliding window rate limiter backed by Redis sorted sets.
 
-    Behaviour:
-    * Identifies callers by ``X-User-ID`` header (set by the auth layer) or
-      falls back to the client IP.
-    * Reads the caller's plan tier from ``X-Plan-Tier`` header (injected by the
-      auth dependency) to pick the correct limit.
-    * Uses a Redis sorted-set per caller to implement an accurate sliding
-      window.
-    * Injects standard ``X-RateLimit-*`` / ``Retry-After`` headers.
+    Each request is recorded as a member in a sorted set keyed by the
+    client identifier. The score is the request timestamp. On each
+    check we remove entries outside the window and count remaining
+    members.
     """
 
-    def __init__(self, app: Any, redis: Redis | None = None) -> None:
-        super().__init__(app)
-        self._redis = redis
-        self._settings = get_settings()
+    def __init__(self, redis_client: redis.Redis | None = None) -> None:
+        self._redis: redis.Redis | None = redis_client
 
-    # ------------------------------------------------------------------
-    # Redis helpers
-    # ------------------------------------------------------------------
-
-    async def _get_redis(self) -> Redis | None:
-        """Lazily connect to Redis if not already provided."""
-        if self._redis is not None:
-            return self._redis
-        try:
-            self._redis = Redis.from_url(
-                self._settings.REDIS_URL,
+    async def _get_redis(self) -> redis.Redis:
+        if self._redis is None:
+            settings = get_settings()
+            self._redis = redis.from_url(
+                settings.REDIS_URL,
                 decode_responses=True,
-                socket_connect_timeout=2,
             )
-            await self._redis.ping()
-            return self._redis
-        except Exception:  # noqa: BLE001
-            # If Redis is unavailable, let requests through (fail-open).
-            return None
+        return self._redis
 
-    # ------------------------------------------------------------------
-    # Core sliding-window logic
-    # ------------------------------------------------------------------
+    def _resolve_limit(self, tier: RateLimitTier, path: str) -> int:
+        """Return the applicable rate limit for a tier + path combination."""
+        for prefix, overrides in ENDPOINT_OVERRIDES.items():
+            if path.startswith(prefix):
+                return overrides.get(tier, DEFAULT_TIER_LIMITS[tier])
+        return DEFAULT_TIER_LIMITS[tier]
 
-    async def _check_rate_limit(
+    async def check(
         self,
-        redis: Redis,
-        key: str,
-        limit: int,
-    ) -> tuple[bool, int, int, float]:
-        """Check and update the sliding-window counter.
-
-        Returns (allowed, remaining, limit, reset_at_epoch).
+        identifier: str,
+        tier: RateLimitTier = RateLimitTier.FREE,
+        path: str = "/",
+    ) -> tuple[bool, dict[str, str]]:
         """
-        now = time.time()
-        window_start = now - WINDOW_SECONDS
-        pipe = redis.pipeline()
+        Check whether the request is allowed.
 
-        # Remove entries outside the window
-        pipe.zremrangebyscore(key, 0, window_start)
+        Returns:
+            (allowed, headers) where *headers* is a dict of
+            X-RateLimit-* response headers.
+        """
+        limit = self._resolve_limit(tier, path)
+        now = time.time()
+        window_start = now - WINDOW_SIZE
+
+        r = await self._get_redis()
+        key = f"rl:{identifier}"
+
+        pipe = r.pipeline()
+        # Remove expired entries
+        pipe.zremrangebyscore(key, "-inf", window_start)
         # Add current request
         pipe.zadd(key, {f"{now}": now})
         # Count entries in window
         pipe.zcard(key)
-        # Set key expiry to auto-cleanup
-        pipe.expire(key, WINDOW_SECONDS + 1)
-
+        # Set expiry so keys don't linger
+        pipe.expire(key, WINDOW_SIZE + 1)
         results = await pipe.execute()
-        request_count: int = results[2]
 
-        remaining = max(0, limit - request_count)
-        reset_at = now + WINDOW_SECONDS
-        allowed = request_count <= limit
+        current_count: int = results[2]
+        allowed = current_count <= limit
+        remaining = max(0, limit - current_count)
+        reset_at = int(now) + WINDOW_SIZE
 
-        return allowed, remaining, limit, reset_at
-
-    # ------------------------------------------------------------------
-    # Middleware dispatch
-    # ------------------------------------------------------------------
-
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: RequestResponseEndpoint,
-    ) -> Response:
-        # Skip rate limiting for health-check and docs endpoints
-        path = request.url.path
-        if path in ("/health", "/docs", "/redoc", "/openapi.json"):
-            return await call_next(request)
-
-        redis = await self._get_redis()
-        if redis is None:
-            # Fail-open: if Redis is down, do not block requests.
-            return await call_next(request)
-
-        # Identify caller
-        user_id = request.headers.get("X-User-ID")
-        if user_id:
-            identifier = f"user:{user_id}"
-        else:
-            client = request.client
-            identifier = f"ip:{client.host}" if client else "ip:unknown"
-
-        # Determine tier limit
-        tier = request.headers.get("X-Plan-Tier", "free").lower()
-        limit = TIER_RATE_LIMITS.get(tier, DEFAULT_RATE_LIMIT)
-
-        rate_key = f"rate_limit:{identifier}"
-
-        allowed, remaining, limit_val, reset_at = await self._check_rate_limit(
-            redis, rate_key, limit
-        )
+        headers = {
+            "X-RateLimit-Limit": str(limit),
+            "X-RateLimit-Remaining": str(remaining),
+            "X-RateLimit-Reset": str(reset_at),
+        }
 
         if not allowed:
-            retry_after = max(1, int(reset_at - time.time()))
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded. Please slow down.",
-                headers={
-                    "X-RateLimit-Limit": str(limit_val),
-                    "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(int(reset_at)),
-                    "Retry-After": str(retry_after),
+            # Remove the request we just added since it's denied
+            await r.zrem(key, f"{now}")
+
+        return allowed, headers
+
+    async def close(self) -> None:
+        """Close the underlying Redis connection."""
+        if self._redis is not None:
+            await self._redis.close()
+            self._redis = None
+
+
+# Module-level singleton -------------------------------------------------
+_limiter: SlidingWindowRateLimiter | None = None
+
+
+def get_rate_limiter() -> SlidingWindowRateLimiter:
+    """Return (and lazily create) the module-level rate limiter."""
+    global _limiter
+    if _limiter is None:
+        _limiter = SlidingWindowRateLimiter()
+    return _limiter
+
+
+def _extract_tier(request: Request) -> RateLimitTier:
+    """
+    Determine the caller's tier from the request state.
+
+    Falls back to FREE if no tier information is available.
+    """
+    user: dict[str, Any] | None = getattr(request.state, "user", None)
+    if user and "tier" in user:
+        try:
+            return RateLimitTier(user["tier"])
+        except ValueError:
+            pass
+    return RateLimitTier.FREE
+
+
+def _extract_identifier(request: Request) -> str:
+    """
+    Build a unique identifier for rate limiting.
+
+    Authenticated users are keyed by user_id; anonymous callers by IP.
+    """
+    user: dict[str, Any] | None = getattr(request.state, "user", None)
+    if user and "user_id" in user:
+        return f"user:{user['user_id']}"
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return f"ip:{forwarded.split(',')[0].strip()}"
+    client_host = request.client.host if request.client else "unknown"
+    return f"ip:{client_host}"
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """
+    FastAPI middleware that enforces per-request rate limiting.
+    """
+
+    def __init__(self, app: Any, limiter: SlidingWindowRateLimiter | None = None) -> None:
+        super().__init__(app)
+        self.limiter = limiter or get_rate_limiter()
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        # Skip rate limiting for health endpoints
+        if request.url.path.startswith("/health"):
+            return await call_next(request)
+
+        identifier = _extract_identifier(request)
+        tier = _extract_tier(request)
+
+        try:
+            allowed, headers = await self.limiter.check(
+                identifier=identifier,
+                tier=tier,
+                path=request.url.path,
+            )
+        except Exception:
+            # If Redis is unavailable, allow the request through
+            return await call_next(request)
+
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": {
+                        "code": "RATE_LIMIT_EXCEEDED",
+                        "message": "Too many requests. Please try again later.",
+                    }
                 },
+                headers=headers,
             )
 
         response = await call_next(request)
-
-        # Attach rate-limit info headers
-        response.headers["X-RateLimit-Limit"] = str(limit_val)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-        response.headers["X-RateLimit-Reset"] = str(int(reset_at))
-
+        for name, value in headers.items():
+            response.headers[name] = value
         return response

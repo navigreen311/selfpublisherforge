@@ -1,97 +1,135 @@
-"""Application middleware stack.
+"""
+API Gateway middleware stack.
 
 Provides:
-* **CorrelationIdMiddleware** -- injects/propagates a unique request ID.
-* **RequestLoggingMiddleware** -- logs every request with method, path,
-  status code and duration in milliseconds.
-* **TimingMiddleware** -- adds ``X-Process-Time-Ms`` response header.
+- RequestTimingMiddleware  -- X-Response-Time header
+- CorrelationIDMiddleware  -- X-Request-ID generation / propagation
+- RequestLoggingMiddleware -- structured request/response logging
+- SecurityHeadersMiddleware -- HSTS, CSP, X-Frame-Options, X-Content-Type-Options
 """
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
+from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from app.core.logging import correlation_id_ctx, get_logger
-
-logger = get_logger(__name__)
-
-# Header used to propagate correlation IDs across services.
-CORRELATION_ID_HEADER = "X-Correlation-ID"
+logger = logging.getLogger("spf.middleware")
 
 
-class CorrelationIdMiddleware(BaseHTTPMiddleware):
-    """Ensure every request has a correlation ID.
+# ---------------------------------------------------------------------------
+# Correlation ID
+# ---------------------------------------------------------------------------
 
-    If the incoming request carries an ``X-Correlation-ID`` header it is
-    reused; otherwise a new UUID-4 is generated.  The value is stored in
-    the ``correlation_id_ctx`` context-var so that the structured logger
-    can include it automatically.
+class CorrelationIDMiddleware(BaseHTTPMiddleware):
+    """
+    Generate or propagate an ``X-Request-ID`` header.
+
+    If the incoming request already carries the header, its value is reused;
+    otherwise a new UUID-4 is created.  The value is stored on
+    ``request.state.correlation_id`` so downstream code can access it.
     """
 
     async def dispatch(
-        self,
-        request: Request,
-        call_next: RequestResponseEndpoint,
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        cid = request.headers.get(CORRELATION_ID_HEADER) or str(uuid.uuid4())
+        correlation_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request.state.correlation_id = correlation_id
 
-        # Store in contextvars for logger access
-        token = correlation_id_ctx.set(cid)
-        try:
-            response = await call_next(request)
-            response.headers[CORRELATION_ID_HEADER] = cid
-            return response
-        finally:
-            correlation_id_ctx.reset(token)
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = correlation_id
+        return response
 
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Log every HTTP request with method, path, status and duration."""
+# ---------------------------------------------------------------------------
+# Request Timing
+# ---------------------------------------------------------------------------
+
+class RequestTimingMiddleware(BaseHTTPMiddleware):
+    """Add an ``X-Response-Time`` header (in milliseconds)."""
 
     async def dispatch(
-        self,
-        request: Request,
-        call_next: RequestResponseEndpoint,
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         start = time.perf_counter()
-
-        # Let request proceed
         response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Response-Time"] = f"{elapsed_ms:.2f}ms"
+        return response
 
-        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
+# ---------------------------------------------------------------------------
+# Request Logging
+# ---------------------------------------------------------------------------
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """
+    Log every request with method, path, status, duration and optional
+    user context.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        start = time.perf_counter()
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start) * 1000
+
+        correlation_id: str = getattr(request.state, "correlation_id", "-")
+        user: dict[str, Any] | None = getattr(request.state, "user", None)
+        user_id = str(user["user_id"]) if user and "user_id" in user else "anonymous"
 
         logger.info(
-            "%s %s -> %s (%.2fms)",
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
+            "request_completed",
             extra={
                 "method": request.method,
                 "path": request.url.path,
                 "status_code": response.status_code,
-                "duration_ms": duration_ms,
-                "user_agent": request.headers.get("user-agent", ""),
+                "duration_ms": round(duration_ms, 2),
+                "correlation_id": correlation_id,
+                "user_id": user_id,
+                "client_ip": request.client.host if request.client else "unknown",
             },
         )
-
         return response
 
 
-class TimingMiddleware(BaseHTTPMiddleware):
-    """Add ``X-Process-Time-Ms`` header with the server processing time."""
+# ---------------------------------------------------------------------------
+# Security Headers
+# ---------------------------------------------------------------------------
+
+# Default values -- production-ready but overridable.
+_DEFAULT_SECURITY_HEADERS: dict[str, str] = {
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Inject security headers into every response.
+
+    Custom headers can be passed at init time; defaults cover HSTS, CSP,
+    X-Frame-Options, X-Content-Type-Options, Referrer-Policy and
+    Permissions-Policy.
+    """
+
+    def __init__(self, app: Any, headers: dict[str, str] | None = None) -> None:
+        super().__init__(app)
+        self.headers = headers or _DEFAULT_SECURITY_HEADERS
 
     async def dispatch(
-        self,
-        request: Request,
-        call_next: RequestResponseEndpoint,
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        start = time.perf_counter()
         response = await call_next(request)
-        duration_ms = round((time.perf_counter() - start) * 1000, 2)
-        response.headers["X-Process-Time-Ms"] = str(duration_ms)
+        for name, value in self.headers.items():
+            response.headers[name] = value
         return response
