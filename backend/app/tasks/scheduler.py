@@ -51,30 +51,30 @@ CELERY_BEAT_SCHEDULE = {
         "kwargs": {},
     },
     # ------------------------------------------------------------------
-    # Marketing: Send scheduled emails — every hour
+    # Advertising: sync performance from ad platforms — every hour
     # ------------------------------------------------------------------
-    "marketing-send-scheduled-emails": {
-        "task": "marketing.send_scheduled_emails",
-        "schedule": schedule(run_every=60 * 60),  # 3600 seconds
-        "options": {"queue": "email_queue"},
+    "sync-ad-performance-hourly": {
+        "task": "app.tasks.advertising.sync_performance",
+        "schedule": schedule(run_every=3600),
+        "options": {"queue": "default"},
         "kwargs": {},
     },
     # ------------------------------------------------------------------
-    # Marketing: Social post reminders — every 6 hours
+    # Advertising: auto-optimize bids — daily at 04:00 UTC
     # ------------------------------------------------------------------
-    "marketing-social-post-reminders": {
-        "task": "marketing.send_social_post_reminders",
-        "schedule": schedule(run_every=6 * 60 * 60),  # 21600 seconds
-        "options": {"queue": "email_queue"},
+    "auto-optimize-bids-daily": {
+        "task": "app.tasks.advertising.auto_optimize",
+        "schedule": crontab(hour=4, minute=0),
+        "options": {"queue": "default"},
         "kwargs": {},
     },
     # ------------------------------------------------------------------
-    # Marketing: ARC follow-ups — daily at 10:00 UTC
+    # Advertising: budget alerts — every 4 hours
     # ------------------------------------------------------------------
-    "marketing-arc-follow-ups": {
-        "task": "marketing.send_arc_follow_ups",
-        "schedule": crontab(hour=10, minute=0),
-        "options": {"queue": "email_queue"},
-        "kwargs": {"days_since_send": 7},
+    "check-budget-alerts-every-4h": {
+        "task": "app.tasks.advertising.budget_alerts",
+        "schedule": schedule(run_every=4 * 60 * 60),
+        "options": {"queue": "default"},
+        "kwargs": {},
     },
 }

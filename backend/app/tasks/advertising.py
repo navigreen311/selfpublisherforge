@@ -34,7 +34,7 @@ def _run_async(coro):
         loop.close()
 
 
-@celery_app.task(name="advertising.sync_performance", bind=True, max_retries=3)
+@celery_app.task(name="app.tasks.advertising.sync_performance", bind=True, max_retries=3)
 def sync_campaign_performance(self, campaign_id: str | None = None):
     """Sync performance data from ad platforms for campaigns.
 
@@ -120,7 +120,7 @@ async def _sync_performance_async(campaign_id: str | None = None):
             raise
 
 
-@celery_app.task(name="advertising.auto_optimize", bind=True, max_retries=3)
+@celery_app.task(name="app.tasks.advertising.auto_optimize", bind=True, max_retries=3)
 def auto_optimize_bids(self):
     """Automatically optimize bids for campaigns with ACOS targets.
 
@@ -212,7 +212,7 @@ async def _auto_optimize_async():
             raise
 
 
-@celery_app.task(name="advertising.budget_alerts", bind=True, max_retries=3)
+@celery_app.task(name="app.tasks.advertising.budget_alerts", bind=True, max_retries=3)
 def check_budget_alerts(self):
     """Check for campaigns approaching budget limits and send alerts.
 
@@ -299,20 +299,4 @@ async def _check_budget_alerts_async():
 
 
 # ─── Periodic Task Schedule ──────────────────────────────────────────────────
-# Exported as a dict for merging into the central scheduler; do NOT mutate
-# celery_app.conf.beat_schedule directly from module-level code.
-
-ADVERTISING_BEAT_SCHEDULE = {
-    "sync-ad-performance-hourly": {
-        "task": "advertising.sync_performance",
-        "schedule": 3600.0,  # Every hour
-    },
-    "auto-optimize-bids-daily": {
-        "task": "advertising.auto_optimize",
-        "schedule": 86400.0,  # Every 24 hours
-    },
-    "check-budget-alerts-every-4h": {
-        "task": "advertising.budget_alerts",
-        "schedule": 14400.0,  # Every 4 hours
-    },
-}
+# Beat schedules are registered centrally in app.tasks.scheduler.CELERY_BEAT_SCHEDULE
