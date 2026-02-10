@@ -12,6 +12,9 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     await init_db()
     yield
+    # Shut down the WebSocket connection manager (cancels background tasks, closes Redis).
+    from app.modules.realtime.router import manager as ws_manager
+    await ws_manager.shutdown()
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -66,7 +69,7 @@ def _register_routers(app: FastAPI):
     app.include_router(notifications_router, prefix=f"{prefix}/notifications", tags=["notifications"])
 
     from app.modules.realtime.router import router as realtime_router
-    app.include_router(realtime_router, prefix=prefix, tags=["realtime"])
+    app.include_router(realtime_router, tags=["realtime"])
 
     # Tier 1-2: Data & Creation
     from app.modules.llm_orchestration import router as llm_router

@@ -19,7 +19,6 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
-from uuid import UUID
 
 from app.config import get_settings
 from app.modules.realtime.schemas import WSChannel
