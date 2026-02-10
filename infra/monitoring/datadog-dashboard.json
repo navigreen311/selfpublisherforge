@@ -1,0 +1,300 @@
+{
+  "title": "SelfPublisherForge - Production Dashboard",
+  "description": "Comprehensive monitoring dashboard for SelfPublisherForge: API performance, error rates, queue metrics, and database health.",
+  "widgets": [
+    {
+      "id": 1,
+      "definition": {
+        "title": "API Request Latency (P50 / P95 / P99)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:trace.fastapi.request.duration.by.resource_name{env:production}.rollup(avg)",
+            "display_type": "line",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "metadata": [
+              { "expression": "avg:trace.fastapi.request.duration{env:production,quantile:0.50}", "alias_name": "P50" },
+              { "expression": "avg:trace.fastapi.request.duration{env:production,quantile:0.95}", "alias_name": "P95" },
+              { "expression": "avg:trace.fastapi.request.duration{env:production,quantile:0.99}", "alias_name": "P99" }
+            ]
+          }
+        ],
+        "yaxis": { "label": "Latency (ms)", "min": "0" },
+        "markers": [
+          { "value": "y = 500", "display_type": "warning dashed", "label": "SLO Threshold (500ms)" },
+          { "value": "y = 2000", "display_type": "error dashed", "label": "Critical (2s)" }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "definition": {
+        "title": "API Error Rate (5xx)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:trace.fastapi.request.errors{env:production}.as_rate()",
+            "display_type": "bars",
+            "style": { "palette": "warm" }
+          },
+          {
+            "q": "( sum:trace.fastapi.request.errors{env:production}.as_count() / sum:trace.fastapi.request.hits{env:production}.as_count() ) * 100",
+            "display_type": "line",
+            "style": { "palette": "red" },
+            "metadata": [{ "alias_name": "Error Rate %" }]
+          }
+        ],
+        "yaxis": { "label": "Error Rate (%)", "min": "0" },
+        "markers": [
+          { "value": "y = 1", "display_type": "error dashed", "label": "1% SLO Threshold" }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "definition": {
+        "title": "API Requests Per Second",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:trace.fastapi.request.hits{env:production}.as_rate()",
+            "display_type": "line",
+            "style": { "palette": "dog_classic" },
+            "metadata": [{ "alias_name": "Requests/sec" }]
+          }
+        ],
+        "yaxis": { "label": "RPS", "min": "0" }
+      }
+    },
+    {
+      "id": 4,
+      "definition": {
+        "title": "API Response Codes Distribution",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:trace.fastapi.request.hits{env:production,http.status_code:200}.as_count()",
+            "display_type": "area",
+            "style": { "palette": "green" },
+            "metadata": [{ "alias_name": "2xx" }]
+          },
+          {
+            "q": "sum:trace.fastapi.request.hits{env:production,http.status_code:400}.as_count()",
+            "display_type": "area",
+            "style": { "palette": "orange" },
+            "metadata": [{ "alias_name": "4xx" }]
+          },
+          {
+            "q": "sum:trace.fastapi.request.hits{env:production,http.status_code:500}.as_count()",
+            "display_type": "area",
+            "style": { "palette": "red" },
+            "metadata": [{ "alias_name": "5xx" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "definition": {
+        "title": "Celery Queue Depth",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:celery.queue.length{env:production} by {queue_name}",
+            "display_type": "line",
+            "style": { "palette": "dog_classic" }
+          }
+        ],
+        "yaxis": { "label": "Queued Tasks", "min": "0" },
+        "markers": [
+          { "value": "y = 100", "display_type": "warning dashed", "label": "High Queue Depth" },
+          { "value": "y = 500", "display_type": "error dashed", "label": "Critical Queue Depth" }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "definition": {
+        "title": "Celery Task Throughput & Failures",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:celery.task.succeeded{env:production}.as_rate()",
+            "display_type": "line",
+            "style": { "palette": "green" },
+            "metadata": [{ "alias_name": "Succeeded/sec" }]
+          },
+          {
+            "q": "sum:celery.task.failed{env:production}.as_rate()",
+            "display_type": "bars",
+            "style": { "palette": "red" },
+            "metadata": [{ "alias_name": "Failed/sec" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "definition": {
+        "title": "Database Connections",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:aws.rds.database_connections{dbinstanceidentifier:selfpublisherforge-production-postgres}",
+            "display_type": "line",
+            "style": { "palette": "purple" },
+            "metadata": [{ "alias_name": "Active Connections" }]
+          }
+        ],
+        "yaxis": { "label": "Connections", "min": "0" },
+        "markers": [
+          { "value": "y = 150", "display_type": "warning dashed", "label": "Connection Pool Warning" },
+          { "value": "y = 190", "display_type": "error dashed", "label": "Near Max Connections" }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "definition": {
+        "title": "Database CPU & IOPS",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:aws.rds.cpuutilization{dbinstanceidentifier:selfpublisherforge-production-postgres}",
+            "display_type": "line",
+            "style": { "palette": "orange" },
+            "metadata": [{ "alias_name": "CPU %" }]
+          },
+          {
+            "q": "avg:aws.rds.read_iops{dbinstanceidentifier:selfpublisherforge-production-postgres}",
+            "display_type": "line",
+            "style": { "palette": "blue" },
+            "metadata": [{ "alias_name": "Read IOPS" }]
+          },
+          {
+            "q": "avg:aws.rds.write_iops{dbinstanceidentifier:selfpublisherforge-production-postgres}",
+            "display_type": "line",
+            "style": { "palette": "green" },
+            "metadata": [{ "alias_name": "Write IOPS" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "definition": {
+        "title": "Redis Memory & Connections",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:aws.elasticache.bytes_used_for_cache{cacheclusterid:selfpublisherforge-production-redis}",
+            "display_type": "line",
+            "style": { "palette": "cool" },
+            "metadata": [{ "alias_name": "Memory Used (bytes)" }]
+          },
+          {
+            "q": "avg:aws.elasticache.curr_connections{cacheclusterid:selfpublisherforge-production-redis}",
+            "display_type": "line",
+            "style": { "palette": "warm" },
+            "metadata": [{ "alias_name": "Current Connections" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "definition": {
+        "title": "Redis Hit Rate",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "( sum:aws.elasticache.cache_hits{cacheclusterid:selfpublisherforge-production-redis}.as_count() / ( sum:aws.elasticache.cache_hits{cacheclusterid:selfpublisherforge-production-redis}.as_count() + sum:aws.elasticache.cache_misses{cacheclusterid:selfpublisherforge-production-redis}.as_count() ) ) * 100",
+            "aggregator": "avg"
+          }
+        ],
+        "precision": 1,
+        "autoscale": false,
+        "custom_unit": "%"
+      }
+    },
+    {
+      "id": 11,
+      "definition": {
+        "title": "ECS CPU Utilization by Service",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:aws.ecs.cpuutilization{clustername:selfpublisherforge-production} by {servicename}",
+            "display_type": "line"
+          }
+        ],
+        "yaxis": { "label": "CPU %", "min": "0", "max": "100" }
+      }
+    },
+    {
+      "id": 12,
+      "definition": {
+        "title": "ECS Memory Utilization by Service",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:aws.ecs.memory_utilization{clustername:selfpublisherforge-production} by {servicename}",
+            "display_type": "line"
+          }
+        ],
+        "yaxis": { "label": "Memory %", "min": "0", "max": "100" }
+      }
+    },
+    {
+      "id": 13,
+      "definition": {
+        "title": "ALB Request Count & Latency",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:aws.applicationelb.request_count{loadbalancer:selfpublisherforge-production-alb}.as_rate()",
+            "display_type": "bars",
+            "metadata": [{ "alias_name": "Requests/sec" }]
+          },
+          {
+            "q": "avg:aws.applicationelb.target_response_time.average{loadbalancer:selfpublisherforge-production-alb}",
+            "display_type": "line",
+            "style": { "palette": "orange" },
+            "metadata": [{ "alias_name": "Avg Response Time (s)" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "definition": {
+        "title": "Service Health Overview",
+        "type": "check_status",
+        "check": "ecs.service.health",
+        "grouping": "cluster",
+        "group_by": ["servicename"],
+        "tags": ["clustername:selfpublisherforge-production"]
+      }
+    }
+  ],
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "production",
+      "available_values": ["production", "staging"]
+    },
+    {
+      "name": "service",
+      "prefix": "servicename",
+      "default": "*"
+    }
+  ],
+  "layout_type": "ordered",
+  "notify_list": [],
+  "reflow_type": "fixed"
+}
