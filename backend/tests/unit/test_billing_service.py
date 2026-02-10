@@ -320,11 +320,11 @@ class TestWebhookHandling:
     async def test_invalid_signature_raises(self, mock_stripe):
         from app.core.exceptions import AppException
 
-        mock_stripe.Webhook.construct_event.side_effect = (
-            stripe_sig_error()
-        )
-        mock_stripe.error.SignatureVerificationError = type(
-            "SignatureVerificationError", (Exception,), {}
+        # Define the mock exception class first, then raise an instance of it
+        MockSigError = type("SignatureVerificationError", (Exception,), {})
+        mock_stripe.SignatureVerificationError = MockSigError
+        mock_stripe.Webhook.construct_event.side_effect = MockSigError(
+            "bad sig"
         )
 
         mock_db = AsyncMock()
@@ -455,11 +455,11 @@ class TestCreateCheckoutSession:
 
 
 def stripe_sig_error():
-    """Return an exception that mimics stripe.error.SignatureVerificationError."""
+    """Return an exception that mimics stripe.SignatureVerificationError."""
     import stripe as _stripe
 
     try:
-        return _stripe.error.SignatureVerificationError("bad sig", "sig_header")
+        return _stripe.SignatureVerificationError("bad sig", "sig_header")
     except Exception:
         # If stripe is not installed, create a stand-in
         return Exception("SignatureVerificationError")

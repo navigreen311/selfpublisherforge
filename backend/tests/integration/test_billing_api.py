@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.modules.billing.router import router
+from app.core.error_handler import register_error_handlers
 from app.database import get_db
 from app.core.dependencies import get_current_user, require_role
 from app.schemas.common import PlanTier
@@ -65,6 +66,7 @@ def _make_mock_db():
 def _create_test_app() -> FastAPI:
     """Build a minimal FastAPI app with billing router for testing."""
     app = FastAPI()
+    register_error_handlers(app)
     app.include_router(router, prefix="/api/v1/billing", tags=["billing"])
 
     # Override dependencies
