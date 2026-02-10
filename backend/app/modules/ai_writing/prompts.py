@@ -6,7 +6,7 @@ fully-formed system/user prompt pair suitable for the LLM.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 
 def _base_system_prompt(genre: str = "", tone: str = "") -> str:
@@ -212,7 +212,7 @@ def tone_adjustment_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # Registry
 # ---------------------------------------------------------------------------
 
-PROMPT_REGISTRY: dict[str, callable] = {
+PROMPT_REGISTRY: dict[str, Callable[..., tuple[str, str]]] = {
     "outline": outline_prompt,
     "chapter": chapter_prompt,
     "blurb": blurb_prompt,
