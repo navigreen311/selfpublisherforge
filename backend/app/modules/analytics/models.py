@@ -42,6 +42,7 @@ class AnalyticsEvent(TenantModel):
     __table_args__ = (
         Index("ix_analytics_events_org_occurred", "org_id", "occurred_at"),
         Index("ix_analytics_events_type_occurred", "event_type", "occurred_at"),
+        {"extend_existing": True},
     )
 
 
@@ -73,6 +74,7 @@ class RoyaltyRecord(TenantModel):
     __table_args__ = (
         Index("ix_royalty_records_org_period", "org_id", "period_start"),
         Index("ix_royalty_records_platform_period", "platform", "period_start"),
+        {"extend_existing": True},
     )
 
 
@@ -95,6 +97,7 @@ class PortfolioMetricSnapshot(TenantModel):
 
     __table_args__ = (
         Index("ix_portfolio_metrics_org_date", "org_id", "snapshot_date"),
+        {"extend_existing": True},
     )
 
 
@@ -116,4 +119,5 @@ class Report(TenantModel):
 
     __table_args__ = (
         Index("ix_reports_org_type", "org_id", "report_type"),
+        {"extend_existing": True},
     )
