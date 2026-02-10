@@ -55,10 +55,10 @@ logs: ## Tail logs for all services (or specify SERVICE=api)
 	$(COMPOSE) logs -f $(SERVICE)
 
 shell: ## Open a shell in the API container
-	$(COMPOSE) exec api bash
+	$(COMPOSE) exec backend bash
 
 db-shell: ## Open a PostgreSQL shell
-	$(COMPOSE) exec db psql -U postgres -d selfpublisherforge
+	$(COMPOSE) exec postgres psql -U postgres -d selfpublisherforge
 
 redis-shell: ## Open a Redis CLI shell
 	$(COMPOSE) exec redis redis-cli
@@ -89,7 +89,7 @@ docker-push: ## Push images to ECR (requires AWS auth)
 test: test-backend test-frontend ## Run all tests
 
 test-backend: ## Run backend tests with coverage
-	$(COMPOSE) exec api pytest tests/ -v --cov=app --cov-report=term-missing -x
+	$(COMPOSE) exec backend pytest tests/ -v --cov=app --cov-report=term-missing -x
 
 test-frontend: ## Run frontend tests with coverage
 	$(COMPOSE) exec frontend npx jest --coverage --ci
@@ -98,7 +98,7 @@ test-e2e: ## Run end-to-end tests with Playwright
 	cd frontend && npx playwright test
 
 test-integration: ## Run integration tests
-	$(COMPOSE) exec api pytest tests/integration/ -v -x
+	$(COMPOSE) exec backend pytest tests/integration/ -v -x
 
 # ---------------------------------------------------------------------------
 # Linting & Formatting
@@ -106,38 +106,38 @@ test-integration: ## Run integration tests
 lint: lint-backend lint-frontend ## Run all linters
 
 lint-backend: ## Lint backend with ruff
-	$(COMPOSE) exec api ruff check .
-	$(COMPOSE) exec api ruff format --check .
+	$(COMPOSE) exec backend ruff check .
+	$(COMPOSE) exec backend ruff format --check .
 
 lint-frontend: ## Lint frontend with ESLint and type-check with tsc
 	$(COMPOSE) exec frontend npx next lint
 	$(COMPOSE) exec frontend npx tsc --noEmit
 
 format: ## Auto-format all code
-	$(COMPOSE) exec api ruff format .
-	$(COMPOSE) exec api ruff check --fix .
+	$(COMPOSE) exec backend ruff format .
+	$(COMPOSE) exec backend ruff check --fix .
 
 # ---------------------------------------------------------------------------
 # Security
 # ---------------------------------------------------------------------------
 security-scan: ## Run security scans (pip-audit + npm audit)
-	$(COMPOSE) exec api pip-audit --strict --desc || true
+	$(COMPOSE) exec backend pip-audit --strict --desc || true
 	$(COMPOSE) exec frontend npm audit --audit-level=high || true
 
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
 migrate: ## Run database migrations
-	$(COMPOSE) exec api alembic upgrade head
+	$(COMPOSE) exec backend alembic upgrade head
 
 migrate-create: ## Create a new migration (usage: make migrate-create MSG="add users table")
-	$(COMPOSE) exec api alembic revision --autogenerate -m "$(MSG)"
+	$(COMPOSE) exec backend alembic revision --autogenerate -m "$(MSG)"
 
 migrate-rollback: ## Rollback one migration step
-	$(COMPOSE) exec api alembic downgrade -1
+	$(COMPOSE) exec backend alembic downgrade -1
 
 migrate-history: ## Show migration history
-	$(COMPOSE) exec api alembic history --verbose
+	$(COMPOSE) exec backend alembic history --verbose
 
 # ---------------------------------------------------------------------------
 # Deployment

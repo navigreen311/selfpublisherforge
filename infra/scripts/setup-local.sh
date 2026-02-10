@@ -5,14 +5,14 @@ echo "=== SelfPublisherForge Local Setup ==="
 
 # Start Docker services
 echo "Starting Docker services..."
-docker-compose up -d db redis elasticsearch
+docker compose up -d postgres redis elasticsearch
 
 # Wait for services
 echo "Waiting for PostgreSQL..."
-until docker-compose exec db pg_isready -U postgres; do sleep 1; done
+until docker compose exec postgres pg_isready -U postgres; do sleep 1; done
 
 echo "Waiting for Redis..."
-until docker-compose exec redis redis-cli ping; do sleep 1; done
+until docker compose exec redis redis-cli ping; do sleep 1; done
 
 # Backend setup
 echo "Setting up backend..."
@@ -35,7 +35,7 @@ cp -n .env.example .env.local 2>/dev/null || true
 cd ..
 
 echo "=== Setup complete! ==="
-echo "Run 'docker-compose up' to start all services"
+echo "Run 'docker compose up' to start all services"
 echo "Or run backend/frontend manually:"
 echo "  Backend: cd backend && uvicorn app.main:app --reload"
 echo "  Frontend: cd frontend && npm run dev"

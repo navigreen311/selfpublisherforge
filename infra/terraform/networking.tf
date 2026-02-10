@@ -331,7 +331,7 @@ resource "aws_lb_target_group" "api" {
     unhealthy_threshold = 3
     timeout             = 10
     interval            = 30
-    path                = "/api/health"
+    path                = "/health"
     protocol            = "HTTP"
     matcher             = "200"
   }
@@ -384,6 +384,25 @@ resource "aws_lb_listener_rule" "api" {
   condition {
     path_pattern {
       values = ["/api/*"]
+    }
+  }
+}
+
+# ALB Listener Rule — Route /health to API target group (for external health checks)
+resource "aws_lb_listener_rule" "health" {
+  count = var.certificate_arn != "" ? 1 : 0
+
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 50
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/health", "/health/*"]
     }
   }
 }
