@@ -4,11 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import init_db
-from app.modules.portfolio_economics.router import (
-    portfolio_router,
-    audience_router,
-    seasonal_router,
-)
 
 settings = get_settings()
 
@@ -49,9 +44,12 @@ def _register_routers(app: FastAPI):
     """Register all module API routers."""
     prefix = settings.API_V1_PREFIX
 
-    # Portfolio Economics, Audience DNA, and Seasonal Calendar
-    app.include_router(portfolio_router, prefix=prefix)
-    app.include_router(audience_router, prefix=prefix)
-    app.include_router(seasonal_router, prefix=prefix)
+    # Cover Design Studio
+    from app.modules.cover_design.router import router as cover_router
+    app.include_router(cover_router, prefix=prefix)
+
+    # Chrome Extension API
+    from app.modules.chrome_extension.router import router as extension_router
+    app.include_router(extension_router, prefix=prefix)
 
 app = create_app()
