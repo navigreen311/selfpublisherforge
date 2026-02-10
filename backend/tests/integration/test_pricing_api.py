@@ -7,12 +7,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.database import Base, get_db
+from app.main import create_app
+from app.core.dependencies import get_current_user
 from app.modules.pricing_automation.schemas import (
     ABTestResponse,
     ABTestStatus,
@@ -23,6 +28,76 @@ from app.modules.pricing_automation.schemas import (
     PromotionStatus,
     RuleStatus,
 )
+
+# ──────────────────── Test DB Setup ────────────────────
+
+TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest.fixture
+def org_id() -> uuid.UUID:
+    return uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+@pytest.fixture
+def book_id() -> uuid.UUID:
+    return uuid.UUID("00000000-0000-0000-0000-000000000099")
+
+
+@pytest.fixture
+def mock_user(org_id):
+    return {"user_id": uuid.uuid4(), "org_id": org_id, "role": "admin"}
+
+
+@pytest_asyncio.fixture
+async def mock_db():
+    """Create an in-memory SQLite test database session."""
+    test_engine = create_async_engine(TEST_DB_URL, echo=False)
+
+    @event.listens_for(test_engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    # Strip PG-specific server defaults for SQLite
+    for table in Base.metadata.tables.values():
+        for column in table.columns:
+            if column.server_default is not None:
+                sd = column.server_default
+                if hasattr(sd, "arg") and hasattr(sd.arg, "text"):
+                    if "gen_random_uuid" in str(sd.arg.text):
+                        column.server_default = None
+
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(
+        test_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with session_factory() as session:
+        yield session
+
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+    await test_engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def fastapi_app(mock_db, mock_user):
+    """Create a FastAPI app with DB and auth overrides."""
+    app = create_app()
+
+    async def override_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    yield app
+
+    app.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture
@@ -168,9 +243,8 @@ class TestKUCalculatorEndpoint:
 
 @pytest.mark.asyncio
 class TestPricingRulesEndpoints:
-    async def test_create_rule(self, client: AsyncClient, fastapi_app, mock_db, org_id):
+    async def test_create_rule(self, client: AsyncClient, org_id):
         """POST /api/v1/pricing/rules creates a rule."""
-        from app.database import get_db
         from app.modules.pricing_automation.service import PricingAutomationService
 
         now = datetime.now(timezone.utc)
@@ -201,12 +275,6 @@ class TestPricingRulesEndpoints:
             new_callable=AsyncMock,
             return_value=mock_rule_response,
         ):
-            # Override get_db
-            async def override_db():
-                yield mock_db
-
-            fastapi_app.dependency_overrides[get_db] = override_db
-
             response = await client.post(
                 "/api/v1/pricing/rules",
                 json={
@@ -217,9 +285,6 @@ class TestPricingRulesEndpoints:
                     "max_price": 9.99,
                 },
             )
-
-            # Clean up override
-            fastapi_app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 201
         data = response.json()
@@ -240,9 +305,8 @@ class TestPricingRulesEndpoints:
         )
         assert response.status_code == 422
 
-    async def test_list_rules(self, client: AsyncClient, fastapi_app, mock_db, org_id):
+    async def test_list_rules(self, client: AsyncClient, org_id):
         """GET /api/v1/pricing/rules returns paginated results."""
-        from app.database import get_db
         from app.modules.pricing_automation.service import PricingAutomationService
 
         now = datetime.now(timezone.utc)
@@ -274,13 +338,7 @@ class TestPricingRulesEndpoints:
             new_callable=AsyncMock,
             return_value=(mock_rules, 3),
         ):
-            async def override_db():
-                yield mock_db
-
-            fastapi_app.dependency_overrides[get_db] = override_db
-
             response = await client.get("/api/v1/pricing/rules")
-            fastapi_app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -288,9 +346,8 @@ class TestPricingRulesEndpoints:
         assert data["total_count"] == 3
         assert len(data["items"]) == 3
 
-    async def test_delete_rule_not_found(self, client: AsyncClient, fastapi_app, mock_db):
+    async def test_delete_rule_not_found(self, client: AsyncClient):
         """DELETE /api/v1/pricing/rules/{id} returns 404 when not found."""
-        from app.database import get_db
         from app.modules.pricing_automation.service import PricingAutomationService
 
         with patch.object(
@@ -299,13 +356,7 @@ class TestPricingRulesEndpoints:
             new_callable=AsyncMock,
             return_value=False,
         ):
-            async def override_db():
-                yield mock_db
-
-            fastapi_app.dependency_overrides[get_db] = override_db
-
             response = await client.delete(f"/api/v1/pricing/rules/{uuid.uuid4()}")
-            fastapi_app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 404
 
@@ -315,9 +366,8 @@ class TestPricingRulesEndpoints:
 
 @pytest.mark.asyncio
 class TestPromotionEndpoints:
-    async def test_create_promotion(self, client: AsyncClient, fastapi_app, mock_db, org_id, book_id):
+    async def test_create_promotion(self, client: AsyncClient, org_id, book_id):
         """POST /api/v1/pricing/promotions schedules a promotion."""
-        from app.database import get_db
         from app.modules.pricing_automation.service import PricingAutomationService
 
         now = datetime.now(timezone.utc)
@@ -350,11 +400,6 @@ class TestPromotionEndpoints:
             new_callable=AsyncMock,
             return_value=mock_promo,
         ):
-            async def override_db():
-                yield mock_db
-
-            fastapi_app.dependency_overrides[get_db] = override_db
-
             response = await client.post(
                 "/api/v1/pricing/promotions",
                 json={
@@ -366,7 +411,6 @@ class TestPromotionEndpoints:
                     "end_date": end.isoformat(),
                 },
             )
-            fastapi_app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 201
         data = response.json()
@@ -411,9 +455,8 @@ class TestPromotionEndpoints:
 
 @pytest.mark.asyncio
 class TestABTestEndpoints:
-    async def test_create_ab_test(self, client: AsyncClient, fastapi_app, mock_db, org_id, book_id):
+    async def test_create_ab_test(self, client: AsyncClient, org_id, book_id):
         """POST /api/v1/pricing/ab-test creates a test."""
-        from app.database import get_db
         from app.modules.pricing_automation.service import PricingAutomationService
 
         now = datetime.now(timezone.utc)
@@ -445,11 +488,6 @@ class TestABTestEndpoints:
             new_callable=AsyncMock,
             return_value=mock_test,
         ):
-            async def override_db():
-                yield mock_db
-
-            fastapi_app.dependency_overrides[get_db] = override_db
-
             response = await client.post(
                 "/api/v1/pricing/ab-test",
                 json={
@@ -460,7 +498,6 @@ class TestABTestEndpoints:
                     "duration_days": 14,
                 },
             )
-            fastapi_app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 201
         data = response.json()
@@ -475,9 +512,8 @@ class TestABTestEndpoints:
 
 @pytest.mark.asyncio
 class TestCompetitorEndpoint:
-    async def test_get_competitors_empty(self, client: AsyncClient, fastapi_app, mock_db, org_id, book_id):
+    async def test_get_competitors_empty(self, client: AsyncClient, org_id, book_id):
         """GET /api/v1/pricing/competitors/{book_id} returns summary."""
-        from app.database import get_db
         from app.modules.pricing_automation.service import PricingAutomationService
 
         mock_summary = CompetitorPriceSummary(
@@ -501,13 +537,7 @@ class TestCompetitorEndpoint:
             new_callable=AsyncMock,
             return_value=mock_summary,
         ):
-            async def override_db():
-                yield mock_db
-
-            fastapi_app.dependency_overrides[get_db] = override_db
-
             response = await client.get(f"/api/v1/pricing/competitors/{book_id}")
-            fastapi_app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()

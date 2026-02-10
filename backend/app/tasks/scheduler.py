@@ -50,4 +50,19 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "analytics_queue"},
         "kwargs": {},
     },
+    # ------------------------------------------------------------------
+    # Pricing automation — promotion lifecycle management
+    # ------------------------------------------------------------------
+    "activate-scheduled-promotions": {
+        "task": "pricing.activate_scheduled_promotions",
+        "schedule": 900.0,  # Every 15 minutes
+        "options": {"queue": "default"},
+        "kwargs": {},
+    },
+    "complete-expired-promotions": {
+        "task": "pricing.complete_expired_promotions",
+        "schedule": 900.0,  # Every 15 minutes
+        "options": {"queue": "default"},
+        "kwargs": {},
+    },
 }

@@ -17,3 +17,7 @@ celery_app.conf.update(**CELERY_CONFIG)
 
 # Register Celery Beat schedule
 celery_app.conf.beat_schedule = CELERY_BEAT_SCHEDULE
+
+# Import task modules so @celery_app.task decorators are registered.
+# These imports must come after celery_app is created to avoid circular imports.
+import app.tasks.pricing_automation  # noqa: E402, F401
