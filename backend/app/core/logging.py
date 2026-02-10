@@ -14,8 +14,6 @@ import re
 import sys
 from typing import Any
 
-from pythonjsonlogger import jsonlogger
-
 from app.config import get_settings
 
 # Keys whose values must be redacted when logging request/response bodies.
@@ -48,29 +46,37 @@ def sanitize(data: Any, _depth: int = 0) -> Any:
     return data
 
 
-class SPFJsonFormatter(jsonlogger.JsonFormatter):
-    """
-    Custom JSON formatter that injects ``correlation_id``, ``user_id``
-    and ``org_id`` into every log record if those fields are present in
-    the record's extra data.
-    """
+try:
+    from pythonjsonlogger import jsonlogger
 
-    def add_fields(
-        self,
-        log_record: dict[str, Any],
-        record: logging.LogRecord,
-        message_dict: dict[str, Any],
-    ) -> None:
-        super().add_fields(log_record, record, message_dict)
+    class SPFJsonFormatter(jsonlogger.JsonFormatter):
+        """
+        Custom JSON formatter that injects ``correlation_id``, ``user_id``
+        and ``org_id`` into every log record if those fields are present in
+        the record's extra data.
+        """
 
-        log_record.setdefault("level", record.levelname)
-        log_record.setdefault("logger", record.name)
+        def add_fields(
+            self,
+            log_record: dict[str, Any],
+            record: logging.LogRecord,
+            message_dict: dict[str, Any],
+        ) -> None:
+            super().add_fields(log_record, record, message_dict)
 
-        # Propagate context fields from the ``extra`` dict.
-        for field in ("correlation_id", "user_id", "org_id"):
-            value = getattr(record, field, None)
-            if value is not None:
-                log_record[field] = value
+            log_record.setdefault("level", record.levelname)
+            log_record.setdefault("logger", record.name)
+
+            # Propagate context fields from the ``extra`` dict.
+            for field in ("correlation_id", "user_id", "org_id"):
+                value = getattr(record, field, None)
+                if value is not None:
+                    log_record[field] = value
+
+    _HAS_JSON_LOGGER = True
+except ImportError:
+    _HAS_JSON_LOGGER = False
+    SPFJsonFormatter = None  # type: ignore[assignment,misc]
 
 
 def setup_logging() -> None:
@@ -79,16 +85,25 @@ def setup_logging() -> None:
 
     - ``DEBUG`` / ``INFO`` in development (``settings.DEBUG == True``).
     - ``WARNING`` and above in production.
+
+    Falls back to a standard ``logging.Formatter`` if ``python-json-logger``
+    is not installed.
     """
     settings = get_settings()
     level = logging.DEBUG if settings.DEBUG else logging.WARNING
 
-    formatter = SPFJsonFormatter(
-        fmt="%(asctime)s %(level)s %(name)s %(message)s",
-        rename_fields={"asctime": "timestamp"},
-    )
-
     handler = logging.StreamHandler(stream=sys.stdout)
+
+    if _HAS_JSON_LOGGER and SPFJsonFormatter is not None:
+        formatter = SPFJsonFormatter(
+            fmt="%(asctime)s %(level)s %(name)s %(message)s",
+            rename_fields={"asctime": "timestamp"},
+        )
+    else:
+        formatter = logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        )
+
     handler.setFormatter(formatter)
 
     # Root logger

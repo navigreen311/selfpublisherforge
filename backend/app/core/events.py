@@ -1,7 +1,11 @@
-"""Redis Streams-based event bus implementing the shared EventPublisher interface.
+"""Redis Streams-based event bus for inter-module communication.
 
-Provides publish, subscribe, replay, and dead-letter handling for inter-module
-communication.
+Provides publish, subscribe, replay, and dead-letter handling.
+
+If the ``shared.types.events`` package is available, its ``BaseEvent``,
+``EventPublisher``, and ``EventType`` types are re-used.  Otherwise,
+lightweight local definitions are provided so this module can be imported
+without the shared package.
 """
 from __future__ import annotations
 
@@ -9,12 +13,47 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Callable, Awaitable
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Awaitable, Callable, Protocol, runtime_checkable
 from uuid import UUID
 
-import redis.asyncio as aioredis
+try:
+    from shared.types.events import BaseEvent, EventPublisher, EventType  # type: ignore[import-untyped]
+except ImportError:
+    # ------------------------------------------------------------------
+    # Fallback definitions when the shared package is not installed
+    # ------------------------------------------------------------------
+    from pydantic import BaseModel
 
-from shared.types.events import BaseEvent, EventPublisher, EventType
+    class EventType(str, Enum):  # type: ignore[no-redef]
+        """Minimal set of event types for standalone operation."""
+        USER_REGISTERED = "user_registered"
+        USER_UPDATED = "user_updated"
+        ORG_CREATED = "org_created"
+        BOOK_CREATED = "book_created"
+        BOOK_UPDATED = "book_updated"
+        PIPELINE_STARTED = "pipeline_started"
+        PIPELINE_COMPLETED = "pipeline_completed"
+        BILLING_SUBSCRIPTION_CHANGED = "billing_subscription_changed"
+
+    class BaseEvent(BaseModel):  # type: ignore[no-redef]
+        """Minimal event schema for standalone operation."""
+        event_type: EventType
+        org_id: UUID
+        actor_id: UUID
+        actor_type: str = "user"
+        timestamp: datetime
+        data: dict[str, Any] = {}
+
+    @runtime_checkable
+    class EventPublisher(Protocol):  # type: ignore[no-redef]
+        async def publish(self, event: "BaseEvent") -> str: ...
+
+try:
+    import redis.asyncio as aioredis
+except ImportError:
+    aioredis = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +94,7 @@ def _deserialize_event(fields: dict[bytes | str, bytes | str]) -> BaseEvent:
     return BaseEvent.model_validate_json(raw)
 
 
-class RedisEventPublisher(EventPublisher):
+class RedisEventPublisher:
     """Publishes events into a Redis Stream.
 
     Each event is added to both a per-type stream (``spf:events:<event_type>``)
@@ -63,7 +102,7 @@ class RedisEventPublisher(EventPublisher):
     specific types or all events.
     """
 
-    def __init__(self, redis_client: aioredis.Redis) -> None:
+    def __init__(self, redis_client: Any) -> None:
         self._redis = redis_client
 
     async def publish(self, event: BaseEvent) -> str:
@@ -95,7 +134,7 @@ class RedisEventSubscriber:
 
     def __init__(
         self,
-        redis_client: aioredis.Redis,
+        redis_client: Any,
         group_name: str,
         consumer_name: str,
     ) -> None:
@@ -145,7 +184,7 @@ class RedisEventSubscriber:
                     block=block_ms,
                 )
             except Exception:
-                logger.exception("XREADGROUP error — retrying in 1 s")
+                logger.exception("XREADGROUP error -- retrying in 1 s")
                 await asyncio.sleep(1)
                 continue
 
@@ -199,7 +238,7 @@ class RedisEventSubscriber:
         try:
             await self._redis.xgroup_create(stream_key, self._group, id="0", mkstream=True)
         except Exception:
-            # Group already exists — expected on subsequent startups
+            # Group already exists -- expected on subsequent startups
             pass
 
     async def _handle_message(
@@ -219,8 +258,11 @@ class RedisEventSubscriber:
                 msg_id = msg_id.decode()
             await self._redis.xack(stream_name, self._group, msg_id)
         except Exception as exc:
-            logger.exception("Failed to process event — sending to DLQ")
+            logger.exception("Failed to process event -- sending to DLQ")
             await self.send_to_dlq(
-                {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in fields.items()},
+                {
+                    k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v
+                    for k, v in fields.items()
+                },
                 str(exc),
             )
