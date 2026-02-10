@@ -1,71 +1,87 @@
-"""Shared test fixtures for the pricing automation module tests."""
+"""Shared test fixtures for the Marketing & Launch Command module tests."""
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-from app.config import get_settings
+from app.database import Base
 
+
+# ---------------------------------------------------------------------------
+# Async event loop
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create a session-scoped event loop for async tests."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+# ---------------------------------------------------------------------------
+# In-memory SQLite engine for testing
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture(scope="session")
+async def engine() -> AsyncGenerator[AsyncEngine, None]:
+    """Create an async in-memory SQLite engine for testing."""
+    eng = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        echo=False,
+    )
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    yield eng
+
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture
+async def db(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """Provide a transactional database session for each test."""
+    session_factory = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with session_factory() as session:
+        yield session
+        await session.rollback()
+
+
+# ---------------------------------------------------------------------------
+# Common test data
+# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def org_id() -> uuid.UUID:
-    return uuid.uuid4()
+    return uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
 @pytest.fixture
 def user_id() -> uuid.UUID:
-    return uuid.uuid4()
+    return uuid.UUID("00000000-0000-0000-0000-000000000002")
 
 
 @pytest.fixture
 def book_id() -> uuid.UUID:
-    return uuid.uuid4()
+    return uuid.UUID("00000000-0000-0000-0000-000000000003")
 
 
 @pytest.fixture
-def mock_current_user(user_id: uuid.UUID, org_id: uuid.UUID) -> dict:
-    return {
-        "user_id": user_id,
-        "org_id": org_id,
-        "role": "owner",
-    }
-
-
-@pytest.fixture
-def fastapi_app(mock_current_user: dict) -> FastAPI:
-    """Create a FastAPI app with the pricing router and mocked auth."""
-    from app.core.dependencies import get_current_user
-    from app.database import get_db
-    from app.modules.pricing_automation.router import router
-
-    test_app = FastAPI()
-    test_app.include_router(router, prefix="/api/v1")
-
-    # Override auth dependency
-    async def override_get_current_user():
-        return mock_current_user
-
-    test_app.dependency_overrides[get_current_user] = override_get_current_user
-
-    return test_app
-
-
-@pytest_asyncio.fixture
-async def mock_db() -> AsyncSession:
-    """Create a mock async session."""
-    session = AsyncMock(spec=AsyncSession)
-    session.flush = AsyncMock()
-    session.refresh = AsyncMock()
-    session.commit = AsyncMock()
-    session.rollback = AsyncMock()
-    session.close = AsyncMock()
-    return session
+def future_launch_date() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(days=30)
