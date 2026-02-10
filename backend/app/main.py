@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.core.exceptions import AppException, app_exception_handler
 from app.database import init_db
 
 settings = get_settings()
@@ -29,6 +30,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Exception handlers
+    app.add_exception_handler(AppException, app_exception_handler)
 
     # Health check
     @app.get("/health")
