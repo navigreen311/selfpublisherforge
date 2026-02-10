@@ -116,7 +116,7 @@ def _register_routers(app: FastAPI):
     app.include_router(advertising_router, prefix=f"{prefix}/ads", tags=["advertising"])
 
     from app.modules.review_intelligence.router import router as review_router
-    app.include_router(review_router, prefix=prefix, tags=["reviews"])
+    app.include_router(review_router, prefix=f"{prefix}/reviews", tags=["reviews"])
 
     from app.modules.analytics.router import router as analytics_router
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])

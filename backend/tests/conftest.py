@@ -1,8 +1,9 @@
 """Shared test fixtures for the backend test suite."""
 from __future__ import annotations
 
+import asyncio
 import uuid
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
@@ -15,15 +16,10 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.database import Base, get_db
+from app.main import create_app
 
-# Ensure all models are imported so Base.metadata knows about them.
-# IMPORTANT: must come BEFORE ``from app.main import create_app`` because
-# importing main.py triggers ``create_app()`` which loads module routers.
-# Some module routers define inline ORM models with ``extend_existing=True``
-# that expect the canonical models to already be registered in the metadata.
-import app.models  # noqa: F401, E402
-
-from app.main import create_app  # noqa: E402
+# Ensure all models are imported so Base.metadata knows about them
+import app.models  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # In-memory SQLite for tests (async via aiosqlite)
@@ -61,6 +57,14 @@ def _strip_pg_server_defaults(target, connection, **kw):
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(scope="session")
+def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+    """Create a single event loop for the whole test session."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
 @pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """Yield a fresh database session with tables created/dropped per test."""
@@ -96,88 +100,55 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
+@pytest_asyncio.fixture(scope="function")
+async def db_engine():
+    """Yield the async engine after creating all tables, then drop them."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
+    """Yield a database session (alias used by integration tests)."""
+    async with TestingSessionLocal() as session:
+        yield session
+
+
 @pytest.fixture
 def org_id() -> uuid.UUID:
     """Return the placeholder org ID used by the routers."""
     return uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
-# ---------------------------------------------------------------------------
-# Auth-specific fixtures
-# ---------------------------------------------------------------------------
+def make_review(
+    org_id: uuid.UUID | None = None,
+    book_id: uuid.UUID | None = None,
+    source: str = "amazon",
+    star_rating: float = 3.0,
+    body: str = "",
+    sentiment: str | None = None,
+    sentiment_score: float | None = None,
+    is_competitor: bool = False,
+    review_date=None,
+    **kwargs,
+):
+    """Factory helper to create a BookReview ORM instance for tests."""
+    from datetime import datetime, timezone
 
-VALID_PASSWORD = "StrongP@ss1"
+    from app.modules.review_intelligence.models import BookReview
 
-
-@pytest_asyncio.fixture(scope="function")
-async def seed_user(db_session: AsyncSession):
-    """Factory fixture that inserts a user + org into the test DB.
-
-    Usage::
-
-        user = await seed_user()
-        user = await seed_user(email="other@test.com", mfa=True)
-    """
-    from app.core.security import hash_password
-    from app.models.organization import Organization
-    from app.models.user import User, UserRole
-    from app.modules.auth.utils import generate_totp_secret
-
-    async def _create(
-        email: str = "user@test.com",
-        password: str = VALID_PASSWORD,
-        mfa: bool = False,
-    ) -> User:
-        org_id = uuid.uuid4()
-        org = Organization(id=org_id, name="TestOrg", slug=f"testorg-{str(org_id)[:8]}")
-        db_session.add(org)
-
-        user_id = uuid.uuid4()
-        user = User(
-            id=user_id,
-            org_id=org_id,
-            email=email,
-            name="Test User",
-            password_hash=hash_password(password),
-            role=UserRole.OWNER,
-            email_verified=False,
-            mfa_enabled=mfa,
-            mfa_secret=generate_totp_secret() if mfa else None,
-        )
-        db_session.add(user)
-        await db_session.flush()
-        return user
-
-    return _create
-
-
-@pytest_asyncio.fixture(scope="function")
-async def auth_headers(client: AsyncClient):
-    """Factory fixture returning auth headers for a registered user.
-
-    Usage::
-
-        headers = await auth_headers()
-        headers = await auth_headers(email="other@test.com")
-    """
-    from app.config import get_settings
-
-    settings = get_settings()
-    prefix = f"{settings.API_V1_PREFIX}/auth"
-
-    async def _create(email: str = "auth-fixture@test.com") -> dict:
-        resp = await client.post(
-            f"{prefix}/register",
-            json={
-                "email": email,
-                "password": VALID_PASSWORD,
-                "name": "Fixture User",
-                "org_name": "Fixture Org",
-            },
-        )
-        assert resp.status_code == 201, resp.text
-        data = resp.json()
-        token = data["tokens"]["access_token"]
-        return {"Authorization": f"Bearer {token}"}
-
-    return _create
+    return BookReview(
+        org_id=org_id or uuid.uuid4(),
+        book_id=book_id or uuid.uuid4(),
+        source=source,
+        star_rating=star_rating,
+        body=body,
+        sentiment=sentiment,
+        sentiment_score=sentiment_score,
+        is_competitor=is_competitor,
+        review_date=review_date or datetime.now(timezone.utc),
+        **kwargs,
+    )

@@ -51,30 +51,19 @@ CELERY_BEAT_SCHEDULE = {
         "kwargs": {},
     },
     # ------------------------------------------------------------------
-    # Advertising: sync performance from ad platforms — every hour
+    # Review Intelligence — analyze pending reviews every hour
     # ------------------------------------------------------------------
-    "sync-ad-performance-hourly": {
-        "task": "app.tasks.advertising.sync_performance",
+    "review-analyze-pending-hourly": {
+        "task": "review_intelligence.analyze_pending_reviews",
         "schedule": schedule(run_every=3600),
-        "options": {"queue": "default"},
-        "kwargs": {},
+        "kwargs": {"org_id": "all"},
     },
     # ------------------------------------------------------------------
-    # Advertising: auto-optimize bids — daily at 04:00 UTC
+    # Review Intelligence — daily velocity snapshots
     # ------------------------------------------------------------------
-    "auto-optimize-bids-daily": {
-        "task": "app.tasks.advertising.auto_optimize",
-        "schedule": crontab(hour=4, minute=0),
-        "options": {"queue": "default"},
-        "kwargs": {},
-    },
-    # ------------------------------------------------------------------
-    # Advertising: budget alerts — every 4 hours
-    # ------------------------------------------------------------------
-    "check-budget-alerts-every-4h": {
-        "task": "app.tasks.advertising.budget_alerts",
-        "schedule": schedule(run_every=4 * 60 * 60),
-        "options": {"queue": "default"},
-        "kwargs": {},
+    "review-velocity-snapshots-daily": {
+        "task": "review_intelligence.compute_velocity_snapshots",
+        "schedule": schedule(run_every=86400),
+        "kwargs": {"org_id": "all", "book_id": "all", "period": "daily"},
     },
 }

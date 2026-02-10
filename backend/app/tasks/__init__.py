@@ -12,9 +12,10 @@ celery_app = Celery(
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
         "app.tasks.advertising",
-        "app.tasks.analytics",
         "app.tasks.agent_system",
+        "app.tasks.analytics",
         "app.tasks.competitor_finder",
+        "app.tasks.dead_letter",
         "app.tasks.knowledge_vault",
         "app.tasks.market_intelligence",
         "app.tasks.marketing",
