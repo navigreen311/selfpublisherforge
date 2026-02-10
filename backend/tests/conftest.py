@@ -16,10 +16,15 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.database import Base, get_db
-from app.main import create_app
 
-# Ensure all models are imported so Base.metadata knows about them
-import app.models  # noqa: F401
+# Ensure all models are imported so Base.metadata knows about them.
+# IMPORTANT: must come BEFORE ``from app.main import create_app`` because
+# importing main.py triggers ``create_app()`` which loads module routers.
+# Some module routers define inline ORM models with ``extend_existing=True``
+# that expect the canonical models to already be registered in the metadata.
+import app.models  # noqa: F401, E402
+
+from app.main import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # In-memory SQLite for tests (async via aiosqlite)

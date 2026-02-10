@@ -11,7 +11,31 @@ engine = create_async_engine(settings.DATABASE_URL, echo=settings.DATABASE_ECHO)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 class Base(DeclarativeBase):
-    pass
+    """Project-wide declarative base.
+
+    Automatically injects ``extend_existing=True`` into every concrete
+    model's ``__table_args__`` so that duplicate table definitions
+    (common after merging many feature branches) are merged instead of
+    raising ``InvalidRequestError``.
+    """
+
+    def __init_subclass__(cls, **kw):
+        # A class is concrete (needs a table) when it declares __tablename__
+        # in its own __dict__ and does NOT declare __abstract__ = True itself.
+        is_own_abstract = cls.__dict__.get("__abstract__", False)
+        has_own_tablename = "__tablename__" in cls.__dict__
+        if not is_own_abstract and has_own_tablename:
+            ta = cls.__dict__.get("__table_args__")  # only this class, not inherited
+            if ta is None:
+                cls.__table_args__ = {"extend_existing": True}
+            elif isinstance(ta, dict):
+                ta.setdefault("extend_existing", True)
+            elif isinstance(ta, tuple):
+                if ta and isinstance(ta[-1], dict):
+                    ta[-1].setdefault("extend_existing", True)
+                else:
+                    cls.__table_args__ = (*ta, {"extend_existing": True})
+        super().__init_subclass__(**kw)
 
 class BaseModel(Base):
     __abstract__ = True

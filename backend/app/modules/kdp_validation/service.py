@@ -7,8 +7,6 @@ results, and manages validation lifecycle (store / retrieve results).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Any
 
 from app.modules.kdp_validation.compliance_scanner import ComplianceScanner
 from app.modules.kdp_validation.cover_validator import CoverValidator
@@ -23,7 +21,6 @@ from app.modules.kdp_validation.schemas import (
     PrintValidationRequest,
     Severity,
     ValidationResult,
-    ValidationResultResponse,
     ValidationStatus,
 )
 
