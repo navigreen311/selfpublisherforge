@@ -56,12 +56,10 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     """Handle application-level exceptions defined via ``AppException``."""
     request_id = _get_request_id(request)
     logger.warning(
-        "app_exception",
-        extra={
-            "code": exc.code,
-            "message": exc.message,
-            "request_id": request_id,
-        },
+        "app_exception | code=%s detail=%s request_id=%s",
+        exc.code,
+        exc.message,
+        request_id,
     )
     return JSONResponse(
         status_code=exc.status_code,
