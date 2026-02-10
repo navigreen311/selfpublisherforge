@@ -78,7 +78,7 @@ def _register_routers(app: FastAPI):
     app.include_router(writing_router, prefix=prefix, tags=["writing"])
 
     from app.modules.style_cloning.router import router as style_router
-    app.include_router(style_router, prefix=prefix, tags=["style"])
+    app.include_router(style_router, prefix=f"{prefix}/style-profiles", tags=["style"])
 
     # Tier 3: Production
     from app.modules.production_pipeline.router import router as pipeline_router

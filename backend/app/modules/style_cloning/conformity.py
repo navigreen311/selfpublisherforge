@@ -3,11 +3,8 @@ profile and return a 0-100 match score with actionable feedback."""
 
 from __future__ import annotations
 
-import math
-from typing import Optional
-
-from app.modules.style_cloning.features import AllFeatures, extract_all_features
-from app.modules.style_cloning.ingestion import SegmentedText, ingest_text
+from app.modules.style_cloning.features import extract_all_features
+from app.modules.style_cloning.ingestion import ingest_text
 from app.modules.style_cloning.schemas import (
     ConformityCheckResult,
     VoiceFingerprint,

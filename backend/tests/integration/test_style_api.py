@@ -23,13 +23,7 @@ from app.modules.style_cloning import service as style_service
 @pytest_asyncio.fixture
 async def fastapi_app():
     """Create a fresh app instance with the style-cloning router registered."""
-    from app.modules.style_cloning.router import router
-    from app.config import get_settings
-
     application = create_app()
-    settings = get_settings()
-    prefix = f"{settings.API_V1_PREFIX}/style-profiles"
-    application.include_router(router, prefix=prefix, tags=["style-cloning"])
 
     # Reset the in-memory store before each test
     style_service._reset_store()
