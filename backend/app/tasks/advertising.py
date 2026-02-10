@@ -300,3 +300,18 @@ async def _check_budget_alerts_async():
 
 # ─── Periodic Task Schedule ──────────────────────────────────────────────────
 # Beat schedules are registered centrally in app.tasks.scheduler.CELERY_BEAT_SCHEDULE
+
+ADVERTISING_BEAT_SCHEDULE = {
+    "sync-campaign-performance-hourly": {
+        "task": "app.tasks.advertising.sync_performance",
+        "schedule": 3600.0,  # Every hour
+    },
+    "auto-optimize-bids-daily": {
+        "task": "app.tasks.advertising.auto_optimize",
+        "schedule": 86400.0,  # Every 24 hours
+    },
+    "check-budget-alerts-30min": {
+        "task": "app.tasks.advertising.budget_alerts",
+        "schedule": 1800.0,  # Every 30 minutes
+    },
+}

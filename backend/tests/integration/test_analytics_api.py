@@ -172,7 +172,16 @@ class TestRevenueEndpoint:
     async def test_get_revenue_with_filters(self, client, mock_db):
         """GET /api/v1/analytics/revenue with query parameters."""
         with patch("app.modules.analytics.router.service") as mock_service:
-            mock_service.get_revenue = AsyncMock(return_value=MagicMock())
+            mock_service.get_revenue = AsyncMock(return_value=MagicMock(
+                total_revenue=Decimal("500.00"),
+                total_units=25,
+                data_points=[],
+                period_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                period_end=datetime(2024, 6, 30, tzinfo=timezone.utc),
+                aggregation=AggregationPeriod.WEEKLY,
+                by_platform={},
+                by_book=[],
+            ))
             mock_service.get_revenue.return_value.model_dump = MagicMock(return_value={
                 "total_revenue": "500.00",
                 "total_units": 25,

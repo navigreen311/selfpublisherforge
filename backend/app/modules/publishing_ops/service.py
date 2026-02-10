@@ -125,16 +125,18 @@ async def generate_export(
             style_settings=style_settings,
         )
 
+    fmt_str = request.format.value if hasattr(request.format, "value") else str(request.format)
+
     response = ExportResponse(
         id=export_id,
         book_id=request.book_id,
         format=request.format,
         status="completed",
-        file_url=f"/exports/{export_id}.{request.format.value}",
+        file_url=f"/exports/{export_id}.{fmt_str}",
         file_size_bytes=len(data),
         page_count=None,
         created_at=_now(),
-        message=f"{request.format.value.upper()} export completed successfully",
+        message=f"{fmt_str.upper()} export completed successfully",
     )
     _exports[export_id] = response
     return response

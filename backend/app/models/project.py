@@ -126,11 +126,20 @@ class Book(BaseModel):
     listings = relationship("Listing", back_populates="book", lazy="selectin")
     upload_validations = relationship("UploadValidation", back_populates="book", lazy="selectin")
     compliance_scans = relationship("ComplianceScan", back_populates="book", lazy="selectin")
-    pricing_rules = relationship("PricingRule", back_populates="book", lazy="selectin")
-    campaigns = relationship("Campaign", back_populates="book", lazy="selectin")
+    pricing_rules = relationship(
+        "PricingRule", back_populates="book", lazy="selectin",
+        primaryjoin="Book.id == foreign(PricingRule.book_id)",
+    )
+    campaigns = relationship(
+        "Campaign", back_populates="book", lazy="selectin",
+        primaryjoin="Book.id == foreign(Campaign.book_id)",
+    )
     launch_plans = relationship("LaunchPlan", back_populates="book", lazy="selectin")
     writing_sessions = relationship("WritingSession", back_populates="book", lazy="selectin")
-    royalty_records = relationship("RoyaltyRecord", back_populates="book", lazy="selectin")
+    royalty_records = relationship(
+        "RoyaltyRecord", back_populates="book", lazy="selectin",
+        primaryjoin="Book.id == foreign(RoyaltyRecord.book_id)",
+    )
 
     __table_args__ = (
         Index("ix_books_format", "format"),

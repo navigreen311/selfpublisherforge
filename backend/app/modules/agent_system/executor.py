@@ -122,7 +122,13 @@ class TaskExecutor:
 
         try:
             # 1. Permission check
-            check_permission(agent, "execute_auto", user_role=user_role)
+            # Draft-only and suggest agents are allowed to execute but need
+            # approval afterward, so only enforce execute_auto for autonomous
+            # agents.
+            if not requires_approval(agent):
+                check_permission(agent, "execute_auto", user_role=user_role)
+            else:
+                check_permission(agent, "approve", user_role=user_role)
 
             # 2. Budget check
             estimated_tokens = agent.max_tokens

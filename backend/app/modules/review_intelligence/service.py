@@ -495,6 +495,7 @@ async def acknowledge_alert(
     alert.acknowledged_by = user_id
     db.add(alert)
     await db.flush()
+    await db.refresh(alert)
     return alert
 
 

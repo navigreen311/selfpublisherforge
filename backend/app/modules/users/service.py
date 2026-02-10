@@ -49,18 +49,22 @@ class UserService:
     @staticmethod
     async def get_user_profile(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
         """Retrieve user profile by id."""
+        from app.models.user import User
+        from sqlalchemy import select, inspect as sa_inspect
+
         result = await db.execute(
-            sa_text("SELECT * FROM users WHERE id = :uid AND deleted_at IS NULL"),
-            {"uid": user_id},
+            select(User).where(User.id == user_id, User.deleted_at.is_(None))
         )
-        row = result.mappings().first()
-        if not row:
+        user = result.scalar_one_or_none()
+        if not user:
             raise AppException(
                 status_code=404,
                 code="USER_NOT_FOUND",
                 message="User not found",
             )
-        return dict(row)
+        # Convert ORM instance to dict using column inspection
+        mapper = sa_inspect(User)
+        return {col.key: getattr(user, col.key) for col in mapper.mapper.column_attrs}
 
     @staticmethod
     async def update_user_profile(

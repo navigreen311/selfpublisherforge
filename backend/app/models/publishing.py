@@ -19,6 +19,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
 
+# Import canonical PricingRule from the pricing_automation module
+from app.modules.pricing_automation.models import PricingRule  # noqa: F401
+
 
 class PublishingPlatform(str, enum.Enum):
     KDP = "kdp"
@@ -192,31 +195,4 @@ class ComplianceScan(BaseModel):
         Index("ix_compliance_scans_risk_level", "risk_level"),
         Index("ix_compliance_scans_findings_gin", "findings", postgresql_using="gin"),
         Index("ix_compliance_scans_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
-    )
-
-
-class PricingRule(BaseModel):
-    __tablename__ = "pricing_rules"
-
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("books.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    strategy: Mapped[str] = mapped_column(String(100), nullable=False)
-    rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
-    current_price: Mapped[float | None] = mapped_column(
-        Numeric(10, 2), nullable=True, default=None
-    )
-    last_adjusted: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
-
-    # Relationships
-    book = relationship("Book", back_populates="pricing_rules")
-
-    __table_args__ = (
-        Index("ix_pricing_rules_strategy", "strategy"),
-        Index("ix_pricing_rules_rules_gin", "rules", postgresql_using="gin"),
-        Index("ix_pricing_rules_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )

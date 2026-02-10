@@ -15,7 +15,8 @@ from fastapi.testclient import TestClient
 from app.modules.users.router import router
 from app.database import get_db
 from app.core.dependencies import get_current_user
-from app.core.exceptions import AppException, app_exception_handler
+from app.core.exceptions import AppException
+from app.core.error_handler import app_exception_handler
 
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -45,6 +46,14 @@ def _make_mapping_result(rows: list[dict]):
     mapping_mock.all.return_value = rows
     mock_result.mappings.return_value = mapping_mock
     mock_result.rowcount = len(rows)
+    # Support ORM-style scalar_one_or_none (returns object with attributes)
+    if rows:
+        obj_mock = MagicMock()
+        for k, v in rows[0].items():
+            setattr(obj_mock, k, v)
+        mock_result.scalar_one_or_none.return_value = obj_mock
+    else:
+        mock_result.scalar_one_or_none.return_value = None
     return mock_result
 
 

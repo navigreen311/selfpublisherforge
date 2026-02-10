@@ -94,7 +94,7 @@ def _deserialize_event(fields: dict[bytes | str, bytes | str]) -> BaseEvent:
     return BaseEvent.model_validate_json(raw)
 
 
-class RedisEventPublisher:
+class RedisEventPublisher(EventPublisher):
     """Publishes events into a Redis Stream.
 
     Each event is added to both a per-type stream (``spf:events:<event_type>``)

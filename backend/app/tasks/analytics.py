@@ -187,10 +187,14 @@ def royalty_sync(self, org_id: str, platform: str) -> dict[str, Any]:
 # ---------- Celery Beat Schedule (for periodic tasks) ----------
 # Merge analytics tasks into the existing beat schedule rather than overwriting it.
 
-_existing_schedule = getattr(celery_app.conf, "beat_schedule", None) or {}
-_existing_schedule["daily-metric-aggregation"] = {
-    "task": "analytics.daily_metric_aggregation",
-    "schedule": 86400.0,  # Every 24 hours
-    "args": (None,),  # All orgs
+ANALYTICS_BEAT_SCHEDULE = {
+    "daily-metric-aggregation": {
+        "task": "analytics.daily_metric_aggregation",
+        "schedule": 86400.0,  # Every 24 hours
+        "args": (None,),  # All orgs
+    },
 }
+
+_existing_schedule = getattr(celery_app.conf, "beat_schedule", None) or {}
+_existing_schedule.update(ANALYTICS_BEAT_SCHEDULE)
 celery_app.conf.beat_schedule = _existing_schedule

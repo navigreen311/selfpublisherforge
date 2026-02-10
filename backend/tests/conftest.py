@@ -8,18 +8,51 @@ from typing import AsyncGenerator, Generator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event, text
+from sqlalchemy import event, text, Enum as SAEnum
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
+from sqlalchemy.dialects.postgresql import (
+    JSONB,
+    ARRAY as PG_ARRAY,
+    UUID as PG_UUID,
+    ENUM as PG_ENUM,
+)
+from sqlalchemy import JSON, String
+
 from app.database import Base, get_db
 from app.main import create_app
 
 # Ensure all models are imported so Base.metadata knows about them
 import app.models  # noqa: F401
+
+# ---------------------------------------------------------------------------
+# Register SQLite-compatible type compilation for PostgreSQL-specific types
+# ---------------------------------------------------------------------------
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.types import VARCHAR
+
+
+@compiles(JSONB, "sqlite")
+def _compile_jsonb_sqlite(element, compiler, **kw):
+    """JSONB -> JSON on SQLite."""
+    return "JSON"
+
+
+@compiles(PG_ARRAY, "sqlite")
+def _compile_array_sqlite(element, compiler, **kw):
+    """PostgreSQL ARRAY -> TEXT on SQLite."""
+    return "TEXT"
+
+
+@compiles(PG_UUID, "sqlite")
+def _compile_pg_uuid_sqlite(element, compiler, **kw):
+    """PostgreSQL UUID -> CHAR(32) on SQLite."""
+    return "CHAR(32)"
+
 
 # ---------------------------------------------------------------------------
 # In-memory SQLite for tests (async via aiosqlite)
@@ -34,22 +67,87 @@ TestingSessionLocal = async_sessionmaker(
 
 
 # ---------------------------------------------------------------------------
-# Strip PostgreSQL-only server_defaults before CREATE TABLE on SQLite
+# Neutralize PostgreSQL-specific indexes before table creation on SQLite
 # ---------------------------------------------------------------------------
 
+def _is_pg_only_index(idx) -> bool:
+    """Return True if the index uses PostgreSQL-specific features that
+    would cause a syntax error on SQLite (GIN, BRIN, partial, trgm, etc.)."""
+    dialect_opts = getattr(idx, "dialect_options", {})
+    pg_opts = dialect_opts.get("postgresql", {})
+
+    # postgresql_using (gin, brin, gist, etc.)
+    if pg_opts.get("using"):
+        return True
+
+    # postgresql_where (partial indexes)
+    if pg_opts.get("where") is not None:
+        return True
+
+    # postgresql_ops (e.g. gin_trgm_ops)
+    if pg_opts.get("ops"):
+        return True
+
+    # Also check older-style attributes for compatibility
+    kw = getattr(idx, "kwargs", {})
+    if kw.get("postgresql_using"):
+        return True
+    if kw.get("postgresql_where") is not None:
+        return True
+    if kw.get("postgresql_ops"):
+        return True
+
+    return False
+
+
 @event.listens_for(Base.metadata, "before_create")
-def _strip_pg_server_defaults(target, connection, **kw):
-    """Remove server_default values that use PostgreSQL-specific functions
-    (e.g. gen_random_uuid()) when running against SQLite for tests.
-    The Python-side ``default`` still handles value generation."""
-    if connection.dialect.name == "sqlite":
-        for table in target.tables.values():
-            for column in table.columns:
-                if column.server_default is not None:
-                    sd = column.server_default
-                    if hasattr(sd, "arg") and hasattr(sd.arg, "text"):
-                        if "gen_random_uuid" in str(sd.arg.text):
-                            column.server_default = None
+def _patch_for_sqlite(target, connection, **kw):
+    """Adjust PostgreSQL-specific schema features when running on SQLite.
+
+    This handles:
+    1. Removing server_default values that use PG-specific functions
+       (gen_random_uuid, NOW(), etc.)
+    2. Removing PostgreSQL-specific indexes (GIN, BRIN, partial, trgm)
+    3. Stripping ARRAY server_defaults like '{}' that SQLite cannot parse
+    """
+    if connection.dialect.name != "sqlite":
+        return
+
+    for table in target.tables.values():
+        # ---- Fix columns ----
+        for column in table.columns:
+            if column.server_default is not None:
+                sd = column.server_default
+                sd_text = ""
+                if hasattr(sd, "arg"):
+                    if hasattr(sd.arg, "text"):
+                        sd_text = str(sd.arg.text)
+                    else:
+                        sd_text = str(sd.arg)
+
+                # Strip PG-only function calls in server_default
+                pg_functions = ["gen_random_uuid", "uuid_generate"]
+                if any(fn in sd_text.lower() for fn in pg_functions):
+                    column.server_default = None
+
+        # ---- Remove PG-only indexes ----
+        pg_indexes = [idx for idx in table.indexes if _is_pg_only_index(idx)]
+        for idx in pg_indexes:
+            table.indexes.discard(idx)
+
+        # ---- Deduplicate indexes by name ----
+        # When two model files define the same table with extend_existing,
+        # duplicate Index objects (same name) can accumulate and cause
+        # "index already exists" errors on SQLite.
+        seen_names: set[str] = set()
+        dupes = []
+        for idx in table.indexes:
+            if idx.name in seen_names:
+                dupes.append(idx)
+            else:
+                seen_names.add(idx.name)
+        for idx in dupes:
+            table.indexes.discard(idx)
 
 
 # ---------------------------------------------------------------------------

@@ -197,7 +197,7 @@ class TestAnomalyDetection:
 
     def test_multiple_anomalies(self):
         """Multiple anomalies in one dataset."""
-        data_points = _make_data_points([5, 50, 5, 5, 5, 50, 5])
+        data_points = _make_data_points([5, 100, 5, 5, 5, 100, 5])
         anomalies = detect_anomalies(data_points)
         assert len(anomalies) >= 2
 
@@ -218,7 +218,7 @@ class TestVelocityComputations:
 
     def test_declining_with_anomaly_drop(self):
         """Declining trend with one anomaly drop."""
-        data_points = _make_data_points([30, 25, 20, 0, 15, 10, 5])
+        data_points = _make_data_points([50, 45, 40, 0, 35, 30, 25])
         trend = detect_trend(data_points)
         anomalies = detect_anomalies(data_points)
 

@@ -34,6 +34,21 @@ manager = ConnectionManager(redis_url=get_settings().REDIS_URL)
 
 
 # ---------------------------------------------------------------------------
+# HTTP health-check so the "realtime" tag appears in the OpenAPI spec
+# (WebSocket-only routes are excluded from the spec by default).
+# ---------------------------------------------------------------------------
+
+@router.get("/api/v1/ws/status")
+async def ws_status() -> dict[str, Any]:
+    """Return basic status information for the WebSocket subsystem."""
+    return {
+        "status": "ok",
+        "channels": [ch.value for ch in WSChannel],
+        "rooms": manager.get_all_rooms(),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Auth helper
 # ---------------------------------------------------------------------------
 

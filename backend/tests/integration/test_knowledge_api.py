@@ -62,12 +62,12 @@ def _make_mock_entry(**overrides):
 
 
 @pytest.fixture
-def app():
+def test_app():
     """Create a test FastAPI app with dependency overrides."""
-    test_app = create_app()
+    _app = create_app()
 
     # Override auth dependency
-    test_app.dependency_overrides[get_current_user] = lambda: TEST_USER
+    _app.dependency_overrides[get_current_user] = lambda: TEST_USER
 
     # Override DB dependency
     mock_db = AsyncMock()
@@ -78,15 +78,15 @@ def app():
     async def override_get_db():
         yield mock_db
 
-    test_app.dependency_overrides[get_db] = override_get_db
+    _app.dependency_overrides[get_db] = override_get_db
 
-    return test_app
+    return _app
 
 
 @pytest_asyncio.fixture
-async def client(app):
+async def client(test_app):
     """Create an async HTTP test client."""
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=test_app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 

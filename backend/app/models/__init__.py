@@ -9,7 +9,7 @@ from app.models.market import MarketCategory, MarketKeyword, CompetitorBook, Com
 from app.models.publishing import PublishingAccount, Listing, UploadValidation, ComplianceScan, PricingRule as PublishingPricingRule
 from app.models.marketing import LaunchPlan, LaunchPhase, PhaseTask, EmailSequence, EmailTemplate, SocialPost, ARCCampaign, ARCRecipient
 from app.models.agent import Agent as DomainAgent, AgentTask as DomainAgentTask, AgentWorkflow as DomainAgentWorkflow, AgentBudget as DomainAgentBudget, AuditTrail as DomainAuditTrail
-from app.models.analytics import AnalyticsEvent as DomainAnalyticsEvent, RoyaltyRecord as DomainRoyaltyRecord, PortfolioMetric, ABTest as DomainABTest, Report as DomainReport
+from app.models.analytics import PortfolioMetric, ABTestStatus, ReportStatus
 
 # Module-specific models
 from app.modules.notifications.models import Notification, NotificationPreference
@@ -33,7 +33,7 @@ __all__ = [
     "PublishingAccount", "Listing", "UploadValidation", "ComplianceScan", "PublishingPricingRule",
     "LaunchPlan", "LaunchPhase", "PhaseTask", "EmailSequence", "EmailTemplate", "SocialPost", "ARCCampaign", "ARCRecipient",
     "DomainAgent", "DomainAgentTask", "DomainAgentWorkflow", "DomainAgentBudget", "DomainAuditTrail",
-    "DomainAnalyticsEvent", "DomainRoyaltyRecord", "PortfolioMetric", "DomainABTest", "DomainReport",
+    "PortfolioMetric", "ABTestStatus", "ReportStatus",
     # Module models
     "Notification", "NotificationPreference",
     "KnowledgeEntry",

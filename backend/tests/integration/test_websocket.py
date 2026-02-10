@@ -18,7 +18,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.security import create_access_token
-from app.modules.realtime.router import router, manager
+from app.modules.realtime.manager import ConnectionManager
+from app.modules.realtime.router import router
 from app.modules.realtime.schemas import WSChannel
 
 
@@ -27,16 +28,23 @@ from app.modules.realtime.schemas import WSChannel
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def app() -> FastAPI:
-    """Create a minimal FastAPI app with the realtime router."""
+def test_manager() -> ConnectionManager:
+    """Create a fresh ConnectionManager with no Redis for test isolation."""
+    return ConnectionManager(redis_url=None)
+
+
+@pytest.fixture()
+def test_app(test_manager: ConnectionManager) -> FastAPI:
+    """Create a minimal FastAPI app with the realtime router and a fresh manager."""
     _app = FastAPI()
     _app.include_router(router)
     return _app
 
 
 @pytest.fixture()
-def client(app: FastAPI) -> TestClient:
-    return TestClient(app)
+def client(test_app: FastAPI, test_manager: ConnectionManager) -> TestClient:
+    with patch("app.modules.realtime.router.manager", test_manager):
+        yield TestClient(test_app)
 
 
 @pytest.fixture()
@@ -148,7 +156,7 @@ class TestBroadcast:
 # ---------------------------------------------------------------------------
 
 class TestEdgeCases:
-    def test_different_rooms_isolated(self, client: TestClient, valid_token: str) -> None:
+    def test_different_rooms_isolated(self, client: TestClient, valid_token: str, test_manager: ConnectionManager) -> None:
         """Messages in room-A should not appear in room-B."""
         with client.websocket_connect(
             f"/api/v1/ws/writing/book-a?token={valid_token}"
@@ -171,5 +179,5 @@ class TestEdgeCases:
                 # We cannot easily assert "no message" with the sync test
                 # client, so we simply verify the rooms are separate in the
                 # manager state.
-                count_b = manager.get_connection_count(WSChannel.WRITING, "book-b")
+                count_b = test_manager.get_connection_count(WSChannel.WRITING, "book-b")
                 assert count_b >= 1

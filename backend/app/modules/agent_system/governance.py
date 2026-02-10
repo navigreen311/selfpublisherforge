@@ -135,14 +135,22 @@ async def check_budget(
 
     now = datetime.now(timezone.utc)
 
+    # Helper: ensure datetime is timezone-aware (SQLite strips tzinfo)
+    def _aware(dt: datetime | None) -> datetime | None:
+        if dt is not None and dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
     # Daily reset
-    if budget.last_reset_daily is None or (now - budget.last_reset_daily) > timedelta(days=1):
+    last_daily = _aware(budget.last_reset_daily)
+    if last_daily is None or (now - last_daily) > timedelta(days=1):
         budget.tokens_used_today = 0
         budget.usd_used_today = 0.0
         budget.last_reset_daily = now
 
     # Monthly reset
-    if budget.last_reset_monthly is None or (now - budget.last_reset_monthly) > timedelta(days=30):
+    last_monthly = _aware(budget.last_reset_monthly)
+    if last_monthly is None or (now - last_monthly) > timedelta(days=30):
         budget.usd_used_this_month = 0.0
         budget.last_reset_monthly = now
 

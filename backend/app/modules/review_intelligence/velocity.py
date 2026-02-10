@@ -84,7 +84,10 @@ def detect_trend(data_points: list[VelocityDataPoint]) -> VelocityTrend:
 def detect_anomalies(
     data_points: list[VelocityDataPoint], z_threshold: float = 2.0
 ) -> list[dict]:
-    """Detect anomalies in review velocity using z-score method.
+    """Detect anomalies in review velocity using modified z-score method.
+
+    Uses the median and MAD (Median Absolute Deviation) instead of mean/stdev
+    so that multiple outliers do not inflate the spread and mask each other.
 
     Args:
         data_points: Time-ordered velocity data points.
@@ -97,15 +100,29 @@ def detect_anomalies(
         return []
 
     counts = [dp.review_count for dp in data_points]
-    mean = statistics.mean(counts)
-    stdev = statistics.stdev(counts)
+    median = statistics.median(counts)
+    mad = statistics.median([abs(c - median) for c in counts])
 
-    if stdev == 0:
-        return []
+    # Scale MAD to be comparable to standard deviation for normal distributions
+    # (MAD * 1.4826 ≈ stdev for normally distributed data)
+    mad_scaled = mad * 1.4826
+
+    if mad_scaled == 0:
+        # MAD is zero when the majority of values equal the median.
+        # Fall back to mean absolute deviation from the median so that the
+        # few differing points are still detectable as anomalies.
+        mean_abs_dev = statistics.mean([abs(c - median) for c in counts])
+        if mean_abs_dev == 0:
+            return []
+        center = median
+        spread = mean_abs_dev
+    else:
+        center = median
+        spread = mad_scaled
 
     anomalies = []
     for i, dp in enumerate(data_points):
-        z_score = (dp.review_count - mean) / stdev
+        z_score = (dp.review_count - center) / spread
         if abs(z_score) > z_threshold:
             anomalies.append(
                 {
@@ -115,8 +132,8 @@ def detect_anomalies(
                     "z_score": round(z_score, 2),
                     "direction": "spike" if z_score > 0 else "drop",
                     "expected_range": {
-                        "low": max(0, round(mean - z_threshold * stdev)),
-                        "high": round(mean + z_threshold * stdev),
+                        "low": max(0, round(center - z_threshold * spread)),
+                        "high": round(center + z_threshold * spread),
                     },
                 }
             )

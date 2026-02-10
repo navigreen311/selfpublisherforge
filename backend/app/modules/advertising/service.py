@@ -206,6 +206,7 @@ class AdvertisingService:
             self.db.add(kw_bid)
 
         await self.db.flush()
+        await self.db.refresh(campaign)
         return CampaignResponse.model_validate(campaign)
 
     async def update_campaign(
@@ -370,6 +371,10 @@ class AdvertisingService:
             new_amount = item.get("bid_amount")
             if not bid_id or not new_amount:
                 continue
+
+            # Ensure bid_id is a UUID object for proper SQLAlchemy binding
+            if isinstance(bid_id, str):
+                bid_id = UUID(bid_id)
 
             result = await self.db.execute(
                 select(KeywordBid).join(Campaign).where(

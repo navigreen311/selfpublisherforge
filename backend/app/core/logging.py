@@ -9,10 +9,16 @@ when those values are available on the current request state.
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import re
 import sys
 from typing import Any
+
+# Context variable for request correlation IDs
+correlation_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "correlation_id", default=None
+)
 
 from app.config import get_settings
 

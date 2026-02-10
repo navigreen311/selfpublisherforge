@@ -97,6 +97,11 @@ class PricingRule(TenantModel):
     )
 
     # Relationships
+    book = relationship(
+        "Book", back_populates="pricing_rules",
+        primaryjoin="PricingRule.book_id == Book.id",
+        foreign_keys="[PricingRule.book_id]",
+    )
     promotions: Mapped[list["Promotion"]] = relationship(
         "Promotion", back_populates="pricing_rule", lazy="selectin"
     )

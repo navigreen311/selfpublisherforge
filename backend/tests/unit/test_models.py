@@ -149,8 +149,9 @@ class TestApiKey:
     def test_instantiation(self):
         api_key = ApiKey(
             org_id=uuid.uuid4(),
-            user_id=uuid.uuid4(),
+            created_by=uuid.uuid4(),
             key_hash="abc123hash",
+            prefix="spf_",
             name="My API Key",
         )
         assert api_key.name == "My API Key"
@@ -159,8 +160,9 @@ class TestApiKey:
     def test_scopes_array(self):
         api_key = ApiKey(
             org_id=uuid.uuid4(),
-            user_id=uuid.uuid4(),
+            created_by=uuid.uuid4(),
             key_hash="abc123hash",
+            prefix="spf_",
             name="Key",
             scopes=["read", "write"],
         )
@@ -170,8 +172,9 @@ class TestApiKey:
     def test_expires_at_nullable(self):
         api_key = ApiKey(
             org_id=uuid.uuid4(),
-            user_id=uuid.uuid4(),
+            created_by=uuid.uuid4(),
             key_hash="abc123hash",
+            prefix="spf_",
             name="Key",
         )
         assert api_key.expires_at is None
@@ -475,12 +478,12 @@ class TestContentAsset:
     def test_instantiation(self):
         ca = ContentAsset(
             org_id=uuid.uuid4(),
-            asset_type=AssetType.COVER,
+            asset_type=AssetType.COVER.value,
             file_url="https://s3.amazonaws.com/bucket/cover.jpg",
             file_size=1024000,
             mime_type="image/jpeg",
         )
-        assert ca.asset_type == AssetType.COVER
+        assert ca.asset_type == AssetType.COVER.value
         assert ca.file_size == 1024000
 
     def test_tablename(self):
@@ -748,18 +751,22 @@ class TestRiskLevelEnum:
 class TestPricingRule:
     def test_instantiation(self):
         pr = PricingRule(
+            org_id=uuid.uuid4(),
             book_id=uuid.uuid4(),
+            name="Dynamic Rule",
             strategy="dynamic",
         )
-        assert pr.strategy == "dynamic"
+        assert pr.name == "Dynamic Rule"
 
-    def test_rules_jsonb(self):
+    def test_parameters_jsonb(self):
         pr = PricingRule(
+            org_id=uuid.uuid4(),
             book_id=uuid.uuid4(),
-            strategy="competitive",
-            rules={"min_price": 0.99, "max_price": 9.99},
+            name="Competitive Rule",
+            strategy="competitive_match",
+            parameters={"min_price": 0.99, "max_price": 9.99},
         )
-        assert pr.rules["min_price"] == 0.99
+        assert pr.parameters["min_price"] == 0.99
 
     def test_tablename(self):
         assert PricingRule.__tablename__ == "pricing_rules"
@@ -967,7 +974,8 @@ class TestARCRecipient:
 # ── Agent ──────────────────────────────────────────────────────────────
 from app.models.agent import (
     Agent, AgentTask, AgentWorkflow, AgentBudget, AuditTrail,
-    AgentType, PermissionLevel, AgentTaskStatus, BudgetType, ActorType,
+    AgentType, PermissionLevel, TaskStatus, BudgetType, ActorType,
+    WorkflowStatus,
 )
 
 
@@ -981,31 +989,31 @@ class TestAgent:
         assert agent.name == "Research Agent"
         assert agent.agent_type == AgentType.RESEARCH
 
-    def test_default_active(self):
-        """active defaults to True at DB level via server_default."""
+    def test_default_is_enabled(self):
+        """is_enabled defaults to True."""
         agent = Agent(
             org_id=uuid.uuid4(),
-            agent_type=AgentType.WRITING,
+            agent_type=AgentType.WRITING_ASSISTANT,
             name="Test",
         )
-        assert agent.active is True or agent.active is None
+        assert agent.is_enabled is True or agent.is_enabled is None
 
     def test_default_permission_level(self):
         agent = Agent(
             org_id=uuid.uuid4(),
-            agent_type=AgentType.EDITING,
+            agent_type=AgentType.EDITOR,
             name="Test",
         )
-        assert agent.permission_level is None or agent.permission_level == PermissionLevel.SUGGEST
+        assert agent.permission_level is None or agent.permission_level == PermissionLevel.DRAFT_ONLY
 
-    def test_configuration_jsonb(self):
+    def test_config_jsonb(self):
         agent = Agent(
             org_id=uuid.uuid4(),
-            agent_type=AgentType.MARKETING,
+            agent_type=AgentType.MARKETING_COPY,
             name="Test",
-            configuration={"model": "claude-3", "max_tokens": 4096},
+            config={"model": "claude-3", "max_tokens": 4096},
         )
-        assert agent.configuration["model"] == "claude-3"
+        assert agent.config["model"] == "claude-3"
 
     def test_tablename(self):
         assert Agent.__tablename__ == "agents"
@@ -1014,48 +1022,53 @@ class TestAgent:
 class TestAgentTypeEnum:
     def test_values(self):
         assert AgentType.RESEARCH.value == "research"
-        assert AgentType.WRITING.value == "writing"
-        assert AgentType.EDITING.value == "editing"
-        assert AgentType.MARKETING.value == "marketing"
-        assert AgentType.ANALYTICS.value == "analytics"
-        assert AgentType.PUBLISHING.value == "publishing"
+        assert AgentType.WRITING_ASSISTANT.value == "writing_assistant"
+        assert AgentType.EDITOR.value == "editor"
+        assert AgentType.MARKETING_COPY.value == "marketing_copy"
 
     def test_count(self):
-        assert len(AgentType) == 6
+        assert len(AgentType) == 4
 
 
 class TestPermissionLevelEnum:
     def test_values(self):
-        assert PermissionLevel.READ_ONLY.value == "read_only"
+        assert PermissionLevel.DRAFT_ONLY.value == "draft_only"
         assert PermissionLevel.SUGGEST.value == "suggest"
-        assert PermissionLevel.EXECUTE.value == "execute"
-        assert PermissionLevel.AUTONOMOUS.value == "autonomous"
+        assert PermissionLevel.AUTO_EXECUTE_LOW.value == "auto_execute_low"
+        assert PermissionLevel.AUTO_EXECUTE_HIGH.value == "auto_execute_high"
+        assert PermissionLevel.FULL_AUTONOMOUS.value == "full_autonomous"
 
 
 class TestAgentTask:
     def test_instantiation(self):
         task = AgentTask(
+            org_id=uuid.uuid4(),
             agent_id=uuid.uuid4(),
-            task_type="keyword_research",
+            title="Keyword Research",
+            created_by=uuid.uuid4(),
         )
-        assert task.task_type == "keyword_research"
+        assert task.title == "Keyword Research"
 
     def test_default_status(self):
         task = AgentTask(
+            org_id=uuid.uuid4(),
             agent_id=uuid.uuid4(),
-            task_type="test",
+            title="Test",
+            created_by=uuid.uuid4(),
         )
-        assert task.status is None or task.status == AgentTaskStatus.PENDING
+        assert task.status is None or task.status == TaskStatus.PENDING
 
     def test_input_output_jsonb(self):
         task = AgentTask(
+            org_id=uuid.uuid4(),
             agent_id=uuid.uuid4(),
-            task_type="test",
-            input={"query": "fantasy books"},
-            output={"results": [1, 2, 3]},
+            title="Test",
+            created_by=uuid.uuid4(),
+            input_data={"query": "fantasy books"},
+            output_data={"results": [1, 2, 3]},
         )
-        assert task.input["query"] == "fantasy books"
-        assert len(task.output["results"]) == 3
+        assert task.input_data["query"] == "fantasy books"
+        assert len(task.output_data["results"]) == 3
 
     def test_tablename(self):
         assert AgentTask.__tablename__ == "agent_tasks"
@@ -1066,18 +1079,20 @@ class TestAgentWorkflow:
         wf = AgentWorkflow(
             org_id=uuid.uuid4(),
             name="Book Launch Workflow",
+            created_by=uuid.uuid4(),
         )
         assert wf.name == "Book Launch Workflow"
 
-    def test_default_active(self):
-        """active defaults to True at DB level via server_default."""
-        wf = AgentWorkflow(org_id=uuid.uuid4(), name="Test")
-        assert wf.active is True or wf.active is None
+    def test_default_status(self):
+        """status defaults to DRAFT."""
+        wf = AgentWorkflow(org_id=uuid.uuid4(), name="Test", created_by=uuid.uuid4())
+        assert wf.status is None or wf.status == WorkflowStatus.DRAFT
 
     def test_steps_jsonb(self):
         wf = AgentWorkflow(
             org_id=uuid.uuid4(),
             name="Test",
+            created_by=uuid.uuid4(),
             steps=[{"name": "research", "agent_type": "research"}],
         )
         assert wf.steps[0]["name"] == "research"
@@ -1090,29 +1105,26 @@ class TestAgentBudget:
     def test_instantiation(self):
         ab = AgentBudget(
             org_id=uuid.uuid4(),
-            budget_type=BudgetType.MONTHLY,
-            limit_value=100.00,
+            agent_id=uuid.uuid4(),
+            monthly_usd_limit=200.00,
         )
-        assert ab.budget_type == BudgetType.MONTHLY
-        assert ab.limit_value == 100.00
+        assert ab.monthly_usd_limit == 200.00
 
-    def test_default_spent_value(self):
-        """spent_value defaults to 0 at DB level via server_default."""
+    def test_default_tokens_used_today(self):
+        """tokens_used_today defaults to 0."""
         ab = AgentBudget(
             org_id=uuid.uuid4(),
-            budget_type=BudgetType.DAILY,
-            limit_value=10.00,
+            agent_id=uuid.uuid4(),
         )
-        assert ab.spent_value == 0 or ab.spent_value is None
+        assert ab.tokens_used_today == 0 or ab.tokens_used_today is None
 
-    def test_default_alerts_sent(self):
-        """alerts_sent defaults to 0 at DB level via server_default."""
+    def test_default_usd_used_today(self):
+        """usd_used_today defaults to 0.0."""
         ab = AgentBudget(
             org_id=uuid.uuid4(),
-            budget_type=BudgetType.WEEKLY,
-            limit_value=50.00,
+            agent_id=uuid.uuid4(),
         )
-        assert ab.alerts_sent == 0 or ab.alerts_sent is None
+        assert ab.usd_used_today == 0.0 or ab.usd_used_today is None
 
     def test_tablename(self):
         assert AgentBudget.__tablename__ == "agent_budgets"
@@ -1248,13 +1260,13 @@ class TestPortfolioMetric:
         )
         assert pm.total_books == 0 or pm.total_books is None
 
-    def test_roi_by_book_jsonb(self):
+    def test_metrics_data_jsonb(self):
         pm = PortfolioMetric(
             org_id=uuid.uuid4(),
             snapshot_date=date(2024, 1, 15),
-            roi_by_book={"book_id_1": 1.5, "book_id_2": 2.3},
+            metrics_data={"book_id_1": 1.5, "book_id_2": 2.3},
         )
-        assert pm.roi_by_book["book_id_1"] == 1.5
+        assert pm.metrics_data["book_id_1"] == 1.5
 
     def test_tablename(self):
         assert PortfolioMetric.__tablename__ == "portfolio_metrics"
@@ -1263,29 +1275,41 @@ class TestPortfolioMetric:
 class TestABTest:
     def test_instantiation(self):
         ab = ABTest(
-            entity_type="listing",
-            entity_id=uuid.uuid4(),
+            book_id=uuid.uuid4(),
+            name="Blurb Test",
+            variant_a_content="Variant A blurb",
+            variant_b_content="Variant B blurb",
         )
-        assert ab.entity_type == "listing"
+        assert ab.name == "Blurb Test"
+        assert ab.variant_a_content == "Variant A blurb"
 
     def test_default_status(self):
         ab = ABTest(
-            entity_type="listing",
-            entity_id=uuid.uuid4(),
+            book_id=uuid.uuid4(),
+            name="Test",
+            variant_a_content="A",
+            variant_b_content="B",
         )
-        assert ab.status is None or ab.status == ABTestStatus.DRAFT
+        assert ab.status is None or ab.status == "draft"
 
-    def test_variants_jsonb(self):
+    def test_default_impressions(self):
         ab = ABTest(
-            entity_type="listing",
-            entity_id=uuid.uuid4(),
-            variants={"A": {"title": "Title A"}, "B": {"title": "Title B"}},
+            book_id=uuid.uuid4(),
+            name="Test",
+            variant_a_content="A",
+            variant_b_content="B",
         )
-        assert ab.variants["A"]["title"] == "Title A"
+        assert ab.variant_a_impressions == 0 or ab.variant_a_impressions is None
+        assert ab.variant_b_impressions == 0 or ab.variant_b_impressions is None
 
-    def test_winner_id_nullable(self):
-        ab = ABTest(entity_type="test", entity_id=uuid.uuid4())
-        assert ab.winner_id is None
+    def test_completed_at_nullable(self):
+        ab = ABTest(
+            book_id=uuid.uuid4(),
+            name="Test",
+            variant_a_content="A",
+            variant_b_content="B",
+        )
+        assert ab.completed_at is None
 
     def test_tablename(self):
         assert ABTest.__tablename__ == "ab_tests"
@@ -1322,9 +1346,9 @@ class TestReport:
         )
         assert report.parameters["start_date"] == "2024-01-01"
 
-    def test_generated_url_nullable(self):
+    def test_file_path_nullable(self):
         report = Report(org_id=uuid.uuid4(), report_type="test")
-        assert report.generated_url is None
+        assert report.file_path is None
 
     def test_tablename(self):
         assert Report.__tablename__ == "reports"

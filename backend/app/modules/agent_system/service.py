@@ -305,6 +305,7 @@ async def approve_task(
     task.approved_by = approved_by
     task.completed_at = datetime.now(timezone.utc)
     await db.flush()
+    await db.refresh(task)
 
     await record_audit(
         db,
@@ -340,6 +341,7 @@ async def reject_task(
     task.completed_at = datetime.now(timezone.utc)
     task.error_message = f"Rejected: {payload.reason}"
     await db.flush()
+    await db.refresh(task)
 
     await record_audit(
         db,
@@ -391,6 +393,7 @@ async def cancel_task(
     task.error_message = f"Cancelled: {reason}" if reason else "Cancelled by user"
     task.completed_at = datetime.now(timezone.utc)
     await db.flush()
+    await db.refresh(task)
 
     await record_audit(
         db,

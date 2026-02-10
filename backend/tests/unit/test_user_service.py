@@ -31,6 +31,15 @@ def _make_mapping_result(rows: list[dict]):
     mapping_mock.all.return_value = rows
     mock_result.mappings.return_value = mapping_mock
     mock_result.rowcount = len(rows)
+    # Also support ORM-style scalar_one_or_none (returns the first row as
+    # an object with attributes, or None)
+    if rows:
+        user_mock = MagicMock()
+        for k, v in rows[0].items():
+            setattr(user_mock, k, v)
+        mock_result.scalar_one_or_none.return_value = user_mock
+    else:
+        mock_result.scalar_one_or_none.return_value = None
     return mock_result
 
 

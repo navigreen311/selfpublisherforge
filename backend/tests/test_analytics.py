@@ -350,7 +350,10 @@ class TestReports:
             )
 
             assert response.status_code == 404
-            assert response.json()["detail"] == "Report not found"
+            body = response.json()
+            # Support both standard HTTPException format and custom error envelope
+            msg = body.get("detail") or body.get("error", {}).get("message", "")
+            assert "Report not found" in msg
 
 
 # ---------------------------------------------------------------------------

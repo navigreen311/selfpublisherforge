@@ -178,16 +178,23 @@ class WritingSession(BaseModel):
 class ContentAsset(TenantModel):
     __tablename__ = "content_assets"
 
-    asset_type: Mapped[AssetType] = mapped_column(
-        SAEnum(AssetType, name="asset_type", create_constraint=True),
+    asset_type: Mapped[str] = mapped_column(
+        String(50),
         nullable=False,
     )
-    file_url: Mapped[str] = mapped_column(Text, nullable=False)
-    file_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Legacy columns (kept for backward-compat with other modules)
+    file_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
     metadata_: Mapped[dict | None] = mapped_column(
         "metadata", JSONB, nullable=True, default=None
     )
+    # Storage-service columns
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    content_type: Mapped[str | None] = mapped_column(String(127), nullable=True, default=None)
+    size: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    s3_key: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    status: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
 
     # Relationships
     organization = relationship(

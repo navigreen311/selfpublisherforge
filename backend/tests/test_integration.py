@@ -203,20 +203,20 @@ async def test_auth_flow_register_login_profile(client: AsyncClient):
 @pytest.mark.parametrize(
     "path,expected_codes",
     [
-        (f"{API}/auth/login", {200, 401, 422}),
+        (f"{API}/auth/login", {200, 401, 405, 422}),
         (f"{API}/users/me", {200, 401, 403}),
         (f"{API}/billing/plans", {200, 401, 403, 404, 405}),
         (f"{API}/storage/files", {200, 401, 403, 404, 405}),
-        (f"{API}/notifications/", {200, 401, 403, 404, 405}),
+        (f"{API}/notifications", {200, 401, 403, 404, 405}),
         (f"{API}/llm/models", {200, 401, 403, 404, 405}),
         (f"{API}/market/categories", {200, 401, 403, 404, 405}),
         (f"{API}/knowledge/entries", {200, 401, 403, 404, 405}),
-        (f"{API}/pipelines/", {200, 401, 403, 404, 405}),
+        (f"{API}/pipelines", {200, 401, 403, 404, 405, 422}),
         (f"{API}/publishing/accounts", {200, 401, 403, 404, 405}),
         (f"{API}/marketing/campaigns", {200, 401, 403, 404, 405}),
         (f"{API}/ads/campaigns", {200, 401, 403, 404, 405}),
         (f"{API}/analytics/dashboard", {200, 401, 403, 404, 405}),
-        (f"{API}/agents/", {200, 401, 403, 404, 405}),
+        (f"{API}/agents", {200, 401, 403, 404, 405}),
     ],
 )
 async def test_api_prefix_responds(

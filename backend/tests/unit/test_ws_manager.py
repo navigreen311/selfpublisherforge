@@ -223,6 +223,9 @@ async def test_broadcast_publishes_to_redis() -> None:
 
     # Mock the Redis client
     mock_redis = AsyncMock()
+    # pubsub() is a sync method in redis.asyncio that returns a PubSub object
+    mock_pubsub = AsyncMock()
+    mock_redis.pubsub = MagicMock(return_value=mock_pubsub)
     mgr._redis = mock_redis
 
     ws = FakeWebSocket()

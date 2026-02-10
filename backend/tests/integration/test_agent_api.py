@@ -30,7 +30,9 @@ from app.modules.agent_system.models import (
     WorkflowStatus,
 )
 
-from tests.conftest import TestSessionLocal, test_engine
+from tests.conftest import TestingSessionLocal, engine as test_engine
+
+TestSessionLocal = TestingSessionLocal
 
 
 # ---------------------------------------------------------------------------

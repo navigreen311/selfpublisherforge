@@ -39,6 +39,13 @@ class AnalyticsEvent(TenantModel):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
 
+    # Relationships
+    organization = relationship(
+        "Organization", back_populates="analytics_events",
+        primaryjoin="AnalyticsEvent.org_id == Organization.id",
+        foreign_keys="[AnalyticsEvent.org_id]",
+    )
+
     __table_args__ = (
         Index("ix_analytics_events_org_occurred", "org_id", "occurred_at"),
         Index("ix_analytics_events_type_occurred", "event_type", "occurred_at"),
@@ -71,6 +78,13 @@ class RoyaltyRecord(TenantModel):
     import_batch_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
+    # Relationships
+    book = relationship(
+        "Book", back_populates="royalty_records",
+        primaryjoin="RoyaltyRecord.book_id == Book.id",
+        foreign_keys="[RoyaltyRecord.book_id]",
+    )
+
     __table_args__ = (
         Index("ix_royalty_records_org_period", "org_id", "period_start"),
         Index("ix_royalty_records_platform_period", "platform", "period_start"),
@@ -95,6 +109,13 @@ class PortfolioMetricSnapshot(TenantModel):
     top_books: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
     metrics_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
 
+    # Relationships
+    organization = relationship(
+        "Organization", back_populates="portfolio_metrics",
+        primaryjoin="PortfolioMetricSnapshot.org_id == Organization.id",
+        foreign_keys="[PortfolioMetricSnapshot.org_id]",
+    )
+
     __table_args__ = (
         Index("ix_portfolio_metrics_org_date", "org_id", "snapshot_date"),
         {"extend_existing": True},
@@ -116,6 +137,13 @@ class Report(TenantModel):
     generated_by: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    organization = relationship(
+        "Organization", back_populates="reports",
+        primaryjoin="Report.org_id == Organization.id",
+        foreign_keys="[Report.org_id]",
+    )
 
     __table_args__ = (
         Index("ix_reports_org_type", "org_id", "report_type"),

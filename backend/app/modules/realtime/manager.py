@@ -171,6 +171,8 @@ class ConnectionManager:
             try:
                 if ws.client_state == WebSocketState.CONNECTED:
                     await ws.send_json(message)
+                else:
+                    dead.append(ws)
             except Exception:
                 dead.append(ws)
         for ws in dead:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -53,13 +54,17 @@ def create_access_token(
 
 
 def create_refresh_token(data: dict[str, Any]) -> str:
-    """Create a signed JWT refresh token with a longer expiry."""
+    """Create a signed JWT refresh token with a longer expiry.
+
+    Each token includes a unique ``jti`` (JWT ID) claim so that tokens
+    generated with identical payloads in the same second are still distinct.
+    """
     settings = get_settings()
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({"exp": expire, "type": "refresh", "jti": str(uuid4())})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 

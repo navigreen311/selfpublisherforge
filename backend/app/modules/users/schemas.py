@@ -22,7 +22,7 @@ class UserProfile(TimestampMixin):
     avatar_url: str | None = None
     role: UserRole
     org_id: UUID
-    preferences: dict[str, Any] = Field(default_factory=dict)
+    preferences: dict[str, Any] | None = Field(default_factory=dict)
     is_active: bool = True
 
 

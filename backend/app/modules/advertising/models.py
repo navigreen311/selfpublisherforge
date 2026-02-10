@@ -32,6 +32,11 @@ class Campaign(TenantModel):
     external_campaign_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
+    book = relationship(
+        "Book", back_populates="campaigns",
+        primaryjoin="Campaign.book_id == Book.id",
+        foreign_keys="[Campaign.book_id]",
+    )
     keyword_bids: Mapped[list["KeywordBid"]] = relationship(
         "KeywordBid", back_populates="campaign", lazy="selectin"
     )
@@ -40,6 +45,11 @@ class Campaign(TenantModel):
     )
     creatives: Mapped[list["AdCreative"]] = relationship(
         "AdCreative", back_populates="campaign", lazy="selectin"
+    )
+    organization = relationship(
+        "Organization", back_populates="campaigns",
+        primaryjoin="Campaign.org_id == Organization.id",
+        foreign_keys="[Campaign.org_id]",
     )
 
     __table_args__ = (

@@ -9,13 +9,12 @@ from typing import Any
 import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
-from sqlalchemy import String, BigInteger, Text, select, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config import get_settings
 from app.core.exceptions import AppException
-from app.database import TenantModel
+from app.models.content import ContentAsset
 from app.modules.storage.schemas import (
     AssetResponse,
     AssetStatus,
@@ -25,24 +24,6 @@ from app.modules.storage.schemas import (
 from app.modules.storage.validators import validate_file
 
 settings = get_settings()
-
-
-# ---------------------------------------------------------------------------
-# SQLAlchemy model — maps to the "content_assets" table created by W02
-# ---------------------------------------------------------------------------
-
-class ContentAsset(TenantModel):
-    """ORM model for the content_assets table."""
-
-    __tablename__ = "content_assets"
-
-    file_name: Mapped[str] = mapped_column(String(255))
-    content_type: Mapped[str] = mapped_column(String(127))
-    size: Mapped[int] = mapped_column(BigInteger)
-    asset_type: Mapped[str] = mapped_column(String(50))
-    status: Mapped[str] = mapped_column(String(50), default=AssetStatus.PENDING.value)
-    s3_key: Mapped[str] = mapped_column(String(1024))
-    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 # ---------------------------------------------------------------------------

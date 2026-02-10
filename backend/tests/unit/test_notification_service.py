@@ -482,13 +482,14 @@ class TestCeleryTasks:
     def test_send_email_task_success(self, mock_send):
         from app.tasks.notifications import send_email_task
 
-        # Call the underlying function directly (not via .delay)
-        task = send_email_task
-        task.request = MagicMock()
-        task.request.retries = 0
-        task.max_retries = 3
+        # Access the unbound function to call with a mock self (bind=True task)
+        raw_fn = send_email_task.__wrapped__.__func__
+        mock_self = MagicMock()
+        mock_self.request.retries = 0
+        mock_self.max_retries = 3
 
-        result = send_email_task(
+        result = raw_fn(
+            mock_self,
             to_email="test@example.com",
             template_name="welcome",
             context={"name": "Tester"},
@@ -500,14 +501,15 @@ class TestCeleryTasks:
     def test_send_email_task_failure_retries(self, mock_send):
         from app.tasks.notifications import send_email_task
 
-        task = send_email_task
-        task.request = MagicMock()
-        task.request.retries = 0
-        task.max_retries = 3
-        task.retry = MagicMock(side_effect=Exception("retry"))
+        raw_fn = send_email_task.__wrapped__.__func__
+        mock_self = MagicMock()
+        mock_self.request.retries = 0
+        mock_self.max_retries = 3
+        mock_self.retry = MagicMock(side_effect=Exception("retry"))
 
         with pytest.raises(Exception, match="retry"):
-            send_email_task(
+            raw_fn(
+                mock_self,
                 to_email="test@example.com",
                 template_name="welcome",
                 context={"name": "Tester"},

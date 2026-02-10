@@ -146,6 +146,11 @@ class Agent(Base):
     # Relationships
     tasks: Mapped[list["AgentTask"]] = relationship(back_populates="agent", lazy="selectin")
     budget: Mapped[Optional["AgentBudget"]] = relationship(back_populates="agent", uselist=False, lazy="selectin")
+    organization = relationship(
+        "Organization", back_populates="agents",
+        primaryjoin="Agent.org_id == Organization.id",
+        foreign_keys="[Agent.org_id]",
+    )
 
 
 class AgentTask(Base):
@@ -252,6 +257,11 @@ class AgentWorkflow(Base):
 
     # Relationships
     tasks: Mapped[list["AgentTask"]] = relationship(back_populates="workflow", lazy="selectin")
+    organization = relationship(
+        "Organization", back_populates="agent_workflows",
+        primaryjoin="AgentWorkflow.org_id == Organization.id",
+        foreign_keys="[AgentWorkflow.org_id]",
+    )
 
 
 class AgentBudget(Base):
@@ -296,6 +306,11 @@ class AgentBudget(Base):
 
     # Relationships
     agent: Mapped["Agent"] = relationship(back_populates="budget", lazy="selectin")
+    organization = relationship(
+        "Organization", back_populates="agent_budgets",
+        primaryjoin="AgentBudget.org_id == Organization.id",
+        foreign_keys="[AgentBudget.org_id]",
+    )
 
 
 class AuditTrail(Base):
@@ -326,4 +341,11 @@ class AuditTrail(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+
+    # Relationships
+    organization = relationship(
+        "Organization", back_populates="audit_trails",
+        primaryjoin="AuditTrail.org_id == Organization.id",
+        foreign_keys="[AuditTrail.org_id]",
     )

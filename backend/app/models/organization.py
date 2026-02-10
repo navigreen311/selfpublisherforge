@@ -115,12 +115,16 @@ class Organization(BaseModel):
         primaryjoin="Organization.id == foreign(AnalyticsEvent.org_id)",
     )
     portfolio_metrics = relationship(
-        "PortfolioMetric", back_populates="organization", lazy="selectin",
-        primaryjoin="Organization.id == foreign(PortfolioMetric.org_id)",
+        "PortfolioMetricSnapshot", back_populates="organization", lazy="selectin",
+        primaryjoin="Organization.id == foreign(PortfolioMetricSnapshot.org_id)",
     )
     reports = relationship(
         "Report", back_populates="organization", lazy="selectin",
         primaryjoin="Organization.id == foreign(Report.org_id)",
+    )
+    reader_panels = relationship(
+        "ReaderPanel", back_populates="organization", lazy="selectin",
+        primaryjoin="Organization.id == foreign(ReaderPanel.org_id)",
     )
 
     __table_args__ = (

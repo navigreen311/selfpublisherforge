@@ -123,12 +123,12 @@ class TestOptimizeCampaign:
             clicks=30,
             spend=60.0,
             sales=60.0,
-            acos=100.0,  # way above 30% target
+            acos=80.0,  # above target*1.5 (45%) but below target*3.0 (90%) negation threshold
         )
         data = CampaignPerformanceData(
             campaign_id=campaign_id,
             campaign_name="High ACOS Campaign",
-            current_acos=100.0,
+            current_acos=80.0,
             keywords=[kw],
         )
         request = OptimizationRequest(target_acos=30.0)

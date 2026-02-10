@@ -175,3 +175,23 @@ def generate_market_snapshot(self, category_id: str | None = None):
     except Exception as exc:
         logger.error("Market snapshot generation failed: %s", exc)
         raise self.retry(exc=exc)
+
+
+# ---------------------------------------------------------------------------
+# Celery Beat schedule entry (to be registered in celery config)
+# ---------------------------------------------------------------------------
+
+CELERY_BEAT_SCHEDULE = {
+    "refresh-category-data-daily": {
+        "task": "app.tasks.market_intelligence.refresh_category_data",
+        "schedule": 86400.0,  # Every 24 hours
+    },
+    "update-bsr-history-6h": {
+        "task": "app.tasks.market_intelligence.update_bsr_history",
+        "schedule": 21600.0,  # Every 6 hours
+    },
+    "generate-market-snapshot-daily": {
+        "task": "app.tasks.market_intelligence.generate_market_snapshot",
+        "schedule": 86400.0,  # Every 24 hours
+    },
+}
