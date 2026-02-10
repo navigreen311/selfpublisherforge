@@ -1,0 +1,68 @@
+[project]
+name = "selfpublisherforge-backend"
+version = "0.1.0"
+description = "SelfPublisherForge — AI-powered self-publishing platform backend"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [
+    { name = "SelfPublisherForge Team" },
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "T20",  # flake8-print
+    "RET",  # flake8-return
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+    "ERA",  # eradicate (commented-out code)
+    "RUF",  # ruff-specific rules
+    "ASYNC",# flake8-async
+    "S",    # flake8-bandit (security)
+]
+ignore = [
+    "S101",   # allow assert in tests
+    "B008",   # allow function calls in default arguments (FastAPI Depends)
+    "RET504", # allow assignment before return
+    "ARG001", # allow unused function arguments (common in FastAPI deps)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "shared"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "ARG001", "ARG002"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short -x"
+markers = [
+    "unit: unit tests (no external services)",
+    "integration: integration tests (may need DB/Redis)",
+    "slow: slow-running tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
