@@ -51,11 +51,17 @@ CELERY_BEAT_SCHEDULE = {
         "kwargs": {},
     },
     # ------------------------------------------------------------------
-    # Production pipeline deadline check — every hour
+    # Pricing automation — promotion lifecycle management
     # ------------------------------------------------------------------
-    "pipeline-deadline-check": {
-        "task": "production_pipeline.check_deadlines",
-        "schedule": crontab(minute=0),
+    "activate-scheduled-promotions": {
+        "task": "pricing.activate_scheduled_promotions",
+        "schedule": 900.0,  # Every 15 minutes
+        "options": {"queue": "default"},
+        "kwargs": {},
+    },
+    "complete-expired-promotions": {
+        "task": "pricing.complete_expired_promotions",
+        "schedule": 900.0,  # Every 15 minutes
         "options": {"queue": "default"},
         "kwargs": {},
     },

@@ -10,22 +10,6 @@ celery_app = Celery(
     "selfpublisherforge",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=[
-        "app.tasks.production_pipeline",
-        "app.tasks.analytics",
-        "app.tasks.advertising",
-        "app.tasks.agent_system",
-        "app.tasks.competitor_finder",
-        "app.tasks.knowledge_vault",
-        "app.tasks.market_intelligence",
-        "app.tasks.marketing",
-        "app.tasks.notifications",
-        "app.tasks.portfolio_economics",
-        "app.tasks.pricing_automation",
-        "app.tasks.publishing_ops",
-        "app.tasks.review_intelligence",
-        "app.tasks.style_cloning",
-    ],
 )
 
 # Apply enhanced configuration (routing, queues, serialisation, etc.)
@@ -34,20 +18,6 @@ celery_app.conf.update(**CELERY_CONFIG)
 # Register Celery Beat schedule
 celery_app.conf.beat_schedule = CELERY_BEAT_SCHEDULE
 
-# Auto-discover task modules so that @celery_app.task decorators are registered
-celery_app.conf.include = [
-    "app.tasks.advertising",
-    "app.tasks.agent_system",
-    "app.tasks.analytics",
-    "app.tasks.competitor_finder",
-    "app.tasks.knowledge_vault",
-    "app.tasks.market_intelligence",
-    "app.tasks.marketing",
-    "app.tasks.notifications",
-    "app.tasks.portfolio_economics",
-    "app.tasks.pricing_automation",
-    "app.tasks.production_pipeline",
-    "app.tasks.publishing_ops",
-    "app.tasks.review_intelligence",
-    "app.tasks.style_cloning",
-]
+# Import task modules so @celery_app.task decorators are registered.
+# These imports must come after celery_app is created to avoid circular imports.
+import app.tasks.pricing_automation  # noqa: E402, F401
