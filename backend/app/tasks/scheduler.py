@@ -50,4 +50,31 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "analytics_queue"},
         "kwargs": {},
     },
+    # ------------------------------------------------------------------
+    # Marketing: Send scheduled emails — every hour
+    # ------------------------------------------------------------------
+    "marketing-send-scheduled-emails": {
+        "task": "marketing.send_scheduled_emails",
+        "schedule": schedule(run_every=60 * 60),  # 3600 seconds
+        "options": {"queue": "email_queue"},
+        "kwargs": {},
+    },
+    # ------------------------------------------------------------------
+    # Marketing: Social post reminders — every 6 hours
+    # ------------------------------------------------------------------
+    "marketing-social-post-reminders": {
+        "task": "marketing.send_social_post_reminders",
+        "schedule": schedule(run_every=6 * 60 * 60),  # 21600 seconds
+        "options": {"queue": "email_queue"},
+        "kwargs": {},
+    },
+    # ------------------------------------------------------------------
+    # Marketing: ARC follow-ups — daily at 10:00 UTC
+    # ------------------------------------------------------------------
+    "marketing-arc-follow-ups": {
+        "task": "marketing.send_arc_follow_ups",
+        "schedule": crontab(hour=10, minute=0),
+        "options": {"queue": "email_queue"},
+        "kwargs": {"days_since_send": 7},
+    },
 }

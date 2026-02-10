@@ -10,6 +10,23 @@ celery_app = Celery(
     "selfpublisherforge",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
+    include=[
+        "app.tasks.marketing",
+        "app.tasks.advertising",
+        "app.tasks.agent_system",
+        "app.tasks.analytics",
+        "app.tasks.competitor_finder",
+        "app.tasks.dead_letter",
+        "app.tasks.knowledge_vault",
+        "app.tasks.market_intelligence",
+        "app.tasks.notifications",
+        "app.tasks.portfolio_economics",
+        "app.tasks.pricing_automation",
+        "app.tasks.production_pipeline",
+        "app.tasks.publishing_ops",
+        "app.tasks.review_intelligence",
+        "app.tasks.style_cloning",
+    ],
 )
 
 # Apply enhanced configuration (routing, queues, serialisation, etc.)
