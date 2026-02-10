@@ -1,10 +1,13 @@
 """Authentication service — business logic for registration, login, tokens,
-password reset, email verification, MFA, and session management."""
+password reset, email verification, MFA, session management, and OAuth."""
 
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
+import httpx
 from sqlalchemy import select, delete, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,11 +34,12 @@ from app.modules.auth.schemas import (
     MFASetupResponse,
     MFARequiredResponse,
     UserResponse,
+    OAuthAuthorizationURL,
 )
 
 # Import canonical ORM models from the shared models package
 from app.models.organization import Organization
-from app.models.user import User, UserRole, UserSession
+from app.models.user import User, UserRole, UserSession, OAuthAccount
 
 settings = get_settings()
 
@@ -356,6 +360,245 @@ async def disable_mfa(db: AsyncSession, *, user_id: UUID, password: str) -> None
 
 
 # ---------------------------------------------------------------------------
+# OAuth — Google
+# ---------------------------------------------------------------------------
+
+_GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+
+_GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
+_GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+_GITHUB_USER_URL = "https://api.github.com/user"
+_GITHUB_EMAILS_URL = "https://api.github.com/user/emails"
+
+
+def generate_google_auth_url() -> OAuthAuthorizationURL:
+    """Build the Google OAuth2 authorization URL.
+
+    Raises AppException(501) when Google OAuth is not configured.
+    """
+    if not settings.GOOGLE_CLIENT_ID:
+        raise AppException(
+            status_code=501,
+            code="OAUTH_NOT_CONFIGURED",
+            message="Google OAuth is not configured.",
+        )
+
+    state = secrets.token_urlsafe(32)
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": state,
+    }
+    url = f"{_GOOGLE_AUTH_URL}?{urlencode(params)}"
+    return OAuthAuthorizationURL(authorization_url=url, provider="google")
+
+
+async def handle_google_callback(db: AsyncSession, *, code: str) -> dict:
+    """Exchange the Google authorization code for tokens, fetch the user
+    profile, find-or-create the local user, link the OAuth account, and
+    return JWT tokens.
+    """
+    if not settings.GOOGLE_CLIENT_ID:
+        raise AppException(
+            status_code=501,
+            code="OAUTH_NOT_CONFIGURED",
+            message="Google OAuth is not configured.",
+        )
+
+    # 1. Exchange code for access token
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            _GOOGLE_TOKEN_URL,
+            data={
+                "code": code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                "grant_type": "authorization_code",
+            },
+        )
+        if token_resp.status_code != 200:
+            raise AppException(
+                status_code=401,
+                code="OAUTH_TOKEN_ERROR",
+                message="Failed to exchange Google authorization code for tokens.",
+            )
+        token_data = token_resp.json()
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise AppException(
+                status_code=401,
+                code="OAUTH_TOKEN_ERROR",
+                message="No access token in Google response.",
+            )
+
+        # 2. Fetch user profile
+        profile_resp = await client.get(
+            _GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        if profile_resp.status_code != 200:
+            raise AppException(
+                status_code=401,
+                code="OAUTH_PROFILE_ERROR",
+                message="Failed to fetch Google user profile.",
+            )
+        profile = profile_resp.json()
+
+    google_id = profile.get("id")
+    email = profile.get("email")
+    name = profile.get("name", email.split("@")[0] if email else "User")
+    avatar = profile.get("picture")
+
+    if not email:
+        raise AppException(
+            status_code=400,
+            code="OAUTH_NO_EMAIL",
+            message="Google account does not have an email address.",
+        )
+
+    # 3. Find or create user + link OAuth account
+    return await _find_or_create_oauth_user(
+        db,
+        provider="google",
+        provider_user_id=google_id,
+        email=email,
+        name=name,
+        avatar_url=avatar,
+        oauth_access_token=access_token,
+        oauth_refresh_token=token_data.get("refresh_token"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# OAuth — GitHub
+# ---------------------------------------------------------------------------
+
+def generate_github_auth_url() -> OAuthAuthorizationURL:
+    """Build the GitHub OAuth authorization URL.
+
+    Raises AppException(501) when GitHub OAuth is not configured.
+    """
+    if not settings.GITHUB_CLIENT_ID:
+        raise AppException(
+            status_code=501,
+            code="OAUTH_NOT_CONFIGURED",
+            message="GitHub OAuth is not configured.",
+        )
+
+    state = secrets.token_urlsafe(32)
+    params = {
+        "client_id": settings.GITHUB_CLIENT_ID,
+        "redirect_uri": settings.GITHUB_REDIRECT_URI,
+        "scope": "read:user user:email",
+        "state": state,
+    }
+    url = f"{_GITHUB_AUTH_URL}?{urlencode(params)}"
+    return OAuthAuthorizationURL(authorization_url=url, provider="github")
+
+
+async def handle_github_callback(db: AsyncSession, *, code: str) -> dict:
+    """Exchange the GitHub authorization code for tokens, fetch the user
+    profile, find-or-create the local user, link the OAuth account, and
+    return JWT tokens.
+    """
+    if not settings.GITHUB_CLIENT_ID:
+        raise AppException(
+            status_code=501,
+            code="OAUTH_NOT_CONFIGURED",
+            message="GitHub OAuth is not configured.",
+        )
+
+    # 1. Exchange code for access token
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            _GITHUB_TOKEN_URL,
+            data={
+                "client_id": settings.GITHUB_CLIENT_ID,
+                "client_secret": settings.GITHUB_CLIENT_SECRET,
+                "code": code,
+                "redirect_uri": settings.GITHUB_REDIRECT_URI,
+            },
+            headers={"Accept": "application/json"},
+        )
+        if token_resp.status_code != 200:
+            raise AppException(
+                status_code=401,
+                code="OAUTH_TOKEN_ERROR",
+                message="Failed to exchange GitHub authorization code for tokens.",
+            )
+        token_data = token_resp.json()
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise AppException(
+                status_code=401,
+                code="OAUTH_TOKEN_ERROR",
+                message="No access token in GitHub response.",
+            )
+
+        # 2. Fetch user profile
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        }
+        profile_resp = await client.get(_GITHUB_USER_URL, headers=headers)
+        if profile_resp.status_code != 200:
+            raise AppException(
+                status_code=401,
+                code="OAUTH_PROFILE_ERROR",
+                message="Failed to fetch GitHub user profile.",
+            )
+        profile = profile_resp.json()
+
+        github_id = str(profile.get("id"))
+        email = profile.get("email")
+        name = profile.get("name") or profile.get("login", "User")
+        avatar = profile.get("avatar_url")
+
+        # GitHub may not return email in the profile; fetch from /user/emails
+        if not email:
+            emails_resp = await client.get(_GITHUB_EMAILS_URL, headers=headers)
+            if emails_resp.status_code == 200:
+                emails = emails_resp.json()
+                # Prefer the primary verified email
+                for em in emails:
+                    if em.get("primary") and em.get("verified"):
+                        email = em["email"]
+                        break
+                # Fallback to any verified email
+                if not email:
+                    for em in emails:
+                        if em.get("verified"):
+                            email = em["email"]
+                            break
+
+    if not email:
+        raise AppException(
+            status_code=400,
+            code="OAUTH_NO_EMAIL",
+            message="GitHub account does not have a verified email address.",
+        )
+
+    # 3. Find or create user + link OAuth account
+    return await _find_or_create_oauth_user(
+        db,
+        provider="github",
+        provider_user_id=github_id,
+        email=email,
+        name=name,
+        avatar_url=avatar,
+        oauth_access_token=access_token,
+        oauth_refresh_token=None,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
@@ -397,6 +640,134 @@ async def _create_session(
     db.add(session)
     await db.flush()
     return session
+
+
+async def _find_or_create_oauth_user(
+    db: AsyncSession,
+    *,
+    provider: str,
+    provider_user_id: str,
+    email: str,
+    name: str,
+    avatar_url: str | None = None,
+    oauth_access_token: str | None = None,
+    oauth_refresh_token: str | None = None,
+) -> dict:
+    """Shared logic for all OAuth providers.
+
+    1. Check if an OAuthAccount already exists for (provider, provider_user_id).
+       If so, load the linked user and issue tokens.
+    2. Otherwise, check if a User with the same email exists.
+       If so, link a new OAuthAccount to that user.
+    3. Otherwise, create a brand-new Organization + User + OAuthAccount.
+
+    Returns the same dict shape as ``register_user`` / ``authenticate``.
+    """
+    # --- Check for existing OAuth link ---
+    result = await db.execute(
+        select(OAuthAccount).where(
+            OAuthAccount.provider == provider,
+            OAuthAccount.provider_user_id == provider_user_id,
+        )
+    )
+    oauth_account = result.scalar_one_or_none()
+
+    if oauth_account is not None:
+        # Update stored tokens
+        oauth_account.access_token = oauth_access_token
+        if oauth_refresh_token:
+            oauth_account.refresh_token = oauth_refresh_token
+        oauth_account.provider_email = email
+        if avatar_url:
+            oauth_account.avatar_url = avatar_url
+        await db.flush()
+
+        # Load user
+        user_result = await db.execute(select(User).where(User.id == oauth_account.user_id))
+        user = user_result.scalar_one_or_none()
+        if user is None:
+            raise AppException(
+                status_code=404,
+                code="USER_NOT_FOUND",
+                message="Linked user account not found.",
+            )
+        return await _issue_oauth_tokens(db, user)
+
+    # --- Check for existing user with same email ---
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+
+    if user is not None:
+        # Link new OAuth account to existing user
+        oauth_account = OAuthAccount(
+            id=uuid4(),
+            user_id=user.id,
+            provider=provider,
+            provider_user_id=provider_user_id,
+            provider_email=email,
+            access_token=oauth_access_token,
+            refresh_token=oauth_refresh_token,
+            avatar_url=avatar_url,
+        )
+        db.add(oauth_account)
+        if avatar_url and not user.avatar_url:
+            user.avatar_url = avatar_url
+        await db.flush()
+        return await _issue_oauth_tokens(db, user)
+
+    # --- Create new organization + user + OAuth account ---
+    org_id = uuid4()
+    slug = _make_slug(name, str(org_id))
+    org = Organization(id=org_id, name=f"{name}'s Workspace", slug=slug)
+    db.add(org)
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        org_id=org_id,
+        email=email,
+        name=name,
+        password_hash=hash_password(secrets.token_urlsafe(32)),  # random password for OAuth-only users
+        role=UserRole.OWNER,
+        email_verified=True,  # OAuth emails are already verified by the provider
+        avatar_url=avatar_url,
+    )
+    db.add(user)
+
+    oauth_account = OAuthAccount(
+        id=uuid4(),
+        user_id=user_id,
+        provider=provider,
+        provider_user_id=provider_user_id,
+        provider_email=email,
+        access_token=oauth_access_token,
+        refresh_token=oauth_refresh_token,
+        avatar_url=avatar_url,
+    )
+    db.add(oauth_account)
+    await db.flush()
+
+    return await _issue_oauth_tokens(db, user)
+
+
+async def _issue_oauth_tokens(db: AsyncSession, user: User) -> dict:
+    """Issue JWT access and refresh tokens for an OAuth-authenticated user."""
+    role_value = user.role.value if isinstance(user.role, UserRole) else str(user.role)
+    token_data = {"sub": str(user.id), "org_id": str(user.org_id), "role": role_value}
+    access = create_access_token(token_data)
+    refresh = create_refresh_token(token_data)
+
+    await _create_session(db, user_id=user.id, refresh_token=refresh)
+
+    return {
+        "user": _user_dict(user),
+        "tokens": TokenResponse(
+            access_token=access,
+            refresh_token=refresh,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        ),
+    }
 
 
 def _user_dict(user: User) -> dict:

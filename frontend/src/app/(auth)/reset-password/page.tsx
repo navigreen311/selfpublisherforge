@@ -16,6 +16,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { getPasswordChecks, PASSWORD_CHECK_LABELS, validatePassword } from "@/lib/validation";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -30,14 +31,8 @@ function ResetPasswordForm() {
   const [error, setError] = React.useState("");
   const [success, setSuccess] = React.useState(false);
 
-  const passwordChecks = {
-    minLength: password.length >= 8,
-    hasUppercase: /[A-Z]/.test(password),
-    hasLowercase: /[a-z]/.test(password),
-    hasNumber: /\d/.test(password),
-  };
-
-  const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+  const passwordChecks = getPasswordChecks(password);
+  const isPasswordValid = validatePassword(password).valid;
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,12 +158,7 @@ function ResetPasswordForm() {
             </div>
             {password && (
               <div className="grid grid-cols-2 gap-1 mt-2">
-                {[
-                  { key: "minLength", label: "8+ characters" },
-                  { key: "hasUppercase", label: "Uppercase letter" },
-                  { key: "hasLowercase", label: "Lowercase letter" },
-                  { key: "hasNumber", label: "Number" },
-                ].map(({ key, label }) => (
+                {PASSWORD_CHECK_LABELS.map(({ key, label }) => (
                   <div
                     key={key}
                     className={cn(

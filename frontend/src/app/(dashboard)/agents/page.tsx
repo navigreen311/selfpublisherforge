@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAgents, useTasks, useBudgets, useEmergencyStop } from "@/modules/agents/hooks";
 import { AgentCard } from "@/modules/agents/components/AgentCard";
 import { TaskList } from "@/modules/agents/components/TaskList";
 import { BudgetMeter } from "@/modules/agents/components/BudgetMeter";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent } from "@/modules/agents/types";
 
 export default function AgentDashboardPage() {
+  const router = useRouter();
   const { data: agentsData, isLoading: agentsLoading } = useAgents();
   const { data: tasksData, isLoading: tasksLoading } = useTasks({
     limit: 5,
@@ -83,7 +87,11 @@ export default function AgentDashboardPage() {
       <section>
         <h2 className="text-lg font-semibold mb-4">Available Agents</h2>
         {agentsLoading ? (
-          <div className="text-muted-foreground">Loading agents...</div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-36" />
+            ))}
+          </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {agents.map((agent) => (
@@ -91,10 +99,10 @@ export default function AgentDashboardPage() {
                 key={agent.id}
                 agent={agent}
                 onCreateTask={() => {
-                  window.location.href = `/agents/tasks?create=true&agent_id=${agent.id}`;
+                  router.push(`/agents/tasks?create=true&agent_id=${agent.id}`);
                 }}
                 onConfigure={() => {
-                  window.location.href = `/agents/settings?agent_id=${agent.id}`;
+                  router.push(`/agents/settings?agent_id=${agent.id}`);
                 }}
               />
             ))}
@@ -122,15 +130,19 @@ export default function AgentDashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Recent Tasks</h2>
-          <a
+          <Link
             href="/agents/tasks"
             className="text-sm text-primary hover:underline"
           >
             View all
-          </a>
+          </Link>
         </div>
         {tasksLoading ? (
-          <div className="text-muted-foreground">Loading tasks...</div>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
         ) : (
           <TaskList tasks={recentTasks} />
         )}

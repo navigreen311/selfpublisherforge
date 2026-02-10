@@ -12,6 +12,7 @@ import {
   useKnowledgeSearch,
   useCreateEntry,
 } from "@/modules/knowledge/hooks";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { SearchHit } from "@/modules/knowledge/hooks";
 
 export default function KnowledgeVaultPage() {
@@ -149,8 +150,10 @@ export default function KnowledgeVaultPage() {
       {!searchResults && (
         <div>
           {entriesLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-6 w-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-32" />
+              ))}
             </div>
           ) : entries && entries.items.length > 0 ? (
             <>

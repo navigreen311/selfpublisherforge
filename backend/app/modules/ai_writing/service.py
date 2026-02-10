@@ -27,6 +27,9 @@ from app.modules.ai_writing.schemas import (
     OutlineRequest,
     OutlineResponse,
     OutlineChapter,
+    OutlineGenerateRequest,
+    OutlineGenerateResponse,
+    ChapterOutline,
     ReadabilityScore,
     WritingSessionCreate,
     WritingSessionRecord,
@@ -341,6 +344,92 @@ async def generate_outline(
         chapters=chapters,
         summary=data.get("summary", ""),
         generated_at=datetime.now(timezone.utc),
+    )
+
+
+async def generate_outline_standalone(
+    request: OutlineGenerateRequest,
+    db: AsyncSession,
+) -> OutlineGenerateResponse:
+    """Generate a book outline using AI without requiring an existing book.
+
+    Builds a structured system prompt for outline generation, calls the LLM
+    following the same pattern as the book-bound outline endpoint, and parses
+    the response into typed ChapterOutline objects.
+    """
+    from app.modules.ai_writing.generator import _call_llm, resolve_model
+
+    # -- Build the system prompt ------------------------------------------------
+    system_parts = [
+        "You are an expert book outline architect. You create detailed, "
+        "well-structured book outlines that serve as comprehensive blueprints "
+        "for authors.",
+        f"Genre: {request.genre}.",
+        f"Tone: {request.tone}.",
+    ]
+    system_msg = " ".join(system_parts)
+
+    # -- Build the user prompt --------------------------------------------------
+    user_parts = [
+        f'Generate a detailed outline for a book titled "{request.book_title}".',
+        f"Genre: {request.genre}.",
+        f"Number of chapters: {request.num_chapters}.",
+    ]
+    if request.premise:
+        user_parts.append(f"Premise: {request.premise}")
+    if request.target_audience:
+        user_parts.append(f"Target audience: {request.target_audience}")
+
+    user_parts.append(
+        "\nFor each chapter provide:\n"
+        "- chapter_number (integer)\n"
+        "- title (string)\n"
+        "- description (2-3 sentence summary)\n"
+        "- key_points (list of 2-4 bullet points)\n"
+        "- estimated_word_count (integer)\n\n"
+        "Also include a 'synopsis' field with a 2-3 paragraph overall book synopsis.\n\n"
+        "Return ONLY valid JSON with the structure:\n"
+        '{"chapters": [{"chapter_number": 1, "title": "...", "description": "...", '
+        '"key_points": ["..."], "estimated_word_count": 3000}], '
+        '"synopsis": "overall book synopsis"}'
+    )
+    user_msg = "\n".join(user_parts)
+
+    messages = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ]
+    model = resolve_model("auto")
+    raw = await _call_llm(messages, model)
+
+    # -- Parse the LLM JSON response -------------------------------------------
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        import re as _re
+        json_match = _re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, _re.DOTALL)
+        if json_match:
+            data = json.loads(json_match.group(1))
+        else:
+            data = {"chapters": [], "synopsis": raw}
+
+    chapters = [
+        ChapterOutline(
+            chapter_number=ch.get("chapter_number", i + 1),
+            title=ch.get("title", f"Chapter {i + 1}"),
+            description=ch.get("description", ch.get("synopsis", "")),
+            key_points=ch.get("key_points", []),
+            estimated_word_count=ch.get("estimated_word_count", 3000),
+        )
+        for i, ch in enumerate(data.get("chapters", []))
+    ]
+
+    return OutlineGenerateResponse(
+        book_title=request.book_title,
+        genre=request.genre,
+        total_chapters=len(chapters),
+        chapters=chapters,
+        synopsis=data.get("synopsis", ""),
     )
 
 

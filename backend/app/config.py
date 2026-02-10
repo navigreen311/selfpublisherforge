@@ -57,6 +57,23 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+
+    # GitHub OAuth
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    GITHUB_REDIRECT_URI: str = ""
+
+    # Amazon Ads
+    AMAZON_ADS_CLIENT_ID: str = ""
+    AMAZON_ADS_CLIENT_SECRET: str = ""
+    AMAZON_ADS_REFRESH_TOKEN: str = ""
+    AMAZON_ADS_PROFILE_ID: str = ""
+    AMAZON_ADS_REGION: str = "NA"
+
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 

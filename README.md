@@ -395,6 +395,334 @@ All infrastructure is defined in `infra/terraform/` and deployed per environment
 - **Alert tiers** -- P0 (immediate, PagerDuty) through P3 (next business day, Slack)
 - **CloudWatch** -- ECS logs, ALB metrics, auto-scaling triggers
 
+## Deployment Guide
+
+Full deployment documentation is in [`docs/deploy.md`](docs/deploy.md). Below is a condensed step-by-step.
+
+### Prerequisites
+
+- **AWS account** with IAM credentials configured (`aws configure`)
+- **Domain name** pointing to your AWS ALB (e.g., `selfpublisherforge.com`)
+- **SSL certificate** provisioned via AWS Certificate Manager (ACM)
+- **Terraform >= 1.6.0** installed locally
+- **Docker** and **Docker Compose** installed
+- GitHub repository secrets configured (see `docs/deploy.md` for full list)
+
+### Step-by-Step Deployment
+
+<details>
+<summary><strong>Step 1: Configure environment variables</strong></summary>
+
+```bash
+# Backend
+cp backend/.env.example backend/.env
+# Edit backend/.env — fill in all API keys and connection strings
+
+# Frontend
+cp frontend/.env.example frontend/.env.local
+# Edit frontend/.env.local — set API URL and Stripe publishable key
+```
+
+See the [Environment Variables](#environment-variables) section and `backend/.env.example` for detailed descriptions of each variable.
+
+</details>
+
+<details>
+<summary><strong>Step 2: Run database migrations</strong></summary>
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+This applies all pending migrations to your PostgreSQL database. Ensure `DATABASE_URL` in your `.env` is correct before running.
+
+</details>
+
+<details>
+<summary><strong>Step 3: Build and push Docker images</strong></summary>
+
+```bash
+# Authenticate with ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
+
+# Build images
+make build
+
+# Tag and push
+docker tag selfpublisherforge-api:latest <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/selfpublisherforge-api:latest
+docker push <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/selfpublisherforge-api:latest
+
+docker tag selfpublisherforge-frontend:latest <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/selfpublisherforge-frontend:latest
+docker push <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/selfpublisherforge-frontend:latest
+```
+
+</details>
+
+<details>
+<summary><strong>Step 4: Apply Terraform infrastructure</strong></summary>
+
+```bash
+# Preview changes
+make tf-plan ENV=staging
+
+# Apply (creates ECS, RDS, ElastiCache, S3, ALB, etc.)
+make tf-apply ENV=staging
+
+# For production (requires manual approval)
+make tf-plan ENV=production
+make tf-apply ENV=production
+```
+
+</details>
+
+<details>
+<summary><strong>Step 5: Deploy via GitHub Actions</strong></summary>
+
+- **Staging**: Push or merge to `main` -- triggers automatic staging deployment.
+- **Production**: Push a version tag to trigger blue-green production deployment:
+
+```bash
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+```
+
+</details>
+
+<details>
+<summary><strong>Step 6: Verify health checks</strong></summary>
+
+```bash
+# Check API health endpoint
+curl -f https://staging.selfpublisherforge.com/api/health
+
+# Verify ECS service stability
+aws ecs describe-services \
+  --cluster selfpublisherforge-staging \
+  --services selfpublisherforge-api-staging \
+  --query 'services[0].deployments'
+```
+
+</details>
+
+## Chrome Extension Installation
+
+The Chrome extension (`extension/` directory) is a Manifest V3 extension for extracting Amazon product data.
+
+### Developer Mode Installation
+
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable **Developer mode** (toggle in the top-right corner)
+3. Click **Load unpacked** and select the `extension/` directory from this repository
+4. The extension icon will appear in your toolbar
+
+### Configuration
+
+1. Click the extension icon and open the popup
+2. Set the **API URL** to your backend instance:
+   - Development: `http://localhost:8000`
+   - Production: `https://api.selfpublisherforge.com`
+3. Enter your **authentication token** (obtain one via `POST /api/v1/auth/login`)
+
+### Usage
+
+1. Navigate to any Amazon product page (supported marketplaces: US, UK, DE, FR, CA, AU, JP, IT, ES, IN)
+2. The content script automatically extracts product data on `/dp/` and `/gp/product/` pages
+3. Open the **side panel** (click the extension icon or use the toolbar) to view extracted data, track BSR, research niches, and save clips to your SelfPublisherForge account
+
+## Database Migrations
+
+Migrations are managed by [Alembic](https://alembic.sqlalchemy.org/) and live in `backend/migrations/`.
+
+```bash
+# Create a new migration (auto-detects model changes)
+cd backend
+alembic revision --autogenerate -m "add user preferences table"
+
+# Apply all pending migrations
+alembic upgrade head
+
+# Rollback the last migration
+alembic downgrade -1
+
+# View current migration status
+alembic current
+
+# View migration history
+alembic history --verbose
+```
+
+> **Tip**: Always review auto-generated migrations before applying. Alembic may not detect all changes (e.g., column renames, index changes) and manual edits may be required.
+
+## Monitoring Setup
+
+The monitoring stack runs alongside the application in `docker-compose.yml` and is configured in `infra/monitoring/`.
+
+### Stack Components
+
+| Component | Port | Purpose |
+|---|---|---|
+| **Prometheus** | 9090 | Metrics collection and alerting rules |
+| **Grafana** | 3001 | Dashboards and visualization |
+| **AlertManager** | 9093 | Alert routing (Slack, PagerDuty) |
+| **postgres-exporter** | 9187 | PostgreSQL metrics |
+| **redis-exporter** | 9121 | Redis metrics |
+| **node-exporter** | 9100 | Host system metrics |
+| **elasticsearch-exporter** | 9114 | Elasticsearch metrics |
+
+### Development
+
+Access Grafana at [http://localhost:3001](http://localhost:3001) (default credentials: `admin` / value of `GRAFANA_PASSWORD` env var, defaults to `admin`). Prometheus datasource is pre-configured via `infra/monitoring/grafana-datasources.yml`.
+
+### Production
+
+- **AWS CloudWatch** -- ECS logs, ALB metrics, auto-scaling triggers
+- **Prometheus** -- Application and infrastructure metrics scraped from exporters
+- **Datadog** -- APM dashboard with latency percentiles, error rates, and queue depth (dashboard config in `infra/monitoring/datadog-dashboard.json`)
+- **Alert tiers** -- P0 (immediate, PagerDuty) through P3 (next business day, Slack). See `infra/monitoring/alerts.yml`.
+
+## Troubleshooting
+
+<details>
+<summary><strong>Database connection failures</strong></summary>
+
+```bash
+# Verify PostgreSQL is running
+docker-compose ps postgres
+
+# Check connection string in .env
+# DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/selfpublisherforge
+
+# Test connection directly
+docker-compose exec postgres psql -U postgres -d selfpublisherforge -c "SELECT 1"
+
+# Reset development database (WARNING: destroys all data)
+docker-compose down -v   # removes volumes
+docker-compose up -d postgres
+cd backend && alembic upgrade head
+```
+
+</details>
+
+<details>
+<summary><strong>Redis connection failures</strong></summary>
+
+```bash
+# Verify Redis is running
+docker-compose ps redis
+
+# Test connectivity
+docker-compose exec redis redis-cli ping
+# Expected: PONG
+
+# Check Redis URL in .env
+# REDIS_URL=redis://localhost:6379/0
+# CELERY_BROKER_URL=redis://localhost:6379/1
+```
+
+</details>
+
+<details>
+<summary><strong>API key configuration issues</strong></summary>
+
+- Ensure all required API keys are set in `backend/.env` (not the placeholder values from `.env.example`).
+- The `ANTHROPIC_API_KEY` is required for AI features. `OPENAI_API_KEY` is a fallback.
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are required for billing features.
+- `SENDGRID_API_KEY` is required for email delivery.
+- If a key is missing, the backend logs will show a clear error on startup or when the feature is invoked.
+
+</details>
+
+<details>
+<summary><strong>Checking service logs</strong></summary>
+
+```bash
+# Tail backend logs
+docker-compose logs -f backend
+
+# Tail Celery worker logs
+docker-compose logs -f celery-worker
+
+# Tail all services
+docker-compose logs -f
+
+# Filter for errors
+docker-compose logs backend 2>&1 | grep -i error
+
+# Using Make
+make logs SERVICE=backend
+```
+
+</details>
+
+<details>
+<summary><strong>Resetting the development database</strong></summary>
+
+```bash
+# Stop services and remove volumes
+docker-compose down -v
+
+# Restart PostgreSQL
+docker-compose up -d postgres
+
+# Wait for health check, then run migrations
+docker-compose exec postgres pg_isready -U postgres
+cd backend && alembic upgrade head
+
+# Restart all services
+docker-compose up -d
+```
+
+</details>
+
+## API Authentication
+
+All API endpoints (except login, registration, and health checks) require a valid JWT token.
+
+### Login
+
+```bash
+# Obtain tokens
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "your-password"}'
+
+# Response:
+# {
+#   "access_token": "eyJhbG...",
+#   "refresh_token": "eyJhbG...",
+#   "token_type": "bearer"
+# }
+```
+
+### Authenticated Requests
+
+Include the `Authorization` header on all subsequent requests:
+
+```bash
+curl http://localhost:8000/api/v1/projects \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### Token Refresh
+
+Access tokens expire after 15 minutes (configurable via `ACCESS_TOKEN_EXPIRE_MINUTES`). Use the refresh token to obtain a new access token without re-authenticating:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "<refresh_token>"}'
+
+# Response:
+# {
+#   "access_token": "eyJhbG...(new)...",
+#   "refresh_token": "eyJhbG...(new)...",
+#   "token_type": "bearer"
+# }
+```
+
+Refresh tokens expire after 7 days (configurable via `REFRESH_TOKEN_EXPIRE_DAYS`).
+
 ## Contributing
 
 1. Create a feature branch: `git checkout -b ai-feature/your-feature-name`

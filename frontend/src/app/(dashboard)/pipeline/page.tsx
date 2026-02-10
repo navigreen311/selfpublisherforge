@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePipelines, useCreatePipeline } from "@/modules/pipeline/hooks";
 import { useBooks } from "@/modules/writing/hooks";
 import { PipelineCard } from "@/modules/pipeline/components/PipelineCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { PipelineStatus } from "@/modules/pipeline/hooks";
 
 // ---------------------------------------------------------------------------
@@ -252,7 +253,11 @@ export default function PipelineDashboardPage() {
 
       {/* Pipeline grid */}
       {isLoading && (
-        <p className="text-muted-foreground text-sm">Loading pipelines...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
       )}
       {error && (
         <p className="text-red-600 text-sm">

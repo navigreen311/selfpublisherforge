@@ -163,6 +163,35 @@ class OutlineResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Standalone Outline Generation (no book_id required)
+# ---------------------------------------------------------------------------
+
+class OutlineGenerateRequest(BaseModel):
+    book_title: str
+    genre: str
+    target_audience: str | None = None
+    num_chapters: int = Field(default=12, ge=3, le=50)
+    premise: str | None = None
+    tone: str = "commercial"  # formal, casual, literary, commercial
+
+
+class ChapterOutline(BaseModel):
+    chapter_number: int
+    title: str
+    description: str
+    key_points: list[str] = []
+    estimated_word_count: int = 3000
+
+
+class OutlineGenerateResponse(BaseModel):
+    book_title: str
+    genre: str
+    total_chapters: int
+    chapters: list[ChapterOutline]
+    synopsis: str
+
+
+# ---------------------------------------------------------------------------
 # Writing Sessions
 # ---------------------------------------------------------------------------
 

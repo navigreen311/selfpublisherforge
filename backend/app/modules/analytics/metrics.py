@@ -26,6 +26,7 @@ from app.modules.analytics.schemas import (
     TrendData,
     TrendDataPoint,
 )
+from app.modules.advertising.models import Campaign, CampaignPerformance
 
 
 def _quantize(value: Decimal, places: int = 2) -> Decimal:
@@ -50,6 +51,40 @@ def _change_direction(change: float | None) -> str:
     elif change < -0.5:
         return "down"
     return "flat"
+
+
+async def _compute_total_expenses(
+    db: AsyncSession,
+    org_id: UUID,
+) -> Decimal:
+    """Sum all tracked expenses for an organization.
+
+    Currently aggregates:
+    - Advertising spend from ``CampaignPerformance`` records (joined
+      through ``Campaign`` for org-level filtering).
+
+    The query joins ``CampaignPerformance`` to ``Campaign`` so we can
+    filter by ``Campaign.org_id`` (``CampaignPerformance`` itself is
+    a non-tenant ``BaseModel`` without ``org_id``).
+    """
+    ad_spend_query = (
+        select(
+            func.coalesce(func.sum(CampaignPerformance.spend), 0).label("total_ad_spend"),
+        )
+        .join(Campaign, CampaignPerformance.campaign_id == Campaign.id)
+        .where(
+            and_(
+                Campaign.org_id == org_id,
+                Campaign.deleted_at.is_(None),
+                CampaignPerformance.deleted_at.is_(None),
+            )
+        )
+    )
+    result = await db.execute(ad_spend_query)
+    row = result.one()
+    total_ad_spend = Decimal(str(row.total_ad_spend))
+
+    return total_ad_spend
 
 
 async def compute_portfolio_metrics(
@@ -82,6 +117,18 @@ async def compute_portfolio_metrics(
     total_revenue = Decimal(str(row.total_revenue))
     total_units = int(row.total_units)
     total_books = int(row.total_books)
+
+    # Total expenses (advertising spend + other tracked costs)
+    total_expenses = await _compute_total_expenses(db, org_id)
+
+    # Net profit = revenue minus expenses
+    net_profit = total_revenue - total_expenses
+
+    # Average ROI: (revenue - expenses) / expenses when expenses > 0
+    if total_expenses > 0:
+        avg_roi = (total_revenue - total_expenses) / total_expenses
+    else:
+        avg_roi = Decimal("0.00")
 
     # Platform breakdown
     platform_query = (
@@ -155,9 +202,9 @@ async def compute_portfolio_metrics(
         total_books=total_books,
         total_revenue=_quantize(total_revenue),
         total_units_sold=total_units,
-        total_expenses=Decimal("0.00"),  # Placeholder; expenses are not tracked in royalties
-        net_profit=_quantize(total_revenue),  # Revenue-only for now
-        avg_roi=Decimal("0.00"),
+        total_expenses=_quantize(total_expenses),
+        net_profit=_quantize(net_profit),
+        avg_roi=_quantize(avg_roi, places=4),
         platform_breakdown=platform_breakdown,
         format_breakdown=format_breakdown,
         top_books=top_books,

@@ -129,48 +129,193 @@ function extractCurrency() {
 // BSR (Best Sellers Rank)
 // ---------------------------------------------------------------------------
 
-function extractBSR() {
-  let overallBSR = null;
-  const bsrCategories = {};
+/**
+ * Parse a BSR text block and extract overall rank + category ranks.
+ *
+ * Handles multiple Amazon BSR formats:
+ *   "#1,234 in Books"
+ *   "#1,234 in Kindle Store (See Top 100 …)"
+ *   "#42 in Kindle eBooks > Romance > Contemporary"
+ *   "Nr. 1.234 in …" (DE locale with period separator)
+ *
+ * @param {string} text  The raw text containing BSR information.
+ * @param {number|null} currentOverallBSR  Previously found overall BSR (if any).
+ * @param {Object} bsrCategories  Accumulator for category ranks.
+ * @returns {{ overallBSR: number|null, bsrCategories: Object }}
+ */
+function _parseBSRText(text, currentOverallBSR, bsrCategories) {
+  let overallBSR = currentOverallBSR;
 
-  // Method 1: Product details table
-  const detailRows = document.querySelectorAll(
-    "#productDetails_detailBullets_sections1 tr, #detailBulletsWrapper_feature_div li"
-  );
+  // Regex patterns for different BSR formats across locales
+  const rankPatterns = [
+    // Standard: "#1,234 in Books" or "#1,234 in Kindle Store"
+    /#([\d,]+)\s+in\s+([^\n(#]+)/g,
+    // German / EU locale: "Nr. 1.234 in …"
+    /Nr\.\s*([\d.]+)\s+in\s+([^\n(#]+)/gi,
+    // Compact: "#1234in Books" (some mobile layouts omit the space)
+    /#([\d,]+)in\s+([^\n(#]+)/g,
+  ];
 
-  for (const row of detailRows) {
-    const text = row.textContent;
-    if (/best\s*sellers?\s*rank/i.test(text)) {
-      // Extract overall BSR
-      const overallMatch = text.match(/#([\d,]+)\s+in\s+([\w\s&]+)/);
-      if (overallMatch) {
-        overallBSR = parseInt(overallMatch[1].replace(/,/g, ""), 10);
-      }
-
-      // Extract category BSRs
-      const catMatches = text.matchAll(/#([\d,]+)\s+in\s+([^\n(#]+)/g);
-      for (const m of catMatches) {
-        const rank = parseInt(m[1].replace(/,/g, ""), 10);
-        const cat = m[2].trim().replace(/\s*\(.*$/, "");
-        if (cat && rank) {
-          bsrCategories[cat] = rank;
-          if (!overallBSR) overallBSR = rank;
+  for (const pattern of rankPatterns) {
+    // Reset lastIndex in case the regex was previously used
+    pattern.lastIndex = 0;
+    const matches = text.matchAll(pattern);
+    for (const m of matches) {
+      const rank = parseInt(m[1].replace(/[,.\s]/g, ""), 10);
+      const cat = m[2].trim().replace(/\s*\(.*$/, "").replace(/\s+$/, "");
+      if (cat && rank > 0) {
+        bsrCategories[cat] = rank;
+        // First match is the overall/broadest rank
+        if (!overallBSR) {
+          overallBSR = rank;
         }
       }
     }
   }
 
-  // Method 2: Detail bullets
+  // Fallback: just grab the first "#<number>" if nothing matched above
   if (!overallBSR) {
-    const bullets = document.querySelectorAll("#detailBullets_feature_div .a-list-item");
-    for (const bullet of bullets) {
-      const text = bullet.textContent;
+    const simpleMatch = text.match(/#([\d,]+)/);
+    if (simpleMatch) {
+      overallBSR = parseInt(simpleMatch[1].replace(/,/g, ""), 10);
+    }
+  }
+
+  return { overallBSR, bsrCategories };
+}
+
+function extractBSR() {
+  let overallBSR = null;
+  const bsrCategories = {};
+
+  // -----------------------------------------------------------------------
+  // Strategy 1: Product details table (most common modern layout)
+  // Selector: #productDetails_detailBullets_sections1 table rows
+  // -----------------------------------------------------------------------
+  try {
+    const tableRows = document.querySelectorAll(
+      "#productDetails_detailBullets_sections1 tr"
+    );
+    for (const row of tableRows) {
+      const text = row.textContent;
       if (/best\s*sellers?\s*rank/i.test(text)) {
-        const match = text.match(/#([\d,]+)/);
-        if (match) {
-          overallBSR = parseInt(match[1].replace(/,/g, ""), 10);
+        const parsed = _parseBSRText(text, overallBSR, bsrCategories);
+        overallBSR = parsed.overallBSR;
+      }
+    }
+  } catch (e) {
+    /* selector may not exist — continue to fallbacks */
+  }
+
+  // -----------------------------------------------------------------------
+  // Strategy 2: Detail bullets wrapper (alternate layout)
+  // Selector: #detailBulletsWrapper_feature_div list items
+  // -----------------------------------------------------------------------
+  if (!overallBSR) {
+    try {
+      const wrapperItems = document.querySelectorAll(
+        "#detailBulletsWrapper_feature_div li"
+      );
+      for (const item of wrapperItems) {
+        const text = item.textContent;
+        if (/best\s*sellers?\s*rank/i.test(text)) {
+          const parsed = _parseBSRText(text, overallBSR, bsrCategories);
+          overallBSR = parsed.overallBSR;
         }
       }
+    } catch (e) {
+      /* continue */
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Strategy 3: Detail bullets feature div (older layout variant)
+  // Selector: #detailBullets_feature_div .a-list-item
+  // -----------------------------------------------------------------------
+  if (!overallBSR) {
+    try {
+      const bullets = document.querySelectorAll(
+        "#detailBullets_feature_div .a-list-item"
+      );
+      for (const bullet of bullets) {
+        const text = bullet.textContent;
+        if (/best\s*sellers?\s*rank/i.test(text)) {
+          const parsed = _parseBSRText(text, overallBSR, bsrCategories);
+          overallBSR = parsed.overallBSR;
+        }
+      }
+    } catch (e) {
+      /* continue */
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Strategy 4: .prodDetTable (older/legacy product detail layout)
+  // -----------------------------------------------------------------------
+  if (!overallBSR) {
+    try {
+      const prodDetCells = document.querySelectorAll(".prodDetTable td");
+      for (const cell of prodDetCells) {
+        const text = cell.textContent;
+        if (/best\s*sellers?\s*rank/i.test(text)) {
+          const parsed = _parseBSRText(text, overallBSR, bsrCategories);
+          overallBSR = parsed.overallBSR;
+        }
+      }
+    } catch (e) {
+      /* continue */
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Strategy 5: Broad sweep — look for "Best Sellers Rank" text anywhere
+  // within known product-information containers. This catches edge-case
+  // layouts and A/B tests Amazon may be running.
+  // -----------------------------------------------------------------------
+  if (!overallBSR) {
+    try {
+      const containers = [
+        "#productDetails_feature_div",
+        "#detailBulletsWrapper_feature_div",
+        "#prodDetails",
+        "#detail-bullets",
+        "#bookDescription_feature_div",
+      ];
+      for (const sel of containers) {
+        const el = document.querySelector(sel);
+        if (!el) continue;
+        const text = el.textContent || "";
+        if (/best\s*sellers?\s*rank/i.test(text)) {
+          const parsed = _parseBSRText(text, overallBSR, bsrCategories);
+          overallBSR = parsed.overallBSR;
+          if (overallBSR) break;
+        }
+      }
+    } catch (e) {
+      /* continue */
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Strategy 6: Last resort — scan all <th> and <span> elements for the
+  // label "Best Sellers Rank" and read the adjacent sibling / parent row.
+  // -----------------------------------------------------------------------
+  if (!overallBSR) {
+    try {
+      const candidates = document.querySelectorAll("th, span.a-text-bold");
+      for (const node of candidates) {
+        if (/best\s*sellers?\s*rank/i.test(node.textContent)) {
+          // Grab the nearest row or parent element for context
+          const context = node.closest("tr") || node.parentElement;
+          if (context) {
+            const parsed = _parseBSRText(context.textContent, overallBSR, bsrCategories);
+            overallBSR = parsed.overallBSR;
+            if (overallBSR) break;
+          }
+        }
+      }
+    } catch (e) {
+      /* continue */
     }
   }
 

@@ -100,7 +100,7 @@ export function ListingScoreCard({ analysis, className }: ListingScoreCardProps)
       </div>
 
       {/* Score badges */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
         <ScoreBadge score={analysis.title_score} label="Title" />
         <ScoreBadge score={analysis.blurb_score} label="Blurb" />
         <ScoreBadge score={analysis.keyword_score} label="Keywords" />

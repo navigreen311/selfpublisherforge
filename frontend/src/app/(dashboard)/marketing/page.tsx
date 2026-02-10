@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useLaunchPlans, useEmailSequences, useSocialCalendar, useARCCampaigns } from "@/modules/marketing/hooks";
+import { useLaunchPlans, useEmailSequences, useSocialCalendar, useARCCampaigns, useRecentActivity } from "@/modules/marketing/hooks";
+import type { RecentActivityItem } from "@/modules/marketing/hooks";
 import { ARCTable } from "@/modules/marketing/components/ARCTable";
 import { SocialCalendar } from "@/modules/marketing/components/SocialCalendar";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Rocket, Mail, Activity } from "lucide-react";
 import Link from "next/link";
 
 type Tab = "overview" | "launch-plans" | "email" | "social" | "arc";
@@ -60,6 +64,7 @@ export default function MarketingDashboard() {
           sequencesCount={emailSequences?.total_count || 0}
           socialPostsCount={socialCalendar?.posts.length || 0}
           arcCount={arcCampaigns?.total_count || 0}
+          setActiveTab={setActiveTab}
         />
       )}
 
@@ -95,17 +100,43 @@ export default function MarketingDashboard() {
 // Sub-components
 // ---------------------------------------------------------------------------
 
+const ACTIVITY_ICONS: Record<RecentActivityItem["type"], string> = {
+  launch_plan: "bg-blue-100 text-blue-700",
+  email_sequence: "bg-green-100 text-green-700",
+  arc_campaign: "bg-orange-100 text-orange-700",
+  social_post: "bg-purple-100 text-purple-700",
+};
+
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  const diffHours = Math.floor(diffMs / 3_600_000);
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
 function OverviewTab({
   plansCount,
   sequencesCount,
   socialPostsCount,
   arcCount,
+  setActiveTab,
 }: {
   plansCount: number;
   sequencesCount: number;
   socialPostsCount: number;
   arcCount: number;
+  setActiveTab: (tab: Tab) => void;
 }) {
+  const { items: recentActivity, isLoading: activityLoading } = useRecentActivity();
+
   const stats = [
     { label: "Launch Plans", value: plansCount, color: "bg-blue-500" },
     { label: "Email Sequences", value: sequencesCount, color: "bg-green-500" },
@@ -148,7 +179,51 @@ function OverviewTab({
 
         <div className="bg-white rounded-lg border p-6">
           <h3 className="font-semibold mb-4">Recent Activity</h3>
-          <p className="text-sm text-gray-400">No recent activity to show.</p>
+          {activityLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div className="flex-1 space-y-1">
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-2 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : recentActivity.length === 0 ? (
+            <EmptyState
+              icon={Activity}
+              title="No recent activity"
+              description="Activity will appear here as you create campaigns, send emails, and publish posts."
+              actionLabel="Create a launch plan"
+              onAction={() => setActiveTab("launch-plans")}
+            />
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((item) => (
+                <div key={item.id} className="flex items-start gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium ${ACTIVITY_ICONS[item.type]}`}
+                  >
+                    {item.type === "launch_plan" && "LP"}
+                    {item.type === "email_sequence" && "ES"}
+                    {item.type === "arc_campaign" && "AC"}
+                    {item.type === "social_post" && "SP"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {item.action}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">{item.title}</p>
+                  </div>
+                  <span className="text-xs text-gray-400 flex-shrink-0">
+                    {formatRelativeDate(item.timestamp)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -187,9 +262,9 @@ function LaunchPlansTab({
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-3">
+      <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 bg-gray-200 rounded-lg" />
+          <Skeleton key={i} className="h-16" />
         ))}
       </div>
     );
@@ -207,9 +282,14 @@ function LaunchPlansTab({
       </div>
 
       {plans.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 border rounded-lg">
-          <p className="text-lg">No launch plans yet.</p>
-          <p className="text-sm mt-1">Generate your first AI-powered launch plan.</p>
+        <div className="border rounded-lg">
+          <EmptyState
+            icon={Rocket}
+            title="No launch plans yet"
+            description="Generate your first AI-powered launch plan to coordinate your book launch."
+            actionLabel="Generate Launch Plan"
+            onAction={() => (window.location.href = "/marketing/launch/new")}
+          />
         </div>
       ) : (
         <div className="space-y-3">
@@ -267,9 +347,9 @@ function EmailTab({
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-3">
+      <div className="space-y-3">
         {[1, 2].map((i) => (
-          <div key={i} className="h-16 bg-gray-200 rounded-lg" />
+          <Skeleton key={i} className="h-16" />
         ))}
       </div>
     );
@@ -287,8 +367,14 @@ function EmailTab({
       </div>
 
       {sequences.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 border rounded-lg">
-          <p className="text-lg">No email sequences yet.</p>
+        <div className="border rounded-lg">
+          <EmptyState
+            icon={Mail}
+            title="No email sequences yet"
+            description="Create your first email sequence to engage your readers and build your audience."
+            actionLabel="Create Sequence"
+            onAction={() => (window.location.href = "/marketing/email")}
+          />
         </div>
       ) : (
         <div className="space-y-3">

@@ -3,11 +3,14 @@
   "name": "SelfPublisherForge — Amazon Research Assistant",
   "version": "1.0.0",
   "description": "Extract Amazon product data, track BSR, research niches, and save clips to your SelfPublisherForge account.",
+  "update_url": "https://selfpublisherforge.com/extension/updates.xml",
   "permissions": [
     "activeTab",
     "storage",
     "tabs",
-    "sidePanel"
+    "sidePanel",
+    "alarms",
+    "notifications"
   ],
   "host_permissions": [
     "https://www.amazon.com/*",
@@ -19,7 +22,9 @@
     "https://www.amazon.co.jp/*",
     "https://www.amazon.it/*",
     "https://www.amazon.es/*",
-    "https://www.amazon.in/*"
+    "https://www.amazon.in/*",
+    "https://api.selfpublisherforge.com/*",
+    "https://*.selfpublisherforge.com/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js",

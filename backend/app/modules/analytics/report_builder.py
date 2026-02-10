@@ -209,13 +209,35 @@ async def _gather_marketing_roi(
 ) -> dict[str, Any]:
     """Gather data for a marketing ROI report.
 
-    Note: marketing data would typically come from the marketing module.
-    This is a placeholder that returns revenue-based data.
+    Combines revenue data with advertising spend from the campaigns module
+    to compute return on investment.
     """
+    from app.modules.advertising.models import Campaign, CampaignPerformance
+
+    revenue_data = await _gather_revenue_summary(db, org_id, parameters)
+
+    # Compute total advertising spend
+    spend_stmt = (
+        select(func.coalesce(func.sum(CampaignPerformance.spend), 0.0))
+        .join(Campaign, CampaignPerformance.campaign_id == Campaign.id)
+        .where(
+            Campaign.org_id == org_id,
+            Campaign.deleted_at.is_(None),
+            CampaignPerformance.deleted_at.is_(None),
+        )
+    )
+    spend_result = await db.execute(spend_stmt)
+    total_spend = float(spend_result.scalar() or 0.0)
+    total_revenue = float(revenue_data.get("total_revenue", 0))
+    roi = ((total_revenue - total_spend) / total_spend * 100) if total_spend > 0 else 0.0
+
     return {
         "report_type": "Marketing ROI",
-        "note": "Marketing cost data integration pending",
-        **(await _gather_revenue_summary(db, org_id, parameters)),
+        "total_ad_spend": round(total_spend, 2),
+        "total_revenue": round(total_revenue, 2),
+        "net_return": round(total_revenue - total_spend, 2),
+        "roi_percent": round(roi, 1),
+        **revenue_data,
     }
 
 

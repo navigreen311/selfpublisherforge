@@ -216,6 +216,12 @@ variable "backups_bucket_name" {
   default     = "selfpublisherforge-backups"
 }
 
+variable "frontend_bucket_name" {
+  description = "Name of the S3 bucket for frontend static build output"
+  type        = string
+  default     = "selfpublisherforge-frontend"
+}
+
 # -----------------------------------------------------------------------------
 # Monitoring & Logging
 # -----------------------------------------------------------------------------

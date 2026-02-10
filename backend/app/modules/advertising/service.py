@@ -39,6 +39,11 @@ from app.modules.advertising.schemas import (
     OptimizationRequest,
     OptimizationSuggestion,
     AdDashboard,
+    FacebookCampaignCreate,
+    FacebookCampaignUpdate,
+    FacebookCampaignResponse,
+    FacebookCampaignListResponse,
+    FacebookCampaignMetrics,
 )
 from app.modules.advertising.optimizer import (
     AdOptimizer,
@@ -47,7 +52,7 @@ from app.modules.advertising.optimizer import (
 )
 from app.modules.advertising.creative_generator import AdCreativeGenerator
 from app.modules.advertising.amazon_ads import AmazonAdsClient
-from app.modules.advertising.facebook_ads import FacebookAdsClient
+from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
 
 logger = logging.getLogger(__name__)
 
@@ -631,4 +636,122 @@ class AdvertisingService:
             overall_roas=overall_roas,
             top_campaigns=top_campaigns,
             platform_breakdown=platform_breakdown,
+        )
+
+    # ─── Facebook Ads ────────────────────────────────────────────────────
+
+    async def facebook_create_campaign(
+        self,
+        org_id: UUID,
+        data: FacebookCampaignCreate,
+    ) -> FacebookCampaignResponse:
+        """Create a Facebook Ads campaign via the Graph API.
+
+        Delegates to the FacebookAdsClient and returns the external campaign
+        details.  The caller (router) is responsible for HTTP error mapping.
+        """
+        result = await self.facebook_client.create_campaign(
+            name=data.name,
+            objective=data.objective.value,
+            daily_budget=data.daily_budget,
+            status=data.status.value,
+        )
+        return FacebookCampaignResponse(
+            external_campaign_id=result.get("external_campaign_id", ""),
+            name=data.name,
+            objective=data.objective.value,
+            status=result.get("status", data.status.value),
+            daily_budget=data.daily_budget,
+            created=result.get("created", False),
+        )
+
+    async def facebook_list_campaigns(
+        self,
+        org_id: UUID,
+        limit: int = 50,
+        status_filter: str | None = None,
+    ) -> FacebookCampaignListResponse:
+        """List Facebook Ads campaigns for the configured ad account."""
+        result = await self.facebook_client.list_campaigns(
+            limit=limit,
+            status_filter=status_filter,
+        )
+        campaigns = [
+            FacebookCampaignResponse(**c) for c in result.get("campaigns", [])
+        ]
+        return FacebookCampaignListResponse(
+            campaigns=campaigns,
+            total_count=result.get("total_count", len(campaigns)),
+        )
+
+    async def facebook_get_campaign(
+        self,
+        org_id: UUID,
+        external_campaign_id: str,
+    ) -> FacebookCampaignResponse:
+        """Get details for a single Facebook Ads campaign."""
+        result = await self.facebook_client.get_campaign(external_campaign_id)
+        return FacebookCampaignResponse(
+            external_campaign_id=result.get("external_campaign_id", ""),
+            name=result.get("name"),
+            objective=result.get("objective"),
+            status=result.get("status"),
+            daily_budget=result.get("daily_budget"),
+        )
+
+    async def facebook_update_campaign(
+        self,
+        org_id: UUID,
+        external_campaign_id: str,
+        data: FacebookCampaignUpdate,
+    ) -> FacebookCampaignResponse:
+        """Update an existing Facebook Ads campaign."""
+        updates = data.model_dump(exclude_unset=True)
+        # Convert enum values to strings for the client
+        if "status" in updates and updates["status"] is not None:
+            updates["status"] = updates["status"].value if hasattr(updates["status"], "value") else updates["status"]
+
+        result = await self.facebook_client.update_campaign(
+            external_campaign_id=external_campaign_id,
+            updates=updates,
+        )
+        return FacebookCampaignResponse(
+            external_campaign_id=result.get("external_campaign_id", ""),
+            updated=result.get("updated", False),
+            changes=result.get("changes"),
+        )
+
+    async def facebook_pause_campaign(
+        self,
+        org_id: UUID,
+        external_campaign_id: str,
+    ) -> FacebookCampaignResponse:
+        """Pause a Facebook Ads campaign."""
+        result = await self.facebook_client.pause_campaign(external_campaign_id)
+        return FacebookCampaignResponse(
+            external_campaign_id=result.get("external_campaign_id", ""),
+            status="paused",
+            updated=result.get("updated", False),
+            changes=result.get("changes"),
+        )
+
+    async def facebook_get_campaign_metrics(
+        self,
+        org_id: UUID,
+        external_campaign_id: str,
+        start_date: str,
+        end_date: str,
+    ) -> FacebookCampaignMetrics:
+        """Get performance metrics for a Facebook Ads campaign."""
+        result = await self.facebook_client.get_campaign_insights(
+            external_campaign_id=external_campaign_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        return FacebookCampaignMetrics(
+            external_campaign_id=result.get("external_campaign_id", ""),
+            start_date=result.get("start_date", start_date),
+            end_date=result.get("end_date", end_date),
+            metrics=result.get("metrics", {}),
+            report_status=result.get("report_status", "completed"),
         )

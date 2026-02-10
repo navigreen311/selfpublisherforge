@@ -29,7 +29,7 @@ export default function SettingsLayout({
       </div>
 
       {/* Tab Navigation */}
-      <nav className="flex border-b">
+      <nav className="flex border-b overflow-x-auto">
         {TABS.map((tab) => {
           const isActive = pathname === tab.href;
           return (

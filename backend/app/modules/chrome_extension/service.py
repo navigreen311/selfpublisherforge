@@ -5,9 +5,12 @@ and saving clips to the Knowledge Vault.
 """
 from __future__ import annotations
 
+import json
 import logging
+import re
+from collections import Counter
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
 from sqlalchemy import select, func
@@ -21,6 +24,7 @@ from app.modules.chrome_extension.schemas import (
     ExtractedDataResponse,
     QuickResearchQuery,
     QuickResearchResponse,
+    RelatedKeyword,
 )
 
 logger = logging.getLogger(__name__)
@@ -170,9 +174,11 @@ async def _compute_niche_stats(
 ) -> dict[str, Any]:
     """Compute aggregate niche statistics from stored product data.
 
-    In production this queries the market intelligence module.
+    Queries stored product data for competition metrics and generates
+    related keyword suggestions via the LLM orchestration service with
+    a local frequency-analysis fallback.
     """
-    # For now, count products matching any keyword in title/keywords
+    # Count products matching any keyword in title/keywords
     stmt = select(func.count(ExtractedProduct.id)).where(
         ExtractedProduct.org_id == org_id,
         ExtractedProduct.deleted_at.is_(None),
@@ -190,13 +196,247 @@ async def _compute_niche_stats(
     avg_price_raw = price_result.scalar()
     avg_price = round(float(avg_price_raw), 2) if avg_price_raw else None
 
+    # Generate related keywords
+    related_keywords = await _generate_related_keywords(
+        db, org_id, keywords
+    )
+
     return {
         "competitor_count": competitor_count,
         "avg_price": avg_price,
         "avg_reviews": None,  # Would come from reviews_json aggregation
         "niche_score": None,  # Would be computed by market intelligence
-        "related_keywords": keywords,  # Placeholder
+        "related_keywords": related_keywords,
     }
+
+
+# ---------------------------------------------------------------------------
+# Related keyword generation
+# ---------------------------------------------------------------------------
+
+# Common English stop-words to exclude from frequency analysis
+_STOP_WORDS: frozenset[str] = frozenset(
+    "a an the and or but in on at to for of is it by as with from this that "
+    "be are was were been have has had do does did not no nor so if its my "
+    "your his her our their which what when where who whom how all each every "
+    "both few more most other some such than too very can will just should "
+    "now into also about up out after before between through during without".split()
+)
+
+
+def _extract_candidate_words(text: str) -> list[str]:
+    """Tokenize text and return meaningful lowercase words."""
+    tokens = re.findall(r"[a-zA-Z]{2,}", text.lower())
+    return [t for t in tokens if t not in _STOP_WORDS]
+
+
+def _volume_indicator(frequency: int, max_freq: int) -> str:
+    """Map a word frequency to a volume indicator bucket."""
+    if max_freq == 0:
+        return "low"
+    ratio = frequency / max_freq
+    if ratio >= 0.6:
+        return "high"
+    if ratio >= 0.25:
+        return "medium"
+    return "low"
+
+
+async def _generate_related_keywords_via_llm(
+    keywords: list[str],
+) -> list[RelatedKeyword]:
+    """Use the LLM orchestration service to generate related keywords.
+
+    Returns an empty list if the service is unavailable or errors out,
+    allowing the caller to fall back to local analysis.
+    """
+    try:
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
+        from app.modules.llm_orchestration.schemas import (
+            CompletionRequest,
+            ModelConfig,
+            TaskTypeEnum,
+        )
+
+        service = LLMOrchestrationService()
+
+        keyword_list = ", ".join(keywords)
+        prompt = (
+            f"Given these Amazon book niche keywords: [{keyword_list}], "
+            "generate 15 closely related keyword phrases that a self-published "
+            "author could target. For each keyword, estimate the relative "
+            "search volume as 'high', 'medium', or 'low' and rate its "
+            "relevance from 0.0 to 1.0.\n\n"
+            "Return ONLY a JSON array with objects like:\n"
+            '[{"keyword": "phrase", "volume": "high", "relevance": 0.9}]\n'
+            "No explanation, just valid JSON."
+        )
+
+        request = CompletionRequest(
+            task_type=TaskTypeEnum.MARKET_ANALYSIS,
+            prompt=prompt,
+            system_prompt=(
+                "You are a keyword research assistant for Amazon KDP "
+                "(Kindle Direct Publishing). You understand book niches, "
+                "reader search behaviour, and Amazon search algorithms. "
+                "Respond ONLY with the requested JSON."
+            ),
+            config=ModelConfig(
+                temperature=0.4,
+                max_tokens=1024,
+                skip_cache=False,
+                skip_quality_check=True,
+            ),
+        )
+
+        response = await service.complete(request)
+
+        if not response.succeeded or not response.content:
+            return []
+
+        # Parse the JSON from the LLM response
+        raw = response.content.strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+
+        items = json.loads(raw)
+        results: list[RelatedKeyword] = []
+        for item in items:
+            if isinstance(item, dict) and "keyword" in item:
+                volume = item.get("volume", "medium")
+                if volume not in ("high", "medium", "low"):
+                    volume = "medium"
+                relevance = float(item.get("relevance", 0.5))
+                relevance = max(0.0, min(1.0, relevance))
+                results.append(
+                    RelatedKeyword(
+                        keyword=str(item["keyword"]),
+                        volume=volume,
+                        relevance=relevance,
+                        source="llm",
+                    )
+                )
+        return results
+
+    except Exception:
+        logger.debug(
+            "LLM-based keyword generation unavailable, falling back to "
+            "local analysis",
+            exc_info=True,
+        )
+        return []
+
+
+async def _generate_related_keywords_from_corpus(
+    db: AsyncSession,
+    org_id: UUID,
+    keywords: list[str],
+) -> list[RelatedKeyword]:
+    """Generate related keywords using word frequency analysis on stored products.
+
+    Scans titles and stored keywords of all products for the org,
+    builds a frequency map, and surfaces terms that co-occur with the
+    input keywords but are not already in the input set.
+    """
+    stmt = select(
+        ExtractedProduct.title,
+        ExtractedProduct.keywords,
+    ).where(
+        ExtractedProduct.org_id == org_id,
+        ExtractedProduct.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    if not rows:
+        # No stored data — return the input keywords as low-confidence suggestions
+        return [
+            RelatedKeyword(
+                keyword=kw,
+                volume="low",
+                relevance=0.5,
+                source="frequency",
+            )
+            for kw in keywords
+        ]
+
+    input_set = {kw.lower() for kw in keywords}
+    word_counter: Counter[str] = Counter()
+
+    for title, stored_kws in rows:
+        if title:
+            word_counter.update(_extract_candidate_words(title))
+        if stored_kws:
+            for kw in stored_kws:
+                word_counter.update(_extract_candidate_words(kw))
+
+    # Remove words that are already in the input keywords
+    for kw in input_set:
+        word_counter.pop(kw, None)
+    # Remove very short or overly generic single words that leaked through
+    for w in list(word_counter):
+        if len(w) < 3:
+            del word_counter[w]
+
+    if not word_counter:
+        return []
+
+    max_freq = word_counter.most_common(1)[0][1] if word_counter else 1
+    results: list[RelatedKeyword] = []
+
+    for word, freq in word_counter.most_common(20):
+        volume = _volume_indicator(freq, max_freq)
+        relevance = round(min(1.0, freq / max_freq), 2)
+        results.append(
+            RelatedKeyword(
+                keyword=word,
+                volume=volume,
+                relevance=relevance,
+                source="frequency",
+            )
+        )
+
+    return results
+
+
+async def _generate_related_keywords(
+    db: AsyncSession,
+    org_id: UUID,
+    keywords: list[str],
+) -> list[RelatedKeyword]:
+    """Produce related keyword suggestions.
+
+    Strategy:
+      1. Attempt LLM-based generation (richer, more creative).
+      2. If that fails or returns nothing, fall back to corpus
+         frequency analysis from stored product data.
+      3. Merge results, de-duplicate, and cap at 20 entries.
+    """
+    if not keywords:
+        return []
+
+    # Try LLM first
+    llm_keywords = await _generate_related_keywords_via_llm(keywords)
+
+    # Always run local analysis for data-backed suggestions
+    corpus_keywords = await _generate_related_keywords_from_corpus(
+        db, org_id, keywords
+    )
+
+    # Merge: LLM results first, then corpus results (de-duplicated)
+    seen: set[str] = set()
+    merged: list[RelatedKeyword] = []
+
+    for kw in llm_keywords + corpus_keywords:
+        normalised = kw.keyword.lower().strip()
+        if normalised not in seen:
+            seen.add(normalised)
+            merged.append(kw)
+
+    # Cap at 20 keyword suggestions
+    return merged[:20]
 
 
 # ---------------------------------------------------------------------------

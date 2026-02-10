@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 /**
  * Settings root page — redirects to the Profile tab by default and
@@ -14,5 +15,5 @@ export default function SettingsPage() {
     router.replace("/settings/profile");
   }, [router]);
 
-  return null;
+  return <PageSkeleton />;
 }

@@ -197,6 +197,25 @@ body {
   font-size: 11px;
 }
 
+/* ---- Update badge ---- */
+.update-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #e65100;
+  border-radius: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.update-badge:hover {
+  background: #bf360c;
+}
+
 /* ---- Utility ---- */
 .hidden {
   display: none !important;

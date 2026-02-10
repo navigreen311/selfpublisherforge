@@ -17,6 +17,8 @@ const btnSidebar = document.getElementById("btn-sidebar");
 const btnClip = document.getElementById("btn-clip");
 const btnDisconnect = document.getElementById("btn-disconnect");
 const extractResult = document.getElementById("extract-result");
+const versionLabel = document.getElementById("version-label");
+const updateBadge = document.getElementById("update-badge");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -64,16 +66,26 @@ function sendMessage(action, payload = {}) {
 // ---------------------------------------------------------------------------
 
 async function init() {
+  // Display the version dynamically from the manifest
+  const manifest = chrome.runtime.getManifest();
+  if (versionLabel) {
+    versionLabel.textContent = `SelfPublisherForge v${manifest.version}`;
+  }
+
   try {
-    const { apiUrl, apiToken } = await chrome.storage.local.get([
-      "apiUrl",
-      "apiToken",
-    ]);
+    const { apiUrl, apiToken, updateAvailable } =
+      await chrome.storage.local.get(["apiUrl", "apiToken", "updateAvailable"]);
+
     if (apiUrl && apiToken) {
       apiUrlInput.value = apiUrl;
       showActions();
     } else {
       showLogin();
+    }
+
+    // Show / hide the update badge based on stored flag
+    if (updateAvailable && updateBadge) {
+      updateBadge.classList.remove("hidden");
     }
   } catch {
     showLogin();
@@ -90,6 +102,24 @@ btnConnect.addEventListener("click", async () => {
 
   if (!apiUrl || !apiToken) {
     alert("Please enter both API URL and token.");
+    return;
+  }
+
+  // Validate API URL format
+  if (!apiUrl.startsWith("https://")) {
+    alert("API URL must start with https://");
+    return;
+  }
+  try {
+    new URL(apiUrl);
+  } catch {
+    alert("API URL is not a valid URL.");
+    return;
+  }
+
+  // Validate API token length
+  if (apiToken.length < 1 || apiToken.length > 500) {
+    alert("API token must be between 1 and 500 characters.");
     return;
   }
 
@@ -241,6 +271,36 @@ btnDisconnect.addEventListener("click", async () => {
   await chrome.storage.local.remove(["apiUrl", "apiToken"]);
   showLogin();
 });
+
+// ---------------------------------------------------------------------------
+// Update badge click — open the update URL
+// ---------------------------------------------------------------------------
+
+if (updateBadge) {
+  updateBadge.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      const { apiUrl } = await chrome.storage.local.get(["apiUrl"]);
+      if (apiUrl) {
+        const response = await fetch(
+          `${apiUrl}/api/v1/extension/version`
+        );
+        if (response.ok) {
+          const json = await response.json();
+          const remote = json.data || json;
+          chrome.tabs.create({ url: remote.update_url });
+          return;
+        }
+      }
+    } catch {
+      // ignore — fall through to default
+    }
+    // Fallback URL
+    chrome.tabs.create({
+      url: "https://selfpublisherforge.com/extension/updates.xml",
+    });
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Boot

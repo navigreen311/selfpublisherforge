@@ -28,6 +28,7 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     setUser,
+    setTokens,
     setLoading,
     logout: storeLogout,
   } = useAuthStore();
@@ -41,8 +42,8 @@ export function useAuth() {
           password: credentials.password,
           mfa_code: credentials.mfaCode,
         });
-        const { access_token, user: userData } = response.data;
-        localStorage.setItem("access_token", access_token);
+        const { access_token, refresh_token, user: userData } = response.data;
+        setTokens(access_token, refresh_token);
         setUser(userData as User);
         router.push("/dashboard");
       } catch (error) {
@@ -51,7 +52,7 @@ export function useAuth() {
       }
       setLoading(false);
     },
-    [router, setUser, setLoading]
+    [router, setUser, setTokens, setLoading]
   );
 
   const register = useCallback(
@@ -65,8 +66,8 @@ export function useAuth() {
           org_name: data.orgName,
           plan_tier: data.planTier,
         });
-        const { access_token, user: userData } = response.data;
-        localStorage.setItem("access_token", access_token);
+        const { access_token, refresh_token, user: userData } = response.data;
+        setTokens(access_token, refresh_token);
         setUser(userData as User);
         router.push("/onboarding");
       } catch (error) {
@@ -75,13 +76,43 @@ export function useAuth() {
       }
       setLoading(false);
     },
-    [router, setUser, setLoading]
+    [router, setUser, setTokens, setLoading]
   );
 
   const logout = useCallback(() => {
     storeLogout();
     router.push("/login");
   }, [storeLogout, router]);
+
+  const loginWithGoogle = useCallback(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    window.location.href = `${apiBase}/api/v1/auth/oauth/google`;
+  }, []);
+
+  const loginWithGitHub = useCallback(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    window.location.href = `${apiBase}/api/v1/auth/oauth/github`;
+  }, []);
+
+  const handleOAuthCallback = useCallback(
+    async (provider: string, code: string) => {
+      setLoading(true);
+      try {
+        const response = await api.post(`/api/v1/auth/oauth/${provider}/callback`, {
+          code,
+        });
+        const { access_token, refresh_token, user: userData } = response.data;
+        setTokens(access_token, refresh_token);
+        setUser(userData as User);
+        router.push("/dashboard");
+      } catch (error) {
+        setLoading(false);
+        throw error;
+      }
+      setLoading(false);
+    },
+    [router, setUser, setTokens, setLoading]
+  );
 
   const checkAuth = useCallback(async () => {
     setLoading(true);
@@ -107,5 +138,8 @@ export function useAuth() {
     register,
     logout,
     checkAuth,
+    loginWithGoogle,
+    loginWithGitHub,
+    handleOAuthCallback,
   };
 }

@@ -48,8 +48,8 @@ redis_num_cache_nodes = 1
 log_retention_days = 30
 
 # Domain — MUST be set before production deployment
-domain_name     = ""  # REQUIRED: Set to your domain (e.g., "app.selfpublisherforge.com")
-certificate_arn = ""  # REQUIRED: Set to your ACM certificate ARN (e.g., "arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234")
+domain_name     = "selfpublisherforge.com"  # TODO: Replace with your actual domain
+certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/REPLACE_ME"  # TODO: Replace with real ACM cert ARN
 
 # Monitoring
-alarm_sns_topic_arn = ""  # REQUIRED: Set to your SNS topic ARN for CloudWatch alarms
+alarm_sns_topic_arn = "arn:aws:sns:us-east-1:ACCOUNT_ID:selfpublisherforge-alarms"  # TODO: Replace with real SNS topic ARN

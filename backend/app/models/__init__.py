@@ -2,7 +2,7 @@
 
 # Domain models (W02: Database Schema)
 from app.models.organization import Organization
-from app.models.user import User, ApiKey, UserSession
+from app.models.user import User, ApiKey, UserSession, OAuthAccount
 from app.models.project import Project, Book, Series, PenName, BookVersion
 from app.models.content import Manuscript, Chapter, StyleProfile, WritingSession, ContentAsset
 from app.models.market import MarketCategory, MarketKeyword, CompetitorBook, CompetitorReview, MarketSnapshot
@@ -27,7 +27,7 @@ from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
 
 __all__ = [
     # Domain models
-    "Organization", "User", "ApiKey", "UserSession",
+    "Organization", "User", "ApiKey", "UserSession", "OAuthAccount",
     "Project", "Book", "Series", "PenName", "BookVersion",
     "Manuscript", "Chapter", "StyleProfile", "WritingSession", "ContentAsset",
     "MarketCategory", "MarketKeyword", "CompetitorBook", "CompetitorReview", "MarketSnapshot",

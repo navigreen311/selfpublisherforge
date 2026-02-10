@@ -9,8 +9,11 @@ Credentials are read from environment variables:
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
+import gzip
+import json
+import time
 
 import httpx
 
@@ -22,6 +25,13 @@ settings = get_settings()
 # Maximum number of times to poll a report before giving up
 _REPORT_POLL_MAX_ATTEMPTS = 30
 _REPORT_POLL_INTERVAL_SECONDS = 2
+
+# Region-aware API base URLs
+_REGION_ENDPOINTS = {
+    "NA": "https://advertising-api.amazon.com",
+    "EU": "https://advertising-api-eu.amazon.com",
+    "FE": "https://advertising-api-fe.amazon.com",
+}
 
 
 class AmazonAdsError(Exception):
@@ -61,6 +71,8 @@ class AmazonAdsClient:
         self.refresh_token = refresh_token or os.environ.get("AMAZON_ADS_REFRESH_TOKEN", "")
         self.profile_id = profile_id or os.environ.get("AMAZON_ADS_PROFILE_ID", "")
         self.region = region
+        self._base_url = _REGION_ENDPOINTS.get(self.region, _REGION_ENDPOINTS["NA"])
+        self._request_timestamps: list[float] = []
         self._access_token: str | None = None
         self._token_expiry: datetime | None = None
 
@@ -103,7 +115,8 @@ class AmazonAdsClient:
             if response.status_code == 200:
                 data = response.json()
                 self._access_token = data["access_token"]
-                self._token_expiry = datetime.now(timezone.utc)
+                expires_in = data.get("expires_in", 3600)
+                self._token_expiry = datetime.now(timezone.utc) + timedelta(seconds=max(expires_in - 300, 60))
                 logger.info("Amazon Ads access token refreshed")
             else:
                 logger.error(f"Failed to refresh Amazon Ads token: {response.text}")
@@ -113,9 +126,20 @@ class AmazonAdsClient:
         """Ensure we have a valid access token."""
         if not self._access_token or (
             self._token_expiry
-            and (datetime.now(timezone.utc) - self._token_expiry).seconds > 3000
+            and datetime.now(timezone.utc) >= self._token_expiry
         ):
             await self._refresh_access_token()
+
+    async def _rate_limit_wait(self) -> None:
+        """Enforce Amazon Ads API rate limit of 10 requests/second."""
+        now = time.monotonic()
+        # Remove timestamps older than 1 second
+        self._request_timestamps = [t for t in self._request_timestamps if now - t < 1.0]
+        if len(self._request_timestamps) >= 10:
+            sleep_time = 1.0 - (now - self._request_timestamps[0])
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+        self._request_timestamps.append(time.monotonic())
 
     async def _request(
         self,
@@ -129,22 +153,40 @@ class AmazonAdsClient:
         """Execute an authenticated request against the Amazon Advertising API.
 
         Raises AmazonAdsError on non-2xx responses.
+        Retries up to 3 times on 429 (rate limit) and 5xx (server) errors
+        with exponential backoff.
         """
         await self._ensure_auth()
+        await self._rate_limit_wait()
         headers = await self._get_headers()
         if headers_override:
             headers.update(headers_override)
 
-        url = f"{self.BASE_URL}/{path.lstrip('/')}"
+        url = f"{self._base_url}/{path.lstrip('/')}"
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.request(
-                method,
-                url,
-                json=json,
-                params=params,
-                headers=headers,
-            )
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.request(
+                    method,
+                    url,
+                    json=json,
+                    params=params,
+                    headers=headers,
+                )
+
+            # Retry on 429 or 5xx errors with exponential backoff
+            if response.status_code == 429 or response.status_code >= 500:
+                if attempt < max_attempts - 1:
+                    backoff = 2 ** attempt  # 1s, 2s
+                    logger.warning(
+                        "Amazon Ads API %s %s returned %s, retrying in %ss (attempt %d/%d)",
+                        method, url, response.status_code, backoff, attempt + 1, max_attempts,
+                    )
+                    await asyncio.sleep(backoff)
+                    continue
+
+            break
 
         if response.status_code >= 400:
             logger.error(
@@ -569,7 +611,11 @@ class AmazonAdsClient:
                 async with httpx.AsyncClient(timeout=120.0) as dl_client:
                     dl_resp = await dl_client.get(download_url)
                 if dl_resp.status_code == 200:
-                    return dl_resp.json()
+                    try:
+                        decompressed = gzip.decompress(dl_resp.content)
+                        return json.loads(decompressed)
+                    except (gzip.BadGzipFile, OSError):
+                        return dl_resp.json()
                 logger.error("Failed to download completed report: %s", dl_resp.status_code)
                 return None
 

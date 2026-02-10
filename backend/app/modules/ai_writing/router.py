@@ -10,7 +10,8 @@ Endpoints:
   PATCH /books/{id}/manuscript/chapters/reorder -- Reorder chapters
   POST /books/{id}/manuscript/analyze         -- Analyze manuscript
   GET  /books/{id}/manuscript/readability-score -- Readability metrics
-  POST /books/{id}/outline/generate           -- Generate outline
+  POST /books/{id}/outline/generate           -- Generate outline (book-bound)
+  POST /writing/outline/generate              -- Generate outline (standalone)
   POST /writing-sessions                      -- Record writing session
 """
 
@@ -228,6 +229,24 @@ async def generate_outline(
 ):
     """AI-generate a book outline."""
     return await service.generate_outline(db, book_id, data)
+
+
+@router.post(
+    "/writing/outline/generate",
+    response_model=schemas.OutlineGenerateResponse,
+    summary="Generate standalone book outline",
+    description=(
+        "AI-generate a structured book outline from title, genre, and optional "
+        "parameters. Does not require an existing book record."
+    ),
+)
+async def generate_outline_standalone(
+    data: schemas.OutlineGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """AI-generate a standalone book outline without requiring an existing book."""
+    return await service.generate_outline_standalone(data, db)
 
 
 # ---------------------------------------------------------------------------

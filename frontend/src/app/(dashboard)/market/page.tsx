@@ -10,6 +10,7 @@ import {
   type CategoryNode,
 } from "@/modules/market/hooks";
 import { CategoryTree, NicheScoreCard, TrendChart } from "@/modules/market/components";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MarketDashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryNode | null>(null);
@@ -78,8 +79,10 @@ export default function MarketDashboardPage() {
         {/* Category tree */}
         <div className="lg:col-span-1">
           {catsLoading ? (
-            <div className="border rounded-lg bg-card p-8 text-center text-muted-foreground">
-              Loading categories...
+            <div className="border rounded-lg bg-card p-4 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-8" />
+              ))}
             </div>
           ) : (
             <CategoryTree

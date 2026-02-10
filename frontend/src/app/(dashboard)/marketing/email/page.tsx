@@ -87,7 +87,10 @@ export default function EmailSequencePage() {
                 </Link>
               ))}
               {(!sequencesData?.items || sequencesData.items.length === 0) && (
-                <p className="text-sm text-gray-400 p-3">No sequences yet.</p>
+                <div className="p-3 text-center">
+                  <p className="text-sm text-muted-foreground">No sequences yet.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Create one to get started.</p>
+                </div>
               )}
             </>
           )}

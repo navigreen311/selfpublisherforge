@@ -355,6 +355,47 @@ export function useGenerateOutline(bookId: string) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Standalone Outline Generation (no book_id required)
+// ---------------------------------------------------------------------------
+
+export interface StandaloneOutlineRequest {
+  book_title: string;
+  genre: string;
+  target_audience?: string;
+  num_chapters: number;
+  premise?: string;
+  tone: string;
+}
+
+export interface ChapterOutline {
+  chapter_number: number;
+  title: string;
+  description: string;
+  key_points: string[];
+  estimated_word_count: number;
+}
+
+export interface StandaloneOutlineResponse {
+  book_title: string;
+  genre: string;
+  total_chapters: number;
+  chapters: ChapterOutline[];
+  synopsis: string;
+}
+
+export function useGenerateStandaloneOutline() {
+  return useMutation<StandaloneOutlineResponse, Error, StandaloneOutlineRequest>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post(
+        "/api/v1/writing/outline/generate",
+        payload
+      );
+      return data;
+    },
+  });
+}
+
 export function useRecordWritingSession() {
   return useMutation({
     mutationFn: async (payload: WritingSessionCreate) => {

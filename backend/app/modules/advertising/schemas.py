@@ -282,6 +282,62 @@ class AdDashboard(BaseModel):
     recent_optimizations: list[str] = []
 
 
+# ─── Facebook Ads Schemas ────────────────────────────────────────────────────
+
+
+class FacebookObjective(str, Enum):
+    OUTCOME_SALES = "OUTCOME_SALES"
+    OUTCOME_LEADS = "OUTCOME_LEADS"
+    OUTCOME_ENGAGEMENT = "OUTCOME_ENGAGEMENT"
+    OUTCOME_AWARENESS = "OUTCOME_AWARENESS"
+    OUTCOME_TRAFFIC = "OUTCOME_TRAFFIC"
+    OUTCOME_APP_PROMOTION = "OUTCOME_APP_PROMOTION"
+
+
+class FacebookCampaignStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    DELETED = "DELETED"
+    ARCHIVED = "ARCHIVED"
+
+
+class FacebookCampaignCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    objective: FacebookObjective = FacebookObjective.OUTCOME_SALES
+    daily_budget: float = Field(0.0, ge=0, le=1000000, description="Daily budget in dollars")
+    status: FacebookCampaignStatus = FacebookCampaignStatus.PAUSED
+
+
+class FacebookCampaignUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=255)
+    status: FacebookCampaignStatus | None = None
+    daily_budget: float | None = Field(None, ge=0, le=1000000)
+
+
+class FacebookCampaignResponse(BaseModel):
+    external_campaign_id: str
+    name: str | None = None
+    objective: str | None = None
+    status: str | None = None
+    daily_budget: float | None = None
+    created: bool | None = None
+    updated: bool | None = None
+    changes: dict | None = None
+
+
+class FacebookCampaignListResponse(BaseModel):
+    campaigns: list[FacebookCampaignResponse] = []
+    total_count: int = 0
+
+
+class FacebookCampaignMetrics(BaseModel):
+    external_campaign_id: str
+    start_date: str
+    end_date: str
+    metrics: dict = {}
+    report_status: str = "completed"
+
+
 # ─── Filter / Query Schemas ──────────────────────────────────────────────────
 
 class CampaignFilter(BaseModel):

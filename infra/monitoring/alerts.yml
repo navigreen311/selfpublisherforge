@@ -1,348 +1,310 @@
 # =============================================================================
-# Alert Definitions — Severity tiers P0 (critical) through P3 (informational)
+# Prometheus AlertManager Rules
+# Severity tiers: P0 (critical) through P3 (informational)
 # =============================================================================
 # P0: Immediate response required (page on-call)
 # P1: Urgent response within 15 minutes
 # P2: Respond within 1 hour
 # P3: Informational / next business day
 
-alerts:
-
+groups:
   # ---------------------------------------------------------------------------
   # P0 — Critical: Immediate paging, service is down or data loss risk
   # ---------------------------------------------------------------------------
-  - name: "API Service Down"
-    severity: P0
-    type: metric
-    query: "avg(last_5m):avg:aws.ecs.service.running{servicename:selfpublisherforge-api-production} < 1"
-    message: |
-      P0 CRITICAL: API service has zero running tasks in production.
-      Service is completely unavailable to users.
-      Runbook: https://wiki.internal/runbooks/api-service-down
-    notify:
-      - pagerduty-critical
-      - slack-incidents
-    thresholds:
-      critical: 1
-    tags:
-      - service:api
-      - env:production
-      - severity:P0
+  - name: selfpublisherforge-p0-critical
+    rules:
+      - alert: APIServiceDown
+        expr: ecs_service_running_task_count{service_name="selfpublisherforge-api-production"} < 1
+        for: 5m
+        labels:
+          severity: P0
+          service: api
+          env: production
+        annotations:
+          summary: "API service has zero running tasks in production"
+          description: "P0 CRITICAL: API service has zero running tasks in production. Service is completely unavailable to users."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/api-service-down"
 
-  - name: "Database Connection Failure"
-    severity: P0
-    type: metric
-    query: "avg(last_3m):avg:aws.rds.database_connections{dbinstanceidentifier:selfpublisherforge-production-postgres} < 1"
-    message: |
-      P0 CRITICAL: No active database connections detected.
-      RDS instance may be down or unreachable.
-      Runbook: https://wiki.internal/runbooks/rds-connection-failure
-    notify:
-      - pagerduty-critical
-      - slack-incidents
-    thresholds:
-      critical: 1
-    tags:
-      - service:database
-      - env:production
-      - severity:P0
+      - alert: DatabaseConnectionFailure
+        expr: pg_stat_activity_count{instance=~"selfpublisherforge-production-postgres.*"} < 1
+        for: 3m
+        labels:
+          severity: P0
+          service: database
+          env: production
+        annotations:
+          summary: "No active database connections detected"
+          description: "P0 CRITICAL: No active database connections detected. RDS instance may be down or unreachable."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-connection-failure"
 
-  - name: "API Error Rate > 5%"
-    severity: P0
-    type: metric
-    query: "avg(last_5m):( sum:trace.fastapi.request.errors{env:production}.as_count() / sum:trace.fastapi.request.hits{env:production}.as_count() ) * 100 > 5"
-    message: |
-      P0 CRITICAL: API error rate has exceeded 5%.
-      Current value: {{value}}%
-      Widespread failures affecting users.
-      Runbook: https://wiki.internal/runbooks/high-error-rate
-    notify:
-      - pagerduty-critical
-      - slack-incidents
-    thresholds:
-      critical: 5
-      warning: 3
-    tags:
-      - service:api
-      - env:production
-      - severity:P0
+      - alert: APIErrorRateCritical
+        expr: >
+          (
+            sum(rate(http_requests_total{job="selfpublisherforge-api", status=~"5.."}[5m]))
+          /
+            sum(rate(http_requests_total{job="selfpublisherforge-api"}[5m]))
+          ) * 100 > 5
+        for: 5m
+        labels:
+          severity: P0
+          service: api
+          env: production
+        annotations:
+          summary: "API error rate has exceeded 5%"
+          description: "P0 CRITICAL: API error rate has exceeded 5%. Current value: {{ $value | printf \"%.2f\" }}%. Widespread failures affecting users."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/high-error-rate"
 
-  - name: "RDS Storage Space Critical"
-    severity: P0
-    type: metric
-    query: "avg(last_5m):avg:aws.rds.free_storage_space{dbinstanceidentifier:selfpublisherforge-production-postgres} < 2147483648"
-    message: |
-      P0 CRITICAL: RDS free storage is below 2 GB.
-      Database writes may fail imminently.
-      Runbook: https://wiki.internal/runbooks/rds-storage-critical
-    notify:
-      - pagerduty-critical
-      - slack-incidents
-    thresholds:
-      critical: 2147483648
-    tags:
-      - service:database
-      - env:production
-      - severity:P0
+      - alert: RDSStorageSpaceCritical
+        expr: rds_free_storage_space_bytes{dbinstance_identifier="selfpublisherforge-production-postgres"} < 2147483648
+        for: 5m
+        labels:
+          severity: P0
+          service: database
+          env: production
+        annotations:
+          summary: "RDS free storage is below 2 GB"
+          description: "P0 CRITICAL: RDS free storage is below 2 GB. Database writes may fail imminently."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-storage-critical"
 
   # ---------------------------------------------------------------------------
   # P1 — Urgent: Respond within 15 minutes, degraded experience
   # ---------------------------------------------------------------------------
-  - name: "API Latency P95 > 2s"
-    severity: P1
-    type: metric
-    query: "avg(last_10m):avg:trace.fastapi.request.duration{env:production,quantile:0.95} > 2000"
-    message: |
-      P1 URGENT: API P95 latency has exceeded 2 seconds.
-      Current P95: {{value}}ms
-      Users are experiencing significant slowness.
-      Runbook: https://wiki.internal/runbooks/high-latency
-    notify:
-      - pagerduty-high
-      - slack-alerts
-    thresholds:
-      critical: 2000
-      warning: 1000
-    tags:
-      - service:api
-      - env:production
-      - severity:P1
+  - name: selfpublisherforge-p1-urgent
+    rules:
+      - alert: APILatencyP95Critical
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="selfpublisherforge-api"}[10m])) by (le)
+          ) > 2
+        for: 10m
+        labels:
+          severity: P1
+          service: api
+          env: production
+        annotations:
+          summary: "API P95 latency has exceeded 2 seconds"
+          description: "P1 URGENT: API P95 latency has exceeded 2 seconds. Current P95: {{ $value | printf \"%.3f\" }}s. Users are experiencing significant slowness."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/high-latency"
 
-  - name: "API Error Rate > 1%"
-    severity: P1
-    type: metric
-    query: "avg(last_10m):( sum:trace.fastapi.request.errors{env:production}.as_count() / sum:trace.fastapi.request.hits{env:production}.as_count() ) * 100 > 1"
-    message: |
-      P1 URGENT: API error rate has exceeded 1% SLO threshold.
-      Current rate: {{value}}%
-      Runbook: https://wiki.internal/runbooks/elevated-error-rate
-    notify:
-      - pagerduty-high
-      - slack-alerts
-    thresholds:
-      critical: 1
-      warning: 0.5
-    tags:
-      - service:api
-      - env:production
-      - severity:P1
+      - alert: APIErrorRateWarning
+        expr: >
+          (
+            sum(rate(http_requests_total{job="selfpublisherforge-api", status=~"5.."}[10m]))
+          /
+            sum(rate(http_requests_total{job="selfpublisherforge-api"}[10m]))
+          ) * 100 > 1
+        for: 10m
+        labels:
+          severity: P1
+          service: api
+          env: production
+        annotations:
+          summary: "API error rate has exceeded 1% SLO threshold"
+          description: "P1 URGENT: API error rate has exceeded 1% SLO threshold. Current rate: {{ $value | printf \"%.2f\" }}%."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/elevated-error-rate"
 
-  - name: "Celery Queue Depth > 500"
-    severity: P1
-    type: metric
-    query: "avg(last_10m):avg:celery.queue.length{env:production} > 500"
-    message: |
-      P1 URGENT: Celery queue depth has exceeded 500 tasks.
-      Current depth: {{value}}
-      Background job processing is severely backed up.
-      Runbook: https://wiki.internal/runbooks/celery-queue-backup
-    notify:
-      - pagerduty-high
-      - slack-alerts
-    thresholds:
-      critical: 500
-      warning: 200
-    tags:
-      - service:worker
-      - env:production
-      - severity:P1
+      - alert: CeleryQueueDepthCritical
+        expr: celery_queue_length{env="production"} > 500
+        for: 10m
+        labels:
+          severity: P1
+          service: worker
+          env: production
+        annotations:
+          summary: "Celery queue depth has exceeded 500 tasks"
+          description: "P1 URGENT: Celery queue depth has exceeded 500 tasks. Current depth: {{ $value }}. Background job processing is severely backed up."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/celery-queue-backup"
 
-  - name: "RDS CPU > 90%"
-    severity: P1
-    type: metric
-    query: "avg(last_10m):avg:aws.rds.cpuutilization{dbinstanceidentifier:selfpublisherforge-production-postgres} > 90"
-    message: |
-      P1 URGENT: RDS CPU utilization is above 90%.
-      Current: {{value}}%
-      Database performance is likely degraded.
-      Runbook: https://wiki.internal/runbooks/rds-high-cpu
-    notify:
-      - pagerduty-high
-      - slack-alerts
-    thresholds:
-      critical: 90
-      warning: 80
-    tags:
-      - service:database
-      - env:production
-      - severity:P1
+      - alert: RDSCPUCritical
+        expr: rds_cpu_utilization_percent{dbinstance_identifier="selfpublisherforge-production-postgres"} > 90
+        for: 10m
+        labels:
+          severity: P1
+          service: database
+          env: production
+        annotations:
+          summary: "RDS CPU utilization is above 90%"
+          description: "P1 URGENT: RDS CPU utilization is above 90%. Current: {{ $value | printf \"%.1f\" }}%. Database performance is likely degraded."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-high-cpu"
 
-  - name: "Redis Memory > 90%"
-    severity: P1
-    type: metric
-    query: "avg(last_10m):avg:aws.elasticache.database_memory_usage_percentage{cacheclusterid:selfpublisherforge-production-redis} > 90"
-    message: |
-      P1 URGENT: Redis memory usage is above 90%.
-      Current: {{value}}%
-      Cache evictions may be occurring, LRU eviction will accelerate.
-      Runbook: https://wiki.internal/runbooks/redis-high-memory
-    notify:
-      - pagerduty-high
-      - slack-alerts
-    thresholds:
-      critical: 90
-      warning: 75
-    tags:
-      - service:redis
-      - env:production
-      - severity:P1
+      - alert: RedisMemoryUsageCritical
+        expr: >
+          (redis_memory_used_bytes{instance=~"selfpublisherforge-production-redis.*"}
+          /
+          redis_memory_max_bytes{instance=~"selfpublisherforge-production-redis.*"})
+          * 100 > 90
+        for: 10m
+        labels:
+          severity: P1
+          service: redis
+          env: production
+        annotations:
+          summary: "Redis memory usage is above 90%"
+          description: "P1 URGENT: Redis memory usage is above 90%. Current: {{ $value | printf \"%.1f\" }}%. Cache evictions may be occurring, LRU eviction will accelerate."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/redis-high-memory"
 
   # ---------------------------------------------------------------------------
   # P2 — Warning: Respond within 1 hour, potential issue developing
   # ---------------------------------------------------------------------------
-  - name: "ECS Task Restarts"
-    severity: P2
-    type: metric
-    query: "sum(last_30m):sum:aws.ecs.service.task_stopped_count{clustername:selfpublisherforge-production} by {servicename} > 5"
-    message: |
-      P2 WARNING: ECS service {{servicename.name}} has had more than 5 task restarts in 30 minutes.
-      Possible crash loop or OOM kills.
-      Runbook: https://wiki.internal/runbooks/ecs-task-restarts
-    notify:
-      - slack-alerts
-    thresholds:
-      critical: 5
-      warning: 3
-    tags:
-      - service:ecs
-      - env:production
-      - severity:P2
+  - name: selfpublisherforge-p2-warning
+    rules:
+      - alert: ECSTaskRestarts
+        expr: >
+          sum(increase(ecs_container_restarts_total{cluster_name="selfpublisherforge-production"}[30m])) by (service_name) > 5
+        for: 5m
+        labels:
+          severity: P2
+          service: ecs
+          env: production
+        annotations:
+          summary: "ECS service {{ $labels.service_name }} has excessive task restarts"
+          description: "P2 WARNING: ECS service {{ $labels.service_name }} has had more than 5 task restarts in 30 minutes. Possible crash loop or OOM kills."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/ecs-task-restarts"
 
-  - name: "API Latency P95 > 500ms"
-    severity: P2
-    type: metric
-    query: "avg(last_15m):avg:trace.fastapi.request.duration{env:production,quantile:0.95} > 500"
-    message: |
-      P2 WARNING: API P95 latency exceeds 500ms SLO target.
-      Current P95: {{value}}ms
-      Runbook: https://wiki.internal/runbooks/latency-investigation
-    notify:
-      - slack-alerts
-    thresholds:
-      critical: 500
-      warning: 300
-    tags:
-      - service:api
-      - env:production
-      - severity:P2
+      - alert: APILatencyP95Warning
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="selfpublisherforge-api"}[15m])) by (le)
+          ) > 0.5
+        for: 15m
+        labels:
+          severity: P2
+          service: api
+          env: production
+        annotations:
+          summary: "API P95 latency exceeds 500ms SLO target"
+          description: "P2 WARNING: API P95 latency exceeds 500ms SLO target. Current P95: {{ $value | printf \"%.3f\" }}s."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/latency-investigation"
 
-  - name: "Celery Task Failure Rate"
-    severity: P2
-    type: metric
-    query: "avg(last_15m):( sum:celery.task.failed{env:production}.as_count() / ( sum:celery.task.succeeded{env:production}.as_count() + sum:celery.task.failed{env:production}.as_count() ) ) * 100 > 5"
-    message: |
-      P2 WARNING: Celery task failure rate exceeds 5%.
-      Current rate: {{value}}%
-      Runbook: https://wiki.internal/runbooks/celery-failures
-    notify:
-      - slack-alerts
-    thresholds:
-      critical: 5
-      warning: 2
-    tags:
-      - service:worker
-      - env:production
-      - severity:P2
+      - alert: CeleryTaskFailureRate
+        expr: >
+          (
+            sum(rate(celery_task_failed_total{env="production"}[15m]))
+          /
+            (
+              sum(rate(celery_task_succeeded_total{env="production"}[15m]))
+            +
+              sum(rate(celery_task_failed_total{env="production"}[15m]))
+            )
+          ) * 100 > 5
+        for: 15m
+        labels:
+          severity: P2
+          service: worker
+          env: production
+        annotations:
+          summary: "Celery task failure rate exceeds 5%"
+          description: "P2 WARNING: Celery task failure rate exceeds 5%. Current rate: {{ $value | printf \"%.2f\" }}%."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/celery-failures"
 
-  - name: "RDS Free Storage Low"
-    severity: P2
-    type: metric
-    query: "avg(last_15m):avg:aws.rds.free_storage_space{dbinstanceidentifier:selfpublisherforge-production-postgres} < 10737418240"
-    message: |
-      P2 WARNING: RDS free storage is below 10 GB.
-      Current free: {{value}} bytes
-      Plan for storage expansion.
-      Runbook: https://wiki.internal/runbooks/rds-storage-low
-    notify:
-      - slack-alerts
-    thresholds:
-      critical: 10737418240
-    tags:
-      - service:database
-      - env:production
-      - severity:P2
+      - alert: RDSFreeStorageLow
+        expr: rds_free_storage_space_bytes{dbinstance_identifier="selfpublisherforge-production-postgres"} < 10737418240
+        for: 15m
+        labels:
+          severity: P2
+          service: database
+          env: production
+        annotations:
+          summary: "RDS free storage is below 10 GB"
+          description: "P2 WARNING: RDS free storage is below 10 GB. Current free: {{ $value | humanize1024 }}B. Plan for storage expansion."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-storage-low"
 
-  - name: "DB Connection Pool Near Capacity"
-    severity: P2
-    type: metric
-    query: "avg(last_10m):avg:aws.rds.database_connections{dbinstanceidentifier:selfpublisherforge-production-postgres} > 150"
-    message: |
-      P2 WARNING: Database connection count is above 150 (max 200).
-      Current connections: {{value}}
-      Runbook: https://wiki.internal/runbooks/db-connection-pool
-    notify:
-      - slack-alerts
-    thresholds:
-      critical: 150
-      warning: 120
-    tags:
-      - service:database
-      - env:production
-      - severity:P2
+      - alert: DBConnectionPoolNearCapacity
+        expr: pg_stat_activity_count{instance=~"selfpublisherforge-production-postgres.*"} > 150
+        for: 10m
+        labels:
+          severity: P2
+          service: database
+          env: production
+        annotations:
+          summary: "Database connection count is above 150 (max 200)"
+          description: "P2 WARNING: Database connection count is above 150 (max 200). Current connections: {{ $value }}."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/db-connection-pool"
 
   # ---------------------------------------------------------------------------
   # P3 — Informational: Next business day, tracking trends
   # ---------------------------------------------------------------------------
-  - name: "ECS CPU Sustained Above 70%"
-    severity: P3
-    type: metric
-    query: "avg(last_1h):avg:aws.ecs.cpuutilization{clustername:selfpublisherforge-production} by {servicename} > 70"
-    message: |
-      P3 INFO: ECS service {{servicename.name}} CPU has been above 70% for 1 hour.
-      Consider scaling review.
-    notify:
-      - slack-monitoring
-    thresholds:
-      warning: 70
-    tags:
-      - service:ecs
-      - env:production
-      - severity:P3
+  - name: selfpublisherforge-p3-informational
+    rules:
+      - alert: HighCPUUsageSustained
+        expr: >
+          avg(rate(container_cpu_usage_seconds_total{container_label_com_amazonaws_ecs_cluster="selfpublisherforge-production"}[5m])) by (container_label_com_amazonaws_ecs_service_name) > 0.7
+        for: 1h
+        labels:
+          severity: P3
+          service: ecs
+          env: production
+        annotations:
+          summary: "ECS service {{ $labels.container_label_com_amazonaws_ecs_service_name }} CPU sustained above 70%"
+          description: "P3 INFO: ECS service {{ $labels.container_label_com_amazonaws_ecs_service_name }} CPU has been above 70% for 1 hour. Consider scaling review."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/high-cpu"
 
-  - name: "Redis Cache Hit Rate Below 80%"
-    severity: P3
-    type: metric
-    query: "avg(last_1h):( sum:aws.elasticache.cache_hits{cacheclusterid:selfpublisherforge-production-redis}.as_count() / ( sum:aws.elasticache.cache_hits{cacheclusterid:selfpublisherforge-production-redis}.as_count() + sum:aws.elasticache.cache_misses{cacheclusterid:selfpublisherforge-production-redis}.as_count() ) ) * 100 < 80"
-    message: |
-      P3 INFO: Redis cache hit rate is below 80%.
-      Current rate: {{value}}%
-      Review cache key strategies and TTLs.
-    notify:
-      - slack-monitoring
-    thresholds:
-      warning: 80
-    tags:
-      - service:redis
-      - env:production
-      - severity:P3
+      - alert: RedisCacheHitRateLow
+        expr: >
+          (
+            rate(redis_keyspace_hits_total{instance=~"selfpublisherforge-production-redis.*"}[1h])
+          /
+            (
+              rate(redis_keyspace_hits_total{instance=~"selfpublisherforge-production-redis.*"}[1h])
+            +
+              rate(redis_keyspace_misses_total{instance=~"selfpublisherforge-production-redis.*"}[1h])
+            )
+          ) * 100 < 80
+        for: 1h
+        labels:
+          severity: P3
+          service: redis
+          env: production
+        annotations:
+          summary: "Redis cache hit rate is below 80%"
+          description: "P3 INFO: Redis cache hit rate is below 80%. Current rate: {{ $value | printf \"%.1f\" }}%. Review cache key strategies and TTLs."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/redis-low-hit-rate"
 
-  - name: "Celery Queue Growing Trend"
-    severity: P3
-    type: metric
-    query: "avg(last_1h):avg:celery.queue.length{env:production} > 100"
-    message: |
-      P3 INFO: Celery queue depth has been above 100 for 1 hour.
-      Current depth: {{value}}
-      May need more workers or task optimization.
-    notify:
-      - slack-monitoring
-    thresholds:
-      warning: 100
-    tags:
-      - service:worker
-      - env:production
-      - severity:P3
+      - alert: CeleryQueueGrowingTrend
+        expr: celery_queue_length{env="production"} > 100
+        for: 1h
+        labels:
+          severity: P3
+          service: worker
+          env: production
+        annotations:
+          summary: "Celery queue depth sustained above 100"
+          description: "P3 INFO: Celery queue depth has been above 100 for 1 hour. Current depth: {{ $value }}. May need more workers or task optimization."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/celery-queue-growing"
 
-  - name: "Deployment Completed"
-    severity: P3
-    type: event
-    query: "events('sources:github priority:normal tags:action:deploy env:production').rollup('count').last('5m') > 0"
-    message: |
-      P3 INFO: A new deployment to production has been detected.
-      Review deployment health metrics.
-    notify:
-      - slack-deployments
-    tags:
-      - service:deploy
-      - env:production
-      - severity:P3
+      - alert: DeploymentCompleted
+        expr: >
+          time() - deploy_last_timestamp{env="production", app="selfpublisherforge"} < 300
+        for: 0m
+        labels:
+          severity: P3
+          service: deploy
+          env: production
+        annotations:
+          summary: "A new deployment to production has been detected"
+          description: "P3 INFO: A new deployment to production has been detected. Review deployment health metrics."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/deployment-completed"
+
+      - alert: ElasticsearchClusterHealthRed
+        expr: elasticsearch_cluster_health_status{color="red", cluster=~"selfpublisherforge.*"} == 1
+        for: 5m
+        labels:
+          severity: P1
+          service: elasticsearch
+          env: production
+        annotations:
+          summary: "Elasticsearch cluster health is RED"
+          description: "P1 URGENT: Elasticsearch cluster health is RED. One or more primary shards are unassigned. Search functionality may be degraded or unavailable."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/elasticsearch-red"
+
+      - alert: ElasticsearchClusterHealthYellow
+        expr: elasticsearch_cluster_health_status{color="yellow", cluster=~"selfpublisherforge.*"} == 1
+        for: 30m
+        labels:
+          severity: P2
+          service: elasticsearch
+          env: production
+        annotations:
+          summary: "Elasticsearch cluster health is YELLOW"
+          description: "P2 WARNING: Elasticsearch cluster health is YELLOW for over 30 minutes. One or more replica shards are unassigned. Redundancy is reduced."
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/elasticsearch-yellow"

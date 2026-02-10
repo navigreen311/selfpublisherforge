@@ -103,3 +103,19 @@ class UserResponse(BaseModel):
     role: str
     email_verified: bool
     mfa_enabled: bool
+
+
+# ---------------------------------------------------------------------------
+# OAuth
+# ---------------------------------------------------------------------------
+
+class OAuthAuthorizationURL(BaseModel):
+    """Response containing the OAuth provider authorization URL."""
+    authorization_url: str
+    provider: str
+
+
+class OAuthCallbackRequest(BaseModel):
+    """Query parameters from the OAuth callback."""
+    code: str
+    state: str | None = None

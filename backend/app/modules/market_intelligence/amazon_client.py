@@ -207,7 +207,20 @@ class MockAmazonClient(AmazonClientBase):
 def get_amazon_client() -> AmazonClientBase:
     """Return the Amazon client.
 
-    In the future this will check for PA-API credentials in settings and
-    return a live client.  For now, always returns the mock.
+    When PA-API credentials are configured via environment variables
+    (AMAZON_PAAPI_ACCESS_KEY, AMAZON_PAAPI_SECRET_KEY, AMAZON_PAAPI_PARTNER_TAG),
+    a live client would be returned.  Until PA-API integration is implemented,
+    falls back to the mock client for development and testing.
     """
+    import os
+
+    access_key = os.environ.get("AMAZON_PAAPI_ACCESS_KEY", "")
+    secret_key = os.environ.get("AMAZON_PAAPI_SECRET_KEY", "")
+    partner_tag = os.environ.get("AMAZON_PAAPI_PARTNER_TAG", "")
+
+    if access_key and secret_key and partner_tag:
+        # TODO: Return a LiveAmazonClient(access_key, secret_key, partner_tag)
+        #       once PA-API 5.0 integration is implemented.
+        pass
+
     return MockAmazonClient()

@@ -42,6 +42,11 @@ resource "aws_db_parameter_group" "postgres" {
   }
 
   parameter {
+    name  = "log_statement"
+    value = "mod"
+  }
+
+  parameter {
     name  = "shared_preload_libraries"
     value = "pg_stat_statements"
   }

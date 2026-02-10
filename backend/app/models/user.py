@@ -69,6 +69,7 @@ class User(BaseModel):
     organization = relationship("Organization", back_populates="users")
     api_keys = relationship("ApiKey", back_populates="user", lazy="selectin", foreign_keys="[ApiKey.created_by]")
     sessions = relationship("UserSession", back_populates="user", lazy="selectin")
+    oauth_accounts = relationship("OAuthAccount", back_populates="user", lazy="selectin")
     writing_sessions = relationship("WritingSession", back_populates="user", lazy="selectin")
     book_versions = relationship("BookVersion", back_populates="created_by_user", lazy="selectin")
 
@@ -77,6 +78,32 @@ class User(BaseModel):
         Index("ix_users_preferences_gin", "preferences", postgresql_using="gin"),
         Index("ix_users_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
         Index("ix_users_org_id_created_at", "org_id", "created_at"),
+    )
+
+
+class OAuthAccount(BaseModel):
+    """Stores linked OAuth provider accounts for a user."""
+    __tablename__ = "oauth_accounts"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)  # "google" | "github"
+    provider_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider_email: Mapped[str | None] = mapped_column(String(320), nullable=True, default=None)
+    access_token: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+
+    # Relationships
+    user = relationship("User", back_populates="oauth_accounts")
+
+    __table_args__ = (
+        Index("ix_oauth_accounts_provider_user", "provider", "provider_user_id", unique=True),
+        Index("ix_oauth_accounts_user_provider", "user_id", "provider", unique=True),
+        Index("ix_oauth_accounts_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 

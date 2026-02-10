@@ -130,6 +130,27 @@ class ExtractedDataResponse(BaseModel):
     saved_at: datetime
 
 
+class RelatedKeyword(BaseModel):
+    """A related keyword suggestion with estimated search volume."""
+
+    keyword: str
+    volume: str = Field(
+        "medium",
+        description="Estimated search volume indicator: 'high', 'medium', or 'low'.",
+        pattern="^(high|medium|low)$",
+    )
+    relevance: float = Field(
+        1.0,
+        ge=0.0,
+        le=1.0,
+        description="Relevance score 0-1 indicating closeness to the original keywords.",
+    )
+    source: str = Field(
+        "analysis",
+        description="How the keyword was derived: 'llm', 'title', 'frequency', 'synonym'.",
+    )
+
+
 class QuickResearchResponse(BaseModel):
     """Quick research data returned to the sidebar."""
 
@@ -144,7 +165,7 @@ class QuickResearchResponse(BaseModel):
     avg_price: float | None = None
     avg_reviews: float | None = None
     niche_score: float | None = Field(None, ge=0, le=100)
-    related_keywords: list[str] = Field(default_factory=list)
+    related_keywords: list[RelatedKeyword] = Field(default_factory=list)
     trends: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -158,3 +179,12 @@ class ClipSaveResponse(BaseModel):
     clip_type: ClipType
     title: str | None = None
     saved_at: datetime
+
+
+class ExtensionVersionResponse(BaseModel):
+    """Current published extension version info."""
+
+    version: str
+    min_version: str
+    update_url: str
+    changelog: str

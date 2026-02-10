@@ -302,12 +302,12 @@ export default function WritingStudioPage() {
             Start a new book from scratch or with an AI-generated outline.
           </p>
         </Link>
-        <div className="rounded-lg border bg-card p-4 hover:border-primary/50 transition-colors">
+        <Link href="/writing/outline" className="rounded-lg border bg-card p-4 hover:border-primary/50 transition-colors">
           <h3 className="font-medium text-sm">AI Outline Generator</h3>
           <p className="text-xs text-muted-foreground mt-1">
             Generate a complete book outline with chapter summaries.
           </p>
-        </div>
+        </Link>
         <div className="rounded-lg border bg-card p-4 hover:border-primary/50 transition-colors">
           <h3 className="font-medium text-sm">Writing Analytics</h3>
           <p className="text-xs text-muted-foreground mt-1">

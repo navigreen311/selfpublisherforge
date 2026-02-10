@@ -154,6 +154,80 @@ class FacebookAdsClient:
 
     # ─── Campaign Management ─────────────────────────────────────────────
 
+    async def list_campaigns(
+        self,
+        limit: int = 50,
+        status_filter: str | None = None,
+    ) -> dict:
+        """List campaigns for the configured ad account.
+
+        Returns a dict with a ``campaigns`` list and ``total_count``.
+
+        See: https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group
+        """
+        self._ensure_credentials()
+
+        url = f"{self.BASE_URL}/{self._account_path()}/campaigns"
+
+        fields = "id,name,objective,status,daily_budget,created_time,updated_time"
+        params: dict = {
+            "fields": fields,
+            "limit": str(limit),
+        }
+        if status_filter:
+            params["effective_status"] = f'["{status_filter.upper()}"]'
+
+        logger.info("Listing Facebook Ads campaigns (limit=%s)", limit)
+        data = await self._request("GET", url, params=params)
+
+        campaigns = []
+        for item in data.get("data", []):
+            # daily_budget comes back in cents from the API
+            raw_budget = item.get("daily_budget")
+            budget_dollars = float(raw_budget) / 100.0 if raw_budget else 0.0
+            campaigns.append({
+                "external_campaign_id": item.get("id", ""),
+                "name": item.get("name", ""),
+                "objective": item.get("objective", ""),
+                "status": item.get("status", "").lower(),
+                "daily_budget": budget_dollars,
+            })
+
+        return {
+            "campaigns": campaigns,
+            "total_count": len(campaigns),
+        }
+
+    async def get_campaign(self, external_campaign_id: str) -> dict:
+        """Get details for a single Facebook Ads campaign.
+
+        Returns a dict with campaign fields.
+
+        See: https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group
+        """
+        self._ensure_credentials()
+
+        url = f"{self.BASE_URL}/{external_campaign_id}"
+        params = {
+            "fields": "id,name,objective,status,daily_budget,created_time,updated_time,start_time,stop_time",
+        }
+
+        logger.info("Getting Facebook Ads campaign: %s", external_campaign_id)
+        data = await self._request("GET", url, params=params)
+
+        raw_budget = data.get("daily_budget")
+        budget_dollars = float(raw_budget) / 100.0 if raw_budget else 0.0
+
+        return {
+            "external_campaign_id": data.get("id", ""),
+            "name": data.get("name", ""),
+            "objective": data.get("objective", ""),
+            "status": data.get("status", "").lower(),
+            "daily_budget": budget_dollars,
+            "created_time": data.get("created_time"),
+            "updated_time": data.get("updated_time"),
+        }
+
     async def create_campaign(
         self,
         name: str,

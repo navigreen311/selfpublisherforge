@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAdDashboard } from "@/modules/advertising/hooks";
 import { CampaignCard } from "@/modules/advertising/components/CampaignCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdvertisingDashboardPage() {
   const { data: dashboard, isLoading, error } = useAdDashboard();
@@ -13,9 +14,10 @@ export default function AdvertisingDashboardPage() {
         <h1 className="text-2xl font-bold">Advertising Intelligence</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
+            <Skeleton key={i} className="h-24" />
           ))}
         </div>
+        <Skeleton className="h-48" />
       </div>
     );
   }

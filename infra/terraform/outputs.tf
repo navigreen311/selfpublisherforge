@@ -197,3 +197,21 @@ output "database_url_secret_arn" {
   description = "ARN of the Secrets Manager secret for the full database URL"
   value       = aws_secretsmanager_secret.database_url.arn
 }
+
+# -----------------------------------------------------------------------------
+# CloudFront
+# -----------------------------------------------------------------------------
+output "cloudfront_domain_name" {
+  description = "Domain name of the CloudFront distribution"
+  value       = aws_cloudfront_distribution.frontend.domain_name
+}
+
+output "cloudfront_distribution_id" {
+  description = "ID of the CloudFront distribution (for cache invalidation in CI/CD)"
+  value       = aws_cloudfront_distribution.frontend.id
+}
+
+output "frontend_bucket_name" {
+  description = "Name of the S3 frontend bucket"
+  value       = aws_s3_bucket.frontend.id
+}

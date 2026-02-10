@@ -201,7 +201,6 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: ${{ secrets.STAGING_URL }}
         run: npx playwright test --reporter=html
-        continue-on-error: true
 
       - name: Upload E2E test results
         if: always()
@@ -222,7 +221,7 @@ jobs:
       - name: Determine status
         id: status
         run: |
-          if [ "${{ needs.deploy.result }}" == "success" ] && [ "${{ needs.e2e-tests.result }}" != "failure" ]; then
+          if [ "${{ needs.deploy.result }}" == "success" ] && [ "${{ needs.e2e-tests.result }}" == "success" ]; then
             echo "color=good" >> "$GITHUB_OUTPUT"
             echo "status=SUCCESS" >> "$GITHUB_OUTPUT"
             echo "emoji=:white_check_mark:" >> "$GITHUB_OUTPUT"

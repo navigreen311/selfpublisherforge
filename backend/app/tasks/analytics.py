@@ -9,12 +9,17 @@ Tasks:
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import logging
 import os
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
+
+import httpx
 
 from app.tasks import celery_app
 from app.database import async_session
@@ -34,7 +39,7 @@ _PUBLISHING_TO_ANALYTICS_PLATFORM: dict[str, str] = {
 # Environment variable names that, when set, indicate an API client is
 # available for the given publishing platform.
 _PLATFORM_API_ENV_KEYS: dict[str, str] = {
-    "kdp": "KDP_API_CLIENT_ID",
+    "kdp": "KDP_ACCESS_KEY",
     "ingramspark": "INGRAM_SPARK_API_KEY",
     "d2d": "D2D_API_KEY",
     "acx": "ACX_API_KEY",
@@ -513,76 +518,857 @@ async def _try_api_sync(
 async def _fetch_kdp_royalties(account) -> list[dict[str, Any]]:
     """Fetch royalty data from the Amazon KDP Reporting API.
 
-    Requires ``KDP_API_CLIENT_ID`` and ``KDP_API_CLIENT_SECRET`` env vars.
+    Requires ``KDP_ACCESS_KEY`` and ``KDP_SECRET_KEY`` env vars.
+    Authenticates using HMAC-SHA256 signed requests against the KDP
+    sales reporting endpoint.
+
     Returns a list of normalised royalty record dicts ready for upsert.
     """
-    client_id = os.environ.get("KDP_API_CLIENT_ID", "")
-    client_secret = os.environ.get("KDP_API_CLIENT_SECRET", "")
-    if not client_id or not client_secret:
-        logger.debug("KDP API credentials not fully configured; skipping API sync.")
+    access_key = os.environ.get("KDP_ACCESS_KEY", "")
+    secret_key = os.environ.get("KDP_SECRET_KEY", "")
+    if not access_key or not secret_key:
+        logger.warning(
+            "KDP API credentials (KDP_ACCESS_KEY / KDP_SECRET_KEY) not configured; "
+            "skipping API sync for account %s.",
+            account.id,
+        )
         return []
 
-    # TODO: Implement actual KDP API call once Amazon exposes a stable
-    # reporting endpoint and the project adds an HTTP client dependency.
-    # The implementation would:
-    #   1. Authenticate via OAuth using client_id / client_secret
-    #   2. Request the latest monthly royalty report
-    #   3. Parse the response and return normalised dicts matching the
-    #      RoyaltyRecord field schema
-    logger.info(
-        "KDP API client is configured for account %s; "
-        "API fetch will be performed when the KDP SDK is integrated.",
-        account.id,
+    base_url = os.environ.get(
+        "KDP_API_BASE_URL", "https://kdp.amazon.com/api/reports/v1"
     )
-    return []
+
+    # Determine the reporting period: last full calendar month.
+    now = datetime.now(timezone.utc)
+    first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    period_end = first_of_this_month - timedelta(microseconds=1)
+    period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
+
+    report_url = f"{base_url}/royalties"
+    params = {
+        "startDate": period_start.strftime("%Y-%m-%d"),
+        "endDate": period_end.strftime("%Y-%m-%d"),
+        "granularity": "MONTHLY",
+    }
+
+    logger.info(
+        "Fetching KDP royalties for account %s, period %s to %s",
+        account.id,
+        params["startDate"],
+        params["endDate"],
+    )
+
+    response_data = await _kdp_api_request(
+        method="GET",
+        url=report_url,
+        params=params,
+        access_key=access_key,
+        secret_key=secret_key,
+    )
+
+    if response_data is None:
+        return []
+
+    return _parse_kdp_royalty_response(response_data, period_start, period_end)
+
+
+def _kdp_sign_request(
+    method: str,
+    url: str,
+    timestamp: str,
+    access_key: str,
+    secret_key: str,
+    params: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Build HMAC-SHA256 signed headers for the KDP Reporting API.
+
+    The signing scheme follows Amazon's standard pattern:
+      1. Build a canonical string from the HTTP method, path, sorted query
+         parameters, and timestamp.
+      2. Sign the canonical string with the secret key using HMAC-SHA256.
+      3. Return the Authorization and timestamp headers.
+    """
+    from urllib.parse import urlparse, urlencode
+
+    parsed = urlparse(url)
+    canonical_path = parsed.path or "/"
+
+    # Sort query parameters for deterministic signing
+    sorted_params = ""
+    if params:
+        sorted_params = urlencode(sorted(params.items()))
+
+    canonical_string = f"{method.upper()}\n{canonical_path}\n{sorted_params}\n{timestamp}"
+
+    signature = hmac.new(
+        secret_key.encode("utf-8"),
+        canonical_string.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    return {
+        "Authorization": f"KDP-HMAC-SHA256 Credential={access_key}, Signature={signature}",
+        "X-KDP-Timestamp": timestamp,
+        "X-KDP-Content-SHA256": hashlib.sha256(b"").hexdigest(),
+        "Accept": "application/json",
+        "User-Agent": "SelfPublisherForge/0.1.0",
+    }
+
+
+async def _kdp_api_request(
+    method: str,
+    url: str,
+    params: dict[str, str] | None = None,
+    access_key: str = "",
+    secret_key: str = "",
+    max_retries: int = 3,
+) -> dict[str, Any] | None:
+    """Execute an authenticated request to the KDP Reporting API with retry.
+
+    Retries up to *max_retries* times using exponential backoff (1s, 2s, 4s).
+    Returns the parsed JSON response body on success, or ``None`` on failure.
+    """
+    last_exception: Exception | None = None
+
+    for attempt in range(max_retries):
+        try:
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            headers = _kdp_sign_request(
+                method=method,
+                url=url,
+                timestamp=timestamp,
+                access_key=access_key,
+                secret_key=secret_key,
+                params=params,
+            )
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    params=params,
+                    headers=headers,
+                )
+
+            if response.status_code == 200:
+                return response.json()
+
+            # Retriable server errors
+            if response.status_code in (429, 500, 502, 503, 504):
+                logger.warning(
+                    "KDP API returned %d on attempt %d/%d: %s",
+                    response.status_code,
+                    attempt + 1,
+                    max_retries,
+                    response.text[:500],
+                )
+                last_exception = httpx.HTTPStatusError(
+                    f"KDP API error: {response.status_code}",
+                    request=response.request,
+                    response=response,
+                )
+            else:
+                # Non-retriable client errors (400, 401, 403, etc.)
+                logger.error(
+                    "KDP API returned non-retriable status %d: %s",
+                    response.status_code,
+                    response.text[:500],
+                )
+                return None
+
+        except httpx.TimeoutException as exc:
+            logger.warning(
+                "KDP API request timed out on attempt %d/%d: %s",
+                attempt + 1,
+                max_retries,
+                exc,
+            )
+            last_exception = exc
+
+        except httpx.RequestError as exc:
+            logger.warning(
+                "KDP API request failed on attempt %d/%d: %s",
+                attempt + 1,
+                max_retries,
+                exc,
+            )
+            last_exception = exc
+
+        # Exponential backoff: 1s, 2s, 4s
+        if attempt < max_retries - 1:
+            backoff = 2 ** attempt
+            logger.debug("Retrying KDP API request in %ds ...", backoff)
+            await asyncio.sleep(backoff)
+
+    logger.error(
+        "KDP API request failed after %d attempts. Last error: %s",
+        max_retries,
+        last_exception,
+    )
+    return None
+
+
+# -- KDP marketplace code to human-readable name mapping --
+_KDP_MARKETPLACE_MAP: dict[str, str] = {
+    "ATVPDKIKX0DER": "US",
+    "A1F83G8C2ARO7P": "UK",
+    "A13V1IB3VIYZZH": "FR",
+    "A1PA6795UKMFR9": "DE",
+    "APJ6JRA9NG5V4": "IT",
+    "A1RKKUPIHCS9HS": "ES",
+    "A21TJRUUN4KGV": "IN",
+    "A1VC6025VUSJ7K": "JP",
+    "A3K6Y4MI8GDQMW": "CA",
+    "A39IBJ37TRP1C6": "AU",
+    "A2Q3Y263D00KWC": "BR",
+    "A2VIGQ35RCS4UG": "MX",
+    "A1805IZSGTT6HS": "NL",
+}
+
+
+def _parse_kdp_royalty_response(
+    data: dict[str, Any],
+    period_start: datetime,
+    period_end: datetime,
+) -> list[dict[str, Any]]:
+    """Normalise KDP API response into internal royalty record dicts.
+
+    Expected KDP response structure::
+
+        {
+            "reports": [
+                {
+                    "title": "My Book Title",
+                    "asin": "B0...",
+                    "isbn": "978...",
+                    "marketplace": "ATVPDKIKX0DER",
+                    "formatType": "EBOOK",
+                    "unitsSold": 42,
+                    "unitsRefunded": 1,
+                    "netUnits": 41,
+                    "listPrice": {"amount": "9.99", "currency": "USD"},
+                    "royaltyRate": "0.70",
+                    "grossRevenue": {"amount": "419.58", "currency": "USD"},
+                    "netRevenue": {"amount": "286.93", "currency": "USD"}
+                },
+                ...
+            ]
+        }
+    """
+    records: list[dict[str, Any]] = []
+    report_items = data.get("reports", [])
+
+    if not report_items:
+        logger.info("KDP API returned no royalty report items for the period.")
+        return records
+
+    for item in report_items:
+        try:
+            marketplace_code = item.get("marketplace", "")
+            marketplace = _KDP_MARKETPLACE_MAP.get(marketplace_code, marketplace_code)
+
+            list_price_obj = item.get("listPrice", {})
+            gross_obj = item.get("grossRevenue", {})
+            net_obj = item.get("netRevenue", {})
+
+            currency = (
+                net_obj.get("currency")
+                or gross_obj.get("currency")
+                or list_price_obj.get("currency")
+                or "USD"
+            )
+
+            format_raw = item.get("formatType", "EBOOK").lower()
+            format_map = {
+                "ebook": "ebook",
+                "paperback": "paperback",
+                "hardcover": "hardcover",
+                "audiobook": "audiobook",
+            }
+            format_type = format_map.get(format_raw, "ebook")
+
+            record: dict[str, Any] = {
+                "platform": "kdp",
+                "marketplace": marketplace,
+                "title": item.get("title", "Unknown Title"),
+                "asin": item.get("asin"),
+                "isbn": item.get("isbn"),
+                "format_type": format_type,
+                "units_sold": int(item.get("unitsSold", 0)),
+                "units_refunded": int(item.get("unitsRefunded", 0)),
+                "net_units": int(item.get("netUnits", 0)),
+                "list_price": Decimal(str(list_price_obj.get("amount", "0.00"))),
+                "royalty_rate": Decimal(str(item.get("royaltyRate", "0.70"))),
+                "gross_revenue": Decimal(str(gross_obj.get("amount", "0.00"))),
+                "net_revenue": Decimal(str(net_obj.get("amount", "0.00"))),
+                "currency": currency,
+                "period_start": period_start,
+                "period_end": period_end,
+                "raw_data": item,
+            }
+            records.append(record)
+        except (ValueError, TypeError, KeyError) as exc:
+            logger.warning(
+                "Failed to parse KDP royalty item: %s — %s", exc, item
+            )
+            continue
+
+    logger.info(
+        "Parsed %d royalty records from KDP API response (%d raw items).",
+        len(records),
+        len(report_items),
+    )
+    return records
 
 
 async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
-    """Fetch royalty data from the IngramSpark publisher API.
+    """Fetch royalty/compensation data from the IngramSpark publisher REST API.
 
-    Requires ``INGRAM_SPARK_API_KEY`` env var.
-    Returns a list of normalised royalty record dicts ready for upsert.
+    Requires ``INGRAM_SPARK_API_KEY`` and ``INGRAM_SPARK_API_SECRET`` env vars.
+    Uses HMAC-SHA256 request signing for authentication.
+
+    The function targets the previous full calendar month and returns a list of
+    normalised royalty record dicts ready for upsert into ``royalty_records``.
     """
     api_key = os.environ.get("INGRAM_SPARK_API_KEY", "")
+    api_secret = os.environ.get("INGRAM_SPARK_API_SECRET", "")
     if not api_key:
         logger.debug("IngramSpark API key not configured; skipping API sync.")
         return []
+    if not api_secret:
+        logger.debug("IngramSpark API secret not configured; skipping API sync.")
+        return []
 
-    # TODO: Implement IngramSpark API integration.
-    # The implementation would:
-    #   1. Authenticate with the IngramSpark REST API using the api_key
-    #   2. Pull compensation reports for the current period
-    #   3. Return normalised dicts matching the RoyaltyRecord field schema
+    base_url = os.environ.get(
+        "INGRAM_SPARK_API_URL",
+        "https://api.ingramspark.com/v1",
+    )
+
+    # ------------------------------------------------------------------
+    # Determine the reporting period (previous full calendar month).
+    # ------------------------------------------------------------------
+    now = datetime.now(timezone.utc)
+    first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    period_end = first_of_this_month - timedelta(microseconds=1)
+    period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
+
+    params: dict[str, str] = {
+        "startDate": period_start.strftime("%Y-%m-%d"),
+        "endDate": period_end.strftime("%Y-%m-%d"),
+    }
+
+    # ------------------------------------------------------------------
+    # Build HMAC-SHA256 signature for request authentication.
+    # ------------------------------------------------------------------
+    timestamp = str(int(time.time()))
+    message = f"{api_key}{timestamp}"
+    signature = hmac.new(
+        api_secret.encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    headers: dict[str, str] = {
+        "Authorization": f"Bearer {api_key}",
+        "X-IngramSpark-Key": api_key,
+        "X-IngramSpark-Signature": signature,
+        "X-IngramSpark-Timestamp": timestamp,
+        "Accept": "application/json",
+        "User-Agent": "SelfPublisherForge/0.1.0",
+    }
+
     logger.info(
-        "IngramSpark API key is configured for account %s; "
-        "API fetch will be performed when the IngramSpark client is integrated.",
+        "Fetching IngramSpark compensations for account %s, period %s to %s",
+        account.id,
+        params["startDate"],
+        params["endDate"],
+    )
+
+    # ------------------------------------------------------------------
+    # Fetch compensation report with retries and exponential backoff.
+    # ------------------------------------------------------------------
+    response_data = await _ingramspark_api_request(
+        url=f"{base_url}/compensation/reports",
+        headers=headers,
+        params=params,
+        account_id=str(account.id),
+    )
+
+    if response_data is None:
+        return []
+
+    return _parse_ingramspark_response(response_data, period_start, period_end, account)
+
+
+async def _ingramspark_api_request(
+    url: str,
+    headers: dict[str, str],
+    params: dict[str, str],
+    account_id: str,
+    max_retries: int = 3,
+) -> dict[str, Any] | list[Any] | None:
+    """Execute an authenticated GET request to the IngramSpark API with retry.
+
+    Retries up to *max_retries* times using exponential backoff (1 s, 2 s, 4 s).
+    Returns the parsed JSON response on success, or ``None`` on failure.
+    """
+    last_exc: Exception | None = None
+
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+                response = await client.get(url, headers=headers, params=params)
+
+            if response.status_code == 200:
+                return response.json()
+
+            # Retriable server / rate-limit errors
+            if response.status_code in (429, 500, 502, 503, 504):
+                logger.warning(
+                    "IngramSpark API returned %d on attempt %d/%d: %s",
+                    response.status_code,
+                    attempt + 1,
+                    max_retries,
+                    response.text[:500],
+                )
+                last_exc = httpx.HTTPStatusError(
+                    f"IngramSpark API error: {response.status_code}",
+                    request=response.request,
+                    response=response,
+                )
+            else:
+                # Non-retriable client errors (400, 401, 403, etc.)
+                logger.error(
+                    "IngramSpark API returned non-retriable status %d for "
+                    "account %s: %s",
+                    response.status_code,
+                    account_id,
+                    response.text[:500],
+                )
+                return None
+
+        except httpx.TimeoutException as exc:
+            logger.warning(
+                "IngramSpark API request timed out on attempt %d/%d: %s",
+                attempt + 1,
+                max_retries,
+                exc,
+            )
+            last_exc = exc
+
+        except httpx.RequestError as exc:
+            logger.warning(
+                "IngramSpark API request failed on attempt %d/%d: %s",
+                attempt + 1,
+                max_retries,
+                exc,
+            )
+            last_exc = exc
+
+        # Exponential backoff: 1 s, 2 s, 4 s
+        if attempt < max_retries - 1:
+            backoff = 2 ** attempt
+            logger.debug("Retrying IngramSpark API request in %ds ...", backoff)
+            await asyncio.sleep(backoff)
+
+    logger.error(
+        "IngramSpark API request failed after %d attempts for account %s. "
+        "Last error: %s",
+        max_retries,
+        account_id,
+        last_exc,
+    )
+    return None
+
+
+def _parse_ingramspark_response(
+    data: dict[str, Any] | list[Any],
+    period_start: datetime,
+    period_end: datetime,
+    account: Any,
+) -> list[dict[str, Any]]:
+    """Normalise IngramSpark API response into internal royalty record dicts.
+
+    Expected IngramSpark response structure::
+
+        {
+            "reports": [
+                {
+                    "title": "My Book Title",
+                    "isbn": "9781234567890",
+                    "isbn13": "9781234567890",
+                    "marketplace": "US",
+                    "format": "Paperback",
+                    "units": 10,
+                    "unitsRefunded": 0,
+                    "quantitySold": 10,
+                    "listPrice": 14.99,
+                    "retailPrice": 14.99,
+                    "royaltyRate": "0.40",
+                    "grossRevenue": 149.90,
+                    "grossAmount": 149.90,
+                    "royalties": 59.96,
+                    "netRevenue": 59.96,
+                    "currency": "USD"
+                },
+                ...
+            ]
+        }
+    """
+    records: list[dict[str, Any]] = []
+
+    # The API may return a top-level list or a dict with a reports/compensations key.
+    if isinstance(data, list):
+        report_items = data
+    else:
+        report_items = data.get("reports", data.get("compensations", []))
+
+    if not report_items:
+        logger.info(
+            "IngramSpark API returned no compensation items for account %s.",
+            account.id,
+        )
+        return records
+
+    for entry in report_items:
+        try:
+            title = entry.get("title") or entry.get("bookTitle", "Unknown")
+            units = int(entry.get("units", 0) or entry.get("quantitySold", 0))
+            units_refunded = int(entry.get("unitsRefunded", 0))
+            royalties = Decimal(
+                str(entry.get("royalties", 0) or entry.get("netRevenue", 0))
+            )
+            currency = entry.get("currency", "USD")
+            marketplace = entry.get("marketplace", "US")
+            isbn = entry.get("isbn") or entry.get("isbn13")
+
+            fmt = (entry.get("format", "paperback") or "paperback").lower()
+            if fmt not in ("ebook", "paperback", "hardcover", "audiobook"):
+                fmt = "paperback"
+
+            list_price = Decimal(
+                str(entry.get("listPrice", 0) or entry.get("retailPrice", 0))
+            )
+            gross = Decimal(
+                str(
+                    entry.get("grossRevenue", 0)
+                    or entry.get("grossAmount", royalties)
+                )
+            )
+            royalty_rate = Decimal(str(entry.get("royaltyRate", "0.00")))
+
+            records.append({
+                "platform": "ingram_spark",
+                "marketplace": marketplace,
+                "title": title,
+                "isbn": isbn,
+                "format_type": fmt,
+                "units_sold": max(units, 0),
+                "units_refunded": units_refunded,
+                "net_units": units - units_refunded,
+                "list_price": list_price,
+                "royalty_rate": royalty_rate,
+                "gross_revenue": gross,
+                "net_revenue": royalties,
+                "currency": currency,
+                "period_start": period_start,
+                "period_end": period_end,
+                "raw_data": entry,
+            })
+        except (KeyError, ValueError, TypeError) as exc:
+            logger.warning(
+                "Skipping unparseable IngramSpark compensation entry for "
+                "account %s: %s",
+                account.id,
+                exc,
+            )
+
+    logger.info(
+        "Parsed %d compensation records from IngramSpark API response "
+        "(%d raw items) for account %s.",
+        len(records),
+        len(report_items),
         account.id,
     )
-    return []
+    return records
 
 
 async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
-    """Fetch royalty data from the Draft2Digital reporting API.
+    """Fetch royalty/payout data from the Draft2Digital partner API.
 
-    Requires ``D2D_API_KEY`` env var.
-    Returns a list of normalised royalty record dicts ready for upsert.
+    Requires ``D2D_API_KEY`` env var.  The API key is passed as a Bearer
+    token in the ``Authorization`` header.
+
+    The function targets the previous full calendar month and returns a list of
+    normalised royalty record dicts ready for upsert into ``royalty_records``.
     """
     api_key = os.environ.get("D2D_API_KEY", "")
     if not api_key:
         logger.debug("D2D API key not configured; skipping API sync.")
         return []
 
-    # TODO: Implement Draft2Digital API integration.
-    # The implementation would:
-    #   1. Authenticate using the D2D partner API key
-    #   2. Retrieve the payout/royalty report for the current period
-    #   3. Return normalised dicts matching the RoyaltyRecord field schema
+    base_url = os.environ.get(
+        "D2D_API_URL",
+        "https://api.draft2digital.com/v1",
+    )
+
+    # ------------------------------------------------------------------
+    # Determine the reporting period (previous full calendar month).
+    # ------------------------------------------------------------------
+    now = datetime.now(timezone.utc)
+    first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    period_end = first_of_this_month - timedelta(microseconds=1)
+    period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
+
+    params: dict[str, str] = {
+        "startDate": period_start.strftime("%Y-%m-%d"),
+        "endDate": period_end.strftime("%Y-%m-%d"),
+    }
+
+    headers: dict[str, str] = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",
+        "User-Agent": "SelfPublisherForge/0.1.0",
+    }
+
     logger.info(
-        "D2D API key is configured for account %s; "
-        "API fetch will be performed when the D2D client is integrated.",
+        "Fetching D2D payouts for account %s, period %s to %s",
+        account.id,
+        params["startDate"],
+        params["endDate"],
+    )
+
+    # ------------------------------------------------------------------
+    # Fetch payout report with retries and exponential backoff.
+    # ------------------------------------------------------------------
+    response_data = await _d2d_api_request(
+        url=f"{base_url}/payouts/reports",
+        headers=headers,
+        params=params,
+        account_id=str(account.id),
+    )
+
+    if response_data is None:
+        return []
+
+    return _parse_d2d_response(response_data, period_start, period_end, account)
+
+
+async def _d2d_api_request(
+    url: str,
+    headers: dict[str, str],
+    params: dict[str, str],
+    account_id: str,
+    max_retries: int = 3,
+) -> dict[str, Any] | list[Any] | None:
+    """Execute an authenticated GET request to the D2D API with retry.
+
+    Retries up to *max_retries* times using exponential backoff (1 s, 2 s, 4 s).
+    Returns the parsed JSON response on success, or ``None`` on failure.
+    """
+    last_exc: Exception | None = None
+
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+                response = await client.get(url, headers=headers, params=params)
+
+            if response.status_code == 200:
+                return response.json()
+
+            # Retriable server / rate-limit errors
+            if response.status_code in (429, 500, 502, 503, 504):
+                logger.warning(
+                    "D2D API returned %d on attempt %d/%d: %s",
+                    response.status_code,
+                    attempt + 1,
+                    max_retries,
+                    response.text[:500],
+                )
+                last_exc = httpx.HTTPStatusError(
+                    f"D2D API error: {response.status_code}",
+                    request=response.request,
+                    response=response,
+                )
+            else:
+                # Non-retriable client errors (400, 401, 403, etc.)
+                logger.error(
+                    "D2D API returned non-retriable status %d for account %s: %s",
+                    response.status_code,
+                    account_id,
+                    response.text[:500],
+                )
+                return None
+
+        except httpx.TimeoutException as exc:
+            logger.warning(
+                "D2D API request timed out on attempt %d/%d: %s",
+                attempt + 1,
+                max_retries,
+                exc,
+            )
+            last_exc = exc
+
+        except httpx.RequestError as exc:
+            logger.warning(
+                "D2D API request failed on attempt %d/%d: %s",
+                attempt + 1,
+                max_retries,
+                exc,
+            )
+            last_exc = exc
+
+        # Exponential backoff: 1 s, 2 s, 4 s
+        if attempt < max_retries - 1:
+            backoff = 2 ** attempt
+            logger.debug("Retrying D2D API request in %ds ...", backoff)
+            await asyncio.sleep(backoff)
+
+    logger.error(
+        "D2D API request failed after %d attempts for account %s. Last error: %s",
+        max_retries,
+        account_id,
+        last_exc,
+    )
+    return None
+
+
+# -- D2D retailer slug to marketplace code mapping --
+_D2D_RETAILER_MAP: dict[str, str] = {
+    "amazon": "US",
+    "amazon_uk": "UK",
+    "amazon_de": "DE",
+    "amazon_fr": "FR",
+    "amazon_au": "AU",
+    "amazon_ca": "CA",
+    "apple": "US",
+    "apple_books": "US",
+    "barnes_and_noble": "US",
+    "nook": "US",
+    "kobo": "US",
+    "tolino": "DE",
+    "scribd": "US",
+    "overdrive": "US",
+    "libraries": "US",
+    "hoopla": "US",
+    "vivlio": "FR",
+    "palace_marketplace": "US",
+}
+
+
+def _parse_d2d_response(
+    data: dict[str, Any] | list[Any],
+    period_start: datetime,
+    period_end: datetime,
+    account: Any,
+) -> list[dict[str, Any]]:
+    """Normalise Draft2Digital API response into internal royalty record dicts.
+
+    Expected D2D response structure::
+
+        {
+            "payouts": [
+                {
+                    "title": "My Book Title",
+                    "isbn": "9781234567890",
+                    "retailer": "amazon",
+                    "marketplace": "US",
+                    "format": "ebook",
+                    "unitsSold": 25,
+                    "unitsRefunded": 0,
+                    "listPrice": 4.99,
+                    "royaltyAmount": 17.47,
+                    "grossAmount": 24.95,
+                    "currency": "USD"
+                },
+                ...
+            ]
+        }
+    """
+    records: list[dict[str, Any]] = []
+
+    # The API may return a top-level list or a dict with a payouts/reports key.
+    if isinstance(data, list):
+        payout_items = data
+    else:
+        payout_items = data.get("payouts", data.get("reports", data.get("sales", [])))
+
+    if not payout_items:
+        logger.info(
+            "D2D API returned no payout items for account %s.", account.id
+        )
+        return records
+
+    for entry in payout_items:
+        try:
+            title = entry.get("title") or entry.get("bookTitle", "Unknown")
+            units = int(entry.get("unitsSold", 0) or entry.get("units", 0))
+            units_refunded = int(entry.get("unitsRefunded", 0))
+            royalties = Decimal(
+                str(
+                    entry.get("royaltyAmount", 0)
+                    or entry.get("royalties", 0)
+                    or entry.get("netRevenue", 0)
+                )
+            )
+            currency = entry.get("currency", "USD")
+
+            # Marketplace: prefer explicit field, fall back to retailer mapping.
+            marketplace = entry.get("marketplace", "")
+            if not marketplace:
+                retailer = (entry.get("retailer", "") or "").lower()
+                marketplace = _D2D_RETAILER_MAP.get(retailer, "US")
+
+            isbn = entry.get("isbn") or entry.get("isbn13")
+
+            fmt = (entry.get("format", "ebook") or "ebook").lower()
+            if fmt not in ("ebook", "paperback", "hardcover", "audiobook"):
+                fmt = "ebook"
+
+            list_price = Decimal(
+                str(entry.get("listPrice", 0) or entry.get("retailPrice", 0))
+            )
+            gross = Decimal(
+                str(
+                    entry.get("grossAmount", 0)
+                    or entry.get("grossRevenue", royalties)
+                )
+            )
+            royalty_rate = Decimal(str(entry.get("royaltyRate", "0.00")))
+
+            records.append({
+                "platform": "draft2digital",
+                "marketplace": marketplace,
+                "title": title,
+                "isbn": isbn,
+                "format_type": fmt,
+                "units_sold": max(units, 0),
+                "units_refunded": units_refunded,
+                "net_units": units - units_refunded,
+                "list_price": list_price,
+                "royalty_rate": royalty_rate,
+                "gross_revenue": gross,
+                "net_revenue": royalties,
+                "currency": currency,
+                "period_start": period_start,
+                "period_end": period_end,
+                "raw_data": entry,
+            })
+        except (KeyError, ValueError, TypeError) as exc:
+            logger.warning(
+                "Skipping unparseable D2D payout entry for account %s: %s",
+                account.id,
+                exc,
+            )
+
+    logger.info(
+        "Parsed %d payout records from D2D API response (%d raw items) "
+        "for account %s.",
+        len(records),
+        len(payout_items),
         account.id,
     )
-    return []
+    return records
 
 
 # ---------- Celery Beat Schedule (for periodic tasks) ----------

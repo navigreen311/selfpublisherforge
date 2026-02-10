@@ -7,6 +7,7 @@
  *   - Direct-shape endpoints (e.g. SocialCalendar)                    -> use `resp.data`
  */
 
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { SuccessResponse } from "@/types/api";
@@ -354,4 +355,113 @@ export function useSendARCCopies(campaignId: string) {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaigns });
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Recent Activity (derived from existing marketing data)
+// ---------------------------------------------------------------------------
+
+export interface RecentActivityItem {
+  id: string;
+  type: "launch_plan" | "email_sequence" | "arc_campaign" | "social_post";
+  action: string;
+  title: string;
+  timestamp: string;
+}
+
+/**
+ * Derives a recent-activity feed from the existing marketing data queries.
+ * Combines launch plans, email sequences, ARC campaigns, and social posts,
+ * then sorts by most recent timestamp.
+ */
+export function useRecentActivity(limit = 8) {
+  const { data: plans, isLoading: plansLoading } = useLaunchPlans({ limit: 10 });
+  const { data: sequences, isLoading: seqLoading } = useEmailSequences({ limit: 10 });
+  const { data: arc, isLoading: arcLoading } = useARCCampaigns({ limit: 10 });
+  const { data: social, isLoading: socialLoading } = useSocialCalendar();
+
+  const isLoading = plansLoading || seqLoading || arcLoading || socialLoading;
+
+  const items: RecentActivityItem[] = useMemo(() => {
+    const activities: RecentActivityItem[] = [];
+
+    // Launch plans
+    for (const plan of plans?.items ?? []) {
+      const action =
+        plan.status === "draft"
+          ? "Plan created"
+          : plan.status === "active"
+            ? "Plan activated"
+            : plan.status === "completed"
+              ? "Plan completed"
+              : "Plan updated";
+      activities.push({
+        id: `lp-${plan.id}`,
+        type: "launch_plan",
+        action,
+        title: plan.title,
+        timestamp: plan.updated_at,
+      });
+    }
+
+    // Email sequences
+    for (const seq of sequences?.items ?? []) {
+      const action =
+        seq.sent_count > 0
+          ? `Email sent (${seq.sent_count}/${seq.recipient_count})`
+          : seq.status === "draft"
+            ? "Sequence created"
+            : "Sequence updated";
+      activities.push({
+        id: `es-${seq.id}`,
+        type: "email_sequence",
+        action,
+        title: seq.name,
+        timestamp: seq.updated_at,
+      });
+    }
+
+    // ARC campaigns
+    for (const campaign of arc?.items ?? []) {
+      const action =
+        campaign.sent_copies > 0
+          ? `ARC copies sent (${campaign.sent_copies}/${campaign.total_copies})`
+          : campaign.status === "draft"
+            ? "Campaign created"
+            : "Campaign updated";
+      activities.push({
+        id: `arc-${campaign.id}`,
+        type: "arc_campaign",
+        action,
+        title: campaign.name,
+        timestamp: campaign.updated_at,
+      });
+    }
+
+    // Social posts
+    for (const post of social?.posts ?? []) {
+      const action =
+        post.status === "published"
+          ? "Post published"
+          : post.status === "scheduled"
+            ? "Post scheduled"
+            : "Post drafted";
+      activities.push({
+        id: `sp-${post.id}`,
+        type: "social_post",
+        action,
+        title: post.content.slice(0, 60) + (post.content.length > 60 ? "..." : ""),
+        timestamp: post.published_at || post.scheduled_at || post.updated_at,
+      });
+    }
+
+    // Sort by timestamp descending
+    activities.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    return activities.slice(0, limit);
+  }, [plans, sequences, arc, social, limit]);
+
+  return { items, isLoading };
 }

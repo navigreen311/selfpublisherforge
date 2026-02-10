@@ -9,6 +9,7 @@ import {
   useListings,
   type CreateAccountPayload,
 } from "@/modules/publishing/hooks";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -92,7 +93,7 @@ export default function PublishingDashboardPage() {
         <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-gray-900">Active Listings</h3>
           {listingsLoading ? (
-            <p className="mt-1 text-sm text-gray-400">Loading...</p>
+            <Skeleton className="mt-1 h-10 w-20" />
           ) : listingsError ? (
             <p className="mt-1 text-sm text-red-500">Failed to load</p>
           ) : (
@@ -171,7 +172,11 @@ export default function PublishingDashboardPage() {
         )}
 
         {accountsLoading ? (
-          <div className="py-8 text-center text-gray-500">Loading accounts...</div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
         ) : accounts.length === 0 ? (
           <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
             <h3 className="font-medium text-gray-900">No accounts connected</h3>

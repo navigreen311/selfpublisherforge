@@ -26,7 +26,13 @@ from app.modules.advertising.schemas import (
     AdPlatform,
     CampaignStatus,
     CampaignType,
+    FacebookCampaignCreate,
+    FacebookCampaignUpdate,
+    FacebookCampaignResponse,
+    FacebookCampaignListResponse,
+    FacebookCampaignMetrics,
 )
+from app.modules.advertising.facebook_ads import FacebookAdsError
 from app.modules.advertising.service import AdvertisingService
 
 router = APIRouter()
@@ -307,3 +313,181 @@ async def get_dashboard(
 ):
     """Get aggregate ad performance dashboard."""
     return await service.get_dashboard(org_id=current_user["org_id"])
+
+
+# ─── Facebook Ads Endpoints ─────────────────────────────────────────────────
+
+@router.post(
+    "/facebook/campaigns",
+    response_model=FacebookCampaignResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Facebook ad campaign",
+    description="Create a new advertising campaign on Facebook via the Marketing API.",
+)
+async def create_facebook_campaign(
+    data: FacebookCampaignCreate,
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Create a Facebook Ads campaign."""
+    try:
+        return await service.facebook_create_campaign(
+            org_id=current_user["org_id"],
+            data=data,
+        )
+    except FacebookAdsError as exc:
+        raise HTTPException(
+            status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        )
+
+
+@router.get(
+    "/facebook/campaigns",
+    response_model=FacebookCampaignListResponse,
+    summary="List Facebook campaigns",
+    description="List Facebook Ads campaigns for the configured ad account.",
+)
+async def list_facebook_campaigns(
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: str | None = Query(None, alias="status"),
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """List Facebook Ads campaigns."""
+    try:
+        return await service.facebook_list_campaigns(
+            org_id=current_user["org_id"],
+            limit=limit,
+            status_filter=status_filter,
+        )
+    except FacebookAdsError as exc:
+        raise HTTPException(
+            status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        )
+
+
+@router.get(
+    "/facebook/campaigns/{campaign_id}",
+    response_model=FacebookCampaignResponse,
+    summary="Get Facebook campaign details",
+    description="Get details for a single Facebook Ads campaign by its external ID.",
+)
+async def get_facebook_campaign(
+    campaign_id: str,
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Get a single Facebook Ads campaign."""
+    try:
+        return await service.facebook_get_campaign(
+            org_id=current_user["org_id"],
+            external_campaign_id=campaign_id,
+        )
+    except FacebookAdsError as exc:
+        status_code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        if status_code == 404 or (exc.fb_error and exc.fb_error.get("code") == 100):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Facebook campaign not found",
+            )
+        raise HTTPException(status_code=status_code, detail=str(exc))
+
+
+@router.patch(
+    "/facebook/campaigns/{campaign_id}",
+    response_model=FacebookCampaignResponse,
+    summary="Update Facebook campaign",
+    description="Update an existing Facebook Ads campaign's name, status, or budget.",
+)
+async def update_facebook_campaign(
+    campaign_id: str,
+    data: FacebookCampaignUpdate,
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Update a Facebook Ads campaign."""
+    try:
+        return await service.facebook_update_campaign(
+            org_id=current_user["org_id"],
+            external_campaign_id=campaign_id,
+            data=data,
+        )
+    except FacebookAdsError as exc:
+        status_code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        if status_code == 404 or (exc.fb_error and exc.fb_error.get("code") == 100):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Facebook campaign not found",
+            )
+        raise HTTPException(status_code=status_code, detail=str(exc))
+
+
+@router.post(
+    "/facebook/campaigns/{campaign_id}/pause",
+    response_model=FacebookCampaignResponse,
+    summary="Pause Facebook campaign",
+    description="Pause an active Facebook Ads campaign.",
+)
+async def pause_facebook_campaign(
+    campaign_id: str,
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Pause a Facebook Ads campaign."""
+    try:
+        return await service.facebook_pause_campaign(
+            org_id=current_user["org_id"],
+            external_campaign_id=campaign_id,
+        )
+    except FacebookAdsError as exc:
+        status_code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        if status_code == 404 or (exc.fb_error and exc.fb_error.get("code") == 100):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Facebook campaign not found",
+            )
+        raise HTTPException(status_code=status_code, detail=str(exc))
+
+
+@router.get(
+    "/facebook/campaigns/{campaign_id}/metrics",
+    response_model=FacebookCampaignMetrics,
+    summary="Get Facebook campaign metrics",
+    description="Get performance metrics (impressions, clicks, spend, CTR, CPC, etc.) for a Facebook campaign.",
+)
+async def get_facebook_campaign_metrics(
+    campaign_id: str,
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Get performance metrics for a Facebook Ads campaign."""
+    # Validate date format
+    from datetime import datetime as dt
+    for label, value in [("start_date", start_date), ("end_date", end_date)]:
+        try:
+            dt.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid {label} format. Use YYYY-MM-DD.",
+            )
+
+    try:
+        return await service.facebook_get_campaign_metrics(
+            org_id=current_user["org_id"],
+            external_campaign_id=campaign_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except FacebookAdsError as exc:
+        status_code = exc.status_code or status.HTTP_502_BAD_GATEWAY
+        if status_code == 404 or (exc.fb_error and exc.fb_error.get("code") == 100):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Facebook campaign not found",
+            )
+        raise HTTPException(status_code=status_code, detail=str(exc))

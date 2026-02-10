@@ -15,12 +15,17 @@ representation that can be consumed by any PDF rendering backend.
 
 from __future__ import annotations
 
+import base64
 import io
 import json
+import logging
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any
+
+import barcode
+from barcode.writer import ImageWriter
 
 from app.modules.publishing_ops.schemas import (
     ChapterInput,
@@ -28,6 +33,8 @@ from app.modules.publishing_ops.schemas import (
     TemplateStyleSettings,
     TrimSize,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------- Trim size dimensions (width x height in inches) ----------
@@ -115,16 +122,96 @@ def _build_chapter_html(title: str, content: str, style: TemplateStyleSettings) 
     )
 
 
-def _isbn_barcode_html(isbn: str) -> str:
-    """Placeholder for ISBN barcode rendering."""
-    return (
-        f'<div class="isbn-barcode" style="text-align: center; margin-top: 2em;">\n'
-        f"  <p><strong>ISBN: {isbn}</strong></p>\n"
-        f'  <div style="border: 2px solid #000; padding: 10px; display: inline-block;">\n'
-        f"    <code>|||| {isbn} ||||</code>\n"
-        f"  </div>\n"
-        f"</div>"
+def _validate_isbn13(isbn: str) -> str:
+    """Validate and normalize an ISBN-13 string.
+
+    Strips hyphens/spaces, checks length and digit-only content,
+    and verifies the ISBN-13 check digit.
+
+    Returns
+    -------
+    str
+        The 13-digit normalized ISBN.
+
+    Raises
+    ------
+    ValueError
+        If the ISBN is invalid.
+    """
+    cleaned = isbn.replace("-", "").replace(" ", "").strip()
+    if len(cleaned) != 13:
+        raise ValueError(
+            f"ISBN must be exactly 13 digits after removing hyphens/spaces, "
+            f"got {len(cleaned)} characters: '{isbn}'"
+        )
+    if not cleaned.isdigit():
+        raise ValueError(f"ISBN must contain only digits (and optional hyphens), got: '{isbn}'")
+
+    # Verify the ISBN-13 check digit (alternating weights of 1 and 3)
+    total = sum(
+        int(digit) * (1 if i % 2 == 0 else 3)
+        for i, digit in enumerate(cleaned)
     )
+    if total % 10 != 0:
+        raise ValueError(
+            f"ISBN-13 check digit is invalid for '{isbn}'. "
+            f"Expected checksum divisible by 10, got remainder {total % 10}."
+        )
+
+    return cleaned
+
+
+def render_isbn_barcode(isbn: str) -> bytes:
+    """Render an ISBN-13 as an EAN-13 barcode PNG image.
+
+    Parameters
+    ----------
+    isbn:
+        A valid ISBN-13 string (hyphens allowed, will be stripped).
+
+    Returns
+    -------
+    bytes
+        PNG image data of the rendered barcode.
+
+    Raises
+    ------
+    ValueError
+        If the ISBN is malformed or has an invalid check digit.
+    """
+    cleaned = _validate_isbn13(isbn)
+
+    ean = barcode.get("ean13", cleaned, writer=ImageWriter())
+    buffer = io.BytesIO()
+    ean.write(buffer)
+    return buffer.getvalue()
+
+
+def _isbn_barcode_html(isbn: str) -> str:
+    """Render an ISBN-13 barcode as an inline HTML ``<img>`` tag.
+
+    Generates a real EAN-13 barcode image using ``python-barcode`` and
+    embeds it as a base64-encoded data URI.  Falls back to a text
+    placeholder if the ISBN is invalid or barcode generation fails.
+    """
+    try:
+        png_bytes = render_isbn_barcode(isbn)
+        b64 = base64.b64encode(png_bytes).decode("ascii")
+        return (
+            f'<div class="isbn-barcode" style="text-align: center; margin-top: 2em;">\n'
+            f'  <img src="data:image/png;base64,{b64}" '
+            f'alt="ISBN {isbn}" style="max-width: 300px; height: auto;" />\n'
+            f"  <p><strong>ISBN: {isbn}</strong></p>\n"
+            f"</div>"
+        )
+    except (ValueError, Exception) as exc:
+        logger.warning("Failed to render ISBN barcode for '%s': %s", isbn, exc)
+        return (
+            f'<div class="isbn-barcode" style="text-align: center; margin-top: 2em;">\n'
+            f"  <p><strong>ISBN: {isbn}</strong></p>\n"
+            f"  <p><em>(Barcode could not be generated: {exc})</em></p>\n"
+            f"</div>"
+        )
 
 
 def generate_pdf(

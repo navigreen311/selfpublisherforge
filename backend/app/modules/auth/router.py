@@ -1,6 +1,6 @@
 """FastAPI router for authentication endpoints (/api/v1/auth/...)."""
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -195,3 +195,69 @@ async def mfa_disable(
     """Disable MFA (requires current password for confirmation)."""
     await service.disable_mfa(db, user_id=current_user["user_id"], password=body.password)
     return MessageResponse(message="MFA disabled successfully.")
+
+
+# ---------------------------------------------------------------------------
+# OAuth — Google
+# ---------------------------------------------------------------------------
+@router.get(
+    "/oauth/google",
+    response_model=schemas.OAuthAuthorizationURL,
+    summary="Google OAuth authorization URL",
+    description="Returns the Google OAuth2 authorization URL to redirect the user to.",
+)
+async def oauth_google():
+    """Return Google OAuth2 authorization URL."""
+    return service.generate_google_auth_url()
+
+
+@router.get(
+    "/oauth/google/callback",
+    response_model=None,
+    summary="Google OAuth callback",
+    description="Handle the Google OAuth2 callback, create or link user account, and return JWT tokens.",
+)
+async def oauth_google_callback(
+    code: str = Query(..., description="Authorization code from Google"),
+    state: str | None = Query(None, description="CSRF state parameter"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Google OAuth2 callback."""
+    result = await service.handle_google_callback(db, code=code)
+    return {
+        "user": result["user"],
+        "tokens": result["tokens"].model_dump(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# OAuth — GitHub
+# ---------------------------------------------------------------------------
+@router.get(
+    "/oauth/github",
+    response_model=schemas.OAuthAuthorizationURL,
+    summary="GitHub OAuth authorization URL",
+    description="Returns the GitHub OAuth authorization URL to redirect the user to.",
+)
+async def oauth_github():
+    """Return GitHub OAuth authorization URL."""
+    return service.generate_github_auth_url()
+
+
+@router.get(
+    "/oauth/github/callback",
+    response_model=None,
+    summary="GitHub OAuth callback",
+    description="Handle the GitHub OAuth callback, create or link user account, and return JWT tokens.",
+)
+async def oauth_github_callback(
+    code: str = Query(..., description="Authorization code from GitHub"),
+    state: str | None = Query(None, description="CSRF state parameter"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle GitHub OAuth callback."""
+    result = await service.handle_github_callback(db, code=code)
+    return {
+        "user": result["user"],
+        "tokens": result["tokens"].model_dump(),
+    }

@@ -8,7 +8,6 @@ import {
   Moon,
   Monitor,
   Menu,
-  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,10 +26,9 @@ import { useTheme } from "@/hooks/use-theme";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuthStore, useUIStore } from "@/lib/store";
 
-const breadcrumbLabels: Record<string, string> = {
+const pageLabels: Record<string, string> = {
   dashboard: "Dashboard",
   projects: "Projects",
-  new: "New Project",
   market: "Market Research",
   writing: "Writing Studio",
   publishing: "Publishing",
@@ -51,10 +49,10 @@ export function Header() {
   const notifications = useUIStore((s) => s.notifications);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const segments = pathname
+  const firstSegment = pathname
     ?.split("/")
     .filter(Boolean)
-    .filter((s) => !s.startsWith("("));
+    .filter((s) => !s.startsWith("("))[0];
 
   const userInitials = user?.name
     ? user.name
@@ -76,7 +74,7 @@ export function Header() {
 
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-4 md:px-6">
-      {/* Left: Mobile menu + Breadcrumbs */}
+      {/* Left: Mobile menu + Page title */}
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -87,25 +85,12 @@ export function Header() {
           <Menu className="h-5 w-5" />
         </Button>
 
-        {/* Breadcrumbs */}
-        <nav className="hidden sm:flex items-center gap-1 text-sm">
-          {segments?.map((segment, i) => (
-            <span key={segment} className="flex items-center gap-1">
-              {i > 0 && (
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-              )}
-              <span
-                className={
-                  i === (segments?.length ?? 0) - 1
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground"
-                }
-              >
-                {breadcrumbLabels[segment] || segment}
-              </span>
-            </span>
-          ))}
-        </nav>
+        {/* Page Title */}
+        {firstSegment && (
+          <span className="hidden sm:block text-sm font-medium text-foreground">
+            {pageLabels[firstSegment] || firstSegment}
+          </span>
+        )}
       </div>
 
       {/* Right: Search, notifications, theme, avatar */}

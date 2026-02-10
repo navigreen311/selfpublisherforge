@@ -48,7 +48,7 @@ services:
     environment:
       POSTGRES_DB: selfpublisherforge
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -79,6 +79,7 @@ services:
       - "9200:9200"
     environment:
       - discovery.type=single-node
+      # Security disabled for local dev only - production uses AWS OpenSearch with IAM auth
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
@@ -215,11 +216,26 @@ services:
     networks:
       - spf-network
 
+  grafana:
+    image: grafana/grafana:10.2-oss
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - spf-network
+
 volumes:
   pgdata:
   redisdata:
   esdata:
   prometheusdata:
+  grafana_data:
 
 networks:
   spf-network:

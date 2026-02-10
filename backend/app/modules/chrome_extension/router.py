@@ -1,7 +1,8 @@
 """FastAPI router for the Chrome Extension API.
 
 Endpoints:
-    POST /api/v1/extension/extract        — Save extracted Amazon data
+    GET  /api/v1/extension/version         — Current published extension version
+    POST /api/v1/extension/extract         — Save extracted Amazon data
     GET  /api/v1/extension/quick-research  — Quick niche data for sidebar
     POST /api/v1/extension/clip            — Save clip to Knowledge Vault
 """
@@ -15,10 +16,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.chrome_extension import service
+from app.modules.chrome_extension.constants import (
+    EXTENSION_CHANGELOG,
+    EXTENSION_MIN_VERSION,
+    EXTENSION_UPDATE_URL,
+    EXTENSION_VERSION,
+)
 from app.modules.chrome_extension.schemas import (
     AmazonMarketplace,
     ClipSaveRequest,
     ClipSaveResponse,
+    ExtensionVersionResponse,
     ExtractDataRequest,
     ExtractedDataResponse,
     QuickResearchQuery,
@@ -27,6 +35,23 @@ from app.modules.chrome_extension.schemas import (
 from shared.contracts.api import SuccessResponse
 
 router = APIRouter(prefix="/extension", tags=["chrome-extension"])
+
+
+@router.get(
+    "/version",
+    response_model=SuccessResponse[ExtensionVersionResponse],
+    summary="Current published extension version",
+    description="Returns the latest published extension version, minimum supported version, update URL, and changelog. No authentication required.",
+)
+async def get_extension_version():
+    return SuccessResponse(
+        data=ExtensionVersionResponse(
+            version=EXTENSION_VERSION,
+            min_version=EXTENSION_MIN_VERSION,
+            update_url=EXTENSION_UPDATE_URL,
+            changelog=EXTENSION_CHANGELOG,
+        )
+    )
 
 
 @router.post(
