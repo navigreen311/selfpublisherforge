@@ -82,7 +82,7 @@ def task_generate_epub(
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as exc:
-        self.retry(exc=exc)
+        raise self.retry(exc=exc)
 
 
 @celery_app.task(
@@ -148,7 +148,7 @@ def task_generate_pdf(
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as exc:
-        self.retry(exc=exc)
+        raise self.retry(exc=exc)
 
 
 @celery_app.task(
@@ -182,4 +182,4 @@ def task_sync_listing(
             "message": f"Successfully synced listing with {platform}",
         }
     except Exception as exc:
-        self.retry(exc=exc)
+        raise self.retry(exc=exc)

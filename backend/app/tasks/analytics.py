@@ -185,9 +185,10 @@ def royalty_sync(self, org_id: str, platform: str) -> dict[str, Any]:
 
 
 # ---------- Celery Beat Schedule (for periodic tasks) ----------
+# Exported as a dict for merging into the central scheduler; do NOT mutate
+# celery_app.conf.beat_schedule directly from module-level code.
 
-celery_app.conf.beat_schedule = {
-    **getattr(celery_app.conf, "beat_schedule", {}),
+ANALYTICS_BEAT_SCHEDULE = {
     "daily-metric-aggregation": {
         "task": "analytics.daily_metric_aggregation",
         "schedule": 86400.0,  # Every 24 hours

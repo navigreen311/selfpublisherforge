@@ -90,8 +90,9 @@ def create_in_app_notification_task(
             await session.commit()
             return str(notification.id)
 
+    loop = asyncio.new_event_loop()
     try:
-        notification_id = asyncio.get_event_loop().run_until_complete(_create())
+        notification_id = loop.run_until_complete(_create())
         logger.info(
             "In-app notification created: id=%s user=%s type=%s",
             notification_id,
@@ -108,6 +109,8 @@ def create_in_app_notification_task(
             str(exc),
         )
         raise self.retry(exc=exc)
+    finally:
+        loop.close()
 
 
 @celery_app.task(

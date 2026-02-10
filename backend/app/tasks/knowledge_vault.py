@@ -42,7 +42,11 @@ def import_from_url_task(self, org_id: str, url: str, extract_facts: bool = True
                 logger.exception("Failed to import URL %s", url)
                 raise self.retry(exc=exc)
 
-    return asyncio.get_event_loop().run_until_complete(_run())
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_run())
+    finally:
+        loop.close()
 
 
 @celery_app.task(
@@ -83,7 +87,11 @@ def import_from_file_task(
                 logger.exception("Failed to import file %s", file_name)
                 raise self.retry(exc=exc)
 
-    return asyncio.get_event_loop().run_until_complete(_run())
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_run())
+    finally:
+        loop.close()
 
 
 @celery_app.task(name="knowledge_vault.reindex_all", bind=True)
@@ -121,4 +129,8 @@ def reindex_all_task(self, org_id: str):
         logger.info("Re-indexed %d entries for org %s", count, org_id)
         return {"reindexed": count, "org_id": org_id}
 
-    return asyncio.get_event_loop().run_until_complete(_run())
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_run())
+    finally:
+        loop.close()
