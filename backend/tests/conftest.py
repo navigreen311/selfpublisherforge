@@ -1,87 +1,87 @@
-"""Shared test fixtures for the Marketing & Launch Command module tests."""
-
-from __future__ import annotations
+"""Shared test fixtures for backend tests."""
 
 import asyncio
-import uuid
-from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
     AsyncSession,
-    async_sessionmaker,
     create_async_engine,
+    async_sessionmaker,
 )
+from sqlalchemy import event
 
-from app.database import Base
+from app.database import Base, get_db
+from app.main import create_app
 
 
-# ---------------------------------------------------------------------------
-# Async event loop
-# ---------------------------------------------------------------------------
+# Use in-memory SQLite for tests
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Create a session-scoped event loop for async tests."""
+    """Create an event loop for the test session."""
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
-# ---------------------------------------------------------------------------
-# In-memory SQLite engine for testing
-# ---------------------------------------------------------------------------
-
 @pytest_asyncio.fixture(scope="session")
-async def engine() -> AsyncGenerator[AsyncEngine, None]:
-    """Create an async in-memory SQLite engine for testing."""
-    eng = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        echo=False,
-    )
-    async with eng.begin() as conn:
+async def test_engine():
+    """Create a test database engine."""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+
+    # Enable foreign key support for SQLite
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    yield eng
+    yield engine
 
-    async with eng.begin() as conn:
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    await eng.dispose()
+
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture
-async def db(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
-    """Provide a transactional database session for each test."""
+async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+    """Create a fresh database session for each test."""
     session_factory = async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
+        test_engine, class_=AsyncSession, expire_on_commit=False
     )
+
     async with session_factory() as session:
         yield session
         await session.rollback()
 
 
-# ---------------------------------------------------------------------------
-# Common test data
-# ---------------------------------------------------------------------------
-
 @pytest.fixture
-def org_id() -> uuid.UUID:
-    return uuid.UUID("00000000-0000-0000-0000-000000000001")
+def org_id():
+    """Generate a test org ID."""
+    return uuid4()
 
 
 @pytest.fixture
-def user_id() -> uuid.UUID:
-    return uuid.UUID("00000000-0000-0000-0000-000000000002")
+def user_id():
+    """Generate a test user ID."""
+    return uuid4()
 
 
 @pytest.fixture
-def book_id() -> uuid.UUID:
-    return uuid.UUID("00000000-0000-0000-0000-000000000003")
-
-
-@pytest.fixture
-def future_launch_date() -> datetime:
-    return datetime.now(timezone.utc) + timedelta(days=30)
+def current_user(user_id, org_id):
+    """Mock current user dict."""
+    return {
+        "user_id": user_id,
+        "org_id": org_id,
+        "role": "admin",
+    }
