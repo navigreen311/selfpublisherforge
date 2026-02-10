@@ -50,4 +50,31 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "analytics_queue"},
         "kwargs": {},
     },
+    # ------------------------------------------------------------------
+    # Market Intelligence: refresh Amazon category tree — daily
+    # ------------------------------------------------------------------
+    "market-refresh-categories-daily": {
+        "task": "app.tasks.market_intelligence.refresh_category_data",
+        "schedule": schedule(run_every=86400),  # 24 hours
+        "options": {"queue": "analytics_queue"},
+        "kwargs": {},
+    },
+    # ------------------------------------------------------------------
+    # Market Intelligence: update BSR history — every 6 hours
+    # ------------------------------------------------------------------
+    "market-update-bsr-history-6h": {
+        "task": "app.tasks.market_intelligence.update_bsr_history",
+        "schedule": schedule(run_every=21600),  # 6 hours
+        "options": {"queue": "analytics_queue"},
+        "kwargs": {},
+    },
+    # ------------------------------------------------------------------
+    # Market Intelligence: generate daily snapshots — daily
+    # ------------------------------------------------------------------
+    "market-generate-snapshot-daily": {
+        "task": "app.tasks.market_intelligence.generate_market_snapshot",
+        "schedule": schedule(run_every=86400),  # 24 hours
+        "options": {"queue": "analytics_queue"},
+        "kwargs": {},
+    },
 }

@@ -31,7 +31,7 @@ def _run_async(coro):
 # ---------------------------------------------------------------------------
 
 @celery_app.task(
-    name="market_intelligence.refresh_categories",
+    name="app.tasks.market_intelligence.refresh_category_data",
     bind=True,
     max_retries=3,
     default_retry_delay=60,
@@ -76,7 +76,7 @@ def _count_nodes(nodes: list[dict]) -> int:
 # ---------------------------------------------------------------------------
 
 @celery_app.task(
-    name="market_intelligence.update_bsr_history",
+    name="app.tasks.market_intelligence.update_bsr_history",
     bind=True,
     max_retries=3,
     default_retry_delay=120,
@@ -127,7 +127,7 @@ def update_bsr_history(self):
 # ---------------------------------------------------------------------------
 
 @celery_app.task(
-    name="market_intelligence.generate_market_snapshot",
+    name="app.tasks.market_intelligence.generate_market_snapshot",
     bind=True,
     max_retries=3,
     default_retry_delay=60,
@@ -175,23 +175,3 @@ def generate_market_snapshot(self, category_id: str | None = None):
     except Exception as exc:
         logger.error("Market snapshot generation failed: %s", exc)
         raise self.retry(exc=exc)
-
-
-# ---------------------------------------------------------------------------
-# Celery Beat schedule (to be merged into main celeryconfig)
-# ---------------------------------------------------------------------------
-
-CELERY_BEAT_SCHEDULE = {
-    "market-refresh-categories-daily": {
-        "task": "market_intelligence.refresh_categories",
-        "schedule": 86400,  # 24 hours
-    },
-    "market-update-bsr-history-6h": {
-        "task": "market_intelligence.update_bsr_history",
-        "schedule": 21600,  # 6 hours
-    },
-    "market-generate-snapshot-daily": {
-        "task": "market_intelligence.generate_market_snapshot",
-        "schedule": 86400,  # 24 hours
-    },
-}
