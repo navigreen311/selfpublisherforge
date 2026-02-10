@@ -84,8 +84,9 @@ def _register_routers(app: FastAPI):
     from app.modules.production_pipeline.router import router as pipeline_router
     app.include_router(pipeline_router, prefix=f"{prefix}/pipelines", tags=["pipelines"])
 
-    from app.modules.publishing_ops.router import router as publishing_router
+    from app.modules.publishing_ops.router import router as publishing_router, metadata_router as publishing_metadata_router
     app.include_router(publishing_router, prefix=f"{prefix}/publishing", tags=["publishing"])
+    app.include_router(publishing_metadata_router, prefix=prefix, tags=["publishing"])
 
     from app.modules.kdp_validation.router import router as kdp_router
     app.include_router(kdp_router, prefix=prefix, tags=["kdp-validation"])

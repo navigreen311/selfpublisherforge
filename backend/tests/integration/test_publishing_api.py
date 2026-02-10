@@ -11,7 +11,7 @@ import uuid
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.modules.publishing_ops.router import router
+from app.modules.publishing_ops.router import router, metadata_router
 from app.modules.publishing_ops.service import _reset_stores
 from app.modules.publishing_ops.schemas import (
     ExportFormat,
@@ -24,7 +24,8 @@ from app.modules.publishing_ops.schemas import (
 from fastapi import FastAPI
 
 app = FastAPI()
-app.include_router(router, prefix="/api/v1")
+app.include_router(router, prefix="/api/v1/publishing")
+app.include_router(metadata_router, prefix="/api/v1")
 
 BASE = "/api/v1"
 

@@ -1,18 +1,20 @@
 """FastAPI router for the Publishing Operations Center.
 
-Endpoints
+Endpoints (after prefix="/api/v1/publishing" applied by main.py)
 ---------
-GET    /publishing/accounts              List connected publishing accounts
-POST   /publishing/accounts              Connect a publishing account
-DELETE /publishing/accounts/{id}          Disconnect account
-POST   /publishing/export/epub           Generate EPUB from manuscript
-POST   /publishing/export/pdf            Generate print-ready PDF
-GET    /publishing/templates             List formatting templates
-POST   /publishing/templates             Create custom template
-GET    /books/{id}/metadata              Get book metadata
-PATCH  /books/{id}/metadata              Update metadata
-GET    /publishing/listings              List all listings across platforms
-POST   /publishing/listings/{id}/sync    Sync listing with platform
+GET    /accounts              List connected publishing accounts
+POST   /accounts              Connect a publishing account
+DELETE /accounts/{id}          Disconnect account
+POST   /export/epub           Generate EPUB from manuscript
+POST   /export/pdf            Generate print-ready PDF
+GET    /templates             List formatting templates
+POST   /templates             Create custom template
+GET    /listings              List all listings across platforms
+POST   /listings/{id}/sync    Sync listing with platform
+
+Book metadata endpoints are on a separate router registered at "/api/v1":
+GET    /books/{id}/metadata   Get book metadata
+PATCH  /books/{id}/metadata   Update metadata
 """
 
 from __future__ import annotations
@@ -37,13 +39,16 @@ from app.modules.publishing_ops.schemas import (
 
 router = APIRouter(tags=["publishing"])
 
+# Separate router for book-level endpoints that live outside /publishing.
+metadata_router = APIRouter(tags=["publishing"])
+
 # A placeholder org_id; in production this comes from auth/session.
 _DEFAULT_ORG = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
 # ---------- Publishing Accounts ----------
 
-@router.get("/publishing/accounts", response_model=list[PublishingAccount])
+@router.get("/accounts", response_model=list[PublishingAccount])
 async def list_accounts(
     org_id: uuid.UUID = Query(default=_DEFAULT_ORG),
 ):
@@ -51,7 +56,7 @@ async def list_accounts(
     return await service.list_accounts(org_id)
 
 
-@router.post("/publishing/accounts", response_model=PublishingAccount, status_code=201)
+@router.post("/accounts", response_model=PublishingAccount, status_code=201)
 async def create_account(
     data: PublishingAccountCreate,
     org_id: uuid.UUID = Query(default=_DEFAULT_ORG),
@@ -60,7 +65,7 @@ async def create_account(
     return await service.create_account(org_id, data)
 
 
-@router.delete("/publishing/accounts/{account_id}", status_code=204)
+@router.delete("/accounts/{account_id}", status_code=204)
 async def delete_account(account_id: uuid.UUID):
     """Disconnect (remove) a publishing account."""
     deleted = await service.delete_account(account_id)
@@ -71,7 +76,7 @@ async def delete_account(account_id: uuid.UUID):
 
 # ---------- Export ----------
 
-@router.post("/publishing/export/epub", response_model=ExportResponse, status_code=201)
+@router.post("/export/epub", response_model=ExportResponse, status_code=201)
 async def export_epub(
     request: ExportRequest,
     org_id: uuid.UUID = Query(default=_DEFAULT_ORG),
@@ -81,7 +86,7 @@ async def export_epub(
     return await service.generate_export(org_id, request)
 
 
-@router.post("/publishing/export/pdf", response_model=ExportResponse, status_code=201)
+@router.post("/export/pdf", response_model=ExportResponse, status_code=201)
 async def export_pdf(
     request: ExportRequest,
     org_id: uuid.UUID = Query(default=_DEFAULT_ORG),
@@ -93,7 +98,7 @@ async def export_pdf(
 
 # ---------- Formatting Templates ----------
 
-@router.get("/publishing/templates", response_model=list[FormattingTemplate])
+@router.get("/templates", response_model=list[FormattingTemplate])
 async def list_templates(
     org_id: uuid.UUID = Query(default=_DEFAULT_ORG),
 ):
@@ -101,7 +106,7 @@ async def list_templates(
     return await service.list_templates(org_id)
 
 
-@router.post("/publishing/templates", response_model=FormattingTemplate, status_code=201)
+@router.post("/templates", response_model=FormattingTemplate, status_code=201)
 async def create_template(
     data: FormattingTemplateCreate,
     org_id: uuid.UUID = Query(default=_DEFAULT_ORG),
@@ -110,9 +115,9 @@ async def create_template(
     return await service.create_template(org_id, data)
 
 
-# ---------- Book Metadata ----------
+# ---------- Book Metadata (on separate router) ----------
 
-@router.get("/books/{book_id}/metadata", response_model=BookMetadata)
+@metadata_router.get("/books/{book_id}/metadata", response_model=BookMetadata)
 async def get_metadata(book_id: uuid.UUID):
     """Retrieve metadata for a specific book."""
     meta = await service.get_metadata(book_id)
@@ -121,7 +126,7 @@ async def get_metadata(book_id: uuid.UUID):
     return meta
 
 
-@router.patch("/books/{book_id}/metadata", response_model=BookMetadata)
+@metadata_router.patch("/books/{book_id}/metadata", response_model=BookMetadata)
 async def update_metadata(book_id: uuid.UUID, data: BookMetadataUpdate):
     """Create or update metadata for a specific book."""
     return await service.update_metadata(book_id, data)
@@ -129,7 +134,7 @@ async def update_metadata(book_id: uuid.UUID, data: BookMetadataUpdate):
 
 # ---------- Listings ----------
 
-@router.get("/publishing/listings", response_model=list[ListingDetail])
+@router.get("/listings", response_model=list[ListingDetail])
 async def list_listings(
     org_id: uuid.UUID = Query(default=_DEFAULT_ORG),
 ):
@@ -137,7 +142,7 @@ async def list_listings(
     return await service.list_listings(org_id)
 
 
-@router.post("/publishing/listings/{listing_id}/sync", response_model=ListingSyncResponse)
+@router.post("/listings/{listing_id}/sync", response_model=ListingSyncResponse)
 async def sync_listing(listing_id: uuid.UUID):
     """Trigger a sync for a specific listing with its platform."""
     return await service.sync_listing(listing_id)
