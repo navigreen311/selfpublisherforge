@@ -1,7 +1,7 @@
 """SQLAlchemy models for the Competitor Weakness Finder module.
 
-The competitor_books and competitor_reviews tables are owned by W02 (read-only here).
-This module owns the analysis result tables.
+The competitor_books and competitor_reviews tables are owned by W02 (app.models.market).
+This module imports those models and owns the analysis result tables.
 """
 import uuid
 from datetime import datetime
@@ -14,80 +14,14 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    func,
-    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base, BaseModel, TenantModel
+from app.database import BaseModel, TenantModel
 
-
-class CompetitorBook(Base):
-    """Read-only reference to the W02-owned competitor_books table."""
-
-    __tablename__ = "competitor_books"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        server_default=text("gen_random_uuid()"),
-    )
-    org_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), index=True)
-    asin: Mapped[str] = mapped_column(String(20), index=True)
-    title: Mapped[str] = mapped_column(String(500))
-    author: Mapped[str | None] = mapped_column(String(300), nullable=True)
-    bsr: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    price: Mapped[float | None] = mapped_column(Float, nullable=True)
-    rating: Mapped[float | None] = mapped_column(Float, nullable=True)
-    review_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    category: Mapped[str | None] = mapped_column(String(300), nullable=True)
-    cover_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-
-    reviews: Mapped[list["CompetitorReview"]] = relationship(
-        back_populates="book", lazy="selectin"
-    )
-    analyses: Mapped[list["CompetitorAnalysis"]] = relationship(
-        back_populates="book", lazy="selectin"
-    )
-
-
-class CompetitorReview(Base):
-    """Read-only reference to the W02-owned competitor_reviews table."""
-
-    __tablename__ = "competitor_reviews"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        server_default=text("gen_random_uuid()"),
-    )
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("competitor_books.id"), index=True
-    )
-    reviewer_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    rating: Mapped[int] = mapped_column(Integer)
-    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    body: Mapped[str | None] = mapped_column(Text, nullable=True)
-    review_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    verified_purchase: Mapped[bool] = mapped_column(Boolean, default=False)
-    helpful_votes: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-
-    book: Mapped["CompetitorBook"] = relationship(back_populates="reviews")
+# Re-export the canonical models so existing imports from this module keep working
+from app.models.market import CompetitorBook, CompetitorReview  # noqa: F401
 
 
 class CompetitorAnalysis(TenantModel):

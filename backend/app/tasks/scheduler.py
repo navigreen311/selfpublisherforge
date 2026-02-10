@@ -51,18 +51,12 @@ CELERY_BEAT_SCHEDULE = {
         "kwargs": {},
     },
     # ------------------------------------------------------------------
-    # Pricing automation — promotion lifecycle management
+    # Competitor alerts — every hour
     # ------------------------------------------------------------------
-    "activate-scheduled-promotions": {
-        "task": "pricing.activate_scheduled_promotions",
-        "schedule": 900.0,  # Every 15 minutes
+    "check-competitor-alerts-hourly": {
+        "task": "competitor_finder.check_competitor_alerts",
+        "schedule": schedule(run_every=3600),  # Every hour
         "options": {"queue": "default"},
-        "kwargs": {},
-    },
-    "complete-expired-promotions": {
-        "task": "pricing.complete_expired_promotions",
-        "schedule": 900.0,  # Every 15 minutes
-        "options": {"queue": "default"},
-        "kwargs": {},
+        "args": [],
     },
 }
