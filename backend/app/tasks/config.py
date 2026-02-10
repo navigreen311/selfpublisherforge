@@ -38,6 +38,10 @@ TASK_ROUTES = {
     "app.tasks.email_tasks.*": {"queue": "email_queue", "routing_key": "email"},
     "app.tasks.file_tasks.*": {"queue": "file_queue", "routing_key": "file"},
     "app.tasks.analytics_tasks.*": {"queue": "analytics_queue", "routing_key": "analytics"},
+    "marketing.send_scheduled_emails": {"queue": "email_queue", "routing_key": "email"},
+    "marketing.send_social_post_reminders": {"queue": "email_queue", "routing_key": "email"},
+    "marketing.send_arc_follow_ups": {"queue": "email_queue", "routing_key": "email"},
+    "marketing.generate_launch_plan_async": {"queue": "ai_queue", "routing_key": "ai"},
 }
 
 # ---------------------------------------------------------------------------

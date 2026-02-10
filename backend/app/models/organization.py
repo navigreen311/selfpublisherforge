@@ -79,12 +79,20 @@ class Organization(BaseModel):
         primaryjoin="Organization.id == foreign(Campaign.org_id)",
     )
     email_sequences = relationship(
-        "EmailSequence", back_populates="organization", lazy="selectin",
+        "EmailSequence", lazy="selectin", viewonly=True,
         primaryjoin="Organization.id == foreign(EmailSequence.org_id)",
     )
-    reader_panels = relationship(
-        "ReaderPanel", back_populates="organization", lazy="selectin",
-        primaryjoin="Organization.id == foreign(ReaderPanel.org_id)",
+    launch_plans = relationship(
+        "LaunchPlan", lazy="selectin", viewonly=True,
+        primaryjoin="Organization.id == foreign(LaunchPlan.org_id)",
+    )
+    social_posts = relationship(
+        "SocialPost", lazy="selectin", viewonly=True,
+        primaryjoin="Organization.id == foreign(SocialPost.org_id)",
+    )
+    arc_campaigns = relationship(
+        "ARCCampaign", lazy="selectin", viewonly=True,
+        primaryjoin="Organization.id == foreign(ARCCampaign.org_id)",
     )
     agents = relationship(
         "Agent", back_populates="organization", lazy="selectin",

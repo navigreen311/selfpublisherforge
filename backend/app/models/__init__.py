@@ -7,7 +7,7 @@ from app.models.project import Project, Book, Series, PenName, BookVersion
 from app.models.content import Manuscript, Chapter, StyleProfile, WritingSession, ContentAsset
 from app.models.market import MarketCategory, MarketKeyword, CompetitorBook, CompetitorReview, MarketSnapshot
 from app.models.publishing import PublishingAccount, Listing, UploadValidation, ComplianceScan, PricingRule as PublishingPricingRule
-from app.models.marketing import LaunchPlan as MarketingLaunchPlan, EmailSequence as MarketingEmailSequence
+from app.models.marketing import LaunchPlan, LaunchPhase, PhaseTask, EmailSequence, EmailTemplate, SocialPost, ARCCampaign, ARCRecipient
 from app.models.agent import Agent as DomainAgent, AgentTask as DomainAgentTask, AgentWorkflow as DomainAgentWorkflow, AgentBudget as DomainAgentBudget, AuditTrail as DomainAuditTrail
 from app.models.analytics import AnalyticsEvent as DomainAnalyticsEvent, RoyaltyRecord as DomainRoyaltyRecord, PortfolioMetric, ABTest as DomainABTest, Report as DomainReport
 
@@ -31,7 +31,7 @@ __all__ = [
     "Manuscript", "Chapter", "StyleProfile", "WritingSession", "ContentAsset",
     "MarketCategory", "MarketKeyword", "CompetitorBook", "CompetitorReview", "MarketSnapshot",
     "PublishingAccount", "Listing", "UploadValidation", "ComplianceScan", "PublishingPricingRule",
-    "MarketingLaunchPlan", "MarketingEmailSequence",
+    "LaunchPlan", "LaunchPhase", "PhaseTask", "EmailSequence", "EmailTemplate", "SocialPost", "ARCCampaign", "ARCRecipient",
     "DomainAgent", "DomainAgentTask", "DomainAgentWorkflow", "DomainAgentBudget", "DomainAuditTrail",
     "DomainAnalyticsEvent", "DomainRoyaltyRecord", "PortfolioMetric", "DomainABTest", "DomainReport",
     # Module models
