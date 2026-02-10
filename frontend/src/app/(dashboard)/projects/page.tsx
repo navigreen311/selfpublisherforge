@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, Search, FolderOpen, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ function ProjectCardSkeleton() {
 }
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -167,7 +169,7 @@ export default function ProjectsPage() {
           title="No projects found"
           description="Try adjusting your search or filters, or create a new project to get started."
           actionLabel="Create Project"
-          onAction={() => (window.location.href = "/projects/new")}
+          onAction={() => router.push("/projects/new")}
         />
       )}
 

@@ -88,7 +88,7 @@ export function Sidebar() {
         <Separator />
 
         {/* Main Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+        <nav aria-label="Main navigation" className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -98,6 +98,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-label={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md text-sm font-medium transition-colors",
                   collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
@@ -136,6 +137,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-label={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md text-sm font-medium transition-colors",
                   collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
@@ -188,6 +190,7 @@ export function Sidebar() {
                     size="icon"
                     className="h-8 w-8"
                     onClick={logout}
+                    aria-label="Sign out"
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>
@@ -200,6 +203,7 @@ export function Sidebar() {
                 size="icon"
                 className="h-8 w-8 shrink-0"
                 onClick={logout}
+                aria-label="Sign out"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -210,7 +214,13 @@ export function Sidebar() {
         {/* Collapse Toggle */}
         <Separator />
         <div className="p-2 flex justify-center">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggle}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={toggle}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
             ) : (

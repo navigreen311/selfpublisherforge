@@ -31,7 +31,11 @@ function MobileFrame({
       </div>
 
       {/* Cover placeholder */}
-      <div className="mx-auto w-32 h-48 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-400 mb-3">
+      <div
+        role="img"
+        aria-label="Book cover preview placeholder"
+        className="mx-auto w-32 h-48 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-400 mb-3"
+      >
         Book Cover
       </div>
 
@@ -124,60 +128,65 @@ export function MobilePreview({ className }: MobilePreviewProps) {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <label htmlFor="mobile-preview-title" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
+                id="mobile-preview-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Book title"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
+              <label htmlFor="mobile-preview-author" className="block text-sm font-medium text-gray-700 mb-1">Author</label>
               <input
+                id="mobile-preview-author"
                 type="text"
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Author name"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="mobile-preview-subtitle" className="block text-sm font-medium text-gray-700 mb-1">
                 Subtitle (optional)
               </label>
               <input
+                id="mobile-preview-subtitle"
                 type="text"
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Subtitle"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="mobile-preview-price" className="block text-sm font-medium text-gray-700 mb-1">
                 Price (optional)
               </label>
               <input
+                id="mobile-preview-price"
                 type="number"
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="3.99"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Blurb</label>
+            <label htmlFor="mobile-preview-blurb" className="block text-sm font-medium text-gray-700 mb-1">Blurb</label>
             <textarea
+              id="mobile-preview-blurb"
               value={blurb}
               onChange={(e) => setBlurb(e.target.value)}
               rows={4}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Book description / blurb"
             />
           </div>
@@ -185,7 +194,7 @@ export function MobilePreview({ className }: MobilePreviewProps) {
             onClick={handleCheck}
             disabled={!title || !blurb || !authorName || mobileMutation.isPending}
             className={cn(
-              "rounded-md px-4 py-2 text-sm font-medium text-white",
+              "rounded-md px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2",
               !title || !blurb || !authorName
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-indigo-600 hover:bg-indigo-700"
@@ -280,7 +289,7 @@ export function MobilePreview({ className }: MobilePreviewProps) {
       )}
 
       {mobileMutation.isError && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+        <div role="alert" className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
           Failed to check mobile display. Please try again.
         </div>
       )}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
@@ -9,6 +10,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.schemas.common import PlanTier
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 
 # ---------------------------------------------------------------------------
@@ -87,11 +90,11 @@ class CheckoutRequest(BaseModel):
 
     plan_tier: PlanTier = Field(description="Target plan tier")
     success_url: str = Field(
-        default="http://localhost:3000/settings/billing?success=true",
+        default=f"{FRONTEND_URL}/settings/billing?success=true",
         description="URL to redirect after successful checkout",
     )
     cancel_url: str = Field(
-        default="http://localhost:3000/settings/billing?canceled=true",
+        default=f"{FRONTEND_URL}/settings/billing?canceled=true",
         description="URL to redirect if user cancels checkout",
     )
 
@@ -107,7 +110,7 @@ class PortalRequest(BaseModel):
     """Request body to create a Stripe billing portal session."""
 
     return_url: str = Field(
-        default="http://localhost:3000/settings/billing",
+        default=f"{FRONTEND_URL}/settings/billing",
         description="URL to redirect when user returns from portal",
     )
 

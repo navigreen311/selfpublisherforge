@@ -23,7 +23,7 @@ groups:
         annotations:
           summary: "API service has zero running tasks in production"
           description: "P0 CRITICAL: API service has zero running tasks in production. Service is completely unavailable to users."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/api-service-down"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/api-service-down.md"
 
       - alert: DatabaseConnectionFailure
         expr: pg_stat_activity_count{instance=~"selfpublisherforge-production-postgres.*"} < 1
@@ -35,7 +35,7 @@ groups:
         annotations:
           summary: "No active database connections detected"
           description: "P0 CRITICAL: No active database connections detected. RDS instance may be down or unreachable."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-connection-failure"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/rds-connection-failure.md"
 
       - alert: APIErrorRateCritical
         expr: >
@@ -52,7 +52,7 @@ groups:
         annotations:
           summary: "API error rate has exceeded 5%"
           description: "P0 CRITICAL: API error rate has exceeded 5%. Current value: {{ $value | printf \"%.2f\" }}%. Widespread failures affecting users."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/high-error-rate"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/high-error-rate.md"
 
       - alert: RDSStorageSpaceCritical
         expr: rds_free_storage_space_bytes{dbinstance_identifier="selfpublisherforge-production-postgres"} < 2147483648
@@ -64,7 +64,7 @@ groups:
         annotations:
           summary: "RDS free storage is below 2 GB"
           description: "P0 CRITICAL: RDS free storage is below 2 GB. Database writes may fail imminently."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-storage-critical"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/rds-storage-critical.md"
 
   # ---------------------------------------------------------------------------
   # P1 — Urgent: Respond within 15 minutes, degraded experience
@@ -84,7 +84,7 @@ groups:
         annotations:
           summary: "API P95 latency has exceeded 2 seconds"
           description: "P1 URGENT: API P95 latency has exceeded 2 seconds. Current P95: {{ $value | printf \"%.3f\" }}s. Users are experiencing significant slowness."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/high-latency"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/high-latency.md"
 
       - alert: APIErrorRateWarning
         expr: >
@@ -101,7 +101,7 @@ groups:
         annotations:
           summary: "API error rate has exceeded 1% SLO threshold"
           description: "P1 URGENT: API error rate has exceeded 1% SLO threshold. Current rate: {{ $value | printf \"%.2f\" }}%."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/elevated-error-rate"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elevated-error-rate.md"
 
       - alert: CeleryQueueDepthCritical
         expr: celery_queue_length{env="production"} > 500
@@ -113,7 +113,7 @@ groups:
         annotations:
           summary: "Celery queue depth has exceeded 500 tasks"
           description: "P1 URGENT: Celery queue depth has exceeded 500 tasks. Current depth: {{ $value }}. Background job processing is severely backed up."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/celery-queue-backup"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/celery-queue-backup.md"
 
       - alert: RDSCPUCritical
         expr: rds_cpu_utilization_percent{dbinstance_identifier="selfpublisherforge-production-postgres"} > 90
@@ -125,7 +125,7 @@ groups:
         annotations:
           summary: "RDS CPU utilization is above 90%"
           description: "P1 URGENT: RDS CPU utilization is above 90%. Current: {{ $value | printf \"%.1f\" }}%. Database performance is likely degraded."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-high-cpu"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/rds-high-cpu.md"
 
       - alert: RedisMemoryUsageCritical
         expr: >
@@ -141,7 +141,7 @@ groups:
         annotations:
           summary: "Redis memory usage is above 90%"
           description: "P1 URGENT: Redis memory usage is above 90%. Current: {{ $value | printf \"%.1f\" }}%. Cache evictions may be occurring, LRU eviction will accelerate."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/redis-high-memory"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/redis-high-memory.md"
 
   # ---------------------------------------------------------------------------
   # P2 — Warning: Respond within 1 hour, potential issue developing
@@ -159,7 +159,7 @@ groups:
         annotations:
           summary: "ECS service {{ $labels.service_name }} has excessive task restarts"
           description: "P2 WARNING: ECS service {{ $labels.service_name }} has had more than 5 task restarts in 30 minutes. Possible crash loop or OOM kills."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/ecs-task-restarts"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/ecs-task-restarts.md"
 
       - alert: APILatencyP95Warning
         expr: >
@@ -174,7 +174,7 @@ groups:
         annotations:
           summary: "API P95 latency exceeds 500ms SLO target"
           description: "P2 WARNING: API P95 latency exceeds 500ms SLO target. Current P95: {{ $value | printf \"%.3f\" }}s."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/latency-investigation"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/latency-investigation.md"
 
       - alert: CeleryTaskFailureRate
         expr: >
@@ -195,7 +195,7 @@ groups:
         annotations:
           summary: "Celery task failure rate exceeds 5%"
           description: "P2 WARNING: Celery task failure rate exceeds 5%. Current rate: {{ $value | printf \"%.2f\" }}%."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/celery-failures"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/celery-failures.md"
 
       - alert: RDSFreeStorageLow
         expr: rds_free_storage_space_bytes{dbinstance_identifier="selfpublisherforge-production-postgres"} < 10737418240
@@ -207,7 +207,7 @@ groups:
         annotations:
           summary: "RDS free storage is below 10 GB"
           description: "P2 WARNING: RDS free storage is below 10 GB. Current free: {{ $value | humanize1024 }}B. Plan for storage expansion."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/rds-storage-low"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/rds-storage-low.md"
 
       - alert: DBConnectionPoolNearCapacity
         expr: pg_stat_activity_count{instance=~"selfpublisherforge-production-postgres.*"} > 150
@@ -219,7 +219,7 @@ groups:
         annotations:
           summary: "Database connection count is above 150 (max 200)"
           description: "P2 WARNING: Database connection count is above 150 (max 200). Current connections: {{ $value }}."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/db-connection-pool"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/db-connection-pool.md"
 
   # ---------------------------------------------------------------------------
   # P3 — Informational: Next business day, tracking trends
@@ -237,7 +237,7 @@ groups:
         annotations:
           summary: "ECS service {{ $labels.container_label_com_amazonaws_ecs_service_name }} CPU sustained above 70%"
           description: "P3 INFO: ECS service {{ $labels.container_label_com_amazonaws_ecs_service_name }} CPU has been above 70% for 1 hour. Consider scaling review."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/high-cpu"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/high-cpu.md"
 
       - alert: RedisCacheHitRateLow
         expr: >
@@ -258,7 +258,7 @@ groups:
         annotations:
           summary: "Redis cache hit rate is below 80%"
           description: "P3 INFO: Redis cache hit rate is below 80%. Current rate: {{ $value | printf \"%.1f\" }}%. Review cache key strategies and TTLs."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/redis-low-hit-rate"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/redis-low-hit-rate.md"
 
       - alert: CeleryQueueGrowingTrend
         expr: celery_queue_length{env="production"} > 100
@@ -270,7 +270,7 @@ groups:
         annotations:
           summary: "Celery queue depth sustained above 100"
           description: "P3 INFO: Celery queue depth has been above 100 for 1 hour. Current depth: {{ $value }}. May need more workers or task optimization."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/celery-queue-growing"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/celery-queue-growing.md"
 
       - alert: DeploymentCompleted
         expr: >
@@ -283,7 +283,7 @@ groups:
         annotations:
           summary: "A new deployment to production has been detected"
           description: "P3 INFO: A new deployment to production has been detected. Review deployment health metrics."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/deployment-completed"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/deployment-completed.md"
 
       - alert: ElasticsearchClusterHealthRed
         expr: elasticsearch_cluster_health_status{color="red", cluster=~"selfpublisherforge.*"} == 1
@@ -295,7 +295,7 @@ groups:
         annotations:
           summary: "Elasticsearch cluster health is RED"
           description: "P1 URGENT: Elasticsearch cluster health is RED. One or more primary shards are unassigned. Search functionality may be degraded or unavailable."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/elasticsearch-red"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elasticsearch-red.md"
 
       - alert: ElasticsearchClusterHealthYellow
         expr: elasticsearch_cluster_health_status{color="yellow", cluster=~"selfpublisherforge.*"} == 1
@@ -307,4 +307,4 @@ groups:
         annotations:
           summary: "Elasticsearch cluster health is YELLOW"
           description: "P2 WARNING: Elasticsearch cluster health is YELLOW for over 30 minutes. One or more replica shards are unassigned. Redundancy is reduced."
-          runbook_url: "https://github.com/navigreen311/selfpublisherforge/wiki/runbooks/elasticsearch-yellow"
+          runbook_url: "https://github.com/navigreen311/selfpublisherforge/blob/main/docs/runbooks/elasticsearch-yellow.md"

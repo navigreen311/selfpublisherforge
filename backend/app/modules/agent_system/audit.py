@@ -6,9 +6,12 @@ and debugging purposes.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,7 +95,7 @@ async def list_audit_entries(
             cursor_dt = datetime.fromisoformat(cursor)
             query = query.where(AuditTrail.created_at < cursor_dt)
         except ValueError:
-            pass
+            logger.exception("Failed to write audit log entry")
 
     query = query.limit(limit + 1)
     result = await db.execute(query)

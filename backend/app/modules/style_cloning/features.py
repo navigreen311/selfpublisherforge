@@ -41,7 +41,8 @@ _STOP_WORDS: frozenset[str] = frozenset(
 # from a frequency corpus; here we use a heuristic: words <= 5 chars that
 # appear often in the text are considered common.
 
-_CONTENT_POS_PREFIXES = frozenset()  # placeholder; we rely on heuristics below
+# Empty by design: feature extraction uses heuristic analysis rather than POS prefix matching
+_CONTENT_POS_PREFIXES: frozenset[str] = frozenset()
 
 
 def _is_content_word(word: str) -> bool:

@@ -9,7 +9,7 @@ import {
   useUpdateCampaign,
   useOptimizeCampaign,
 } from "@/modules/advertising/hooks";
-import type { OptimizationSuggestion } from "@/modules/advertising/hooks";
+import type { Campaign, OptimizationSuggestion } from "@/modules/advertising/hooks";
 import { PerformanceChart } from "@/modules/advertising/components/PerformanceChart";
 import { BidManager } from "@/modules/advertising/components/BidManager";
 import { CreativeEditor } from "@/modules/advertising/components/CreativeEditor";
@@ -28,12 +28,13 @@ export default function CampaignDetailPage() {
   const updateCampaign = useUpdateCampaign(campaignId);
   const optimizeCampaign = useOptimizeCampaign(campaignId);
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: Campaign["status"]) => {
     try {
-      await updateCampaign.mutateAsync({ status: newStatus } as any);
-      toast.success(`Campaign ${newStatus}`);
-    } catch {
-      toast.error("Failed to update campaign status");
+      await updateCampaign.mutateAsync({ status: newStatus });
+      toast.success("Campaign status updated");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update campaign status";
+      toast.error(message);
     }
   };
 
@@ -72,7 +73,7 @@ export default function CampaignDetailPage() {
     );
   }
 
-  const statusActions: Record<string, { label: string; status: string }[]> = {
+  const statusActions: Record<string, { label: string; status: Campaign["status"] }[]> = {
     draft: [{ label: "Activate", status: "active" }],
     active: [
       { label: "Pause", status: "paused" },

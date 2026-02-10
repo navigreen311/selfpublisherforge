@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
   Search,
@@ -41,6 +42,8 @@ const pageLabels: Record<string, string> = {
 };
 
 export function Header() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { openMobile } = useSidebar();
@@ -63,6 +66,13 @@ export function Header() {
         .slice(0, 2)
     : "U";
 
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      router.push(`/market?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+    }
+  };
+
   const themeIcon =
     theme === "dark" ? (
       <Moon className="h-4 w-4" />
@@ -81,6 +91,7 @@ export function Header() {
           size="icon"
           className="md:hidden"
           onClick={openMobile}
+          aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
         </Button>
@@ -99,8 +110,12 @@ export function Header() {
         <div className="hidden md:flex relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Search books, keywords, markets..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch}
             className="pl-9 w-64 h-9"
+            aria-label="Search books, keywords, and markets"
           />
         </div>
 
@@ -109,7 +124,7 @@ export function Header() {
         {/* Theme Toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Toggle theme">
               {themeIcon}
             </Button>
           </DropdownMenuTrigger>
@@ -127,7 +142,13 @@ export function Header() {
         </DropdownMenu>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="h-9 w-9 relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 relative"
+          onClick={() => router.push("/settings")}
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <Badge

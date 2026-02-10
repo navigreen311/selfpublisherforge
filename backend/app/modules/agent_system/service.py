@@ -6,9 +6,12 @@ operations.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -256,7 +259,7 @@ async def list_tasks(
             cursor_dt = datetime.fromisoformat(cursor)
             query = query.where(AgentTask.created_at < cursor_dt)
         except ValueError:
-            pass
+            logger.warning("Invalid status value encountered: %s", cursor)
 
     query = query.limit(limit + 1)
     result = await db.execute(query)
@@ -479,7 +482,7 @@ async def list_workflows(
             cursor_dt = datetime.fromisoformat(cursor)
             query = query.where(AgentWorkflow.created_at < cursor_dt)
         except ValueError:
-            pass
+            logger.warning("Invalid status value encountered: %s", cursor)
 
     query = query.limit(limit + 1)
     result = await db.execute(query)

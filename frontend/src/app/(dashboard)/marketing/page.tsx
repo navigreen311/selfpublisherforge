@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Rocket, Mail, Activity } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Tab = "overview" | "launch-plans" | "email" | "social" | "arc";
 
@@ -244,6 +245,8 @@ function LaunchPlansTab({
   }>;
   isLoading: boolean;
 }) {
+  const router = useRouter();
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "--";
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -288,7 +291,7 @@ function LaunchPlansTab({
             title="No launch plans yet"
             description="Generate your first AI-powered launch plan to coordinate your book launch."
             actionLabel="Generate Launch Plan"
-            onAction={() => (window.location.href = "/marketing/launch/new")}
+            onAction={() => router.push("/marketing/launch/new")}
           />
         </div>
       ) : (
@@ -337,6 +340,8 @@ function EmailTab({
   }>;
   isLoading: boolean;
 }) {
+  const router = useRouter();
+
   const statusColors: Record<string, string> = {
     draft: "bg-gray-100 text-gray-700",
     active: "bg-green-100 text-green-700",
@@ -373,7 +378,7 @@ function EmailTab({
             title="No email sequences yet"
             description="Create your first email sequence to engage your readers and build your audience."
             actionLabel="Create Sequence"
-            onAction={() => (window.location.href = "/marketing/email")}
+            onAction={() => router.push("/marketing/email")}
           />
         </div>
       ) : (

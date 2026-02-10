@@ -29,7 +29,9 @@ export class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("ErrorBoundary caught:", error, errorInfo);
+    if (process.env.NODE_ENV === "development") {
+      console.error("ErrorBoundary caught:", error, errorInfo);
+    }
   }
 
   render() {
@@ -58,6 +60,11 @@ export class ErrorBoundary extends React.Component<
                 >
                   Try again
                 </Button>
+                {process.env.NODE_ENV === "development" && this.state.error?.message && (
+                  <pre className="mt-4 p-3 bg-muted rounded text-xs overflow-auto max-h-40">
+                    {this.state.error.message}
+                  </pre>
+                )}
               </div>
             </CardContent>
           </Card>

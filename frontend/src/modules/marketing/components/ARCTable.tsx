@@ -59,7 +59,7 @@ export function ARCTable({
         <h2 className="text-xl font-bold">ARC Campaigns</h2>
         <button
           onClick={onCreateCampaign}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           New ARC Campaign
         </button>
@@ -73,16 +73,16 @@ export function ARCTable({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+          <table className="w-full border-collapse" aria-label="ARC campaigns">
             <thead>
               <tr className="bg-gray-50 text-left text-sm text-gray-500">
-                <th className="p-3 font-medium">Campaign</th>
-                <th className="p-3 font-medium">Status</th>
-                <th className="p-3 font-medium text-center">Total</th>
-                <th className="p-3 font-medium text-center">Sent</th>
-                <th className="p-3 font-medium text-center">Reviews</th>
-                <th className="p-3 font-medium">Deadline</th>
-                <th className="p-3 font-medium">Actions</th>
+                <th scope="col" className="p-3 font-medium">Campaign</th>
+                <th scope="col" className="p-3 font-medium">Status</th>
+                <th scope="col" className="p-3 font-medium text-center">Total</th>
+                <th scope="col" className="p-3 font-medium text-center">Sent</th>
+                <th scope="col" className="p-3 font-medium text-center">Reviews</th>
+                <th scope="col" className="p-3 font-medium">Deadline</th>
+                <th scope="col" className="p-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -135,7 +135,8 @@ export function ARCTable({
                         {campaign.status === "draft" && (
                           <button
                             onClick={() => onSendCopies?.(campaign.id)}
-                            className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                            aria-label={`Send copies for ${campaign.name}`}
+                            className="text-sm px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
                           >
                             Send
                           </button>

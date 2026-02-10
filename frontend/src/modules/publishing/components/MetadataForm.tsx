@@ -9,6 +9,39 @@ import {
 } from "../hooks";
 import { toast } from "sonner";
 
+const MAX_KEYWORDS = 7;
+
+const isValidISBN = (isbn: string): boolean => {
+  const cleaned = isbn.replace(/[-\s]/g, "");
+  if (cleaned.length === 10) {
+    // ISBN-10: sum of (digit * position) mod 11 == 0
+    let sum = 0;
+    for (let i = 0; i < 10; i++) {
+      const char = cleaned[i];
+      const val = char === "X" && i === 9 ? 10 : parseInt(char, 10);
+      if (isNaN(val)) return false;
+      sum += val * (10 - i);
+    }
+    return sum % 11 === 0;
+  }
+  if (cleaned.length === 13) {
+    // ISBN-13: alternating 1,3 weights, sum mod 10 == 0
+    let sum = 0;
+    for (let i = 0; i < 13; i++) {
+      const val = parseInt(cleaned[i], 10);
+      if (isNaN(val)) return false;
+      sum += val * (i % 2 === 0 ? 1 : 3);
+    }
+    return sum % 10 === 0;
+  }
+  return false;
+};
+
+const isValidASIN = (asin: string): boolean => {
+  // ASIN: 10 alphanumeric characters, typically starting with B
+  return /^[A-Z0-9]{10}$/.test(asin.toUpperCase());
+};
+
 interface MetadataFormProps {
   bookId: string;
 }
@@ -40,6 +73,8 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
   const [listPrice, setListPrice] = useState("0.00");
   const [salePrice, setSalePrice] = useState("");
   const [currency, setCurrency] = useState("USD");
+  const [isbnError, setIsbnError] = useState("");
+  const [asinError, setAsinError] = useState("");
 
   useEffect(() => {
     if (metadata) {
@@ -70,6 +105,32 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate ISBN if provided
+    if (form.isbn && form.isbn.trim() !== "" && !isValidISBN(form.isbn)) {
+      setIsbnError("Invalid ISBN format. Must be a valid ISBN-10 or ISBN-13.");
+      toast.error("Invalid ISBN format");
+      return;
+    }
+    setIsbnError("");
+
+    // Validate ASIN if provided
+    if (form.asin && form.asin.trim() !== "" && !isValidASIN(form.asin)) {
+      setAsinError("Invalid ASIN format. Must be 10 alphanumeric characters.");
+      toast.error("Invalid ASIN format");
+      return;
+    }
+    setAsinError("");
+
+    // Validate keyword count
+    const keywords = keywordsInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (keywords.length > MAX_KEYWORDS) {
+      toast.error(`Maximum ${MAX_KEYWORDS} keywords allowed`);
+      return;
+    }
 
     const payload: BookMetadataUpdate = {
       ...form,
@@ -187,17 +248,37 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Keywords (comma-separated, max 7)
+              Keywords (comma-separated, max {MAX_KEYWORDS})
             </label>
             <input
               type="text"
               value={keywordsInput}
-              onChange={(e) => setKeywordsInput(e.target.value)}
+              onChange={(e) => {
+                const newKeywords = e.target.value
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                if (newKeywords.length > MAX_KEYWORDS) {
+                  toast.error(`Maximum ${MAX_KEYWORDS} keywords allowed`);
+                  return;
+                }
+                setKeywordsInput(e.target.value);
+              }}
               placeholder="thriller, suspense, mystery, detective"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
+                keywordsInput.split(",").filter((k) => k.trim()).length > MAX_KEYWORDS
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+              }`}
             />
-            <p className="mt-1 text-xs text-gray-400">
-              {keywordsInput.split(",").filter((k) => k.trim()).length}/7 keywords
+            <p
+              className={`mt-1 text-xs ${
+                keywordsInput.split(",").filter((k) => k.trim()).length >= MAX_KEYWORDS
+                  ? "text-red-500 font-medium"
+                  : "text-gray-400"
+              }`}
+            >
+              {keywordsInput.split(",").filter((k) => k.trim()).length}/{MAX_KEYWORDS} keywords
             </p>
           </div>
           <div>
@@ -224,20 +305,42 @@ export function MetadataForm({ bookId }: MetadataFormProps) {
             <input
               type="text"
               value={form.isbn || ""}
-              onChange={(e) => setForm({ ...form, isbn: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, isbn: e.target.value });
+                if (isbnError) setIsbnError("");
+              }}
               placeholder="978-0-123456-47-2"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
+                isbnError
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+              }`}
             />
+            {isbnError && (
+              <p className="mt-1 text-xs text-red-500">{isbnError}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ASIN</label>
             <input
               type="text"
               value={form.asin || ""}
-              onChange={(e) => setForm({ ...form, asin: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, asin: e.target.value });
+                if (asinError) setAsinError("");
+              }}
               placeholder="B0XXXXXXXXX"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-1 ${
+                asinError
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+              }`}
             />
+            {asinError ? (
+              <p className="mt-1 text-xs text-red-500">{asinError}</p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-400">10 alphanumeric characters (e.g., B0XXXXXXXXX)</p>
+            )}
           </div>
         </div>
       </section>

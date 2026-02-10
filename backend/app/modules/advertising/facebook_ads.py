@@ -1,11 +1,13 @@
 """Facebook Ads API client for campaign creation, audience targeting, and reporting.
 
-Uses httpx to call the Facebook Marketing API v18.0 REST endpoints directly.
+Uses httpx to call the Facebook Marketing API REST endpoints directly.
+The API version defaults to v18.0 and can be overridden with FACEBOOK_ADS_API_VERSION.
 Credentials are read from environment variables:
   - FACEBOOK_APP_ID
   - FACEBOOK_APP_SECRET
   - FACEBOOK_ACCESS_TOKEN
   - FACEBOOK_AD_ACCOUNT_ID
+  - FACEBOOK_ADS_API_VERSION (optional, default: v18.0)
 """
 
 import logging
@@ -18,6 +20,9 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+FACEBOOK_ADS_API_VERSION = os.environ.get("FACEBOOK_ADS_API_VERSION", "v18.0")
+FACEBOOK_GRAPH_API_BASE = f"https://graph.facebook.com/{FACEBOOK_ADS_API_VERSION}"
 
 # Timeout for all Facebook API requests (connect, read, write, pool)
 _DEFAULT_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
@@ -44,7 +49,7 @@ class FacebookAdsClient:
     - Performance reporting
     """
 
-    BASE_URL = "https://graph.facebook.com/v18.0"
+    BASE_URL = FACEBOOK_GRAPH_API_BASE
 
     def __init__(
         self,
@@ -134,7 +139,8 @@ class FacebookAdsClient:
         if response.status_code >= 400:
             try:
                 error_data = response.json()
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to parse Facebook error response as JSON: %s", exc)
                 error_data = {"raw": response.text}
 
             fb_error = error_data.get("error", error_data)

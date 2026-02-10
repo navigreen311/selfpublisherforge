@@ -6,6 +6,7 @@ Serves as the main entry point for the analytics router.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone, date
 from decimal import Decimal
@@ -52,6 +53,8 @@ from app.modules.analytics.schemas import (
     TrendData,
 )
 from app.core.pagination import CursorParams, PaginatedResponse
+
+logger = logging.getLogger(__name__)
 
 
 # ---------- Dashboard ----------
@@ -162,7 +165,7 @@ async def get_royalties(
         try:
             conditions.append(RoyaltyRecord.id < uuid.UUID(cursor))
         except ValueError:
-            pass
+            logger.warning("Failed to parse timezone value, using default UTC")
 
     count_query = (
         select(func.count(RoyaltyRecord.id))
@@ -275,7 +278,7 @@ async def list_reports(
         try:
             conditions.append(Report.id < uuid.UUID(cursor))
         except ValueError:
-            pass
+            logger.warning("Failed to parse timezone value, using default UTC")
 
     total_result = await db.execute(
         select(func.count(Report.id)).where(

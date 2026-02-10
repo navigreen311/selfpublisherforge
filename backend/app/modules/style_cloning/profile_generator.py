@@ -3,12 +3,17 @@ vector, generate a natural-language style guide, and produce a style card."""
 
 from __future__ import annotations
 
+import os
+
 from app.modules.style_cloning.features import AllFeatures
 from app.modules.style_cloning.ingestion import SegmentedText, HIGH_CONFIDENCE_WORDS
 from app.modules.style_cloning.schemas import (
     StyleCard,
     VoiceFingerprint,
 )
+
+INTENSITY_THRESHOLD = float(os.environ.get("STYLE_INTENSITY_THRESHOLD", "0.5"))
+RATIO_THRESHOLD = float(os.environ.get("STYLE_RATIO_THRESHOLD", "0.5"))
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +66,7 @@ def _build_voice_vector(features: AllFeatures) -> tuple[list[float], list[str]]:
     dims.append(("sent_punctuation_energy", s.question_ratio + s.exclamation_ratio))
     # Sentence pattern buckets (normalized length distribution in 5 buckets)
     for i, bucket_name in enumerate(["very_short", "short", "medium", "long", "very_long"]):
-        dims.append((f"sent_bucket_{bucket_name}", 0.0))  # placeholder — populated below
+        dims.append((f"sent_bucket_{bucket_name}", 0.0))  # reserved: sentence-length distribution buckets (not yet computed; requires per-sentence lengths)
     # Interaction features
     dims.append(("sent_simple_x_avg_len", s.simple_ratio * s.avg_length))
     dims.append(("sent_complex_x_variance", s.complex_ratio * s.length_variance))
@@ -137,7 +142,7 @@ def _describe_vocabulary_level(v) -> str:
 def _describe_tone(features: AllFeatures) -> str:
     parts: list[str] = []
     r = features.rhetorical
-    if r.emotional_intensity > 0.5:
+    if r.emotional_intensity > INTENSITY_THRESHOLD:
         parts.append("emotionally charged")
     elif r.emotional_intensity > 0.2:
         parts.append("moderately emotive")
@@ -168,7 +173,7 @@ def _describe_pacing(features: AllFeatures) -> str:
     elif s.length_variance > 30:
         parts.append("moderate rhythmic variation")
 
-    if p.short_paragraph_ratio > 0.5:
+    if p.short_paragraph_ratio > RATIO_THRESHOLD:
         parts.append("frequent paragraph breaks")
     return "; ".join(parts) if parts else "balanced pacing"
 

@@ -9,10 +9,13 @@ can be developed and tested end-to-end without live API credentials.
 from __future__ import annotations
 
 import hashlib
+import logging
 import random
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from app.modules.market_intelligence.schemas import (
     BSRHistoryPoint,
@@ -207,9 +210,8 @@ class MockAmazonClient(AmazonClientBase):
 def get_amazon_client() -> AmazonClientBase:
     """Return the Amazon client.
 
-    When PA-API credentials are configured via environment variables
-    (AMAZON_PAAPI_ACCESS_KEY, AMAZON_PAAPI_SECRET_KEY, AMAZON_PAAPI_PARTNER_TAG),
-    a live client would be returned.  Until PA-API integration is implemented,
+    When PA-API credentials are configured via environment variables,
+    a live client would be returned. Until PA-API integration is implemented,
     falls back to the mock client for development and testing.
     """
     import os
@@ -219,8 +221,10 @@ def get_amazon_client() -> AmazonClientBase:
     partner_tag = os.environ.get("AMAZON_PAAPI_PARTNER_TAG", "")
 
     if access_key and secret_key and partner_tag:
-        # TODO: Return a LiveAmazonClient(access_key, secret_key, partner_tag)
-        #       once PA-API 5.0 integration is implemented.
-        pass
+        logger.warning(
+            "PA-API credentials provided but LiveAmazonClient is not yet implemented. "
+            "Falling back to MockAmazonClient. Implement LiveAmazonClient to use real data."
+        )
 
+    logger.info("Using MockAmazonClient for market intelligence data")
     return MockAmazonClient()

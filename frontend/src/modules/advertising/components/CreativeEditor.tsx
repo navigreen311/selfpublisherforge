@@ -27,8 +27,12 @@ export function CreativeEditor({ campaignId, bookId }: CreativeEditorProps) {
   });
 
   const handleGenerate = async () => {
-    if (!formData.book_title || !formData.book_description) {
-      toast.error("Book title and description are required");
+    if (!formData.book_title.trim()) {
+      toast.error("Book title is required");
+      return;
+    }
+    if (!formData.book_description.trim()) {
+      toast.error("Description is required");
       return;
     }
 
@@ -36,11 +40,12 @@ export function CreativeEditor({ campaignId, bookId }: CreativeEditorProps) {
       const result = await generateCreatives.mutateAsync({
         ...formData,
         book_id: bookId,
-      } as any);
+      });
       setGeneratedResults(result.variations);
       toast.success(`Generated ${result.variations.length} creative variations`);
-    } catch {
-      toast.error("Failed to generate creatives");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to generate creative";
+      toast.error(message);
     }
   };
 
@@ -62,9 +67,10 @@ export function CreativeEditor({ campaignId, bookId }: CreativeEditorProps) {
           <h4 className="font-medium">AI Creative Generator</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Book Title *</label>
+              <label className="block text-sm font-medium mb-1">Book Title <span className="text-red-500">*</span></label>
               <input
                 type="text"
+                required
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={formData.book_title}
                 onChange={(e) =>
@@ -86,8 +92,9 @@ export function CreativeEditor({ campaignId, bookId }: CreativeEditorProps) {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Book Description *</label>
+              <label className="block text-sm font-medium mb-1">Book Description <span className="text-red-500">*</span></label>
               <textarea
+                required
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 rows={3}
                 value={formData.book_description}

@@ -6,9 +6,12 @@ and emergency stop.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -66,33 +69,39 @@ def check_permission(
 
     Returns True if permitted, raises PermissionDenied otherwise.
     """
-    level = agent.permission_level
+    try:
+        level = agent.permission_level
 
-    if not agent.is_enabled:
-        raise PermissionDenied(f"Agent '{agent.name}' is currently disabled.")
+        if not agent.is_enabled:
+            raise PermissionDenied(f"Agent '{agent.name}' is currently disabled.")
 
-    if action == "execute_auto":
-        if level in (PermissionLevel.DRAFT_ONLY, PermissionLevel.SUGGEST):
-            raise PermissionDenied(
-                f"Agent '{agent.name}' has permission level '{level.value}' "
-                "which does not allow autonomous execution."
-            )
-        if level == PermissionLevel.AUTO_EXECUTE_HIGH and user_role not in ("admin", "owner"):
-            raise PermissionDenied(
-                "Auto-execute (high risk) requires admin or owner role."
-            )
-        if level == PermissionLevel.FULL_AUTONOMOUS and user_role not in ("admin", "owner"):
-            raise PermissionDenied(
-                "Full autonomous requires admin or owner role."
-            )
+        if action == "execute_auto":
+            if level in (PermissionLevel.DRAFT_ONLY, PermissionLevel.SUGGEST):
+                raise PermissionDenied(
+                    f"Agent '{agent.name}' has permission level '{level.value}' "
+                    "which does not allow autonomous execution."
+                )
+            if level == PermissionLevel.AUTO_EXECUTE_HIGH and user_role not in ("admin", "owner"):
+                raise PermissionDenied(
+                    "Auto-execute (high risk) requires admin or owner role."
+                )
+            if level == PermissionLevel.FULL_AUTONOMOUS and user_role not in ("admin", "owner"):
+                raise PermissionDenied(
+                    "Full autonomous requires admin or owner role."
+                )
 
-    if action == "approve":
-        # Draft-only and suggest both require human approval
-        if level in (PermissionLevel.AUTO_EXECUTE_LOW, PermissionLevel.AUTO_EXECUTE_HIGH, PermissionLevel.FULL_AUTONOMOUS):
-            # Auto-approve is valid
-            pass
+        if action == "approve":
+            # Draft-only and suggest both require human approval
+            if level in (PermissionLevel.AUTO_EXECUTE_LOW, PermissionLevel.AUTO_EXECUTE_HIGH, PermissionLevel.FULL_AUTONOMOUS):
+                # Auto-approve is valid
+                pass
 
-    return True
+        return True
+    except PermissionDenied:
+        raise
+    except Exception:
+        logger.exception("Permission check failed for action — denying by default")
+        return False  # Fail closed: deny permission on error
 
 
 def requires_approval(agent: Agent) -> bool:

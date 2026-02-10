@@ -11,9 +11,14 @@ Higher opportunity_score means the niche is more attractive.
 from __future__ import annotations
 
 import math
+import os
 import statistics
 from dataclasses import dataclass, field
 from typing import Optional
+
+DEMAND_MIDPOINT = int(os.environ.get("MI_DEMAND_MIDPOINT", "5000"))
+COMPETITION_MIDPOINT = int(os.environ.get("MI_COMPETITION_MIDPOINT", "50000"))
+OPPORTUNITY_MIDPOINT = int(os.environ.get("MI_OPPORTUNITY_MIDPOINT", "500"))
 
 
 @dataclass
@@ -86,14 +91,14 @@ def calculate_niche_scores(metrics: NicheMetrics) -> NicheScores:
 def _compute_demand(m: NicheMetrics) -> float:
     # 1. Search volume component (40 %)
     #    sigmoid centred at 5000 monthly searches
-    sv_score = _sigmoid_scale(m.avg_monthly_search_volume, midpoint=5000, steepness=0.0006)
+    sv_score = _sigmoid_scale(m.avg_monthly_search_volume, midpoint=DEMAND_MIDPOINT, steepness=0.0006)
 
     # 2. BSR component (40 %)
     #    Lower average BSR => more demand
     if m.bsr_values:
         median_bsr = statistics.median(m.bsr_values)
         # sigmoid: median BSR of 50k maps to ~50
-        bsr_score = 100 - _sigmoid_scale(median_bsr, midpoint=50000, steepness=0.00004)
+        bsr_score = 100 - _sigmoid_scale(median_bsr, midpoint=COMPETITION_MIDPOINT, steepness=0.00004)
     else:
         bsr_score = 50  # neutral when no data
 
@@ -112,7 +117,7 @@ def _compute_demand(m: NicheMetrics) -> float:
 
 def _compute_supply(m: NicheMetrics) -> float:
     # 1. Title count component (35 %)
-    title_score = _sigmoid_scale(m.total_competing_titles, midpoint=500, steepness=0.006)
+    title_score = _sigmoid_scale(m.total_competing_titles, midpoint=OPPORTUNITY_MIDPOINT, steepness=0.006)
 
     # 2. Review barrier component (40 %)
     #    High average reviews in top-10 means hard to break in

@@ -5,6 +5,7 @@ and coordination between platform clients (Amazon/Facebook), optimizer, and crea
 """
 
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
@@ -55,6 +56,8 @@ from app.modules.advertising.amazon_ads import AmazonAdsClient
 from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_BID_AMOUNT = float(os.environ.get("DEFAULT_BID_AMOUNT", "0.75"))
 
 
 class AdvertisingService:
@@ -109,7 +112,7 @@ class AdvertisingService:
                 cursor_dt = datetime.fromisoformat(cursor)
                 query = query.where(Campaign.created_at < cursor_dt)
             except ValueError:
-                pass
+                logger.warning("Invalid cursor value: %s", cursor)
 
         result = await self.db.execute(query)
         campaigns = list(result.scalars().all())
@@ -196,7 +199,7 @@ class AdvertisingService:
                 campaign_id=campaign.id,
                 keyword=keyword,
                 match_type="broad",
-                bid_amount=0.75,  # default bid
+                bid_amount=DEFAULT_BID_AMOUNT,
             )
             self.db.add(kw_bid)
 

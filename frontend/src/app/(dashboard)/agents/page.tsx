@@ -49,7 +49,7 @@ export default function AgentDashboardPage() {
           {!showConfirmStop ? (
             <button
               onClick={() => setShowConfirmStop(true)}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
               Emergency Stop
             </button>
@@ -61,13 +61,13 @@ export default function AgentDashboardPage() {
               <button
                 onClick={handleEmergencyStop}
                 disabled={emergencyStop.isPending}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               >
                 {emergencyStop.isPending ? "Stopping..." : "Confirm"}
               </button>
               <button
                 onClick={() => setShowConfirmStop(false)}
-                className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+                className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
               >
                 Cancel
               </button>
@@ -78,7 +78,7 @@ export default function AgentDashboardPage() {
 
       {/* Emergency stop result */}
       {emergencyStop.isSuccess && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+        <div role="alert" className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
           {emergencyStop.data.message}
         </div>
       )}

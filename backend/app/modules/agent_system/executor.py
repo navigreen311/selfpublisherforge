@@ -7,10 +7,15 @@ orchestrator, quality checks the result, and records the outcome.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
+
+AGENT_QUALITY_WEIGHT = float(os.environ.get("AGENT_QUALITY_WEIGHT", "0.5"))
+AGENT_SPEED_WEIGHT = float(os.environ.get("AGENT_SPEED_WEIGHT", "0.25"))
+AGENT_COST_WEIGHT = float(os.environ.get("AGENT_COST_WEIGHT", "0.25"))
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -240,7 +245,7 @@ async def _compute_quality_score(
         vocab_score = 0.4
 
     # --- 4. Formatting signals (0.0 - 1.0), weight 0.10 ---
-    formatting_score = 0.5  # baseline
+    formatting_score = AGENT_QUALITY_WEIGHT  # baseline
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     if len(paragraphs) > 1:
         formatting_score += 0.2  # multi-paragraph structure
@@ -254,7 +259,7 @@ async def _compute_quality_score(
     if keywords:
         text_lower = text.lower()
         matched = sum(1 for kw in keywords if kw.lower() in text_lower)
-        keyword_score = matched / len(keywords) if keywords else 0.0
+        keyword_score = matched / len(keywords) if keywords else AGENT_COST_WEIGHT
     else:
         # No keywords supplied -- assume neutral (full marks)
         keyword_score = 1.0
@@ -262,7 +267,7 @@ async def _compute_quality_score(
     # --- Weighted combination ---
     score = (
         0.30 * length_score
-        + 0.25 * structure_score
+        + AGENT_SPEED_WEIGHT * structure_score
         + 0.20 * vocab_score
         + 0.10 * formatting_score
         + 0.15 * keyword_score

@@ -6,6 +6,7 @@ and other aggregate portfolio metrics.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
@@ -28,6 +29,8 @@ from app.modules.analytics.schemas import (
 )
 from app.modules.advertising.models import Campaign, CampaignPerformance
 
+CHANGE_THRESHOLD = float(os.environ.get("ANALYTICS_CHANGE_THRESHOLD", "0.5"))
+
 
 def _quantize(value: Decimal, places: int = 2) -> Decimal:
     """Round a Decimal to the given number of decimal places."""
@@ -46,9 +49,9 @@ def _change_direction(change: float | None) -> str:
     """Return 'up', 'down', or 'flat' based on percentage change."""
     if change is None:
         return "flat"
-    if change > 0.5:
+    if change > CHANGE_THRESHOLD:
         return "up"
-    elif change < -0.5:
+    elif change < -CHANGE_THRESHOLD:
         return "down"
     return "flat"
 

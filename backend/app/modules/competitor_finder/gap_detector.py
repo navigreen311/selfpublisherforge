@@ -6,6 +6,7 @@ that a new author can exploit.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -16,6 +17,9 @@ from app.modules.competitor_finder.schemas import (
     CoverGap,
     TitleGap,
 )
+
+GAP_PRICE_THRESHOLD = float(os.environ.get("GAP_PRICE_THRESHOLD", "0.5"))
+GAP_FREQUENCY_THRESHOLD = float(os.environ.get("GAP_FREQUENCY_THRESHOLD", "0.5"))
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -78,6 +82,7 @@ def detect_cover_gaps(books: list[BookData]) -> list[CoverGap]:
     focuses on identifiable patterns and known archetypes.
     """
     if not books:
+        logger.warning("detect_cover_gaps called with empty book list — no data to analyze")
         return []
 
     gaps: list[CoverGap] = []
@@ -105,7 +110,7 @@ def detect_cover_gaps(books: list[BookData]) -> list[CoverGap]:
     if total >= 5:
         # If most titles are very similar, there's a differentiation opportunity
         common_words = Counter(title_words).most_common(5)
-        overused = [w for w, c in common_words if c > total * 0.5 and len(w) > 3]
+        overused = [w for w, c in common_words if c > total * GAP_FREQUENCY_THRESHOLD and len(w) > 3]
         if overused:
             gaps.append(
                 CoverGap(
@@ -126,13 +131,13 @@ def detect_cover_gaps(books: list[BookData]) -> list[CoverGap]:
     priced_books = [b for b in books if b.price is not None]
     if priced_books:
         avg_price = sum(b.price for b in priced_books) / len(priced_books)  # type: ignore[arg-type]
-        cheap_books = [b for b in priced_books if (b.price or 0) < avg_price * 0.5]
+        cheap_books = [b for b in priced_books if (b.price or 0) < avg_price * GAP_PRICE_THRESHOLD]
         if len(cheap_books) > total * 0.3:
             gaps.append(
                 CoverGap(
                     gap_type="premium_positioning",
                     description=(
-                        f"Over 30% of books are priced below ${avg_price * 0.5:.2f}. "
+                        f"Over 30% of books are priced below ${avg_price * GAP_PRICE_THRESHOLD:.2f}. "
                         "Many cheap books have low-quality covers."
                     ),
                     prevalence=len(cheap_books) / total,
@@ -185,6 +190,7 @@ TITLE_PATTERNS = {
 def detect_title_gaps(books: list[BookData]) -> list[TitleGap]:
     """Detect underused title patterns and missing keywords in a niche."""
     if not books:
+        logger.warning("detect_title_gaps called with empty book list — no data to analyze")
         return []
 
     gaps: list[TitleGap] = []
@@ -283,6 +289,7 @@ def detect_content_gaps(
     Uses review-derived topics and complaints to identify underserved content areas.
     """
     if not books:
+        logger.warning("detect_content_gaps called with empty book list — no data to analyze")
         return []
 
     gaps: list[ContentGap] = []
@@ -303,7 +310,7 @@ def detect_content_gaps(
         if count >= 2:
             # Check if this topic is well-covered
             coverage = topic_counter.get(complaint, 0) / max(total, 1)
-            if coverage < 0.5:
+            if coverage < GAP_FREQUENCY_THRESHOLD:
                 gaps.append(
                     ContentGap(
                         topic=complaint,

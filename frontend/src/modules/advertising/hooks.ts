@@ -321,6 +321,7 @@ export function useGenerateCreatives() {
       tone?: string;
       num_variations?: number;
       platform?: string;
+      book_id?: string;
     }) => {
       const { data } = await api.post<{
         variations: GeneratedCreative[];

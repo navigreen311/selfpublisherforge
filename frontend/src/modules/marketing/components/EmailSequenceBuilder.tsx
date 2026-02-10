@@ -44,6 +44,32 @@ export function EmailSequenceBuilder({ sequence, onSave, onSend }: EmailSequence
     ]
   );
   const [recipientInput, setRecipientInput] = useState("");
+  const [emailError, setEmailError] = useState("");
+
+  const isValidEmail = (email: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  };
+
+  const validateEmails = (input: string): { valid: string[]; invalid: string[] } => {
+    const emails = input.split(",").map(e => e.trim()).filter(Boolean);
+    const valid = emails.filter(isValidEmail);
+    const invalid = emails.filter(e => !isValidEmail(e));
+    return { valid, invalid };
+  };
+
+  const handleRecipientsChange = (value: string) => {
+    setRecipientInput(value);
+    if (value) {
+      const { invalid } = validateEmails(value);
+      if (invalid.length > 0) {
+        setEmailError(`Invalid email(s): ${invalid.join(", ")}`);
+      } else {
+        setEmailError("");
+      }
+    } else {
+      setEmailError("");
+    }
+  };
 
   const addEmail = () => {
     setEmails((prev) => [
@@ -77,12 +103,13 @@ export function EmailSequenceBuilder({ sequence, onSave, onSend }: EmailSequence
   };
 
   const handleSend = () => {
-    const recipients = recipientInput
-      .split(",")
-      .map((e) => e.trim())
-      .filter(Boolean);
-    if (recipients.length > 0) {
-      onSend?.(recipients);
+    const { valid, invalid } = validateEmails(recipientInput);
+    if (invalid.length > 0) {
+      setEmailError(`Invalid email(s): ${invalid.join(", ")}`);
+      return;
+    }
+    if (valid.length > 0) {
+      onSend?.(valid);
     }
   };
 
@@ -97,6 +124,7 @@ export function EmailSequenceBuilder({ sequence, onSave, onSend }: EmailSequence
               className={`text-xs px-2 py-1 rounded-full ${
                 statusBadgeColors[sequence.status] || ""
               }`}
+              aria-current={sequence.status === "active" ? "step" : undefined}
             >
               {sequence.status}
             </span>
@@ -229,17 +257,21 @@ export function EmailSequenceBuilder({ sequence, onSave, onSend }: EmailSequence
             <input
               type="text"
               value={recipientInput}
-              onChange={(e) => setRecipientInput(e.target.value)}
+              onChange={(e) => handleRecipientsChange(e.target.value)}
               className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="Enter recipient emails, comma-separated"
             />
             <button
               onClick={handleSend}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              disabled={emailError.length > 0}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Send
             </button>
           </div>
+          {emailError && (
+            <p className="text-sm text-destructive mt-1">{emailError}</p>
+          )}
         </div>
       )}
 

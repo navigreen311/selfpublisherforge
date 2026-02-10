@@ -7,6 +7,14 @@ import "@testing-library/jest-dom";
 // Mocks
 // ---------------------------------------------------------------------------
 
+// Mock next/navigation
+const mockPush = jest.fn();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => "/projects",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 // Mock next/link to render a plain anchor
 jest.mock("next/link", () => {
   return ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (

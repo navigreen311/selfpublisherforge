@@ -11,10 +11,13 @@ during integration.
 from __future__ import annotations
 
 import json
+import os
 import uuid as _uuid
 from datetime import datetime, timezone
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
+
+WORD_COUNT_MULTIPLIER = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
 
 from app.modules.ai_writing.readability import analyze_readability
 from app.modules.ai_writing.schemas import (
@@ -270,7 +273,7 @@ async def analyze_manuscript(
             pacing_notes.append("Chapters are long. Consider splitting for better pacing.")
 
         for ch in chapters:
-            if ch.word_count > 0 and ch.word_count < avg_chapter_wc * 0.5:
+            if ch.word_count > 0 and ch.word_count < avg_chapter_wc * WORD_COUNT_MULTIPLIER:
                 pacing_notes.append(
                     f"Chapter '{ch.title}' (#{ch.order_index}) is significantly shorter than average."
                 )

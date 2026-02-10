@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +13,12 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+
   useEffect(() => {
-    console.error("App error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("App error:", error);
+    }
   }, [error]);
 
   return (
@@ -37,7 +42,7 @@ export default function Error({
         </CardContent>
         <CardFooter className="flex justify-center gap-3">
           <Button onClick={reset}>Try again</Button>
-          <Button variant="outline" onClick={() => (window.location.href = "/")}>
+          <Button variant="outline" onClick={() => router.push("/")}>
             Go home
           </Button>
         </CardFooter>

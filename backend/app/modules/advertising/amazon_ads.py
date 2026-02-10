@@ -22,6 +22,9 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+# Default bid amount for keywords (override via DEFAULT_BID_AMOUNT env var)
+DEFAULT_BID_AMOUNT = float(os.environ.get("DEFAULT_BID_AMOUNT", "0.75"))
+
 # Maximum number of times to poll a report before giving up
 _REPORT_POLL_MAX_ATTEMPTS = 30
 _REPORT_POLL_INTERVAL_SECONDS = 2
@@ -370,12 +373,12 @@ class AmazonAdsClient:
         )
 
         if not self._is_configured:
-            logger.warning("Amazon Ads credentials not configured; returning stubs")
+            logger.warning("Amazon Ads not configured — returning stub data for %s", "add_keywords")
             return [
                 {
                     "keyword": kw["keyword"],
                     "match_type": kw.get("match_type", "broad"),
-                    "bid": kw.get("bid", 0.75),
+                    "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
                     "status": "draft",
                     "external_keyword_id": None,
                 }
@@ -388,7 +391,7 @@ class AmazonAdsClient:
                 "state": "enabled",
                 "keywordText": kw["keyword"],
                 "matchType": kw.get("match_type", "broad").upper(),
-                "bid": kw.get("bid", 0.75),
+                "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
             }
             for kw in keywords
         ]
@@ -411,7 +414,7 @@ class AmazonAdsClient:
                     results.append({
                         "keyword": kw["keyword"],
                         "match_type": kw.get("match_type", "broad"),
-                        "bid": kw.get("bid", 0.75),
+                        "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
                         "status": "enabled",
                         "external_keyword_id": str(entry.get("keywordId", "")),
                     })
@@ -420,7 +423,7 @@ class AmazonAdsClient:
                     results.append({
                         "keyword": kw["keyword"],
                         "match_type": kw.get("match_type", "broad"),
-                        "bid": kw.get("bid", 0.75),
+                        "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
                         "status": "error",
                         "external_keyword_id": None,
                         "error": str(error_entry),
@@ -433,7 +436,7 @@ class AmazonAdsClient:
                 {
                     "keyword": kw["keyword"],
                     "match_type": kw.get("match_type", "broad"),
-                    "bid": kw.get("bid", 0.75),
+                    "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
                     "status": "error",
                     "external_keyword_id": None,
                     "error": exc.detail,
@@ -455,7 +458,7 @@ class AmazonAdsClient:
         )
 
         if not self._is_configured:
-            logger.warning("Amazon Ads credentials not configured; returning stubs")
+            logger.warning("Amazon Ads not configured — returning stub data for %s", "update_keyword_bids")
             return [
                 {
                     "external_keyword_id": update["external_keyword_id"],
@@ -516,7 +519,7 @@ class AmazonAdsClient:
         )
 
         if not self._is_configured:
-            logger.warning("Amazon Ads credentials not configured; returning stubs")
+            logger.warning("Amazon Ads not configured — returning stub data for %s", "add_negative_keywords")
             return [
                 {"keyword": kw, "match_type": "negative_exact", "status": "draft"}
                 for kw in keywords
@@ -649,7 +652,7 @@ class AmazonAdsClient:
         )
 
         if not self._is_configured:
-            logger.warning("Amazon Ads credentials not configured; returning zeroed report")
+            logger.warning("Amazon Ads not configured — returning stub data for %s", "get_campaign_report")
             return {
                 "external_campaign_id": external_campaign_id,
                 "start_date": start_date,
@@ -741,7 +744,7 @@ class AmazonAdsClient:
         )
 
         if not self._is_configured:
-            logger.warning("Amazon Ads credentials not configured; returning empty keyword report")
+            logger.warning("Amazon Ads not configured — returning stub data for %s", "get_keyword_report")
             return []
 
         report_payload = {
@@ -813,7 +816,7 @@ class AmazonAdsClient:
         )
 
         if not self._is_configured:
-            logger.warning("Amazon Ads credentials not configured; returning empty search term report")
+            logger.warning("Amazon Ads not configured — returning stub data for %s", "get_search_term_report")
             return []
 
         report_payload = {
