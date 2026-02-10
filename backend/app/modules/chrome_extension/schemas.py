@@ -133,6 +133,8 @@ class ExtractedDataResponse(BaseModel):
 class QuickResearchResponse(BaseModel):
     """Quick research data returned to the sidebar."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     asin: str | None = None
     title: str | None = None
     current_bsr: int | None = None

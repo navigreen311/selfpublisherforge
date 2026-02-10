@@ -156,6 +156,8 @@ class CoverTemplateResponse(BaseModel):
 
 
 class ColorAnalysis(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     hex_code: str
     percentage: float
     name: str | None = None
@@ -163,6 +165,8 @@ class ColorAnalysis(BaseModel):
 
 class CompetitorCoverAnalysis(BaseModel):
     """Result of analysing a single competitor cover."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     image_url: str | None = None
     dominant_colors: list[ColorAnalysis] = Field(default_factory=list)
@@ -175,6 +179,8 @@ class CompetitorCoverAnalysis(BaseModel):
 
 class CompetitorAnalysisResponse(BaseModel):
     """Aggregated competitor cover analysis."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     genre: CoverGenre
     niche_keywords: list[str]
