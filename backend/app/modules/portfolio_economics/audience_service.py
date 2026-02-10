@@ -6,7 +6,7 @@ Provides:
 - Audience growth tracking
 - Churn prediction model
 """
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from uuid import UUID, uuid4
 from typing import Optional
 
@@ -199,7 +199,7 @@ def build_audience_personas(
             pain_points=pain_points,
             favorite_authors=[],  # Would be populated from market data
             percentage_of_audience=template["percentage"],
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         personas.append(persona)
 
@@ -266,7 +266,7 @@ def build_also_bought_intelligence(
         average_rating=round(avg_rating, 1),
         audience_insights=audience_insights,
         positioning_suggestions=positioning_suggestions,
-        analyzed_at=datetime.utcnow(),
+        analyzed_at=datetime.now(timezone.utc),
     )
 
 
@@ -442,5 +442,5 @@ def predict_churn(request: ChurnPredictionRequest) -> ChurnPredictionResult:
         risk_factors=risk_factors,
         retention_suggestions=retention_suggestions,
         estimated_lifetime_value=round(estimated_ltv, 2),
-        predicted_at=datetime.utcnow(),
+        predicted_at=datetime.now(timezone.utc),
     )

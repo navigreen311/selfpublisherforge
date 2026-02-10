@@ -143,10 +143,13 @@ def task_generate_epub(
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
     except ClientError as exc:
-        logger.error("S3 upload failed for EPUB export_id=%s: %s", export_id, exc)
+        logger.error("S3 upload failed for EPUB export_id=%s: %s", export_id, exc, exc_info=True)
+        raise self.retry(exc=exc)
+    except (ValueError, TypeError, KeyError) as exc:
+        logger.error("Data validation error in EPUB generation for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
     except Exception as exc:
-        logger.error("EPUB generation failed for export_id=%s: %s", export_id, exc)
+        logger.error("EPUB generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
 
 
@@ -222,10 +225,13 @@ def task_generate_pdf(
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
     except ClientError as exc:
-        logger.error("S3 upload failed for PDF export_id=%s: %s", export_id, exc)
+        logger.error("S3 upload failed for PDF export_id=%s: %s", export_id, exc, exc_info=True)
+        raise self.retry(exc=exc)
+    except (ValueError, TypeError, KeyError) as exc:
+        logger.error("Data validation error in PDF generation for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
     except Exception as exc:
-        logger.error("PDF generation failed for export_id=%s: %s", export_id, exc)
+        logger.error("PDF generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
 
 
@@ -340,7 +346,7 @@ def task_sync_listing(
     except RuntimeError:
         result = asyncio.run(_sync())
     except Exception as exc:
-        logger.error("Listing sync failed for listing_id=%s: %s", listing_id, exc)
+        logger.error("Listing sync failed for listing_id=%s: %s", listing_id, exc, exc_info=True)
         raise self.retry(exc=exc)
 
     return result

@@ -10,7 +10,7 @@ Factors considered:
 - Seasonal adjustments
 - Risk scoring
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from typing import Optional
 
@@ -349,5 +349,5 @@ def calculate_greenlight(request: GreenlightRequest) -> GreenlightResult:
         risk_factors=risk_factors,
         opportunity_factors=opportunity_factors,
         suggestions=suggestions,
-        calculated_at=datetime.utcnow(),
+        calculated_at=datetime.now(timezone.utc),
     )

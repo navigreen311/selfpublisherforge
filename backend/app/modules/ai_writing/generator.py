@@ -349,7 +349,8 @@ async def generate_stream(request: GenerateRequest) -> AsyncGenerator[str, None]
             collected_content += chunk
             tokens_used += 1  # approximate token count by chunk count
             yield f"event: token\ndata: {json.dumps({'text': chunk})}\n\n"
-    except Exception as exc:
+    except (ConnectionError, TimeoutError, ValueError) as exc:
+        logger.error("Stream generation failed: %s", exc, exc_info=True)
         yield f"event: error\ndata: {json.dumps({'error': str(exc)})}\n\n"
         return
 
@@ -512,7 +513,11 @@ async def _call_llm_stream(
         else:
             async for text in _openai_stream(messages, model):
                 yield text
-    except Exception as exc:
+    except (ConnectionError, TimeoutError) as exc:
+        logger.error("LLM stream network error: %s", exc, exc_info=True)
+        yield f"[Generation error: {exc}]"
+    except ValueError as exc:
+        logger.error("LLM stream value error: %s", exc, exc_info=True)
         yield f"[Generation error: {exc}]"
 
 
@@ -523,5 +528,9 @@ async def _call_llm(messages: list[dict[str, str]], model: str) -> str:
             return await _anthropic_call(messages, model)
         else:
             return await _openai_call(messages, model)
-    except Exception as exc:
+    except (ConnectionError, TimeoutError) as exc:
+        logger.error("LLM call network error: %s", exc, exc_info=True)
+        return f"[Generation error: {exc}]"
+    except ValueError as exc:
+        logger.error("LLM call value error: %s", exc, exc_info=True)
         return f"[Generation error: {exc}]"

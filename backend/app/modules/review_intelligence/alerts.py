@@ -8,6 +8,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.review_intelligence.models import BookReview, ReviewAlert
@@ -400,7 +401,11 @@ async def run_all_checks(
             alert = await check_fn(db, org_id, book_id, thresholds=thresholds)
             if alert:
                 alerts.append(alert)
-        except Exception as e:
-            logger.error(f"Alert check {check_fn.__name__} failed for book {book_id}: {e}")
+        except (SQLAlchemyError, ValueError, TypeError) as e:
+            logger.error(
+                "Alert check %s failed for book %s: %s",
+                check_fn.__name__, book_id, e,
+                exc_info=True,
+            )
 
     return alerts

@@ -112,8 +112,8 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
                             },
                         )
                         snapshots_created += 1
-                    except Exception as exc:
-                        logger.error("Failed to aggregate metrics for org %s: %s", oid, exc)
+                    except (ValueError, TypeError, KeyError) as exc:
+                        logger.exception("Failed to aggregate metrics for org %s: %s", oid, exc)
 
                 await db.commit()
                 return {"snapshots_created": snapshots_created, "org_count": len(org_ids)}
@@ -127,7 +127,7 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
         logger.info("Daily metric aggregation complete: %s", result)
         return result
     except Exception as exc:
-        logger.error("Daily metric aggregation failed: %s", exc)
+        logger.exception("Daily metric aggregation failed: %s", exc)
         raise self.retry(exc=exc)
 
 
@@ -182,7 +182,7 @@ def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
         logger.info("Report generation complete: %s", result)
         return result
     except Exception as exc:
-        logger.error("Report generation failed for %s: %s", report_id, exc)
+        logger.exception("Report generation failed for %s: %s", report_id, exc)
         raise self.retry(exc=exc)
 
 
@@ -290,6 +290,12 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                             # base64-encoded CSV payload that was uploaded
                             # for batch processing but not yet imported.
                             # Try to treat it as pending CSV import data.
+                            logger.warning(
+                                "CSV import queue not yet implemented for account %s "
+                                "(platform=%s); pending API integration.",
+                                account.id,
+                                acct_platform,
+                            )
                             csv_records = await _try_csv_import(
                                 db,
                                 org_id=UUID(org_id),
@@ -328,7 +334,13 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                         # --------------------------------------------------
                         account.updated_at = datetime.now(timezone.utc)
 
-                    except Exception as exc:
+                    except (
+                        ConnectionError,
+                        TimeoutError,
+                        ValueError,
+                        KeyError,
+                        httpx.HTTPError,
+                    ) as exc:
                         logger.error(
                             "Royalty sync failed for account %s (platform=%s): %s",
                             account.id,
@@ -367,7 +379,7 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
         logger.info("Royalty sync complete for org %s: %s", org_id, result)
         return result
     except Exception as exc:
-        logger.error("Royalty sync failed for org %s: %s", org_id, exc)
+        logger.exception("Royalty sync failed for org %s: %s", org_id, exc)
         raise self.retry(exc=exc)
 
 
@@ -386,7 +398,12 @@ async def _try_csv_import(
     Returns the number of records successfully imported.
     """
     if csv_data is None:
-        # No pending CSV data to process for this cycle.
+        logger.debug(
+            "No pending CSV data to process for org %s (platform=%s); "
+            "CSV queue integration pending.",
+            org_id,
+            analytics_platform_key,
+        )
         return 0
 
     from app.modules.analytics.schemas import Platform as AnalyticsPlatform
@@ -432,9 +449,9 @@ async def _try_api_sync(
 
     # ------------------------------------------------------------------
     # Fetch royalty data from the platform API.
-    # Each platform would have its own client; for now we provide the
-    # scaffolding and log when credentials are present but no SDK is
-    # installed.
+    # Each platform has its own client implementation.  KDP, IngramSpark,
+    # and D2D handlers are wired up below; additional platforms will log a
+    # warning until their API integrations are complete.
     # ------------------------------------------------------------------
     api_records: list[dict[str, Any]] = []
 
@@ -445,7 +462,11 @@ async def _try_api_sync(
     elif acct_platform == "d2d":
         api_records = await _fetch_d2d_royalties(account)
     else:
-        logger.info("No API sync handler for platform '%s'; skipping.", acct_platform)
+        logger.warning(
+            "No API sync handler for platform '%s'; skipping. "
+            "API integration pending for this platform.",
+            acct_platform,
+        )
         return 0
 
     # ------------------------------------------------------------------
@@ -502,11 +523,12 @@ async def _try_api_sync(
                 db.add(record)
 
             records_synced += 1
-        except Exception as exc:
+        except (KeyError, ValueError, TypeError) as exc:
             logger.warning(
                 "Failed to upsert royalty record for org %s: %s",
                 org_id,
                 exc,
+                exc_info=True,
             )
 
     if records_synced:
@@ -833,10 +855,18 @@ async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
     api_key = os.environ.get("INGRAM_SPARK_API_KEY", "")
     api_secret = os.environ.get("INGRAM_SPARK_API_SECRET", "")
     if not api_key:
-        logger.debug("IngramSpark API key not configured; skipping API sync.")
+        logger.warning(
+            "IngramSpark API key (INGRAM_SPARK_API_KEY) not configured for "
+            "account %s; skipping API sync. Pending API integration.",
+            account.id,
+        )
         return []
     if not api_secret:
-        logger.debug("IngramSpark API secret not configured; skipping API sync.")
+        logger.warning(
+            "IngramSpark API secret (INGRAM_SPARK_API_SECRET) not configured for "
+            "account %s; skipping API sync. Pending API integration.",
+            account.id,
+        )
         return []
 
     base_url = os.environ.get(
@@ -1104,7 +1134,11 @@ async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
     """
     api_key = os.environ.get("D2D_API_KEY", "")
     if not api_key:
-        logger.debug("D2D API key not configured; skipping API sync.")
+        logger.warning(
+            "D2D API key (D2D_API_KEY) not configured for account %s; "
+            "skipping API sync. Pending API integration.",
+            account.id,
+        )
         return []
 
     base_url = os.environ.get(

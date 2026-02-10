@@ -6,6 +6,7 @@ analysis to run in the background while the API returns immediately.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Optional
 
@@ -17,6 +18,8 @@ from app.modules.style_cloning.profile_generator import (
     generate_style_card,
     generate_voice_fingerprint,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(
@@ -77,8 +80,18 @@ def analyze_profile_task(self, profile_id: str, sample_texts: list[str]) -> dict
             "style_card": style_card.model_dump(),
         }
 
+    except (ValueError, TypeError) as exc:
+        logger.error("Data error in style analysis for profile %s: %s", profile_id, exc, exc_info=True)
+        try:
+            self.retry(exc=exc)
+        except self.MaxRetriesExceededError:
+            return {
+                "profile_id": profile_id,
+                "status": "failed",
+                "error": str(exc),
+            }
     except Exception as exc:
-        # Retry on transient errors
+        logger.error("Unexpected error in style analysis for profile %s: %s", profile_id, exc, exc_info=True)
         try:
             self.retry(exc=exc)
         except self.MaxRetriesExceededError:

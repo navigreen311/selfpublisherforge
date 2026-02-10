@@ -7,6 +7,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
@@ -79,24 +81,44 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
                         review.analyzed_at = datetime.now(timezone.utc)
                         db.add(review)
                         analyzed += 1
-                    except Exception as e:
+                    except (ValueError, KeyError, TypeError) as e:
                         logger.error(
-                            f"Failed to analyze review {review.id}: {e}"
+                            f"Failed to parse sentiment result for review {review.id}: {e}",
+                            exc_info=True,
                         )
+                        # Graceful degradation: mark as unknown so it's not retried endlessly
+                        review.sentiment = "unknown"
+                        review.sentiment_score = 0.0
+                        review.analyzed_at = datetime.now(timezone.utc)
+                        db.add(review)
+                    except (ConnectionError, TimeoutError, OSError) as e:
+                        logger.error(
+                            f"AI service unavailable for review {review.id}: {e}",
+                            exc_info=True,
+                        )
+                        # Graceful degradation: mark as unknown for now, can re-analyze later
+                        review.sentiment = "unknown"
+                        review.sentiment_score = 0.0
+                        review.analyzed_at = datetime.now(timezone.utc)
+                        db.add(review)
 
                 await db.commit()
                 logger.info(
                     f"Successfully analyzed {analyzed}/{len(reviews)} reviews"
                 )
                 return {"analyzed": analyzed, "total": len(reviews)}
-            except Exception as e:
+            except SQLAlchemyError as e:
+                logger.error(
+                    f"Database error during review analysis for org {org_id}: {e}",
+                    exc_info=True,
+                )
                 await db.rollback()
                 raise
 
     try:
         return _run_async(_analyze())
     except Exception as e:
-        logger.error(f"Task failed: {e}")
+        logger.error(f"Task analyze_pending_reviews failed: {e}", exc_info=True)
         raise self.retry(exc=e)
 
 
@@ -132,14 +154,18 @@ def check_alerts(self, org_id: str, book_id: str):
                     "alerts_created": alert_count,
                     "alert_types": [a.alert_type for a in alerts],
                 }
-            except Exception as e:
+            except SQLAlchemyError as e:
+                logger.error(
+                    f"Database error during alert checks for book {book_id}: {e}",
+                    exc_info=True,
+                )
                 await db.rollback()
                 raise
 
     try:
         return _run_async(_check())
     except Exception as e:
-        logger.error(f"Alert check task failed: {e}")
+        logger.error(f"Alert check task failed: {e}", exc_info=True)
         raise self.retry(exc=e)
 
 
@@ -242,14 +268,18 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
                     "review_count": row.count or 0,
                     "period": period,
                 }
-            except Exception as e:
+            except SQLAlchemyError as e:
+                logger.error(
+                    f"Database error during velocity snapshot for book {book_id}: {e}",
+                    exc_info=True,
+                )
                 await db.rollback()
                 raise
 
     try:
         return _run_async(_compute())
     except Exception as e:
-        logger.error(f"Velocity snapshot task failed: {e}")
+        logger.error(f"Velocity snapshot task failed: {e}", exc_info=True)
         raise self.retry(exc=e)
 
 
@@ -277,7 +307,11 @@ def compute_reputation(org_id: str, book_id: str):
                     "health_grade": metrics.health_grade,
                     "total_reviews": metrics.total_reviews,
                 }
-            except Exception as e:
+            except SQLAlchemyError as e:
+                logger.error(
+                    f"Database error during reputation computation for book {book_id}: {e}",
+                    exc_info=True,
+                )
                 await db.rollback()
                 raise
 

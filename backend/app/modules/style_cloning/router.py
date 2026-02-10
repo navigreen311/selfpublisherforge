@@ -195,6 +195,18 @@ async def generate_sample(
 
     except HTTPException:
         raise
+    except (ConnectionError, TimeoutError) as exc:
+        logger.error("LLM network error for profile %s: %s", profile_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Text generation failed: {exc}",
+        )
+    except ValueError as exc:
+        logger.error("LLM value error for profile %s: %s", profile_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Text generation failed: {exc}",
+        )
     except Exception as exc:
         logger.exception("Unexpected error during LLM generation for profile %s", profile_id)
         raise HTTPException(

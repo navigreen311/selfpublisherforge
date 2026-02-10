@@ -146,9 +146,11 @@ class SocialContentGenerator:
         """
         try:
             return await self._call_llm_for_content(request)
-        except Exception:
+        except (OSError, ValueError, KeyError, RuntimeError, TypeError) as exc:
             logger.warning(
-                "LLM social content generation failed, using templates",
+                "LLM social content generation failed (%s: %s), using templates",
+                type(exc).__name__,
+                exc,
                 exc_info=True,
             )
             return await self.generate_content(request)

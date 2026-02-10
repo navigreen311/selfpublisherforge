@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
 
@@ -182,8 +183,26 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "status": "completed",
                 }
-            except Exception:
+            except ValueError as exc:
                 await db.rollback()
+                logger.error(
+                    "Invalid UUID or data for book=%s org=%s: %s",
+                    book_id, org_id, exc, exc_info=True,
+                )
+                raise
+            except SQLAlchemyError as exc:
+                await db.rollback()
+                logger.error(
+                    "Database error during competitor price check for book=%s org=%s: %s",
+                    book_id, org_id, exc, exc_info=True,
+                )
+                raise
+            except statistics.StatisticsError as exc:
+                await db.rollback()
+                logger.error(
+                    "Statistics computation failed for book=%s org=%s: %s",
+                    book_id, org_id, exc, exc_info=True,
+                )
                 raise
 
     try:
@@ -198,9 +217,8 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
 
     except Exception as exc:
         logger.error(
-            "Competitor price check failed for book=%s: %s",
-            book_id,
-            str(exc),
+            "Competitor price check failed for book=%s org=%s: %s",
+            book_id, org_id, str(exc), exc_info=True,
         )
         raise self.retry(exc=exc)
 
@@ -305,10 +323,11 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
                         strategy_result = calculate_price(
                             rule.strategy.value, context
                         )
-                    except Exception as e:
+                    except (ValueError, KeyError, TypeError, ZeroDivisionError) as e:
                         logger.error(
-                            "Strategy calculation failed for rule=%s: %s",
-                            str(rule.id), str(e),
+                            "Strategy calculation failed for rule=%s strategy=%s org=%s: %s",
+                            str(rule.id), rule.strategy.value, org_id, e,
+                            exc_info=True,
                         )
                         continue
 
@@ -353,8 +372,26 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
                     "timestamp": now.isoformat(),
                     "status": "completed",
                 }
-            except Exception:
+            except ValueError as exc:
                 await db.rollback()
+                logger.error(
+                    "Invalid UUID or data during auto-pricing evaluation for org=%s: %s",
+                    org_id, exc, exc_info=True,
+                )
+                raise
+            except SQLAlchemyError as exc:
+                await db.rollback()
+                logger.error(
+                    "Database error during auto-pricing evaluation for org=%s: %s",
+                    org_id, exc, exc_info=True,
+                )
+                raise
+            except (KeyError, AttributeError) as exc:
+                await db.rollback()
+                logger.error(
+                    "Missing data during auto-pricing evaluation for org=%s: %s",
+                    org_id, exc, exc_info=True,
+                )
                 raise
 
     try:
@@ -371,8 +408,7 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
     except Exception as exc:
         logger.error(
             "Auto-pricing evaluation failed for org=%s: %s",
-            org_id,
-            str(exc),
+            org_id, str(exc), exc_info=True,
         )
         raise self.retry(exc=exc)
 
@@ -439,8 +475,19 @@ def activate_scheduled_promotions(self) -> dict:
                     "timestamp": now.isoformat(),
                     "status": "completed",
                 }
-            except Exception:
+            except SQLAlchemyError as exc:
                 await db.rollback()
+                logger.error(
+                    "Database error during promotion activation: %s",
+                    exc, exc_info=True,
+                )
+                raise
+            except (AttributeError, TypeError) as exc:
+                await db.rollback()
+                logger.error(
+                    "Data error during promotion activation: %s",
+                    exc, exc_info=True,
+                )
                 raise
 
     try:
@@ -452,7 +499,9 @@ def activate_scheduled_promotions(self) -> dict:
         return result
 
     except Exception as exc:
-        logger.error("Promotion activation failed: %s", str(exc))
+        logger.error(
+            "Promotion activation failed: %s", str(exc), exc_info=True,
+        )
         raise self.retry(exc=exc)
 
 
@@ -528,8 +577,19 @@ def complete_expired_promotions(self) -> dict:
                     "timestamp": now.isoformat(),
                     "status": "completed",
                 }
-            except Exception:
+            except SQLAlchemyError as exc:
                 await db.rollback()
+                logger.error(
+                    "Database error during promotion expiration check: %s",
+                    exc, exc_info=True,
+                )
+                raise
+            except (AttributeError, TypeError) as exc:
+                await db.rollback()
+                logger.error(
+                    "Data error during promotion expiration check: %s",
+                    exc, exc_info=True,
+                )
                 raise
 
     try:
@@ -541,7 +601,9 @@ def complete_expired_promotions(self) -> dict:
         return result
 
     except Exception as exc:
-        logger.error("Promotion expiration check failed: %s", str(exc))
+        logger.error(
+            "Promotion expiration check failed: %s", str(exc), exc_info=True,
+        )
         raise self.retry(exc=exc)
 
 

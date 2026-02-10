@@ -78,8 +78,8 @@ class AdCreativeGenerator:
         if self.llm_client:
             try:
                 variations = await self._generate_with_llm(request, constraints)
-            except Exception as e:
-                logger.warning(f"LLM generation failed, falling back to templates: {e}")
+            except (ConnectionError, TimeoutError, ValueError, KeyError, IndexError, RuntimeError) as e:
+                logger.warning("LLM generation failed, falling back to templates: %s", e)
                 variations = self._generate_with_templates(request, constraints)
         else:
             variations = self._generate_with_templates(request, constraints)
@@ -113,8 +113,8 @@ class AdCreativeGenerator:
             # Parse the LLM response
             content = response.content[0].text
             return self._parse_llm_response(content, constraints)
-        except Exception as e:
-            logger.error(f"LLM creative generation error: {e}")
+        except (ConnectionError, TimeoutError, ValueError, KeyError, IndexError, RuntimeError) as e:
+            logger.error("LLM creative generation error: %s", e)
             raise
 
     def _build_prompt(

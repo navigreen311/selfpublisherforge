@@ -48,8 +48,11 @@ redis_num_cache_nodes = 1
 log_retention_days = 30
 
 # Domain — MUST be set before production deployment
+# REQUIRED: Set to your production domain (e.g., "selfpublisherforge.com")
 domain_name     = "selfpublisherforge.com"  # TODO: Replace with your actual domain
-certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/REPLACE_ME"  # TODO: Replace with real ACM cert ARN
+# REQUIRED: AWS ACM certificate ARN for HTTPS. Create via: aws acm request-certificate --domain-name yourdomain.com
+certificate_arn = "arn:aws:acm:us-east-1:YOUR_AWS_ACCOUNT_ID:certificate/REPLACE_ME"  # TODO: Replace with real ACM cert ARN
 
 # Monitoring
-alarm_sns_topic_arn = "arn:aws:sns:us-east-1:ACCOUNT_ID:selfpublisherforge-alarms"  # TODO: Replace with real SNS topic ARN
+# REQUIRED: SNS topic ARN for alerts. Create via: aws sns create-topic --name selfpublisherforge-alarms
+alarm_sns_topic_arn = "arn:aws:sns:us-east-1:YOUR_AWS_ACCOUNT_ID:selfpublisherforge-alarms"  # TODO: Replace with real SNS topic ARN

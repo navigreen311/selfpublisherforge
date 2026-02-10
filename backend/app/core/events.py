@@ -52,8 +52,14 @@ except ImportError:
 
 try:
     import redis.asyncio as aioredis
+    from redis.exceptions import ConnectionError as RedisConnectionError, RedisError, ResponseError
 except ImportError:
     aioredis = None  # type: ignore[assignment]
+    RedisConnectionError = ConnectionError  # type: ignore[misc,assignment]
+    RedisError = Exception  # type: ignore[misc,assignment]
+    ResponseError = Exception  # type: ignore[misc,assignment]
+
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -183,8 +189,8 @@ class RedisEventSubscriber:
                     count=batch_size,
                     block=block_ms,
                 )
-            except Exception:
-                logger.exception("XREADGROUP error -- retrying in 1 s")
+            except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError) as exc:
+                logger.error("XREADGROUP error -- retrying in 1 s", exc_info=True)
                 await asyncio.sleep(1)
                 continue
 
@@ -215,8 +221,8 @@ class RedisEventSubscriber:
         for _msg_id, fields in raw:
             try:
                 events.append(_deserialize_event(fields))
-            except Exception:
-                logger.warning("Failed to deserialize event during replay, skipping")
+            except (ValidationError, KeyError, ValueError, json.JSONDecodeError) as exc:
+                logger.warning("Failed to deserialize event during replay, skipping", exc_info=True)
         return events
 
     # ------------------------------------------------------------------
@@ -237,7 +243,7 @@ class RedisEventSubscriber:
         """Create consumer group if it does not exist, auto-creating the stream."""
         try:
             await self._redis.xgroup_create(stream_key, self._group, id="0", mkstream=True)
-        except Exception:
+        except ResponseError:
             # Group already exists -- expected on subsequent startups
             pass
 
@@ -257,8 +263,8 @@ class RedisEventSubscriber:
             if isinstance(msg_id, bytes):
                 msg_id = msg_id.decode()
             await self._redis.xack(stream_name, self._group, msg_id)
-        except Exception as exc:
-            logger.exception("Failed to process event -- sending to DLQ")
+        except (ValidationError, KeyError, ValueError, json.JSONDecodeError, RedisError, RuntimeError) as exc:
+            logger.error("Failed to process event -- sending to DLQ", exc_info=True)
             await self.send_to_dlq(
                 {
                     k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v

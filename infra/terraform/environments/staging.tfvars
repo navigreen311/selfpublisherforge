@@ -39,5 +39,7 @@ redis_num_cache_nodes = 1
 log_retention_days = 14
 
 # Domain (set to actual staging domain when available)
+# Optional for staging - set if you have a staging domain
 domain_name     = ""
+# Optional for staging - set if using custom domain with HTTPS
 certificate_arn = ""

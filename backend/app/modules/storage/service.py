@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -23,6 +24,7 @@ from app.modules.storage.schemas import (
 )
 from app.modules.storage.validators import validate_file
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -288,15 +290,25 @@ class StorageService:
             await self.db.flush()
             await self.db.refresh(asset)
 
-        except Exception:
-            # On any processing failure, mark the asset as FAILED
+        except ClientError as exc:
+            logger.error("S3 client error during asset processing for %s: %s", asset_id, exc)
             asset.status = AssetStatus.FAILED.value
             await self.db.flush()
             await self.db.refresh(asset)
             raise AppException(
                 status_code=500,
                 code="PROCESSING_FAILED",
-                message="Asset processing failed unexpectedly.",
+                message="Asset processing failed due to a storage service error.",
+            )
+        except IOError as exc:
+            logger.error("I/O error during asset processing for %s: %s", asset_id, exc)
+            asset.status = AssetStatus.FAILED.value
+            await self.db.flush()
+            await self.db.refresh(asset)
+            raise AppException(
+                status_code=500,
+                code="PROCESSING_FAILED",
+                message="Asset processing failed due to an I/O error.",
             )
 
         return self._to_response(asset)

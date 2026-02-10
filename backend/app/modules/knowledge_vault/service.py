@@ -48,8 +48,10 @@ class KnowledgeService:
         # Index in Elasticsearch (best-effort)
         try:
             await self.search.index_entry(entry.to_dict())
-        except Exception:
-            logger.exception("Failed to index entry %s in Elasticsearch", entry.id)
+        except (ConnectionError, OSError) as exc:
+            logger.error("Failed to index entry %s in Elasticsearch: connection error", entry.id, exc_info=True)
+        except ValueError as exc:
+            logger.error("Failed to index entry %s in Elasticsearch: invalid data", entry.id, exc_info=True)
 
         return entry
 
@@ -143,8 +145,10 @@ class KnowledgeService:
 
         try:
             await self.search.index_entry(entry.to_dict())
-        except Exception:
-            logger.exception("Failed to re-index entry %s", entry.id)
+        except (ConnectionError, OSError) as exc:
+            logger.error("Failed to re-index entry %s: connection error", entry.id, exc_info=True)
+        except ValueError as exc:
+            logger.error("Failed to re-index entry %s: invalid data", entry.id, exc_info=True)
 
         return entry
 
@@ -158,8 +162,10 @@ class KnowledgeService:
 
         try:
             await self.search.delete_entry(str(entry_id))
-        except Exception:
-            logger.exception("Failed to remove entry %s from search index", entry_id)
+        except (ConnectionError, OSError) as exc:
+            logger.error("Failed to remove entry %s from search index: connection error", entry_id, exc_info=True)
+        except ValueError as exc:
+            logger.error("Failed to remove entry %s from search index: invalid data", entry_id, exc_info=True)
 
         return True
 

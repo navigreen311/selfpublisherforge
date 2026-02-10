@@ -112,7 +112,11 @@ class OpenAIProvider(BaseLLMProvider):
                 messages=[{"role": "user", "content": "ping"}],
             )
             return True
-        except Exception:
+        except (ConnectionError, openai.APIConnectionError, openai.APITimeoutError) as exc:
+            logger.warning("OpenAI health check failed: connection error", exc_info=True)
+            return False
+        except openai.APIError as exc:
+            logger.warning("OpenAI health check failed: API error: %s", exc, exc_info=True)
             return False
 
     # ------------------------------------------------------------------

@@ -145,8 +145,22 @@ async def extract_key_facts(content: str) -> dict[str, Any]:
         )
         raw_text = message.content[0].text
         return _parse_extraction_response(raw_text)
-    except Exception:
-        logger.exception("AI fact extraction failed; returning defaults")
+    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+        logger.error("AI fact extraction failed due to connection issue", exc_info=True)
+        return {
+            "key_facts": "",
+            "tags": [],
+            "credibility_score": None,
+        }
+    except (anthropic.APIStatusError, anthropic.APIError) as exc:
+        logger.error("AI fact extraction failed due to API error: %s", exc, exc_info=True)
+        return {
+            "key_facts": "",
+            "tags": [],
+            "credibility_score": None,
+        }
+    except (ValueError, KeyError, IndexError) as exc:
+        logger.error("AI fact extraction failed due to response parsing error", exc_info=True)
         return {
             "key_facts": "",
             "tags": [],
@@ -182,8 +196,22 @@ async def summarize_content(content: str) -> dict[str, Any]:
         )
         raw_text = message.content[0].text
         return _parse_summary_response(raw_text)
-    except Exception:
-        logger.exception("AI summarization failed; returning defaults")
+    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+        logger.error("AI summarization failed due to connection issue", exc_info=True)
+        return {
+            "summary": "Summary could not be generated.",
+            "key_points": [],
+            "suggested_tags": [],
+        }
+    except (anthropic.APIStatusError, anthropic.APIError) as exc:
+        logger.error("AI summarization failed due to API error: %s", exc, exc_info=True)
+        return {
+            "summary": "Summary could not be generated.",
+            "key_points": [],
+            "suggested_tags": [],
+        }
+    except (ValueError, KeyError, IndexError) as exc:
+        logger.error("AI summarization failed due to response parsing error", exc_info=True)
         return {
             "summary": "Summary could not be generated.",
             "key_points": [],
@@ -224,8 +252,14 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
         if isinstance(data, list):
             return data
         return data.get("suggestions", [])
-    except Exception:
-        logger.exception("AI suggestion failed; returning empty list")
+    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+        logger.error("AI suggestion failed due to connection issue", exc_info=True)
+        return []
+    except (anthropic.APIStatusError, anthropic.APIError) as exc:
+        logger.error("AI suggestion failed due to API error: %s", exc, exc_info=True)
+        return []
+    except (ValueError, json.JSONDecodeError, KeyError, IndexError) as exc:
+        logger.error("AI suggestion failed due to response parsing error", exc_info=True)
         return []
 
 

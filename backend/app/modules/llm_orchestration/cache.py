@@ -103,8 +103,11 @@ class SemanticCache:
                 return json.loads(raw)
             logger.debug("Cache MISS for key %s", key)
             return None
-        except Exception:
-            logger.warning("Cache lookup failed for key %s", key, exc_info=True)
+        except (ConnectionError, aioredis.RedisError, OSError) as exc:
+            logger.warning("Cache lookup failed for key %s: connection/redis error", key, exc_info=True)
+            return None
+        except (ValueError, json.JSONDecodeError) as exc:
+            logger.warning("Cache lookup failed for key %s: corrupt cached data", key, exc_info=True)
             return None
 
     async def set(
@@ -126,8 +129,11 @@ class SemanticCache:
             await client.set(key, json.dumps(response_data), ex=ttl)
             logger.debug("Cache SET for key %s (TTL=%ds)", key, ttl)
             return True
-        except Exception:
-            logger.warning("Cache write failed for key %s", key, exc_info=True)
+        except (ConnectionError, aioredis.RedisError, OSError) as exc:
+            logger.warning("Cache write failed for key %s: connection/redis error", key, exc_info=True)
+            return False
+        except (ValueError, TypeError) as exc:
+            logger.warning("Cache write failed for key %s: serialization error", key, exc_info=True)
             return False
 
     async def invalidate(
@@ -143,8 +149,8 @@ class SemanticCache:
             client = await self._get_redis()
             deleted = await client.delete(key)
             return deleted > 0
-        except Exception:
-            logger.warning("Cache invalidation failed for key %s", key, exc_info=True)
+        except (ConnectionError, aioredis.RedisError, OSError) as exc:
+            logger.warning("Cache invalidation failed for key %s: connection/redis error", key, exc_info=True)
             return False
 
     async def flush_task_type(self, task_type: TaskType) -> int:
@@ -157,6 +163,6 @@ class SemanticCache:
                 await client.delete(key)
                 count += 1
             return count
-        except Exception:
-            logger.warning("Cache flush failed for pattern %s", pattern, exc_info=True)
+        except (ConnectionError, aioredis.RedisError, OSError) as exc:
+            logger.warning("Cache flush failed for pattern %s: connection/redis error", pattern, exc_info=True)
             return 0

@@ -1,5 +1,6 @@
 import os
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -8,6 +9,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "SelfPublisherForge"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
+    ENVIRONMENT: str = "development"  # "development", "staging", "production"
     API_V1_PREFIX: str = "/api/v1"
     FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
@@ -92,6 +94,43 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+
+    # ------------------------------------------------------------------
+    # Validators
+    # ------------------------------------------------------------------
+    _PLACEHOLDER_SECRETS: dict[str, str] = {
+        "SECRET_KEY": "YOUR_SECRET_KEY_HERE",
+        "AWS_ACCESS_KEY_ID": "YOUR_AWS_ACCESS_KEY_HERE",
+        "AWS_SECRET_ACCESS_KEY": "YOUR_AWS_SECRET_KEY_HERE",
+        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
+        "OPENAI_API_KEY": "YOUR_OPENAI_API_KEY_HERE",
+        "STRIPE_SECRET_KEY": "YOUR_STRIPE_SECRET_KEY_HERE",
+        "STRIPE_WEBHOOK_SECRET": "YOUR_STRIPE_WEBHOOK_SECRET_HERE",
+        "SENDGRID_API_KEY": "YOUR_SENDGRID_API_KEY_HERE",
+    }
+
+    @model_validator(mode="after")
+    def _validate_production_secrets(self) -> "Settings":
+        """Ensure no placeholder secrets remain when running in production."""
+        # Dynamically include FRONTEND_URL in CORS origins
+        if self.FRONTEND_URL and self.FRONTEND_URL not in self.CORS_ORIGINS:
+            self.CORS_ORIGINS = [*self.CORS_ORIGINS, self.FRONTEND_URL]
+
+        if self.ENVIRONMENT != "production":
+            return self
+
+        missing: list[str] = [
+            name
+            for name, placeholder in self._PLACEHOLDER_SECRETS.items()
+            if getattr(self, name) == placeholder
+        ]
+        if missing:
+            raise ValueError(
+                "Production mode (ENVIRONMENT=production) requires real values for the "
+                "following environment variables that still contain placeholder "
+                f"defaults:\n  - " + "\n  - ".join(missing)
+            )
+        return self
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

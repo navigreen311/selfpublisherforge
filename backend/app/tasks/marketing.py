@@ -9,7 +9,7 @@ Handles:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from app.tasks import celery_app
@@ -33,6 +33,7 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
     from app.database import async_session
     from app.modules.marketing.service import MarketingService
     from app.models.marketing import EmailSendStatus
+    from app.modules.notifications.email import send_transactional_email
 
     async def _process():
         async with async_session() as db:
@@ -44,19 +45,41 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
                 logger.warning(f"Sequence {sequence_id} not found")
                 return {"status": "not_found"}
 
+            recipients = (sequence.settings or {}).get("recipient_emails", [])
+
             sent_count = 0
             for template in sequence.emails:
                 if template.send_status != EmailSendStatus.SCHEDULED:
                     continue
 
-                if template.scheduled_at and template.scheduled_at <= datetime.utcnow():
-                    # In production, this would call SendGrid/SES
-                    template.send_status = EmailSendStatus.SENT
-                    template.sent_at = datetime.utcnow()
-                    sent_count += 1
-                    logger.info(
-                        f"Sent email '{template.subject}' for sequence {sequence_id}"
-                    )
+                if template.scheduled_at and template.scheduled_at <= datetime.now(timezone.utc):
+                    success = True
+                    for recipient_email in recipients:
+                        ok = send_transactional_email(
+                            to_email=recipient_email,
+                            template_name=template.template_type.value,
+                            context=template.personalization_fields or {},
+                            subject_override=template.subject,
+                        )
+                        if not ok:
+                            logger.warning(
+                                f"Failed to send email '{template.subject}' "
+                                f"to {recipient_email} for sequence {sequence_id}"
+                            )
+                            success = False
+
+                    if success:
+                        template.send_status = EmailSendStatus.SENT
+                        template.sent_at = datetime.now(timezone.utc)
+                        sent_count += 1
+                        logger.info(
+                            f"Sent email '{template.subject}' for sequence {sequence_id}"
+                        )
+                    else:
+                        template.send_status = EmailSendStatus.FAILED
+                        logger.error(
+                            f"Email '{template.subject}' failed for sequence {sequence_id}"
+                        )
 
             sequence.sent_count += sent_count
             await db.commit()
@@ -89,11 +112,14 @@ def send_social_post_reminders(self, org_id: str) -> dict:
     import asyncio
     from app.database import async_session
     from app.models.marketing import SocialPost, SocialPostStatus
+    from app.modules.notifications.service import create_notification
+    from app.modules.notifications.schemas import CreateNotification
+    from app.modules.notifications.models import NotificationType
     from sqlalchemy import select, and_
 
     async def _process():
         async with async_session() as db:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             tomorrow = now + timedelta(hours=24)
 
             stmt = select(SocialPost).where(
@@ -110,13 +136,27 @@ def send_social_post_reminders(self, org_id: str) -> dict:
 
             reminders_sent = 0
             for post in posts:
-                # In production, send notification (push, email, in-app)
+                await create_notification(
+                    db,
+                    CreateNotification(
+                        user_id=post.created_by,
+                        org_id=post.org_id,
+                        type=NotificationType.INFO,
+                        title="Social Post Reminder",
+                        message=(
+                            f"Your {post.platform.value} post is scheduled "
+                            f"for {post.scheduled_at:%Y-%m-%d %H:%M} UTC."
+                        ),
+                        data={"post_id": str(post.id), "platform": post.platform.value},
+                    ),
+                )
                 logger.info(
                     f"Reminder: Social post for {post.platform.value} "
                     f"scheduled at {post.scheduled_at}"
                 )
                 reminders_sent += 1
 
+            await db.commit()
             return {"status": "ok", "reminders_sent": reminders_sent}
 
     try:
@@ -145,6 +185,7 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
     import asyncio
     from app.database import async_session
     from app.modules.marketing.arc_manager import ARCManager
+    from app.modules.notifications.email import send_transactional_email
 
     async def _process():
         async with async_session() as db:
@@ -156,12 +197,26 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
 
             follow_ups_sent = 0
             for recipient_info in pending:
-                # In production, this would send an actual email via SendGrid/SES
-                logger.info(
-                    f"ARC follow-up: Sending to {recipient_info['email']} "
-                    f"({recipient_info['days_since_send']} days since send)"
+                ok = send_transactional_email(
+                    to_email=recipient_info["email"],
+                    template_name="welcome",
+                    context={"name": recipient_info.get("name", "Reader")},
+                    subject_override=(
+                        f"Friendly reminder: We'd love your review "
+                        f"({recipient_info['days_since_send']} days ago)"
+                    ),
                 )
-                follow_ups_sent += 1
+                if ok:
+                    follow_ups_sent += 1
+                    logger.info(
+                        f"ARC follow-up sent to {recipient_info['email']} "
+                        f"({recipient_info['days_since_send']} days since send)"
+                    )
+                else:
+                    logger.warning(
+                        f"ARC follow-up failed for {recipient_info['email']} "
+                        f"({recipient_info['days_since_send']} days since send)"
+                    )
 
             return {"status": "ok", "follow_ups_sent": follow_ups_sent}
 

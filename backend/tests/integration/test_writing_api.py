@@ -331,13 +331,14 @@ class TestGenerateEndpoint:
 
     @pytest.mark.asyncio
     async def test_generate_streaming_returns_event_stream(self, async_client):
-        from app.modules.ai_writing import generator
-
         async def mock_stream(request):
             yield 'event: token\ndata: {"text": "Hello"}\n\n'
             yield 'event: complete\ndata: {"content": "Hello"}\n\n'
 
-        with patch.object(generator, "generate_stream", side_effect=mock_stream):
+        with patch(
+            "app.modules.ai_writing.router.generate_stream",
+            side_effect=mock_stream,
+        ):
             resp = await async_client.post(
                 "/api/v1/generate",
                 json={

@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
+import httpx
 from sqlalchemy import select, func, and_, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,7 +53,7 @@ from app.modules.advertising.optimizer import (
     KeywordPerformanceData,
 )
 from app.modules.advertising.creative_generator import AdCreativeGenerator
-from app.modules.advertising.amazon_ads import AmazonAdsClient
+from app.modules.advertising.amazon_ads import AmazonAdsClient, AmazonAdsError
 from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
 
 logger = logging.getLogger(__name__)
@@ -190,8 +191,8 @@ class AdvertisingService:
                 )
                 campaign.external_campaign_id = ext_result.get("external_campaign_id")
             await self.db.flush()
-        except Exception as e:
-            logger.warning(f"Failed to sync campaign to external platform: {e}")
+        except (AmazonAdsError, FacebookAdsError, httpx.HTTPError, OSError) as e:
+            logger.warning("Failed to sync campaign to external platform: %s", e)
 
         # Create keyword bids from targeting keywords
         for keyword in data.targeting_keywords:

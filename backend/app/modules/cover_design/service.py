@@ -134,8 +134,8 @@ async def generate_cover(
         cover.dpi = result.get("dpi", dimensions.dpi)
         cover.status = CoverStatus.COMPLETED.value
 
-    except Exception:
-        logger.exception("Cover generation failed for cover %s", cover.id)
+    except (KeyError, ValueError, TypeError, RuntimeError, OSError) as exc:
+        logger.exception("Cover generation failed for cover %s: %s", cover.id, exc)
         cover.status = CoverStatus.FAILED.value
 
     await db.flush()

@@ -8,6 +8,7 @@ notification types.
 from __future__ import annotations
 
 import logging
+import smtplib
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -162,10 +163,17 @@ async def _maybe_send_email(
                 template_name,
                 recipient_email,
             )
-    except Exception:
-        logger.exception(
-            "Unexpected error sending email for notification %s",
+    except (smtplib.SMTPException, OSError) as exc:
+        logger.error(
+            "SMTP/network error sending email for notification %s: %s",
             notification.id,
+            exc,
+        )
+    except ValueError as exc:
+        logger.error(
+            "Invalid email template or parameters for notification %s: %s",
+            notification.id,
+            exc,
         )
 
 

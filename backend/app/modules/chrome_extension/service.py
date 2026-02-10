@@ -320,10 +320,12 @@ async def _generate_related_keywords_via_llm(
                 )
         return results
 
-    except Exception:
+    except (ImportError, json.JSONDecodeError, KeyError, ValueError, OSError, RuntimeError) as exc:
         logger.debug(
-            "LLM-based keyword generation unavailable, falling back to "
+            "LLM-based keyword generation unavailable (%s: %s), falling back to "
             "local analysis",
+            type(exc).__name__,
+            exc,
             exc_info=True,
         )
         return []

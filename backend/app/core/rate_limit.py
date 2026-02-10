@@ -10,12 +10,17 @@ import time
 from enum import Enum
 from typing import Any
 
+import logging
+
 import redis.asyncio as redis
 from fastapi import Request, Response
+from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class RateLimitTier(str, Enum):
@@ -203,8 +208,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 tier=tier,
                 path=request.url.path,
             )
-        except Exception:
+        except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError) as exc:
             # If Redis is unavailable, allow the request through
+            logger.warning("Rate limiter unavailable, allowing request through", exc_info=True)
             return await call_next(request)
 
         if not allowed:

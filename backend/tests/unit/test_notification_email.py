@@ -17,6 +17,7 @@ raises ``KeyError``.  Tests that need rendered output therefore mock
 
 from __future__ import annotations
 
+import smtplib
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -239,7 +240,7 @@ class TestSendEmail:
         settings.SMTP_PASS = "pass"
         mock_settings.return_value = settings
 
-        mock_smtp_cls.side_effect = Exception("Connection refused")
+        mock_smtp_cls.side_effect = smtplib.SMTPException("Connection refused")
 
         result = await send_email(
             to="recipient@example.com",

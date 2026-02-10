@@ -6,13 +6,17 @@ Normalizes data into a common RoyaltyRecord format.
 
 from __future__ import annotations
 
+import binascii
 import csv
 import io
 import base64
+import logging
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,7 +83,8 @@ def decode_file_content(content: str) -> str:
     try:
         decoded = base64.b64decode(content)
         return decoded.decode("utf-8-sig")  # Handle BOM
-    except Exception:
+    except (binascii.Error, UnicodeDecodeError) as exc:
+        logger.debug("Base64 decode failed, assuming plain text: %s", exc, exc_info=True)
         # Assume it's already plain text
         return content
 
@@ -145,7 +150,8 @@ def parse_kdp_csv(csv_text: str) -> list[dict[str, Any]]:
                 "period_end": period_end,
                 "raw_data": dict(row),
             })
-        except Exception as exc:
+        except (KeyError, ValueError, TypeError, InvalidOperation, AttributeError) as exc:
+            logger.warning("KDP CSV row %d parse error: %s", i, exc, exc_info=True)
             errors.append(f"Row {i}: {exc}")
 
     return records
@@ -205,7 +211,8 @@ def parse_ingram_spark_csv(csv_text: str) -> list[dict[str, Any]]:
                 "period_end": period_end,
                 "raw_data": dict(row),
             })
-        except Exception:
+        except (KeyError, ValueError, TypeError, InvalidOperation, AttributeError) as exc:
+            logger.warning("IngramSpark CSV row %d parse error: %s", i, exc, exc_info=True)
             continue
 
     return records
@@ -259,7 +266,8 @@ def parse_d2d_csv(csv_text: str) -> list[dict[str, Any]]:
                 "period_end": period_end,
                 "raw_data": dict(row),
             })
-        except Exception:
+        except (KeyError, ValueError, TypeError, InvalidOperation, AttributeError) as exc:
+            logger.warning("D2D CSV row %d parse error: %s", i, exc, exc_info=True)
             continue
 
     return records
@@ -332,7 +340,8 @@ async def import_royalties(
             )
             db.add(record)
             imported += 1
-        except Exception as exc:
+        except (TypeError, ValueError, KeyError) as exc:
+            logger.warning("Failed to create RoyaltyRecord for record %d: %s", i + 1, exc, exc_info=True)
             skipped += 1
             errors.append(f"Record {i + 1}: {exc}")
 

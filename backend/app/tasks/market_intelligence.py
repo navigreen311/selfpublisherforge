@@ -10,8 +10,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.database import async_session
+from app.models.market import CompetitorBook, MarketCategory, MarketSnapshot
 from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
@@ -51,15 +56,39 @@ def refresh_category_data(self):
         categories = await client.get_category_tree()
         count = _count_nodes(categories)
         logger.info("Fetched %d category nodes", count)
-        # In production: upsert into market_categories table
+
+        # Flatten the tree and upsert each node into market_categories
+        flat = _flatten_category_tree(categories)
+        async with async_session() as session:
+            async with session.begin():
+                for node in flat:
+                    result = await session.execute(
+                        select(MarketCategory).where(
+                            MarketCategory.amazon_node_id == node["id"]
+                        )
+                    )
+                    existing = result.scalar_one_or_none()
+                    if existing:
+                        existing.name = node["name"]
+                        existing.book_count = node.get("book_count") or 0
+                    else:
+                        cat = MarketCategory(
+                            amazon_node_id=node["id"],
+                            name=node["name"],
+                            book_count=node.get("book_count") or 0,
+                        )
+                        session.add(cat)
         return count
 
     try:
         count = _run_async(_refresh())
         logger.info("Category refresh complete: %d categories", count)
         return {"status": "success", "categories_updated": count}
-    except Exception as exc:
-        logger.error("Category refresh failed: %s", exc)
+    except SQLAlchemyError as exc:
+        logger.error("Category refresh DB error: %s", exc)
+        raise self.retry(exc=exc)
+    except ConnectionError as exc:
+        logger.error("Category refresh connection failed: %s", exc)
         raise self.retry(exc=exc)
 
 
@@ -69,6 +98,15 @@ def _count_nodes(nodes: list[dict]) -> int:
         total += 1
         total += _count_nodes(n.get("children", []))
     return total
+
+
+def _flatten_category_tree(nodes: list[dict]) -> list[dict]:
+    """Flatten a nested category tree into a list of node dicts."""
+    flat: list[dict] = []
+    for n in nodes:
+        flat.append(n)
+        flat.extend(_flatten_category_tree(n.get("children", [])))
+    return flat
 
 
 # ---------------------------------------------------------------------------
@@ -92,24 +130,44 @@ def update_bsr_history(self):
 
     async def _update():
         from app.modules.market_intelligence.amazon_client import get_amazon_client
-        from app.modules.market_intelligence.service import MarketIntelligenceService
 
-        svc = MarketIntelligenceService()
-        tracked = await svc.list_competitors()
         client = get_amazon_client()
 
-        updated = 0
-        for comp in tracked:
-            try:
-                product = await client.get_product_detail(comp.asin, marketplace=comp.marketplace)
-                if product and product.bsr is not None:
-                    # In production: INSERT into competitor BSR history table
-                    updated += 1
-                    logger.debug(
-                        "Updated BSR for %s: %d", comp.asin, product.bsr
+        async with async_session() as session:
+            async with session.begin():
+                result = await session.execute(
+                    select(CompetitorBook).where(
+                        CompetitorBook.deleted_at.is_(None)
                     )
-            except Exception as exc:
-                logger.warning("Failed to update BSR for %s: %s", comp.asin, exc)
+                )
+                tracked = result.scalars().all()
+
+            updated = 0
+            for comp in tracked:
+                marketplace = (comp.metadata_json or {}).get("marketplace", "US")
+                try:
+                    product = await client.get_product_detail(
+                        comp.asin, marketplace=marketplace
+                    )
+                    if product and product.bsr is not None:
+                        now_iso = datetime.now(tz=timezone.utc).isoformat()
+                        bsr_point = {
+                            "date": now_iso,
+                            "bsr": product.bsr,
+                            "price": product.price,
+                        }
+                        async with session.begin():
+                            history = list(comp.bsr_history or [])
+                            history.append(bsr_point)
+                            comp.bsr_history = history
+                            comp.bsr_current = product.bsr
+                            session.add(comp)
+                        updated += 1
+                        logger.debug(
+                            "Updated BSR for %s: %d", comp.asin, product.bsr
+                        )
+                except (SQLAlchemyError, ConnectionError) as exc:
+                    logger.warning("Failed to update BSR for %s: %s", comp.asin, exc)
 
         return updated
 
@@ -117,8 +175,11 @@ def update_bsr_history(self):
         updated = _run_async(_update())
         logger.info("BSR history update complete: %d competitors updated", updated)
         return {"status": "success", "competitors_updated": updated}
-    except Exception as exc:
-        logger.error("BSR history update failed: %s", exc)
+    except SQLAlchemyError as exc:
+        logger.error("BSR history update DB error: %s", exc)
+        raise self.retry(exc=exc)
+    except ConnectionError as exc:
+        logger.error("BSR history update connection failed: %s", exc)
         raise self.retry(exc=exc)
 
 
@@ -151,19 +212,42 @@ def generate_market_snapshot(self, category_id: str | None = None):
             try:
                 analysis = await svc.get_category_analysis(cat_id)
                 snapshot_data = {
-                    "category_id": cat_id,
-                    "category_name": analysis.category_name,
-                    "snapshot_date": datetime.now(tz=timezone.utc).isoformat(),
                     "avg_bsr": analysis.avg_bsr,
                     "avg_price": analysis.avg_price,
                     "book_count": analysis.book_count,
                     "avg_reviews": analysis.avg_reviews,
                     "competition_score": analysis.competition_score,
                 }
-                # In production: INSERT into market_snapshots table
+
+                async with async_session() as session:
+                    async with session.begin():
+                        # Look up or create the MarketCategory row for this node
+                        cat_result = await session.execute(
+                            select(MarketCategory).where(
+                                MarketCategory.amazon_node_id == cat_id,
+                                MarketCategory.deleted_at.is_(None),
+                            )
+                        )
+                        cat_obj = cat_result.scalar_one_or_none()
+                        if cat_obj is None:
+                            cat_obj = MarketCategory(
+                                amazon_node_id=cat_id,
+                                name=analysis.category_name,
+                                book_count=analysis.book_count,
+                            )
+                            session.add(cat_obj)
+                            await session.flush()
+
+                        snapshot = MarketSnapshot(
+                            category_id=cat_obj.id,
+                            snapshot_date=date.today(),
+                            metrics=snapshot_data,
+                        )
+                        session.add(snapshot)
+
                 snapshots_created += 1
                 logger.debug("Snapshot created for %s: %s", cat_id, snapshot_data)
-            except Exception as exc:
+            except (SQLAlchemyError, ConnectionError) as exc:
                 logger.warning("Failed to snapshot category %s: %s", cat_id, exc)
 
         return snapshots_created
@@ -172,8 +256,11 @@ def generate_market_snapshot(self, category_id: str | None = None):
         count = _run_async(_snapshot())
         logger.info("Market snapshot generation complete: %d snapshots", count)
         return {"status": "success", "snapshots_created": count}
-    except Exception as exc:
-        logger.error("Market snapshot generation failed: %s", exc)
+    except SQLAlchemyError as exc:
+        logger.error("Market snapshot generation DB error: %s", exc)
+        raise self.retry(exc=exc)
+    except ConnectionError as exc:
+        logger.error("Market snapshot generation connection failed: %s", exc)
         raise self.retry(exc=exc)
 
 

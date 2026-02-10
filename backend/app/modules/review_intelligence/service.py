@@ -7,6 +7,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import and_, case, func, select, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -558,7 +559,11 @@ async def compute_reputation_score(
             db, org_id, book_id, VelocityPeriod.WEEKLY, lookback=4
         )
         velocity_trend = velocity.trend
-    except Exception:
+    except (SQLAlchemyError, ValueError) as e:
+        logger.warning(
+            "Velocity computation failed for book %s, defaulting to STABLE: %s",
+            book_id, e,
+        )
         velocity_trend = VelocityTrend.STABLE
 
     # Calculate overall score (0-100)
@@ -801,8 +806,10 @@ Return ONLY valid JSON."""
         )
     except ImportError:
         logger.info("Anthropic SDK not available, using default tips")
-    except Exception as e:
-        logger.warning(f"LLM acquisition tips failed, using defaults: {e}")
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        logger.warning("LLM acquisition tips response parsing failed, using defaults: %s", e)
+    except OSError as e:
+        logger.warning("LLM acquisition tips network request failed, using defaults: %s", e)
 
     # Fallback tips
     return _default_acquisition_tips(request)

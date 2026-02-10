@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select, update, func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.competitor_finder.models import (
@@ -151,7 +152,7 @@ class CompetitorFinderService:
             analysis.status = AnalysisStatus.COMPLETED.value
             analysis.completed_at = datetime.now(timezone.utc)
 
-        except Exception as e:
+        except (SQLAlchemyError, ValueError, RuntimeError, OSError) as e:
             logger.error("Analysis failed for book %s: %s", request.book_id, e, exc_info=True)
             analysis.status = AnalysisStatus.FAILED.value
             analysis.error_message = str(e)

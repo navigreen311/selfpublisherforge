@@ -1,10 +1,15 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import DateTime, func, text
-from datetime import datetime
+import logging
 import uuid
+from datetime import datetime
+
+from sqlalchemy import DateTime, func, text
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 engine = create_async_engine(settings.DATABASE_URL, echo=settings.DATABASE_ECHO)
@@ -65,7 +70,8 @@ async def get_db():
         try:
             yield session
             await session.commit()
-        except Exception:
+        except (SQLAlchemyError, DBAPIError) as exc:
+            logger.error("Database session error, rolling back", exc_info=True)
             await session.rollback()
             raise
         finally:

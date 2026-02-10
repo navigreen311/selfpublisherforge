@@ -35,6 +35,17 @@ def send_email_task(
             raise RuntimeError(f"SendGrid rejected email to {to_email}")
         logger.info("Email task completed: to=%s template=%s", to_email, template_name)
         return {"status": "sent", "to": to_email, "template": template_name}
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning(
+            "Email task network error (attempt %s/%s): to=%s template=%s error=%s",
+            self.request.retries + 1,
+            self.max_retries + 1,
+            to_email,
+            template_name,
+            str(exc),
+            exc_info=True,
+        )
+        raise self.retry(exc=exc)
     except Exception as exc:
         logger.warning(
             "Email task failed (attempt %s/%s): to=%s template=%s error=%s",
@@ -43,6 +54,7 @@ def send_email_task(
             to_email,
             template_name,
             str(exc),
+            exc_info=True,
         )
         raise self.retry(exc=exc)
 
@@ -107,6 +119,7 @@ def create_in_app_notification_task(
             self.max_retries + 1,
             user_id,
             str(exc),
+            exc_info=True,
         )
         raise self.retry(exc=exc)
     finally:
@@ -162,8 +175,17 @@ def batch_notification_delivery_task(
                 )
 
             succeeded += 1
-        except Exception:
-            logger.exception("Failed to queue notification for user %s", entry.get("user_id"))
+        except (KeyError, TypeError) as exc:
+            logger.error(
+                "Invalid notification payload for user %s: %s",
+                entry.get("user_id"), exc, exc_info=True,
+            )
+            failed += 1
+        except (ConnectionError, OSError) as exc:
+            logger.error(
+                "Broker connection error queueing notification for user %s: %s",
+                entry.get("user_id"), exc, exc_info=True,
+            )
             failed += 1
 
     logger.info("Batch delivery: queued=%d failed=%d", succeeded, failed)

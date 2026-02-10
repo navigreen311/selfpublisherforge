@@ -163,9 +163,16 @@ class TestComputePortfolioMetrics:
         book_row1.revenue = Decimal("2500.00")
         book_row1.units = 100
 
+        # Mock the expenses query (called by _compute_total_expenses)
+        expenses_row = MagicMock()
+        expenses_row.total_ad_spend = Decimal("500.00")
+
         # Set up the mock to return different results for each call
         totals_result = MagicMock()
         totals_result.one.return_value = totals_row
+
+        expenses_result = MagicMock()
+        expenses_result.one.return_value = expenses_row
 
         platform_result = MagicMock()
         platform_result.all.return_value = [platform_row1, platform_row2]
@@ -177,7 +184,7 @@ class TestComputePortfolioMetrics:
         top_books_result.all.return_value = [book_row1]
 
         mock_db.execute = AsyncMock(
-            side_effect=[totals_result, platform_result, format_result, top_books_result]
+            side_effect=[totals_result, expenses_result, platform_result, format_result, top_books_result]
         )
 
         result = await compute_portfolio_metrics(mock_db, org_id)

@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.config import get_settings
 from app.core.dependencies import get_current_user
 from app.schemas.common import MessageResponse
 from app.modules.auth import schemas, service
+from app.modules.notifications.email import send_transactional_email
 
 router = APIRouter()
 
@@ -30,7 +32,13 @@ async def register(body: schemas.RegisterRequest, db: AsyncSession = Depends(get
         name=body.name,
         org_name=body.org_name,
     )
-    # In production, send verification email with result["email_verify_token"]
+    settings = get_settings()
+    verification_url = f"{settings.FRONTEND_URL}/verify-email?token={result['email_verify_token']}"
+    send_transactional_email(
+        to_email=body.email,
+        template_name="verification",
+        context={"name": body.name, "verification_url": verification_url},
+    )
     return {
         "user": result["user"],
         "tokens": result["tokens"].model_dump(),
@@ -107,7 +115,14 @@ async def logout(body: schemas.RefreshRequest, db: AsyncSession = Depends(get_db
 async def forgot_password(body: schemas.ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     """Request a password-reset email.  Always returns 200 to prevent email enumeration."""
     _token = await service.forgot_password(db, email=body.email)
-    # In production, send email with _token
+    if _token:  # Only send if user exists (prevent enumeration)
+        settings = get_settings()
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={_token}"
+        send_transactional_email(
+            to_email=body.email,
+            template_name="password_reset",
+            context={"name": "User", "reset_url": reset_url},
+        )
     return MessageResponse(message="If that email exists, a reset link has been sent.")
 
 

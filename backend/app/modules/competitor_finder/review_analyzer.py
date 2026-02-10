@@ -341,9 +341,10 @@ async def analyze_reviews_with_ai(
             book_title,
         )
         return baseline
-    except Exception:
+    except (RuntimeError, ValueError, OSError) as e:
         logger.warning(
-            "AI review analysis failed, falling back to heuristic analysis",
+            "AI review analysis failed, falling back to heuristic analysis: %s",
+            e,
             exc_info=True,
         )
         return baseline

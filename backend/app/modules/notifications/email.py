@@ -7,6 +7,11 @@ from typing import Any
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, From, To, Subject, Content, MimeType
+from python_http_client.exceptions import (
+    BadRequestsError,
+    ForbiddenError,
+    UnauthorizedError,
+)
 
 from app.config import get_settings
 
@@ -138,6 +143,26 @@ def send_transactional_email(
             response.status_code,
         )
         return 200 <= response.status_code < 300
-    except Exception:
-        logger.exception("Failed to send email to %s (template=%s)", to_email, template_name)
+    except UnauthorizedError:
+        logger.error(
+            "SendGrid authentication failed sending to %s (template=%s). Check SENDGRID_API_KEY.",
+            to_email,
+            template_name,
+        )
+        return False
+    except (ForbiddenError, BadRequestsError) as exc:
+        logger.error(
+            "SendGrid rejected request for %s (template=%s): %s",
+            to_email,
+            template_name,
+            exc,
+        )
+        return False
+    except OSError as exc:
+        logger.error(
+            "Network error sending email to %s (template=%s): %s",
+            to_email,
+            template_name,
+            exc,
+        )
         return False

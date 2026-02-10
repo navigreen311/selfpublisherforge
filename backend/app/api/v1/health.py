@@ -8,18 +8,23 @@ Enhanced health-check endpoints.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
 import redis.asyncio as redis
 from elasticsearch import AsyncElasticsearch
 from fastapi import APIRouter, Depends, HTTPException, status
+from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.dependencies import require_role
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
@@ -35,7 +40,8 @@ async def _check_db(db: AsyncSession) -> dict[str, Any]:
     try:
         await db.execute(text("SELECT 1"))
         return {"status": "healthy"}
-    except Exception as exc:
+    except (SQLAlchemyError, DBAPIError, ConnectionError, TimeoutError, OSError) as exc:
+        logger.warning("Database health check failed", exc_info=True)
         return {"status": "unhealthy", "error": str(exc)}
 
 
@@ -47,7 +53,8 @@ async def _check_redis() -> dict[str, Any]:
         await r.ping()
         await r.close()
         return {"status": "healthy"}
-    except Exception as exc:
+    except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError) as exc:
+        logger.warning("Redis health check failed", exc_info=True)
         return {"status": "unhealthy", "error": str(exc)}
 
 
@@ -59,7 +66,8 @@ async def _check_elasticsearch() -> dict[str, Any]:
         info = await es.info()
         await es.close()
         return {"status": "healthy", "version": str(info.get("version", {}).get("number", "unknown"))}
-    except Exception as exc:
+    except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
+        logger.warning("Elasticsearch health check failed", exc_info=True)
         return {"status": "unhealthy", "error": str(exc)}
 
 

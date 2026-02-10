@@ -360,7 +360,7 @@ async def generate_blurb_variants_ai(
             # Call LLM -- interface depends on the orchestration module
             response = await llm_client.generate(prompt)  # type: ignore[attr-defined]
             variant_content = response.strip()
-        except Exception:
+        except (RuntimeError, ConnectionError, ValueError, TimeoutError):
             # Fallback to template
             variant_content = _create_template_variant(
                 current_blurb, style, hook_type, keywords or [], i

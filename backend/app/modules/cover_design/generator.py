@@ -295,7 +295,7 @@ async def generate_cover_image(
             "status": "error",
             "error": f"OpenAI API error: {exc}",
         }
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
         logger.exception("Unexpected error during cover image generation: %s", exc)
         return {
             "image_url": None,

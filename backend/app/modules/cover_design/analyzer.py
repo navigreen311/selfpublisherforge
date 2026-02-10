@@ -186,8 +186,8 @@ async def analyze_single_cover(
     """
     try:
         img = await _download_image(image_url)
-    except Exception:
-        logger.exception("Failed to download cover image: %s", image_url)
+    except (httpx.HTTPError, OSError, Image.UnidentifiedImageError) as exc:
+        logger.exception("Failed to download cover image %s: %s", image_url, exc)
         return CompetitorCoverAnalysis(
             image_url=image_url,
             dominant_colors=[],
@@ -199,8 +199,8 @@ async def analyze_single_cover(
         brightness = _compute_brightness(img)
         contrast = _compute_contrast(img)
         mood = _infer_mood_from_image(brightness, contrast)
-    except Exception:
-        logger.exception("Failed to process cover image: %s", image_url)
+    except (ValueError, TypeError, OSError, IndexError) as exc:
+        logger.exception("Failed to process cover image %s: %s", image_url, exc)
         return CompetitorCoverAnalysis(
             image_url=image_url,
             dominant_colors=[],

@@ -242,8 +242,10 @@ Return ONLY valid JSON, no other text."""
         )
     except ImportError:
         logger.info("Anthropic SDK not available, using keyword-based sentiment analysis")
-    except Exception as e:
-        logger.warning(f"LLM sentiment analysis failed, falling back to keywords: {e}")
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        logger.warning("LLM sentiment response parsing failed, falling back to keywords: %s", e)
+    except OSError as e:
+        logger.warning("LLM sentiment network request failed, falling back to keywords: %s", e)
 
     return _keyword_sentiment(review_text)
 

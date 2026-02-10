@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.models.content import StyleProfile
 from app.modules.style_cloning.conformity import check_conformity
@@ -92,7 +95,8 @@ def _run_analysis(profile: StyleProfile) -> None:
         profile.voice_fingerprint = fingerprint.model_dump()
         profile.style_card = style_card.model_dump()
         profile.status = ProfileStatus.ready.value
-    except Exception:
+    except (ValueError, TypeError, KeyError) as exc:
+        logger.error("Style analysis pipeline failed: %s", exc, exc_info=True)
         profile.status = ProfileStatus.failed.value
         raise
     finally:

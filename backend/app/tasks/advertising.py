@@ -13,14 +13,19 @@ from uuid import UUID
 
 from app.tasks import celery_app
 from app.database import async_session
+from sqlalchemy import select, and_
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.modules.advertising.models import Campaign, CampaignPerformance, KeywordBid
 from app.modules.advertising.schemas import CampaignStatus, OptimizationRequest
 from app.modules.advertising.service import AdvertisingService
 from app.modules.advertising.amazon_ads import AmazonAdsClient
 from app.modules.advertising.facebook_ads import FacebookAdsClient
 from app.modules.advertising.optimizer import AdOptimizer
-
-from sqlalchemy import select, and_
+from app.modules.notifications.service import create_notification
+from app.modules.notifications.schemas import CreateNotification
+from app.modules.notifications.models import NotificationType
+from app.models.user import User, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -105,11 +110,16 @@ async def _sync_performance_async(campaign_id: str | None = None):
                         cpc=float(metrics.get("cpc", 0)),
                     )
                     db.add(perf)
+                    await db.flush()
                     logger.info(f"Synced performance for campaign {campaign.id}")
 
-                except Exception as e:
+                except (ValueError, KeyError, TypeError) as e:
                     logger.error(
-                        f"Failed to sync performance for campaign {campaign.id}: {e}"
+                        f"Failed to parse performance data for campaign {campaign.id}: {e}"
+                    )
+                except SQLAlchemyError as e:
+                    logger.error(
+                        f"Database error syncing campaign {campaign.id}: {e}"
                     )
 
             await db.commit()
@@ -199,9 +209,13 @@ async def _auto_optimize_async():
                             f"{len(suggestion.keywords_to_negate)} negations"
                         )
 
-                except Exception as e:
+                except (ValueError, KeyError, TypeError) as e:
                     logger.error(
-                        f"Failed to optimize campaign {campaign.id}: {e}"
+                        f"Failed to optimize campaign {campaign.id} (data error): {e}"
+                    )
+                except SQLAlchemyError as e:
+                    logger.error(
+                        f"Failed to optimize campaign {campaign.id} (db error): {e}"
                     )
 
             await db.commit()
@@ -289,11 +303,58 @@ async def _check_budget_alerts_async():
                     })
 
             if alerts:
-                logger.warning(f"Generated {len(alerts)} budget alerts: {alerts}")
-                # In production, publish these as events via EventPublisher
-                # or send notifications via the notifications module
+                logger.warning(f"Generated {len(alerts)} budget alerts")
+
+                # Deliver in-app notifications to org owners/admins
+                for alert in alerts:
+                    campaign_id_val = alert["campaign_id"]
+                    # Find the campaign to get org_id
+                    campaign_result = await db.execute(
+                        select(Campaign).where(Campaign.id == campaign_id_val)
+                    )
+                    alert_campaign = campaign_result.scalar_one_or_none()
+                    if not alert_campaign:
+                        continue
+
+                    # Find org owners and admins to notify
+                    user_result = await db.execute(
+                        select(User).where(
+                            and_(
+                                User.org_id == alert_campaign.org_id,
+                                User.role.in_([UserRole.OWNER, UserRole.ADMIN]),
+                                User.is_active.is_(True),
+                                User.deleted_at.is_(None),
+                            )
+                        )
+                    )
+                    recipients = user_result.scalars().all()
+
+                    for user in recipients:
+                        try:
+                            await create_notification(
+                                db,
+                                CreateNotification(
+                                    user_id=user.id,
+                                    org_id=alert_campaign.org_id,
+                                    type=NotificationType.WARNING,
+                                    title=f"Budget Alert: {alert['campaign_name']}",
+                                    message=alert["message"],
+                                    data={
+                                        "campaign_id": alert["campaign_id"],
+                                        "alert_type": alert["alert_type"],
+                                    },
+                                ),
+                            )
+                        except SQLAlchemyError as e:
+                            logger.error(
+                                f"Failed to create notification for user {user.id}, "
+                                f"alert {alert['alert_type']}: {e}"
+                            )
+
+                await db.commit()
 
         except Exception as e:
+            await db.rollback()
             logger.error(f"Budget alert check failed: {e}")
             raise
 

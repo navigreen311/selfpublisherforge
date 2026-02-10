@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -15,7 +16,10 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.modules.analytics.models import Report, RoyaltyRecord
 from app.modules.analytics.schemas import OutputFormat, ReportStatus, ReportType
@@ -70,7 +74,14 @@ async def generate_report(
 
         return report
 
+    except (ValueError, KeyError, OSError, SQLAlchemyError) as exc:
+        logger.error("Report generation failed for report %s: %s", report.id, exc, exc_info=True)
+        report.status = ReportStatus.FAILED.value
+        report.error_message = str(exc)
+        await db.flush()
+        raise ReportGenerationError(str(exc)) from exc
     except Exception as exc:
+        logger.exception("Unexpected error generating report %s", report.id, exc_info=True)
         report.status = ReportStatus.FAILED.value
         report.error_message = str(exc)
         await db.flush()

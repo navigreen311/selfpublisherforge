@@ -388,11 +388,11 @@ class TestTriggerProcessing:
         s3 = _fake_s3_client()
         svc = StorageService(db=db, s3_client=s3)
 
-        # Force _extract_metadata to raise
+        # Force _extract_metadata to raise (source catches ClientError and IOError)
         with patch.object(
             StorageService,
             "_extract_metadata",
-            side_effect=RuntimeError("metadata extraction boom"),
+            side_effect=IOError("metadata extraction boom"),
         ):
             with pytest.raises(AppException) as exc_info:
                 await svc.trigger_processing(

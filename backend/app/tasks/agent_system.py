@@ -7,11 +7,16 @@ long-running LLM calls and multi-step workflows to proceed asynchronously.
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from typing import Any
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.tasks import celery_app
 from app.database import async_session
+
+logger = logging.getLogger(__name__)
 
 
 def _run_async(coro):
@@ -78,8 +83,25 @@ async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, A
                 "quality_score": task.quality_score,
             }
 
+        except SQLAlchemyError as exc:
+            await db.rollback()
+            logger.error("Database error executing agent task %s: %s", task_id, exc, exc_info=True)
+            return {
+                "task_id": task_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        except (ValueError, TypeError) as exc:
+            await db.rollback()
+            logger.error("Validation error executing agent task %s: %s", task_id, exc, exc_info=True)
+            return {
+                "task_id": task_id,
+                "status": "failed",
+                "error": str(exc),
+            }
         except Exception as exc:
             await db.rollback()
+            logger.error("Unexpected error executing agent task %s: %s", task_id, exc, exc_info=True)
             return {
                 "task_id": task_id,
                 "status": "failed",
@@ -159,8 +181,25 @@ async def _execute_agent_workflow_async(
                 "total_steps": len(workflow.steps or []),
             }
 
+        except SQLAlchemyError as exc:
+            await db.rollback()
+            logger.error("Database error executing workflow %s: %s", workflow_id, exc, exc_info=True)
+            return {
+                "workflow_id": workflow_id,
+                "status": "failed",
+                "error": str(exc),
+            }
+        except (ValueError, TypeError) as exc:
+            await db.rollback()
+            logger.error("Validation error executing workflow %s: %s", workflow_id, exc, exc_info=True)
+            return {
+                "workflow_id": workflow_id,
+                "status": "failed",
+                "error": str(exc),
+            }
         except Exception as exc:
             await db.rollback()
+            logger.error("Unexpected error executing workflow %s: %s", workflow_id, exc, exc_info=True)
             return {
                 "workflow_id": workflow_id,
                 "status": "failed",
@@ -196,8 +235,9 @@ async def _reset_daily_budgets_async() -> dict[str, Any]:
             )
             await db.commit()
             return {"reset": True, "count": result.rowcount}
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             await db.rollback()
+            logger.error("Database error resetting daily budgets: %s", exc, exc_info=True)
             return {"reset": False, "error": str(exc)}
 
 
@@ -228,6 +268,7 @@ async def _reset_monthly_budgets_async() -> dict[str, Any]:
             )
             await db.commit()
             return {"reset": True, "count": result.rowcount}
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             await db.rollback()
+            logger.error("Database error resetting monthly budgets: %s", exc, exc_info=True)
             return {"reset": False, "error": str(exc)}

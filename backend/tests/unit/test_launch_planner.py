@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from unittest.mock import AsyncMock, patch
 
 from app.models.marketing import (
     EmailTemplateType,
@@ -141,7 +142,12 @@ class TestLaunchPlanner:
         self, planner: LaunchPlanner, gen_request: GenerateLaunchPlanRequest
     ):
         """AI generation should fall back to template when LLM is unavailable."""
-        plan = await planner.generate_plan_with_ai(gen_request)
+        with patch.object(
+            planner, "_call_llm_for_plan",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("LLM unavailable"),
+        ):
+            plan = await planner.generate_plan_with_ai(gen_request)
 
         assert plan.title is not None
         assert len(plan.phases) == 3
@@ -399,7 +405,12 @@ class TestSocialContentGenerator:
     async def test_generate_with_ai_falls_back_to_template(
         self, generator: SocialContentGenerator, social_request: GenerateSocialContentRequest
     ):
-        posts = await generator.generate_content_with_ai(social_request)
+        with patch.object(
+            generator, "_call_llm_for_content",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("LLM unavailable"),
+        ):
+            posts = await generator.generate_content_with_ai(social_request)
 
         # Should fall back and still produce posts
         assert len(posts) > 0

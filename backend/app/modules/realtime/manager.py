@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
 from app.modules.realtime.schemas import WSChannel
@@ -91,12 +91,14 @@ class ConnectionManager:
                     channel = WSChannel(payload["channel"])
                     room_id: str = payload["room_id"]
                     await self._local_broadcast(channel, room_id, payload)
-                except Exception:
-                    logger.exception("Error processing Redis pub/sub message")
+                except (json.JSONDecodeError, KeyError, ValueError) as exc:
+                    logger.error("Malformed Redis pub/sub message: %s", exc)
         except asyncio.CancelledError:
             pass
-        except Exception:
-            logger.exception("Redis listener crashed")
+        except ConnectionError as exc:
+            logger.error("Redis listener lost connection: %s", exc)
+        except OSError as exc:
+            logger.error("Redis listener network error: %s", exc)
 
     # ------------------------------------------------------------------
     # Heartbeat
@@ -112,7 +114,8 @@ class ConnectionManager:
                     for ws in list(sockets):
                         try:
                             await ws.send_json({"type": "ping", "ts": datetime.now(timezone.utc).isoformat()})
-                        except Exception:
+                        except (ConnectionError, RuntimeError, WebSocketDisconnect) as exc:
+                            logger.debug("Heartbeat failed for WebSocket, marking dead: %s", exc)
                             dead.append(ws)
                     for ws in dead:
                         sockets.discard(ws)
@@ -173,7 +176,8 @@ class ConnectionManager:
                     await ws.send_json(message)
                 else:
                     dead.append(ws)
-            except Exception:
+            except (ConnectionError, RuntimeError, WebSocketDisconnect) as exc:
+                logger.debug("Broadcast send failed for WebSocket, marking dead: %s", exc)
                 dead.append(ws)
         for ws in dead:
             conns.discard(ws)
@@ -201,8 +205,8 @@ class ConnectionManager:
         try:
             if websocket.client_state == WebSocketState.CONNECTED:
                 await websocket.send_json(message)
-        except Exception:
-            logger.warning("Failed to send personal message")
+        except (ConnectionError, RuntimeError, WebSocketDisconnect) as exc:
+            logger.warning("Failed to send personal message: %s", exc)
 
     # ------------------------------------------------------------------
     # Queries

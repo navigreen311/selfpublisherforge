@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
@@ -85,10 +87,16 @@ def process_single_analysis(
                     "weakness_count": updated.weakness_count,
                     "overall_score": updated.overall_score,
                 }
-            except Exception as e:
+            except SQLAlchemyError as e:
                 await db.rollback()
                 logger.error(
-                    "Analysis task failed: %s", e, exc_info=True
+                    "Database error in analysis task: %s", e, exc_info=True
+                )
+                raise
+            except (ValueError, KeyError) as e:
+                await db.rollback()
+                logger.error(
+                    "Validation error in analysis task: %s", e, exc_info=True
                 )
                 raise
 
@@ -137,8 +145,11 @@ def process_batch_analysis(
                 include_opportunity=include_opportunity,
             )
             results["enqueued"] += 1
+        except (ConnectionError, OSError) as e:
+            logger.error("Broker connection error enqueueing analysis %s: %s", aid, e, exc_info=True)
+            results["errors"] += 1
         except Exception as e:
-            logger.error("Failed to enqueue analysis %s: %s", aid, e)
+            logger.error("Failed to enqueue analysis %s: %s", aid, e, exc_info=True)
             results["errors"] += 1
 
     logger.info("Batch enqueue complete: %s", results)
@@ -401,9 +412,13 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                     "alerts_created": alerts_created,
                     "alert_summary": alert_summary,
                 }
-            except Exception as e:
+            except SQLAlchemyError as e:
                 await db.rollback()
-                logger.error("Alert check failed: %s", e, exc_info=True)
+                logger.error("Database error in alert check: %s", e, exc_info=True)
+                raise
+            except (ValueError, TypeError) as e:
+                await db.rollback()
+                logger.error("Data conversion error in alert check: %s", e, exc_info=True)
                 raise
 
     try:

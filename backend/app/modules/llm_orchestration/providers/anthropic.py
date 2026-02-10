@@ -118,7 +118,11 @@ class AnthropicProvider(BaseLLMProvider):
                 messages=[{"role": "user", "content": "ping"}],
             )
             return True
-        except Exception:
+        except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+            logger.warning("Anthropic health check failed: connection error", exc_info=True)
+            return False
+        except anthropic.APIError as exc:
+            logger.warning("Anthropic health check failed: API error: %s", exc, exc_info=True)
             return False
 
     # ------------------------------------------------------------------

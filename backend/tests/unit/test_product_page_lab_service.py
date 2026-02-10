@@ -521,6 +521,12 @@ class TestGetDetailedResults:
     @pytest.mark.asyncio
     async def test_returns_results_response(self, db_session):
         """get_test_results should return an ABTestResultsResponse."""
+        # Use naive datetimes because SQLite strips timezone info,
+        # and the service uses datetime.now(timezone.utc) for comparisons.
+        from unittest.mock import patch as _patch
+        now_utc = datetime.now(timezone.utc)
+        started = now_utc - timedelta(days=7)
+
         ab = await _seed_ab_test(
             db_session,
             status=ABTestStatus.COMPLETED.value,
@@ -528,10 +534,16 @@ class TestGetDetailedResults:
             variant_a_clicks=20,
             variant_b_impressions=200,
             variant_b_clicks=40,
-            started_at=datetime.now(timezone.utc) - timedelta(days=7),
-            completed_at=datetime.now(timezone.utc),
+            started_at=started,
+            completed_at=now_utc,
         )
-        result = await service.get_test_results(ab.id, db_session)
+
+        # After SQLite round-trip, started_at loses tzinfo.
+        # Patch datetime.now in the service module so both sides are consistent.
+        with _patch("app.modules.product_page_lab.service.datetime") as mock_dt:
+            mock_dt.now.return_value = now_utc.replace(tzinfo=None)
+            mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+            result = await service.get_test_results(ab.id, db_session)
 
         assert isinstance(result, ABTestResultsResponse)
         assert result.test_id == ab.id

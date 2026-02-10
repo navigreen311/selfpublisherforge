@@ -245,9 +245,11 @@ class LaunchPlanner:
         """
         try:
             return await self._call_llm_for_plan(request)
-        except Exception:
+        except (OSError, ValueError, KeyError, RuntimeError, TypeError) as exc:
             logger.warning(
-                "LLM-based plan generation failed, falling back to template",
+                "LLM-based plan generation failed (%s: %s), falling back to template",
+                type(exc).__name__,
+                exc,
                 exc_info=True,
             )
             return await self.generate_plan(request)

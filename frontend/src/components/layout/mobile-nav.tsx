@@ -73,7 +73,7 @@ export function MobileNav() {
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4">
           <h2 className="text-lg font-bold">SelfPublisherForge</h2>
-          <Button variant="ghost" size="icon" onClick={closeMobile}>
+          <Button variant="ghost" size="icon" onClick={closeMobile} aria-label="Close menu">
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -126,6 +126,7 @@ export function MobileNav() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
+              aria-label="Sign out"
               onClick={() => {
                 logout();
                 closeMobile();

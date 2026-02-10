@@ -106,8 +106,17 @@ async def _ws_handler(
             await manager.broadcast(channel, room_id, data)
     except WebSocketDisconnect:
         await manager.disconnect(websocket, channel, room_id)
-    except Exception:
-        logger.exception("WebSocket error: channel=%s room=%s", channel.value, room_id)
+    except ConnectionError as exc:
+        logger.error(
+            "Connection lost on WebSocket: channel=%s room=%s — %s",
+            channel.value, room_id, exc,
+        )
+        await manager.disconnect(websocket, channel, room_id)
+    except RuntimeError as exc:
+        logger.error(
+            "Runtime error on WebSocket: channel=%s room=%s — %s",
+            channel.value, room_id, exc,
+        )
         await manager.disconnect(websocket, channel, room_id)
 
 

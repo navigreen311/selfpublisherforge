@@ -308,10 +308,19 @@ class TestAnalyzeEndpoint:
 
     @pytest.mark.asyncio
     async def test_analyze_with_reviews(self, client, seeded_db):
-        response = await client.post(
-            "/api/v1/reviews/analyze",
-            json={"book_id": str(BOOK_ID), "limit": 5},
-        )
+        with patch(
+            "app.modules.review_intelligence.sentiment.analyze_sentiment_llm",
+            new_callable=AsyncMock,
+        ) as mock_llm:
+            from app.modules.review_intelligence.schemas import SentimentAnalysisResult, SentimentLabel as SL
+            mock_llm.return_value = SentimentAnalysisResult(
+                sentiment=SL.POSITIVE, score=0.8, themes=["writing_style"],
+                key_phrases=[], complaints=[], praise=["amazing"],
+            )
+            response = await client.post(
+                "/api/v1/reviews/analyze",
+                json={"book_id": str(BOOK_ID), "limit": 5},
+            )
         assert response.status_code == 200
         data = response.json()
         assert data["total_analyzed"] > 0
@@ -352,14 +361,24 @@ class TestReputationEndpoint:
 class TestAcquisitionTipsEndpoint:
     @pytest.mark.asyncio
     async def test_get_tips(self, client):
-        response = await client.post(
-            "/api/v1/reviews/acquisition/tips",
-            json={
-                "book_id": str(BOOK_ID),
-                "current_review_count": 5,
-                "genre": "fantasy",
-            },
-        )
+        with patch(
+            "app.modules.review_intelligence.router.generate_acquisition_tips",
+            new_callable=AsyncMock,
+        ) as mock_tips:
+            from app.modules.review_intelligence.service import _default_acquisition_tips
+            from app.modules.review_intelligence.schemas import AcquisitionTipsRequest
+            req = AcquisitionTipsRequest(
+                book_id=BOOK_ID, current_review_count=5, genre="fantasy",
+            )
+            mock_tips.return_value = _default_acquisition_tips(req)
+            response = await client.post(
+                "/api/v1/reviews/acquisition/tips",
+                json={
+                    "book_id": str(BOOK_ID),
+                    "current_review_count": 5,
+                    "genre": "fantasy",
+                },
+            )
         assert response.status_code == 200
         data = response.json()
         assert data["book_id"] == str(BOOK_ID)
@@ -368,10 +387,18 @@ class TestAcquisitionTipsEndpoint:
 
     @pytest.mark.asyncio
     async def test_tips_have_required_fields(self, client):
-        response = await client.post(
-            "/api/v1/reviews/acquisition/tips",
-            json={"book_id": str(BOOK_ID)},
-        )
+        with patch(
+            "app.modules.review_intelligence.router.generate_acquisition_tips",
+            new_callable=AsyncMock,
+        ) as mock_tips:
+            from app.modules.review_intelligence.service import _default_acquisition_tips
+            from app.modules.review_intelligence.schemas import AcquisitionTipsRequest
+            req = AcquisitionTipsRequest(book_id=BOOK_ID)
+            mock_tips.return_value = _default_acquisition_tips(req)
+            response = await client.post(
+                "/api/v1/reviews/acquisition/tips",
+                json={"book_id": str(BOOK_ID)},
+            )
         assert response.status_code == 200
         data = response.json()
         for tip in data["tips"]:

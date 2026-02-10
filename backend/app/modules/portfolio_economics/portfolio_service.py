@@ -5,7 +5,7 @@ Aggregates data across all books in a portfolio to provide:
 - Kill/scale decisions for individual books
 - AI-powered recommendations for portfolio optimization
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from typing import Optional
 
@@ -240,7 +240,7 @@ def calculate_kill_scale(request: KillScaleRequest) -> KillScaleDecision:
         actions=actions,
         estimated_additional_investment=estimated_additional_investment,
         estimated_additional_return=estimated_additional_return,
-        calculated_at=datetime.utcnow(),
+        calculated_at=datetime.now(timezone.utc),
     )
 
 
@@ -315,7 +315,7 @@ def build_portfolio_overview(
         underperformers=underperformers,
         genre_distribution=genre_distribution,
         revenue_by_genre={k: round(v, 2) for k, v in revenue_by_genre.items()},
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(timezone.utc),
     )
 
 

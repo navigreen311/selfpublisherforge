@@ -1,6 +1,6 @@
 """Pydantic v2 schemas for Portfolio Economics, Audience DNA, and Seasonal Calendar."""
 from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from uuid import UUID
 from enum import Enum
 from typing import Optional
@@ -86,7 +86,7 @@ class GreenlightResult(BaseModel):
     opportunity_factors: list[str] = Field(default_factory=list, description="Identified opportunities")
     suggestions: list[str] = Field(default_factory=list, description="Suggestions to improve ROI")
 
-    calculated_at: datetime = Field(default_factory=datetime.utcnow)
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class KillScaleRequest(BaseModel):
@@ -128,7 +128,7 @@ class KillScaleDecision(BaseModel):
     estimated_additional_investment: Optional[float] = Field(None, ge=0.0)
     estimated_additional_return: Optional[float] = Field(None)
 
-    calculated_at: datetime = Field(default_factory=datetime.utcnow)
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class BacklistProjection(BaseModel):
@@ -182,7 +182,7 @@ class PortfolioOverview(BaseModel):
     underperformers: list[BookSummary] = Field(default_factory=list)
     genre_distribution: dict[str, int] = Field(default_factory=dict)
     revenue_by_genre: dict[str, float] = Field(default_factory=dict)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class PortfolioRecommendation(BaseModel):
@@ -234,7 +234,7 @@ class AudiencePersona(BaseModel):
     pain_points: list[str] = Field(default_factory=list, description="What frustrates them")
     favorite_authors: list[str] = Field(default_factory=list)
     percentage_of_audience: float = Field(..., ge=0.0, le=100.0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AlsoBoughtItem(BaseModel):
@@ -265,7 +265,7 @@ class AlsoBoughtIntelligence(BaseModel):
     average_rating: float = 0.0
     audience_insights: list[str] = Field(default_factory=list)
     positioning_suggestions: list[str] = Field(default_factory=list)
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AudienceGrowthPoint(BaseModel):
@@ -315,7 +315,7 @@ class ChurnPredictionResult(BaseModel):
     risk_factors: list[str] = Field(default_factory=list)
     retention_suggestions: list[str] = Field(default_factory=list)
     estimated_lifetime_value: float = Field(0.0, ge=0.0)
-    predicted_at: datetime = Field(default_factory=datetime.utcnow)
+    predicted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ─── Seasonal Calendar Schemas ────────────────────────────────────────────────
@@ -395,7 +395,7 @@ class LaunchRecommendation(BaseModel):
         description="[{date, action, channel}]"
     )
 
-    calculated_at: datetime = Field(default_factory=datetime.utcnow)
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class SeasonalCalendarResponse(BaseModel):

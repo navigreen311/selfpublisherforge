@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
@@ -37,9 +39,13 @@ def import_from_url_task(self, org_id: str, url: str, extract_facts: bool = True
                 await db.commit()
                 logger.info("Imported URL %s as entry %s", url, entry.id)
                 return {"entry_id": str(entry.id), "title": entry.title, "status": "completed"}
-            except Exception as exc:
+            except SQLAlchemyError as exc:
                 await db.rollback()
-                logger.exception("Failed to import URL %s", url)
+                logger.error("Database error importing URL %s: %s", url, exc, exc_info=True)
+                raise self.retry(exc=exc)
+            except (ConnectionError, OSError, TimeoutError) as exc:
+                await db.rollback()
+                logger.error("Network error importing URL %s: %s", url, exc, exc_info=True)
                 raise self.retry(exc=exc)
 
     loop = asyncio.new_event_loop()
@@ -82,9 +88,13 @@ def import_from_file_task(
                 await db.commit()
                 logger.info("Imported file %s as entry %s", file_name, entry.id)
                 return {"entry_id": str(entry.id), "title": entry.title, "status": "completed"}
-            except Exception as exc:
+            except SQLAlchemyError as exc:
                 await db.rollback()
-                logger.exception("Failed to import file %s", file_name)
+                logger.error("Database error importing file %s: %s", file_name, exc, exc_info=True)
+                raise self.retry(exc=exc)
+            except (ValueError, UnicodeDecodeError) as exc:
+                await db.rollback()
+                logger.error("File parsing error importing file %s: %s", file_name, exc, exc_info=True)
                 raise self.retry(exc=exc)
 
     loop = asyncio.new_event_loop()

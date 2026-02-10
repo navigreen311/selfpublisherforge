@@ -114,12 +114,16 @@ class TestLLMSentiment:
     @pytest.mark.asyncio
     async def test_falls_back_to_keywords_on_import_error(self):
         """When anthropic SDK is not installed, should fall back to keyword analysis."""
-        with patch(
-            "app.modules.review_intelligence.sentiment.analyze_sentiment_llm",
-            wraps=analyze_sentiment_llm,
-        ):
-            # analyze_sentiment_llm will internally try to import anthropic
-            # which may or may not be available, but the function should always return
+        import builtins
+
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "anthropic":
+                raise ImportError("No module named 'anthropic'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=mock_import):
             result = await analyze_sentiment_llm("This is an amazing book")
             assert result.sentiment in (
                 SentimentLabel.POSITIVE,
@@ -159,14 +163,24 @@ class TestLLMSentiment:
     @pytest.mark.asyncio
     async def test_handles_exception_gracefully(self):
         """Sentiment analysis should never raise, always returns a result."""
-        result = await analyze_sentiment_llm("This is a test review")
-        assert isinstance(result, SentimentAnalysisResult)
-        assert result.sentiment in (
-            SentimentLabel.POSITIVE,
-            SentimentLabel.NEUTRAL,
-            SentimentLabel.NEGATIVE,
-            SentimentLabel.MIXED,
-        )
+        import builtins
+
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "anthropic":
+                raise ImportError("No module named 'anthropic'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=mock_import):
+            result = await analyze_sentiment_llm("This is a test review")
+            assert isinstance(result, SentimentAnalysisResult)
+            assert result.sentiment in (
+                SentimentLabel.POSITIVE,
+                SentimentLabel.NEUTRAL,
+                SentimentLabel.NEGATIVE,
+                SentimentLabel.MIXED,
+            )
 
 
 # --- Batch analysis tests ---
@@ -181,7 +195,11 @@ class TestBatchSentiment:
     @pytest.mark.asyncio
     async def test_batch_analysis_single_review(self):
         reviews = [{"text": "Amazing book, loved every page!", "star_rating": 5.0}]
-        results = await analyze_sentiment_batch(reviews)
+        with patch(
+            "app.modules.review_intelligence.sentiment.analyze_sentiment_llm",
+            new=AsyncMock(side_effect=lambda text, rating=None: _keyword_sentiment(text)),
+        ):
+            results = await analyze_sentiment_batch(reviews)
         assert len(results) == 1
         assert isinstance(results[0], SentimentAnalysisResult)
 
@@ -192,13 +210,21 @@ class TestBatchSentiment:
             {"text": "Terrible and boring", "star_rating": 1.0},
             {"text": "It was okay, nothing special", "star_rating": 3.0},
         ]
-        results = await analyze_sentiment_batch(reviews)
+        with patch(
+            "app.modules.review_intelligence.sentiment.analyze_sentiment_llm",
+            new=AsyncMock(side_effect=lambda text, rating=None: _keyword_sentiment(text)),
+        ):
+            results = await analyze_sentiment_batch(reviews)
         assert len(results) == 3
 
     @pytest.mark.asyncio
     async def test_batch_analysis_uses_body_key(self):
         reviews = [{"body": "Great book!", "star_rating": 4.0}]
-        results = await analyze_sentiment_batch(reviews)
+        with patch(
+            "app.modules.review_intelligence.sentiment.analyze_sentiment_llm",
+            new=AsyncMock(side_effect=lambda text, rating=None: _keyword_sentiment(text)),
+        ):
+            results = await analyze_sentiment_batch(reviews)
         assert len(results) == 1
 
     @pytest.mark.asyncio

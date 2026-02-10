@@ -10,7 +10,7 @@ import logging
 import math
 import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -218,7 +218,7 @@ async def generate_blurb_variants(
             num_variants=request.num_variants,
             llm_client=None,  # Will be injected when LLM orchestration is ready
         )
-    except Exception:
+    except (RuntimeError, ConnectionError, ValueError, TimeoutError):
         return generate_blurb_variants_local(
             current_blurb=request.current_blurb,
             genre=request.genre,
@@ -343,9 +343,9 @@ async def update_ab_test(
     if request.status is not None:
         ab_test.status = request.status.value
         if request.status == ABTestStatus.RUNNING and ab_test.started_at is None:
-            ab_test.started_at = datetime.utcnow()
+            ab_test.started_at = datetime.now(timezone.utc)
         elif request.status == ABTestStatus.COMPLETED and ab_test.completed_at is None:
-            ab_test.completed_at = datetime.utcnow()
+            ab_test.completed_at = datetime.now(timezone.utc)
 
     await db.flush()
     await db.refresh(ab_test)
@@ -371,7 +371,7 @@ async def start_ab_test(
         )
 
     ab_test.status = ABTestStatus.RUNNING.value
-    ab_test.started_at = ab_test.started_at or datetime.utcnow()
+    ab_test.started_at = ab_test.started_at or datetime.now(timezone.utc)
     await db.flush()
     await db.refresh(ab_test)
 
@@ -395,9 +395,9 @@ async def get_test_results(
         and ab_test.started_at is not None
     ):
         end_date = ab_test.started_at + timedelta(days=ab_test.duration_days)
-        if datetime.utcnow() >= end_date:
+        if datetime.now(timezone.utc) >= end_date:
             ab_test.status = ABTestStatus.COMPLETED.value
-            ab_test.completed_at = datetime.utcnow()
+            ab_test.completed_at = datetime.now(timezone.utc)
             await db.flush()
             await db.refresh(ab_test)
 
@@ -449,7 +449,7 @@ async def get_test_results(
     days_running: Optional[int] = None
     days_remaining: Optional[int] = None
     if ab_test.started_at is not None:
-        delta = datetime.utcnow() - ab_test.started_at
+        delta = datetime.now(timezone.utc) - ab_test.started_at
         days_running = max(0, delta.days)
         if ab_test.status == ABTestStatus.RUNNING.value:
             days_remaining = max(0, ab_test.duration_days - delta.days)

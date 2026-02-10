@@ -278,7 +278,7 @@ class TestSendTransactionalEmail:
         settings.FROM_EMAIL = "noreply@test.com"
         mock_settings.return_value = settings
 
-        mock_sg_cls.return_value.send.side_effect = Exception("connection error")
+        mock_sg_cls.return_value.send.side_effect = OSError("connection error")
 
         result = send_transactional_email(
             to_email="user@example.com",

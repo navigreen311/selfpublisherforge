@@ -6,7 +6,7 @@ Provides:
 - AI-recommended launch dates
 - Upcoming events relevant to user's genres
 """
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from uuid import uuid4
 from typing import Optional
 
@@ -502,7 +502,7 @@ def recommend_launch_date(request: LaunchRecommendRequest) -> LaunchRecommendati
         favorable_events=best["favorable_events"],
         pre_launch_checklist=pre_launch_checklist,
         marketing_timeline=marketing_timeline,
-        calculated_at=datetime.utcnow(),
+        calculated_at=datetime.now(timezone.utc),
     )
 
 

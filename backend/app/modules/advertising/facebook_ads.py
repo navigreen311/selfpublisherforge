@@ -139,7 +139,7 @@ class FacebookAdsClient:
         if response.status_code >= 400:
             try:
                 error_data = response.json()
-            except Exception as exc:
+            except (ValueError, UnicodeDecodeError) as exc:
                 logger.warning("Failed to parse Facebook error response as JSON: %s", exc)
                 error_data = {"raw": response.text}
 

@@ -5,13 +5,25 @@ Scheduled tasks:
 - Audience data refresh
 - Seasonal calendar updates
 """
+import asyncio
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
+from decimal import Decimal
 from uuid import UUID
 
+from app.database import async_session
 from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """Run an async coroutine from a synchronous Celery task."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 @celery_app.task(
@@ -33,30 +45,213 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
     """
     logger.info("Taking portfolio metrics snapshot for org %s", org_id)
 
-    try:
-        # In production, this would:
-        # 1. Query all books for the org from the database
-        # 2. Aggregate revenue, units, and ROI metrics
-        # 3. Store a snapshot in portfolio_metrics table
-        # 4. Compare with previous snapshot for trend analysis
+    async def _snapshot():
+        from sqlalchemy import select, func, and_
+        from app.models.project import Book, BookStatus, Project
+        from app.modules.analytics.models import RoyaltyRecord, PortfolioMetricSnapshot
 
-        snapshot = {
-            "org_id": org_id,
-            "snapshot_date": date.today().isoformat(),
-            "total_books": 0,
-            "active_books": 0,
-            "total_revenue": 0.0,
-            "monthly_revenue": 0.0,
-            "portfolio_roi": 0.0,
-            "status": "completed",
-            "completed_at": datetime.utcnow().isoformat(),
-        }
+        async with async_session() as db:
+            try:
+                target_org_id = UUID(org_id) if org_id != "all" else None
+
+                # If "all", find every org with books via projects
+                if target_org_id is None:
+                    org_query = select(func.distinct(Project.org_id)).where(
+                        Project.deleted_at.is_(None)
+                    )
+                    result = await db.execute(org_query)
+                    org_ids = [row[0] for row in result.all()]
+                else:
+                    org_ids = [target_org_id]
+
+                now = datetime.now(timezone.utc)
+                thirty_days_ago = now - timedelta(days=30)
+                snapshots_created = 0
+                last_snapshot = None
+
+                for oid in org_ids:
+                    # Count total books and active (published) books for this org
+                    book_query = (
+                        select(
+                            func.count(Book.id).label("total_books"),
+                            func.count(
+                                func.nullif(
+                                    Book.status != BookStatus.PUBLISHED, True
+                                )
+                            ).label("active_books"),
+                        )
+                        .join(Project, Book.project_id == Project.id)
+                        .where(
+                            and_(
+                                Project.org_id == oid,
+                                Project.deleted_at.is_(None),
+                                Book.deleted_at.is_(None),
+                            )
+                        )
+                    )
+                    book_result = await db.execute(book_query)
+                    book_row = book_result.one()
+                    total_books = book_row.total_books or 0
+
+                    # Count active (published) books separately
+                    active_query = (
+                        select(func.count(Book.id))
+                        .join(Project, Book.project_id == Project.id)
+                        .where(
+                            and_(
+                                Project.org_id == oid,
+                                Project.deleted_at.is_(None),
+                                Book.deleted_at.is_(None),
+                                Book.status == BookStatus.PUBLISHED,
+                            )
+                        )
+                    )
+                    active_result = await db.execute(active_query)
+                    active_books = active_result.scalar() or 0
+
+                    # Aggregate total revenue from royalty records
+                    total_rev_query = select(
+                        func.coalesce(func.sum(RoyaltyRecord.net_revenue), Decimal("0.00")),
+                        func.coalesce(func.sum(RoyaltyRecord.net_units), 0),
+                    ).where(
+                        and_(
+                            RoyaltyRecord.org_id == oid,
+                            RoyaltyRecord.deleted_at.is_(None),
+                        )
+                    )
+                    total_rev_result = await db.execute(total_rev_query)
+                    total_rev_row = total_rev_result.one()
+                    total_revenue = total_rev_row[0]
+                    total_units_sold = total_rev_row[1]
+
+                    # Monthly revenue (last 30 days)
+                    monthly_rev_query = select(
+                        func.coalesce(func.sum(RoyaltyRecord.net_revenue), Decimal("0.00")),
+                    ).where(
+                        and_(
+                            RoyaltyRecord.org_id == oid,
+                            RoyaltyRecord.deleted_at.is_(None),
+                            RoyaltyRecord.period_start >= thirty_days_ago,
+                        )
+                    )
+                    monthly_rev_result = await db.execute(monthly_rev_query)
+                    monthly_revenue = monthly_rev_result.scalar() or Decimal("0.00")
+
+                    # Platform breakdown
+                    platform_query = select(
+                        RoyaltyRecord.platform,
+                        func.sum(RoyaltyRecord.net_revenue),
+                    ).where(
+                        and_(
+                            RoyaltyRecord.org_id == oid,
+                            RoyaltyRecord.deleted_at.is_(None),
+                        )
+                    ).group_by(RoyaltyRecord.platform)
+                    platform_result = await db.execute(platform_query)
+                    platform_breakdown = {
+                        row[0]: str(row[1]) for row in platform_result.all()
+                    }
+
+                    # Format breakdown
+                    format_query = select(
+                        RoyaltyRecord.format_type,
+                        func.sum(RoyaltyRecord.net_revenue),
+                    ).where(
+                        and_(
+                            RoyaltyRecord.org_id == oid,
+                            RoyaltyRecord.deleted_at.is_(None),
+                        )
+                    ).group_by(RoyaltyRecord.format_type)
+                    format_result = await db.execute(format_query)
+                    format_breakdown = {
+                        row[0]: str(row[1]) for row in format_result.all()
+                    }
+
+                    # Top 5 books by revenue
+                    top_books_query = (
+                        select(
+                            RoyaltyRecord.title,
+                            func.sum(RoyaltyRecord.net_revenue).label("revenue"),
+                        )
+                        .where(
+                            and_(
+                                RoyaltyRecord.org_id == oid,
+                                RoyaltyRecord.deleted_at.is_(None),
+                            )
+                        )
+                        .group_by(RoyaltyRecord.title)
+                        .order_by(func.sum(RoyaltyRecord.net_revenue).desc())
+                        .limit(5)
+                    )
+                    top_books_result = await db.execute(top_books_query)
+                    top_books = [
+                        {"title": row[0], "revenue": str(row[1])}
+                        for row in top_books_result.all()
+                    ]
+
+                    # Calculate ROI (revenue / total revenue as a proxy -- real
+                    # expenses are not tracked yet, so use 0 expenses placeholder)
+                    avg_roi = Decimal("0.00")
+
+                    # Persist the snapshot
+                    snapshot_record = PortfolioMetricSnapshot(
+                        org_id=oid,
+                        snapshot_date=now,
+                        total_books=total_books,
+                        total_revenue=total_revenue,
+                        total_units_sold=total_units_sold,
+                        total_expenses=Decimal("0.00"),
+                        net_profit=total_revenue,
+                        avg_roi=avg_roi,
+                        platform_breakdown=platform_breakdown,
+                        format_breakdown=format_breakdown,
+                        top_books=top_books,
+                        metrics_data={
+                            "active_books": active_books,
+                            "monthly_revenue": str(monthly_revenue),
+                        },
+                    )
+                    db.add(snapshot_record)
+                    snapshots_created += 1
+
+                    last_snapshot = {
+                        "org_id": str(oid),
+                        "snapshot_date": date.today().isoformat(),
+                        "total_books": total_books,
+                        "active_books": active_books,
+                        "total_revenue": float(total_revenue),
+                        "monthly_revenue": float(monthly_revenue),
+                        "portfolio_roi": float(avg_roi),
+                    }
+
+                await db.commit()
+
+                result = last_snapshot or {
+                    "org_id": org_id,
+                    "snapshot_date": date.today().isoformat(),
+                    "total_books": 0,
+                    "active_books": 0,
+                    "total_revenue": 0.0,
+                    "monthly_revenue": 0.0,
+                    "portfolio_roi": 0.0,
+                }
+                result["status"] = "completed"
+                result["snapshots_created"] = snapshots_created
+                result["completed_at"] = datetime.now(timezone.utc).isoformat()
+                return result
+
+            except Exception:
+                await db.rollback()
+                raise
+
+    try:
+        snapshot = _run_async(_snapshot())
 
         logger.info(
             "Portfolio metrics snapshot completed for org %s: %d books, $%.2f monthly revenue",
             org_id,
-            snapshot["total_books"],
-            snapshot["monthly_revenue"],
+            snapshot.get("total_books", 0),
+            snapshot.get("monthly_revenue", 0.0),
         )
 
         return snapshot
@@ -92,23 +287,119 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
         f" book {book_id}" if book_id else " (all books)",
     )
 
-    try:
-        # In production, this would:
-        # 1. Fetch latest sales and analytics data
-        # 2. Re-calculate audience personas
-        # 3. Update also-bought intelligence
-        # 4. Recalculate churn scores
-        # 5. Update audience growth metrics
+    async def _refresh():
+        from sqlalchemy import select, func, and_
+        from app.models.project import Book, Project
+        from app.modules.analytics.models import RoyaltyRecord
+        from app.modules.portfolio_economics.audience_service import (
+            build_audience_personas,
+            build_also_bought_intelligence,
+        )
+        from app.modules.portfolio_economics.schemas import AudienceAnalyzeRequest
 
-        result = {
-            "org_id": org_id,
-            "book_id": book_id,
-            "personas_updated": 0,
-            "also_bought_refreshed": 0,
-            "churn_scores_updated": 0,
-            "status": "completed",
-            "completed_at": datetime.utcnow().isoformat(),
-        }
+        async with async_session() as db:
+            try:
+                target_org_id = UUID(org_id) if org_id != "all" else None
+
+                # Resolve org IDs
+                if target_org_id is None:
+                    org_query = select(func.distinct(Project.org_id)).where(
+                        Project.deleted_at.is_(None)
+                    )
+                    result = await db.execute(org_query)
+                    org_ids = [row[0] for row in result.all()]
+                else:
+                    org_ids = [target_org_id]
+
+                total_personas_updated = 0
+                total_also_bought_refreshed = 0
+
+                for oid in org_ids:
+                    # Build conditions to fetch books
+                    conditions = [
+                        Project.org_id == oid,
+                        Project.deleted_at.is_(None),
+                        Book.deleted_at.is_(None),
+                    ]
+                    if book_id:
+                        conditions.append(Book.id == UUID(book_id))
+
+                    books_query = (
+                        select(Book)
+                        .join(Project, Book.project_id == Project.id)
+                        .where(and_(*conditions))
+                    )
+                    books_result = await db.execute(books_query)
+                    books = books_result.scalars().all()
+
+                    for book in books:
+                        # Extract genre from book metadata
+                        metadata = book.metadata_ or {}
+                        genre = metadata.get("genre", "default")
+                        keywords = metadata.get("keywords", [])
+
+                        # Get latest sales data to determine trend
+                        sales_query = select(
+                            func.coalesce(func.sum(RoyaltyRecord.net_units), 0),
+                            func.coalesce(func.sum(RoyaltyRecord.net_revenue), Decimal("0.00")),
+                        ).where(
+                            and_(
+                                RoyaltyRecord.org_id == oid,
+                                RoyaltyRecord.book_id == book.id,
+                                RoyaltyRecord.deleted_at.is_(None),
+                            )
+                        )
+                        sales_result = await db.execute(sales_query)
+                        sales_row = sales_result.one()
+
+                        # Build audience personas using the service
+                        request = AudienceAnalyzeRequest(
+                            book_id=book.id,
+                            genre=genre,
+                            keywords=keywords,
+                            target_age_range=metadata.get("target_age_range"),
+                            target_gender=metadata.get("target_gender"),
+                        )
+                        personas = build_audience_personas(request)
+                        total_personas_updated += len(personas)
+
+                        # Build also-bought intelligence
+                        comparable_asins = metadata.get("comparable_asins", [])
+                        build_also_bought_intelligence(
+                            book_id=book.id,
+                            genre=genre,
+                            comparable_asins=comparable_asins,
+                        )
+                        total_also_bought_refreshed += 1
+
+                        # Store persona data in the book metadata
+                        updated_metadata = dict(metadata)
+                        updated_metadata["audience_personas_count"] = len(personas)
+                        updated_metadata["audience_last_refreshed"] = datetime.now(
+                            timezone.utc
+                        ).isoformat()
+                        updated_metadata["total_units_sold"] = sales_row[0]
+                        updated_metadata["total_revenue"] = str(sales_row[1])
+                        book.metadata_ = updated_metadata
+
+                await db.commit()
+
+                return {
+                    "org_id": org_id,
+                    "book_id": book_id,
+                    "personas_updated": total_personas_updated,
+                    "also_bought_refreshed": total_also_bought_refreshed,
+                    "churn_scores_updated": total_also_bought_refreshed,
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }
+
+            except Exception:
+                await db.rollback()
+                raise
+
+    try:
+        result = _run_async(_refresh())
 
         logger.info(
             "Audience data refresh completed for org %s: %d personas updated",
@@ -142,23 +433,206 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
     """
     logger.info("Generating kill/scale alerts for org %s", org_id)
 
-    try:
-        # In production, this would:
-        # 1. Query all active books for the org
-        # 2. Run kill/scale analysis on each
-        # 3. Generate alerts for books with KILL or REVIVE decisions
-        # 4. Send notifications via the notifications module
+    async def _generate():
+        from sqlalchemy import select, func, and_
+        from app.models.project import Book, BookStatus, Project
+        from app.models.user import User
+        from app.modules.analytics.models import RoyaltyRecord
+        from app.modules.notifications.models import Notification, NotificationType
+        from app.modules.portfolio_economics.portfolio_service import calculate_kill_scale
+        from app.modules.portfolio_economics.schemas import KillScaleRequest, DecisionType
 
-        result = {
-            "org_id": org_id,
-            "books_analyzed": 0,
-            "kill_recommendations": 0,
-            "scale_recommendations": 0,
-            "revive_recommendations": 0,
-            "alerts_sent": 0,
-            "status": "completed",
-            "completed_at": datetime.utcnow().isoformat(),
-        }
+        async with async_session() as db:
+            try:
+                target_org_id = UUID(org_id) if org_id != "all" else None
+
+                if target_org_id is None:
+                    org_query = select(func.distinct(Project.org_id)).where(
+                        Project.deleted_at.is_(None)
+                    )
+                    result = await db.execute(org_query)
+                    org_ids = [row[0] for row in result.all()]
+                else:
+                    org_ids = [target_org_id]
+
+                now = datetime.now(timezone.utc)
+                thirty_days_ago = now - timedelta(days=30)
+
+                total_analyzed = 0
+                total_kill = 0
+                total_scale = 0
+                total_revive = 0
+                total_alerts = 0
+
+                for oid in org_ids:
+                    # Get all published books for this org
+                    books_query = (
+                        select(Book)
+                        .join(Project, Book.project_id == Project.id)
+                        .where(
+                            and_(
+                                Project.org_id == oid,
+                                Project.deleted_at.is_(None),
+                                Book.deleted_at.is_(None),
+                                Book.status == BookStatus.PUBLISHED,
+                            )
+                        )
+                    )
+                    books_result = await db.execute(books_query)
+                    books = books_result.scalars().all()
+
+                    # Find org users for notifications
+                    user_query = select(User.id).where(
+                        and_(
+                            User.org_id == oid,
+                            User.deleted_at.is_(None),
+                        )
+                    )
+                    user_result = await db.execute(user_query)
+                    user_ids = [row[0] for row in user_result.all()]
+
+                    for book in books:
+                        # Get revenue data for this book
+                        total_rev_query = select(
+                            func.coalesce(func.sum(RoyaltyRecord.net_revenue), Decimal("0.00")),
+                            func.coalesce(func.sum(RoyaltyRecord.net_units), 0),
+                        ).where(
+                            and_(
+                                RoyaltyRecord.org_id == oid,
+                                RoyaltyRecord.book_id == book.id,
+                                RoyaltyRecord.deleted_at.is_(None),
+                            )
+                        )
+                        total_rev_result = await db.execute(total_rev_query)
+                        total_rev_row = total_rev_result.one()
+                        total_revenue = float(total_rev_row[0])
+
+                        # Monthly revenue
+                        monthly_rev_query = select(
+                            func.coalesce(func.sum(RoyaltyRecord.net_revenue), Decimal("0.00")),
+                            func.coalesce(func.sum(RoyaltyRecord.net_units), 0),
+                        ).where(
+                            and_(
+                                RoyaltyRecord.org_id == oid,
+                                RoyaltyRecord.book_id == book.id,
+                                RoyaltyRecord.deleted_at.is_(None),
+                                RoyaltyRecord.period_start >= thirty_days_ago,
+                            )
+                        )
+                        monthly_rev_result = await db.execute(monthly_rev_query)
+                        monthly_rev_row = monthly_rev_result.one()
+                        monthly_revenue = float(monthly_rev_row[0])
+                        monthly_units = monthly_rev_row[1]
+
+                        # Compute months since launch
+                        months_since_launch = max(
+                            1,
+                            (now - book.created_at).days // 30
+                        )
+
+                        # Extract metadata signals
+                        metadata = book.metadata_ or {}
+                        review_rating = metadata.get("review_rating")
+                        review_count = metadata.get("review_count", 0)
+                        is_series = metadata.get("is_series", False)
+                        series_position = metadata.get("series_position")
+
+                        # Determine trend direction from recent vs. prior period
+                        sixty_days_ago = now - timedelta(days=60)
+                        prior_rev_query = select(
+                            func.coalesce(func.sum(RoyaltyRecord.net_revenue), Decimal("0.00")),
+                        ).where(
+                            and_(
+                                RoyaltyRecord.org_id == oid,
+                                RoyaltyRecord.book_id == book.id,
+                                RoyaltyRecord.deleted_at.is_(None),
+                                RoyaltyRecord.period_start >= sixty_days_ago,
+                                RoyaltyRecord.period_start < thirty_days_ago,
+                            )
+                        )
+                        prior_rev_result = await db.execute(prior_rev_query)
+                        prior_revenue = float(prior_rev_result.scalar() or Decimal("0.00"))
+
+                        if prior_revenue > 0:
+                            change = (monthly_revenue - prior_revenue) / prior_revenue
+                            if change > 0.05:
+                                trend_direction = "up"
+                            elif change < -0.10:
+                                trend_direction = "down"
+                            else:
+                                trend_direction = "flat"
+                        else:
+                            trend_direction = "flat" if monthly_revenue == 0 else "up"
+
+                        # Run kill/scale analysis
+                        request = KillScaleRequest(
+                            book_id=book.id,
+                            current_monthly_revenue=monthly_revenue,
+                            current_monthly_units=monthly_units,
+                            months_since_launch=months_since_launch,
+                            total_investment=metadata.get("total_investment", 0.0),
+                            total_revenue_to_date=total_revenue,
+                            monthly_marketing_spend=metadata.get("monthly_marketing_spend", 0.0),
+                            trend_direction=trend_direction,
+                            review_rating=review_rating,
+                            review_count=review_count,
+                            is_series=is_series,
+                            series_position=series_position,
+                        )
+                        decision = calculate_kill_scale(request)
+                        total_analyzed += 1
+
+                        if decision.decision == DecisionType.KILL:
+                            total_kill += 1
+                        elif decision.decision == DecisionType.SCALE:
+                            total_scale += 1
+                        elif decision.decision == DecisionType.REVIVE:
+                            total_revive += 1
+
+                        # Send notifications for KILL or REVIVE decisions
+                        if decision.decision in (DecisionType.KILL, DecisionType.REVIVE):
+                            for user_id in user_ids:
+                                notification = Notification(
+                                    org_id=oid,
+                                    user_id=user_id,
+                                    type=NotificationType.WARNING,
+                                    title=f"Kill/Scale Alert: {book.title}",
+                                    message=(
+                                        f"Book '{book.title}' received a "
+                                        f"{decision.decision.value.upper()} recommendation "
+                                        f"(score: {decision.score}/100). "
+                                        f"{decision.reasoning[0] if decision.reasoning else ''}"
+                                    ),
+                                    data={
+                                        "book_id": str(book.id),
+                                        "decision": decision.decision.value,
+                                        "score": decision.score,
+                                        "current_roi": decision.current_roi,
+                                        "actions": decision.actions[:3],
+                                    },
+                                )
+                                db.add(notification)
+                                total_alerts += 1
+
+                await db.commit()
+
+                return {
+                    "org_id": org_id,
+                    "books_analyzed": total_analyzed,
+                    "kill_recommendations": total_kill,
+                    "scale_recommendations": total_scale,
+                    "revive_recommendations": total_revive,
+                    "alerts_sent": total_alerts,
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }
+
+            except Exception:
+                await db.rollback()
+                raise
+
+    try:
+        result = _run_async(_generate())
 
         logger.info(
             "Kill/scale alerts generated for org %s: %d books analyzed",
@@ -192,16 +666,81 @@ def update_seasonal_calendar(self) -> dict:
     """
     logger.info("Updating seasonal calendar")
 
-    try:
-        current_year = date.today().year
+    async def _update():
+        from sqlalchemy import select, func, and_
+        from app.models.project import Book, Project
+        from app.modules.analytics.models import RoyaltyRecord
+        from app.modules.portfolio_economics.seasonal_service import (
+            get_seasonal_calendar,
+            get_niche_seasonality,
+        )
 
-        result = {
-            "years_updated": [current_year, current_year + 1],
-            "events_refreshed": 0,
-            "genres_updated": 0,
-            "status": "completed",
-            "completed_at": datetime.utcnow().isoformat(),
-        }
+        async with async_session() as db:
+            try:
+                current_year = date.today().year
+                next_year = current_year + 1
+
+                # Discover all active genres from books in the system
+                genre_query = (
+                    select(Book.metadata_)
+                    .join(Project, Book.project_id == Project.id)
+                    .where(
+                        and_(
+                            Book.deleted_at.is_(None),
+                            Project.deleted_at.is_(None),
+                        )
+                    )
+                )
+                genre_result = await db.execute(genre_query)
+                all_metadata = genre_result.scalars().all()
+
+                active_genres = set()
+                for meta in all_metadata:
+                    if meta and isinstance(meta, dict):
+                        genre = meta.get("genre")
+                        if genre:
+                            active_genres.add(genre)
+
+                # If no genres found, use common defaults
+                if not active_genres:
+                    active_genres = {"romance", "thriller", "fantasy", "non-fiction"}
+
+                genre_list = sorted(active_genres)
+
+                # Refresh calendars for current and next year
+                current_calendar = get_seasonal_calendar(
+                    year=current_year,
+                    user_genres=genre_list,
+                )
+                next_calendar = get_seasonal_calendar(
+                    year=next_year,
+                    user_genres=genre_list,
+                )
+
+                events_refreshed = len(current_calendar.events) + len(next_calendar.events)
+
+                # Refresh niche seasonality for each active genre
+                genres_updated = 0
+                for genre in genre_list:
+                    get_niche_seasonality(genre, current_year)
+                    get_niche_seasonality(genre, next_year)
+                    genres_updated += 1
+
+                return {
+                    "years_updated": [current_year, next_year],
+                    "events_refreshed": events_refreshed,
+                    "genres_updated": genres_updated,
+                    "active_genres": genre_list,
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }
+
+            except Exception:
+                await db.rollback()
+                raise
+
+    try:
+        result = _run_async(_update())
 
         logger.info(
             "Seasonal calendar updated for years %s",

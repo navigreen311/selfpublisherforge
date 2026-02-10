@@ -255,8 +255,17 @@ async def send_email(
 
         logger.info("Email sent via SMTP to %s: %s", to, subject)
         return True
-    except Exception:
-        logger.exception("Failed to send email via SMTP to %s: %s", to, subject)
+    except smtplib.SMTPAuthenticationError:
+        logger.error("SMTP authentication failed when sending to %s: %s", to, subject)
+        return False
+    except smtplib.SMTPRecipientsRefused:
+        logger.error("SMTP recipients refused for %s: %s", to, subject)
+        return False
+    except smtplib.SMTPException as exc:
+        logger.error("SMTP error sending email to %s: %s — %s", to, subject, exc)
+        return False
+    except OSError as exc:
+        logger.error("Network error connecting to SMTP server for %s: %s — %s", to, subject, exc)
         return False
 
 

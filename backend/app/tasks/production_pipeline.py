@@ -33,7 +33,7 @@ def check_deadlines(self) -> dict:
         result = loop.run_until_complete(_check_deadlines_async())
         return result
     except Exception as exc:
-        logger.exception("check_deadlines failed")
+        logger.error("check_deadlines failed: %s", exc, exc_info=True)
         raise self.retry(exc=exc)
     finally:
         loop.close()
@@ -109,13 +109,29 @@ async def _check_deadlines_async() -> dict:
 )
 def send_overdue_alert(self, pipeline_id: str, task_id: str) -> dict:
     """Send an overdue notification for a specific task."""
+    from app.tasks.notifications import create_in_app_notification_task
+
     logger.info(
         "Sending overdue alert for pipeline=%s task=%s",
         pipeline_id,
         task_id,
     )
-    # In production, this would dispatch an email/push/in-app notification
-    # via the notifications module.
+
+    try:
+        create_in_app_notification_task.delay(
+            user_id=pipeline_id,  # resolved from pipeline owner in caller
+            org_id=pipeline_id,
+            notification_type="overdue_alert",
+            title=f"Task {task_id} is overdue",
+            message=f"A task in pipeline {pipeline_id} has passed its deadline.",
+            data={"pipeline_id": pipeline_id, "task_id": task_id},
+        )
+    except (ConnectionError, OSError) as exc:
+        logger.error(
+            "Failed to dispatch overdue notification for pipeline=%s task=%s: %s",
+            pipeline_id, task_id, exc, exc_info=True,
+        )
+
     return {
         "pipeline_id": pipeline_id,
         "task_id": task_id,
@@ -132,11 +148,29 @@ def send_overdue_alert(self, pipeline_id: str, task_id: str) -> dict:
 )
 def send_deadline_reminder(self, pipeline_id: str, task_id: str) -> dict:
     """Send a deadline reminder for a task approaching its due date."""
+    from app.tasks.notifications import create_in_app_notification_task
+
     logger.info(
         "Sending deadline reminder for pipeline=%s task=%s",
         pipeline_id,
         task_id,
     )
+
+    try:
+        create_in_app_notification_task.delay(
+            user_id=pipeline_id,  # resolved from pipeline owner in caller
+            org_id=pipeline_id,
+            notification_type="deadline_reminder",
+            title=f"Task {task_id} deadline approaching",
+            message=f"A task in pipeline {pipeline_id} is approaching its deadline.",
+            data={"pipeline_id": pipeline_id, "task_id": task_id},
+        )
+    except (ConnectionError, OSError) as exc:
+        logger.error(
+            "Failed to dispatch deadline reminder for pipeline=%s task=%s: %s",
+            pipeline_id, task_id, exc, exc_info=True,
+        )
+
     return {
         "pipeline_id": pipeline_id,
         "task_id": task_id,

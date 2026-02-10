@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from uuid import UUID
@@ -194,7 +194,7 @@ class ListingAnalysis(BaseModel):
     category_analysis: CategoryAnalysis
     price_analysis: PriceAnalysis
     recommendations: list[Recommendation] = Field(default_factory=list)
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class BlurbVariant(BaseModel):

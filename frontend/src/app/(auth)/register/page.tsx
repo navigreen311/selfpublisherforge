@@ -109,6 +109,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? (
@@ -228,10 +229,6 @@ export default function RegisterPage() {
               GitHub
             </Button>
           </div>
-
-          <p className="text-xs text-muted-foreground text-center">
-            Already have an account? These will link automatically
-          </p>
 
           <p className="text-sm text-muted-foreground text-center">
             Already have an account?{" "}

@@ -75,9 +75,10 @@ async def generate_opportunity_blueprint(
         )
         if enhanced:
             return enhanced
-    except Exception:
+    except (RuntimeError, ValueError, OSError) as e:
         logger.warning(
-            "AI blueprint enhancement failed, using rule-based blueprint",
+            "AI blueprint enhancement failed, using rule-based blueprint: %s",
+            e,
             exc_info=True,
         )
 

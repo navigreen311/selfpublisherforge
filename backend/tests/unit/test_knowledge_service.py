@@ -110,7 +110,7 @@ async def test_create_entry_basic(service, mock_db, mock_search, org_id):
 @pytest.mark.asyncio
 async def test_create_entry_es_failure_does_not_raise(service, mock_db, mock_search, org_id):
     """If Elasticsearch indexing fails, the create should still succeed."""
-    mock_search.index_entry.side_effect = Exception("ES down")
+    mock_search.index_entry.side_effect = ConnectionError("ES down")
     mock_db.refresh = AsyncMock(side_effect=lambda e: setattr(e, "id", uuid.uuid4()))
 
     payload = CreateEntryRequest(title="Fallback Test", content="Content")
