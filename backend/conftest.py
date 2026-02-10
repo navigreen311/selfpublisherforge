@@ -1,13 +1,9 @@
-"""Root conftest — ensures ``app`` and ``shared`` packages are importable."""
+"""Root conftest: ensures project root is on sys.path for shared imports."""
 import sys
 from pathlib import Path
 
-# backend/ directory
-backend_dir = Path(__file__).resolve().parent
-# project root (parent of backend/)
-project_root = backend_dir.parent
-
-# Add both to sys.path so `import app.…` and `import shared.…` work
-for p in (str(backend_dir), str(project_root)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+# Add the project root (parent of backend/) to sys.path
+# so that 'shared' package imports work correctly
+_project_root = str(Path(__file__).resolve().parent.parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
