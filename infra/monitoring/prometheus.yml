@@ -1,0 +1,67 @@
+# =============================================================================
+# Prometheus Configuration — Scrape targets for SelfPublisherForge
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    project: selfpublisherforge
+
+# Alert rules
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # API backend metrics
+  - job_name: "spf-api"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: api
+          environment: production
+
+  # Celery worker metrics (via Flower)
+  - job_name: "spf-flower"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["flower:5555"]
+        labels:
+          service: celery
+          environment: production
+
+  # PostgreSQL metrics (via postgres_exporter)
+  - job_name: "spf-postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          service: postgres
+          environment: production
+
+  # Redis metrics (via redis_exporter)
+  - job_name: "spf-redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          service: redis
+          environment: production
+
+  # Node exporter (host metrics)
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          environment: production
+
+  # Elasticsearch metrics
+  - job_name: "spf-elasticsearch"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["elasticsearch-exporter:9114"]
+        labels:
+          service: elasticsearch
+          environment: production

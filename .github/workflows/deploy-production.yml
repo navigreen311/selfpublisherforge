@@ -1,5 +1,5 @@
 # =============================================================================
-# Deploy to Production — On tag push (blue-green with auto-rollback)
+# Deploy to Production — On tag push, release publish, or manual dispatch
 # =============================================================================
 name: Deploy to Production
 
@@ -7,6 +7,14 @@ on:
   push:
     tags:
       - "v*.*.*"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to deploy (e.g. v1.2.3)"
+        required: true
+        type: string
 
 concurrency:
   group: deploy-production
@@ -191,7 +199,7 @@ jobs:
       - name: Check API health endpoint
         id: api-health
         run: |
-          HEALTH_URL="${{ secrets.PRODUCTION_API_URL }}/api/health"
+          HEALTH_URL="${{ secrets.PRODUCTION_API_URL }}/health"
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
           echo "http_status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
           if [ "$HTTP_STATUS" != "200" ]; then

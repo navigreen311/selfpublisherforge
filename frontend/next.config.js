@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   reactStrictMode: true,
   images: {
     domains: ["selfpublisherforge-assets.s3.amazonaws.com"],

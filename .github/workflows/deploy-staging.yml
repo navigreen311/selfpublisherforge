@@ -1,11 +1,17 @@
 # =============================================================================
-# Deploy to Staging — On merge to main
+# Deploy to Staging — On merge to develop or manual dispatch
 # =============================================================================
 name: Deploy to Staging
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to deploy (e.g. v1.2.3). Defaults to git SHA."
+        required: false
+        type: string
 
 concurrency:
   group: deploy-staging

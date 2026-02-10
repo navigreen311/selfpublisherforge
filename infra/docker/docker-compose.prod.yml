@@ -1,50 +1,65 @@
+# =============================================================================
+# Production Docker Compose — used for production-like local testing
+# =============================================================================
+# Usage: docker compose -f infra/docker/docker-compose.prod.yml up --build
+# =============================================================================
+
 version: "3.8"
 
 services:
   backend:
     build:
-      context: ./backend
+      context: ../../backend
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    env_file: ./backend/.env
-    volumes:
-      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/selfpublisherforge
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SECRET_KEY=production-local-test-key-change-me
+      - ENVIRONMENT=production
+      - DEBUG=false
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       start_period: 15s
       retries: 3
+    restart: unless-stopped
     networks:
       - spf-network
 
   frontend:
     build:
-      context: ./frontend
+      context: ../../frontend
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    env_file: ./frontend/.env.local
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://backend:8000
     depends_on:
       - backend
-    command: npm run dev
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
     networks:
       - spf-network
 
   postgres:
     image: postgres:16-alpine
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_DB: selfpublisherforge
       POSTGRES_USER: postgres
@@ -56,13 +71,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
       - spf-network
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -70,13 +84,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
       - spf-network
 
   elasticsearch:
     image: elasticsearch:8.15.0
-    ports:
-      - "9200:9200"
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -89,51 +102,47 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+    restart: unless-stopped
     networks:
       - spf-network
 
   celery-worker:
     build:
-      context: ./backend
+      context: ../../backend
       dockerfile: Dockerfile
-    env_file: ./backend/.env
-    volumes:
-      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/selfpublisherforge
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=production-local-test-key-change-me
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A app.tasks worker -l info -c 4
+    restart: unless-stopped
     networks:
       - spf-network
 
   celery-beat:
     build:
-      context: ./backend
+      context: ../../backend
       dockerfile: Dockerfile
-    env_file: ./backend/.env
-    volumes:
-      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/selfpublisherforge
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=production-local-test-key-change-me
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A app.tasks beat -l info
-    networks:
-      - spf-network
-
-  flower:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "5555:5555"
-    env_file: ./backend/.env
-    depends_on:
-      - redis
-    command: celery -A app.tasks flower --port=5555
+    restart: unless-stopped
     networks:
       - spf-network
 
