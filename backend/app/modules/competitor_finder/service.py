@@ -82,9 +82,9 @@ class CompetitorFinderService:
             review_data = [
                 ReviewData(
                     review_id=r.id,
-                    rating=r.rating,
+                    rating=int(r.rating or 3),
                     title=r.title or "",
-                    body=r.body or "",
+                    body=r.review_text or "",
                     helpful_votes=r.helpful_votes,
                     verified_purchase=r.verified_purchase,
                 )
@@ -203,7 +203,7 @@ class CompetitorFinderService:
                 CompetitorBook.org_id == org_id,
                 CompetitorBook.category == request.category,
             )
-            .order_by(CompetitorBook.bsr.asc().nullslast())
+            .order_by(CompetitorBook.bsr_current.asc().nullslast())
             .limit(request.top_n)
         )
         result = await self.db.execute(stmt)
@@ -265,7 +265,7 @@ class CompetitorFinderService:
             stmt = (
                 select(CompetitorBook)
                 .where(CompetitorBook.org_id == org_id)
-                .order_by(CompetitorBook.bsr.asc().nullslast())
+                .order_by(CompetitorBook.bsr_current.asc().nullslast())
                 .limit(request.max_books)
             )
             if request.category:
@@ -406,7 +406,7 @@ class CompetitorFinderService:
         """Fetch reviews for a book."""
         stmt = (
             select(CompetitorReview)
-            .where(CompetitorReview.book_id == book_id)
+            .where(CompetitorReview.competitor_book_id == book_id)
             .order_by(CompetitorReview.helpful_votes.desc())
             .limit(limit)
         )

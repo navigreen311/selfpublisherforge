@@ -50,4 +50,13 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "analytics_queue"},
         "kwargs": {},
     },
+    # ------------------------------------------------------------------
+    # Competitor alerts — every hour
+    # ------------------------------------------------------------------
+    "check-competitor-alerts-hourly": {
+        "task": "competitor_finder.check_competitor_alerts",
+        "schedule": schedule(run_every=3600),  # Every hour
+        "options": {"queue": "default"},
+        "args": [],
+    },
 }

@@ -190,13 +190,10 @@ class TestAnalyzeEndpoint:
         mock_service.analyze_competitor.return_value = _mock_analysis()
         mock_service_cls.return_value = mock_service
 
-        app = _create_test_app()
-        app.dependency_overrides[get_current_user_dep] = lambda: _mock_current_user()
-
-        # Use direct override on the dependency
         from app.core.dependencies import get_current_user as gcu
         from app.database import get_db as gdb
 
+        app = _create_test_app()
         app.dependency_overrides[gcu] = lambda: _mock_current_user()
         app.dependency_overrides[gdb] = lambda: AsyncMock()
 
@@ -442,8 +439,3 @@ class TestBatchAnalyzeEndpoint:
         data = response.json()
         assert data["analyses_created"] == 2
         assert data["task_id"] == "task-123"
-
-
-# Placeholder for dependency override (avoids NameError in the class)
-def get_current_user_dep():
-    pass

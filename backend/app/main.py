@@ -98,7 +98,7 @@ def _register_routers(app: FastAPI):
     app.include_router(pricing_router, prefix=prefix, tags=["pricing"])
 
     from app.modules.competitor_finder.router import router as competitor_router
-    app.include_router(competitor_router, prefix=prefix, tags=["competitors"])
+    app.include_router(competitor_router, prefix=f"{prefix}/competitors", tags=["competitors"])
 
     # Tier 5: Growth
     from app.modules.marketing.router import router as marketing_router
