@@ -1,5 +1,6 @@
 """SQLAlchemy models for the Marketing & Launch Command module."""
 
+import enum
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
@@ -10,14 +11,18 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
     JSON,
+    Numeric,
     String,
     Text,
     Uuid,
     func,
     text,
+    Enum as SAEnum,
 )
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base, BaseModel, TenantModel
@@ -26,6 +31,29 @@ from app.database import Base, BaseModel, TenantModel
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
+class CampaignPlatform(str, PyEnum):
+    AMAZON_ADS = "amazon_ads"
+    FACEBOOK = "facebook"
+    BOOKBUB = "bookbub"
+    GOOGLE = "google"
+    TIKTOK = "tiktok"
+
+
+class CampaignStatus(str, PyEnum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    ARCHIVED = "archived"
+
+
+class AdCreativeType(str, PyEnum):
+    IMAGE = "image"
+    VIDEO = "video"
+    TEXT = "text"
+    CAROUSEL = "carousel"
+
 
 class LaunchPlanStatus(str, PyEnum):
     DRAFT = "draft"
@@ -104,12 +132,88 @@ class ARCRecipientStatus(str, PyEnum):
 # Models
 # ---------------------------------------------------------------------------
 
+class Campaign(TenantModel):
+    """Marketing campaign across platforms."""
+
+    __tablename__ = "campaigns"
+
+    platform: Mapped[CampaignPlatform] = mapped_column(
+        Enum(CampaignPlatform, name="campaign_platform", create_constraint=False),
+        nullable=False,
+    )
+    book_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("books.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
+    status: Mapped[CampaignStatus] = mapped_column(
+        Enum(CampaignStatus, name="campaign_status", create_constraint=False),
+        default=CampaignStatus.DRAFT,
+        server_default="draft",
+    )
+    daily_budget: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
+    total_spend: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True, default=None)
+    performance: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+
+    # Relationships
+    organization = relationship(
+        "Organization", back_populates="campaigns",
+        primaryjoin="Campaign.org_id == Organization.id",
+        foreign_keys="[Campaign.org_id]",
+    )
+    book = relationship("Book", back_populates="campaigns")
+    ad_creatives = relationship("AdCreative", back_populates="campaign", lazy="selectin")
+
+    __table_args__ = (
+        Index("ix_campaigns_platform", "platform"),
+        Index("ix_campaigns_status", "status"),
+        Index("ix_campaigns_performance_gin", "performance", postgresql_using="gin"),
+        Index("ix_campaigns_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
+        Index("ix_campaigns_org_id_created_at", "org_id", "created_at"),
+    )
+
+
+class AdCreative(BaseModel):
+    """Ad creative asset for a campaign."""
+
+    __tablename__ = "ad_creatives"
+
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("campaigns.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    type: Mapped[AdCreativeType] = mapped_column(
+        Enum(AdCreativeType, name="ad_creative_type", create_constraint=False),
+        nullable=False,
+    )
+    content: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    asset_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    performance: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+
+    # Relationships
+    campaign = relationship("Campaign", back_populates="ad_creatives")
+
+    __table_args__ = (
+        Index("ix_ad_creatives_type", "type"),
+        Index("ix_ad_creatives_active", "active"),
+        Index("ix_ad_creatives_performance_gin", "performance", postgresql_using="gin"),
+        Index("ix_ad_creatives_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
+    )
+
+
 class LaunchPlan(TenantModel):
     """Top-level launch plan for a book."""
 
     __tablename__ = "launch_plans"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
+    book_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("books.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[LaunchPlanStatus] = mapped_column(
@@ -122,11 +226,14 @@ class LaunchPlan(TenantModel):
     target_audience: Mapped[str | None] = mapped_column(Text, nullable=True)
     budget: Mapped[float | None] = mapped_column(Float, nullable=True)
     goals: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    phases: Mapped[dict | None] = mapped_column("phases_data", JSON, nullable=True)
+    checklist: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     ai_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
 
     # Relationships
-    phases: Mapped[list["LaunchPhase"]] = relationship(
+    book = relationship("Book", back_populates="launch_plans")
+    launch_phases: Mapped[list["LaunchPhase"]] = relationship(
         "LaunchPhase", back_populates="launch_plan", cascade="all, delete-orphan",
         order_by="LaunchPhase.order_index",
     )
@@ -151,7 +258,7 @@ class LaunchPhase(BaseModel):
     order_index: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relationships
-    launch_plan: Mapped["LaunchPlan"] = relationship("LaunchPlan", back_populates="phases")
+    launch_plan: Mapped["LaunchPlan"] = relationship("LaunchPlan", back_populates="launch_phases")
     tasks: Mapped[list["PhaseTask"]] = relationship(
         "PhaseTask", back_populates="phase", cascade="all, delete-orphan",
         order_by="PhaseTask.order_index",
@@ -197,15 +304,22 @@ class EmailSequence(TenantModel):
         server_default="draft",
     )
     trigger_event: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    subscriber_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     recipient_count: Mapped[int] = mapped_column(Integer, default=0)
     sent_count: Mapped[int] = mapped_column(Integer, default=0)
     open_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     click_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    emails: Mapped[dict | None] = mapped_column("emails_data", JSON, nullable=True)
     settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
 
     # Relationships
-    emails: Mapped[list["EmailTemplate"]] = relationship(
+    organization = relationship(
+        "Organization", back_populates="email_sequences",
+        primaryjoin="EmailSequence.org_id == Organization.id",
+        foreign_keys="[EmailSequence.org_id]",
+    )
+    email_templates: Mapped[list["EmailTemplate"]] = relationship(
         "EmailTemplate", back_populates="sequence", cascade="all, delete-orphan",
         order_by="EmailTemplate.order_index",
     )
@@ -239,7 +353,34 @@ class EmailTemplate(BaseModel):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    sequence: Mapped["EmailSequence"] = relationship("EmailSequence", back_populates="emails")
+    sequence: Mapped["EmailSequence"] = relationship("EmailSequence", back_populates="email_templates")
+
+
+class ReaderPanel(TenantModel):
+    """A panel of beta readers or ARC reviewers."""
+
+    __tablename__ = "reader_panels"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    panel_size: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    recruitment_criteria: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    tests: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
+    feedback_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+
+    # Relationships
+    organization = relationship(
+        "Organization", back_populates="reader_panels",
+        primaryjoin="ReaderPanel.org_id == Organization.id",
+        foreign_keys="[ReaderPanel.org_id]",
+    )
+
+    __table_args__ = (
+        Index("ix_reader_panels_recruitment_criteria_gin", "recruitment_criteria", postgresql_using="gin"),
+        Index("ix_reader_panels_feedback_summary_gin", "feedback_summary", postgresql_using="gin"),
+        Index("ix_reader_panels_tests_gin", "tests", postgresql_using="gin"),
+        Index("ix_reader_panels_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
+        Index("ix_reader_panels_org_id_created_at", "org_id", "created_at"),
+    )
 
 
 class SocialPost(TenantModel):
