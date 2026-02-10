@@ -35,6 +35,99 @@ def _org_id(current_user: dict) -> UUID:
     return current_user["org_id"]
 
 
+# ── Full-text search ─────────────────────────────────────────────
+# NOTE: Fixed-path routes (/search, /import, /tags, /suggestions) MUST be
+# registered before the parameterised /{entry_id} routes.  FastAPI matches
+# top-to-bottom, so a GET /tags would otherwise be captured by
+# GET /{entry_id} and fail UUID validation with a 422.
+
+@router.post(
+    "/search",
+    response_model=SearchResult,
+    summary="Full-text search via Elasticsearch",
+)
+async def search_entries(
+    payload: SearchRequest,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    result = await service.full_text_search(
+        org_id=_org_id(current_user),
+        query=payload.query,
+        tags=payload.tags or None,
+        source_type=payload.source_type,
+        limit=payload.limit,
+        offset=payload.offset,
+    )
+    return SearchResult(
+        hits=result["hits"],
+        total=result["total"],
+        query=payload.query,
+    )
+
+
+# ── Import ───────────────────────────────────────────────────────
+
+@router.post(
+    "/import",
+    response_model=ImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import from URL or file with AI extraction",
+)
+async def import_entry(
+    payload: ImportRequest,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    try:
+        entry = await service.import_entry(
+            org_id=_org_id(current_user),
+            url=payload.url,
+            file_name=payload.file_name,
+            file_content_base64=payload.file_content_base64,
+            extract_facts=payload.extract_facts,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return ImportResponse(
+        entry_id=entry.id,
+        title=entry.title,
+        content_preview=entry.content[:300] if entry.content else "",
+        tags=entry.tags or [],
+        source_type=entry.source_type,
+    )
+
+
+# ── Tags ─────────────────────────────────────────────────────────
+
+@router.get(
+    "/tags",
+    response_model=TagListResponse,
+    summary="List all tags",
+)
+async def list_tags(
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    return await service.get_all_tags(_org_id(current_user))
+
+
+# ── AI Suggestions ───────────────────────────────────────────────
+
+@router.get(
+    "/suggestions",
+    response_model=SuggestionsResponse,
+    summary="AI-suggested research topics",
+)
+async def get_suggestions(
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    suggestions = await service.get_suggestions(_org_id(current_user))
+    return SuggestionsResponse(suggestions=suggestions)
+
+
 # ── Create ───────────────────────────────────────────────────────
 
 @router.post(
@@ -136,81 +229,6 @@ async def delete_entry(
         raise HTTPException(status_code=404, detail="Knowledge entry not found")
 
 
-# ── Full-text search ─────────────────────────────────────────────
-
-@router.post(
-    "/search",
-    response_model=SearchResult,
-    summary="Full-text search via Elasticsearch",
-)
-async def search_entries(
-    payload: SearchRequest,
-    current_user: dict = Depends(get_current_user),
-    service: KnowledgeService = Depends(_get_service),
-):
-    result = await service.full_text_search(
-        org_id=_org_id(current_user),
-        query=payload.query,
-        tags=payload.tags or None,
-        source_type=payload.source_type,
-        limit=payload.limit,
-        offset=payload.offset,
-    )
-    return SearchResult(
-        hits=result["hits"],
-        total=result["total"],
-        query=payload.query,
-    )
-
-
-# ── Import ───────────────────────────────────────────────────────
-
-@router.post(
-    "/import",
-    response_model=ImportResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Import from URL or file with AI extraction",
-)
-async def import_entry(
-    payload: ImportRequest,
-    current_user: dict = Depends(get_current_user),
-    service: KnowledgeService = Depends(_get_service),
-):
-    try:
-        entry = await service.import_entry(
-            org_id=_org_id(current_user),
-            url=payload.url,
-            file_name=payload.file_name,
-            file_content_base64=payload.file_content_base64,
-            extract_facts=payload.extract_facts,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    return ImportResponse(
-        entry_id=entry.id,
-        title=entry.title,
-        content_preview=entry.content[:300] if entry.content else "",
-        tags=entry.tags or [],
-        source_type=entry.source_type,
-    )
-
-
-# ── AI Suggestions ───────────────────────────────────────────────
-
-@router.get(
-    "/suggestions",
-    response_model=SuggestionsResponse,
-    summary="AI-suggested research topics",
-)
-async def get_suggestions(
-    current_user: dict = Depends(get_current_user),
-    service: KnowledgeService = Depends(_get_service),
-):
-    suggestions = await service.get_suggestions(_org_id(current_user))
-    return SuggestionsResponse(suggestions=suggestions)
-
-
 # ── Summarize ────────────────────────────────────────────────────
 
 @router.post(
@@ -227,20 +245,6 @@ async def summarize_entry(
     if not result:
         raise HTTPException(status_code=404, detail="Knowledge entry not found")
     return result
-
-
-# ── Tags ─────────────────────────────────────────────────────────
-
-@router.get(
-    "/tags",
-    response_model=TagListResponse,
-    summary="List all tags",
-)
-async def list_tags(
-    current_user: dict = Depends(get_current_user),
-    service: KnowledgeService = Depends(_get_service),
-):
-    return await service.get_all_tags(_org_id(current_user))
 
 
 # ── Helpers ──────────────────────────────────────────────────────

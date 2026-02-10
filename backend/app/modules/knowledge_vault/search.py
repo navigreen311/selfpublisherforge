@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
-from uuid import UUID
+from typing import Any
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 
@@ -65,7 +64,11 @@ class KnowledgeSearchService:
         """Create the index if it does not exist."""
         exists = await self._client.indices.exists(index=INDEX_NAME)
         if not exists:
-            await self._client.indices.create(index=INDEX_NAME, body=INDEX_SETTINGS)
+            await self._client.indices.create(
+                index=INDEX_NAME,
+                settings=INDEX_SETTINGS["settings"],
+                mappings=INDEX_SETTINGS["mappings"],
+            )
             logger.info("Created Elasticsearch index %s", INDEX_NAME)
 
     # ── Index / update / delete documents ────────────────────────
@@ -85,7 +88,7 @@ class KnowledgeSearchService:
             "created_at": entry_dict.get("created_at"),
             "updated_at": entry_dict.get("updated_at"),
         }
-        await self._client.index(index=INDEX_NAME, id=doc_id, body=body, refresh="wait_for")
+        await self._client.index(index=INDEX_NAME, id=doc_id, document=body, refresh="wait_for")
 
     async def delete_entry(self, entry_id: str) -> None:
         """Remove an entry from the search index."""
@@ -128,31 +131,33 @@ class KnowledgeSearchService:
         if source_type:
             filter_clauses.append({"term": {"source_type": source_type}})
 
-        body: dict[str, Any] = {
-            "query": {
-                "bool": {
-                    "must": must_clauses,
-                    "filter": filter_clauses,
-                }
-            },
-            "from": offset,
-            "size": limit,
-            "highlight": {
-                "fields": {
-                    "title": {"number_of_fragments": 1},
-                    "content": {"fragment_size": 200, "number_of_fragments": 1},
-                }
-            },
+        es_query: dict[str, Any] = {
+            "bool": {
+                "must": must_clauses,
+                "filter": filter_clauses,
+            }
+        }
+        es_highlight: dict[str, Any] = {
+            "fields": {
+                "title": {"number_of_fragments": 1},
+                "content": {"fragment_size": 200, "number_of_fragments": 1},
+            }
         }
 
-        resp = await self._client.search(index=INDEX_NAME, body=body)
+        resp = await self._client.search(
+            index=INDEX_NAME,
+            query=es_query,
+            from_=offset,
+            size=limit,
+            highlight=es_highlight,
+        )
 
         hits = []
         for hit in resp["hits"]["hits"]:
             source = hit["_source"]
-            highlight = hit.get("highlight", {})
+            hit_highlight = hit.get("highlight", {})
             content_snippet = (
-                highlight.get("content", [source.get("content", "")[:200]])[0]
+                hit_highlight.get("content", [source.get("content", "")[:200]])[0]
             )
             hits.append(
                 {
@@ -176,12 +181,12 @@ class KnowledgeSearchService:
 
     async def get_tag_counts(self, org_id: str) -> dict[str, int]:
         """Return tag -> document count for the org."""
-        body: dict[str, Any] = {
-            "size": 0,
-            "query": {"term": {"org_id": org_id}},
-            "aggs": {"tag_counts": {"terms": {"field": "tags", "size": 500}}},
-        }
-        resp = await self._client.search(index=INDEX_NAME, body=body)
+        resp = await self._client.search(
+            index=INDEX_NAME,
+            size=0,
+            query={"term": {"org_id": org_id}},
+            aggs={"tag_counts": {"terms": {"field": "tags", "size": 500}}},
+        )
         buckets = resp["aggregations"]["tag_counts"]["buckets"]
         return {b["key"]: b["doc_count"] for b in buckets}
 
