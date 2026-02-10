@@ -299,9 +299,10 @@ async def _check_budget_alerts_async():
 
 
 # ─── Periodic Task Schedule ──────────────────────────────────────────────────
+# Exported as a dict for merging into the central scheduler; do NOT mutate
+# celery_app.conf.beat_schedule directly from module-level code.
 
-celery_app.conf.beat_schedule = celery_app.conf.get("beat_schedule", {})
-celery_app.conf.beat_schedule.update({
+ADVERTISING_BEAT_SCHEDULE = {
     "sync-ad-performance-hourly": {
         "task": "advertising.sync_performance",
         "schedule": 3600.0,  # Every hour
@@ -314,4 +315,4 @@ celery_app.conf.beat_schedule.update({
         "task": "advertising.budget_alerts",
         "schedule": 14400.0,  # Every 4 hours
     },
-})
+}

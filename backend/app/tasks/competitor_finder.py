@@ -93,14 +93,10 @@ def process_single_analysis(
                 raise
 
     try:
-        result = asyncio.get_event_loop().run_until_complete(_run())
-        return result
-    except RuntimeError:
-        # No event loop running - create one
         loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         try:
-            return loop.run_until_complete(_run())
+            result = loop.run_until_complete(_run())
+            return result
         finally:
             loop.close()
     except Exception as exc:
@@ -205,10 +201,7 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                 raise
 
     try:
-        return asyncio.get_event_loop().run_until_complete(_run())
-    except RuntimeError:
         loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         try:
             return loop.run_until_complete(_run())
         finally:
