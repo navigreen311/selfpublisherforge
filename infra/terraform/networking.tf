@@ -175,21 +175,75 @@ resource "aws_security_group" "ecs" {
   description = "Security group for ECS tasks"
   vpc_id      = aws_vpc.main.id
 
+  # --- Ingress from ALB (only ports that ALB target groups forward to) ---
+
   ingress {
-    description     = "Traffic from ALB"
-    from_port       = 0
-    to_port         = 65535
+    description     = "API backend (Django/Gunicorn) from ALB"
+    from_port       = 8000
+    to_port         = 8000
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
 
   ingress {
-    description = "Internal ECS-to-ECS traffic"
-    from_port   = 0
-    to_port     = 65535
+    description     = "Frontend (Next.js/Node) from ALB"
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description     = "Flower (Celery monitoring dashboard) from ALB"
+    from_port       = 5555
+    to_port         = 5555
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description     = "Prometheus metrics endpoint from ALB"
+    from_port       = 9090
+    to_port         = 9090
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  # --- Internal ECS-to-ECS traffic (service mesh / inter-container calls) ---
+
+  ingress {
+    description = "API backend — internal ECS-to-ECS"
+    from_port   = 8000
+    to_port     = 8000
     protocol    = "tcp"
     self        = true
   }
+
+  ingress {
+    description = "Frontend — internal ECS-to-ECS"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description = "Flower — internal ECS-to-ECS"
+    from_port   = 5555
+    to_port     = 5555
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description = "Prometheus — internal ECS-to-ECS"
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    self        = true
+  }
+
+  # --- Egress (all outbound needed for ECR pulls, AWS APIs, etc.) ---
 
   egress {
     description = "All outbound"

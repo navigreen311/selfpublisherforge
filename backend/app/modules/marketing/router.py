@@ -43,7 +43,7 @@ from app.modules.marketing.schemas import (
 )
 from app.modules.marketing.service import MarketingService
 from app.modules.marketing.social_generator import SocialContentGenerator
-from shared.contracts.api import PaginatedResponse, SuccessResponse
+from app.core.contracts import PaginatedResponse, SuccessResponse
 
 router = APIRouter()
 

@@ -1,6 +1,14 @@
 # =============================================================================
 # Prometheus Configuration — Scrape targets for SelfPublisherForge
 # =============================================================================
+# This file defines all scrape targets for monitoring the SelfPublisherForge
+# infrastructure. Each job corresponds to a Docker Compose service defined in
+# infra/docker/docker-compose.prod.yml.
+#
+# Exporter health is monitored via the built-in `up` metric (1 = healthy,
+# 0 = scrape failed). The TargetDown alert in alerts.yml fires when any
+# scrape target is unreachable for 5 minutes.
+# =============================================================================
 
 global:
   scrape_interval: 15s
@@ -21,64 +29,216 @@ alerting:
 rule_files:
   - "alerts.yml"
 
+# =============================================================================
 # Scrape configurations
+# =============================================================================
+# Each job includes:
+#   - scrape_interval / scrape_timeout tuned per target characteristics
+#   - environment label for multi-env filtering (dev / staging / production)
+#   - metric_relabel_configs for consistent labeling across all jobs
+#
+# Service name -> Docker Compose service mapping:
+#   spf-api                -> backend:8000
+#   spf-celery-exporter    -> celery-exporter:9808
+#   spf-flower             -> flower:5555        (optional; only if Flower is deployed)
+#   spf-postgres           -> postgres-exporter:9187
+#   spf-redis              -> redis-exporter:9121
+#   spf-node               -> node-exporter:9100
+#   spf-elasticsearch      -> elasticsearch-exporter:9114
+#   spf-prometheus         -> prometheus:9090     (self-monitoring)
+#   spf-alertmanager       -> alertmanager:9093
+# =============================================================================
+
 scrape_configs:
+
+  # ---------------------------------------------------------------------------
+  # Prometheus self-monitoring
+  # ---------------------------------------------------------------------------
+  # Prometheus scrapes its own /metrics endpoint to expose internal health
+  # metrics: prometheus_tsdb_*, prometheus_engine_*, promhttp_*, process_*,
+  # and go_*. This enables dashboards and alerts on Prometheus itself (e.g.,
+  # WAL corruption, query latency, memory usage, config reload failures).
+  - job_name: "spf-prometheus"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: prometheus
+          component: monitoring
+          environment: production
+    # Add consistent project-level labels to all metrics from this job
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
+
+  # ---------------------------------------------------------------------------
+  # Alertmanager metrics
+  # ---------------------------------------------------------------------------
+  # Scrapes Alertmanager's /metrics endpoint for alert pipeline health:
+  # alertmanager_alerts, alertmanager_notifications_total,
+  # alertmanager_notification_latency_seconds, etc. Enables alerting on the
+  # alerting pipeline itself (notification failures, silenced alerts count).
+  - job_name: "spf-alertmanager"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["alertmanager:9093"]
+        labels:
+          service: alertmanager
+          component: monitoring
+          environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
+
+  # ---------------------------------------------------------------------------
   # API backend metrics
+  # ---------------------------------------------------------------------------
+  # Scrapes the FastAPI /metrics endpoint (via prometheus-fastapi-instrumentator
+  # or starlette-exporter). Exposes: http_requests_total, http_request_duration_seconds,
+  # http_requests_in_progress, and custom application metrics.
+  # Docker Compose service: backend:8000
   - job_name: "spf-api"
+    scrape_interval: 15s
+    scrape_timeout: 10s
     metrics_path: /metrics
     static_configs:
       - targets: ["backend:8000"]
         labels:
           service: api
+          component: application
           environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
 
+  # ---------------------------------------------------------------------------
   # Celery worker metrics (via Flower)
+  # ---------------------------------------------------------------------------
+  # Flower provides a /metrics endpoint with Celery worker status, active task
+  # counts, and task event rates. Only available when Flower is deployed.
+  # NOTE: Flower is NOT defined in docker-compose.prod.yml. This job will
+  # report up=0 until a Flower service is added. The TargetDown alert will
+  # fire for this job — disable it or add Flower to the compose file.
+  # Docker Compose service: flower:5555 (not yet provisioned)
   - job_name: "spf-flower"
+    scrape_interval: 15s
+    scrape_timeout: 10s
     metrics_path: /metrics
     static_configs:
       - targets: ["flower:5555"]
         labels:
           service: celery
+          component: application
           environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
 
-  # Celery queue metrics (via celery-exporter — danihodovic/celery-exporter)
-  # Exports: celery_queue_length, celery_task_failed_total, celery_task_succeeded_total
+  # ---------------------------------------------------------------------------
+  # Celery queue metrics (via celery-exporter)
+  # ---------------------------------------------------------------------------
+  # danihodovic/celery-exporter monitors the Celery broker (Redis) and exposes:
+  # celery_queue_length, celery_task_failed_total, celery_task_succeeded_total,
+  # celery_task_runtime_seconds, celery_active_consumer_count.
+  # Docker Compose service: celery-exporter:9808
   - job_name: "spf-celery-exporter"
+    scrape_interval: 15s
+    scrape_timeout: 10s
     metrics_path: /metrics
     static_configs:
       - targets: ["celery-exporter:9808"]
         labels:
           service: celery
+          component: exporter
           environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
 
+  # ---------------------------------------------------------------------------
   # PostgreSQL metrics (via postgres_exporter)
+  # ---------------------------------------------------------------------------
+  # prometheuscommunity/postgres-exporter exposes: pg_up, pg_stat_activity_count,
+  # pg_stat_database_*, pg_stat_bgwriter_*, pg_stat_user_tables_*,
+  # pg_replication_*, pg_locks_count. Critical for DB health monitoring.
+  # Docker Compose service: postgres-exporter:9187
   - job_name: "spf-postgres"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
     static_configs:
       - targets: ["postgres-exporter:9187"]
         labels:
           service: postgres
+          component: exporter
           environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
 
+  # ---------------------------------------------------------------------------
   # Redis metrics (via redis_exporter)
+  # ---------------------------------------------------------------------------
+  # oliver006/redis_exporter exposes: redis_up, redis_used_memory_bytes,
+  # redis_connected_clients, redis_keyspace_hits_total, redis_keyspace_misses_total,
+  # redis_commands_processed_total, redis_config_maxmemory.
+  # Docker Compose service: redis-exporter:9121
   - job_name: "spf-redis"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
     static_configs:
       - targets: ["redis-exporter:9121"]
         labels:
           service: redis
+          component: exporter
           environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
 
-  # Node exporter (host metrics)
-  - job_name: "node"
+  # ---------------------------------------------------------------------------
+  # Node exporter (host-level metrics)
+  # ---------------------------------------------------------------------------
+  # prom/node-exporter exposes host OS metrics: node_cpu_seconds_total,
+  # node_memory_MemAvailable_bytes, node_filesystem_avail_bytes,
+  # node_disk_io_time_seconds_total, node_network_receive_bytes_total.
+  # Docker Compose service: node-exporter:9100
+  - job_name: "spf-node"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
     static_configs:
       - targets: ["node-exporter:9100"]
         labels:
+          service: node
+          component: exporter
           environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge
 
-  # Elasticsearch metrics
+  # ---------------------------------------------------------------------------
+  # Elasticsearch metrics (via elasticsearch_exporter)
+  # ---------------------------------------------------------------------------
+  # prometheuscommunity/elasticsearch-exporter exposes: elasticsearch_cluster_health_status,
+  # elasticsearch_indices_docs_count, elasticsearch_indices_store_size_bytes,
+  # elasticsearch_jvm_memory_used_bytes, elasticsearch_os_cpu_percent.
+  # Docker Compose service: elasticsearch-exporter:9114
   - job_name: "spf-elasticsearch"
+    scrape_interval: 15s
+    scrape_timeout: 10s
     metrics_path: /metrics
     static_configs:
       - targets: ["elasticsearch-exporter:9114"]
         labels:
           service: elasticsearch
+          component: exporter
           environment: production
+    metric_relabel_configs:
+      - target_label: project
+        replacement: selfpublisherforge

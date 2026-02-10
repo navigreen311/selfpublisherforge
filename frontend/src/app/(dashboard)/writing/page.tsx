@@ -141,7 +141,7 @@ function SessionsTableSkeleton() {
 
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+    <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
       <p className="font-medium">Something went wrong</p>
       <p className="mt-1 text-red-600">{message}</p>
     </div>
@@ -317,10 +317,11 @@ export default function WritingStudioPage() {
       </div>
 
       {/* Search */}
-      <div>
+      <div role="search">
         <input
           type="text"
           placeholder="Search manuscripts..."
+          aria-label="Search manuscripts"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full max-w-md rounded-md border px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"

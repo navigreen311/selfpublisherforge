@@ -37,10 +37,14 @@ export default function ProductPageLab() {
 
       {/* Tab navigation */}
       <div className="border-b border-gray-200">
-        <nav className="flex gap-4">
+        <nav className="flex gap-4" role="tablist" aria-label="Product page tools">
           {tabs.map((tab) => (
             <button
               key={tab.key}
+              role="tab"
+              id={`tab-${tab.key}`}
+              aria-selected={activeTab === tab.key}
+              aria-controls={`tabpanel-${tab.key}`}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
                 "pb-2 text-sm font-medium border-b-2 -mb-px",
@@ -57,16 +61,22 @@ export default function ProductPageLab() {
 
       {/* Listing analysis tab */}
       {activeTab === "analyze" && (
-        <div className="space-y-6">
+        <div
+          role="tabpanel"
+          id="tabpanel-analyze"
+          aria-labelledby="tab-analyze"
+          className="space-y-6"
+        >
           {/* Input */}
           <div className="rounded-lg border bg-white p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Analyze a Listing</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="asin-input" className="block text-sm font-medium text-gray-700 mb-1">
                   ASIN
                 </label>
                 <input
+                  id="asin-input"
                   type="text"
                   value={asinInput}
                   onChange={(e) => setAsinInput(e.target.value)}
@@ -76,10 +86,11 @@ export default function ProductPageLab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="url-input" className="block text-sm font-medium text-gray-700 mb-1">
                   or Amazon URL
                 </label>
                 <input
+                  id="url-input"
                   type="text"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
@@ -91,6 +102,7 @@ export default function ProductPageLab() {
             <button
               onClick={handleAnalyze}
               disabled={(!asinInput && !urlInput) || analyzeMutation.isPending}
+              aria-label={analyzeMutation.isPending ? "Analyzing listing" : "Analyze listing"}
               className={cn(
                 "mt-4 rounded-md px-4 py-2 text-sm font-medium text-white",
                 !asinInput && !urlInput
@@ -108,7 +120,7 @@ export default function ProductPageLab() {
           )}
 
           {analyzeMutation.isError && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+            <div role="alert" className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
               Failed to analyze listing. Please check your ASIN or URL and try again.
             </div>
           )}
@@ -116,7 +128,15 @@ export default function ProductPageLab() {
       )}
 
       {/* Mobile check tab */}
-      {activeTab === "mobile" && <MobilePreview />}
+      {activeTab === "mobile" && (
+        <div
+          role="tabpanel"
+          id="tabpanel-mobile"
+          aria-labelledby="tab-mobile"
+        >
+          <MobilePreview />
+        </div>
+      )}
     </div>
   );
 }

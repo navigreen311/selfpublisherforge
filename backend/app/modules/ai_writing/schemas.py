@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def _utcnow() -> datetime:
@@ -41,6 +41,8 @@ class ModelPreference(str, Enum):
 # ---------------------------------------------------------------------------
 
 class GenerateRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     generation_type: GenerationType
     project_id: UUID
     style_profile_id: UUID | None = None
@@ -53,6 +55,8 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     """Returned when stream=false or as the event:complete payload."""
+    model_config = ConfigDict(protected_namespaces=())
+
     request_id: UUID
     generation_type: GenerationType
     content: str

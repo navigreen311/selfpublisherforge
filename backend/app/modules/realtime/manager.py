@@ -94,7 +94,7 @@ class ConnectionManager:
                 except (json.JSONDecodeError, KeyError, ValueError) as exc:
                     logger.error("Malformed Redis pub/sub message: %s", exc)
         except asyncio.CancelledError:
-            pass
+            logger.debug("Redis pub/sub listener task cancelled")
         except ConnectionError as exc:
             logger.error("Redis listener lost connection: %s", exc)
         except OSError as exc:
@@ -122,7 +122,10 @@ class ConnectionManager:
                     if not sockets:
                         self.active_connections.pop(key, None)
         except asyncio.CancelledError:
-            pass
+            logger.debug(
+                "Heartbeat loop cancelled (active rooms: %d)",
+                len(self.active_connections),
+            )
 
     def _ensure_heartbeat(self) -> None:
         if self._heartbeat_task is None or self._heartbeat_task.done():
@@ -237,13 +240,13 @@ class ConnectionManager:
             try:
                 await self._heartbeat_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Heartbeat task cancelled during shutdown")
         if self._listener_task and not self._listener_task.done():
             self._listener_task.cancel()
             try:
                 await self._listener_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Redis listener task cancelled during shutdown")
         if self._pubsub is not None:
             await self._pubsub.unsubscribe()
             await self._pubsub.close()

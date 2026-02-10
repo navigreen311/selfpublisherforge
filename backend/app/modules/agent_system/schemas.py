@@ -24,6 +24,8 @@ from app.modules.agent_system.models import (
 # ---------------------------------------------------------------------------
 
 class AgentBase(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     name: str = Field(..., min_length=1, max_length=255)
     agent_type: AgentType
     description: str | None = None
@@ -42,6 +44,8 @@ class AgentCreate(AgentBase):
 
 class AgentConfigUpdate(BaseModel):
     """Partial update for agent configuration."""
+    model_config = ConfigDict(protected_namespaces=())
+
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     is_enabled: bool | None = None
@@ -54,7 +58,7 @@ class AgentConfigUpdate(BaseModel):
 
 
 class AgentResponse(AgentBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 
     id: UUID
     org_id: UUID

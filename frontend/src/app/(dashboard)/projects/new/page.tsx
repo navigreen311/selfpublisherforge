@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +24,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { useCreateProject } from "@/modules/projects/hooks";
+import { projectSchema, validateForm } from "@/lib/validation";
 
 const genres = [
   "Fiction",
@@ -39,6 +40,8 @@ const genres = [
   "Other",
 ];
 
+const PROJECT_TYPES = ["book", "series", "course"] as const;
+
 export default function NewProjectPage() {
   const router = useRouter();
   const createProject = useCreateProject();
@@ -48,13 +51,54 @@ export default function NewProjectPage() {
   const [penName, setPenName] = React.useState("");
   const [description, setDescription] = React.useState("");
 
+  // Track which fields have been touched (blurred) for inline validation
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({});
+  // Track whether the user has attempted to submit
+  const [submitAttempted, setSubmitAttempted] = React.useState(false);
+
+  const markTouched = React.useCallback((field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  }, []);
+
+  // Validate current form data against the schema
+  const formData = React.useMemo(
+    () => ({
+      title: title.trim(),
+      type: type || undefined,
+      genre: genre || undefined,
+      description: description || undefined,
+    }),
+    [title, type, genre, description]
+  );
+
+  const validation = React.useMemo(
+    () => validateForm(projectSchema, formData),
+    [formData]
+  );
+
+  const errors = validation.errors ?? {};
+  const isFormValid = validation.success;
+
+  // Helper: return the error message for a field only if it should be shown
+  // (i.e., the field has been touched or a submit was attempted)
+  const fieldError = React.useCallback(
+    (field: string): string | undefined => {
+      if (!errors[field]) return undefined;
+      if (touched[field] || submitAttempted) return errors[field];
+      return undefined;
+    },
+    [errors, touched, submitAttempted]
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !type) return;
+    setSubmitAttempted(true);
+
+    if (!isFormValid) return;
 
     try {
       const result = await createProject.mutateAsync({
-        title,
+        title: title.trim(),
         type: type as "book" | "series" | "course",
         genre: genre || undefined,
         pen_name: penName || undefined,
@@ -66,6 +110,13 @@ export default function NewProjectPage() {
       toast.error("Failed to create project. Please try again.");
     }
   };
+
+  const titleError = fieldError("title");
+  const typeError = fieldError("type");
+  const descriptionError = fieldError("description");
+
+  const descriptionCharCount = description.length;
+  const descriptionNearLimit = descriptionCharCount > 1800;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -85,7 +136,7 @@ export default function NewProjectPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <Card>
           <CardHeader>
             <CardTitle>Project Details</CardTitle>
@@ -99,27 +150,60 @@ export default function NewProjectPage() {
               placeholder="Enter your project title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => markTouched("title")}
+              error={titleError}
               required
+              aria-required="true"
             />
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Project Type</label>
-              <Select value={type} onValueChange={setType} required>
-                <SelectTrigger>
+              <label
+                htmlFor="project-type"
+                className="text-sm font-medium"
+                id="project-type-label"
+              >
+                Project Type
+              </label>
+              <Select
+                value={type}
+                onValueChange={(value) => {
+                  setType(value);
+                  markTouched("type");
+                }}
+                required
+              >
+                <SelectTrigger
+                  id="project-type"
+                  className={typeError ? "border-destructive focus:ring-destructive" : ""}
+                  aria-invalid={!!typeError}
+                  aria-describedby={typeError ? "project-type-error" : undefined}
+                  aria-required="true"
+                  aria-labelledby="project-type-label"
+                  onBlur={() => markTouched("type")}
+                >
                   <SelectValue placeholder="Select project type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="book">Book</SelectItem>
-                  <SelectItem value="series">Series</SelectItem>
-                  <SelectItem value="course">Course</SelectItem>
+                  {PROJECT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {typeError && (
+                <p id="project-type-error" className="text-sm text-destructive">
+                  {typeError}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Genre</label>
+              <label htmlFor="project-genre" className="text-sm font-medium">
+                Genre
+              </label>
               <Select value={genre} onValueChange={setGenre}>
-                <SelectTrigger>
+                <SelectTrigger id="project-genre">
                   <SelectValue placeholder="Select genre" />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,14 +225,51 @@ export default function NewProjectPage() {
             />
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Description</label>
+              <label htmlFor="project-description" className="text-sm font-medium">
+                Description
+              </label>
               <Textarea
+                id="project-description"
                 placeholder="Brief description of your project..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => markTouched("description")}
                 autoGrow
-                className="min-h-[100px]"
+                className={`min-h-[100px] ${
+                  descriptionError
+                    ? "border-destructive focus-visible:ring-destructive"
+                    : ""
+                }`}
+                aria-invalid={!!descriptionError}
+                aria-describedby={
+                  descriptionError
+                    ? "project-description-error"
+                    : "project-description-hint"
+                }
+                maxLength={2000}
               />
+              <div className="flex justify-between items-start">
+                <div>
+                  {descriptionError && (
+                    <p
+                      id="project-description-error"
+                      className="text-sm text-destructive"
+                    >
+                      {descriptionError}
+                    </p>
+                  )}
+                </div>
+                <p
+                  id="project-description-hint"
+                  className={`text-xs ${
+                    descriptionNearLimit
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {descriptionCharCount}/2000
+                </p>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
@@ -157,9 +278,21 @@ export default function NewProjectPage() {
             </Button>
             <Button
               type="submit"
-              disabled={!title || !type || createProject.isPending}
+              disabled={
+                (submitAttempted && !isFormValid) || createProject.isPending
+              }
+              aria-disabled={
+                (submitAttempted && !isFormValid) || createProject.isPending
+              }
             >
-              {createProject.isPending ? "Creating..." : "Create Project"}
+              {createProject.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Project"
+              )}
             </Button>
           </CardFooter>
         </Card>

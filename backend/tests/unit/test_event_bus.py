@@ -10,7 +10,7 @@ from uuid import uuid4
 
 import pytest
 
-from shared.types.events import BaseEvent, EventType, EventPublisher
+from app.core.event_types import BaseEvent, EventType, EventPublisher
 from app.core.events import (
     RedisEventPublisher,
     RedisEventSubscriber,

@@ -1,4 +1,19 @@
-"""Unit tests for the storage service — presigned URL generation, file validation, size limits."""
+"""Unit tests for the storage service -- presigned URL generation, file validation, size limits,
+S3 operations (mocked), file deletion, and error handling for AWS failures.
+
+Covers:
+- File upload with valid/invalid files (MIME type validation)
+- File size limits per asset type
+- Allowed file types validation (all asset types)
+- S3 presigned URL generation (mocked boto3)
+- File deletion (soft-delete)
+- Error handling for AWS failures (ClientError, BotoCoreError)
+- Complete upload workflow with S3 verification
+- Metadata extraction for various content types
+- S3 connectivity check
+- Download URL generation
+- Asset state machine transitions
+"""
 
 from __future__ import annotations
 
@@ -7,11 +22,11 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.core.exceptions import AppException
-from app.modules.storage.schemas import AssetStatus, AssetType
-from app.modules.storage.service import StorageService
+from app.modules.storage.schemas import AssetStatus, AssetType, UploadResponse
+from app.modules.storage.service import StorageService, check_s3_connectivity
 from app.modules.storage.validators import (
     ALLOWED_MIME_TYPES,
     MAX_FILE_SIZE,
@@ -20,7 +35,7 @@ from app.modules.storage.validators import (
 
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# Helpers
 # ---------------------------------------------------------------------------
 
 def _fake_s3_client() -> MagicMock:
@@ -28,6 +43,7 @@ def _fake_s3_client() -> MagicMock:
     client = MagicMock()
     client.generate_presigned_url.return_value = "https://s3.example.com/presigned-put"
     client.head_object.return_value = {"ContentLength": 1024}
+    client.head_bucket.return_value = {}
     return client
 
 
@@ -42,9 +58,41 @@ def _fake_db() -> AsyncMock:
 ORG_ID = uuid.uuid4()
 
 
+def _make_fake_asset(
+    *,
+    asset_id: uuid.UUID | None = None,
+    org_id: uuid.UUID | None = None,
+    status: str = "uploaded",
+    content_type: str = "application/pdf",
+    file_name: str = "book.pdf",
+    size: int = 2048,
+    s3_key: str | None = None,
+    asset_type: str = "manuscript",
+) -> MagicMock:
+    """Return a MagicMock that behaves like a ContentAsset row."""
+    asset = MagicMock()
+    asset.id = asset_id or uuid.uuid4()
+    asset.org_id = org_id or ORG_ID
+    asset.status = status
+    asset.content_type = content_type
+    asset.file_name = file_name
+    asset.size = size
+    asset.s3_key = s3_key or f"orgs/{ORG_ID}/manuscript/{asset.id}/{file_name}"
+    asset.asset_type = asset_type
+    asset.metadata_ = None
+    asset.mime_type = None
+    asset.file_size = None
+    asset.file_url = None
+    asset.created_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    asset.updated_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    asset.deleted_at = None
+    return asset
+
+
 # ===========================================================================
-# Validator tests
+# File validator tests
 # ===========================================================================
+
 
 class TestValidateFile:
     """Tests for the validate_file helper."""
@@ -156,10 +204,84 @@ class TestValidateFile:
             assert at in ALLOWED_MIME_TYPES, f"Missing MIME whitelist for {at.value}"
             assert len(ALLOWED_MIME_TYPES[at]) > 0
 
+    def test_export_file_too_large(self):
+        """An export exceeding 100 MB should be rejected."""
+        over_limit = MAX_FILE_SIZE[AssetType.EXPORT] + 1
+        with pytest.raises(AppException) as exc_info:
+            validate_file(
+                file_name="huge_export.epub",
+                content_type="application/epub+zip",
+                size=over_limit,
+                asset_type=AssetType.EXPORT,
+            )
+        assert exc_info.value.code == "FILE_TOO_LARGE"
+
+    def test_manuscript_docx_allowed(self):
+        """DOCX should be allowed for MANUSCRIPT."""
+        validate_file(
+            file_name="manuscript.docx",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            size=1024,
+            asset_type=AssetType.MANUSCRIPT,
+        )
+
+    def test_manuscript_epub_allowed(self):
+        """EPUB should be allowed for MANUSCRIPT."""
+        validate_file(
+            file_name="book.epub",
+            content_type="application/epub+zip",
+            size=1024,
+            asset_type=AssetType.MANUSCRIPT,
+        )
+
 
 # ===========================================================================
-# Service — presigned upload
+# S3 connectivity check
 # ===========================================================================
+
+
+class TestCheckS3Connectivity:
+    """Tests for the check_s3_connectivity function."""
+
+    @pytest.mark.asyncio
+    @patch("app.modules.storage.service._get_s3_client")
+    async def test_connectivity_success(self, mock_get_client):
+        mock_client = MagicMock()
+        mock_client.head_bucket.return_value = {}
+        mock_get_client.return_value = mock_client
+
+        result = await check_s3_connectivity()
+        assert result is True
+        mock_client.head_bucket.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("app.modules.storage.service._get_s3_client")
+    async def test_connectivity_client_error(self, mock_get_client):
+        mock_client = MagicMock()
+        mock_client.head_bucket.side_effect = ClientError(
+            {"Error": {"Code": "403", "Message": "Forbidden"}},
+            "HeadBucket",
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await check_s3_connectivity()
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("app.modules.storage.service._get_s3_client")
+    async def test_connectivity_boto_core_error(self, mock_get_client):
+        mock_client = MagicMock()
+        mock_client.head_bucket.side_effect = BotoCoreError()
+        mock_get_client.return_value = mock_client
+
+        result = await check_s3_connectivity()
+        assert result is False
+
+
+# ===========================================================================
+# Presigned upload
+# ===========================================================================
+
 
 class TestPresignedUpload:
     """Tests for StorageService.create_presigned_upload."""
@@ -169,6 +291,11 @@ class TestPresignedUpload:
         db = _fake_db()
         s3 = _fake_s3_client()
         svc = StorageService(db=db, s3_client=s3)
+
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
 
         resp = await svc.create_presigned_upload(
             org_id=ORG_ID,
@@ -225,6 +352,11 @@ class TestPresignedUpload:
         s3 = _fake_s3_client()
         svc = StorageService(db=db, s3_client=s3)
 
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
+
         resp = await svc.create_presigned_upload(
             org_id=ORG_ID,
             file_name="my book.pdf",
@@ -233,17 +365,42 @@ class TestPresignedUpload:
             asset_type=AssetType.MANUSCRIPT,
         )
 
-        # Inspect the S3 key used in the presigned URL call
         call_kwargs = s3.generate_presigned_url.call_args
         s3_key = call_kwargs.kwargs.get("Params", call_kwargs[1]["Params"])["Key"]
         assert str(ORG_ID) in s3_key
         assert "manuscript" in s3_key
         assert "my_book.pdf" in s3_key  # spaces replaced with underscores
 
+    @pytest.mark.asyncio
+    async def test_presigned_url_generation_failure(self):
+        """When S3 fails to generate presigned URL, the error should propagate."""
+        db = _fake_db()
+        s3 = _fake_s3_client()
+        s3.generate_presigned_url.side_effect = ClientError(
+            {"Error": {"Code": "InternalError", "Message": "S3 down"}},
+            "GeneratePresignedUrl",
+        )
+        svc = StorageService(db=db, s3_client=s3)
+
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
+
+        with pytest.raises(ClientError):
+            await svc.create_presigned_upload(
+                org_id=ORG_ID,
+                file_name="file.pdf",
+                content_type="application/pdf",
+                size=1024,
+                asset_type=AssetType.MANUSCRIPT,
+            )
+
 
 # ===========================================================================
-# Service — S3 key builder
+# S3 key builder
 # ===========================================================================
+
 
 class TestS3KeyBuilder:
     def test_key_format(self):
@@ -257,185 +414,14 @@ class TestS3KeyBuilder:
         assert " " not in key
         assert "my_cover_art.jpg" in key
 
-
-# ===========================================================================
-# Service — trigger_processing
-# ===========================================================================
-
-def _make_fake_asset(
-    *,
-    asset_id: uuid.UUID | None = None,
-    org_id: uuid.UUID | None = None,
-    status: str = "uploaded",
-    content_type: str = "application/pdf",
-    file_name: str = "book.pdf",
-    size: int = 2048,
-    s3_key: str | None = None,
-    asset_type: str = "manuscript",
-) -> MagicMock:
-    """Return a MagicMock that behaves like a ContentAsset row."""
-    asset = MagicMock()
-    asset.id = asset_id or uuid.uuid4()
-    asset.org_id = org_id or ORG_ID
-    asset.status = status
-    asset.content_type = content_type
-    asset.file_name = file_name
-    asset.size = size
-    asset.s3_key = s3_key or f"orgs/{ORG_ID}/manuscript/{asset.id}/{file_name}"
-    asset.asset_type = asset_type
-    asset.metadata_ = None
-    asset.mime_type = None
-    asset.file_size = None
-    asset.file_url = None
-    asset.created_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-    asset.updated_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-    asset.deleted_at = None
-    return asset
-
-
-class TestTriggerProcessing:
-    """Tests for StorageService.trigger_processing."""
-
-    @pytest.mark.asyncio
-    async def test_updates_status_to_processing_then_ready(self):
-        """trigger_processing should transition status from 'uploaded' to 'processing' then 'ready'."""
-        asset = _make_fake_asset(status=AssetStatus.UPLOADED.value)
-        db = _fake_db()
-
-        # _get_asset_or_404 returns our fake asset
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = asset
-        db.execute.return_value = mock_result
-
-        async def fake_refresh(obj):
-            pass
-
-        db.refresh = fake_refresh
-
-        s3 = _fake_s3_client()
-        svc = StorageService(db=db, s3_client=s3)
-
-        # Track status transitions
-        status_transitions = []
-        original_flush = db.flush
-
-        async def tracking_flush():
-            status_transitions.append(asset.status)
-            await original_flush()
-
-        db.flush = tracking_flush
-
-        result = await svc.trigger_processing(
-            asset_id=asset.id, org_id=ORG_ID
-        )
-
-        # Should have first transitioned to PROCESSING, then to READY
-        assert AssetStatus.PROCESSING.value in status_transitions
-        assert asset.status == AssetStatus.READY.value
-        assert result is not None
-
-    @pytest.mark.asyncio
-    async def test_asset_not_found_raises_404(self):
-        """trigger_processing for a non-existent asset should raise 404."""
-        db = _fake_db()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = None
-        db.execute.return_value = mock_result
-
-        s3 = _fake_s3_client()
-        svc = StorageService(db=db, s3_client=s3)
-
-        with pytest.raises(AppException) as exc_info:
-            await svc.trigger_processing(
-                asset_id=uuid.uuid4(), org_id=ORG_ID
-            )
-        assert exc_info.value.status_code == 404
-        assert exc_info.value.code == "ASSET_NOT_FOUND"
-
-    @pytest.mark.asyncio
-    async def test_invalid_state_raises_409(self):
-        """trigger_processing on an asset in 'pending' state should raise 409."""
-        asset = _make_fake_asset(status=AssetStatus.PENDING.value)
-        db = _fake_db()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = asset
-        db.execute.return_value = mock_result
-
-        s3 = _fake_s3_client()
-        svc = StorageService(db=db, s3_client=s3)
-
-        with pytest.raises(AppException) as exc_info:
-            await svc.trigger_processing(
-                asset_id=asset.id, org_id=ORG_ID
-            )
-        assert exc_info.value.status_code == 409
-        assert exc_info.value.code == "INVALID_ASSET_STATE"
-
-    @pytest.mark.asyncio
-    async def test_processing_failure_sets_status_to_failed(self):
-        """If _extract_metadata raises, status should be set to 'failed'."""
-        asset = _make_fake_asset(status=AssetStatus.UPLOADED.value)
-        db = _fake_db()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = asset
-        db.execute.return_value = mock_result
-
-        async def fake_refresh(obj):
-            pass
-
-        db.refresh = fake_refresh
-
-        s3 = _fake_s3_client()
-        svc = StorageService(db=db, s3_client=s3)
-
-        # Force _extract_metadata to raise (source catches ClientError and IOError)
-        with patch.object(
-            StorageService,
-            "_extract_metadata",
-            side_effect=IOError("metadata extraction boom"),
-        ):
-            with pytest.raises(AppException) as exc_info:
-                await svc.trigger_processing(
-                    asset_id=asset.id, org_id=ORG_ID
-                )
-            assert exc_info.value.status_code == 500
-            assert exc_info.value.code == "PROCESSING_FAILED"
-            assert asset.status == AssetStatus.FAILED.value
-
-    @pytest.mark.asyncio
-    async def test_extract_metadata_populates_asset_fields(self):
-        """trigger_processing should populate metadata and legacy columns."""
-        asset = _make_fake_asset(
-            status=AssetStatus.UPLOADED.value,
-            content_type="image/png",
-            file_name="cover.png",
-        )
-        db = _fake_db()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = asset
-        db.execute.return_value = mock_result
-
-        async def fake_refresh(obj):
-            pass
-
-        db.refresh = fake_refresh
-
-        s3 = _fake_s3_client()
-        svc = StorageService(db=db, s3_client=s3)
-
-        await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
-
-        # Metadata should be populated with image-type classification
-        assert asset.metadata_ is not None
-        assert asset.metadata_["type"] == "image"
-        assert asset.metadata_["category"] == "visual"
-        # Legacy columns should be back-filled
-        assert asset.mime_type == "image/png"
-        assert asset.file_size == asset.size
+    def test_key_contains_asset_type(self):
+        asset_id = uuid.uuid4()
+        key = StorageService._build_s3_key(ORG_ID, AssetType.EXPORT, asset_id, "book.epub")
+        assert "/export/" in key
 
 
 # ===========================================================================
-# Service — complete_upload
+# Complete upload
 # ===========================================================================
 
 
@@ -444,7 +430,7 @@ class TestCompleteUpload:
 
     @pytest.mark.asyncio
     async def test_complete_upload_success(self):
-        """complete_upload should transition PENDING -> UPLOADED -> (processing)."""
+        """complete_upload should transition PENDING -> UPLOADED -> (processing) -> READY."""
         asset = _make_fake_asset(status=AssetStatus.PENDING.value)
         db = _fake_db()
         mock_result = MagicMock()
@@ -457,16 +443,12 @@ class TestCompleteUpload:
         db.refresh = fake_refresh
 
         s3 = _fake_s3_client()
-        # head_object returns successfully (file exists in S3)
         s3.head_object.return_value = {"ContentLength": 4096}
 
         svc = StorageService(db=db, s3_client=s3)
 
-        result = await svc.complete_upload(
-            asset_id=asset.id, org_id=ORG_ID
-        )
+        result = await svc.complete_upload(asset_id=asset.id, org_id=ORG_ID)
 
-        # After complete_upload, asset goes through UPLOADED -> trigger_processing -> READY
         assert asset.status == AssetStatus.READY.value
         s3.head_object.assert_called_once()
         assert result is not None
@@ -532,9 +514,208 @@ class TestCompleteUpload:
         assert exc_info.value.status_code == 400
         assert exc_info.value.code == "UPLOAD_NOT_FOUND"
 
+    @pytest.mark.asyncio
+    async def test_complete_upload_asset_not_found_raises_404(self):
+        """complete_upload for a non-existent asset should raise 404."""
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        db.execute.return_value = mock_result
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        with pytest.raises(AppException) as exc_info:
+            await svc.complete_upload(asset_id=uuid.uuid4(), org_id=ORG_ID)
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.code == "ASSET_NOT_FOUND"
+
 
 # ===========================================================================
-# Service — soft-delete
+# Trigger processing
+# ===========================================================================
+
+
+class TestTriggerProcessing:
+    """Tests for StorageService.trigger_processing."""
+
+    @pytest.mark.asyncio
+    async def test_updates_status_to_processing_then_ready(self):
+        """trigger_processing should transition UPLOADED -> PROCESSING -> READY."""
+        asset = _make_fake_asset(status=AssetStatus.UPLOADED.value)
+        db = _fake_db()
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = asset
+        db.execute.return_value = mock_result
+
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        status_transitions = []
+        original_flush = db.flush
+
+        async def tracking_flush():
+            status_transitions.append(asset.status)
+            await original_flush()
+
+        db.flush = tracking_flush
+
+        result = await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
+
+        assert AssetStatus.PROCESSING.value in status_transitions
+        assert asset.status == AssetStatus.READY.value
+        assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_asset_not_found_raises_404(self):
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        db.execute.return_value = mock_result
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        with pytest.raises(AppException) as exc_info:
+            await svc.trigger_processing(asset_id=uuid.uuid4(), org_id=ORG_ID)
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.code == "ASSET_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_invalid_state_raises_409(self):
+        """trigger_processing on an asset in 'pending' state should raise 409."""
+        asset = _make_fake_asset(status=AssetStatus.PENDING.value)
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = asset
+        db.execute.return_value = mock_result
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        with pytest.raises(AppException) as exc_info:
+            await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.code == "INVALID_ASSET_STATE"
+
+    @pytest.mark.asyncio
+    async def test_processing_failure_io_error_sets_failed(self):
+        """If _extract_metadata raises IOError, status should be set to 'failed'."""
+        asset = _make_fake_asset(status=AssetStatus.UPLOADED.value)
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = asset
+        db.execute.return_value = mock_result
+
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        with patch.object(
+            StorageService,
+            "_extract_metadata",
+            side_effect=IOError("metadata extraction boom"),
+        ):
+            with pytest.raises(AppException) as exc_info:
+                await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
+            assert exc_info.value.status_code == 500
+            assert exc_info.value.code == "PROCESSING_FAILED"
+            assert asset.status == AssetStatus.FAILED.value
+
+    @pytest.mark.asyncio
+    async def test_processing_failure_client_error_sets_failed(self):
+        """If _extract_metadata raises ClientError, status should be set to 'failed'."""
+        asset = _make_fake_asset(status=AssetStatus.UPLOADED.value)
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = asset
+        db.execute.return_value = mock_result
+
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        with patch.object(
+            StorageService,
+            "_extract_metadata",
+            side_effect=ClientError(
+                {"Error": {"Code": "500", "Message": "S3 error"}},
+                "GetObject",
+            ),
+        ):
+            with pytest.raises(AppException) as exc_info:
+                await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
+            assert exc_info.value.status_code == 500
+            assert exc_info.value.code == "PROCESSING_FAILED"
+            assert asset.status == AssetStatus.FAILED.value
+
+    @pytest.mark.asyncio
+    async def test_processing_from_ready_state_allowed(self):
+        """trigger_processing should also work when asset is in READY state (reprocessing)."""
+        asset = _make_fake_asset(status=AssetStatus.READY.value)
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = asset
+        db.execute.return_value = mock_result
+
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        result = await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
+        assert asset.status == AssetStatus.READY.value
+        assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_extract_metadata_populates_asset_fields(self):
+        """trigger_processing should populate metadata and legacy columns."""
+        asset = _make_fake_asset(
+            status=AssetStatus.UPLOADED.value,
+            content_type="image/png",
+            file_name="cover.png",
+        )
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = asset
+        db.execute.return_value = mock_result
+
+        async def fake_refresh(obj):
+            pass
+
+        db.refresh = fake_refresh
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
+
+        assert asset.metadata_ is not None
+        assert asset.metadata_["type"] == "image"
+        assert asset.metadata_["category"] == "visual"
+        assert asset.mime_type == "image/png"
+        assert asset.file_size == asset.size
+
+
+# ===========================================================================
+# Soft-delete
 # ===========================================================================
 
 
@@ -543,7 +724,6 @@ class TestDeleteAsset:
 
     @pytest.mark.asyncio
     async def test_soft_delete_sets_status_and_deleted_at(self):
-        """delete_asset should set status to 'deleted' and populate deleted_at."""
         asset = _make_fake_asset(status=AssetStatus.READY.value)
         db = _fake_db()
         mock_result = MagicMock()
@@ -565,7 +745,6 @@ class TestDeleteAsset:
 
     @pytest.mark.asyncio
     async def test_delete_nonexistent_raises_404(self):
-        """delete_asset for a non-existent asset should raise 404."""
         db = _fake_db()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
@@ -581,54 +760,15 @@ class TestDeleteAsset:
 
 
 # ===========================================================================
-# Service — access control (org_id isolation)
+# Get asset and download URL generation
 # ===========================================================================
 
 
-class TestAccessControl:
-    """Tests to verify that asset lookups enforce org_id checks."""
-
-    @pytest.mark.asyncio
-    async def test_get_asset_wrong_org_id_raises_404(self):
-        """get_asset should raise 404 when org_id does not match."""
-        db = _fake_db()
-        mock_result = MagicMock()
-        # The query filters by org_id, so it returns None for wrong org
-        mock_result.scalar_one_or_none.return_value = None
-        db.execute.return_value = mock_result
-
-        s3 = _fake_s3_client()
-        svc = StorageService(db=db, s3_client=s3)
-
-        wrong_org_id = uuid.uuid4()
-        with pytest.raises(AppException) as exc_info:
-            await svc.get_asset(
-                asset_id=uuid.uuid4(), org_id=wrong_org_id
-            )
-        assert exc_info.value.status_code == 404
-        assert exc_info.value.code == "ASSET_NOT_FOUND"
-
-    @pytest.mark.asyncio
-    async def test_trigger_processing_wrong_org_raises_404(self):
-        """trigger_processing should raise 404 when org_id does not match."""
-        db = _fake_db()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = None
-        db.execute.return_value = mock_result
-
-        s3 = _fake_s3_client()
-        svc = StorageService(db=db, s3_client=s3)
-
-        with pytest.raises(AppException) as exc_info:
-            await svc.trigger_processing(
-                asset_id=uuid.uuid4(), org_id=uuid.uuid4()
-            )
-        assert exc_info.value.status_code == 404
-        assert exc_info.value.code == "ASSET_NOT_FOUND"
+class TestGetAsset:
+    """Tests for StorageService.get_asset."""
 
     @pytest.mark.asyncio
     async def test_get_asset_returns_download_url(self):
-        """get_asset should return a response that includes a download_url."""
         asset = _make_fake_asset(status=AssetStatus.READY.value)
         db = _fake_db()
         mock_result = MagicMock()
@@ -643,6 +783,39 @@ class TestAccessControl:
 
         assert result.download_url == "https://s3.example.com/presigned-get"
         s3.generate_presigned_url.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_asset_wrong_org_raises_404(self):
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        db.execute.return_value = mock_result
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        with pytest.raises(AppException) as exc_info:
+            await svc.get_asset(asset_id=uuid.uuid4(), org_id=uuid.uuid4())
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.code == "ASSET_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_download_url_generation_uses_get_object(self):
+        """_generate_download_url should call generate_presigned_url with get_object."""
+        asset = _make_fake_asset(status=AssetStatus.READY.value)
+        db = _fake_db()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = asset
+        db.execute.return_value = mock_result
+
+        s3 = _fake_s3_client()
+        svc = StorageService(db=db, s3_client=s3)
+
+        await svc.get_asset(asset_id=asset.id, org_id=ORG_ID)
+
+        call_kwargs = s3.generate_presigned_url.call_args
+        assert call_kwargs.kwargs.get("ClientMethod") == "get_object" or \
+               call_kwargs[1].get("ClientMethod") == "get_object"
 
 
 # ===========================================================================
@@ -678,6 +851,21 @@ class TestExtractMetadata:
         assert metadata["type"] == "ebook"
         assert metadata["category"] == "export"
 
+    def test_docx_metadata(self):
+        asset = _make_fake_asset(
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            file_name="manuscript.docx",
+        )
+        metadata = StorageService._extract_metadata(asset)
+        assert metadata["type"] == "document"
+        assert metadata["category"] == "manuscript"
+
+    def test_plain_text_metadata(self):
+        asset = _make_fake_asset(content_type="text/plain", file_name="notes.txt")
+        metadata = StorageService._extract_metadata(asset)
+        assert metadata["type"] == "document"
+        assert metadata["category"] == "manuscript"
+
     def test_unknown_content_type(self):
         asset = _make_fake_asset(content_type="application/octet-stream", file_name="data.bin")
         metadata = StorageService._extract_metadata(asset)
@@ -690,3 +878,19 @@ class TestExtractMetadata:
         )
         assert metadata["action"] == "resize"
         assert metadata["options"] == {"width": 800}
+
+    def test_default_action_is_auto(self):
+        asset = _make_fake_asset(content_type="image/png", file_name="img.png")
+        metadata = StorageService._extract_metadata(asset)
+        assert metadata["action"] == "auto"
+
+    def test_metadata_includes_size(self):
+        asset = _make_fake_asset(content_type="image/png", file_name="img.png", size=5000)
+        metadata = StorageService._extract_metadata(asset)
+        assert metadata["size"] == 5000
+
+    def test_rtf_metadata(self):
+        asset = _make_fake_asset(content_type="application/rtf", file_name="doc.rtf")
+        metadata = StorageService._extract_metadata(asset)
+        assert metadata["type"] == "document"
+        assert metadata["category"] == "manuscript"

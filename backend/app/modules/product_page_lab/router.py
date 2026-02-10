@@ -42,7 +42,7 @@ from app.modules.product_page_lab.schemas import (
     MobileCheckResult,
 )
 from app.core.exceptions import ValidationError
-from shared.contracts.api import SuccessResponse
+from app.core.contracts import SuccessResponse
 
 router = APIRouter()
 

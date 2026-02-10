@@ -47,6 +47,13 @@ variable "allowed_cidr_blocks" {
   type        = list(string)
   default     = []
 
+  # SECURITY NOTE: If this list contains "0.0.0.0/0", the ALB will be open to
+  # the entire internet. This is acceptable for staging/public-facing sites but
+  # should be reviewed carefully for production. Consider restricting to known
+  # IP ranges (e.g., office IPs, VPN CIDR) if the application is not public.
+  # A validation block cannot be used here because staging legitimately needs
+  # open access, and Terraform validations cannot reference other variables.
+
   validation {
     condition     = length(var.allowed_cidr_blocks) > 0
     error_message = "allowed_cidr_blocks must contain at least one CIDR block. Open access (0.0.0.0/0) is not set by default for security — provide explicit CIDR ranges."
@@ -246,6 +253,11 @@ variable "alarm_sns_topic_arn" {
   description = "ARN of the SNS topic for CloudWatch alarms"
   type        = string
   default     = ""
+
+  validation {
+    condition     = !can(regex("YOUR_AWS_ACCOUNT_ID", var.alarm_sns_topic_arn))
+    error_message = "alarm_sns_topic_arn contains 'YOUR_AWS_ACCOUNT_ID'. You must replace this placeholder with your real AWS account ID (e.g., 123456789012)."
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -264,12 +276,32 @@ variable "domain_name" {
   description = "Primary domain name for the application"
   type        = string
   default     = ""
+
+  # NOTE: Terraform variable validation blocks cannot cross-reference other
+  # variables (e.g., var.environment), so this validation ensures the value
+  # is not empty whenever it is explicitly provided. The production.tfvars
+  # file sets domain_name, so any placeholder or empty value there will be
+  # caught at plan time. A truly empty default is fine for staging.
+  validation {
+    condition     = var.domain_name != "example.com"
+    error_message = "domain_name is set to the placeholder 'example.com'. You must replace it with your actual production domain."
+  }
 }
 
 variable "certificate_arn" {
   description = "ARN of the ACM certificate for HTTPS"
   type        = string
   default     = ""
+
+  validation {
+    condition     = !can(regex("REPLACE_ME", var.certificate_arn))
+    error_message = "certificate_arn contains 'REPLACE_ME'. You must replace this placeholder with your actual ACM certificate ARN before deploying."
+  }
+
+  validation {
+    condition     = !can(regex("YOUR_AWS_ACCOUNT_ID", var.certificate_arn))
+    error_message = "certificate_arn contains 'YOUR_AWS_ACCOUNT_ID'. You must replace this placeholder with your real AWS account ID (e.g., 123456789012)."
+  }
 }
 
 # -----------------------------------------------------------------------------

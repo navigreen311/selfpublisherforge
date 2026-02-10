@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, ChevronUp, ChevronDown, Copy, Check } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronUp, ChevronDown, Copy, Check, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGenerateStandaloneOutline, StandaloneOutlineResponse } from "@/modules/writing/hooks";
+import { useProjects, useUpdateProject } from "@/modules/projects/hooks";
 import { toast } from "sonner";
 
 const GENRES = [
@@ -28,6 +29,8 @@ const TONES = [
   { value: "formal", label: "Formal" },
 ];
 
+const NO_PROJECT = "__none__";
+
 export default function OutlineGeneratorPage() {
   const [title, setTitle] = React.useState("");
   const [genre, setGenre] = React.useState("Fiction");
@@ -37,14 +40,20 @@ export default function OutlineGeneratorPage() {
   const [tone, setTone] = React.useState("commercial");
   const [result, setResult] = React.useState<StandaloneOutlineResponse | null>(null);
   const [copied, setCopied] = React.useState(false);
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string>(NO_PROJECT);
+  const [savedToProject, setSavedToProject] = React.useState(false);
 
   const generateMutation = useGenerateStandaloneOutline();
+  const { data: projects, isLoading: projectsLoading } = useProjects();
+  const updateProjectMutation = useUpdateProject();
 
   const handleGenerate = async () => {
     if (!title.trim()) {
       toast.error("Please enter a book title");
       return;
     }
+    // Reset save state when generating a new outline
+    setSavedToProject(false);
     try {
       const data = await generateMutation.mutateAsync({
         book_title: title,
@@ -60,6 +69,38 @@ export default function OutlineGeneratorPage() {
     }
   };
 
+  const handleSaveToProject = async () => {
+    if (!result) return;
+    if (selectedProjectId === NO_PROJECT) {
+      toast.error("Please select a project first");
+      return;
+    }
+    try {
+      await updateProjectMutation.mutateAsync({
+        id: selectedProjectId,
+        data: {
+          settings: {
+            outline: {
+              book_title: result.book_title,
+              genre: result.genre,
+              total_chapters: result.total_chapters,
+              synopsis: result.synopsis,
+              chapters: result.chapters,
+              saved_at: new Date().toISOString(),
+            },
+          },
+        },
+      });
+      setSavedToProject(true);
+      const project = projects?.find((p) => p.id === selectedProjectId);
+      toast.success(
+        `Outline saved to "${project?.title || "project"}" successfully`
+      );
+    } catch {
+      toast.error("Failed to save outline to project. Please try again.");
+    }
+  };
+
   const moveChapter = (index: number, direction: "up" | "down") => {
     if (!result) return;
     const chapters = [...result.chapters];
@@ -69,6 +110,8 @@ export default function OutlineGeneratorPage() {
     // Re-number chapters
     const renumbered = chapters.map((ch, i) => ({ ...ch, chapter_number: i + 1 }));
     setResult({ ...result, chapters: renumbered, total_chapters: renumbered.length });
+    // Reset saved state since the outline was modified
+    setSavedToProject(false);
   };
 
   const exportMarkdown = () => {
@@ -113,6 +156,53 @@ export default function OutlineGeneratorPage() {
         </div>
       </div>
 
+      {/* Project Selector */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Link to Project</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <label htmlFor="project-selector" className="text-sm font-medium">
+              Project (optional)
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Select a project to save the generated outline to, or leave as standalone.
+            </p>
+            <Select
+              value={selectedProjectId}
+              onValueChange={(value) => {
+                setSelectedProjectId(value);
+                setSavedToProject(false);
+              }}
+            >
+              <SelectTrigger aria-label="Select a project to save outline to">
+                <SelectValue placeholder="No project selected" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_PROJECT}>None (standalone)</SelectItem>
+                {projectsLoading && (
+                  <SelectItem value="__loading__" disabled>
+                    Loading projects...
+                  </SelectItem>
+                )}
+                {projects?.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.title}
+                    {project.status !== "active" ? ` (${project.status})` : ""}
+                  </SelectItem>
+                ))}
+                {!projectsLoading && projects?.length === 0 && (
+                  <SelectItem value="__empty__" disabled>
+                    No projects found
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Form */}
       <Card>
         <CardHeader>
@@ -125,6 +215,7 @@ export default function OutlineGeneratorPage() {
               placeholder="Enter your book title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              aria-label="Book title"
             />
           </div>
 
@@ -132,7 +223,7 @@ export default function OutlineGeneratorPage() {
             <div>
               <label className="text-sm font-medium">Genre</label>
               <Select value={genre} onValueChange={setGenre}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Select genre">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -145,7 +236,7 @@ export default function OutlineGeneratorPage() {
             <div>
               <label className="text-sm font-medium">Tone</label>
               <Select value={tone} onValueChange={setTone}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Select tone">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -164,6 +255,7 @@ export default function OutlineGeneratorPage() {
                 placeholder="e.g. Young adults, business professionals"
                 value={audience}
                 onChange={(e) => setAudience(e.target.value)}
+                aria-label="Target audience"
               />
             </div>
             <div>
@@ -174,6 +266,7 @@ export default function OutlineGeneratorPage() {
                 max={50}
                 value={numChapters}
                 onChange={(e) => setNumChapters(parseInt(e.target.value) || 12)}
+                aria-label="Number of chapters"
               />
             </div>
           </div>
@@ -185,6 +278,7 @@ export default function OutlineGeneratorPage() {
               placeholder="Describe your book's premise, main themes, or key plot points..."
               value={premise}
               onChange={(e) => setPremise(e.target.value)}
+              aria-label="Book premise or description"
             />
           </div>
 
@@ -192,6 +286,7 @@ export default function OutlineGeneratorPage() {
             onClick={handleGenerate}
             disabled={generateMutation.isPending || !title.trim()}
             className="w-full sm:w-auto"
+            aria-label="Generate book outline"
           >
             {generateMutation.isPending ? (
               <>
@@ -208,16 +303,59 @@ export default function OutlineGeneratorPage() {
       {/* Results */}
       {result && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-xl font-semibold">{result.book_title}</h2>
-            <Button variant="outline" size="sm" onClick={exportMarkdown}>
-              {copied ? (
-                <><Check className="h-4 w-4 mr-1" /> Copied</>
-              ) : (
-                <><Copy className="h-4 w-4 mr-1" /> Export as Markdown</>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportMarkdown}
+                aria-label="Export outline as Markdown to clipboard"
+              >
+                {copied ? (
+                  <><Check className="h-4 w-4 mr-1" /> Copied</>
+                ) : (
+                  <><Copy className="h-4 w-4 mr-1" /> Export as Markdown</>
+                )}
+              </Button>
+              {selectedProjectId !== NO_PROJECT && (
+                <Button
+                  variant={savedToProject ? "outline" : "default"}
+                  size="sm"
+                  onClick={handleSaveToProject}
+                  disabled={updateProjectMutation.isPending || savedToProject}
+                  aria-label={
+                    savedToProject
+                      ? "Outline already saved to project"
+                      : "Save outline to selected project"
+                  }
+                >
+                  {updateProjectMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Saving...
+                    </>
+                  ) : savedToProject ? (
+                    <>
+                      <Check className="h-4 w-4 mr-1" />
+                      Saved to Project
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-1" />
+                      Save to Project
+                    </>
+                  )}
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
+
+          {selectedProjectId === NO_PROJECT && (
+            <p className="text-xs text-muted-foreground italic">
+              Tip: Select a project above to save this outline directly to it.
+            </p>
+          )}
 
           {result.synopsis && (
             <Card>
@@ -263,6 +401,7 @@ export default function OutlineGeneratorPage() {
                         onClick={() => moveChapter(index, "up")}
                         disabled={index === 0}
                         className="h-7 w-7 p-0"
+                        aria-label={`Move chapter ${ch.chapter_number} up`}
                       >
                         <ChevronUp className="h-4 w-4" />
                       </Button>
@@ -272,6 +411,7 @@ export default function OutlineGeneratorPage() {
                         onClick={() => moveChapter(index, "down")}
                         disabled={index === result.chapters.length - 1}
                         className="h-7 w-7 p-0"
+                        aria-label={`Move chapter ${ch.chapter_number} down`}
                       >
                         <ChevronDown className="h-4 w-4" />
                       </Button>

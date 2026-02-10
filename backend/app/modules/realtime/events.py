@@ -129,7 +129,7 @@ class RealtimeEventPublisher:
         agent events -> AGENTS channel, analytics -> ANALYTICS, publishing ->
         PUBLISHING.  Everything else is silently ignored.
         """
-        from shared.types.events import BaseEvent  # type: ignore[import-untyped]
+        from app.core.event_types import BaseEvent
 
         if not isinstance(event, BaseEvent):
             return

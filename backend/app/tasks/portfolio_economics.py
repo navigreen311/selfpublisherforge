@@ -51,6 +51,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
         from sqlalchemy import select, func, and_
         from app.models.project import Book, BookStatus, Project
         from app.modules.analytics.models import RoyaltyRecord, PortfolioMetricSnapshot
+        from app.modules.analytics.metrics import _compute_total_expenses
 
         async with async_session() as db:
             try:
@@ -191,9 +192,17 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                         for row in top_books_result.all()
                     ]
 
-                    # Calculate ROI (revenue / total revenue as a proxy -- real
-                    # expenses are not tracked yet, so use 0 expenses placeholder)
-                    avg_roi = Decimal("0.00")
+                    # Calculate real expenses from campaign ad spend
+                    total_expenses = await _compute_total_expenses(db, oid)
+
+                    # Net profit = revenue minus expenses
+                    net_profit = total_revenue - total_expenses
+
+                    # ROI: (revenue - expenses) / expenses when expenses > 0
+                    if total_expenses > 0:
+                        avg_roi = (total_revenue - total_expenses) / total_expenses
+                    else:
+                        avg_roi = Decimal("0.00")
 
                     # Persist the snapshot
                     snapshot_record = PortfolioMetricSnapshot(
@@ -202,8 +211,8 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                         total_books=total_books,
                         total_revenue=total_revenue,
                         total_units_sold=total_units_sold,
-                        total_expenses=Decimal("0.00"),
-                        net_profit=total_revenue,
+                        total_expenses=total_expenses,
+                        net_profit=net_profit,
                         avg_roi=avg_roi,
                         platform_breakdown=platform_breakdown,
                         format_breakdown=format_breakdown,

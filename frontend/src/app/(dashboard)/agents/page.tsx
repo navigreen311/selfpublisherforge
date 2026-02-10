@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { useAgents, useTasks, useBudgets, useEmergencyStop } from "@/modules/agents/hooks";
 import { AgentCard } from "@/modules/agents/components/AgentCard";
 import { TaskList } from "@/modules/agents/components/TaskList";
@@ -16,7 +17,7 @@ export default function AgentDashboardPage() {
   const { data: tasksData, isLoading: tasksLoading } = useTasks({
     limit: 5,
   });
-  const { data: budgetsData } = useBudgets();
+  const { data: budgetsData, isLoading: budgetsLoading } = useBudgets();
   const emergencyStop = useEmergencyStop();
   const [showConfirmStop, setShowConfirmStop] = useState(false);
 
@@ -35,6 +36,52 @@ export default function AgentDashboardPage() {
   // Map agent IDs to names for budget display
   const agentNameMap = new Map(agents.map((a) => [a.id, a.name]));
 
+  // Full-page loading skeleton while initial data is being fetched
+  if (agentsLoading && tasksLoading) {
+    return (
+      <div className="space-y-8" aria-label="Loading agent dashboard">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+          <Skeleton className="h-10 w-36" />
+        </div>
+
+        {/* Agents grid skeleton */}
+        <section aria-label="Loading available agents">
+          <Skeleton className="h-6 w-40 mb-4" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-36" />
+            ))}
+          </div>
+        </section>
+
+        {/* Budget skeleton */}
+        <section aria-label="Loading budget overview">
+          <Skeleton className="h-6 w-40 mb-4" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(2)].map((_, i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
+        </section>
+
+        {/* Tasks skeleton */}
+        <section aria-label="Loading recent tasks">
+          <Skeleton className="h-6 w-32 mb-4" />
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Page header */}
@@ -49,8 +96,9 @@ export default function AgentDashboardPage() {
           {!showConfirmStop ? (
             <button
               onClick={() => setShowConfirmStop(true)}
+              disabled={emergencyStop.isPending}
               aria-label="Emergency stop all running agent tasks"
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
               Emergency Stop
             </button>
@@ -63,14 +111,18 @@ export default function AgentDashboardPage() {
                 onClick={handleEmergencyStop}
                 disabled={emergencyStop.isPending}
                 aria-label="Confirm emergency stop of all running tasks"
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               >
+                {emergencyStop.isPending && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                )}
                 {emergencyStop.isPending ? "Stopping..." : "Confirm"}
               </button>
               <button
                 onClick={() => setShowConfirmStop(false)}
+                disabled={emergencyStop.isPending}
                 aria-label="Cancel emergency stop"
-                className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
               >
                 Cancel
               </button>

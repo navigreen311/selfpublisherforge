@@ -34,7 +34,8 @@ export default function AdvertisingDashboardPage() {
     );
   }
 
-  const d = dashboard!;
+  if (!dashboard) return null;
+  const d = dashboard;
 
   return (
     <div className="space-y-6">

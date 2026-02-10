@@ -1,44 +1,42 @@
 "use client";
 
-import { ExportWizard } from "@/modules/publishing/components/ExportWizard";
+import { useState } from "react";
 import Link from "next/link";
-
-// Demo chapters for the export wizard; in production these would come from
-// the manuscript/book data loaded via the book ID.
-const DEMO_CHAPTERS = [
-  {
-    title: "Chapter 1: The Beginning",
-    content:
-      "It was a bright cold day in April, and the clocks were striking thirteen.\n\n" +
-      "Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, " +
-      "slipped quickly through the glass doors of Victory Mansions.",
-    order: 1,
-  },
-  {
-    title: "Chapter 2: The Journey",
-    content:
-      "The journey of a thousand miles begins with a single step.\n\n" +
-      "She packed her bags carefully, making sure to include the old leather journal " +
-      "that had belonged to her grandmother.",
-    order: 2,
-  },
-  {
-    title: "Chapter 3: The Discovery",
-    content:
-      "Hidden beneath the floorboards was a letter, yellowed with age.\n\n" +
-      "The handwriting was unmistakable -- it was her father's.",
-    order: 3,
-  },
-];
-
-// In production this would come from the URL params or selected book context
-const DEMO_BOOK_ID = "00000000-0000-0000-0000-000000000099";
+import { ExportWizard } from "@/modules/publishing/components/ExportWizard";
+import { useBooks, useChapters } from "@/modules/writing/hooks";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ExportPage() {
+  const [selectedBookId, setSelectedBookId] = useState<string>("");
+
+  const {
+    data: books,
+    isLoading: booksLoading,
+    error: booksError,
+  } = useBooks();
+
+  const {
+    data: chapters,
+    isLoading: chaptersLoading,
+    error: chaptersError,
+  } = useChapters(selectedBookId);
+
+  // Map ChapterContent[] to the shape ExportWizard expects
+  const exportChapters = (chapters ?? []).map((ch) => ({
+    title: ch.title,
+    content: ch.content,
+    order: ch.order,
+  }));
+
+  const selectedBook = books?.find((b) => b.id === selectedBookId);
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-gray-500">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex items-center space-x-2 text-sm text-gray-500"
+      >
         <Link href="/publishing" className="hover:text-gray-700">
           Publishing
         </Link>
@@ -50,14 +48,146 @@ export default function ExportPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Export Manuscript</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Generate an EPUB for digital distribution or a print-ready PDF for KDP / IngramSpark.
+          Generate an EPUB for digital distribution or a print-ready PDF for KDP
+          / IngramSpark.
         </p>
       </div>
 
-      {/* Export Wizard */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <ExportWizard bookId={DEMO_BOOK_ID} chapters={DEMO_CHAPTERS} />
+      {/* Book Selector */}
+      <div>
+        <label
+          htmlFor="book-selector"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Select a Book
+        </label>
+
+        {booksLoading && (
+          <Skeleton className="h-10 w-full max-w-md rounded-md" />
+        )}
+
+        {booksError && (
+          <div
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            <p className="font-medium">Failed to load books</p>
+            <p className="mt-1 text-red-600">
+              {booksError instanceof Error
+                ? booksError.message
+                : "An unexpected error occurred."}
+            </p>
+          </div>
+        )}
+
+        {!booksLoading && !booksError && books && books.length === 0 && (
+          <div
+            className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center"
+            role="status"
+          >
+            <h3 className="font-medium text-gray-900">No books found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Create a project first before exporting a manuscript.
+            </p>
+            <Link
+              href="/writing/new"
+              className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              Create a Project
+            </Link>
+          </div>
+        )}
+
+        {!booksLoading && !booksError && books && books.length > 0 && (
+          <select
+            id="book-selector"
+            aria-label="Select a book to export"
+            value={selectedBookId}
+            onChange={(e) => setSelectedBookId(e.target.value)}
+            className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            <option value="">-- Choose a book --</option>
+            {books.map((book) => (
+              <option key={book.id} value={book.id}>
+                {book.title}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
+
+      {/* Chapters loading state */}
+      {selectedBookId && chaptersLoading && (
+        <div
+          className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+          role="status"
+          aria-label="Loading chapters"
+        >
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-full max-w-lg" />
+            <Skeleton className="h-4 w-full max-w-sm" />
+          </div>
+        </div>
+      )}
+
+      {/* Chapters error state */}
+      {selectedBookId && chaptersError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          <p className="font-medium">Failed to load chapters</p>
+          <p className="mt-1 text-red-600">
+            {chaptersError instanceof Error
+              ? chaptersError.message
+              : "Could not fetch chapters for this book."}
+          </p>
+        </div>
+      )}
+
+      {/* Empty chapters state */}
+      {selectedBookId &&
+        !chaptersLoading &&
+        !chaptersError &&
+        chapters &&
+        chapters.length === 0 && (
+          <div
+            className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center"
+            role="status"
+          >
+            <h3 className="font-medium text-gray-900">No chapters yet</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              This book has no chapters to export. Add some content in the
+              Writing Studio first.
+            </p>
+            <Link
+              href={`/writing/${selectedBookId}`}
+              className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              Open in Writing Studio
+            </Link>
+          </div>
+        )}
+
+      {/* Export Wizard -- only shown when a book is selected and chapters are loaded */}
+      {selectedBookId &&
+        !chaptersLoading &&
+        !chaptersError &&
+        chapters &&
+        chapters.length > 0 && (
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="mb-4 text-sm text-gray-600">
+              Exporting{" "}
+              <span className="font-semibold text-gray-900">
+                {selectedBook?.title}
+              </span>{" "}
+              ({exportChapters.length} chapter
+              {exportChapters.length === 1 ? "" : "s"})
+            </p>
+            <ExportWizard bookId={selectedBookId} chapters={exportChapters} />
+          </div>
+        )}
     </div>
   );
 }

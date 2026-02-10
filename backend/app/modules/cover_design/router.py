@@ -27,7 +27,7 @@ from app.modules.cover_design.schemas import (
     CoverTemplateResponse,
     CoverVariationRequest,
 )
-from shared.contracts.api import SuccessResponse
+from app.core.contracts import SuccessResponse
 
 router = APIRouter(prefix="/covers", tags=["covers"])
 

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def _utcnow() -> datetime:
@@ -107,6 +107,7 @@ class CompletionRequest(BaseModel):
 
 class CompletionResponse(BaseModel):
     """Response body for a completed LLM generation."""
+    model_config = ConfigDict(protected_namespaces=())
 
     content: str = ""
     model_id: str = ""
@@ -148,6 +149,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     """Response body for a chat completion."""
+    model_config = ConfigDict(protected_namespaces=())
 
     content: str = ""
     model_id: str = ""
@@ -171,6 +173,7 @@ class ChatResponse(BaseModel):
 
 class CostEstimateRequest(BaseModel):
     """Request body for estimating the cost of a generation."""
+    model_config = ConfigDict(protected_namespaces=())
 
     model_id: str = Field(
         ...,
@@ -182,6 +185,7 @@ class CostEstimateRequest(BaseModel):
 
 class CostEstimate(BaseModel):
     """Estimated USD cost for a generation request."""
+    model_config = ConfigDict(protected_namespaces=())
 
     model_id: str
     estimated_input_tokens: int = 0

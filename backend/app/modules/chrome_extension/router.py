@@ -32,7 +32,7 @@ from app.modules.chrome_extension.schemas import (
     QuickResearchQuery,
     QuickResearchResponse,
 )
-from shared.contracts.api import SuccessResponse
+from app.core.contracts import SuccessResponse
 
 router = APIRouter(prefix="/extension", tags=["chrome-extension"])
 

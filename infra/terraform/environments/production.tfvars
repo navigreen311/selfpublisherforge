@@ -2,13 +2,27 @@
 # Production Environment — Terraform variable overrides
 # =============================================================================
 #
-# VALIDATION: Before applying this configuration, ensure the following
-# required values are set:
-#   - domain_name       (must not be empty)
-#   - certificate_arn   (must not be empty)
-#   - alarm_sns_topic_arn (must not be empty)
-#   - TF_VAR_db_password, TF_VAR_db_username, TF_VAR_jwt_secret_key,
-#     TF_VAR_app_secret_key must be set as environment variables.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!  WARNING: THIS FILE CONTAINS PLACEHOLDER VALUES THAT MUST BE          !!!
+# !!!  REPLACED BEFORE YOUR FIRST PRODUCTION DEPLOYMENT.                    !!!
+# !!!                                                                       !!!
+# !!!  Search for "TODO" to find every value that needs your attention.     !!!
+# !!!  Terraform validation will BLOCK deployment if placeholders remain.   !!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# CHECKLIST — complete every item before running terraform apply:
+#
+#   [ ] 1. Replace domain_name with your actual production domain
+#   [ ] 2. Replace certificate_arn with your real ACM certificate ARN
+#          (must NOT contain "YOUR_AWS_ACCOUNT_ID" or "REPLACE_ME")
+#   [ ] 3. Replace alarm_sns_topic_arn with your real SNS topic ARN
+#          (must NOT contain "YOUR_AWS_ACCOUNT_ID")
+#   [ ] 4. Export the four required secret environment variables:
+#            export TF_VAR_db_username="..."
+#            export TF_VAR_db_password="..."
+#            export TF_VAR_jwt_secret_key="..."
+#            export TF_VAR_app_secret_key="..."
+#   [ ] 5. Set allowed_cidr_blocks in networking section
 #
 # HOW TO DEPLOY:
 #   1. Complete all TODO items below (replace every placeholder).
@@ -99,7 +113,10 @@ log_retention_days = 30   # CloudWatch log retention in days
 # This is used for the ALB listener rules, CloudFront distribution, and Route 53.
 # Example: "selfpublisherforge.com"
 #
-domain_name = "selfpublisherforge.com"  # TODO: Replace with your actual domain
+# >>> TODO: Replace with your actual production domain <<<
+# Terraform will NOT block on this value, but ensure it matches the domain
+# you used when requesting your ACM certificate.
+domain_name = "selfpublisherforge.com"
 
 # ---------------------------------------------------------------------------
 # ACM Certificate ARN
@@ -135,7 +152,9 @@ domain_name = "selfpublisherforge.com"  # TODO: Replace with your actual domain
 #
 # Format: arn:aws:acm:us-east-1:<ACCOUNT_ID>:certificate/<UUID>
 #
-certificate_arn = "arn:aws:acm:us-east-1:YOUR_AWS_ACCOUNT_ID:certificate/REPLACE_ME"  # TODO: Replace with real ACM cert ARN
+# >>> TODO: Replace with your real ACM certificate ARN <<<
+# Deployment will FAIL if this still contains "YOUR_AWS_ACCOUNT_ID" or "REPLACE_ME".
+certificate_arn = "arn:aws:acm:us-east-1:YOUR_AWS_ACCOUNT_ID:certificate/REPLACE_ME"
 
 # =============================================================================
 # Monitoring & Alerting
@@ -170,4 +189,6 @@ certificate_arn = "arn:aws:acm:us-east-1:YOUR_AWS_ACCOUNT_ID:certificate/REPLACE
 #
 # Format: arn:aws:sns:us-east-1:<ACCOUNT_ID>:selfpublisherforge-production-alarms
 #
-alarm_sns_topic_arn = "arn:aws:sns:us-east-1:YOUR_AWS_ACCOUNT_ID:selfpublisherforge-alarms"  # TODO: Replace with real SNS topic ARN
+# >>> TODO: Replace with your real SNS topic ARN <<<
+# Deployment will FAIL if this still contains "YOUR_AWS_ACCOUNT_ID".
+alarm_sns_topic_arn = "arn:aws:sns:us-east-1:YOUR_AWS_ACCOUNT_ID:selfpublisherforge-alarms"

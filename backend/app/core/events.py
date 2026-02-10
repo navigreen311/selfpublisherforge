@@ -1,11 +1,6 @@
 """Redis Streams-based event bus for inter-module communication.
 
 Provides publish, subscribe, replay, and dead-letter handling.
-
-If the ``shared.types.events`` package is available, its ``BaseEvent``,
-``EventPublisher``, and ``EventType`` types are re-used.  Otherwise,
-lightweight local definitions are provided so this module can be imported
-without the shared package.
 """
 from __future__ import annotations
 
@@ -14,41 +9,10 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Awaitable, Callable, Protocol, runtime_checkable
+from typing import Any, Awaitable, Callable
 from uuid import UUID
 
-try:
-    from shared.types.events import BaseEvent, EventPublisher, EventType  # type: ignore[import-untyped]
-except ImportError:
-    # ------------------------------------------------------------------
-    # Fallback definitions when the shared package is not installed
-    # ------------------------------------------------------------------
-    from pydantic import BaseModel
-
-    class EventType(str, Enum):  # type: ignore[no-redef]
-        """Minimal set of event types for standalone operation."""
-        USER_REGISTERED = "user_registered"
-        USER_UPDATED = "user_updated"
-        ORG_CREATED = "org_created"
-        BOOK_CREATED = "book_created"
-        BOOK_UPDATED = "book_updated"
-        PIPELINE_STARTED = "pipeline_started"
-        PIPELINE_COMPLETED = "pipeline_completed"
-        BILLING_SUBSCRIPTION_CHANGED = "billing_subscription_changed"
-
-    class BaseEvent(BaseModel):  # type: ignore[no-redef]
-        """Minimal event schema for standalone operation."""
-        event_type: EventType
-        org_id: UUID
-        actor_id: UUID
-        actor_type: str = "user"
-        timestamp: datetime
-        data: dict[str, Any] = {}
-
-    @runtime_checkable
-    class EventPublisher(Protocol):  # type: ignore[no-redef]
-        async def publish(self, event: "BaseEvent") -> str: ...
+from app.core.event_types import BaseEvent, EventPublisher, EventType
 
 try:
     import redis.asyncio as aioredis

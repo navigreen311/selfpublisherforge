@@ -22,7 +22,7 @@ from typing import Any
 
 try:
     from reportlab.lib.pagesizes import letter, A4, inch
-    from reportlab.lib.units import inch as rl_inch
+    from reportlab.lib.units import inch as rl_inch, mm
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
     from reportlab.lib.colors import black, gray, white, HexColor
@@ -330,24 +330,40 @@ def _build_isbn_barcode_flowable(isbn: str, page_width: float) -> list:
     if BARCODE_WIDGET_AVAILABLE:
         try:
             cleaned = _validate_isbn13(isbn)
-            barcode_widget = Ean13BarcodeWidget(cleaned)
-            barcode_widget.barHeight = 1.0 * inch
-            barcode_widget.barWidth = 0.015 * inch
+            barcode_widget = Ean13BarcodeWidget(
+                value=cleaned,
+                barHeight=25 * mm,
+                barWidth=0.33 * mm,
+            )
             bounds = barcode_widget.getBounds()
             widget_width = bounds[2] - bounds[0]
             widget_height = bounds[3] - bounds[1]
-            drawing = Drawing(widget_width, widget_height)
+
+            # Centre the barcode within the available page width
+            avail_width = page_width - 2 * inch  # approximate content width
+            drawing_width = max(widget_width, avail_width)
+            drawing = Drawing(drawing_width, widget_height)
+            x_offset = (drawing_width - widget_width) / 2
+            barcode_widget.x = x_offset
+            barcode_widget.y = 0
             drawing.add(barcode_widget)
+
             flowables.append(drawing)
-            flowables.append(Spacer(1, 12))
+            flowables.append(Spacer(1, 8))
             isbn_style = ParagraphStyle(
                 "ISBNText",
                 fontName="Helvetica-Bold",
-                fontSize=12,
+                fontSize=11,
                 alignment=TA_CENTER,
             )
-            flowables.append(Paragraph(f"ISBN: {isbn}", isbn_style))
+            formatted_isbn = (
+                f"{cleaned[0:3]}-{cleaned[3]}-{cleaned[4:6]}-"
+                f"{cleaned[6:12]}-{cleaned[12]}"
+            )
+            flowables.append(Paragraph(f"ISBN {formatted_isbn}", isbn_style))
             return flowables
+        except ValueError as exc:
+            logger.warning("Invalid ISBN '%s' for barcode rendering: %s", isbn, exc)
         except Exception as exc:
             logger.warning("ReportLab barcode widget failed for '%s': %s", isbn, exc)
 

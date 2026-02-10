@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { z } from "zod";
 import { Eye, EyeOff, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,26 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { getPasswordChecks, PASSWORD_CHECK_LABELS, validatePassword } from "@/lib/validation";
+import {
+  getPasswordChecks,
+  PASSWORD_CHECK_LABELS,
+  validatePassword,
+  registerSchema,
+  validateForm,
+} from "@/lib/validation";
+
+/** Extend the shared registerSchema with the name field to avoid duplicating password rules */
+const registerPageSchema = registerSchema.innerType().extend({
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be at most 100 characters"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type TouchedFields = Record<string, boolean>;
 
 const plans = [
   { id: "free", name: "Free", description: "Get started with basics", price: "$0" },
@@ -37,21 +57,56 @@ export default function RegisterPage() {
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
   const [orgName, setOrgName] = React.useState("");
   const [plan, setPlan] = React.useState("free");
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [touched, setTouched] = React.useState<TouchedFields>({});
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   const passwordChecks = getPasswordChecks(password);
   const isPasswordValid = validatePassword(password).valid;
 
+  // Run validation whenever form values change
+  React.useEffect(() => {
+    const result = validateForm(registerPageSchema, {
+      name,
+      email,
+      password,
+      confirmPassword,
+    });
+    setFieldErrors(result.errors ?? {});
+  }, [name, email, password, confirmPassword]);
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  /** Return the error message for a field only if the field has been touched */
+  const getFieldError = (field: string): string | undefined => {
+    return touched[field] ? fieldErrors[field] : undefined;
+  };
+
+  const hasFormErrors = Object.keys(fieldErrors).length > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!isPasswordValid) {
-      setError("Please meet all password requirements");
+
+    // Mark all fields as touched on submit so errors become visible
+    setTouched({
+      name: true,
+      email: true,
+      password: true,
+      confirmPassword: true,
+    });
+
+    if (hasFormErrors) {
+      setError("Please fix the errors above before submitting");
       return;
     }
+
     try {
       await register({ name, email, password, orgName, planTier: plan });
     } catch (err: unknown) {
@@ -61,13 +116,18 @@ export default function RegisterPage() {
     }
   };
 
+  const nameError = getFieldError("name");
+  const emailError = getFieldError("email");
+  const passwordError = getFieldError("password");
+  const confirmPasswordError = getFieldError("confirmPassword");
+
   return (
     <Card className="w-full max-w-lg">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Create your account</CardTitle>
         <CardDescription>Start your self-publishing journey today</CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <CardContent className="space-y-4">
           {error && (
             <Alert variant="destructive">
@@ -80,8 +140,10 @@ export default function RegisterPage() {
             placeholder="John Doe"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onBlur={() => handleBlur("name")}
             required
             autoComplete="name"
+            error={nameError}
           />
 
           <Input
@@ -90,21 +152,37 @@ export default function RegisterPage() {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => handleBlur("email")}
             required
             autoComplete="email"
+            error={emailError}
           />
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Password</label>
+            <label htmlFor="register-password" className="text-sm font-medium">
+              Password
+            </label>
             <div className="relative">
               <input
+                id="register-password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => handleBlur("password")}
                 required
                 autoComplete="new-password"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 pr-10"
+                aria-invalid={!!passwordError}
+                aria-describedby={
+                  passwordError
+                    ? "register-password-error"
+                    : "register-password-checks"
+                }
+                className={cn(
+                  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 pr-10",
+                  passwordError &&
+                    "border-destructive focus-visible:ring-destructive"
+                )}
               />
               <button
                 type="button"
@@ -119,8 +197,19 @@ export default function RegisterPage() {
                 )}
               </button>
             </div>
+            {passwordError && (
+              <p
+                id="register-password-error"
+                className="text-sm text-destructive"
+              >
+                {passwordError}
+              </p>
+            )}
             {password && (
-              <div className="grid grid-cols-2 gap-1 mt-2">
+              <div
+                id="register-password-checks"
+                className="grid grid-cols-2 gap-1 mt-2"
+              >
                 {PASSWORD_CHECK_LABELS.map(({ key, label }) => (
                   <div
                     key={key}
@@ -138,6 +227,18 @@ export default function RegisterPage() {
               </div>
             )}
           </div>
+
+          <Input
+            label="Confirm Password"
+            type="password"
+            placeholder="Re-enter your password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            onBlur={() => handleBlur("confirmPassword")}
+            required
+            autoComplete="new-password"
+            error={confirmPasswordError}
+          />
 
           <Input
             label="Organization Name"
@@ -172,7 +273,7 @@ export default function RegisterPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !isPasswordValid}
+            disabled={isLoading}
           >
             {isLoading ? "Creating account..." : "Create account"}
           </Button>

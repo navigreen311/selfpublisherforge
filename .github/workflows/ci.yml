@@ -102,6 +102,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Validate database migrations
+        run: |
+          echo "--- Applying all migrations (upgrade to head) ---"
+          alembic upgrade head
+
+          echo "--- Checking for model changes missing migrations ---"
+          alembic check || {
+            echo "::error::Alembic check failed — model changes detected that are not covered by migrations."
+            exit 1
+          }
+
+          echo "--- Verifying migration reversibility (downgrade to base) ---"
+          alembic downgrade base
+
+          echo "--- Re-applying all migrations (upgrade to head again) ---"
+          alembic upgrade head
+
+          echo "--- Migration validation passed ---"
+
       - name: Run unit tests with coverage
         run: |
           pytest tests/ -v \

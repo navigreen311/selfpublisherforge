@@ -39,6 +39,11 @@ export const projectSchema = z.object({
     errorMap: () => ({ message: "Type must be book, series, or course" }),
   }),
   genre: z.string().optional(),
+  description: z
+    .string()
+    .max(2000, "Description must be at most 2000 characters")
+    .optional()
+    .or(z.literal("")),
 });
 export type ProjectFormData = z.infer<typeof projectSchema>;
 
