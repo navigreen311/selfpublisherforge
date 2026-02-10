@@ -50,4 +50,20 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "analytics_queue"},
         "kwargs": {},
     },
+    # ------------------------------------------------------------------
+    # Review Intelligence — analyze pending reviews every hour
+    # ------------------------------------------------------------------
+    "review-analyze-pending-hourly": {
+        "task": "review_intelligence.analyze_pending_reviews",
+        "schedule": schedule(run_every=3600),
+        "kwargs": {"org_id": "all"},
+    },
+    # ------------------------------------------------------------------
+    # Review Intelligence — daily velocity snapshots
+    # ------------------------------------------------------------------
+    "review-velocity-snapshots-daily": {
+        "task": "review_intelligence.compute_velocity_snapshots",
+        "schedule": schedule(run_every=86400),
+        "kwargs": {"org_id": "all", "book_id": "all", "period": "daily"},
+    },
 }

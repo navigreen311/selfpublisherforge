@@ -100,7 +100,55 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
+@pytest_asyncio.fixture(scope="function")
+async def db_engine():
+    """Yield the async engine after creating all tables, then drop them."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
+    """Yield a database session (alias used by integration tests)."""
+    async with TestingSessionLocal() as session:
+        yield session
+
+
 @pytest.fixture
 def org_id() -> uuid.UUID:
     """Return the placeholder org ID used by the routers."""
     return uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+def make_review(
+    org_id: uuid.UUID | None = None,
+    book_id: uuid.UUID | None = None,
+    source: str = "amazon",
+    star_rating: float = 3.0,
+    body: str = "",
+    sentiment: str | None = None,
+    sentiment_score: float | None = None,
+    is_competitor: bool = False,
+    review_date=None,
+    **kwargs,
+):
+    """Factory helper to create a BookReview ORM instance for tests."""
+    from datetime import datetime, timezone
+
+    from app.modules.review_intelligence.models import BookReview
+
+    return BookReview(
+        org_id=org_id or uuid.uuid4(),
+        book_id=book_id or uuid.uuid4(),
+        source=source,
+        star_rating=star_rating,
+        body=body,
+        sentiment=sentiment,
+        sentiment_score=sentiment_score,
+        is_competitor=is_competitor,
+        review_date=review_date or datetime.now(timezone.utc),
+        **kwargs,
+    )
