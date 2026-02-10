@@ -11,6 +11,7 @@ from uuid import uuid4
 from app.core.security import hash_password, verify_password, decode_token
 from app.modules.auth import service
 from app.modules.auth.service import User, Organization, UserSession
+from app.models.user import UserRole
 from app.modules.auth.utils import (
     generate_token,
     generate_token_hash,
@@ -33,7 +34,7 @@ VALID_PASSWORD = "StrongP@ss1"
 async def _seed_user(db, *, email="user@test.com", password=VALID_PASSWORD, mfa=False):
     """Insert a user + org into the test DB and return the ORM user."""
     org_id = uuid4()
-    org = Organization(id=org_id, name="TestOrg")
+    org = Organization(id=org_id, name="TestOrg", slug=f"testorg-{str(org_id)[:8]}")
     db.add(org)
 
     user_id = uuid4()
@@ -43,7 +44,7 @@ async def _seed_user(db, *, email="user@test.com", password=VALID_PASSWORD, mfa=
         email=email,
         name="Test User",
         password_hash=hash_password(password),
-        role="owner",
+        role=UserRole.OWNER,
         email_verified=False,
         mfa_enabled=mfa,
         mfa_secret=generate_totp_secret() if mfa else None,

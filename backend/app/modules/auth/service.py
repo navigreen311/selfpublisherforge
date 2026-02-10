@@ -1,6 +1,7 @@
 """Authentication service — business logic for registration, login, tokens,
 password reset, email verification, MFA, and session management."""
 
+import re
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
@@ -32,70 +33,14 @@ from app.modules.auth.schemas import (
     UserResponse,
 )
 
+# Import canonical ORM models from the shared models package
+from app.models.organization import Organization
+from app.models.user import User, UserRole, UserSession
+
 settings = get_settings()
 
 # Max concurrent sessions per user
 MAX_SESSIONS = 5
-
-
-# ---------------------------------------------------------------------------
-# Lightweight in-module ORM models.
-# These map to the tables created by W02 (users, organizations, user_sessions).
-# We define them locally so that this module is self-contained and does not
-# import from a yet-to-be-written W02 models file.
-# ---------------------------------------------------------------------------
-from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, Table
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from app.database import Base
-import uuid as _uuid
-
-
-class Organization(Base):
-    __tablename__ = "organizations"
-    __table_args__ = {"extend_existing": True}
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=_uuid.uuid4)
-    name = Column(String(255), nullable=False)
-    plan = Column(String(50), default="free")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
-
-
-class User(Base):
-    __tablename__ = "users"
-    __table_args__ = {"extend_existing": True}
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=_uuid.uuid4)
-    org_id = Column(PG_UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    name = Column(String(255), nullable=False)
-    password_hash = Column(Text, nullable=False)
-    role = Column(String(50), default="owner")
-    email_verified = Column(Boolean, default=False)
-    email_verify_token = Column(Text, nullable=True)
-    email_verify_expires = Column(DateTime(timezone=True), nullable=True)
-    password_reset_token = Column(Text, nullable=True)
-    password_reset_expires = Column(DateTime(timezone=True), nullable=True)
-    mfa_enabled = Column(Boolean, default=False)
-    mfa_secret = Column(Text, nullable=True)
-    mfa_backup_codes = Column(Text, nullable=True)  # comma-separated hashes
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
-
-
-class UserSession(Base):
-    __tablename__ = "user_sessions"
-    __table_args__ = {"extend_existing": True}
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=_uuid.uuid4)
-    user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    refresh_token_hash = Column(Text, nullable=False, unique=True)
-    user_agent = Column(Text, nullable=True)
-    ip_address = Column(String(45), nullable=True)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +71,8 @@ async def register_user(
 
     # Create organization
     org_id = uuid4()
-    org = Organization(id=org_id, name=org_name)
+    slug = _make_slug(org_name, str(org_id))
+    org = Organization(id=org_id, name=org_name, slug=slug)
     db.add(org)
 
     # Email verification token
@@ -141,7 +87,7 @@ async def register_user(
         email=email,
         name=name,
         password_hash=hash_password(password),
-        role="owner",
+        role=UserRole.OWNER,
         email_verified=False,
         email_verify_token=verify_hash,
         email_verify_expires=token_expiry(hours=48),
@@ -211,7 +157,8 @@ async def authenticate(
                 message="Invalid MFA code.",
             )
 
-    token_data = {"sub": str(user.id), "org_id": str(user.org_id), "role": user.role}
+    role_value = user.role.value if isinstance(user.role, UserRole) else str(user.role)
+    token_data = {"sub": str(user.id), "org_id": str(user.org_id), "role": role_value}
     access = create_access_token(token_data)
     refresh = create_refresh_token(token_data)
 
@@ -454,15 +401,24 @@ async def _create_session(
 
 def _user_dict(user: User) -> dict:
     """Serialize a User ORM instance to a plain dict."""
+    role_value = user.role.value if isinstance(user.role, UserRole) else str(user.role)
     return {
         "id": str(user.id),
         "email": user.email,
         "name": user.name,
         "org_id": str(user.org_id),
-        "role": user.role,
+        "role": role_value,
         "email_verified": user.email_verified,
         "mfa_enabled": user.mfa_enabled,
     }
+
+
+def _make_slug(org_name: str, org_id: str) -> str:
+    """Generate a URL-safe slug from an organization name, appending a short
+    UUID suffix to avoid collisions."""
+    base = re.sub(r"[^a-z0-9]+", "-", org_name.lower()).strip("-")
+    suffix = org_id[:8]
+    return f"{base}-{suffix}" if base else suffix
 
 
 def _verify_mfa(user: User, code: str) -> bool:

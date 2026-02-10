@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -47,6 +48,20 @@ class User(BaseModel):
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
+
+    # Auth-specific columns (registration, password reset, MFA)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verify_token: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    email_verify_expires: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    password_reset_token: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    password_reset_expires: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    mfa_secret: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    mfa_backup_codes: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     # Relationships
     organization = relationship("Organization", back_populates="users")
@@ -104,8 +119,10 @@ class UserSession(BaseModel):
         nullable=False,
         index=True,
     )
-    token_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    token_hash: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, default=None)
+    refresh_token_hash: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True, default=None)
     device_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True, default=None)
     expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None

@@ -109,3 +109,84 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 def org_id() -> uuid.UUID:
     """Return the placeholder org ID used by the routers."""
     return uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+# ---------------------------------------------------------------------------
+# Auth-specific fixtures
+# ---------------------------------------------------------------------------
+
+VALID_PASSWORD = "StrongP@ss1"
+
+
+@pytest_asyncio.fixture(scope="function")
+async def seed_user(db_session: AsyncSession):
+    """Factory fixture that inserts a user + org into the test DB.
+
+    Usage::
+
+        user = await seed_user()
+        user = await seed_user(email="other@test.com", mfa=True)
+    """
+    from app.core.security import hash_password
+    from app.models.organization import Organization
+    from app.models.user import User, UserRole
+    from app.modules.auth.utils import generate_totp_secret
+
+    async def _create(
+        email: str = "user@test.com",
+        password: str = VALID_PASSWORD,
+        mfa: bool = False,
+    ) -> User:
+        org_id = uuid.uuid4()
+        org = Organization(id=org_id, name="TestOrg", slug=f"testorg-{str(org_id)[:8]}")
+        db_session.add(org)
+
+        user_id = uuid.uuid4()
+        user = User(
+            id=user_id,
+            org_id=org_id,
+            email=email,
+            name="Test User",
+            password_hash=hash_password(password),
+            role=UserRole.OWNER,
+            email_verified=False,
+            mfa_enabled=mfa,
+            mfa_secret=generate_totp_secret() if mfa else None,
+        )
+        db_session.add(user)
+        await db_session.flush()
+        return user
+
+    return _create
+
+
+@pytest_asyncio.fixture(scope="function")
+async def auth_headers(client: AsyncClient):
+    """Factory fixture returning auth headers for a registered user.
+
+    Usage::
+
+        headers = await auth_headers()
+        headers = await auth_headers(email="other@test.com")
+    """
+    from app.config import get_settings
+
+    settings = get_settings()
+    prefix = f"{settings.API_V1_PREFIX}/auth"
+
+    async def _create(email: str = "auth-fixture@test.com") -> dict:
+        resp = await client.post(
+            f"{prefix}/register",
+            json={
+                "email": email,
+                "password": VALID_PASSWORD,
+                "name": "Fixture User",
+                "org_name": "Fixture Org",
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        data = resp.json()
+        token = data["tokens"]["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    return _create
