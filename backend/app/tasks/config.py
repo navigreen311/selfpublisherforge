@@ -38,6 +38,7 @@ TASK_ROUTES = {
     "app.tasks.email_tasks.*": {"queue": "email_queue", "routing_key": "email"},
     "app.tasks.file_tasks.*": {"queue": "file_queue", "routing_key": "file"},
     "app.tasks.analytics_tasks.*": {"queue": "analytics_queue", "routing_key": "analytics"},
+    "app.tasks.advertising.*": {"queue": "default", "routing_key": "default"},
 }
 
 # ---------------------------------------------------------------------------

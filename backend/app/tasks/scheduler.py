@@ -50,4 +50,31 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "analytics_queue"},
         "kwargs": {},
     },
+    # ------------------------------------------------------------------
+    # Advertising: sync performance from ad platforms — every hour
+    # ------------------------------------------------------------------
+    "sync-ad-performance-hourly": {
+        "task": "app.tasks.advertising.sync_performance",
+        "schedule": schedule(run_every=3600),
+        "options": {"queue": "default"},
+        "kwargs": {},
+    },
+    # ------------------------------------------------------------------
+    # Advertising: auto-optimize bids — daily at 04:00 UTC
+    # ------------------------------------------------------------------
+    "auto-optimize-bids-daily": {
+        "task": "app.tasks.advertising.auto_optimize",
+        "schedule": crontab(hour=4, minute=0),
+        "options": {"queue": "default"},
+        "kwargs": {},
+    },
+    # ------------------------------------------------------------------
+    # Advertising: budget alerts — every 4 hours
+    # ------------------------------------------------------------------
+    "check-budget-alerts-every-4h": {
+        "task": "app.tasks.advertising.budget_alerts",
+        "schedule": schedule(run_every=4 * 60 * 60),
+        "options": {"queue": "default"},
+        "kwargs": {},
+    },
 }
