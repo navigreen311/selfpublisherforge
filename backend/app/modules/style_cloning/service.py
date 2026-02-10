@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Sequence
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.style_cloning.conformity import check_conformity
 from app.modules.style_cloning.features import extract_all_features
@@ -15,7 +15,6 @@ from app.modules.style_cloning.ingestion import (
     SegmentedText,
     ingest_text,
     merge_segmented,
-    MIN_WORDS,
 )
 from app.modules.style_cloning.profile_generator import (
     compute_confidence,
