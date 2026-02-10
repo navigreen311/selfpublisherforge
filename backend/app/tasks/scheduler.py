@@ -50,4 +50,13 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "analytics_queue"},
         "kwargs": {},
     },
+    # ------------------------------------------------------------------
+    # Production pipeline deadline check — every hour
+    # ------------------------------------------------------------------
+    "pipeline-deadline-check": {
+        "task": "production_pipeline.check_deadlines",
+        "schedule": crontab(minute=0),
+        "options": {"queue": "default"},
+        "kwargs": {},
+    },
 }

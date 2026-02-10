@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.database import Base, get_db
 from app.main import create_app
-from tests.conftest import patch_pg_server_defaults
 
 # ── Test database setup ───────────────────────────────────────────────────
 
@@ -42,9 +41,6 @@ async def fastapi_app():
     """Create a fresh app with a clean in-memory database."""
     # Import models so they are registered on Base.metadata
     import app.modules.production_pipeline.models  # noqa: F401
-
-    # Patch PG-specific server defaults for SQLite
-    patch_pg_server_defaults()
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
