@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.core.error_handler import register_error_handlers
 from app.database import init_db
 
 settings = get_settings()
@@ -30,6 +31,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Error handlers
+    register_error_handlers(app)
+
     # Health check
     @app.get("/health")
     @app.get(f"{settings.API_V1_PREFIX}/health")
@@ -56,7 +60,7 @@ def _register_routers(app: FastAPI):
     app.include_router(billing_router, prefix=prefix, tags=["billing"])
 
     from app.modules.storage.router import router as storage_router
-    app.include_router(storage_router, prefix=prefix, tags=["storage"])
+    app.include_router(storage_router, prefix=f"{prefix}/storage", tags=["storage"])
 
     from app.modules.notifications.router import router as notifications_router
     app.include_router(notifications_router, prefix=prefix, tags=["notifications"])
