@@ -1,8 +1,11 @@
-"""Shared test configuration for the publishing operations tests."""
+"""Shared test configuration and fixtures."""
 
-import pytest
+from __future__ import annotations
 
+import sys
+from pathlib import Path
 
-@pytest.fixture(autouse=True)
-def anyio_backend():
-    return "asyncio"
+# Ensure the backend app is importable from tests
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
