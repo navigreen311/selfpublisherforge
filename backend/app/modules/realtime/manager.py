@@ -8,12 +8,11 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID
 
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket
 from starlette.websockets import WebSocketState
 
-from app.modules.realtime.schemas import WSChannel, WSMessage
+from app.modules.realtime.schemas import WSChannel
 
 logger = logging.getLogger(__name__)
 
