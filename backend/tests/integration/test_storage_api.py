@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core.exceptions import AppException, app_exception_handler
 from app.database import Base, get_db
 from app.modules.storage.schemas import AssetStatus, AssetType
 from app.modules.storage.service import ContentAsset
@@ -79,14 +76,6 @@ async def client():
     from app.core.dependencies import get_current_user
 
     app = create_app()
-    app.add_exception_handler(AppException, app_exception_handler)
-
-    # Register the storage router manually (main.py doesn't include it yet)
-    from app.modules.storage.router import router as storage_router
-    from app.config import get_settings
-
-    settings = get_settings()
-    app.include_router(storage_router, prefix=f"{settings.API_V1_PREFIX}/storage", tags=["storage"])
 
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_user] = lambda: FAKE_USER
