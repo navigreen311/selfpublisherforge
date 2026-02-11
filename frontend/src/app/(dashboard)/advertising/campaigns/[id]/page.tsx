@@ -14,8 +14,10 @@ import { PerformanceChart } from "@/modules/advertising/components/PerformanceCh
 import { BidManager } from "@/modules/advertising/components/BidManager";
 import { CreativeEditor } from "@/modules/advertising/components/CreativeEditor";
 import { toast } from "sonner";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function CampaignDetailPage() {
+  const t = useTranslations("advertising");
   const params = useParams();
   const campaignId = params.id as string;
   const [activeTab, setActiveTab] = useState<"performance" | "keywords" | "creatives" | "optimize">(
@@ -31,9 +33,9 @@ export default function CampaignDetailPage() {
   const handleStatusChange = async (newStatus: Campaign["status"]) => {
     try {
       await updateCampaign.mutateAsync({ status: newStatus });
-      toast.success("Campaign status updated");
+      toast.success(t("campaignDetail.statusUpdated"));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update campaign status";
+      const message = error instanceof Error ? error.message : t("campaignDetail.statusUpdateError");
       toast.error(message);
     }
   };
@@ -45,9 +47,9 @@ export default function CampaignDetailPage() {
         min_data_points: 1,
       });
       setOptimization(result);
-      toast.success("Optimization analysis complete");
+      toast.success(t("campaignDetail.optimizationComplete"));
     } catch {
-      toast.error("Failed to run optimization");
+      toast.error(t("campaignDetail.optimizationError"));
     }
   };
 
@@ -64,33 +66,33 @@ export default function CampaignDetailPage() {
     return (
       <div className="space-y-4">
         <Link href="/advertising/campaigns" className="text-primary hover:underline text-sm">
-          Back to Campaigns
+          {t("campaignDetail.backToCampaigns")}
         </Link>
         <div className="border border-red-200 bg-red-50 rounded-lg p-4 text-red-700">
-          Campaign not found.
+          {t("campaignDetail.notFound")}
         </div>
       </div>
     );
   }
 
   const statusActions: Record<string, { label: string; status: Campaign["status"] }[]> = {
-    draft: [{ label: "Activate", status: "active" }],
+    draft: [{ label: t("campaignDetail.activate"), status: "active" }],
     active: [
-      { label: "Pause", status: "paused" },
-      { label: "End", status: "ended" },
+      { label: t("campaignDetail.pause"), status: "paused" },
+      { label: t("campaignDetail.end"), status: "ended" },
     ],
     paused: [
-      { label: "Resume", status: "active" },
-      { label: "Archive", status: "archived" },
+      { label: t("campaignDetail.resume"), status: "active" },
+      { label: t("campaignDetail.archive"), status: "archived" },
     ],
-    ended: [{ label: "Archive", status: "archived" }],
+    ended: [{ label: t("campaignDetail.archive"), status: "archived" }],
   };
 
   const tabs = [
-    { key: "performance" as const, label: "Performance" },
-    { key: "keywords" as const, label: "Keywords" },
-    { key: "creatives" as const, label: "Creatives" },
-    { key: "optimize" as const, label: "AI Optimize" },
+    { key: "performance" as const, label: t("campaignDetail.performance") },
+    { key: "keywords" as const, label: t("campaignDetail.keywords") },
+    { key: "creatives" as const, label: t("campaignDetail.creatives") },
+    { key: "optimize" as const, label: t("campaignDetail.aiOptimize") },
   ];
 
   return (
@@ -98,11 +100,11 @@ export default function CampaignDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/advertising" className="hover:text-foreground">
-          Advertising
+          {t("campaignDetail.advertising")}
         </Link>
         <span>/</span>
         <Link href="/advertising/campaigns" className="hover:text-foreground">
-          Campaigns
+          {t("campaignDetail.campaigns")}
         </Link>
         <span>/</span>
         <span className="text-foreground">{campaign.name}</span>
@@ -113,10 +115,10 @@ export default function CampaignDetailPage() {
           <h1 className="text-2xl font-bold">{campaign.name}</h1>
           <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
             <span className="capitalize">
-              {campaign.platform === "amazon" ? "Amazon Ads" : "Facebook Ads"}
+              {campaign.platform === "amazon" ? t("campaignDetail.amazonAds") : t("campaignDetail.facebookAds")}
             </span>
             <span>{campaign.campaign_type.replace(/_/g, " ")}</span>
-            <StatusBadge status={campaign.status} />
+            <StatusBadge status={campaign.status} t={t} />
           </div>
         </div>
         <div className="flex gap-2">
@@ -136,16 +138,17 @@ export default function CampaignDetailPage() {
       {/* Summary Cards */}
       {campaign.performance_summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          <SummaryCard label="Spend" value={`$${campaign.performance_summary.total_spend.toFixed(2)}`} />
-          <SummaryCard label="Sales" value={`$${campaign.performance_summary.total_sales.toFixed(2)}`} />
+          <SummaryCard label={t("campaignDetail.spend")} value={`$${campaign.performance_summary.total_spend.toFixed(2)}`} />
+          <SummaryCard label={t("campaignDetail.sales")} value={`$${campaign.performance_summary.total_sales.toFixed(2)}`} />
           <SummaryCard
-            label="ACOS"
+            label={t("campaignDetail.acos")}
             value={`${campaign.performance_summary.avg_acos.toFixed(1)}%`}
             target={campaign.target_acos}
+            t={t}
           />
-          <SummaryCard label="ROAS" value={`${campaign.performance_summary.avg_roas.toFixed(2)}x`} />
-          <SummaryCard label="Impressions" value={campaign.performance_summary.total_impressions.toLocaleString()} />
-          <SummaryCard label="Clicks" value={campaign.performance_summary.total_clicks.toLocaleString()} />
+          <SummaryCard label={t("campaignDetail.roas")} value={`${campaign.performance_summary.avg_roas.toFixed(2)}x`} />
+          <SummaryCard label={t("campaignDetail.impressions")} value={campaign.performance_summary.total_impressions.toLocaleString()} />
+          <SummaryCard label={t("campaignDetail.clicks")} value={campaign.performance_summary.total_clicks.toLocaleString()} />
         </div>
       )}
 
@@ -171,7 +174,7 @@ export default function CampaignDetailPage() {
       {/* Tab Content */}
       {activeTab === "performance" && (
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold">Performance Over Time</h3>
+          <h3 className="text-lg font-semibold">{t("campaignDetail.performanceOverTime")}</h3>
           <PerformanceChart
             data={performance || []}
             metrics={["spend", "sales", "acos"]}
@@ -198,9 +201,9 @@ export default function CampaignDetailPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">AI Optimization</h3>
+              <h3 className="text-lg font-semibold">{t("campaignDetail.aiOptimization")}</h3>
               <p className="text-sm text-muted-foreground">
-                Analyze campaign performance and get AI-powered bid recommendations.
+                {t("campaignDetail.aiOptimizationDesc")}
               </p>
             </div>
             <button
@@ -208,7 +211,7 @@ export default function CampaignDetailPage() {
               disabled={optimizeCampaign.isPending}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
             >
-              {optimizeCampaign.isPending ? "Analyzing..." : "Run Optimization"}
+              {optimizeCampaign.isPending ? t("campaignDetail.analyzing") : t("campaignDetail.runOptimization")}
             </button>
           </div>
 
@@ -216,19 +219,18 @@ export default function CampaignDetailPage() {
             <div className="space-y-4">
               {/* Summary */}
               <div className="border rounded-lg p-4 bg-muted/10">
-                <h4 className="font-medium mb-2">Analysis Summary</h4>
+                <h4 className="font-medium mb-2">{t("campaignDetail.analysisSummary")}</h4>
                 <p className="text-sm">{optimization.summary}</p>
                 <div className="flex gap-4 mt-3 text-sm">
                   <span>
-                    Current ACOS: <strong>{optimization.current_acos.toFixed(1)}%</strong>
+                    {t("campaignDetail.currentAcos", { value: optimization.current_acos.toFixed(1) })}
                   </span>
                   <span>
-                    Target ACOS: <strong>{optimization.target_acos.toFixed(1)}%</strong>
+                    {t("campaignDetail.targetAcos", { value: optimization.target_acos.toFixed(1) })}
                   </span>
                   {optimization.budget_recommendation && (
                     <span>
-                      Recommended Budget:{" "}
-                      <strong>${optimization.budget_recommendation.toFixed(2)}/day</strong>
+                      {t("campaignDetail.recommendedBudget", { value: optimization.budget_recommendation.toFixed(2) })}
                     </span>
                   )}
                 </div>
@@ -238,15 +240,15 @@ export default function CampaignDetailPage() {
               {optimization.bid_adjustments.length > 0 && (
                 <div className="border rounded-lg overflow-hidden">
                   <div className="px-4 py-3 bg-muted/50 font-medium text-sm">
-                    Suggested Bid Adjustments ({optimization.bid_adjustments.length})
+                    {t("campaignDetail.suggestedBids", { count: optimization.bid_adjustments.length.toString() })}
                   </div>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-t bg-muted/30">
-                        <th className="text-left px-4 py-2">Keyword</th>
-                        <th className="text-right px-4 py-2">Current Bid</th>
-                        <th className="text-right px-4 py-2">Suggested Bid</th>
-                        <th className="text-left px-4 py-2">Reason</th>
+                        <th className="text-left px-4 py-2">{t("campaignDetail.keyword")}</th>
+                        <th className="text-right px-4 py-2">{t("campaignDetail.currentBid")}</th>
+                        <th className="text-right px-4 py-2">{t("campaignDetail.suggestedBid")}</th>
+                        <th className="text-left px-4 py-2">{t("campaignDetail.reason")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -279,7 +281,7 @@ export default function CampaignDetailPage() {
               {optimization.keywords_to_negate.length > 0 && (
                 <div className="border rounded-lg p-4">
                   <h4 className="font-medium mb-2">
-                    Keywords to Negate ({optimization.keywords_to_negate.length})
+                    {t("campaignDetail.keywordsToNegate", { count: optimization.keywords_to_negate.length.toString() })}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {optimization.keywords_to_negate.map((kw, i) => (
@@ -297,8 +299,7 @@ export default function CampaignDetailPage() {
               {optimization.bid_adjustments.length === 0 &&
                 optimization.keywords_to_negate.length === 0 && (
                   <div className="border rounded-lg p-6 text-center text-muted-foreground">
-                    No optimization changes recommended at this time. Your campaign is
-                    performing within target parameters.
+                    {t("campaignDetail.noChanges")}
                   </div>
                 )}
             </div>
@@ -309,7 +310,7 @@ export default function CampaignDetailPage() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
   const styles: Record<string, string> = {
     active: "bg-green-100 text-green-800",
     paused: "bg-yellow-100 text-yellow-800",
@@ -320,7 +321,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || styles.draft}`}>
-      {status}
+      {t(`campaigns.${status}`)}
     </span>
   );
 }
@@ -329,10 +330,12 @@ function SummaryCard({
   label,
   value,
   target,
+  t,
 }: {
   label: string;
   value: string;
   target?: number | null;
+  t?: (key: string, params?: Record<string, string>) => string;
 }) {
   const isOverTarget = target && parseFloat(value) > target;
   return (
@@ -341,8 +344,8 @@ function SummaryCard({
       <p className={`text-lg font-bold ${isOverTarget ? "text-red-600" : ""}`}>
         {value}
       </p>
-      {target && (
-        <p className="text-xs text-muted-foreground">Target: {target}%</p>
+      {target && t && (
+        <p className="text-xs text-muted-foreground">{t("campaignDetail.target", { target: target.toString() })}</p>
       )}
     </div>
   );

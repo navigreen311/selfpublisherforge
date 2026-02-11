@@ -2,8 +2,11 @@
 
 import { GreenlightScorer } from "@/modules/analytics/components/GreenlightScorer";
 import Link from "next/link";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function GreenlightPage() {
+  const t = useTranslations("analytics");
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -13,18 +16,18 @@ export default function GreenlightPage() {
             href="/analytics/portfolio"
             className="text-sm text-blue-600 hover:text-blue-800 mb-2 inline-block"
           >
-            ← Back to Portfolio
+            {t("greenlight.backToPortfolio")}
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">Greenlight Gate</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("greenlight.title")}</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Evaluate book ideas before writing to maximize ROI
+            {t("greenlight.subtitle")}
           </p>
         </div>
         <Link
           href="/analytics/portfolio/audience"
           className="px-4 py-2 text-sm font-medium text-foreground bg-card border rounded-md hover:bg-muted"
         >
-          Audience DNA
+          {t("greenlight.audienceDna")}
         </Link>
       </div>
 
@@ -37,17 +40,16 @@ export default function GreenlightPage() {
             </svg>
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-blue-800">Pre-Writing ROI Forecast</h3>
+            <h3 className="text-sm font-medium text-blue-800">{t("greenlight.infoBannerTitle")}</h3>
             <div className="mt-2 text-sm text-blue-700">
               <p>
-                The Greenlight Gate helps you evaluate book ideas before investing time and money.
-                Enter your concept details to get:
+                {t("greenlight.infoBannerDescription")}
               </p>
               <ul className="list-disc list-inside mt-1 space-y-1">
-                <li>ROI forecast and breakeven analysis</li>
-                <li>Market size and capture rate estimates</li>
-                <li>Risk factors and opportunity identification</li>
-                <li>Go / Caution / No-Go recommendation</li>
+                <li>{t("greenlight.infoListItem1")}</li>
+                <li>{t("greenlight.infoListItem2")}</li>
+                <li>{t("greenlight.infoListItem3")}</li>
+                <li>{t("greenlight.infoListItem4")}</li>
               </ul>
             </div>
           </div>
@@ -59,35 +61,23 @@ export default function GreenlightPage() {
 
       {/* Tips Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-3">Tips for Better Results</h3>
+        <h3 className="text-base font-semibold text-gray-900 mb-3">{t("greenlight.tipsTitle")}</h3>
         <div className="space-y-2 text-sm text-gray-700">
           <div className="flex items-start">
             <span className="text-green-600 mr-2 font-bold">✓</span>
-            <p>
-              <strong>Be realistic with costs:</strong> Include cover design, editing, formatting,
-              and initial marketing spend.
-            </p>
+            <p>{t("greenlight.tipRealistic")}</p>
           </div>
           <div className="flex items-start">
             <span className="text-green-600 mr-2 font-bold">✓</span>
-            <p>
-              <strong>Research comparable titles:</strong> Find ASINs of similar books in your
-              niche for better market size estimates.
-            </p>
+            <p>{t("greenlight.tipResearch")}</p>
           </div>
           <div className="flex items-start">
             <span className="text-green-600 mr-2 font-bold">✓</span>
-            <p>
-              <strong>Consider series advantage:</strong> First books in a series often have lower
-              ROI but drive sales for later books.
-            </p>
+            <p>{t("greenlight.tipSeries")}</p>
           </div>
           <div className="flex items-start">
             <span className="text-green-600 mr-2 font-bold">✓</span>
-            <p>
-              <strong>Factor in time:</strong> A lower ROI book that you can write quickly may
-              outperform a high-ROI book that takes months.
-            </p>
+            <p>{t("greenlight.tipTime")}</p>
           </div>
         </div>
       </div>

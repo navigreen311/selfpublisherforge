@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useReports, useDownloadReport } from "@/modules/analytics/hooks";
 import type { ReportResponse } from "@/modules/analytics/hooks";
 import { ReportBuilder } from "@/modules/analytics/components/ReportBuilder";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function ReportsPage() {
+  const t = useTranslations("analytics");
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [allItems, setAllItems] = useState<ReportResponse[]>([]);
   const { data: reports, isLoading, isFetching } = useReports(cursor);
@@ -83,13 +85,13 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Reports</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("reports.title")}</h1>
         <a
           href="/analytics"
-          aria-label="Back to Analytics Dashboard"
+          aria-label={t("reports.backToDashboard")}
           className="text-sm text-blue-600 hover:text-blue-800"
         >
-          Back to Dashboard
+          {t("reports.backToDashboard")}
         </a>
       </div>
 
@@ -105,11 +107,11 @@ export default function ReportsPage() {
             </div>
             <button
               type="button"
-              aria-label="Dismiss download error"
+              aria-label={t("reports.errorDismiss")}
               className="ml-3 text-red-500 hover:text-red-700"
               onClick={() => setDownloadError(null)}
             >
-              <span className="sr-only">Dismiss</span>
+              <span className="sr-only">{t("reports.errorDismissSr")}</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path
                   fillRule="evenodd"
@@ -124,23 +126,23 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Report Builder */}
-        <div className="lg:col-span-1" role="region" aria-label="Report Builder">
+        <div className="lg:col-span-1" role="region" aria-label={t("reports.reportBuilder")}>
           <ReportBuilder />
         </div>
 
         {/* Reports List */}
-        <div className="lg:col-span-2" role="region" aria-label="Generated Reports List">
+        <div className="lg:col-span-2" role="region" aria-label={t("reports.generatedReports")}>
           <div className="bg-card rounded-lg border border-border shadow-sm">
             <div className="p-6 border-b border-border">
               <h3 className="text-lg font-semibold text-foreground" id="reports-table-heading">
-                Generated Reports
+                {t("reports.generatedReports")}
               </h3>
             </div>
 
             <div aria-live="polite" aria-atomic="true">
               {isLoading && !cursor ? (
-                <div className="p-6" role="status" aria-label="Loading reports">
-                  <span className="sr-only">Loading reports, please wait...</span>
+                <div className="p-6" role="status" aria-label={t("reports.loadingReports")}>
+                  <span className="sr-only">{t("reports.loadingReports")}</span>
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="animate-pulse flex items-center space-x-4">
@@ -153,7 +155,7 @@ export default function ReportsPage() {
               ) : displayItems.length > 0 ? (
                 <>
                   <p id="reports-table-desc" className="sr-only">
-                    A list of {displayItems.length} generated reports showing title, type, format, status, and download options.
+                    {t("reports.tableDescription", { count: displayItems.length })}
                   </p>
                   <table
                     className="w-full"
@@ -161,12 +163,12 @@ export default function ReportsPage() {
                     aria-labelledby="reports-table-heading"
                   >
                     <caption className="sr-only">
-                      Generated reports with title, report type, output format, status, file size, and download actions
+                      {t("reports.tableCaption")}
                     </caption>
                     <thead className="sr-only">
                       <tr>
-                        <th scope="col">Report Details</th>
-                        <th scope="col">Actions</th>
+                        <th scope="col">{t("reports.reportDetails")}</th>
+                        <th scope="col">{t("reports.actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -191,7 +193,7 @@ export default function ReportsPage() {
                                           : "bg-muted text-muted-foreground"
                                   }`}
                                   role="status"
-                                  aria-label={`Status: ${report.status}`}
+                                  aria-label={t("reports.status", { status: report.status })}
                                 >
                                   {report.status}
                                 </span>
@@ -203,7 +205,7 @@ export default function ReportsPage() {
                               </div>
                               {report.generated_at && (
                                 <p className="text-xs text-muted-foreground/70 mt-1">
-                                  Generated: {new Date(report.generated_at).toLocaleString()}
+                                  {t("reports.generated", { date: new Date(report.generated_at).toLocaleString() })}
                                 </p>
                               )}
                             </div>
@@ -215,10 +217,10 @@ export default function ReportsPage() {
                                   handleDownload(report.id, `${report.title}.${report.output_format}`)
                                 }
                                 disabled={downloadReport.isPending}
-                                aria-label={`Download report: ${report.title}`}
+                                aria-label={t("reports.downloadLabel", { title: report.title })}
                                 className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 disabled:opacity-50"
                               >
-                                Download
+                                {t("reports.download")}
                               </button>
                             )}
                             {report.status === "failed" && report.error_message && (
@@ -226,9 +228,9 @@ export default function ReportsPage() {
                                 className="text-xs text-red-600"
                                 title={report.error_message}
                                 role="alert"
-                                aria-label={`Error for report ${report.title}: ${report.error_message}`}
+                                aria-label={t("reports.errorLabel", { title: report.title, message: report.error_message })}
                               >
-                                Error
+                                {t("reports.error")}
                               </span>
                             )}
                           </td>
@@ -239,7 +241,7 @@ export default function ReportsPage() {
                 </>
               ) : (
                 <div className="p-6 text-center">
-                  <p className="text-muted-foreground">No reports generated yet. Use the builder to create one.</p>
+                  <p className="text-muted-foreground">{t("reports.noReports")}</p>
                 </div>
               )}
             </div>
@@ -249,10 +251,10 @@ export default function ReportsPage() {
                 <button
                   onClick={handleLoadMore}
                   disabled={isLoadingMore}
-                  aria-label="Load more reports"
+                  aria-label={t("reports.loadMore")}
                   className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
                 >
-                  {isLoadingMore ? "Loading..." : "Load More"}
+                  {isLoadingMore ? t("reports.loading") : t("reports.loadMore")}
                 </button>
               </div>
             )}

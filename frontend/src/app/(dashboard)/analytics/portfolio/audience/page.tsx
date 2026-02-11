@@ -6,8 +6,10 @@ import { AudienceDNA } from "@/modules/analytics/components/AudienceDNA";
 import { SeasonalCalendar } from "@/modules/analytics/components/SeasonalCalendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function AudiencePage() {
+  const t = useTranslations("analytics");
   const { data: overview } = usePortfolioOverview();
   const [selectedBookId, setSelectedBookId] = useState<string>("");
   const [selectedGenre, setSelectedGenre] = useState<string>("romance");
@@ -55,15 +57,15 @@ export default function AudiencePage() {
             href="/analytics/portfolio"
             className="text-sm text-blue-600 hover:text-blue-800 mb-2 inline-block"
           >
-            ← Back to Portfolio
+            {t("audience.backToPortfolio")}
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">Audience DNA</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("audience.title")}</h1>
         </div>
         <Link
           href="/analytics/portfolio/greenlight"
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
         >
-          Greenlight Gate
+          {t("audience.greenlightGate")}
         </Link>
       </div>
 
@@ -72,7 +74,7 @@ export default function AudiencePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Book
+              {t("audience.selectBook")}
             </label>
             <select
               value={bookIdToUse}
@@ -80,7 +82,7 @@ export default function AudiencePage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {allBooks.length === 0 && (
-                <option value="">No books available</option>
+                <option value="">{t("audience.noBooksAvailable")}</option>
               )}
               {allBooks.map((book) => (
                 <option key={book.book_id} value={book.book_id}>
@@ -92,14 +94,14 @@ export default function AudiencePage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Genre / Niche
+              {t("audience.genreNiche")}
             </label>
             <input
               type="text"
               value={selectedGenre}
               onChange={(e) => handleGenreChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., romance, thriller, fantasy"
+              placeholder={t("audience.genrePlaceholder")}
             />
           </div>
         </div>
@@ -113,15 +115,15 @@ export default function AudiencePage() {
         </div>
       ) : personasError ? (
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-red-800">Failed to load audience personas. Please try again.</p>
+          <p className="text-red-800">{t("audience.errorPersonas")}</p>
         </div>
       ) : personas && personas.length > 0 ? (
         <AudienceDNA personas={personas} />
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Audience Data</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t("audience.noAudienceDataTitle")}</h3>
           <p className="text-gray-600">
-            Select a book and genre to view audience personas and insights.
+            {t("audience.noAudienceDataDescription")}
           </p>
         </div>
       )}
@@ -135,7 +137,7 @@ export default function AudiencePage() {
       ) : seasonalityError ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
           <p className="text-yellow-800">
-            Seasonal data not available for this genre. Try a different genre.
+            {t("audience.errorSeasonality")}
           </p>
         </div>
       ) : seasonality ? (
