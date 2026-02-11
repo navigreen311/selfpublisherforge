@@ -13,6 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 from app.models.content import StyleProfile
+from app.modules.style_cloning.analyzers import (
+    RhythmAnalyzer,
+    SyntaxAnalyzer,
+    ToneAnalyzer,
+    VocabularyAnalyzer,
+)
 from app.modules.style_cloning.conformity import check_conformity
 from app.modules.style_cloning.features import extract_all_features
 from app.modules.style_cloning.ingestion import (
@@ -87,14 +93,44 @@ def _run_analysis(profile: StyleProfile) -> None:
     profile.confidence = compute_confidence(merged.word_count)
 
     try:
+        # Extract traditional features
         features = extract_all_features(merged)
+
+        # Run deep NLP analyzers
+        syntax_analyzer = SyntaxAnalyzer()
+        rhythm_analyzer = RhythmAnalyzer()
+        vocabulary_analyzer = VocabularyAnalyzer()
+        tone_analyzer = ToneAnalyzer()
+
+        syntax_metrics = syntax_analyzer.analyze(merged.raw_text)
+        rhythm_metrics = rhythm_analyzer.analyze(merged.raw_text)
+        vocabulary_metrics = vocabulary_analyzer.analyze(merged.raw_text)
+        tone_metrics = tone_analyzer.analyze(merged.raw_text)
+
+        # Generate fingerprint and style card
         fingerprint = generate_voice_fingerprint(features, merged)
         style_card = generate_style_card(features, merged)
 
+        # Enhance fingerprint with deep NLP metrics
+        fingerprint_dict = fingerprint.model_dump()
+        fingerprint_dict["deep_analysis"] = {
+            "syntax": syntax_metrics,
+            "rhythm": rhythm_metrics,
+            "vocabulary": vocabulary_metrics,
+            "tone": tone_metrics,
+        }
+
         # Store as dicts in JSONB columns
-        profile.voice_fingerprint = fingerprint.model_dump()
+        profile.voice_fingerprint = fingerprint_dict
         profile.style_card = style_card.model_dump()
         profile.status = ProfileStatus.ready.value
+
+        logger.info(
+            "Style analysis complete for profile %s: %d words, confidence %.2f",
+            profile.id,
+            merged.word_count,
+            profile.confidence,
+        )
     except (ValueError, TypeError, KeyError) as exc:
         logger.error("Style analysis pipeline failed: %s", exc, exc_info=True)
         profile.status = ProfileStatus.failed.value
