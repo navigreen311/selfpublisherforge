@@ -164,16 +164,15 @@ def _classify_reading_level(grade: float) -> str:
     """Map a grade level score to a human-readable reading level."""
     if grade < 1:
         return "Kindergarten"
-    elif grade < 6:
+    if grade < 6:
         return "Elementary"
-    elif grade < 9:
+    if grade < 9:
         return "Middle School"
-    elif grade < 13:
+    if grade < 13:
         return "High School"
-    elif grade < 17:
+    if grade < 17:
         return "College"
-    else:
-        return "Graduate"
+    return "Graduate"
 
 
 def analyze_readability(text: str) -> ReadabilityMetrics:

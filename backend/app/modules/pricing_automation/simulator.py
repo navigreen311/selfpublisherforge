@@ -7,16 +7,12 @@ Uses standard economic elasticity formula:
 
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass
-
 from app.modules.pricing_automation.schemas import (
     BookFormat,
     PricePoint,
     PriceSimulationRequest,
     PriceSimulationResponse,
 )
-
 
 # KDP royalty tiers
 ROYALTY_35_RANGE = (0.99, 2.98)
@@ -38,12 +34,12 @@ def _get_royalty_rate(price: float, book_format: BookFormat) -> float:
         if ROYALTY_70_RANGE[0] <= price <= ROYALTY_70_RANGE[1]:
             return 0.70
         return 0.35
-    elif book_format == BookFormat.PAPERBACK:
+    if book_format == BookFormat.PAPERBACK:
         # Approximate: 60% of list - printing cost. Simplified to ~40%.
         return 0.40
-    elif book_format == BookFormat.HARDCOVER:
+    if book_format == BookFormat.HARDCOVER:
         return 0.35
-    elif book_format == BookFormat.AUDIOBOOK:
+    if book_format == BookFormat.AUDIOBOOK:
         # ACX/Audible typical split
         return 0.40
     return 0.35

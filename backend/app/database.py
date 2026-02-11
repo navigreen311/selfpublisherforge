@@ -70,7 +70,7 @@ async def get_db():
         try:
             yield session
             await session.commit()
-        except (SQLAlchemyError, DBAPIError) as exc:
+        except (SQLAlchemyError, DBAPIError):
             logger.error("Database session error, rolling back", exc_info=True)
             await session.rollback()
             raise

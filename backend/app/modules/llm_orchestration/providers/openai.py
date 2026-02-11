@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import openai
 
@@ -71,7 +71,7 @@ class OpenAIProvider(BaseLLMProvider):
                 metadata={"error": str(exc)},
             )
 
-    async def generate_stream(
+    async def generate_stream(  # type: ignore[override,misc]
         self, request: LLMRequest
     ) -> AsyncIterator[LLMStreamChunk]:
         """Stream response chunks from OpenAI."""
@@ -112,7 +112,7 @@ class OpenAIProvider(BaseLLMProvider):
                 messages=[{"role": "user", "content": "ping"}],
             )
             return True
-        except (ConnectionError, openai.APIConnectionError, openai.APITimeoutError) as exc:
+        except (ConnectionError, openai.APIConnectionError, openai.APITimeoutError):
             logger.warning("OpenAI health check failed: connection error", exc_info=True)
             return False
         except openai.APIError as exc:

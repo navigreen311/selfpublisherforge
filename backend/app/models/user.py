@@ -10,13 +10,14 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+)
+from sqlalchemy import (
     Enum as SAEnum,
-    func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import BaseModel, TenantModel
+from app.database import BaseModel
 
 
 class UserRole(str, enum.Enum):
@@ -156,7 +157,6 @@ class UserSession(BaseModel):
     device_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True, default=None)
-    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     last_active_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )

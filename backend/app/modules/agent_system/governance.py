@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone, timedelta
-from typing import Any
+from datetime import UTC, datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.agent_system.audit import record_audit
 from app.modules.agent_system.models import (
     Agent,
     AgentBudget,
@@ -26,8 +26,6 @@ from app.modules.agent_system.models import (
     TaskStatus,
     WorkflowStatus,
 )
-from app.modules.agent_system.audit import record_audit
-
 
 # ---------------------------------------------------------------------------
 # Permission enforcement
@@ -99,7 +97,7 @@ def check_permission(
         return True
     except PermissionDenied:
         raise
-    except (AttributeError, TypeError) as e:
+    except (AttributeError, TypeError):
         logger.exception(
             "Permission check failed for agent '%s' action '%s' (role=%s) — denying by default",
             agent.name, action, user_role,
@@ -145,12 +143,12 @@ async def check_budget(
         await db.flush()
         await db.refresh(budget)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Helper: ensure datetime is timezone-aware (SQLite strips tzinfo)
     def _aware(dt: datetime | None) -> datetime | None:
         if dt is not None and dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
+            return dt.replace(tzinfo=UTC)
         return dt
 
     # Daily reset
@@ -267,7 +265,7 @@ async def emergency_stop(
         .values(
             status=TaskStatus.CANCELLED,
             error_message="Emergency stop activated",
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         .returning(AgentTask.id)
     )
@@ -283,7 +281,7 @@ async def emergency_stop(
         .values(
             status=WorkflowStatus.CANCELLED,
             error_message="Emergency stop activated",
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         .returning(AgentWorkflow.id)
     )

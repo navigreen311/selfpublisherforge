@@ -15,12 +15,12 @@ import re
 import sys
 from typing import Any
 
+from app.config import get_settings
+
 # Context variable for request correlation IDs
 correlation_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "correlation_id", default=None
 )
-
-from app.config import get_settings
 
 # Keys whose values must be redacted when logging request/response bodies.
 _SENSITIVE_KEYS = re.compile(
@@ -47,7 +47,7 @@ def sanitize(data: Any, _depth: int = 0) -> Any:
             k: (_REDACTED if _SENSITIVE_KEYS.search(k) else sanitize(v, _depth + 1))
             for k, v in data.items()
         }
-    if isinstance(data, (list, tuple)):
+    if isinstance(data, list | tuple):
         return [sanitize(item, _depth + 1) for item in data]
     return data
 
@@ -106,11 +106,11 @@ def setup_logging() -> None:
             rename_fields={"asctime": "timestamp"},
         )
     else:
-        formatter = logging.Formatter(
+        formatter = logging.Formatter(  # type: ignore[assignment]
             "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
         )
 
-    handler.setFormatter(formatter)
+    handler.setFormatter(formatter)  # type: ignore[arg-type]
 
     # Root logger
     root = logging.getLogger()

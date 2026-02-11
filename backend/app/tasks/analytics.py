@@ -24,7 +24,7 @@ import hmac
 import logging
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -33,8 +33,8 @@ import httpx
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.tasks import celery_app
 from app.database import async_session
+from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +84,11 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
     logger.info("Starting daily metric aggregation (org_id=%s)", org_id)
 
     async def _aggregate():
-        from app.modules.analytics.metrics import compute_portfolio_metrics
+        from sqlalchemy import func, select
+
         from app.modules.analytics.aggregator import save_portfolio_snapshot
+        from app.modules.analytics.metrics import compute_portfolio_metrics
         from app.modules.analytics.models import RoyaltyRecord
-        from sqlalchemy import select, func, and_
 
         async with async_session() as db:
             try:
@@ -101,7 +102,7 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
                     result = await db.execute(query)
                     org_ids = [row[0] for row in result.all()]
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 snapshots_created = 0
 
                 for oid in org_ids:
@@ -165,9 +166,10 @@ def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
     logger.info("Starting report generation for report_id=%s", report_id)
 
     async def _generate():
+        from sqlalchemy import and_, select
+
         from app.modules.analytics.models import Report
         from app.modules.analytics.report_builder import generate_report
-        from sqlalchemy import select, and_
 
         async with async_session() as db:
             try:
@@ -238,15 +240,9 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
     logger.info("Starting royalty sync for org_id=%s, platform=%s", org_id, platform)
 
     async def _sync() -> dict[str, Any]:
-        from sqlalchemy import select, and_, update
+        from sqlalchemy import and_, select
 
         from app.models.publishing import PublishingAccount, PublishingAccountStatus
-        from app.modules.analytics.models import RoyaltyRecord
-        from app.modules.analytics.schemas import Platform as AnalyticsPlatform
-        from app.modules.analytics.royalty_importer import (
-            import_royalties,
-            PLATFORM_PARSERS,
-        )
 
         async with async_session() as db:
             try:
@@ -363,7 +359,7 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                         # --------------------------------------------------
                         # 2d. Update account's last-synced timestamp
                         # --------------------------------------------------
-                        account.updated_at = datetime.now(timezone.utc)
+                        account.updated_at = datetime.now(UTC)
 
                     except (
                         ConnectionError,
@@ -441,8 +437,8 @@ async def _try_csv_import(
         )
         return 0
 
-    from app.modules.analytics.schemas import Platform as AnalyticsPlatform
     from app.modules.analytics.royalty_importer import import_royalties
+    from app.modules.analytics.schemas import Platform as AnalyticsPlatform
 
     try:
         analytics_platform = AnalyticsPlatform(analytics_platform_key)
@@ -477,7 +473,8 @@ async def _try_api_sync(
 
     Returns the number of records upserted.
     """
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
+
     from app.modules.analytics.models import RoyaltyRecord
 
     records_synced = 0
@@ -532,7 +529,7 @@ async def _try_api_sync(
                 ):
                     if field in rec_data:
                         setattr(existing, field, rec_data[field])
-                existing.updated_at = datetime.now(timezone.utc)
+                existing.updated_at = datetime.now(UTC)
                 existing.raw_data = rec_data.get("raw_data", existing.raw_data)
             else:
                 record = RoyaltyRecord(
@@ -596,7 +593,7 @@ async def _fetch_kdp_royalties(account) -> list[dict[str, Any]]:
     )
 
     # Determine the reporting period: last full calendar month.
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     period_end = first_of_this_month - timedelta(microseconds=1)
     period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
@@ -645,7 +642,7 @@ def _kdp_sign_request(
       2. Sign the canonical string with the secret key using HMAC-SHA256.
       3. Return the Authorization and timestamp headers.
     """
-    from urllib.parse import urlparse, urlencode
+    from urllib.parse import urlencode, urlparse
 
     parsed = urlparse(url)
     canonical_path = parsed.path or "/"
@@ -689,7 +686,7 @@ async def _kdp_api_request(
 
     for attempt in range(max_retries):
         try:
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
             headers = _kdp_sign_request(
                 method=method,
                 url=url,
@@ -900,7 +897,7 @@ async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
 
         client = get_ingram_client()
         if client is not None:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             period_end = first_of_this_month - timedelta(microseconds=1)
             period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
@@ -919,12 +916,11 @@ async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
                 account.id,
             )
             return royalties
-        else:
-            logger.info(
-                "IngramSparkClient not configured (get_ingram_client() returned None); "
-                "falling back to legacy API path for account %s.",
-                account.id,
-            )
+        logger.info(
+            "IngramSparkClient not configured (get_ingram_client() returned None); "
+            "falling back to legacy API path for account %s.",
+            account.id,
+        )
     except ImportError:
         logger.info(
             "ingram_client module not available; falling back to legacy API path "
@@ -967,7 +963,7 @@ async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
     # ------------------------------------------------------------------
     # Determine the reporting period (previous full calendar month).
     # ------------------------------------------------------------------
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     period_end = first_of_this_month - timedelta(microseconds=1)
     period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
@@ -1234,7 +1230,7 @@ async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
 
         client = get_d2d_client()
         if client is not None:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             period_end = first_of_this_month - timedelta(microseconds=1)
             period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
@@ -1253,12 +1249,11 @@ async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
                 account.id,
             )
             return royalties
-        else:
-            logger.info(
-                "D2DClient not configured (get_d2d_client() returned None); "
-                "falling back to legacy API path for account %s.",
-                account.id,
-            )
+        logger.info(
+            "D2DClient not configured (get_d2d_client() returned None); "
+            "falling back to legacy API path for account %s.",
+            account.id,
+        )
     except ImportError:
         logger.info(
             "d2d_client module not available; falling back to legacy API path "
@@ -1293,7 +1288,7 @@ async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
     # ------------------------------------------------------------------
     # Determine the reporting period (previous full calendar month).
     # ------------------------------------------------------------------
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     period_end = first_of_this_month - timedelta(microseconds=1)
     period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)

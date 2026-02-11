@@ -19,13 +19,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from datetime import UTC
 from typing import Any
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.tasks import celery_app
 from app.database import async_session
+from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +63,10 @@ def execute_agent_task(self, task_id: str, user_role: str = "viewer") -> dict[st
 
 
 async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, Any]:
-    from app.modules.agent_system.models import AgentTask, TaskStatus
-    from app.modules.agent_system.executor import TaskExecutor
     from sqlalchemy import select
+
+    from app.modules.agent_system.executor import TaskExecutor
+    from app.modules.agent_system.models import AgentTask, TaskStatus
 
     async with async_session() as db:
         try:
@@ -156,9 +158,10 @@ async def _execute_agent_workflow_async(
     workflow_id: str,
     user_role: str,
 ) -> dict[str, Any]:
+    from sqlalchemy import select
+
     from app.modules.agent_system.models import AgentWorkflow, WorkflowStatus
     from app.modules.agent_system.workflow_engine import WorkflowEngine
-    from sqlalchemy import select
 
     async with async_session() as db:
         try:
@@ -245,9 +248,11 @@ def reset_daily_budgets(self) -> dict[str, Any]:
 
 
 async def _reset_daily_budgets_async() -> dict[str, Any]:
-    from app.modules.agent_system.models import AgentBudget
+    from datetime import datetime
+
     from sqlalchemy import update
-    from datetime import datetime, timezone
+
+    from app.modules.agent_system.models import AgentBudget
 
     async with async_session() as db:
         try:
@@ -255,7 +260,7 @@ async def _reset_daily_budgets_async() -> dict[str, Any]:
                 update(AgentBudget).values(
                     tokens_used_today=0,
                     usd_used_today=0.0,
-                    last_reset_daily=datetime.now(timezone.utc),
+                    last_reset_daily=datetime.now(UTC),
                 )
             )
             await db.commit()
@@ -281,16 +286,18 @@ def reset_monthly_budgets(self) -> dict[str, Any]:
 
 
 async def _reset_monthly_budgets_async() -> dict[str, Any]:
-    from app.modules.agent_system.models import AgentBudget
+    from datetime import datetime
+
     from sqlalchemy import update
-    from datetime import datetime, timezone
+
+    from app.modules.agent_system.models import AgentBudget
 
     async with async_session() as db:
         try:
             result = await db.execute(
                 update(AgentBudget).values(
                     usd_used_this_month=0.0,
-                    last_reset_monthly=datetime.now(timezone.utc),
+                    last_reset_monthly=datetime.now(UTC),
                 )
             )
             await db.commit()

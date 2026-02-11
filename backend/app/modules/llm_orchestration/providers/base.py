@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import AsyncIterator, Optional
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -19,7 +19,7 @@ class LLMRequest:
     """Normalized request sent to any LLM provider."""
 
     prompt: str
-    system_prompt: Optional[str] = None
+    system_prompt: str | None = None
     model_id: str = ""
     max_tokens: int = 4096
     temperature: float = 0.7
@@ -40,7 +40,7 @@ class LLMResponse:
     total_tokens: int = 0
     latency_ms: float = 0.0
     finish_reason: str = ""
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: dict = field(default_factory=dict)
 
     @property
@@ -55,7 +55,7 @@ class LLMStreamChunk:
     delta: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
-    finish_reason: Optional[str] = None
+    finish_reason: str | None = None
     model_id: str = ""
 
 

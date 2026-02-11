@@ -10,13 +10,14 @@ import json
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
+from typing import Any
 
 from app.config import get_settings
 from app.modules.ai_writing.prompts import get_prompt
 from app.modules.ai_writing.readability import analyze_readability
-from app.modules.ai_writing.schemas import GenerateRequest, GenerateResponse, GenerationType
+from app.modules.ai_writing.schemas import GenerateRequest, GenerateResponse
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -369,7 +370,7 @@ async def generate_stream(request: GenerateRequest) -> AsyncGenerator[str, None]
         "tokens_used": tokens_used,
         "quality_results": quality_results,
         "model_used": model,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
     yield f"event: complete\ndata: {json.dumps(complete_payload)}\n\n"
 
@@ -394,7 +395,7 @@ async def generate_sync(request: GenerateRequest) -> GenerateResponse:
         tokens_used=len(content.split()),
         quality_results=quality_results,
         model_used=model,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
@@ -431,7 +432,7 @@ async def _anthropic_stream(
         model=model if model.startswith("claude") else settings.DEFAULT_LLM_MODEL,
         max_tokens=4096,
         system=system_content,
-        messages=user_messages,
+        messages=user_messages,  # type: ignore[arg-type]
     ) as stream:
         async for text in stream.text_stream:
             yield text
@@ -448,9 +449,10 @@ async def _anthropic_call(messages: list[dict[str, str]], model: str) -> str:
         model=model if model.startswith("claude") else settings.DEFAULT_LLM_MODEL,
         max_tokens=4096,
         system=system_content,
-        messages=user_messages,
+        messages=user_messages,  # type: ignore[arg-type]
     )
-    return response.content[0].text
+    content_block = response.content[0]
+    return content_block.text if hasattr(content_block, 'text') else str(content_block)
 
 
 # ---------------------------------------------------------------------------
@@ -470,10 +472,10 @@ async def _openai_stream(
     response = await client.chat.completions.create(
         model=oai_model,
         max_tokens=4096,
-        messages=messages,  # OpenAI accepts system role directly
+        messages=messages,  # type: ignore[arg-type]
         stream=True,
     )
-    async for chunk in response:
+    async for chunk in response:  # type: ignore[union-attr]
         delta = chunk.choices[0].delta if chunk.choices else None
         if delta and delta.content:
             yield delta.content
@@ -489,7 +491,7 @@ async def _openai_call(messages: list[dict[str, str]], model: str) -> str:
     response = await client.chat.completions.create(
         model=oai_model,
         max_tokens=4096,
-        messages=messages,
+        messages=messages,  # type: ignore[arg-type]
     )
     return response.choices[0].message.content or ""
 
@@ -526,8 +528,7 @@ async def _call_llm(messages: list[dict[str, str]], model: str) -> str:
     try:
         if _LLM_PROVIDER == "anthropic":
             return await _anthropic_call(messages, model)
-        else:
-            return await _openai_call(messages, model)
+        return await _openai_call(messages, model)
     except (ConnectionError, TimeoutError) as exc:
         logger.error("LLM call network error: %s", exc, exc_info=True)
         return f"[Generation error: {exc}]"

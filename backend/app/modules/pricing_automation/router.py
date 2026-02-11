@@ -137,7 +137,7 @@ async def delete_pricing_rule(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Pricing rule not found",
         )
-    return None
+    return
 
 
 # ──────────────────── Price Simulation ────────────────────

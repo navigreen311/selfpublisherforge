@@ -27,7 +27,7 @@ import csv
 import io
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -115,7 +115,7 @@ def _parse_date(value: str | None) -> datetime | None:
     for fmt in formats:
         try:
             dt = datetime.strptime(cleaned, fmt)
-            return dt.replace(tzinfo=timezone.utc)
+            return dt.replace(tzinfo=UTC)
         except ValueError:
             continue
     return None
@@ -205,7 +205,7 @@ def _parse_kdp_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
     period_str = row.get("Royalty Date") or row.get("royalty_date") or ""
     period_start = _parse_date(period_str)
     if period_start is None:
-        period_start = datetime.now(timezone.utc).replace(day=1)
+        period_start = datetime.now(UTC).replace(day=1)
 
     period_end = _compute_period_end(period_start)
 
@@ -271,7 +271,7 @@ def _parse_ingram_spark_row(
     )
     period_start = _parse_date(period_str)
     if period_start is None:
-        period_start = datetime.now(timezone.utc).replace(day=1)
+        period_start = datetime.now(UTC).replace(day=1)
 
     period_end = _compute_period_end(period_start)
 
@@ -318,7 +318,7 @@ def _parse_d2d_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
     period_str = row.get("Period") or row.get("period") or ""
     period_start = _parse_date(period_str)
     if period_start is None:
-        period_start = datetime.now(timezone.utc).replace(day=1)
+        period_start = datetime.now(UTC).replace(day=1)
 
     period_end = _compute_period_end(period_start)
 

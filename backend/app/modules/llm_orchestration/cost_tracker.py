@@ -13,9 +13,8 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from enum import Enum
-from typing import Optional
 
 import redis.exceptions
 from redis.asyncio import Redis
@@ -90,7 +89,7 @@ class UsageRecord:
     input_tokens: int = 0
     output_tokens: int = 0
     cost_usd: float = 0.0
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -101,7 +100,7 @@ class OrgBudget:
     monthly_budget_usd: float = 100.0
     spent_usd: float = 0.0
     period_start: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc).replace(
+        default_factory=lambda: datetime.now(UTC).replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
     )
@@ -154,16 +153,16 @@ class CostTracker:
     Falls back to in-memory tracking if Redis is unavailable.
     """
 
-    def __init__(self, redis_client: Optional[Redis] = None) -> None:
+    def __init__(self, redis_client: Redis | None = None) -> None:
         self._pricing = dict(MODEL_PRICING)
-        self._redis: Optional[Redis] = redis_client
+        self._redis: Redis | None = redis_client
         self._redis_available: bool = True
 
         # In-memory fallbacks (always maintained as secondary store)
         self._budgets: dict[str, OrgBudget] = {}
         self._usage_log: list[UsageRecord] = []
 
-    async def _get_redis(self) -> Optional[Redis]:
+    async def _get_redis(self) -> Redis | None:
         """Lazily initialize the Redis connection. Returns None if unavailable."""
         if self._redis is None:
             try:
@@ -235,7 +234,7 @@ class CostTracker:
         budget.alert_level = self._evaluate_alert_level(budget)
 
         # Persist to Redis atomically
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         await self._persist_to_redis(
             org_id=org_id,
             model_id=model_id,
@@ -324,7 +323,7 @@ class CostTracker:
         org_id: str,
         start_date: date,
         end_date: date,
-        model_id: Optional[str] = None,
+        model_id: str | None = None,
     ) -> dict:
         """Aggregate costs from Redis for an org over a date range.
 
@@ -357,7 +356,7 @@ class CostTracker:
         org_id: str,
         start_date: date,
         end_date: date,
-        model_id: Optional[str],
+        model_id: str | None,
     ) -> dict:
         """Read cost data from Redis keys across the date range."""
         total_cost = 0.0
@@ -422,7 +421,7 @@ class CostTracker:
         org_id: str,
         start_date: date,
         end_date: date,
-        model_id: Optional[str],
+        model_id: str | None,
     ) -> dict:
         """Aggregate cost data from the in-memory usage log."""
         records = [
@@ -495,7 +494,7 @@ class CostTracker:
     def get_usage_summary(
         self,
         org_id: str,
-        model_id: Optional[str] = None,
+        model_id: str | None = None,
     ) -> dict:
         """Return aggregated usage stats for an org (from in-memory log)."""
         records = [r for r in self._usage_log if r.org_id == org_id]

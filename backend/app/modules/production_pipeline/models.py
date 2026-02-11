@@ -5,7 +5,6 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     JSON,
@@ -15,7 +14,6 @@ from sqlalchemy import (
     Index,
     String,
     Text,
-    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -53,19 +51,19 @@ class Pipeline(TenantModel):
 
     book_id: Mapped[uuid.UUID] = mapped_column(index=True)
     name: Mapped[str] = mapped_column(String(255))
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[PipelineStatus] = mapped_column(
         Enum(PipelineStatus, name="pipeline_status"),
         default=PipelineStatus.DRAFT,
         server_default="draft",
     )
-    settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
-    deadline: Mapped[Optional[datetime]] = mapped_column(
+    settings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
+    deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     # Relationships
-    tasks: Mapped[list["PipelineTask"]] = relationship(
+    tasks: Mapped[list[PipelineTask]] = relationship(
         "PipelineTask",
         back_populates="pipeline",
         cascade="all, delete-orphan",
@@ -88,7 +86,7 @@ class PipelineTask(TenantModel):
         ForeignKey("pipelines.id", ondelete="CASCADE"), index=True
     )
     title: Mapped[str] = mapped_column(String(255))
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     type: Mapped[TaskType] = mapped_column(
         Enum(TaskType, name="task_type"),
         default=TaskType.WRITING,
@@ -98,20 +96,20 @@ class PipelineTask(TenantModel):
         default=TaskStatus.PENDING,
         server_default="pending",
     )
-    assignee_id: Mapped[Optional[uuid.UUID]] = mapped_column(nullable=True)
-    due_date: Mapped[Optional[datetime]] = mapped_column(
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    depends_on: Mapped[Optional[list[str]]] = mapped_column(
+    depends_on: Mapped[list[str] | None] = mapped_column(
         JSON, nullable=True, default=list
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     position: Mapped[int] = mapped_column(default=0)
 
     # Relationships
-    pipeline: Mapped["Pipeline"] = relationship(
+    pipeline: Mapped[Pipeline] = relationship(
         "Pipeline", back_populates="tasks"
     )
 
@@ -128,9 +126,9 @@ class PipelineTemplate(TenantModel):
     __tablename__ = "pipeline_templates"
 
     name: Mapped[str] = mapped_column(String(255))
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     task_definitions: Mapped[dict] = mapped_column(JSON, default=list)
-    settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+    settings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
     is_public: Mapped[bool] = mapped_column(default=False, server_default="false")
 
     __table_args__ = (

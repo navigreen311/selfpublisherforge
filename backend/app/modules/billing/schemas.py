@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -51,10 +50,10 @@ class SubscriptionResponse(BaseModel):
     subscription_status: str = Field(
         description="active | trialing | past_due | canceled | incomplete | none"
     )
-    stripe_subscription_id: Optional[str] = None
-    stripe_customer_id: Optional[str] = None
-    current_period_start: Optional[datetime] = None
-    current_period_end: Optional[datetime] = None
+    stripe_subscription_id: str | None = None
+    stripe_customer_id: str | None = None
+    current_period_start: datetime | None = None
+    current_period_end: datetime | None = None
     cancel_at_period_end: bool = False
 
 
@@ -77,8 +76,8 @@ class UsageStats(BaseModel):
     ai_generations_daily_limit: int
 
     # Billing period
-    current_period_start: Optional[datetime] = None
-    current_period_end: Optional[datetime] = None
+    current_period_start: datetime | None = None
+    current_period_end: datetime | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +128,7 @@ class InvoiceItem(BaseModel):
     """A single Stripe invoice."""
 
     id: str
-    number: Optional[str] = None
+    number: str | None = None
     status: str
     amount_due: int = Field(description="Amount in cents")
     amount_paid: int = Field(description="Amount in cents")
@@ -137,8 +136,8 @@ class InvoiceItem(BaseModel):
     created: datetime
     period_start: datetime
     period_end: datetime
-    hosted_invoice_url: Optional[str] = None
-    invoice_pdf: Optional[str] = None
+    hosted_invoice_url: str | None = None
+    invoice_pdf: str | None = None
 
 
 class InvoiceListResponse(BaseModel):

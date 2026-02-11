@@ -9,15 +9,13 @@ import json
 import logging
 import re
 from collections import Counter
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, func
-from sqlalchemy.exc import SQLAlchemyError, OperationalError
+from sqlalchemy import func, select
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.cover_design.models import ExtractedProduct, KnowledgeClip
 from app.models.market import CompetitorBook, MarketKeyword
 from app.modules.chrome_extension.schemas import (
     ClipSaveRequest,
@@ -28,6 +26,7 @@ from app.modules.chrome_extension.schemas import (
     QuickResearchResponse,
     RelatedKeyword,
 )
+from app.modules.cover_design.models import ExtractedProduct, KnowledgeClip
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +133,7 @@ async def get_quick_research(
 
                 if latest.bsr:
                     response.estimated_daily_sales = _estimate_daily_sales(latest.bsr)
-        except (SQLAlchemyError, OperationalError, ValueError, TypeError) as e:
+        except (SQLAlchemyError, OperationalError, ValueError, TypeError):
             logger.warning(
                 "Failed to fetch ExtractedProduct data for ASIN %s",
                 query.asin,
@@ -181,7 +180,7 @@ async def get_quick_research(
                     response.bsr_history.sort(
                         key=lambda e: e.get("date") or ""
                     )
-        except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError) as e:
+        except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError):
             logger.warning(
                 "Failed to fetch CompetitorBook data for ASIN %s",
                 query.asin,
@@ -197,7 +196,7 @@ async def get_quick_research(
             response.avg_reviews = niche_stats.get("avg_reviews")
             response.niche_score = niche_stats.get("niche_score")
             response.related_keywords = niche_stats.get("related_keywords", [])
-        except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError) as e:
+        except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError):
             logger.warning(
                 "Failed to compute niche stats for keywords %s",
                 query.keywords,
@@ -252,7 +251,7 @@ async def _compute_niche_stats(
         )
         result = await db.execute(stmt)
         competitor_count = result.scalar() or 0
-    except (SQLAlchemyError, OperationalError) as e:
+    except (SQLAlchemyError, OperationalError):
         logger.warning("Failed to count ExtractedProduct entries", exc_info=True)
 
     # --- Average price from ExtractedProduct --------------------------
@@ -265,7 +264,7 @@ async def _compute_niche_stats(
         price_result = await db.execute(price_stmt)
         avg_price_raw = price_result.scalar()
         avg_price = round(float(avg_price_raw), 2) if avg_price_raw else None
-    except (SQLAlchemyError, OperationalError, ValueError, TypeError) as e:
+    except (SQLAlchemyError, OperationalError, ValueError, TypeError):
         logger.warning("Failed to compute avg price from ExtractedProduct", exc_info=True)
 
     # --- Average reviews from CompetitorBook --------------------------
@@ -280,7 +279,7 @@ async def _compute_niche_stats(
         avg_reviews_raw = reviews_result.scalar()
         if avg_reviews_raw is not None:
             avg_reviews = round(float(avg_reviews_raw), 1)
-    except (SQLAlchemyError, OperationalError, ValueError, TypeError) as e:
+    except (SQLAlchemyError, OperationalError, ValueError, TypeError):
         logger.warning("Failed to compute avg reviews from CompetitorBook", exc_info=True)
 
     # Also augment competitor_count with CompetitorBook rows
@@ -292,7 +291,7 @@ async def _compute_niche_stats(
         comp_count_result = await db.execute(comp_count_stmt)
         comp_count = comp_count_result.scalar() or 0
         competitor_count = max(competitor_count, comp_count)
-    except (SQLAlchemyError, OperationalError) as e:
+    except (SQLAlchemyError, OperationalError):
         logger.warning("Failed to count CompetitorBook entries", exc_info=True)
 
     # --- Niche score via market intelligence scoring ------------------
@@ -350,7 +349,7 @@ async def _compute_niche_stats(
                 kw_row = kw_result.scalar_one_or_none()
                 if kw_row is not None:
                     search_volume = max(search_volume, kw_row)
-        except (SQLAlchemyError, OperationalError) as e:
+        except (SQLAlchemyError, OperationalError):
             logger.debug("MarketKeyword lookup failed, defaulting search_volume=0", exc_info=True)
 
         import statistics as _stats
@@ -370,7 +369,7 @@ async def _compute_niche_stats(
 
         scores = calculate_niche_scores(metrics)
         niche_score = round(scores.opportunity_score, 1)
-    except (SQLAlchemyError, OperationalError, ImportError, ValueError, TypeError, AttributeError) as e:
+    except (SQLAlchemyError, OperationalError, ImportError, ValueError, TypeError, AttributeError):
         logger.warning("Failed to compute niche score via market intelligence", exc_info=True)
 
     # --- Related keywords ---------------------------------------------
@@ -383,7 +382,7 @@ async def _compute_niche_stats(
         related_keywords = await _enrich_keywords_from_market_data(
             db, related_keywords
         )
-    except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError) as e:
+    except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError):
         logger.warning("Failed to generate related keywords", exc_info=True)
 
     return {
@@ -491,12 +490,12 @@ async def _generate_related_keywords_via_llm(
     allowing the caller to fall back to local analysis.
     """
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
             ModelConfig,
             TaskTypeEnum,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         service = LLMOrchestrationService()
 

@@ -7,14 +7,11 @@ accounting for:
 - Series multiplier (read-through revenue from series)
 - New title injection (adding new books to the portfolio)
 """
-from datetime import datetime
-from typing import Optional
 
 from app.modules.portfolio_economics.schemas import (
     BacklistProjection,
     ProjectionPeriod,
 )
-
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -67,7 +64,7 @@ def _apply_promotion_boost(month: int, base_monthly: float) -> float:
     if month > 0 and month % PROMOTION_FREQUENCY_MONTHS == 0:
         return base_monthly * PROMOTION_BOOST_MULTIPLIER
     # Tail effect in the month after a promotion
-    elif month > 1 and (month - 1) % PROMOTION_FREQUENCY_MONTHS == 0:
+    if month > 1 and (month - 1) % PROMOTION_FREQUENCY_MONTHS == 0:
         return base_monthly * PROMOTION_TAIL_MULTIPLIER
     return base_monthly
 

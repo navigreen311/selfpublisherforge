@@ -5,10 +5,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -81,11 +79,11 @@ class DialogueMetrics(BaseModel):
 
 
 class VoiceFingerprint(BaseModel):
-    vocabulary: VocabularyMetrics = Field(default_factory=VocabularyMetrics)
-    sentence: SentenceMetrics = Field(default_factory=SentenceMetrics)
-    paragraph: ParagraphMetrics = Field(default_factory=ParagraphMetrics)
-    rhetorical: RhetoricalMetrics = Field(default_factory=RhetoricalMetrics)
-    dialogue: DialogueMetrics = Field(default_factory=DialogueMetrics)
+    vocabulary: VocabularyMetrics = Field(default_factory=lambda: VocabularyMetrics())  # type: ignore[call-arg]
+    sentence: SentenceMetrics = Field(default_factory=lambda: SentenceMetrics())  # type: ignore[call-arg]
+    paragraph: ParagraphMetrics = Field(default_factory=lambda: ParagraphMetrics())  # type: ignore[call-arg]
+    rhetorical: RhetoricalMetrics = Field(default_factory=lambda: RhetoricalMetrics())  # type: ignore[call-arg]
+    dialogue: DialogueMetrics = Field(default_factory=lambda: DialogueMetrics())  # type: ignore[call-arg]
     voice_vector: list[float] = Field(default_factory=list, description="200+ dimension numeric vector")
     dimension_labels: list[str] = Field(default_factory=list, description="Label for each vector dimension")
 
@@ -154,7 +152,7 @@ class ProfileResponse(BaseModel):
     word_count: int
     sample_count: int
     confidence: float
-    style_card: Optional[StyleCard] = None
+    style_card: StyleCard | None = None
     created_at: datetime
     updated_at: datetime
 

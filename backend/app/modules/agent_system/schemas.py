@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,9 +15,7 @@ from app.modules.agent_system.models import (
     TaskPriority,
     TaskStatus,
     WorkflowStatus,
-    WorkflowStepStatus,
 )
-
 
 # ---------------------------------------------------------------------------
 # Agent schemas

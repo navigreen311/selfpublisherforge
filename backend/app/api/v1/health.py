@@ -15,7 +15,8 @@ from typing import Any
 import redis.asyncio as redis
 from elasticsearch import AsyncElasticsearch
 from fastapi import APIRouter, Depends, HTTPException, status
-from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession

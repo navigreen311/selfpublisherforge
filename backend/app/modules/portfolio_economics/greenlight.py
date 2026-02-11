@@ -10,16 +10,13 @@ Factors considered:
 - Seasonal adjustments
 - Risk scoring
 """
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
-from typing import Optional
+from datetime import UTC, datetime
 
 from app.modules.portfolio_economics.schemas import (
+    ConfidenceLevel,
     GreenlightRequest,
     GreenlightResult,
-    ConfidenceLevel,
 )
-
 
 # ─── Genre Market Data (baseline estimates) ───────────────────────────────────
 
@@ -114,12 +111,11 @@ def _calculate_series_multiplier(request: GreenlightRequest) -> float:
     if position == 1:
         # First book gets a "series promise" bump -- readers more willing to try
         return 1.15
-    else:
-        # Later books benefit from existing readership
-        base_multiplier = SERIES_MULTIPLIER.get(position, 0.40)
-        # But they also get read-through from book 1 buyers
-        read_through_bonus = 1.0 + (0.3 / position)
-        return base_multiplier * read_through_bonus
+    # Later books benefit from existing readership
+    base_multiplier = SERIES_MULTIPLIER.get(position, 0.40)
+    # But they also get read-through from book 1 buyers
+    read_through_bonus = 1.0 + (0.3 / position)
+    return base_multiplier * read_through_bonus
 
 
 def _identify_risk_factors(request: GreenlightRequest, genre_data: dict) -> list[str]:
@@ -187,7 +183,7 @@ def _identify_opportunity_factors(
 def _generate_suggestions(
     request: GreenlightRequest,
     roi: float,
-    breakeven_months: Optional[float],
+    breakeven_months: float | None,
 ) -> list[str]:
     """Generate actionable suggestions to improve the ROI."""
     suggestions = []
@@ -231,7 +227,7 @@ def _determine_confidence(request: GreenlightRequest) -> ConfidenceLevel:
 
     if score >= 5:
         return ConfidenceLevel.HIGH
-    elif score >= 2:
+    if score >= 2:
         return ConfidenceLevel.MEDIUM
     return ConfidenceLevel.LOW
 
@@ -349,5 +345,5 @@ def calculate_greenlight(request: GreenlightRequest) -> GreenlightResult:
         risk_factors=risk_factors,
         opportunity_factors=opportunity_factors,
         suggestions=suggestions,
-        calculated_at=datetime.now(timezone.utc),
+        calculated_at=datetime.now(UTC),
     )

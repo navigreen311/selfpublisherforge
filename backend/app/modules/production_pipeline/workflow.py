@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from app.modules.production_pipeline.models import (
     PipelineStatus,
     PipelineTask,
     TaskStatus,
 )
-
 
 # ── Valid status transitions ──────────────────────────────────────────────
 
@@ -187,7 +185,7 @@ def compute_critical_path(tasks: list[PipelineTask]) -> list[str]:
 
     # dp[node] = length of longest path ending at node
     dp: dict[str, int] = {}
-    predecessor: dict[str, Optional[str]] = {}
+    predecessor: dict[str, str | None] = {}
 
     for node in order:
         dp[node] = 1
@@ -205,7 +203,7 @@ def compute_critical_path(tasks: list[PipelineTask]) -> list[str]:
 
     # Trace back
     path: list[str] = []
-    current: Optional[str] = end_node
+    current: str | None = end_node
     while current is not None:
         path.append(current)
         current = predecessor[current]
@@ -217,10 +215,10 @@ def compute_critical_path(tasks: list[PipelineTask]) -> list[str]:
 
 
 def get_overdue_tasks(
-    tasks: list[PipelineTask], now: Optional[datetime] = None
+    tasks: list[PipelineTask], now: datetime | None = None
 ) -> list[PipelineTask]:
     """Return tasks that are past their due date and not completed/cancelled."""
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     overdue: list[PipelineTask] = []
     for t in tasks:
         if t.status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED):
@@ -233,12 +231,12 @@ def get_overdue_tasks(
 def get_upcoming_deadlines(
     tasks: list[PipelineTask],
     within_hours: int = 48,
-    now: Optional[datetime] = None,
+    now: datetime | None = None,
 ) -> list[PipelineTask]:
     """Return tasks due within the given window that are not completed."""
     from datetime import timedelta
 
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     cutoff = now + timedelta(hours=within_hours)
     upcoming: list[PipelineTask] = []
     for t in tasks:

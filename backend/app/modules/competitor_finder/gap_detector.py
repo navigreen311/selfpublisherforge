@@ -130,7 +130,7 @@ def detect_cover_gaps(books: list[BookData]) -> list[CoverGap]:
     # Check price-cover correlation (cheap books often have bad covers)
     priced_books = [b for b in books if b.price is not None]
     if priced_books:
-        avg_price = sum(b.price for b in priced_books) / len(priced_books)  # type: ignore[arg-type]
+        avg_price = sum(b.price for b in priced_books) / len(priced_books)  # type: ignore[arg-type,misc]
         cheap_books = [b for b in priced_books if (b.price or 0) < avg_price * GAP_PRICE_THRESHOLD]
         if len(cheap_books) > total * 0.3:
             gaps.append(
@@ -326,7 +326,7 @@ def detect_content_gaps(
     # Check for rating-based content quality gaps
     rated_books = [b for b in books if b.rating is not None]
     if rated_books:
-        avg_rating = sum(b.rating for b in rated_books) / len(rated_books)  # type: ignore[arg-type]
+        avg_rating = sum(b.rating for b in rated_books) / len(rated_books)  # type: ignore[arg-type,misc]
         if avg_rating < 4.0:
             gaps.append(
                 ContentGap(
@@ -425,14 +425,14 @@ def _build_recommendations(
             recs.append(f"HIGH PRIORITY - Content: {gap.description}")
 
     # Cover gaps
-    for gap in cover_gaps[:2]:
-        if gap.opportunity:
-            recs.append(f"Cover: {gap.opportunity}")
+    for cover_gap in cover_gaps[:2]:
+        if cover_gap.opportunity:
+            recs.append(f"Cover: {cover_gap.opportunity}")
 
     # Title gaps
-    for gap in title_gaps[:2]:
-        if gap.opportunity:
-            recs.append(f"Title: {gap.opportunity}")
+    for title_gap in title_gaps[:2]:
+        if title_gap.opportunity:
+            recs.append(f"Title: {title_gap.opportunity}")
 
     if not recs:
         recs.append(

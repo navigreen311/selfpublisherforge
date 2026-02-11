@@ -5,20 +5,18 @@ Aggregates data across all books in a portfolio to provide:
 - Kill/scale decisions for individual books
 - AI-powered recommendations for portfolio optimization
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
-from typing import Optional
 
 from app.modules.portfolio_economics.schemas import (
     BookSummary,
-    PortfolioOverview,
-    KillScaleRequest,
-    KillScaleDecision,
-    DecisionType,
     ConfidenceLevel,
+    DecisionType,
+    KillScaleDecision,
+    KillScaleRequest,
+    PortfolioOverview,
     PortfolioRecommendation,
 )
-
 
 # ─── Kill/Scale Thresholds ────────────────────────────────────────────────────
 
@@ -240,7 +238,7 @@ def calculate_kill_scale(request: KillScaleRequest) -> KillScaleDecision:
         actions=actions,
         estimated_additional_investment=estimated_additional_investment,
         estimated_additional_return=estimated_additional_return,
-        calculated_at=datetime.now(timezone.utc),
+        calculated_at=datetime.now(UTC),
     )
 
 
@@ -315,7 +313,7 @@ def build_portfolio_overview(
         underperformers=underperformers,
         genre_distribution=genre_distribution,
         revenue_by_genre={k: round(v, 2) for k, v in revenue_by_genre.items()},
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
     )
 
 
@@ -348,7 +346,10 @@ def generate_portfolio_recommendations(
         max_genre_count = max(overview.genre_distribution.values()) if overview.genre_distribution else 0
         concentration = max_genre_count / overview.total_books if overview.total_books > 0 else 0
         if concentration > 0.7:
-            dominant_genre = max(overview.genre_distribution, key=overview.genre_distribution.get)
+            dominant_genre = max(
+                overview.genre_distribution,
+                key=lambda k: overview.genre_distribution.get(k, 0)  # type: ignore[arg-type]
+            )
             recommendations.append(PortfolioRecommendation(
                 category="diversification",
                 priority="medium",

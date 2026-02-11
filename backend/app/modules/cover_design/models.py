@@ -2,24 +2,20 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
-    DateTime,
+    JSON,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     Uuid,
-    func,
-    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base, TenantModel
+from app.database import TenantModel
 
 
 class Cover(TenantModel):
@@ -57,12 +53,12 @@ class Cover(TenantModel):
     )
 
     # Relationships
-    variations: Mapped[list["Cover"]] = relationship(
+    variations: Mapped[list[Cover]] = relationship(
         "Cover",
         back_populates="parent_cover",
         foreign_keys=[parent_cover_id],
     )
-    parent_cover: Mapped["Cover | None"] = relationship(
+    parent_cover: Mapped[Cover | None] = relationship(
         "Cover",
         back_populates="variations",
         remote_side="Cover.id",

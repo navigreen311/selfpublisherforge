@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -50,9 +48,9 @@ class DeviceType(str, Enum):
 
 class ListingAnalyzeRequest(BaseModel):
     """Request to analyze an Amazon listing by ASIN or URL."""
-    asin: Optional[str] = Field(None, min_length=10, max_length=10, pattern=r"^[A-Z0-9]{10}$")
-    url: Optional[str] = Field(None, max_length=500)
-    book_id: Optional[UUID] = None
+    asin: str | None = Field(None, min_length=10, max_length=10, pattern=r"^[A-Z0-9]{10}$")
+    url: str | None = Field(None, max_length=500)
+    book_id: UUID | None = None
 
     model_config = ConfigDict(json_schema_extra={
         "examples": [
@@ -64,12 +62,12 @@ class ListingAnalyzeRequest(BaseModel):
 
 class BlurbGenerateRequest(BaseModel):
     """Request to generate optimized blurb variations."""
-    book_id: Optional[UUID] = None
+    book_id: UUID | None = None
     current_blurb: str = Field(..., min_length=10, max_length=5000)
     genre: Genre = Genre.OTHER
-    target_audience: Optional[str] = Field(None, max_length=500)
+    target_audience: str | None = Field(None, max_length=500)
     keywords: list[str] = Field(default_factory=list, max_length=20)
-    tone: Optional[str] = Field(None, max_length=100)
+    tone: str | None = Field(None, max_length=100)
     num_variants: int = Field(default=3, ge=1, le=5)
 
 
@@ -84,16 +82,16 @@ class ABTestCreateRequest(BaseModel):
 
 class ABTestUpdateRequest(BaseModel):
     """Request to update an existing A/B test."""
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    variant_a: Optional[str] = Field(None, min_length=10, max_length=5000)
-    variant_b: Optional[str] = Field(None, min_length=10, max_length=5000)
-    duration_days: Optional[int] = Field(None, ge=1, le=90)
-    status: Optional[ABTestStatus] = None
+    name: str | None = Field(None, min_length=1, max_length=200)
+    variant_a: str | None = Field(None, min_length=10, max_length=5000)
+    variant_b: str | None = Field(None, min_length=10, max_length=5000)
+    duration_days: int | None = Field(None, ge=1, le=90)
+    status: ABTestStatus | None = None
 
 
 class LookInsideAnalyzeRequest(BaseModel):
     """Request to analyze the Look Inside preview effectiveness."""
-    book_id: Optional[UUID] = None
+    book_id: UUID | None = None
     preview_text: str = Field(..., min_length=50, max_length=20000)
     genre: Genre = Genre.OTHER
     chapter_titles: list[str] = Field(default_factory=list)
@@ -102,11 +100,11 @@ class LookInsideAnalyzeRequest(BaseModel):
 class MobileCheckRequest(BaseModel):
     """Request to check listing appearance on mobile."""
     title: str = Field(..., min_length=1, max_length=500)
-    subtitle: Optional[str] = Field(None, max_length=500)
+    subtitle: str | None = Field(None, max_length=500)
     blurb: str = Field(..., min_length=10, max_length=5000)
     author_name: str = Field(..., min_length=1, max_length=200)
-    cover_image_url: Optional[str] = Field(None, max_length=1000)
-    price: Optional[float] = Field(None, ge=0)
+    cover_image_url: str | None = Field(None, max_length=1000)
+    price: float | None = Field(None, ge=0)
 
 
 # ---------------------------------------------------------------------------
@@ -119,8 +117,8 @@ class Recommendation(BaseModel):
     severity: str = Field(..., pattern=r"^(critical|warning|info)$")
     message: str
     suggestion: str
-    current_value: Optional[str] = None
-    recommended_value: Optional[str] = None
+    current_value: str | None = None
+    recommended_value: str | None = None
 
 
 class TitleAnalysis(BaseModel):
@@ -160,15 +158,15 @@ class CategoryAnalysis(BaseModel):
     score: float = Field(..., ge=0, le=100)
     current_categories: list[str] = Field(default_factory=list)
     suggested_categories: list[str] = Field(default_factory=list)
-    category_rank_potential: Optional[str] = None
+    category_rank_potential: str | None = None
 
 
 class PriceAnalysis(BaseModel):
     """Analysis of the listing's pricing."""
     score: float = Field(..., ge=0, le=100)
-    current_price: Optional[float] = None
-    genre_avg_price: Optional[float] = None
-    suggested_range: Optional[str] = None
+    current_price: float | None = None
+    genre_avg_price: float | None = None
+    suggested_range: str | None = None
     issues: list[str] = Field(default_factory=list)
 
 
@@ -180,8 +178,8 @@ class ListingAnalysis(BaseModel):
     """Full listing analysis response."""
     model_config = ConfigDict(from_attributes=True)
 
-    asin: Optional[str] = None
-    title: Optional[str] = None
+    asin: str | None = None
+    title: str | None = None
     title_score: float = Field(..., ge=0, le=100)
     blurb_score: float = Field(..., ge=0, le=100)
     keyword_score: float = Field(..., ge=0, le=100)
@@ -194,7 +192,7 @@ class ListingAnalysis(BaseModel):
     category_analysis: CategoryAnalysis
     price_analysis: PriceAnalysis
     recommendations: list[Recommendation] = Field(default_factory=list)
-    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class BlurbVariant(BaseModel):
@@ -235,10 +233,10 @@ class ABTestResponse(BaseModel):
     status: ABTestStatus
     variant_a: ABTestVariantResult
     variant_b: ABTestVariantResult
-    winner: Optional[str] = None
-    confidence: Optional[float] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    winner: str | None = None
+    confidence: float | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -250,13 +248,13 @@ class ABTestResultsResponse(BaseModel):
     status: ABTestStatus
     variant_a: ABTestVariantResult
     variant_b: ABTestVariantResult
-    winner: Optional[str] = None
-    confidence: Optional[float] = None
+    winner: str | None = None
+    confidence: float | None = None
     is_statistically_significant: bool = False
     sample_size_sufficient: bool = False
     minimum_sample_needed: int = 100
-    days_running: Optional[int] = None
-    days_remaining: Optional[int] = None
+    days_running: int | None = None
+    days_remaining: int | None = None
 
 
 class LookInsideSection(BaseModel):
@@ -285,14 +283,14 @@ class MobileTruncation(BaseModel):
     visible_length: int
     is_truncated: bool
     visible_text: str
-    truncated_text: Optional[str] = None
+    truncated_text: str | None = None
 
 
 class MobileCheckResult(BaseModel):
     """Mobile conversion check results."""
     overall_score: float = Field(..., ge=0, le=100)
     title_display: MobileTruncation
-    subtitle_display: Optional[MobileTruncation] = None
+    subtitle_display: MobileTruncation | None = None
     blurb_fold_point: int
     blurb_above_fold: str
     blurb_above_fold_word_count: int
@@ -307,10 +305,10 @@ class MobileCheckResult(BaseModel):
 class ConversionScores(BaseModel):
     """Aggregate conversion optimization scores for a book."""
     book_id: UUID
-    listing_score: Optional[float] = None
-    blurb_score: Optional[float] = None
-    mobile_score: Optional[float] = None
-    look_inside_score: Optional[float] = None
+    listing_score: float | None = None
+    blurb_score: float | None = None
+    mobile_score: float | None = None
+    look_inside_score: float | None = None
     overall_score: float = Field(..., ge=0, le=100)
-    last_analyzed_at: Optional[datetime] = None
+    last_analyzed_at: datetime | None = None
     recommendations_count: int = 0

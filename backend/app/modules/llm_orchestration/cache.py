@@ -13,7 +13,6 @@ import json
 import logging
 import time
 from collections import OrderedDict
-from typing import Optional
 
 import redis.asyncio as aioredis
 
@@ -46,7 +45,7 @@ class _MemoryCache:
         self._store: OrderedDict[str, tuple[float, dict]] = OrderedDict()
         self._max_entries = max_entries
 
-    def get(self, key: str) -> Optional[dict]:
+    def get(self, key: str) -> dict | None:
         entry = self._store.get(key)
         if entry is None:
             return None
@@ -80,8 +79,8 @@ class SemanticCache:
 
     def __init__(
         self,
-        redis_client: Optional[aioredis.Redis] = None,
-        ttl_overrides: Optional[dict[TaskType, int]] = None,
+        redis_client: aioredis.Redis | None = None,
+        ttl_overrides: dict[TaskType, int] | None = None,
         memory_max_entries: int = _DEFAULT_MEMORY_MAX_ENTRIES,
     ) -> None:
         self._redis = redis_client
@@ -89,7 +88,7 @@ class SemanticCache:
         self._memory = _MemoryCache(max_entries=memory_max_entries)
         self._redis_available: bool = True  # optimistic; flipped on first failure
 
-    async def _get_redis(self) -> Optional[aioredis.Redis]:
+    async def _get_redis(self) -> aioredis.Redis | None:
         """Lazily initialize the Redis connection. Returns None if unavailable."""
         if self._redis is None:
             try:
@@ -148,7 +147,7 @@ class SemanticCache:
         prompt: str,
         model_id: str,
         system_prompt: str | None = None,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Look up a cached response. Returns None on miss or if caching disabled."""
         ttl = self.get_ttl(task_type)
         if ttl <= 0:

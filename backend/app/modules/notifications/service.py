@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import smtplib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -244,7 +244,7 @@ async def mark_as_read(db: AsyncSession, notification_id: UUID, user_id: UUID) -
             code="NOTIFICATION_NOT_FOUND",
             message="Notification not found",
         )
-    notification.read_at = datetime.now(timezone.utc)
+    notification.read_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(notification)
     return notification
@@ -258,7 +258,7 @@ async def mark_all_as_read(db: AsyncSession, user_id: UUID) -> int:
     result = await db.execute(
         update(Notification)
         .where(Notification.user_id == user_id, Notification.read_at.is_(None))
-        .values(read_at=datetime.now(timezone.utc))
+        .values(read_at=datetime.now(UTC))
     )
     return result.rowcount  # type: ignore[return-value]
 

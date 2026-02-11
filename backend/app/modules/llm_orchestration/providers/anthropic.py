@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import anthropic
 
@@ -70,7 +70,7 @@ class AnthropicProvider(BaseLLMProvider):
                 metadata={"error": str(exc)},
             )
 
-    async def generate_stream(
+    async def generate_stream(  # type: ignore[override,misc]
         self, request: LLMRequest
     ) -> AsyncIterator[LLMStreamChunk]:
         """Stream response chunks from Claude using SSE."""
@@ -118,7 +118,7 @@ class AnthropicProvider(BaseLLMProvider):
                 messages=[{"role": "user", "content": "ping"}],
             )
             return True
-        except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+        except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
             logger.warning("Anthropic health check failed: connection error", exc_info=True)
             return False
         except anthropic.APIError as exc:

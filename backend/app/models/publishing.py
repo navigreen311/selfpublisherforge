@@ -9,9 +9,10 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
-    Numeric,
     String,
     Text,
+)
+from sqlalchemy import (
     Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB

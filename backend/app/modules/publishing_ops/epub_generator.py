@@ -12,8 +12,7 @@ from __future__ import annotations
 import io
 import uuid
 import zipfile
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 from xml.sax.saxutils import escape as xml_escape
 
 from app.modules.publishing_ops.schemas import (
@@ -112,7 +111,7 @@ def _build_content_opf(
 ) -> str:
     uid = str(book_id)
     safe_title = xml_escape(title)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     author_elements = "\n    ".join(
         f"<dc:creator>{xml_escape(a)}</dc:creator>" for a in (authors or ["Unknown"])

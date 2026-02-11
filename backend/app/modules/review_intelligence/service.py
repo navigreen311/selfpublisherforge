@@ -2,11 +2,10 @@
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, select, update
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,9 +23,7 @@ from app.modules.review_intelligence.schemas import (
     BatchAnalysisRequest,
     BatchAnalysisResponse,
     ReputationHealthMetrics,
-    ReviewAlertRead,
     ReviewListParams,
-    ReviewRead,
     SentimentBreakdown,
     SentimentLabel,
     VelocityPeriod,
@@ -34,12 +31,10 @@ from app.modules.review_intelligence.schemas import (
 )
 from app.modules.review_intelligence.sentiment import (
     analyze_sentiment_batch,
-    analyze_sentiment_llm,
     extract_themes_from_results,
 )
 from app.modules.review_intelligence.velocity import (
     compute_velocity_from_snapshots,
-    detect_trend,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,7 +48,7 @@ async def list_reviews(
     db: AsyncSession,
     org_id: UUID,
     params: ReviewListParams,
-) -> tuple[list[BookReview], Optional[str], int]:
+) -> tuple[list[BookReview], str | None, int]:
     """List reviews for an org's books with filtering and pagination.
 
     Returns:
@@ -123,7 +118,7 @@ async def get_reviews_for_book(
     org_id: UUID,
     book_id: UUID,
     params: ReviewListParams,
-) -> tuple[list[BookReview], Optional[str], int]:
+) -> tuple[list[BookReview], str | None, int]:
     """Get reviews for a specific book with sentiment data."""
     stmt = select(BookReview).where(
         and_(
@@ -310,8 +305,8 @@ async def analyze_reviews_batch(
     analysis_results = await analyze_sentiment_batch(review_dicts)
 
     # Update reviews with analysis results
-    now = datetime.now(timezone.utc)
-    for review, result_item in zip(reviews, analysis_results):
+    now = datetime.now(UTC)
+    for review, result_item in zip(reviews, analysis_results, strict=False):
         review.sentiment = result_item.sentiment.value
         review.sentiment_score = result_item.score
         review.themes = {
@@ -421,7 +416,7 @@ def _generate_insights(
 
 async def list_alerts(
     db: AsyncSession, org_id: UUID, params: AlertListParams
-) -> tuple[list[ReviewAlert], Optional[str], int]:
+) -> tuple[list[ReviewAlert], str | None, int]:
     """List review alerts with filtering."""
     stmt = select(ReviewAlert).where(
         and_(
@@ -476,7 +471,7 @@ async def acknowledge_alert(
     org_id: UUID,
     alert_id: UUID,
     user_id: UUID,
-) -> Optional[ReviewAlert]:
+) -> ReviewAlert | None:
     """Acknowledge a review alert."""
     stmt = select(ReviewAlert).where(
         and_(
@@ -492,7 +487,7 @@ async def acknowledge_alert(
         return None
 
     alert.is_acknowledged = True
-    alert.acknowledged_at = datetime.now(timezone.utc)
+    alert.acknowledged_at = datetime.now(UTC)
     alert.acknowledged_by = user_id
     db.add(alert)
     await db.flush()
@@ -606,7 +601,7 @@ async def compute_reputation_score(
             "rating_distribution": rating_distribution,
             "recommendations": recommendations,
         }
-        rep_score.last_calculated_at = datetime.now(timezone.utc)
+        rep_score.last_calculated_at = datetime.now(UTC)
     else:
         rep_score = ReputationScore(
             org_id=org_id,
@@ -621,7 +616,7 @@ async def compute_reputation_score(
                 "rating_distribution": rating_distribution,
                 "recommendations": recommendations,
             },
-            last_calculated_at=datetime.now(timezone.utc),
+            last_calculated_at=datetime.now(UTC),
         )
         db.add(rep_score)
 
@@ -685,20 +680,19 @@ def _score_to_grade(score: float) -> str:
     """Convert numerical score to letter grade."""
     if score >= 95:
         return "A+"
-    elif score >= 90:
+    if score >= 90:
         return "A"
-    elif score >= 85:
+    if score >= 85:
         return "B+"
-    elif score >= 80:
+    if score >= 80:
         return "B"
-    elif score >= 75:
+    if score >= 75:
         return "C+"
-    elif score >= 70:
+    if score >= 70:
         return "C"
-    elif score >= 60:
+    if score >= 60:
         return "D"
-    else:
-        return "F"
+    return "F"
 
 
 def _generate_reputation_recommendations(
@@ -788,7 +782,7 @@ Return ONLY valid JSON."""
             messages=[{"role": "user", "content": prompt}],
         )
 
-        response_text = message.content[0].text.strip()
+        response_text = message.content[0].text.strip()  # type: ignore[union-attr]
         result_data = json.loads(response_text)
 
         tips = [

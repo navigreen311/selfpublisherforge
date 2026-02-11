@@ -92,7 +92,7 @@ async def extract_from_file(file_name: str, file_content_base64: str) -> dict[st
 def _extract_pdf_text(data: bytes) -> str:
     """Extract text from PDF bytes. Requires PyPDF2 or falls back gracefully."""
     try:
-        import PyPDF2  # noqa: F401
+        import PyPDF2
 
         reader = PyPDF2.PdfReader(io.BytesIO(data))
         pages = [page.extract_text() or "" for page in reader.pages]
@@ -143,9 +143,10 @@ async def extract_key_facts(content: str) -> dict[str, Any]:
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw_text = message.content[0].text
+        content_block = message.content[0]
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
         return _parse_extraction_response(raw_text)
-    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI fact extraction failed due to connection issue", exc_info=True)
         return {
             "key_facts": "",
@@ -159,7 +160,7 @@ async def extract_key_facts(content: str) -> dict[str, Any]:
             "tags": [],
             "credibility_score": None,
         }
-    except (ValueError, KeyError, IndexError) as exc:
+    except (ValueError, KeyError, IndexError):
         logger.error("AI fact extraction failed due to response parsing error", exc_info=True)
         return {
             "key_facts": "",
@@ -194,9 +195,10 @@ async def summarize_content(content: str) -> dict[str, Any]:
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw_text = message.content[0].text
+        content_block = message.content[0]
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
         return _parse_summary_response(raw_text)
-    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI summarization failed due to connection issue", exc_info=True)
         return {
             "summary": "Summary could not be generated.",
@@ -210,7 +212,7 @@ async def summarize_content(content: str) -> dict[str, Any]:
             "key_points": [],
             "suggested_tags": [],
         }
-    except (ValueError, KeyError, IndexError) as exc:
+    except (ValueError, KeyError, IndexError):
         logger.error("AI summarization failed due to response parsing error", exc_info=True)
         return {
             "summary": "Summary could not be generated.",
@@ -245,20 +247,21 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw_text = message.content[0].text
+        content_block = message.content[0]
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
         import json
 
         data = json.loads(raw_text)
         if isinstance(data, list):
             return data
         return data.get("suggestions", [])
-    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+    except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI suggestion failed due to connection issue", exc_info=True)
         return []
     except (anthropic.APIStatusError, anthropic.APIError) as exc:
         logger.error("AI suggestion failed due to API error: %s", exc, exc_info=True)
         return []
-    except (ValueError, json.JSONDecodeError, KeyError, IndexError) as exc:
+    except (ValueError, json.JSONDecodeError, KeyError, IndexError):
         logger.error("AI suggestion failed due to response parsing error", exc_info=True)
         return []
 

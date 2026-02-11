@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from app.modules.kdp_validation.rules import (
     BLEED_SIZE,
+    MIN_PAGE_COUNT,
     MIN_PRINT_DPI,
     TRIM_SIZES,
     PaperType,
     calculate_spine_width,
     get_inside_margin,
     get_max_page_count,
-    MIN_PAGE_COUNT,
 )
 from app.modules.kdp_validation.schemas import (
     PrintValidationRequest,

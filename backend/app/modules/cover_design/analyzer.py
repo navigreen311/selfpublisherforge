@@ -16,8 +16,8 @@ from PIL import Image, ImageStat
 
 from app.modules.cover_design.schemas import (
     ColorAnalysis,
-    CompetitorCoverAnalysis,
     CompetitorAnalysisResponse,
+    CompetitorCoverAnalysis,
     CoverGenre,
 )
 
@@ -192,6 +192,7 @@ async def analyze_single_cover(
             image_url=image_url,
             dominant_colors=[],
             overall_mood="Unable to analyse — image download failed",
+            effectiveness_score=0.0,
         )
 
     try:
@@ -205,6 +206,7 @@ async def analyze_single_cover(
             image_url=image_url,
             dominant_colors=[],
             overall_mood="Unable to analyse — image processing failed",
+            effectiveness_score=0.0,
         )
 
     return CompetitorCoverAnalysis(

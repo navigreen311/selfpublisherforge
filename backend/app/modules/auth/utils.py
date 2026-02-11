@@ -1,11 +1,11 @@
 """Helper utilities for the auth module: token generation, email tokens, TOTP helpers."""
 
-import secrets
 import hashlib
 import hmac
+import secrets
 import struct
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
 
 from app.config import get_settings
@@ -29,7 +29,7 @@ def generate_token_hash(token: str) -> str:
 
 def token_expiry(hours: int = 24) -> datetime:
     """Return a UTC datetime *hours* from now."""
-    return datetime.now(timezone.utc) + timedelta(hours=hours)
+    return datetime.now(UTC) + timedelta(hours=hours)
 
 
 # ---------------------------------------------------------------------------

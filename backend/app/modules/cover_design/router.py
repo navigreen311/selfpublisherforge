@@ -15,6 +15,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.cover_design import service
@@ -27,7 +28,6 @@ from app.modules.cover_design.schemas import (
     CoverTemplateResponse,
     CoverVariationRequest,
 )
-from app.core.contracts import SuccessResponse
 
 router = APIRouter(prefix="/covers", tags=["covers"])
 
@@ -126,4 +126,4 @@ async def delete_cover(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cover {cover_id} not found",
         )
-    return None
+    return

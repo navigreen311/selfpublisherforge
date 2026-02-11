@@ -5,11 +5,10 @@ Orchestrates cover generation, template management, and competitor analysis.
 from __future__ import annotations
 
 import logging
-import uuid
-from typing import Any
+from datetime import UTC
 from uuid import UUID
 
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
@@ -314,7 +313,7 @@ async def delete_cover(
     cover_id: UUID,
 ) -> bool:
     """Soft-delete a cover. Returns True if found and deleted."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     stmt = select(Cover).where(
         Cover.id == cover_id,
@@ -330,6 +329,6 @@ async def delete_cover(
             message=f"Cover {cover_id} not found",
         )
 
-    cover.deleted_at = datetime.now(timezone.utc)
+    cover.deleted_at = datetime.now(UTC)
     await db.flush()
     return True

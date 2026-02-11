@@ -19,7 +19,7 @@ Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -44,9 +44,10 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
     based on their delay_days / delay_hours configuration.
     """
     import asyncio
+
     from app.database import async_session
-    from app.modules.marketing.service import MarketingService
     from app.models.marketing import EmailSendStatus
+    from app.modules.marketing.service import MarketingService
     from app.modules.notifications.email import send_transactional_email
 
     async def _process():
@@ -66,7 +67,7 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
                 if template.send_status != EmailSendStatus.SCHEDULED:
                     continue
 
-                if template.scheduled_at and template.scheduled_at <= datetime.now(timezone.utc):
+                if template.scheduled_at and template.scheduled_at <= datetime.now(UTC):
                     success = True
                     for recipient_email in recipients:
                         ok = send_transactional_email(
@@ -84,7 +85,7 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
 
                     if success:
                         template.send_status = EmailSendStatus.SENT
-                        template.sent_at = datetime.now(timezone.utc)
+                        template.sent_at = datetime.now(UTC)
                         sent_count += 1
                         logger.info(
                             f"Sent email '{template.subject}' for sequence {sequence_id}"
@@ -129,16 +130,18 @@ def send_social_post_reminders(self, org_id: str) -> dict:
     Celery Beat schedule.
     """
     import asyncio
+
+    from sqlalchemy import and_, select
+
     from app.database import async_session
     from app.models.marketing import SocialPost, SocialPostStatus
-    from app.modules.notifications.service import create_notification
-    from app.modules.notifications.schemas import CreateNotification
     from app.modules.notifications.models import NotificationType
-    from sqlalchemy import select, and_
+    from app.modules.notifications.schemas import CreateNotification
+    from app.modules.notifications.service import create_notification
 
     async def _process():
         async with async_session() as db:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             tomorrow = now + timedelta(hours=24)
 
             stmt = select(SocialPost).where(
@@ -207,6 +210,7 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
     days ago and who have not yet submitted a review.
     """
     import asyncio
+
     from app.database import async_session
     from app.modules.marketing.arc_manager import ARCManager
     from app.modules.notifications.email import send_transactional_email
@@ -270,10 +274,11 @@ def generate_launch_plan_async(
     The result is saved to the database and a notification is sent.
     """
     import asyncio
+
     from app.database import async_session
     from app.modules.marketing.launch_planner import LaunchPlanner
-    from app.modules.marketing.service import MarketingService
     from app.modules.marketing.schemas import GenerateLaunchPlanRequest
+    from app.modules.marketing.service import MarketingService
 
     async def _process():
         request = GenerateLaunchPlanRequest(**request_data)

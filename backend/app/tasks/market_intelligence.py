@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select
@@ -168,7 +168,7 @@ def update_bsr_history(self):
                         comp.asin, marketplace=marketplace
                     )
                     if product and product.bsr is not None:
-                        now_iso = datetime.now(tz=timezone.utc).isoformat()
+                        now_iso = datetime.now(tz=UTC).isoformat()
                         bsr_point = {
                             "date": now_iso,
                             "bsr": product.bsr,

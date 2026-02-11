@@ -1,19 +1,18 @@
 """Seed demo projects and books."""
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.content import Manuscript, ManuscriptStatus, ContentType
+from app.models.content import ContentType, Manuscript, ManuscriptStatus
 from app.models.project import (
-    Project,
-    ProjectType,
-    ProjectStatus,
     Book,
     BookFormat,
     BookStatus,
     PenName,
+    Project,
+    ProjectStatus,
+    ProjectType,
 )
 
 

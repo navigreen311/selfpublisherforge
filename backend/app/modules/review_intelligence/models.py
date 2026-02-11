@@ -2,13 +2,11 @@
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     Boolean,
     DateTime,
     Float,
-    ForeignKey,
     Index,
     Integer,
     String,
@@ -16,10 +14,11 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database import Base, TenantModel
+from app.database import TenantModel
 
 
 class BookReview(TenantModel):
@@ -29,13 +28,13 @@ class BookReview(TenantModel):
 
     book_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), index=True)
     source: Mapped[str] = mapped_column(String(50))  # amazon, goodreads, bookbub, etc.
-    source_review_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reviewer_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reviewer_profile_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_review_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reviewer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reviewer_profile_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     star_rating: Mapped[float] = mapped_column(Float)
-    title: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    review_date: Mapped[Optional[datetime]] = mapped_column(
+    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    review_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     verified_purchase: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -43,12 +42,12 @@ class BookReview(TenantModel):
     is_competitor: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
     # Sentiment analysis results
-    sentiment: Mapped[Optional[str]] = mapped_column(
+    sentiment: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )  # positive, negative, neutral, mixed
-    sentiment_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    themes: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    analyzed_at: Mapped[Optional[datetime]] = mapped_column(
+    sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    themes: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    analyzed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -78,12 +77,12 @@ class ReviewAlert(TenantModel):
     severity: Mapped[str] = mapped_column(String(20))  # low, medium, high, critical
     title: Mapped[str] = mapped_column(String(500))
     description: Mapped[str] = mapped_column(Text)
-    data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
-    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(
+    acknowledged_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    acknowledged_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    acknowledged_by: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), nullable=True
     )
 
@@ -103,7 +102,7 @@ class ReviewVelocitySnapshot(TenantModel):
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     review_count: Mapped[int] = mapped_column(Integer, default=0)
-    avg_rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    avg_rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     positive_count: Mapped[int] = mapped_column(Integer, default=0)
     neutral_count: Mapped[int] = mapped_column(Integer, default=0)
     negative_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -139,7 +138,7 @@ class ReputationScore(TenantModel):
     health_grade: Mapped[str] = mapped_column(
         String(2), default="C"
     )  # A+, A, B+, B, C+, C, D, F
-    details: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     last_calculated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

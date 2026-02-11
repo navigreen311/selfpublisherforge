@@ -4,18 +4,17 @@ Handles all business logic: user CRUD, org management, invitation flow,
 role validation, session management, and API key operations.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any
-from uuid import UUID, uuid4
 import hashlib
 import json
 import secrets
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID, uuid4
 
 from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,8 +48,10 @@ class UserService:
     @staticmethod
     async def get_user_profile(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
         """Retrieve user profile by id."""
+        from sqlalchemy import inspect as sa_inspect
+        from sqlalchemy import select
+
         from app.models.user import User
-        from sqlalchemy import select, inspect as sa_inspect
 
         result = await db.execute(
             select(User).where(User.id == user_id, User.deleted_at.is_(None))
@@ -80,7 +81,7 @@ class UserService:
                 code="NO_FIELDS",
                 message="No fields to update",
             )
-        data["updated_at"] = datetime.now(timezone.utc)
+        data["updated_at"] = datetime.now(UTC)
 
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["user_id"] = user_id
@@ -105,7 +106,7 @@ class UserService:
             ),
             {
                 "prefs": json.dumps(preferences),
-                "now": datetime.now(timezone.utc),
+                "now": datetime.now(UTC),
                 "user_id": user_id,
             },
         )
@@ -140,12 +141,12 @@ class UserService:
                 "WHERE id = :sid AND user_id = :uid AND revoked_at IS NULL"
             ),
             {
-                "now": datetime.now(timezone.utc),
+                "now": datetime.now(UTC),
                 "sid": session_id,
                 "uid": user_id,
             },
         )
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore[attr-defined]
             raise AppException(
                 status_code=404,
                 code="SESSION_NOT_FOUND",
@@ -192,7 +193,7 @@ class UserService:
                 message="No fields to update",
             )
 
-        data["updated_at"] = datetime.now(timezone.utc)
+        data["updated_at"] = datetime.now(UTC)
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["oid"] = org_id
         await db.execute(
@@ -254,7 +255,7 @@ class UserService:
                 message="A pending invitation already exists for this email",
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         invite_id = uuid4()
         expires = now + timedelta(days=7)
 
@@ -311,12 +312,12 @@ class UserService:
             ),
             {
                 "role": new_role,
-                "now": datetime.now(timezone.utc),
+                "now": datetime.now(UTC),
                 "uid": target_user_id,
                 "oid": org_id,
             },
         )
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore[attr-defined]
             raise AppException(
                 status_code=404,
                 code="MEMBER_NOT_FOUND",
@@ -373,7 +374,7 @@ class UserService:
                 "WHERE id = :uid AND org_id = :oid"
             ),
             {
-                "now": datetime.now(timezone.utc),
+                "now": datetime.now(UTC),
                 "uid": target_user_id,
                 "oid": org_id,
             },
@@ -399,7 +400,7 @@ class UserService:
 
         raw_key, prefix = _generate_api_key()
         key_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = None
         if data.get("expires_in_days"):
             expires_at = now + timedelta(days=data["expires_in_days"])
@@ -478,12 +479,12 @@ class UserService:
                 "WHERE id = :kid AND org_id = :oid AND is_active = true"
             ),
             {
-                "now": datetime.now(timezone.utc),
+                "now": datetime.now(UTC),
                 "kid": key_id,
                 "oid": org_id,
             },
         )
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore[attr-defined]
             raise AppException(
                 status_code=404,
                 code="API_KEY_NOT_FOUND",

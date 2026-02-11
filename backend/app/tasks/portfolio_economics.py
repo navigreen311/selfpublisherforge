@@ -17,7 +17,7 @@ Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 import asyncio
 import logging
-from datetime import datetime, date, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -61,10 +61,11 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
     logger.info("Taking portfolio metrics snapshot for org %s", org_id)
 
     async def _snapshot():
-        from sqlalchemy import select, func, and_
+        from sqlalchemy import and_, func, select
+
         from app.models.project import Book, BookStatus, Project
-        from app.modules.analytics.models import RoyaltyRecord, PortfolioMetricSnapshot
         from app.modules.analytics.metrics import _compute_total_expenses
+        from app.modules.analytics.models import PortfolioMetricSnapshot, RoyaltyRecord
 
         async with async_session() as db:
             try:
@@ -80,7 +81,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                 else:
                     org_ids = [target_org_id]
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 thirty_days_ago = now - timedelta(days=30)
                 snapshots_created = 0
                 last_snapshot = None
@@ -261,7 +262,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                 }
                 result["status"] = "completed"
                 result["snapshots_created"] = snapshots_created
-                result["completed_at"] = datetime.now(timezone.utc).isoformat()
+                result["completed_at"] = datetime.now(UTC).isoformat()
                 return result
 
             except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
@@ -319,12 +320,13 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
     )
 
     async def _refresh():
-        from sqlalchemy import select, func, and_
+        from sqlalchemy import and_, func, select
+
         from app.models.project import Book, Project
         from app.modules.analytics.models import RoyaltyRecord
         from app.modules.portfolio_economics.audience_service import (
-            build_audience_personas,
             build_also_bought_intelligence,
+            build_audience_personas,
         )
         from app.modules.portfolio_economics.schemas import AudienceAnalyzeRequest
 
@@ -407,7 +409,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
                         updated_metadata = dict(metadata)
                         updated_metadata["audience_personas_count"] = len(personas)
                         updated_metadata["audience_last_refreshed"] = datetime.now(
-                            timezone.utc
+                            UTC
                         ).isoformat()
                         updated_metadata["total_units_sold"] = sales_row[0]
                         updated_metadata["total_revenue"] = str(sales_row[1])
@@ -422,7 +424,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
                     "also_bought_refreshed": total_also_bought_refreshed,
                     "churn_scores_updated": total_also_bought_refreshed,
                     "status": "completed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": datetime.now(UTC).isoformat(),
                 }
 
             except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
@@ -472,13 +474,14 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
     logger.info("Generating kill/scale alerts for org %s", org_id)
 
     async def _generate():
-        from sqlalchemy import select, func, and_
+        from sqlalchemy import and_, func, select
+
         from app.models.project import Book, BookStatus, Project
         from app.models.user import User
         from app.modules.analytics.models import RoyaltyRecord
         from app.modules.notifications.models import Notification, NotificationType
         from app.modules.portfolio_economics.portfolio_service import calculate_kill_scale
-        from app.modules.portfolio_economics.schemas import KillScaleRequest, DecisionType
+        from app.modules.portfolio_economics.schemas import DecisionType, KillScaleRequest
 
         async with async_session() as db:
             try:
@@ -493,7 +496,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
                 else:
                     org_ids = [target_org_id]
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 thirty_days_ago = now - timedelta(days=30)
 
                 total_analyzed = 0
@@ -662,7 +665,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
                     "revive_recommendations": total_revive,
                     "alerts_sent": total_alerts,
                     "status": "completed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": datetime.now(UTC).isoformat(),
                 }
 
             except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:
@@ -712,12 +715,12 @@ def update_seasonal_calendar(self) -> dict:
     logger.info("Updating seasonal calendar")
 
     async def _update():
-        from sqlalchemy import select, func, and_
+        from sqlalchemy import and_, select
+
         from app.models.project import Book, Project
-        from app.modules.analytics.models import RoyaltyRecord
         from app.modules.portfolio_economics.seasonal_service import (
-            get_seasonal_calendar,
             get_niche_seasonality,
+            get_seasonal_calendar,
         )
 
         async with async_session() as db:
@@ -777,7 +780,7 @@ def update_seasonal_calendar(self) -> dict:
                     "genres_updated": genres_updated,
                     "active_genres": genre_list,
                     "status": "completed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": datetime.now(UTC).isoformat(),
                 }
 
             except (SQLAlchemyError, ValueError, TypeError, KeyError) as exc:

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from app.modules.kdp_validation.rules import (
     ALLOWED_EBOOK_IMAGE_FORMATS,
-    DISALLOWED_EBOOK_ELEMENTS,
     MAX_EBOOK_FILE_SIZE_BYTES,
     MAX_EBOOK_IMAGE_SIZE_BYTES,
     MIN_EBOOK_DPI,

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 
 class TaskType(str, Enum):
@@ -106,7 +105,7 @@ class ModelRouter:
 
     def __init__(
         self,
-        routing_table: Optional[dict[TaskType, ModelRoute]] = None,
+        routing_table: dict[TaskType, ModelRoute] | None = None,
     ) -> None:
         self._table = routing_table or ROUTING_TABLE
 

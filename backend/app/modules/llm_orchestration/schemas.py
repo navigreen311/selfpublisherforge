@@ -6,16 +6,16 @@ quality reporting, and usage statistics.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 def _utcnow() -> datetime:
     """Return timezone-aware UTC now."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ class ModelConfig(BaseModel):
 
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     top_p: float = Field(default=1.0, ge=0.0, le=1.0)
-    max_tokens: Optional[int] = Field(
+    max_tokens: int | None = Field(
         default=None,
         ge=1,
         description="Max output tokens. None uses the route default.",
@@ -87,18 +87,18 @@ class CompletionRequest(BaseModel):
 
     task_type: TaskTypeEnum
     prompt: str = Field(..., min_length=1, max_length=100_000)
-    context: Optional[str] = Field(
+    context: str | None = Field(
         default=None,
         max_length=200_000,
         description="Optional context prepended to the prompt.",
     )
-    system_prompt: Optional[str] = Field(
+    system_prompt: str | None = Field(
         default=None,
         max_length=50_000,
         description="Optional system prompt for the model.",
     )
     config: ModelConfig = Field(default_factory=ModelConfig)
-    org_id: Optional[str] = Field(
+    org_id: str | None = Field(
         default=None,
         description="Organization ID for budget tracking.",
     )
@@ -119,7 +119,7 @@ class CompletionResponse(BaseModel):
     cache_hit: bool = False
     fallback_used: bool = False
     attempts: int = 0
-    quality_report: Optional[QualityReport] = None
+    quality_report: QualityReport | None = None
     succeeded: bool = False
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=_utcnow)
@@ -138,12 +138,12 @@ class ChatRequest(BaseModel):
 
     task_type: TaskTypeEnum
     messages: list[ChatMessage] = Field(..., min_length=1)
-    system_prompt: Optional[str] = Field(
+    system_prompt: str | None = Field(
         default=None,
         max_length=50_000,
     )
     config: ModelConfig = Field(default_factory=ModelConfig)
-    org_id: Optional[str] = None
+    org_id: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -161,7 +161,7 @@ class ChatResponse(BaseModel):
     cache_hit: bool = False
     fallback_used: bool = False
     attempts: int = 0
-    quality_report: Optional[QualityReport] = None
+    quality_report: QualityReport | None = None
     succeeded: bool = False
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=_utcnow)

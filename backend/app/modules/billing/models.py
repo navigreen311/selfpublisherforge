@@ -1,6 +1,5 @@
 """SQLAlchemy models for billing events and audit trail."""
 
-import enum
 import uuid
 from datetime import datetime
 
@@ -8,7 +7,6 @@ from sqlalchemy import (
     DateTime,
     Index,
     String,
-    Text,
     UniqueConstraint,
     func,
     text,

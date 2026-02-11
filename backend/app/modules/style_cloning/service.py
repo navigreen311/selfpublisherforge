@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +41,6 @@ from app.modules.style_cloning.schemas import (
     VoiceFingerprint,
 )
 
-
 # ---------------------------------------------------------------------------
 # ORM -> Response conversion
 # ---------------------------------------------------------------------------
@@ -50,7 +48,7 @@ from app.modules.style_cloning.schemas import (
 def _to_response(profile: StyleProfile) -> ProfileResponse:
     """Convert an ORM StyleProfile instance to a ProfileResponse schema."""
     # Reconstruct StyleCard from the stored dict if present
-    style_card: Optional[StyleCard] = None
+    style_card: StyleCard | None = None
     if profile.style_card is not None:
         style_card = StyleCard(**profile.style_card)
 
@@ -136,7 +134,7 @@ def _run_analysis(profile: StyleProfile) -> None:
         profile.status = ProfileStatus.failed.value
         raise
     finally:
-        profile.updated_at = datetime.now(timezone.utc)
+        profile.updated_at = datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +187,7 @@ async def get_profile(
     db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
-) -> Optional[ProfileResponse]:
+) -> ProfileResponse | None:
     """Get a single profile by ID."""
     stmt = (
         select(StyleProfile)
@@ -208,7 +206,7 @@ async def get_fingerprint(
     db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
-) -> Optional[FingerprintResponse]:
+) -> FingerprintResponse | None:
     """Get the full voice fingerprint for a profile."""
     stmt = (
         select(StyleProfile)
@@ -235,7 +233,7 @@ async def analyze_profile(
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
     sample_texts: list[str],
-) -> Optional[ProfileResponse]:
+) -> ProfileResponse | None:
     """Add samples and re-analyze."""
     stmt = (
         select(StyleProfile)
@@ -276,7 +274,7 @@ async def delete_profile(
     if profile is None:
         return False
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     profile.deleted_at = now
     profile.updated_at = now
     await db.flush()
@@ -288,7 +286,7 @@ async def conformity_check(
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
     text: str,
-) -> Optional[ConformityCheckResult]:
+) -> ConformityCheckResult | None:
     """Check text conformity against a profile's fingerprint."""
     stmt = (
         select(StyleProfile)

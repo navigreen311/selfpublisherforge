@@ -15,7 +15,8 @@ Usage from ``main.py``::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from fastapi.openapi.utils import get_openapi
 
@@ -37,12 +38,18 @@ production, launch, advertising, and long-term growth analytics.
 
 | Tier | Modules | Purpose |
 |------|---------|---------|
-| **0 -- Foundation** | auth, users, billing, storage, notifications, realtime | Identity, payments, file storage, real-time events |
-| **1-2 -- Data & Creation** | llm, market, knowledge, writing, style | LLM orchestration, market intelligence, knowledge vault, AI writing studio, style cloning |
-| **3 -- Production** | pipelines, publishing, kdp-validation | Manuscript production pipeline, multi-platform publishing, KDP validation |
-| **4 -- Optimization** | product-page, pricing, competitors | A/B product-page testing, dynamic pricing, competitor tracking |
-| **5 -- Growth** | marketing, advertising, reviews, analytics | Launch campaigns, ad management, review monitoring, revenue analytics |
-| **6-8 -- Intelligence & Scale** | agents, portfolio, audience, seasonal, covers, chrome-extension | Autonomous agents, portfolio economics, audience building, seasonal planning, cover design, browser extension |
+| **0 -- Foundation** | auth, users, billing, storage, notifications, realtime | Identity, \
+payments, file storage, real-time events |
+| **1-2 -- Data & Creation** | llm, market, knowledge, writing, style | LLM orchestration, \
+market intelligence, knowledge vault, AI writing studio, style cloning |
+| **3 -- Production** | pipelines, publishing, kdp-validation | Manuscript production \
+pipeline, multi-platform publishing, KDP validation |
+| **4 -- Optimization** | product-page, pricing, competitors | A/B product-page \
+testing, dynamic pricing, competitor tracking |
+| **5 -- Growth** | marketing, advertising, reviews, analytics | Launch campaigns, \
+ad management, review monitoring, revenue analytics |
+| **6-8 -- Intelligence & Scale** | agents, portfolio, audience, seasonal, covers, chrome-extension | \
+Autonomous agents, portfolio economics, audience building, seasonal planning, cover design, browser extension |
 
 ## Authentication
 
@@ -70,7 +77,10 @@ TAGS_METADATA: list[dict[str, Any]] = [
     # Tier 0: Foundation
     {
         "name": "auth",
-        "description": "Authentication -- registration, login, logout, password reset, email verification, MFA, and OAuth (Google / GitHub).",
+        "description": (
+            "Authentication -- registration, login, logout, password reset, "
+            "email verification, MFA, and OAuth (Google / GitHub)."
+        ),
     },
     {
         "name": "users",
@@ -99,15 +109,24 @@ TAGS_METADATA: list[dict[str, Any]] = [
     },
     {
         "name": "market",
-        "description": "Market Intelligence Engine -- category browsing, keyword research, niche analysis, competitor tracking, and trend data.",
+        "description": (
+            "Market Intelligence Engine -- category browsing, keyword research, "
+            "niche analysis, competitor tracking, and trend data."
+        ),
     },
     {
         "name": "knowledge",
-        "description": "Knowledge Vault -- CRUD, semantic search, import, tags, and AI summaries for research notes and references.",
+        "description": (
+            "Knowledge Vault -- CRUD, semantic search, import, tags, "
+            "and AI summaries for research notes and references."
+        ),
     },
     {
         "name": "writing",
-        "description": "AI Writing Studio -- AI content generation (streaming), manuscript/chapter CRUD, outlines, readability analysis, and writing sessions.",
+        "description": (
+            "AI Writing Studio -- AI content generation (streaming), "
+            "manuscript/chapter CRUD, outlines, readability analysis, and writing sessions."
+        ),
     },
     {
         "name": "style",
@@ -116,11 +135,17 @@ TAGS_METADATA: list[dict[str, Any]] = [
     # Tier 3: Production
     {
         "name": "pipelines",
-        "description": "Production Pipeline -- manuscript formatting, EPUB/PDF export orchestration, and stage tracking.",
+        "description": (
+            "Production Pipeline -- manuscript formatting, "
+            "EPUB/PDF export orchestration, and stage tracking."
+        ),
     },
     {
         "name": "publishing",
-        "description": "Publishing Operations Center -- platform account connections, listing management, book metadata, and export to EPUB/PDF.",
+        "description": (
+            "Publishing Operations Center -- platform account connections, "
+            "listing management, book metadata, and export to EPUB/PDF."
+        ),
     },
     {
         "name": "kdp-validation",
@@ -142,11 +167,17 @@ TAGS_METADATA: list[dict[str, Any]] = [
     # Tier 5: Growth
     {
         "name": "marketing",
-        "description": "Marketing & Launch Command -- launch plans, email sequences, social media content, and ARC campaigns.",
+        "description": (
+            "Marketing & Launch Command -- launch plans, email sequences, "
+            "social media content, and ARC campaigns."
+        ),
     },
     {
         "name": "advertising",
-        "description": "Advertising Intelligence -- Amazon Ads and Facebook Ads campaign management, bid optimization, creative generation, and performance dashboards.",
+        "description": (
+            "Advertising Intelligence -- Amazon Ads and Facebook Ads campaign management, "
+            "bid optimization, creative generation, and performance dashboards."
+        ),
     },
     {
         "name": "reviews",
@@ -154,12 +185,18 @@ TAGS_METADATA: list[dict[str, Any]] = [
     },
     {
         "name": "analytics",
-        "description": "Analytics & BI -- revenue dashboards, royalty imports, portfolio metrics, report generation, event tracking, and trend analysis.",
+        "description": (
+            "Analytics & BI -- revenue dashboards, royalty imports, portfolio metrics, "
+            "report generation, event tracking, and trend analysis."
+        ),
     },
     # Tier 6-8: Intelligence & Scale
     {
         "name": "agents",
-        "description": "AI Agent System -- autonomous task execution with governance, budgets, approvals, and audit logs.",
+        "description": (
+            "AI Agent System -- autonomous task execution with governance, "
+            "budgets, approvals, and audit logs."
+        ),
     },
     {
         "name": "portfolio",
@@ -205,7 +242,7 @@ _SECURITY_SCHEMES: dict[str, Any] = {
 # Factory
 # ---------------------------------------------------------------------------
 
-def custom_openapi_schema(app: "FastAPI") -> Callable[[], dict[str, Any]]:
+def custom_openapi_schema(app: FastAPI) -> Callable[[], dict[str, Any]]:
     """Return a zero-arg callable that lazily builds and caches the OpenAPI schema.
 
     Assign the return value directly to ``app.openapi``::

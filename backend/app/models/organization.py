@@ -1,9 +1,9 @@
 """Organization model."""
 import enum
-import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, String, Text, Enum as SAEnum
+from sqlalchemy import Boolean, DateTime, Index, String
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

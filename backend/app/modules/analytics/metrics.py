@@ -7,17 +7,15 @@ and other aggregate portfolio metrics.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Any
+from datetime import UTC, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select, text, and_
+from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.advertising.models import Campaign, CampaignPerformance
 from app.modules.analytics.models import (
-    AnalyticsEvent,
-    PortfolioMetricSnapshot,
     RoyaltyRecord,
 )
 from app.modules.analytics.schemas import (
@@ -27,7 +25,6 @@ from app.modules.analytics.schemas import (
     TrendData,
     TrendDataPoint,
 )
-from app.modules.advertising.models import Campaign, CampaignPerformance
 
 CHANGE_THRESHOLD = float(os.environ.get("ANALYTICS_CHANGE_THRESHOLD", "0.5"))
 
@@ -51,7 +48,7 @@ def _change_direction(change: float | None) -> str:
         return "flat"
     if change > CHANGE_THRESHOLD:
         return "up"
-    elif change < -CHANGE_THRESHOLD:
+    if change < -CHANGE_THRESHOLD:
         return "down"
     return "flat"
 
@@ -97,7 +94,7 @@ async def compute_portfolio_metrics(
 ) -> PortfolioMetrics:
     """Compute portfolio-level metrics from royalty records."""
     if as_of is None:
-        as_of = datetime.now(timezone.utc)
+        as_of = datetime.now(UTC)
 
     # Total revenue & units
     totals_query = (

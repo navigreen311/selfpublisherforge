@@ -7,14 +7,13 @@ from app.modules.style_cloning.features import extract_all_features
 from app.modules.style_cloning.ingestion import ingest_text
 from app.modules.style_cloning.schemas import (
     ConformityCheckResult,
-    VoiceFingerprint,
-    VocabularyMetrics,
-    SentenceMetrics,
+    DialogueMetrics,
     ParagraphMetrics,
     RhetoricalMetrics,
-    DialogueMetrics,
+    SentenceMetrics,
+    VocabularyMetrics,
+    VoiceFingerprint,
 )
-
 
 # ---------------------------------------------------------------------------
 # Per-dimension similarity helpers

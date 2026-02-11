@@ -1,14 +1,13 @@
 """Seed demo market intelligence data."""
 import random
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.market import CompetitorBook, MarketKeyword
-
 
 # Sample competitor books for Fantasy genre
 FANTASY_COMPETITORS = [
@@ -161,7 +160,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
         current_bsr = book_data["bsr"]
         for day in range(30):
             date_key = (
-                datetime.now(timezone.utc) - timedelta(days=30 - day)
+                datetime.now(UTC) - timedelta(days=30 - day)
             ).strftime("%Y-%m-%d")
             # BSR fluctuates
             fluctuation = random.randint(-500, 500)
@@ -180,7 +179,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
             rating=book_data["rating"],
             category="Fantasy",
             category_ids=["17220", "17300"],
-            publication_date=datetime.now(timezone.utc) - timedelta(days=random.randint(180, 730)),
+            publication_date=datetime.now(UTC) - timedelta(days=random.randint(180, 730)),
             description=f"An epic {book_data['title'].lower()} story...",
             keywords=["fantasy", "adventure", "magic"],
             page_count=random.randint(250, 450),
@@ -190,7 +189,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
                 "book_number": random.randint(1, 3) if random.choice([True, False]) else None,
             },
             metadata_json={
-                "scraped_at": datetime.now(timezone.utc).isoformat(),
+                "scraped_at": datetime.now(UTC).isoformat(),
                 "source": "amazon",
             },
         )
@@ -216,7 +215,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
             competition_score=kw_data["competition"],
             cpc_estimate=Decimal(str(kw_data["cpc"])),
             trend_direction="stable",
-            last_updated=datetime.now(timezone.utc),
+            last_updated=datetime.now(UTC),
         )
         db.add(keyword)
         total_keywords += 1

@@ -1,35 +1,28 @@
 """SQLAlchemy models for the Marketing & Launch Command module."""
 
-import enum
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Boolean,
+    JSON,
     DateTime,
     Enum,
     Float,
     ForeignKey,
     Index,
     Integer,
-    JSON,
-    Numeric,
     String,
     Text,
     Uuid,
-    func,
-    text,
-    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base, BaseModel, TenantModel
+from app.database import BaseModel, TenantModel
 
 # Import canonical Campaign and AdCreative from the advertising module
-from app.modules.advertising.models import Campaign, AdCreative  # noqa: F401
-
+from app.modules.advertising.models import AdCreative, Campaign  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Enums

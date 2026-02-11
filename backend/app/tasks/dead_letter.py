@@ -5,8 +5,7 @@ import json
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
-from typing import Any
+from dataclasses import asdict, dataclass, field
 
 import redis
 
@@ -38,7 +37,7 @@ class DeadLetter:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "DeadLetter":
+    def from_dict(cls, data: dict) -> DeadLetter:
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
@@ -51,8 +50,8 @@ class DeadLetterQueue:
     * ``spf:dlq:detail:<id>`` — JSON hash with full dead-letter metadata
     """
 
-    def __init__(self, redis_client: redis.Redis) -> None:
-        self._redis = redis_client
+    def __init__(self, redis_client: redis.Redis) -> None:  # type: ignore[type-arg]
+        self._redis: redis.Redis = redis_client  # type: ignore[type-arg,assignment]
 
     # ------------------------------------------------------------------
     # Write
@@ -72,16 +71,17 @@ class DeadLetterQueue:
     # ------------------------------------------------------------------
     def get(self, dl_id: str) -> DeadLetter | None:
         """Fetch a single dead letter by id."""
-        raw = self._redis.get(f"{DLQ_DETAIL_PREFIX}{dl_id}")
+        raw = self._redis.get(f"{DLQ_DETAIL_PREFIX}{dl_id}")  # type: ignore[assignment]
         if raw is None:
             return None
-        return DeadLetter.from_dict(json.loads(raw))
+        raw_str = raw.decode() if isinstance(raw, bytes) else str(raw)
+        return DeadLetter.from_dict(json.loads(raw_str))
 
     def list(self, offset: int = 0, limit: int = 50, status: str | None = None) -> list[DeadLetter]:
         """List dead letters ordered newest-first."""
-        ids = self._redis.zrevrange(DLQ_KEY, offset, offset + limit - 1)
+        ids = self._redis.zrevrange(DLQ_KEY, offset, offset + limit - 1)  # type: ignore[arg-type]
         results: list[DeadLetter] = []
-        for dl_id in ids:
+        for dl_id in ids:  # type: ignore[union-attr]
             dl_id_str = dl_id if isinstance(dl_id, str) else dl_id.decode()
             dl = self.get(dl_id_str)
             if dl is None:
@@ -93,7 +93,8 @@ class DeadLetterQueue:
 
     def count(self) -> int:
         """Return total number of dead letters."""
-        return self._redis.zcard(DLQ_KEY)
+        result = self._redis.zcard(DLQ_KEY)  # type: ignore[assignment]
+        return int(result) if result else 0  # type: ignore[arg-type]
 
     # ------------------------------------------------------------------
     # Retry / discard
@@ -117,10 +118,10 @@ class DeadLetterQueue:
     def purge(self) -> int:
         """Remove all dead letters.  Returns the number purged."""
         count = self.count()
-        ids = self._redis.zrange(DLQ_KEY, 0, -1)
+        ids = self._redis.zrange(DLQ_KEY, 0, -1)  # type: ignore[arg-type]
         if ids:
             pipe = self._redis.pipeline()
-            for dl_id in ids:
+            for dl_id in ids:  # type: ignore[union-attr]
                 dl_id_str = dl_id if isinstance(dl_id, str) else dl_id.decode()
                 pipe.delete(f"{DLQ_DETAIL_PREFIX}{dl_id_str}")
             pipe.delete(DLQ_KEY)

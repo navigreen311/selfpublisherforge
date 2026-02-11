@@ -22,11 +22,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import statistics
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
@@ -108,7 +108,7 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
                         "competitors_checked": 0,
                         "competitors_updated": 0,
                         "price_summary": None,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                         "status": "completed",
                     }
 
@@ -193,7 +193,7 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
                     "competitors_updated": len(price_changes_detected),
                     "price_summary": price_summary,
                     "price_changes": price_changes_detected,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "status": "completed",
                 }
             except ValueError as exc:
@@ -277,7 +277,7 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
         async with async_session() as db:
             try:
                 org_uuid = UUID(org_id)
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
 
                 # 1. Fetch all active auto-apply rules for this org
                 stmt = (
@@ -463,7 +463,7 @@ def activate_scheduled_promotions(self) -> dict:
 
         async with async_session() as db:
             try:
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
 
                 # Query promotions that are scheduled and ready to start
                 stmt = (
@@ -561,7 +561,7 @@ def complete_expired_promotions(self) -> dict:
 
         async with async_session() as db:
             try:
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
 
                 # Query active promotions whose end_date has passed
                 stmt = (

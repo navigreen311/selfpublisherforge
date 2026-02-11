@@ -16,7 +16,7 @@ Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from celery.exceptions import SoftTimeLimitExceeded
 
@@ -70,7 +70,7 @@ async def _check_deadlines_async() -> dict:
         get_upcoming_deadlines,
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     overdue_count = 0
     reminder_count = 0
 
@@ -155,7 +155,7 @@ def send_overdue_alert(self, pipeline_id: str, task_id: str) -> dict:
         "pipeline_id": pipeline_id,
         "task_id": task_id,
         "alert_type": "overdue",
-        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -196,7 +196,7 @@ def send_deadline_reminder(self, pipeline_id: str, task_id: str) -> dict:
         "pipeline_id": pipeline_id,
         "task_id": task_id,
         "alert_type": "deadline_reminder",
-        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_at": datetime.now(UTC).isoformat(),
     }
 
 

@@ -4,10 +4,9 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.schemas.common import TimestampMixin, UserRole, PlanTier
-
+from app.schemas.common import PlanTier, TimestampMixin, UserRole
 
 # ─── User Profile ────────────────────────────────────────────────────────────
 

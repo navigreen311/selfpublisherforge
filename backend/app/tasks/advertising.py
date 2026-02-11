@@ -18,26 +18,24 @@ Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 
 import asyncio
 import logging
-from datetime import datetime, timezone, timedelta
-from uuid import UUID
+from datetime import UTC, datetime, timedelta
 
 from celery.exceptions import SoftTimeLimitExceeded
-
-from app.tasks import celery_app
-from app.database import async_session
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.modules.advertising.models import Campaign, CampaignPerformance, KeywordBid
-from app.modules.advertising.schemas import CampaignStatus, OptimizationRequest
-from app.modules.advertising.service import AdvertisingService
+from app.database import async_session
+from app.models.user import User, UserRole
 from app.modules.advertising.amazon_ads import AmazonAdsClient
 from app.modules.advertising.facebook_ads import FacebookAdsClient
+from app.modules.advertising.models import Campaign, CampaignPerformance, KeywordBid
 from app.modules.advertising.optimizer import AdOptimizer
-from app.modules.notifications.service import create_notification
-from app.modules.notifications.schemas import CreateNotification
+from app.modules.advertising.schemas import CampaignStatus, OptimizationRequest
+from app.modules.advertising.service import AdvertisingService
 from app.modules.notifications.models import NotificationType
-from app.models.user import User, UserRole
+from app.modules.notifications.schemas import CreateNotification
+from app.modules.notifications.service import create_notification
+from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +82,7 @@ async def _sync_performance_async(campaign_id: str | None = None):
             result = await db.execute(query)
             campaigns = result.scalars().all()
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
             today = now.strftime("%Y-%m-%d")
 

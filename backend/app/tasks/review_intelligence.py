@@ -14,7 +14,7 @@ Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -91,7 +91,7 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
                             "complaints": analysis.complaints,
                             "praise": analysis.praise,
                         }
-                        review.analyzed_at = datetime.now(timezone.utc)
+                        review.analyzed_at = datetime.now(UTC)
                         db.add(review)
                         analyzed += 1
                     except (ValueError, KeyError, TypeError) as e:
@@ -102,7 +102,7 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
                         # Graceful degradation: mark as unknown so it's not retried endlessly
                         review.sentiment = "unknown"
                         review.sentiment_score = 0.0
-                        review.analyzed_at = datetime.now(timezone.utc)
+                        review.analyzed_at = datetime.now(UTC)
                         db.add(review)
                     except (ConnectionError, TimeoutError, OSError) as e:
                         logger.error(
@@ -112,7 +112,7 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
                         # Graceful degradation: mark as unknown for now, can re-analyze later
                         review.sentiment = "unknown"
                         review.sentiment_score = 0.0
-                        review.analyzed_at = datetime.now(timezone.utc)
+                        review.analyzed_at = datetime.now(UTC)
                         db.add(review)
 
                 await db.commit()
@@ -220,7 +220,7 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
             try:
                 vel_period = VelocityPeriod(period)
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 if vel_period == VelocityPeriod.DAILY:
                     period_start = now.replace(
                         hour=0, minute=0, second=0, microsecond=0

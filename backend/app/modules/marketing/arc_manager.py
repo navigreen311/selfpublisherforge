@@ -9,17 +9,16 @@ Handles:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.marketing import (
     ARCCampaign,
-    ARCCampaignStatus,
     ARCRecipient,
     ARCRecipientStatus,
 )
@@ -101,7 +100,7 @@ class ARCManager:
             return None
 
         recipient.status = ARCRecipientStatus.DELIVERED
-        recipient.delivered_at = datetime.now(tz=timezone.utc)
+        recipient.delivered_at = datetime.now(tz=UTC)
         await self.db.flush()
         return recipient
 
@@ -118,7 +117,7 @@ class ARCManager:
             return None
 
         recipient.status = ARCRecipientStatus.REVIEWED
-        recipient.review_received_at = datetime.now(tz=timezone.utc)
+        recipient.review_received_at = datetime.now(tz=UTC)
         if review_url:
             recipient.review_url = review_url
 
@@ -140,7 +139,7 @@ class ARCManager:
         Returns recipients whose copies were sent more than `days_since_send`
         days ago and who have not yet submitted a review.
         """
-        cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days_since_send)
+        cutoff = datetime.now(tz=UTC) - timedelta(days=days_since_send)
 
         stmt = (
             select(ARCRecipient)
@@ -167,7 +166,7 @@ class ARCManager:
                 "name": r.name,
                 "email": r.email,
                 "sent_at": r.sent_at.isoformat() if r.sent_at else None,
-                "days_since_send": (datetime.now(tz=timezone.utc) - r.sent_at).days if r.sent_at else 0,
+                "days_since_send": (datetime.now(tz=UTC) - r.sent_at).days if r.sent_at else 0,
             }
             for r in recipients
         ]

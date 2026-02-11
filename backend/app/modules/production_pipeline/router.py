@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,8 +89,8 @@ async def list_pipelines(
     current_user: dict = Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    pipeline_status: Optional[PipelineStatus] = Query(None, alias="status"),
-    book_id: Optional[uuid.UUID] = None,
+    pipeline_status: PipelineStatus | None = Query(None, alias="status"),
+    book_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     return await service.list_pipelines(

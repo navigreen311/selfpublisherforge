@@ -6,9 +6,7 @@ category fit, and pricing of Amazon book listings.
 
 from __future__ import annotations
 
-import math
 import re
-from typing import Optional
 
 from app.modules.product_page_lab.schemas import (
     BlurbAnalysis,
@@ -76,7 +74,7 @@ MOBILE_BLURB_FOLD_CHARS = 200
 
 def analyze_title(
     title: str,
-    target_keywords: Optional[list[str]] = None,
+    target_keywords: list[str] | None = None,
 ) -> TitleAnalysis:
     """Analyze a listing title for conversion optimization."""
     target_keywords = target_keywords or []
@@ -223,8 +221,8 @@ def analyze_blurb(blurb: str) -> BlurbAnalysis:
 
 def analyze_keywords(
     text: str,
-    target_keywords: Optional[list[str]] = None,
-    genre: Optional[str] = None,
+    target_keywords: list[str] | None = None,
+    genre: str | None = None,
 ) -> KeywordAnalysis:
     """Analyze keyword usage across listing text."""
     target_keywords = target_keywords or []
@@ -254,7 +252,7 @@ def analyze_keywords(
     over_stuffed = keyword_density > 5.0
     if over_stuffed:
         score -= 15
-        issues: list[str] = ["Keyword density is too high ({:.1f}%). Aim for 1-3%.".format(keyword_density)]
+        issues.append(f"Keyword density is too high ({keyword_density:.1f}%). Aim for 1-3%.")
 
     # Determine missing high-value keywords
     missing = [kw for kw in target_keywords if kw.lower() not in text_lower]
@@ -279,8 +277,8 @@ def analyze_keywords(
 # ---------------------------------------------------------------------------
 
 def analyze_category(
-    current_categories: Optional[list[str]] = None,
-    genre: Optional[str] = None,
+    current_categories: list[str] | None = None,
+    genre: str | None = None,
 ) -> CategoryAnalysis:
     """Analyze category selection for the listing."""
     current_categories = current_categories or []
@@ -347,8 +345,8 @@ def analyze_category(
 # ---------------------------------------------------------------------------
 
 def analyze_price(
-    current_price: Optional[float] = None,
-    genre: Optional[str] = None,
+    current_price: float | None = None,
+    genre: str | None = None,
 ) -> PriceAnalysis:
     """Analyze pricing for the listing."""
     issues: list[str] = []
@@ -400,11 +398,11 @@ def analyze_price(
 def analyze_listing(
     title: str = "",
     blurb: str = "",
-    keywords: Optional[list[str]] = None,
-    categories: Optional[list[str]] = None,
-    price: Optional[float] = None,
-    genre: Optional[str] = None,
-    asin: Optional[str] = None,
+    keywords: list[str] | None = None,
+    categories: list[str] | None = None,
+    price: float | None = None,
+    genre: str | None = None,
+    asin: str | None = None,
 ) -> ListingAnalysis:
     """Run full listing analysis and produce a consolidated report."""
     keywords = keywords or []

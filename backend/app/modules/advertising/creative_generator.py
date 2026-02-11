@@ -6,7 +6,6 @@ Uses LLM to produce compelling ad variations optimized for each platform.
 
 import json
 import logging
-from uuid import UUID
 
 from app.config import get_settings
 from app.modules.advertising.schemas import (

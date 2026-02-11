@@ -5,18 +5,20 @@ Provides publish (Pub/Sub + Streams), subscribe, replay, and dead-letter handlin
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
-from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 from uuid import UUID
 
 from app.core.event_types import BaseEvent, EventPublisher, EventType
 
 try:
     import redis.asyncio as aioredis
-    from redis.exceptions import ConnectionError as RedisConnectionError, RedisError, ResponseError
+    from redis.exceptions import ConnectionError as RedisConnectionError
+    from redis.exceptions import RedisError, ResponseError
 except ImportError:
     aioredis = None  # type: ignore[assignment]
     RedisConnectionError = ConnectionError  # type: ignore[misc,assignment]
@@ -61,7 +63,7 @@ def _deserialize_event(fields: dict[bytes | str, bytes | str]) -> BaseEvent:
     raw = fields.get(b"_raw") or fields.get("_raw")
     if isinstance(raw, bytes):
         raw = raw.decode()
-    return BaseEvent.model_validate_json(raw)
+    return BaseEvent.model_validate_json(raw)  # type: ignore[arg-type]
 
 
 class RedisStreamPublisher:
@@ -204,7 +206,7 @@ class RedisEventSubscriber:
                     count=batch_size,
                     block=block_ms,
                 )
-            except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError) as exc:
+            except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError):
                 logger.error("XREADGROUP error -- retrying in 1 s", exc_info=True)
                 await asyncio.sleep(1)
                 continue
@@ -236,7 +238,7 @@ class RedisEventSubscriber:
         for _msg_id, fields in raw:
             try:
                 events.append(_deserialize_event(fields))
-            except (ValidationError, KeyError, ValueError, json.JSONDecodeError) as exc:
+            except (ValidationError, KeyError, ValueError, json.JSONDecodeError):
                 logger.warning("Failed to deserialize event during replay, skipping", exc_info=True)
         return events
 
@@ -256,11 +258,9 @@ class RedisEventSubscriber:
     # ------------------------------------------------------------------
     async def _ensure_group(self, stream_key: str) -> None:
         """Create consumer group if it does not exist, auto-creating the stream."""
-        try:
-            await self._redis.xgroup_create(stream_key, self._group, id="0", mkstream=True)
-        except ResponseError:
+        with contextlib.suppress(ResponseError):
             # Group already exists -- expected on subsequent startups
-            pass
+            await self._redis.xgroup_create(stream_key, self._group, id="0", mkstream=True)
 
     async def _handle_message(
         self,

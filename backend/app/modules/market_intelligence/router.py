@@ -5,7 +5,6 @@ Prefix: /api/v1/market
 
 from __future__ import annotations
 
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -48,7 +47,7 @@ def _service() -> MarketIntelligenceService:
     description="Browse Amazon category taxonomy as a tree structure.",
 )
 async def browse_categories(
-    root_id: Optional[str] = Query(None, description="Parent category ID"),
+    root_id: str | None = Query(None, description="Parent category ID"),
     marketplace: str = Query("US"),
     current_user: dict = Depends(get_current_user),
 ):
@@ -101,7 +100,7 @@ async def keyword_research(
 )
 async def keyword_suggestions(
     genre: str = Query(..., min_length=1),
-    niche: Optional[str] = Query(None),
+    niche: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
 ):
@@ -205,8 +204,8 @@ async def get_competitor(
     description="Market trend data for categories and keywords over a configurable period.",
 )
 async def market_trends(
-    category_id: Optional[str] = Query(None),
-    keyword: Optional[str] = Query(None),
+    category_id: str | None = Query(None),
+    keyword: str | None = Query(None),
     days: int = Query(30, ge=1, le=365),
     current_user: dict = Depends(get_current_user),
 ):
@@ -224,7 +223,7 @@ async def market_trends(
     description="Daily category snapshots with BSR and pricing aggregates.",
 )
 async def market_snapshots(
-    category_id: Optional[str] = Query(None),
+    category_id: str | None = Query(None),
     limit: int = Query(30, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),

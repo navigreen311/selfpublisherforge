@@ -2,8 +2,7 @@
 
 import logging
 import statistics
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
@@ -24,9 +23,9 @@ def _period_delta(period: VelocityPeriod) -> timedelta:
     """Return the timedelta for one period unit."""
     if period == VelocityPeriod.DAILY:
         return timedelta(days=1)
-    elif period == VelocityPeriod.WEEKLY:
+    if period == VelocityPeriod.WEEKLY:
         return timedelta(weeks=1)
-    elif period == VelocityPeriod.MONTHLY:
+    if period == VelocityPeriod.MONTHLY:
         return timedelta(days=30)
     return timedelta(days=1)
 
@@ -35,9 +34,7 @@ def _default_lookback(period: VelocityPeriod) -> int:
     """Number of periods to look back by default."""
     if period == VelocityPeriod.DAILY:
         return 30
-    elif period == VelocityPeriod.WEEKLY:
-        return 12
-    elif period == VelocityPeriod.MONTHLY:
+    if period == VelocityPeriod.WEEKLY or period == VelocityPeriod.MONTHLY:
         return 12
     return 30
 
@@ -59,7 +56,7 @@ def detect_trend(data_points: list[VelocityDataPoint]) -> VelocityTrend:
     x_mean = sum(x_vals) / n
     y_mean = sum(counts) / n
 
-    numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(x_vals, counts))
+    numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(x_vals, counts, strict=False))
     denominator = sum((x - x_mean) ** 2 for x in x_vals)
 
     if denominator == 0:
@@ -75,10 +72,9 @@ def detect_trend(data_points: list[VelocityDataPoint]) -> VelocityTrend:
 
     if relative_slope > 0.1:
         return VelocityTrend.RISING
-    elif relative_slope < -0.1:
+    if relative_slope < -0.1:
         return VelocityTrend.DECLINING
-    else:
-        return VelocityTrend.STABLE
+    return VelocityTrend.STABLE
 
 
 def detect_anomalies(
@@ -146,7 +142,7 @@ async def compute_velocity_from_reviews(
     org_id: UUID,
     book_id: UUID,
     period: VelocityPeriod = VelocityPeriod.WEEKLY,
-    lookback: Optional[int] = None,
+    lookback: int | None = None,
 ) -> VelocityReport:
     """Compute review velocity directly from the book_reviews table.
 
@@ -164,7 +160,7 @@ async def compute_velocity_from_reviews(
         lookback = _default_lookback(period)
 
     delta = _period_delta(period)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start_date = now - (delta * lookback)
 
     # Query reviews grouped by period
@@ -242,7 +238,7 @@ async def compute_velocity_from_snapshots(
     org_id: UUID,
     book_id: UUID,
     period: VelocityPeriod = VelocityPeriod.WEEKLY,
-    lookback: Optional[int] = None,
+    lookback: int | None = None,
 ) -> VelocityReport:
     """Compute velocity from pre-computed snapshots (faster for large datasets).
 
@@ -252,7 +248,7 @@ async def compute_velocity_from_snapshots(
         lookback = _default_lookback(period)
 
     delta = _period_delta(period)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start_date = now - (delta * lookback)
 
     stmt = (
@@ -321,7 +317,7 @@ async def save_velocity_snapshot(
     period_start: datetime,
     period_end: datetime,
     review_count: int,
-    avg_rating: Optional[float],
+    avg_rating: float | None,
     positive_count: int,
     neutral_count: int,
     negative_count: int,

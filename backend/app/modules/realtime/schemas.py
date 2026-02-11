@@ -1,11 +1,10 @@
 """WebSocket message types and typed event schemas for each channel."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
-
 
 # ---------------------------------------------------------------------------
 # Channel enum
@@ -28,7 +27,7 @@ class WSMessage(BaseModel):
     channel: WSChannel
     room_id: str
     data: dict[str, Any] = {}
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 # ---------------------------------------------------------------------------

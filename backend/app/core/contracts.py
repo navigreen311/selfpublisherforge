@@ -4,8 +4,9 @@ Local copy of shared/contracts/api.py so the backend can run without the
 root-level ``shared`` package on sys.path.
 """
 
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel
-from typing import TypeVar, Generic
 
 T = TypeVar("T")
 

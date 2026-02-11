@@ -3,20 +3,21 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, func as sa_func, update, and_
+from sqlalchemy import and_, select
+from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.knowledge_vault import importer
 from app.modules.knowledge_vault.models import KnowledgeEntry
 from app.modules.knowledge_vault.schemas import (
     CreateEntryRequest,
     UpdateEntryRequest,
 )
 from app.modules.knowledge_vault.search import KnowledgeSearchService
-from app.modules.knowledge_vault import importer
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ class KnowledgeService:
         if not entry:
             return False
 
-        entry.deleted_at = datetime.now(timezone.utc)
+        entry.deleted_at = datetime.now(UTC)
         await self.db.flush()
 
         try:

@@ -49,14 +49,16 @@ def process_single_analysis(
     It runs the full review analysis + opportunity blueprint pipeline.
     """
     import asyncio
+
+    from sqlalchemy import select
+
     from app.database import async_session
-    from app.modules.competitor_finder.service import CompetitorFinderService
+    from app.modules.competitor_finder.models import CompetitorAnalysis
     from app.modules.competitor_finder.schemas import (
         AnalysisStatus,
         CompetitorAnalyzeRequest,
     )
-    from app.modules.competitor_finder.models import CompetitorAnalysis
-    from sqlalchemy import select
+    from app.modules.competitor_finder.service import CompetitorFinderService
 
     logger.info(
         "Starting single analysis task: analysis_id=%s, org_id=%s",
@@ -198,10 +200,12 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
     Returns a dict with books_checked, alerts_created, and alert_summary.
     """
     import asyncio
-    from app.database import async_session
-    from app.modules.competitor_finder.models import CompetitorBook, CompetitorAlert
-    from app.modules.competitor_finder.schemas import AlertType, AlertSeverity
+
     from sqlalchemy import select
+
+    from app.database import async_session
+    from app.modules.competitor_finder.models import CompetitorAlert, CompetitorBook
+    from app.modules.competitor_finder.schemas import AlertSeverity, AlertType
 
     logger.info("Running competitor alert check, org_id=%s", org_id)
 

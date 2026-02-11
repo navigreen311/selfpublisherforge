@@ -1,5 +1,6 @@
 """Celery application factory with enhanced routing, queues, and scheduling."""
 from celery import Celery
+
 from app.config import get_settings
 from app.tasks.config import CELERY_CONFIG
 from app.tasks.scheduler import CELERY_BEAT_SCHEDULE

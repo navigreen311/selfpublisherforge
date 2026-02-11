@@ -6,13 +6,13 @@ Normalizes data into a common RoyaltyRecord format.
 
 from __future__ import annotations
 
+import base64
 import binascii
 import csv
 import io
-import base64
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -72,7 +72,7 @@ def _parse_date(value: str | None, formats: list[str] | None = None) -> datetime
     for fmt in formats:
         try:
             dt = datetime.strptime(cleaned, fmt)
-            return dt.replace(tzinfo=timezone.utc)
+            return dt.replace(tzinfo=UTC)
         except ValueError:
             continue
     return None
@@ -123,7 +123,7 @@ def parse_kdp_csv(csv_text: str) -> list[dict[str, Any]]:
             period_str = row.get("Royalty Date", row.get("royalty_date", ""))
             period_date = _parse_date(period_str)
             if period_date is None:
-                period_date = datetime.now(timezone.utc).replace(day=1)
+                period_date = datetime.now(UTC).replace(day=1)
 
             # Approximate period end as last day of month
             if period_date.month == 12:
@@ -185,7 +185,7 @@ def parse_ingram_spark_csv(csv_text: str) -> list[dict[str, Any]]:
             period_str = row.get("Reporting Date", row.get("reporting_date", ""))
             period_date = _parse_date(period_str)
             if period_date is None:
-                period_date = datetime.now(timezone.utc).replace(day=1)
+                period_date = datetime.now(UTC).replace(day=1)
 
             if period_date.month == 12:
                 period_end = period_date.replace(year=period_date.year + 1, month=1)
@@ -240,7 +240,7 @@ def parse_d2d_csv(csv_text: str) -> list[dict[str, Any]]:
             period_str = row.get("Period", row.get("period", ""))
             period_date = _parse_date(period_str)
             if period_date is None:
-                period_date = datetime.now(timezone.utc).replace(day=1)
+                period_date = datetime.now(UTC).replace(day=1)
 
             if period_date.month == 12:
                 period_end = period_date.replace(year=period_date.year + 1, month=1)

@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone, date
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any
 
 from kombu.exceptions import OperationalError as BrokerOperationalError
-from sqlalchemy import and_, func, select, desc
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.pagination import PaginatedResponse
 from app.modules.analytics.aggregator import (
     aggregate_revenue,
     aggregate_revenue_by_book,
@@ -28,7 +28,6 @@ from app.modules.analytics.metrics import (
 )
 from app.modules.analytics.models import (
     AnalyticsEvent,
-    PortfolioMetricSnapshot,
     Report,
     RoyaltyRecord,
 )
@@ -39,13 +38,10 @@ from app.modules.analytics.schemas import (
     AnalyticsEventCreate,
     AnalyticsEventResponse,
     DashboardData,
-    OutputFormat,
-    Platform,
     PortfolioMetrics,
     ReportRequest,
     ReportResponse,
     ReportStatus,
-    RevenueDataPoint,
     RevenueQueryParams,
     RevenueResponse,
     RoyaltyImportRequest,
@@ -53,7 +49,6 @@ from app.modules.analytics.schemas import (
     RoyaltyRecordResponse,
     TrendData,
 )
-from app.core.pagination import CursorParams, PaginatedResponse
 from app.tasks.analytics import scheduled_report_generation
 
 logger = logging.getLogger(__name__)
@@ -68,7 +63,7 @@ async def get_dashboard(
     period_end: datetime | None = None,
 ) -> DashboardData:
     """Build the main analytics dashboard payload."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if period_end is None:
         period_end = now
     if period_start is None:
@@ -119,9 +114,9 @@ async def get_revenue(
     params: RevenueQueryParams,
 ) -> RevenueResponse:
     """Get revenue data with optional filters."""
-    now = datetime.now(timezone.utc)
-    start = datetime.combine(params.start_date, datetime.min.time()).replace(tzinfo=timezone.utc) if params.start_date else now - timedelta(days=365)
-    end = datetime.combine(params.end_date, datetime.max.time()).replace(tzinfo=timezone.utc) if params.end_date else now
+    now = datetime.now(UTC)
+    start = datetime.combine(params.start_date, datetime.min.time()).replace(tzinfo=UTC) if params.start_date else now - timedelta(days=365)
+    end = datetime.combine(params.end_date, datetime.max.time()).replace(tzinfo=UTC) if params.end_date else now
 
     platform_str = params.platform.value if params.platform else None
 
@@ -267,7 +262,7 @@ async def create_report(
             report.id,
             task_result.id,
         )
-    except (ConnectionError, OSError, BrokerOperationalError) as e:
+    except (ConnectionError, OSError, BrokerOperationalError):
         logger.exception(
             "Failed to dispatch Celery task for report_id=%s; "
             "falling back to synchronous generation.",
@@ -367,7 +362,7 @@ async def record_event(
         entity_type=event.entity_type,
         entity_id=event.entity_id,
         data=event.data,
-        occurred_at=event.occurred_at or datetime.now(timezone.utc),
+        occurred_at=event.occurred_at or datetime.now(UTC),
     )
     db.add(analytics_event)
     await db.flush()
@@ -385,7 +380,7 @@ async def get_trends(
     aggregation: AggregationPeriod = AggregationPeriod.MONTHLY,
 ) -> TrendData:
     """Get trend data for a specified metric."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if period_end is None:
         period_end = now
     if period_start is None:

@@ -70,7 +70,7 @@ class TrackedTask(Task):
     # ------------------------------------------------------------------
     # Extension hooks (override in subclasses)
     # ------------------------------------------------------------------
-    def on_tracked_start(self, task_id: str, args: tuple, kwargs: dict) -> None:  # noqa: D401
+    def on_tracked_start(self, task_id: str, args: tuple, kwargs: dict) -> None:
         """Called after tracking data is initialised."""
 
     def on_tracked_success(self, retval: Any, task_id: str, args: tuple, kwargs: dict, duration: float) -> None:

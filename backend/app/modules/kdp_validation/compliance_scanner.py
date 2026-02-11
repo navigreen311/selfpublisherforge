@@ -13,7 +13,6 @@ from app.modules.kdp_validation.rules import (
     DESCRIPTION_ALLOWED_HTML_TAGS,
     DESCRIPTION_DISALLOWED_HTML,
     TRADEMARK_PATTERNS,
-    ComplianceRule,
 )
 from app.modules.kdp_validation.schemas import (
     ComplianceScanRequest,

@@ -8,19 +8,17 @@ from decimal import Decimal
 
 from sqlalchemy import (
     DateTime,
-    Enum as SAEnum,
-    ForeignKey,
     Index,
     Numeric,
     String,
     Text,
     func,
-    text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base, BaseModel, TenantModel
+from app.database import TenantModel
 
 
 class AnalyticsEvent(TenantModel):

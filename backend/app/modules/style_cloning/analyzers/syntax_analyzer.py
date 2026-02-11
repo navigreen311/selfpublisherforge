@@ -62,10 +62,9 @@ class SyntaxAnalyzer:
 
         if coord_count == 0 and sub_count == 0:
             return "simple"
-        elif sub_count > 0:
+        if sub_count > 0:
             return "complex"
-        else:
-            return "compound"
+        return "compound"
 
     @staticmethod
     def _is_passive_voice(sentence: str) -> bool:

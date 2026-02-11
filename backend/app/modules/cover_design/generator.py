@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 import openai
 
@@ -17,12 +17,10 @@ from app.modules.cover_design.schemas import (
     CoverDimensions,
     CoverGenre,
     CoverPlatform,
-    CoverStatus,
 )
 from app.modules.cover_design.templates import (
     get_dimensions_for_platform,
     get_template_by_id,
-    get_templates_by_genre,
 )
 
 logger = logging.getLogger(__name__)
@@ -222,7 +220,7 @@ async def generate_cover_image(
         response = await client.images.generate(
             model="dall-e-3",
             prompt=prompt,
-            size=dalle_size,
+            size=cast(Any, dalle_size),  # dalle_size is validated to be one of the correct sizes
             quality="hd",
             n=1,
         )
@@ -314,10 +312,9 @@ def _pick_dalle_size(width: int, height: int) -> str:
     ratio = width / height if height else 1.0
     if ratio < 0.8:
         return "1024x1792"  # portrait
-    elif ratio > 1.2:
+    if ratio > 1.2:
         return "1792x1024"  # landscape
-    else:
-        return "1024x1024"  # square
+    return "1024x1024"  # square
 
 
 # ---------------------------------------------------------------------------

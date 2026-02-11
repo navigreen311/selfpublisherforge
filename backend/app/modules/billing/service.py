@@ -6,8 +6,8 @@ portal sessions, webhook event processing, and usage tracking.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import stripe
@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.exceptions import AppException
-from app.schemas.common import PlanTier
 from app.modules.billing.plans import (
     PLAN_DEFINITIONS,
     get_plan_limits,
@@ -31,6 +30,7 @@ from app.modules.billing.schemas import (
     SubscriptionResponse,
     UsageStats,
 )
+from app.schemas.common import PlanTier
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -273,9 +273,9 @@ async def list_invoices(
                 amount_due=inv.amount_due,
                 amount_paid=inv.amount_paid,
                 currency=inv.currency or "usd",
-                created=datetime.fromtimestamp(inv.created, tz=timezone.utc),
-                period_start=datetime.fromtimestamp(inv.period_start, tz=timezone.utc),
-                period_end=datetime.fromtimestamp(inv.period_end, tz=timezone.utc),
+                created=datetime.fromtimestamp(inv.created, tz=UTC),
+                period_start=datetime.fromtimestamp(inv.period_start, tz=UTC),
+                period_end=datetime.fromtimestamp(inv.period_end, tz=UTC),
                 hosted_invoice_url=inv.hosted_invoice_url,
                 invoice_pdf=inv.invoice_pdf,
             )
@@ -369,13 +369,13 @@ async def _handle_subscription_event(
     event_id: str,
 ) -> None:
     """Process subscription created / updated / deleted events with upgrade/downgrade detection."""
+    from app.modules.billing.plans import is_upgrade
     from app.modules.billing.webhook_handlers import (
-        handle_subscription_upgrade,
-        handle_subscription_downgrade,
         handle_subscription_canceled,
+        handle_subscription_downgrade,
+        handle_subscription_upgrade,
         handle_trial_will_end,
     )
-    from app.modules.billing.plans import is_upgrade
 
     # Resolve org_id
     org_id_str = subscription.get("metadata", {}).get("org_id")
@@ -399,7 +399,7 @@ async def _handle_subscription_event(
         # Calculate days remaining
         trial_end = subscription.get("trial_end")
         if trial_end:
-            days_remaining = max(0, int((trial_end - datetime.now(timezone.utc).timestamp()) / 86400))
+            days_remaining = max(0, int((trial_end - datetime.now(UTC).timestamp()) / 86400))
             await handle_trial_will_end(db, org_id, subscription, days_remaining)
         return
 
@@ -415,11 +415,11 @@ async def _handle_subscription_event(
         current_period_end = None
         if subscription.get("current_period_start"):
             current_period_start = datetime.fromtimestamp(
-                subscription["current_period_start"], tz=timezone.utc
+                subscription["current_period_start"], tz=UTC
             )
         if subscription.get("current_period_end"):
             current_period_end = datetime.fromtimestamp(
-                subscription["current_period_end"], tz=timezone.utc
+                subscription["current_period_end"], tz=UTC
             )
 
         await _update_org(
@@ -456,11 +456,11 @@ async def _handle_subscription_event(
         current_period_end = None
         if subscription.get("current_period_start"):
             current_period_start = datetime.fromtimestamp(
-                subscription["current_period_start"], tz=timezone.utc
+                subscription["current_period_start"], tz=UTC
             )
         if subscription.get("current_period_end"):
             current_period_end = datetime.fromtimestamp(
-                subscription["current_period_end"], tz=timezone.utc
+                subscription["current_period_end"], tz=UTC
             )
 
         await _update_org(
@@ -506,8 +506,8 @@ async def _handle_invoice_payment_failed(
 ) -> None:
     """Handle a failed invoice payment with retry tracking."""
     from app.modules.billing.webhook_handlers import (
-        handle_payment_failure,
         get_payment_attempt_count,
+        handle_payment_failure,
     )
 
     customer_id = invoice.get("customer")

@@ -10,20 +10,18 @@ and post-generation quality assurance with progressive enhancement.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Optional
 
 from app.modules.llm_orchestration.cache import SemanticCache
 from app.modules.llm_orchestration.cost_tracker import CostTracker
 from app.modules.llm_orchestration.providers.base import (
     BaseLLMProvider,
     LLMRequest,
-    LLMResponse,
     LLMStreamChunk,
 )
 from app.modules.llm_orchestration.quality import QualityAssurance, QualityReport
 from app.modules.llm_orchestration.router_config import (
-    ModelID,
     ModelRouter,
     ProviderName,
 )
@@ -37,13 +35,13 @@ class GenerationOptions:
 
     temperature: float = 0.7
     top_p: float = 1.0
-    max_tokens: Optional[int] = None  # None = use route default
-    system_prompt: Optional[str] = None
+    max_tokens: int | None = None  # None = use route default
+    system_prompt: str | None = None
     stop_sequences: list[str] = field(default_factory=list)
     stream: bool = False
     skip_cache: bool = False
     skip_quality_check: bool = False
-    org_id: Optional[str] = None
+    org_id: str | None = None
     metadata: dict = field(default_factory=dict)
 
 
@@ -59,7 +57,7 @@ class GenerationResult:
     cost_usd: float = 0.0
     latency_ms: float = 0.0
     cache_hit: bool = False
-    quality_report: Optional[QualityReport] = None
+    quality_report: QualityReport | None = None
     fallback_used: bool = False
     attempts: int = 0
     metadata: dict = field(default_factory=dict)
@@ -74,11 +72,11 @@ class LLMOrchestrator:
 
     def __init__(
         self,
-        providers: Optional[dict[ProviderName, BaseLLMProvider]] = None,
-        router: Optional[ModelRouter] = None,
-        cache: Optional[SemanticCache] = None,
-        cost_tracker: Optional[CostTracker] = None,
-        quality: Optional[QualityAssurance] = None,
+        providers: dict[ProviderName, BaseLLMProvider] | None = None,
+        router: ModelRouter | None = None,
+        cache: SemanticCache | None = None,
+        cost_tracker: CostTracker | None = None,
+        quality: QualityAssurance | None = None,
     ) -> None:
         self._providers: dict[ProviderName, BaseLLMProvider] = providers or {}
         self._router = router or ModelRouter()
@@ -100,8 +98,8 @@ class LLMOrchestrator:
         self,
         task_type: str,
         prompt: str,
-        context: Optional[str] = None,
-        options: Optional[GenerationOptions] = None,
+        context: str | None = None,
+        options: GenerationOptions | None = None,
     ) -> GenerationResult:
         """Generate a complete response with routing, caching, cost tracking,
         fallback, and quality assurance."""
@@ -258,8 +256,8 @@ class LLMOrchestrator:
         self,
         task_type: str,
         prompt: str,
-        context: Optional[str] = None,
-        options: Optional[GenerationOptions] = None,
+        context: str | None = None,
+        options: GenerationOptions | None = None,
     ) -> AsyncIterator[LLMStreamChunk]:
         """Stream response chunks with model routing and fallback.
 
@@ -303,7 +301,7 @@ class LLMOrchestrator:
             had_content = False
             errored = False
 
-            async for chunk in provider.generate_stream(request):
+            async for chunk in provider.generate_stream(request):  # type: ignore[attr-defined]
                 if chunk.finish_reason == "error":
                     errored = True
                     break

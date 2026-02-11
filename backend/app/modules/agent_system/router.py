@@ -10,16 +10,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.core.dependencies import get_current_user, require_role
-
+from app.database import get_db
 from app.modules.agent_system import service
+from app.modules.agent_system.audit import list_audit_entries
 from app.modules.agent_system.governance import (
-    BudgetExceeded,
-    PermissionDenied,
     emergency_stop as gov_emergency_stop,
 )
-from app.modules.agent_system.audit import list_audit_entries
 from app.modules.agent_system.models import (
     AuditAction,
     TaskPriority,
@@ -35,7 +32,6 @@ from app.modules.agent_system.schemas import (
     BudgetStatus,
     BudgetUpdate,
     EmergencyStopResponse,
-    MessageResponse,
     TaskApproveRequest,
     TaskCancelRequest,
     TaskCreate,

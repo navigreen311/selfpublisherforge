@@ -46,11 +46,11 @@ async def get_current_user(
             "org_id": UUID(org_id_raw) if org_id_raw else None,
             "role": payload.get("role", "viewer"),
         }
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
-        )
+        ) from e
 
 
 def require_role(*roles: str):

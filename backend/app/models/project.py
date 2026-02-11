@@ -1,16 +1,16 @@
 """Project, Book, Series, PenName, and BookVersion models."""
 import enum
 import uuid
-from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
     String,
     Text,
+)
+from sqlalchemy import (
     Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB

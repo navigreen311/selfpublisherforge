@@ -5,13 +5,11 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import re
 import statistics
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 from app.modules.style_cloning.ingestion import SegmentedText
 from app.modules.style_cloning.schemas import (
@@ -233,7 +231,7 @@ def extract_vocabulary(segmented: SegmentedText) -> VocabularyMetrics:
     """Analyze vocabulary characteristics of the text."""
     words = re.findall(r"[a-zA-Z']+", segmented.raw_text.lower())
     if not words:
-        return VocabularyMetrics()
+        return VocabularyMetrics()  # type: ignore[call-arg]
 
     total = len(words)
     unique = set(words)
@@ -270,7 +268,7 @@ def extract_sentence_metrics(segmented: SegmentedText) -> SentenceMetrics:
     """Analyze sentence-level characteristics."""
     sentences = segmented.sentences
     if not sentences:
-        return SentenceMetrics()
+        return SentenceMetrics()  # type: ignore[call-arg]
 
     lengths = [len(s.split()) for s in sentences]
     classifications = [_classify_sentence(s) for s in sentences]
@@ -299,7 +297,7 @@ def extract_paragraph_metrics(segmented: SegmentedText) -> ParagraphMetrics:
     """Analyze paragraph-level characteristics."""
     paragraphs = segmented.paragraphs
     if not paragraphs:
-        return ParagraphMetrics()
+        return ParagraphMetrics()  # type: ignore[call-arg]
 
     para_sentence_counts: list[int] = []
     para_word_counts: list[int] = []
@@ -334,7 +332,7 @@ def extract_rhetorical_metrics(segmented: SegmentedText) -> RhetoricalMetrics:
     text = segmented.raw_text
     word_count = segmented.word_count
     if word_count == 0:
-        return RhetoricalMetrics()
+        return RhetoricalMetrics()  # type: ignore[call-arg]
 
     per_1000 = 1000 / word_count
 
@@ -370,11 +368,11 @@ def extract_dialogue_metrics(segmented: SegmentedText) -> DialogueMetrics:
     text = segmented.raw_text
     word_count = segmented.word_count
     if word_count == 0:
-        return DialogueMetrics()
+        return DialogueMetrics()  # type: ignore[call-arg]
 
     dialogue_spans = _DIALOGUE_RE.findall(text)
     if not dialogue_spans:
-        return DialogueMetrics()
+        return DialogueMetrics()  # type: ignore[call-arg]
 
     dialogue_words = sum(len(span.split()) for span in dialogue_spans)
     narrative_words = word_count - dialogue_words

@@ -4,10 +4,11 @@ Local copy of shared/types/events.py so the backend can run without the
 root-level ``shared`` package on sys.path.
 """
 
-from pydantic import BaseModel
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel
 
 
 class EventType(str, Enum):

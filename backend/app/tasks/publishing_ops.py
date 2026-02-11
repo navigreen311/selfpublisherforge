@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -125,13 +125,13 @@ def task_generate_epub(
     3. Uploads the EPUB to S3
     4. Updates the export record with file URL and size
     """
+    from app.modules.publishing_ops.epub_generator import generate_epub
     from app.modules.publishing_ops.schemas import (
         ChapterInput,
-        ExportRequest,
         ExportFormat,
+        ExportRequest,
         TemplateStyleSettings,
     )
-    from app.modules.publishing_ops.epub_generator import generate_epub
 
     try:
         logger.info("Generating EPUB for export_id=%s, book_id=%s", export_id, book_id)
@@ -170,7 +170,7 @@ def task_generate_epub(
             "status": "completed",
             "file_url": file_url,
             "file_size_bytes": file_size,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
     except ClientError as exc:
         logger.error("S3 upload failed for EPUB export_id=%s: %s", export_id, exc, exc_info=True)
@@ -212,14 +212,14 @@ def task_generate_pdf(
     Similar flow to EPUB but uses pdf_generator and includes
     trim-size / ISBN barcode handling.
     """
+    from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
     from app.modules.publishing_ops.schemas import (
         ChapterInput,
-        ExportRequest,
         ExportFormat,
+        ExportRequest,
         TemplateStyleSettings,
         TrimSize,
     )
-    from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 
     try:
         logger.info("Generating PDF for export_id=%s, book_id=%s", export_id, book_id)
@@ -257,7 +257,7 @@ def task_generate_pdf(
             "status": "completed",
             "file_url": file_url,
             "file_size_bytes": file_size,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
     except ClientError as exc:
         logger.error("S3 upload failed for PDF export_id=%s: %s", export_id, exc, exc_info=True)
@@ -298,9 +298,12 @@ def task_sync_listing(
     5. Update the last_synced_at timestamp on the listing record
     """
     from sqlalchemy import select
+
     from app.database import async_session
     from app.models.publishing import (
         Listing as ListingModel,
+    )
+    from app.models.publishing import (
         ListingStatus as ListingStatusEnum,
     )
 
@@ -322,7 +325,7 @@ def task_sync_listing(
                     "listing_id": listing_id,
                     "platform": platform,
                     "status": "not_found",
-                    "synced_at": datetime.now(timezone.utc).isoformat(),
+                    "synced_at": datetime.now(UTC).isoformat(),
                     "message": f"Listing {listing_id} not found",
                 }
 
@@ -331,7 +334,7 @@ def task_sync_listing(
             listing_data = listing.listing_data or {}
             effective_platform = listing_data.get("platform", platform)
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             logger.info(
                 "Listing sync attempted: listing_id=%s, platform=%s",

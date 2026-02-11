@@ -8,17 +8,17 @@ and trial events with proper idempotency, notifications, and logging.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.common import PlanTier
-from app.modules.billing.plans import get_plan_limits, is_upgrade
-from app.modules.notifications.service import create_notification
+from app.modules.billing.plans import get_plan_limits
 from app.modules.notifications.models import NotificationType
+from app.modules.notifications.service import create_notification
+from app.schemas.common import PlanTier
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +56,11 @@ async def handle_subscription_upgrade(
 
     if subscription.get("current_period_start"):
         current_period_start = datetime.fromtimestamp(
-            subscription["current_period_start"], tz=timezone.utc
+            subscription["current_period_start"], tz=UTC
         )
     if subscription.get("current_period_end"):
         current_period_end = datetime.fromtimestamp(
-            subscription["current_period_end"], tz=timezone.utc
+            subscription["current_period_end"], tz=UTC
         )
 
     await _update_org(
@@ -100,7 +100,11 @@ async def handle_subscription_upgrade(
                 'org_id': org_id,
                 'type': NotificationType.SUCCESS,
                 'title': f'Upgraded to {new_tier.value.title()} Plan',
-                'message': f'Your subscription has been upgraded. You now have access to {new_limits.max_projects or "unlimited"} projects and {new_limits.ai_generations_per_day} AI generations per day.',
+                'message': (
+                    f'Your subscription has been upgraded. You now have access to '
+                    f'{new_limits.max_projects or "unlimited"} projects and '
+                    f'{new_limits.ai_generations_per_day} AI generations per day.'
+                ),
                 'data': {
                     'tier': new_tier.value,
                     'max_projects': new_limits.max_projects,
@@ -139,7 +143,7 @@ async def handle_subscription_downgrade(
 
     if subscription.get("current_period_end"):
         current_period_end = datetime.fromtimestamp(
-            subscription["current_period_end"], tz=timezone.utc
+            subscription["current_period_end"], tz=UTC
         )
 
     # If cancel_at_period_end, keep current tier until period ends
@@ -180,7 +184,10 @@ async def handle_subscription_downgrade(
         message = f'Your subscription will be downgraded to {new_tier.value.title()} plan'
         if cancel_at_period_end and current_period_end:
             message += f' on {current_period_end.strftime("%B %d, %Y")}'
-        message += f'. Projects will be limited to {new_limits.max_projects or "unlimited"} (currently {old_limits.max_projects or "unlimited"}).'
+        message += (
+            f'. Projects will be limited to {new_limits.max_projects or "unlimited"} '
+            f'(currently {old_limits.max_projects or "unlimited"}).'
+        )
 
         await create_notification(
             db,
@@ -341,7 +348,7 @@ async def handle_subscription_canceled(
         event_type="subscription_canceled",
         event_data={
             "subscription_id": subscription.get("id"),
-            "canceled_at": datetime.now(timezone.utc).isoformat(),
+            "canceled_at": datetime.now(UTC).isoformat(),
         },
         stripe_event_id=subscription.get("id"),
     )
@@ -559,8 +566,9 @@ async def _update_org(
         return
     set_clauses = ", ".join(f"{key} = :{key}" for key in data)
     params = {**data, "org_id": str(org_id)}
+    # Dynamic column names, but values are parameterized (safe from SQL injection)
     await db.execute(
-        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),
+        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608
         params,
     )
     await db.flush()

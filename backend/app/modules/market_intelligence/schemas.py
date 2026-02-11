@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -27,9 +25,9 @@ class TrendDirection(str, Enum):
 class CategoryNode(BaseModel):
     id: str = Field(..., description="Amazon browse-node ID")
     name: str
-    parent_id: Optional[str] = None
+    parent_id: str | None = None
     children: list[CategoryNode] = Field(default_factory=list)
-    book_count: Optional[int] = None
+    book_count: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -81,7 +79,7 @@ class KeywordResearchResponse(BaseModel):
 
 class KeywordSuggestionsParams(BaseModel):
     genre: str
-    niche: Optional[str] = None
+    niche: str | None = None
     limit: int = Field(default=20, ge=1, le=100)
 
 
@@ -91,7 +89,7 @@ class KeywordSuggestionsParams(BaseModel):
 
 class NicheAnalysisRequest(BaseModel):
     niche: str = Field(..., min_length=2, max_length=200)
-    category_id: Optional[str] = None
+    category_id: str | None = None
     marketplace: str = Field(default="US")
 
 
@@ -108,8 +106,8 @@ class NicheAnalysisResponse(BaseModel):
     opportunity_score: float = Field(..., ge=0, le=100)
     top_competitors: list[CompetitorSummary]
     gap_analysis: list[GapAnalysisItem]
-    avg_monthly_revenue: Optional[float] = None
-    avg_bsr: Optional[float] = None
+    avg_monthly_revenue: float | None = None
+    avg_bsr: float | None = None
     recommendation: str = ""
     analyzed_at: datetime
 
@@ -122,11 +120,11 @@ class CompetitorSummary(BaseModel):
     asin: str
     title: str
     author: str = ""
-    bsr: Optional[int] = None
-    price: Optional[float] = None
+    bsr: int | None = None
+    price: float | None = None
     reviews_count: int = 0
-    rating: Optional[float] = None
-    image_url: Optional[str] = None
+    rating: float | None = None
+    image_url: str | None = None
 
 
 class CompetitorTrackRequest(BaseModel):
@@ -137,7 +135,7 @@ class CompetitorTrackRequest(BaseModel):
 class BSRHistoryPoint(BaseModel):
     date: datetime
     bsr: int
-    price: Optional[float] = None
+    price: float | None = None
 
 
 class CompetitorDetail(BaseModel):
@@ -145,16 +143,16 @@ class CompetitorDetail(BaseModel):
     asin: str
     title: str
     author: str
-    bsr: Optional[int] = None
-    price: Optional[float] = None
+    bsr: int | None = None
+    price: float | None = None
     reviews_count: int = 0
-    rating: Optional[float] = None
-    image_url: Optional[str] = None
-    category: Optional[str] = None
+    rating: float | None = None
+    image_url: str | None = None
+    category: str | None = None
     marketplace: str = "US"
     bsr_history: list[BSRHistoryPoint] = Field(default_factory=list)
     tracked_since: datetime
-    last_updated: Optional[datetime] = None
+    last_updated: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -164,10 +162,10 @@ class CompetitorListItem(BaseModel):
     asin: str
     title: str
     author: str
-    bsr: Optional[int] = None
-    price: Optional[float] = None
+    bsr: int | None = None
+    price: float | None = None
     reviews_count: int = 0
-    rating: Optional[float] = None
+    rating: float | None = None
     marketplace: str = "US"
     tracked_since: datetime
 
@@ -185,8 +183,8 @@ class TrendDataPoint(BaseModel):
 
 class MarketTrend(BaseModel):
     label: str
-    category_id: Optional[str] = None
-    keyword: Optional[str] = None
+    category_id: str | None = None
+    keyword: str | None = None
     direction: TrendDirection
     data_points: list[TrendDataPoint] = Field(default_factory=list)
     change_pct: float = Field(

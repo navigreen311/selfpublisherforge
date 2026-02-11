@@ -1,6 +1,5 @@
 """FastAPI router for Review Intelligence endpoints."""
 
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -50,13 +49,13 @@ router = APIRouter()
     description="List reviews for the organization's books with optional filters.",
 )
 async def list_reviews_endpoint(
-    cursor: Optional[str] = Query(None),
+    cursor: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
-    source: Optional[ReviewSource] = Query(None),
-    min_rating: Optional[float] = Query(None, ge=0.0, le=5.0),
-    max_rating: Optional[float] = Query(None, ge=0.0, le=5.0),
-    sentiment: Optional[SentimentLabel] = Query(None),
-    is_competitor: Optional[bool] = Query(None),
+    source: ReviewSource | None = Query(None),
+    min_rating: float | None = Query(None, ge=0.0, le=5.0),
+    max_rating: float | None = Query(None, ge=0.0, le=5.0),
+    sentiment: SentimentLabel | None = Query(None),
+    is_competitor: bool | None = Query(None),
     sort_by: str = Query("review_date"),
     sort_dir: str = Query("desc"),
     current_user: dict = Depends(get_current_user),
@@ -93,11 +92,11 @@ async def list_reviews_endpoint(
 )
 async def get_book_reviews_endpoint(
     book_id: UUID,
-    cursor: Optional[str] = Query(None),
+    cursor: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
-    sentiment: Optional[SentimentLabel] = Query(None),
-    min_rating: Optional[float] = Query(None, ge=0.0, le=5.0),
-    max_rating: Optional[float] = Query(None, ge=0.0, le=5.0),
+    sentiment: SentimentLabel | None = Query(None),
+    min_rating: float | None = Query(None, ge=0.0, le=5.0),
+    max_rating: float | None = Query(None, ge=0.0, le=5.0),
     sort_by: str = Query("review_date"),
     sort_dir: str = Query("desc"),
     current_user: dict = Depends(get_current_user),
@@ -148,7 +147,7 @@ async def get_sentiment_endpoint(
 async def get_velocity_endpoint(
     book_id: UUID,
     period: VelocityPeriod = Query(VelocityPeriod.WEEKLY),
-    lookback: Optional[int] = Query(None, ge=1, le=52),
+    lookback: int | None = Query(None, ge=1, le=52),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -165,12 +164,12 @@ async def get_velocity_endpoint(
     description="List active review alerts such as negative reviews, velocity drops, and competitor surges.",
 )
 async def list_alerts_endpoint(
-    cursor: Optional[str] = Query(None),
+    cursor: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
-    alert_type: Optional[AlertType] = Query(None),
-    severity: Optional[AlertSeverity] = Query(None),
-    is_acknowledged: Optional[bool] = Query(False),
-    book_id: Optional[UUID] = Query(None),
+    alert_type: AlertType | None = Query(None),
+    severity: AlertSeverity | None = Query(None),
+    is_acknowledged: bool | None = Query(False),
+    book_id: UUID | None = Query(None),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

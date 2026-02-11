@@ -1,13 +1,13 @@
 """Seed demo analytics, revenue, and royalty data."""
 import random
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.analytics.models import RoyaltyRecord, PortfolioMetricSnapshot
+from app.modules.analytics.models import PortfolioMetricSnapshot, RoyaltyRecord
 
 
 async def seed_analytics(
@@ -41,7 +41,7 @@ async def seed_analytics(
     marketplaces = ["US", "UK", "CA", "AU", "DE"]
 
     total_records = 0
-    end_date = datetime.now(timezone.utc)
+    end_date = datetime.now(UTC)
     start_date = end_date - timedelta(days=365)
 
     # Generate monthly records for each platform/marketplace combo
@@ -103,7 +103,7 @@ async def seed_analytics(
                     raw_data={
                         "platform": platform,
                         "marketplace": marketplace,
-                        "import_date": datetime.now(timezone.utc).isoformat(),
+                        "import_date": datetime.now(UTC).isoformat(),
                     },
                 )
                 db.add(royalty)

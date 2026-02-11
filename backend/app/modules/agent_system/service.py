@@ -8,21 +8,23 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import select, func, desc, update
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
+from app.modules.agent_system.audit import record_audit
+from app.modules.agent_system.executor import TaskExecutor
 from app.modules.agent_system.models import (
     Agent,
     AgentBudget,
     AgentTask,
-    AgentWorkflow,
     AgentType,
+    AgentWorkflow,
     AuditAction,
     PermissionLevel,
     TaskPriority,
@@ -31,23 +33,13 @@ from app.modules.agent_system.models import (
 )
 from app.modules.agent_system.schemas import (
     AgentConfigUpdate,
-    AgentCreate,
     BudgetUpdate,
     TaskApproveRequest,
     TaskCreate,
     TaskRejectRequest,
     WorkflowCreate,
 )
-from app.modules.agent_system.executor import TaskExecutor
 from app.modules.agent_system.workflow_engine import WorkflowEngine
-from app.modules.agent_system.governance import (
-    check_budget,
-    check_permission,
-    emergency_stop as gov_emergency_stop,
-    requires_approval,
-)
-from app.modules.agent_system.audit import record_audit, list_audit_entries
-
 
 # ---------------------------------------------------------------------------
 # Default agent definitions (seeded per-org on first access)
@@ -317,7 +309,7 @@ async def approve_task(
 
     task.status = TaskStatus.APPROVED
     task.approved_by = approved_by
-    task.completed_at = datetime.now(timezone.utc)
+    task.completed_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(task)
 
@@ -350,7 +342,7 @@ async def reject_task(
         raise ValueError(f"Task is not awaiting approval (status: {task.status.value})")
 
     task.status = TaskStatus.REJECTED
-    task.completed_at = datetime.now(timezone.utc)
+    task.completed_at = datetime.now(UTC)
     task.error_message = f"Rejected: {payload.reason}"
     await db.flush()
     await db.refresh(task)
@@ -401,7 +393,7 @@ async def cancel_task(
 
     task.status = TaskStatus.CANCELLED
     task.error_message = f"Cancelled: {reason}" if reason else "Cancelled by user"
-    task.completed_at = datetime.now(timezone.utc)
+    task.completed_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(task)
 

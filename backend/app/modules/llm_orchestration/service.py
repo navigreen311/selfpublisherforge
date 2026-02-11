@@ -8,10 +8,10 @@ modules and by the router endpoints.
 from __future__ import annotations
 
 import logging
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
 
 from app.modules.llm_orchestration.cache import SemanticCache
-from app.modules.llm_orchestration.cost_tracker import CostTracker, MODEL_PRICING
+from app.modules.llm_orchestration.cost_tracker import MODEL_PRICING, CostTracker
 from app.modules.llm_orchestration.orchestrator import (
     GenerationOptions,
     GenerationResult,
@@ -28,9 +28,10 @@ from app.modules.llm_orchestration.schemas import (
     CompletionResponse,
     CostEstimate,
     CostEstimateRequest,
-    ModelConfig,
-    QualityReport as QualityReportSchema,
     UsageStats,
+)
+from app.modules.llm_orchestration.schemas import (
+    QualityReport as QualityReportSchema,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,24 +39,24 @@ logger = logging.getLogger(__name__)
 
 def _quality_report_to_schema(
     report: object,
-) -> Optional[QualityReportSchema]:
+) -> QualityReportSchema | None:
     """Convert an orchestrator QualityReport dataclass to the Pydantic schema."""
     if report is None:
         return None
     return QualityReportSchema(
-        overall_level=report.overall_level.value,  # type: ignore[union-attr]
-        overall_score=report.overall_score,  # type: ignore[union-attr]
-        readability_score=report.readability_score,  # type: ignore[union-attr]
-        readability_grade_level=report.readability_grade_level,  # type: ignore[union-attr]
-        word_count=report.word_count,  # type: ignore[union-attr]
-        sentence_count=report.sentence_count,  # type: ignore[union-attr]
-        avg_sentence_length=report.avg_sentence_length,  # type: ignore[union-attr]
-        plagiarism_flag=report.plagiarism_flag,  # type: ignore[union-attr]
-        plagiarism_confidence=report.plagiarism_confidence,  # type: ignore[union-attr]
-        hallucination_flag=report.hallucination_flag,  # type: ignore[union-attr]
-        hallucination_confidence=report.hallucination_confidence,  # type: ignore[union-attr]
-        issues=report.issues,  # type: ignore[union-attr]
-        passes_threshold=report.passes_threshold,  # type: ignore[union-attr]
+        overall_level=report.overall_level.value,  # type: ignore[union-attr,attr-defined]
+        overall_score=report.overall_score,  # type: ignore[union-attr,attr-defined]
+        readability_score=report.readability_score,  # type: ignore[union-attr,attr-defined]
+        readability_grade_level=report.readability_grade_level,  # type: ignore[union-attr,attr-defined]
+        word_count=report.word_count,  # type: ignore[union-attr,attr-defined]
+        sentence_count=report.sentence_count,  # type: ignore[union-attr,attr-defined]
+        avg_sentence_length=report.avg_sentence_length,  # type: ignore[union-attr,attr-defined]
+        plagiarism_flag=report.plagiarism_flag,  # type: ignore[union-attr,attr-defined]
+        plagiarism_confidence=report.plagiarism_confidence,  # type: ignore[union-attr,attr-defined]
+        hallucination_flag=report.hallucination_flag,  # type: ignore[union-attr,attr-defined]
+        hallucination_confidence=report.hallucination_confidence,  # type: ignore[union-attr,attr-defined]
+        issues=report.issues,  # type: ignore[union-attr,attr-defined]
+        passes_threshold=report.passes_threshold,  # type: ignore[union-attr,attr-defined]
     )
 
 
@@ -114,11 +115,11 @@ class LLMOrchestrationService:
 
     def __init__(
         self,
-        providers: Optional[dict[ProviderName, BaseLLMProvider]] = None,
-        router: Optional[ModelRouter] = None,
-        cache: Optional[SemanticCache] = None,
-        cost_tracker: Optional[CostTracker] = None,
-        quality: Optional[QualityAssurance] = None,
+        providers: dict[ProviderName, BaseLLMProvider] | None = None,
+        router: ModelRouter | None = None,
+        cache: SemanticCache | None = None,
+        cost_tracker: CostTracker | None = None,
+        quality: QualityAssurance | None = None,
     ) -> None:
         self._cost_tracker = cost_tracker or CostTracker()
         self._quality = quality or QualityAssurance()
@@ -300,7 +301,7 @@ class LLMOrchestrationService:
     # ------------------------------------------------------------------
 
     def get_usage_stats(
-        self, org_id: str, model_id: Optional[str] = None
+        self, org_id: str, model_id: str | None = None
     ) -> UsageStats:
         """Return aggregated usage statistics for an organization.
 
@@ -326,7 +327,7 @@ class LLMOrchestrationService:
     # ------------------------------------------------------------------
 
     def assess_quality(
-        self, content: str, task_type: Optional[str] = None
+        self, content: str, task_type: str | None = None
     ) -> QualityReportSchema:
         """Run a standalone quality assessment on arbitrary text.
 
@@ -347,7 +348,7 @@ class LLMOrchestrationService:
     @staticmethod
     def _flatten_messages(
         messages: list[ChatMessage],
-    ) -> tuple[str, Optional[str]]:
+    ) -> tuple[str, str | None]:
         """Flatten a list of chat messages into (prompt, context).
 
         The last user message becomes the prompt.  All preceding messages

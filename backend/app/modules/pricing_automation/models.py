@@ -16,12 +16,11 @@ from sqlalchemy import (
     String,
     Text,
     func,
-    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base, TenantModel
+from app.database import TenantModel
 
 
 class PricingStrategyType(str, PyEnum):
@@ -102,10 +101,10 @@ class PricingRule(TenantModel):
         primaryjoin="PricingRule.book_id == Book.id",
         foreign_keys="[PricingRule.book_id]",
     )
-    promotions: Mapped[list["Promotion"]] = relationship(
+    promotions: Mapped[list[Promotion]] = relationship(
         "Promotion", back_populates="pricing_rule", lazy="selectin"
     )
-    ab_tests: Mapped[list["PricingABTest"]] = relationship(
+    ab_tests: Mapped[list[PricingABTest]] = relationship(
         "PricingABTest", back_populates="pricing_rule", lazy="selectin"
     )
 

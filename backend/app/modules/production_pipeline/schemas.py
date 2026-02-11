@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,17 +13,16 @@ from app.modules.production_pipeline.models import (
     TaskType,
 )
 
-
 # ── Task Schemas ──────────────────────────────────────────────────────────
 
 
 class TaskBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: str | None = None
     type: TaskType = TaskType.WRITING
-    assignee_id: Optional[uuid.UUID] = None
-    due_date: Optional[datetime] = None
-    depends_on: Optional[list[str]] = Field(default_factory=list)
+    assignee_id: uuid.UUID | None = None
+    due_date: datetime | None = None
+    depends_on: list[str] | None = Field(default_factory=list)
     position: int = 0
 
 
@@ -35,14 +33,14 @@ class CreateTask(TaskBase):
 class UpdateTask(BaseModel):
     """Schema for updating a task (partial)."""
 
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    type: Optional[TaskType] = None
-    status: Optional[TaskStatus] = None
-    assignee_id: Optional[uuid.UUID] = None
-    due_date: Optional[datetime] = None
-    depends_on: Optional[list[str]] = None
-    position: Optional[int] = None
+    title: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    type: TaskType | None = None
+    status: TaskStatus | None = None
+    assignee_id: uuid.UUID | None = None
+    due_date: datetime | None = None
+    depends_on: list[str] | None = None
+    position: int | None = None
 
 
 class TaskResponse(TaskBase):
@@ -50,7 +48,7 @@ class TaskResponse(TaskBase):
     pipeline_id: uuid.UUID
     org_id: uuid.UUID
     status: TaskStatus
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -62,26 +60,26 @@ class TaskResponse(TaskBase):
 
 class PipelineBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: str | None = None
     book_id: uuid.UUID
-    deadline: Optional[datetime] = None
-    settings: Optional[dict] = Field(default_factory=dict)
+    deadline: datetime | None = None
+    settings: dict | None = Field(default_factory=dict)
 
 
 class CreatePipeline(PipelineBase):
     """Schema for creating a new pipeline."""
 
-    template_id: Optional[uuid.UUID] = None
+    template_id: uuid.UUID | None = None
 
 
 class UpdatePipeline(BaseModel):
     """Schema for updating pipeline settings (partial)."""
 
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    status: Optional[PipelineStatus] = None
-    deadline: Optional[datetime] = None
-    settings: Optional[dict] = None
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    status: PipelineStatus | None = None
+    deadline: datetime | None = None
+    settings: dict | None = None
 
 
 class PipelineResponse(PipelineBase):
@@ -103,7 +101,7 @@ class PipelineSummaryResponse(BaseModel):
     book_id: uuid.UUID
     name: str
     status: PipelineStatus
-    deadline: Optional[datetime] = None
+    deadline: datetime | None = None
     task_count: int = 0
     completed_task_count: int = 0
     overdue_task_count: int = 0
@@ -123,10 +121,10 @@ class TimelineTask(BaseModel):
     title: str
     type: TaskType
     status: TaskStatus
-    assignee_id: Optional[uuid.UUID] = None
-    start_date: Optional[datetime] = None
-    due_date: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    assignee_id: uuid.UUID | None = None
+    start_date: datetime | None = None
+    due_date: datetime | None = None
+    completed_at: datetime | None = None
     depends_on: list[str] = []
     progress: float = 0.0  # 0.0 – 1.0
 
@@ -136,7 +134,7 @@ class TimelineView(BaseModel):
 
     pipeline_id: uuid.UUID
     pipeline_name: str
-    deadline: Optional[datetime] = None
+    deadline: datetime | None = None
     tasks: list[TimelineTask] = []
     critical_path: list[str] = []  # ordered task IDs on the critical path
 
@@ -149,7 +147,7 @@ class TaskDefinition(BaseModel):
 
     title: str
     type: TaskType = TaskType.WRITING
-    description: Optional[str] = None
+    description: str | None = None
     depends_on: list[str] = Field(default_factory=list)
     estimated_days: int = 1
     position: int = 0
@@ -157,9 +155,9 @@ class TaskDefinition(BaseModel):
 
 class CreateTemplate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: str | None = None
     task_definitions: list[TaskDefinition] = Field(default_factory=list)
-    settings: Optional[dict] = Field(default_factory=dict)
+    settings: dict | None = Field(default_factory=dict)
     is_public: bool = False
 
 
@@ -167,9 +165,9 @@ class TemplateResponse(BaseModel):
     id: uuid.UUID
     org_id: uuid.UUID
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     task_definitions: list[dict] = []
-    settings: Optional[dict] = None
+    settings: dict | None = None
     is_public: bool = False
     created_at: datetime
     updated_at: datetime

@@ -7,13 +7,12 @@ Credentials are read from environment variables:
 """
 
 import asyncio
-import logging
-import os
-from datetime import datetime, timedelta, timezone
-from uuid import UUID
 import gzip
 import json
+import logging
+import os
 import time
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -154,7 +153,7 @@ class AmazonAdsClient:
                 data = response.json()
                 self._access_token = data["access_token"]
                 expires_in = data.get("expires_in", 3600)
-                self._token_expiry = datetime.now(timezone.utc) + timedelta(seconds=max(expires_in - 300, 60))
+                self._token_expiry = datetime.now(UTC) + timedelta(seconds=max(expires_in - 300, 60))
                 logger.info("Amazon Ads access token refreshed")
             else:
                 logger.error(f"Failed to refresh Amazon Ads token: {response.text}")
@@ -164,7 +163,7 @@ class AmazonAdsClient:
         """Ensure we have a valid access token."""
         if not self._access_token or (
             self._token_expiry
-            and datetime.now(timezone.utc) >= self._token_expiry
+            and datetime.now(UTC) >= self._token_expiry
         ):
             await self._refresh_access_token()
 
@@ -255,7 +254,7 @@ class AmazonAdsClient:
         logger.info(f"Creating Amazon Ads campaign: {name}")
         self._require_configured("create_campaign")
 
-        effective_start = start_date or datetime.now(timezone.utc).strftime("%Y%m%d")
+        effective_start = start_date or datetime.now(UTC).strftime("%Y%m%d")
 
         payload = {
             "campaigns": [

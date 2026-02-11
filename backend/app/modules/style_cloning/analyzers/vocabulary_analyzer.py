@@ -63,10 +63,7 @@ class VocabularyAnalyzer:
             return True
 
         # Hyphenated technical terms
-        if '-' in word and len(word) > 6:
-            return True
-
-        return False
+        return bool('-' in word and len(word) > 6)
 
     def analyze(self, text: str) -> VocabularyRichnessMetrics:
         """Analyze vocabulary richness in the given text.
@@ -112,10 +109,6 @@ class VocabularyAnalyzer:
         # Vocabulary level score (based on word length distribution)
         # 0.0 = very simple (short words), 1.0 = advanced (long words)
         length_counts = Counter(len(w) for w in words_lower)
-        common_count = sum(
-            count for length, count in length_counts.items()
-            if length <= _COMMON_WORD_LENGTH_THRESHOLD
-        )
         advanced_count = sum(
             count for length, count in length_counts.items()
             if length > _INTERMEDIATE_WORD_LENGTH

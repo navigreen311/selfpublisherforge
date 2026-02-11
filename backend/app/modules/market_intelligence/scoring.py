@@ -14,7 +14,6 @@ import math
 import os
 import statistics
 from dataclasses import dataclass, field
-from typing import Optional
 
 DEMAND_MIDPOINT = int(os.environ.get("MI_DEMAND_MIDPOINT", "5000"))
 COMPETITION_MIDPOINT = int(os.environ.get("MI_COMPETITION_MIDPOINT", "50000"))

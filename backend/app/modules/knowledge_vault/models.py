@@ -1,9 +1,8 @@
 """Knowledge Vault database models."""
 
-from sqlalchemy import Column, Float, String, Text, DateTime, func
+
+from sqlalchemy import Column, Float, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from datetime import datetime
-from typing import Optional
 
 from app.database import TenantModel
 
@@ -13,16 +12,16 @@ class KnowledgeEntry(TenantModel):
 
     __tablename__ = "knowledge_entries"
 
-    title: str = Column(String(500), nullable=False, index=True)
-    content: str = Column(Text, nullable=False, default="")
-    source_url: Optional[str] = Column(String(2048), nullable=True)
-    source_type: str = Column(
+    title: str = Column(String(500), nullable=False, index=True)  # type: ignore[assignment]
+    content: str = Column(Text, nullable=False, default="")  # type: ignore[assignment]
+    source_url: str | None = Column(String(2048), nullable=True)  # type: ignore[assignment]
+    source_type: str = Column(  # type: ignore[assignment]
         String(20), nullable=False, default="manual",
         comment="manual | url | file | clip",
     )
-    tags: list[str] = Column(ARRAY(String(100)), nullable=False, server_default="{}")
-    credibility_score: Optional[float] = Column(Float, nullable=True)
-    metadata_: dict = Column("metadata", JSONB, nullable=False, server_default="{}")
+    tags: list[str] = Column(ARRAY(String(100)), nullable=False, server_default="{}")  # type: ignore[assignment]
+    credibility_score: float | None = Column(Float, nullable=True)  # type: ignore[assignment]
+    metadata_: dict = Column("metadata", JSONB, nullable=False, server_default="{}")  # type: ignore[assignment]
 
     def __repr__(self) -> str:
         return f"<KnowledgeEntry id={self.id} title={self.title!r}>"

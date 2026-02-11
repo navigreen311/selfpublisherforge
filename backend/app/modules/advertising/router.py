@@ -1,43 +1,43 @@
 """FastAPI router for Advertising Intelligence endpoints."""
 
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
-from app.database import get_db
 from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
+from app.database import get_db
+from app.modules.advertising.facebook_ads import FacebookAdsError
 from app.modules.advertising.schemas import (
+    AdCreativeResponse,
     AdDashboard,
     AdPerformance,
-    AdCreativeResponse,
+    AdPlatform,
     CampaignCreate,
     CampaignFilter,
     CampaignResponse,
+    CampaignStatus,
+    CampaignType,
     CampaignUpdate,
     CampaignWithPerformance,
     CreativeGenerateRequest,
     CreativeGenerateResponse,
+    FacebookCampaignCreate,
+    FacebookCampaignListResponse,
+    FacebookCampaignMetrics,
+    FacebookCampaignResponse,
+    FacebookCampaignUpdate,
     KeywordBidBulkUpdate,
     KeywordBidResponse,
     OptimizationRequest,
     OptimizationSuggestion,
     PerformanceQuery,
-    AdPlatform,
-    CampaignStatus,
-    CampaignType,
-    FacebookCampaignCreate,
-    FacebookCampaignUpdate,
-    FacebookCampaignResponse,
-    FacebookCampaignListResponse,
-    FacebookCampaignMetrics,
 )
-from app.modules.advertising.facebook_ads import FacebookAdsError
 
 try:
     from app.modules.advertising.facebook_ads import FacebookAdsClient
