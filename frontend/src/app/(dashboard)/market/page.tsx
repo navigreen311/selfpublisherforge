@@ -20,8 +20,10 @@ import {
 } from "@/modules/market/hooks";
 import { CategoryTree, NicheScoreCard, TrendChart } from "@/modules/market/components";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function MarketDashboardPage() {
+  const t = useTranslations("market");
   const [selectedCategory, setSelectedCategory] = useState<CategoryNode | null>(null);
   const [nicheQuery, setNicheQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -63,7 +65,7 @@ export default function MarketDashboardPage() {
         <input
           id="niche-search"
           type="text"
-          placeholder="Enter a niche to analyze (e.g., 'self-help for millennials')..."
+          placeholder={t("nicheSearchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAnalyzeNiche()}
@@ -77,9 +79,9 @@ export default function MarketDashboardPage() {
           onClick={handleAnalyzeNiche}
           disabled={nicheAnalysis.isPending || !searchInput.trim()}
           className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label={nicheAnalysis.isPending ? "Analyzing niche, please wait" : "Analyze niche"}
+          aria-label={nicheAnalysis.isPending ? t("analyzingLabel") : t("analyzeLabel")}
         >
-          {nicheAnalysis.isPending ? "Analyzing..." : "Analyze Niche"}
+          {nicheAnalysis.isPending ? t("analyzing") : t("analyzeNiche")}
         </button>
       </div>
 
@@ -97,9 +99,9 @@ export default function MarketDashboardPage() {
       {/* Main grid: category tree + analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Category tree */}
-        <div className="lg:col-span-1" role="region" aria-label="Category browser">
+        <div className="lg:col-span-1" role="region" aria-label={t("categoryBrowser")}>
           {catsLoading ? (
-            <div className="border rounded-lg bg-card p-4 space-y-3" aria-busy="true" aria-label="Loading categories">
+            <div className="border rounded-lg bg-card p-4 space-y-3" aria-busy="true" aria-label={t("loadingCategories")}>
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-8" />
               ))}
@@ -114,7 +116,7 @@ export default function MarketDashboardPage() {
         </div>
 
         {/* Category analysis */}
-        <div className="lg:col-span-2 space-y-4" role="region" aria-label="Category analysis details">
+        <div className="lg:col-span-2 space-y-4" role="region" aria-label={t("categoryAnalysisDetails")}>
           {categoryAnalysis ? (
             <>
               <div className="border rounded-lg bg-card p-6">
@@ -126,18 +128,18 @@ export default function MarketDashboardPage() {
                   role="group"
                   aria-label="Category statistics"
                 >
-                  <StatCard label="Books" value={categoryAnalysis.book_count.toLocaleString()} />
-                  <StatCard label="Avg BSR" value={Math.round(categoryAnalysis.avg_bsr).toLocaleString()} />
-                  <StatCard label="Avg Price" value={`$${categoryAnalysis.avg_price.toFixed(2)}`} />
-                  <StatCard label="Competition" value={`${categoryAnalysis.competition_score.toFixed(0)}/100`} />
-                  <StatCard label="Avg Reviews" value={Math.round(categoryAnalysis.avg_reviews).toLocaleString()} />
-                  <StatCard label="Avg Rating" value={`${categoryAnalysis.avg_rating.toFixed(1)} stars`} />
-                  <StatCard label="Median BSR" value={Math.round(categoryAnalysis.median_bsr).toLocaleString()} />
+                  <StatCard label={t("books")} value={categoryAnalysis.book_count.toLocaleString()} />
+                  <StatCard label={t("avgBsr")} value={Math.round(categoryAnalysis.avg_bsr).toLocaleString()} />
+                  <StatCard label={t("avgPrice")} value={`$${categoryAnalysis.avg_price.toFixed(2)}`} />
+                  <StatCard label={t("competition")} value={`${categoryAnalysis.competition_score.toFixed(0)}/100`} />
+                  <StatCard label={t("avgReviews")} value={Math.round(categoryAnalysis.avg_reviews).toLocaleString()} />
+                  <StatCard label={t("avgRating")} value={`${categoryAnalysis.avg_rating.toFixed(1)} stars`} />
+                  <StatCard label={t("medianBsr")} value={Math.round(categoryAnalysis.median_bsr).toLocaleString()} />
                 </div>
 
                 {/* BSR Distribution */}
                 <div className="mt-6" role="region" aria-label="BSR distribution chart">
-                  <h4 className="text-sm font-medium mb-3">BSR Distribution</h4>
+                  <h4 className="text-sm font-medium mb-3">{t("bsrDistribution")}</h4>
                   <div
                     className="flex gap-2"
                     role="img"
@@ -165,7 +167,7 @@ export default function MarketDashboardPage() {
                 {/* Top books */}
                 {categoryAnalysis.top_books.length > 0 && (
                   <div className="mt-6" role="region" aria-label="Top books in category">
-                    <h4 className="text-sm font-medium mb-3">Top Books</h4>
+                    <h4 className="text-sm font-medium mb-3">{t("topBooks")}</h4>
                     <div
                       className="space-y-2"
                       role="list"
@@ -203,7 +205,7 @@ export default function MarketDashboardPage() {
           {/* Trends */}
           {trends && trends.trends.length > 0 && (
             <div className="space-y-4" role="region" aria-label="Market trends">
-              <h3 className="font-semibold">Market Trends</h3>
+              <h3 className="font-semibold">{t("marketTrends")}</h3>
               {trends.trends.map((t, i) => (
                 <TrendChart key={i} trend={t} />
               ))}
@@ -211,15 +213,15 @@ export default function MarketDashboardPage() {
           )}
 
           {/* Snapshots summary */}
-          <div role="region" aria-label="Market snapshots">
+          <div role="region" aria-label={t("marketSnapshots")}>
             {snapshotsLoading ? (
-              <div className="border rounded-lg bg-card p-6 space-y-3" aria-busy="true" aria-label="Loading snapshots">
+              <div className="border rounded-lg bg-card p-6 space-y-3" aria-busy="true" aria-label={t("loadingSnapshots")}>
                 <Skeleton className="h-5 w-40" />
                 <Skeleton className="h-4 w-64" />
               </div>
             ) : snapshots.length > 0 ? (
               <div className="border rounded-lg bg-card p-6">
-                <h3 className="font-semibold mb-3">Recent Snapshots</h3>
+                <h3 className="font-semibold mb-3">{t("recentSnapshots")}</h3>
                 <div className="text-sm text-muted-foreground">
                   {snapshots.length} daily snapshots available for analysis.
                   Latest: {new Date(snapshots[0].snapshot_date).toLocaleDateString()}
