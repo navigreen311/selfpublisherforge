@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Helper: format a date string into a human-friendly relative label
 // ---------------------------------------------------------------------------
 
-function formatRelativeDate(dateStr: string | undefined): string {
+function formatRelativeDate(dateStr: string | undefined, t: (key: string, vars?: Record<string, string | number>) => string): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   const now = new Date();
@@ -37,22 +37,22 @@ function formatRelativeDate(dateStr: string | undefined): string {
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} min ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+  if (diffMins < 1) return t("timeAgo.justNow");
+  if (diffMins < 60) return t("timeAgo.minutesAgo", { count: diffMins });
+  if (diffHours < 24) return diffHours === 1 ? t("timeAgo.hoursAgo", { count: diffHours }) : t("timeAgo.hoursAgoPlural", { count: diffHours });
+  if (diffDays < 7) return diffDays === 1 ? t("timeAgo.daysAgo", { count: diffDays }) : t("timeAgo.daysAgoPlural", { count: diffDays });
   return date.toLocaleDateString();
 }
 
-function formatSessionDate(dateStr: string): string {
+function formatSessionDate(dateStr: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays === 0) return t("timeAgo.today");
+  if (diffDays === 1) return t("timeAgo.yesterday");
+  if (diffDays < 7) return t("timeAgo.daysAgoPlural", { count: diffDays });
   return date.toLocaleDateString();
 }
 
@@ -60,7 +60,7 @@ function formatSessionDate(dateStr: string): string {
 // StatusBadge
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
   const colors: Record<string, string> = {
     draft: "bg-gray-100 text-gray-700",
     writing: "bg-blue-100 text-blue-700",
@@ -75,7 +75,7 @@ function StatusBadge({ status }: { status: string }) {
         colors[status] || colors.draft
       }`}
     >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {t(`status.${status}`)}
     </span>
   );
 }
@@ -103,23 +103,23 @@ function BookCardSkeleton() {
 }
 
   const t = useTranslations("writing");
-function SessionsTableSkeleton() {
+function SessionsTableSkeleton({ t }: { t: (key: string) => string }) {
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-muted/30">
           <tr>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Book
+              {t("sessions.table.book")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Words Written
+              {t("sessions.table.wordsWritten")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Duration
+              {t("sessions.table.duration")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Date
+              {t("sessions.table.date")}
             </th>
           </tr>
         </thead>
@@ -151,7 +151,7 @@ function SessionsTableSkeleton() {
 // ---------------------------------------------------------------------------
 
   const t = useTranslations("writing");
-function ErrorBanner({ message }: { message: string }) {
+function ErrorBanner({ message, t }: { message: string; t: (key: string) => string }) {
   return (
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
       <p className="font-medium">{t("error.title")}</p>
@@ -164,7 +164,7 @@ function ErrorBanner({ message }: { message: string }) {
 // Empty state
 // ---------------------------------------------------------------------------
 
-function EmptyBooksState() {
+function EmptyBooksState({ t }: { t: (key: string) => string }) {
   const t = useTranslations("writing");
 
   return (
@@ -210,17 +210,17 @@ function WritingSessionsSection({
   }, [books]);
 
   if (error) {
-    return <ErrorBanner message={error.message} />;
+    return <ErrorBanner message={error.message} t={t} />;
   }
 
   if (isLoading) {
-    return <SessionsTableSkeleton />;
+    return <SessionsTableSkeleton t={t} />;
   }
 
   if (!sessions || sessions.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-8">
-        No writing sessions recorded yet. Open a manuscript and start writing!
+        {t("sessions.empty")}
       </p>
     );
   }
@@ -232,16 +232,16 @@ function WritingSessionsSection({
           <thead className="bg-muted/30">
             <tr>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Book
+                {t("sessions.table.book")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Words Written
+                {t("sessions.table.wordsWritten")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Duration
+                {t("sessions.table.duration")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Date
+                {t("sessions.table.date")}
               </th>
             </tr>
           </thead>
@@ -251,14 +251,14 @@ function WritingSessionsSection({
                 <td className="px-2 sm:px-4 py-2">
                   {session.book_title ||
                     bookTitleMap[session.book_id] ||
-                    "Unknown Book"}
+                    t("stats.unknownBook")}
                 </td>
                 <td className="px-2 sm:px-4 py-2">
                   {session.words_written.toLocaleString()}
                 </td>
-                <td className="px-2 sm:px-4 py-2">{session.duration_minutes} min</td>
+                <td className="px-2 sm:px-4 py-2">{session.duration_minutes} {t("sessions.minutes")}</td>
                 <td className="px-2 sm:px-4 py-2 text-muted-foreground">
-                  {formatSessionDate(session.created_at)}
+                  {formatSessionDate(session.created_at, t)}
                 </td>
               </tr>
             ))}
@@ -337,7 +337,7 @@ export default function WritingStudioPage() {
         <input
           type="text"
           placeholder={t("search.placeholder")}
-          aria-label="Search manuscripts"
+          aria-label={t("search.placeholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full max-w-md rounded-md border px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -358,6 +358,7 @@ export default function WritingStudioPage() {
                 ? booksError.message
                 : "Failed to load manuscripts."
             }
+            t={t}
           />
         )}
 
@@ -372,7 +373,7 @@ export default function WritingStudioPage() {
 
         {/* Empty state -- no books at all */}
         {!booksLoading && !booksError && books && books.length === 0 && (
-          <EmptyBooksState />
+          <EmptyBooksState t={t} />
         )}
 
         {/* Loaded with results */}
@@ -391,7 +392,7 @@ export default function WritingStudioPage() {
                         {book.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-                        <StatusBadge status={book.status} />
+                        <StatusBadge status={book.status} t={t} />
                         {book.chapter_count !== undefined && (
                           <span className="text-[10px] sm:text-xs text-muted-foreground">
                             {book.chapter_count} {t("stats.chapters")}
@@ -405,7 +406,7 @@ export default function WritingStudioPage() {
                       </div>
                     </div>
                     <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
-                      {formatRelativeDate(book.updated_at)}
+                      {formatRelativeDate(book.updated_at, t)}
                     </span>
                   </div>
                 </Link>
@@ -432,6 +433,7 @@ export default function WritingStudioPage() {
             isLoading={sessionsLoading}
             error={sessionsError as Error | null}
             books={books}
+            t={t}
           />
         </div>
       </div>

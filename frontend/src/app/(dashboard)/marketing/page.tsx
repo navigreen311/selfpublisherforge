@@ -115,13 +115,13 @@ export default function MarketingDashboard() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={handleDeleteDialogChange}
-        title={`Delete ${deleteConfig?.label || "item"}?`}
+        title={t("delete.title", { type: deleteConfig?.label || "item" })}
         description={
           deleteTarget
             ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
             : ""
         }
-        confirmLabel="Delete"
+        confirmLabel={t("delete.confirm")}
         variant="destructive"
         onConfirm={handleDeleteConfirm}
         loading={isDeleting}
@@ -162,6 +162,7 @@ export default function MarketingDashboard() {
           socialPostsCount={socialCalendar?.posts.length || 0}
           arcCount={arcCampaigns?.total_count || 0}
           setActiveTab={setActiveTab}
+          t={t}
         />
       )}
 
@@ -206,7 +207,7 @@ const ACTIVITY_ICONS: Record<RecentActivityItem["type"], string> = {
   social_post: "bg-purple-100 text-purple-700",
 };
 
-function formatRelativeDate(dateStr: string): string {
+function formatRelativeDate(dateStr: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -214,10 +215,10 @@ function formatRelativeDate(dateStr: string): string {
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins < 1) return t("timeAgo.justNow"); // Note: Using exact match from timeAgo JSON
+  if (diffMins < 60) return t("timeAgo.minutesAgo", { count: diffMins });
+  if (diffHours < 24) return t("timeAgo.hoursAgo", { count: diffHours });
+  if (diffDays < 7) return t("timeAgo.daysAgo", { count: diffDays });
   return date.toLocaleDateString();
 }
 
@@ -318,7 +319,7 @@ function OverviewTab({
                     <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{item.title}</p>
                   </div>
                   <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
-                    {formatRelativeDate(item.timestamp)}
+                    {formatRelativeDate(item.timestamp, t)}
                   </span>
                 </div>
               ))}
@@ -499,9 +500,9 @@ function EmailTab({
         <div className="border rounded-lg">
           <EmptyState
             icon={Mail}
-            title="No email sequences yet"
-            description="Create your first email sequence to engage your readers and build your audience."
-            actionLabel="Create Sequence"
+            title={t("emailSequences.empty.title")}
+            description={t("emailSequences.empty.description")}
+            actionLabel={t("emailSequences.empty.action")}
             onAction={() => router.push("/marketing/email")}
           />
         </div>
