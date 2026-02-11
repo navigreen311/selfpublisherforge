@@ -147,7 +147,7 @@ export default function PipelineDashboardPage() {
                 <>
                   <select
                     id="pl-book"
-                    className={`w-full border rounded-md px-3 py-2 text-sm bg-white ${
+                    className={`w-full border rounded-md px-3 py-2 text-sm bg-card ${
                       bookIdError ? "border-red-500 focus:ring-red-500" : ""
                     }`}
                     value={newBookId}
@@ -190,7 +190,7 @@ export default function PipelineDashboardPage() {
                     placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
                   />
                   {booksLoading && (
-                    <p className="mt-1 text-xs text-gray-500">Loading books...</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Loading books...</p>
                   )}
                   {useManualBookId && books && books.length > 0 && (
                     <button
@@ -216,7 +216,7 @@ export default function PipelineDashboardPage() {
             <button
               type="button"
               onClick={handleToggleCreate}
-              className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-sm border rounded-md hover:bg-muted"
             >
               Cancel
             </button>
@@ -243,7 +243,7 @@ export default function PipelineDashboardPage() {
             className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
               statusFilter === f.value
                 ? "bg-primary text-primary-foreground"
-                : "bg-white hover:bg-gray-50"
+                : "bg-card hover:bg-muted"
             }`}
           >
             {f.label}

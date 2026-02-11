@@ -101,7 +101,7 @@ class SemanticCache:
                 # Verify connectivity
                 await self._redis.ping()
                 self._redis_available = True
-            except Exception:
+            except (aioredis.RedisError, ConnectionError, OSError):
                 logger.warning(
                     "Redis connection unavailable — falling back to in-memory cache",
                     exc_info=True,

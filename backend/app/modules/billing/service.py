@@ -49,7 +49,8 @@ def _ensure_stripe_configured() -> None:
         return
 
     key = settings.STRIPE_SECRET_KEY
-    if not key or key.startswith("sk_test_PLACEHOLDER") or key == "CHANGE_ME":
+    placeholder_patterns = ["PLACEHOLDER", "CHANGE_ME", "YOUR_", "REPLACE_", "TODO", "XXX"]
+    if not key or any(p in key.upper() for p in placeholder_patterns):
         raise AppException(
             status_code=500,
             code="STRIPE_NOT_CONFIGURED",

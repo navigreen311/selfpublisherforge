@@ -40,7 +40,7 @@ export default function PublishingDashboardPage() {
   const connectErrorClass = (field: string): string =>
     showConnectError(field)
       ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-      : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500";
+      : "border focus:border-indigo-500 focus:ring-indigo-500";
 
   const connectHasErrors = Object.keys(connectErrors).length > 0;
 
@@ -77,8 +77,8 @@ export default function PublishingDashboardPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Publishing Operations</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Publishing Operations</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your publishing accounts, export manuscripts, and track listings.
           </p>
         </div>
@@ -94,19 +94,19 @@ export default function PublishingDashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Link
           href="/publishing/export"
-          className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+          className="rounded-lg border bg-card p-5 shadow-sm hover:shadow-md transition-shadow"
         >
-          <h3 className="font-semibold text-gray-900">Export Manuscript</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="font-semibold text-foreground">Export Manuscript</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Generate EPUB or print-ready PDF with formatting templates
           </p>
         </Link>
-        <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-900">Connected Accounts</h3>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <h3 className="font-semibold text-foreground">Connected Accounts</h3>
           <p className="mt-1 text-3xl font-bold text-indigo-600">{accounts.length}</p>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-900">Active Listings</h3>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <h3 className="font-semibold text-foreground">Active Listings</h3>
           {listingsLoading ? (
             <Skeleton className="mt-1 h-10 w-20" />
           ) : listingsError ? (
@@ -120,7 +120,7 @@ export default function PublishingDashboardPage() {
       {/* Publishing Accounts */}
       <section aria-labelledby="publishing-accounts-heading">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="publishing-accounts-heading" className="text-lg font-semibold text-gray-900">Publishing Accounts</h2>
+          <h2 id="publishing-accounts-heading" className="text-lg font-semibold text-foreground">Publishing Accounts</h2>
           <button
             onClick={() => setShowConnect(!showConnect)}
             aria-expanded={showConnect}
@@ -137,15 +137,15 @@ export default function PublishingDashboardPage() {
             aria-label="Connect new publishing account"
             className="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 p-5 space-y-4"
           >
-            <h3 className="font-medium text-gray-900">Connect New Account</h3>
+            <h3 className="font-medium text-foreground">Connect New Account</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <label htmlFor="connect-platform" className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                <label htmlFor="connect-platform" className="block text-sm font-medium text-foreground mb-1">Platform</label>
                 <select
                   id="connect-platform"
                   value={newPlatform}
                   onChange={(e) => setNewPlatform(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border px-3 py-2 text-sm"
                 >
                   {PUBLISHING_PLATFORMS.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -155,7 +155,7 @@ export default function PublishingDashboardPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="connect-account-name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="connect-account-name" className="block text-sm font-medium text-foreground mb-1">
                   Account Name *
                 </label>
                 <input
@@ -176,7 +176,7 @@ export default function PublishingDashboardPage() {
                 )}
               </div>
               <div>
-                <label htmlFor="connect-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label htmlFor="connect-email" className="block text-sm font-medium text-foreground mb-1">Email</label>
                 <input
                   id="connect-email"
                   type="email"
@@ -212,9 +212,9 @@ export default function PublishingDashboardPage() {
             ))}
           </div>
         ) : accounts.length === 0 ? (
-          <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
-            <h3 className="font-medium text-gray-900">No accounts connected</h3>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="rounded-lg border-2 border-dashed border p-8 text-center">
+            <h3 className="font-medium text-foreground">No accounts connected</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Connect your first publishing platform account to get started.
             </p>
             <button
@@ -236,7 +236,7 @@ export default function PublishingDashboardPage() {
 
       {/* Listings */}
       <section aria-labelledby="listings-heading">
-        <h2 id="listings-heading" className="text-lg font-semibold text-gray-900 mb-4">Listings</h2>
+        <h2 id="listings-heading" className="text-lg font-semibold text-foreground mb-4">Listings</h2>
         <ListingTable />
       </section>
     </div>

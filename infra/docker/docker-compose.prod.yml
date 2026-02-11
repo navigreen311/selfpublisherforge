@@ -303,11 +303,34 @@ services:
     networks:
       - spf-network
 
+  grafana:
+    image: grafana/grafana:10.2-oss
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../../infra/monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - spf-network
+
 volumes:
   pgdata:
   redisdata:
   esdata:
   prometheusdata:
+  grafana_data:
 
 networks:
   spf-network:

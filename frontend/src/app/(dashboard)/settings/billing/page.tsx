@@ -32,10 +32,30 @@ export default function BillingSettingsPage() {
   const [notified, setNotified] = useState(false);
 
   // Queries
-  const { data: plans, isLoading: plansLoading } = usePlans();
-  const { data: subscription, isLoading: subLoading } = useSubscription();
-  const { data: usage, isLoading: usageLoading } = useUsage();
-  const { data: invoiceData, isLoading: invoicesLoading } = useInvoices();
+  const {
+    data: plans,
+    isLoading: plansLoading,
+    error: plansError,
+    refetch: refetchPlans,
+  } = usePlans();
+  const {
+    data: subscription,
+    isLoading: subLoading,
+    error: subscriptionError,
+    refetch: refetchSubscription,
+  } = useSubscription();
+  const {
+    data: usage,
+    isLoading: usageLoading,
+    error: usageError,
+    refetch: refetchUsage,
+  } = useUsage();
+  const {
+    data: invoiceData,
+    isLoading: invoicesLoading,
+    error: invoicesError,
+    refetch: refetchInvoices,
+  } = useInvoices();
 
   // Mutations
   const checkout = useCreateCheckout();
@@ -94,6 +114,40 @@ export default function BillingSettingsPage() {
               <div key={i} className="h-96 rounded-2xl bg-gray-100" />
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (plansError || subscriptionError || usageError || invoicesError) {
+    const handleRetry = () => {
+      if (plansError) refetchPlans();
+      if (subscriptionError) refetchSubscription();
+      if (usageError) refetchUsage();
+      if (invoicesError) refetchInvoices();
+    };
+
+    return (
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Billing & Subscription
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your plan, monitor usage, and view invoices.
+          </p>
+        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm font-medium text-red-700">
+            Failed to load billing data. Please try again later.
+          </p>
+          <button
+            onClick={handleRetry}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );

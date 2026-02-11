@@ -54,11 +54,101 @@ resource "aws_secretsmanager_secret_version" "app_secret_key" {
 }
 
 # -----------------------------------------------------------------------------
-# Database URL (composed secret)
+# Individual Database Connection Components
+# -----------------------------------------------------------------------------
+# IMPORTANT — Compose the database URL at runtime, not in Terraform!
+#
+# PROBLEM: The old `database_url` secret embedded db_password directly into
+# the connection string. When db_password rotates every 30 days via the
+# rotation Lambda, the database_url secret was NOT updated, causing the
+# application to connect with a stale (revoked) password. This resulted in
+# authentication failures every 30 days until a manual Terraform apply
+# refreshed the composed URL.
+#
+# SOLUTION: Store each connection component as its own secret. The application
+# (ECS task) must fetch each component individually and compose the URL at
+# startup. This way, when db_password rotates, the app automatically picks up
+# the new password on the next task launch or secret refresh — no Terraform
+# apply required.
+#
+# APPLICATION CODE MUST construct the URL like this:
+#   DATABASE_URL = f"postgresql+asyncpg://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
+#
+# See the `locals.database_url_template` block below for the Terraform-side
+# reference showing how these components fit together.
+# -----------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "db_host" {
+  name        = "${var.project_name}-${var.environment}-db-host"
+  description = "RDS PostgreSQL endpoint hostname for ${var.environment}"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-db-host"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db_host" {
+  secret_id     = aws_secretsmanager_secret.db_host.id
+  secret_string = aws_db_instance.postgres.address
+}
+
+resource "aws_secretsmanager_secret" "db_port" {
+  name        = "${var.project_name}-${var.environment}-db-port"
+  description = "RDS PostgreSQL port for ${var.environment}"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-db-port"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db_port" {
+  secret_id     = aws_secretsmanager_secret.db_port.id
+  secret_string = tostring(aws_db_instance.postgres.port)
+}
+
+resource "aws_secretsmanager_secret" "db_name" {
+  name        = "${var.project_name}-${var.environment}-db-name"
+  description = "RDS PostgreSQL database name for ${var.environment}"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-db-name"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db_name" {
+  secret_id     = aws_secretsmanager_secret.db_name.id
+  secret_string = var.db_name
+}
+
+resource "aws_secretsmanager_secret" "db_username" {
+  name        = "${var.project_name}-${var.environment}-db-username"
+  description = "RDS PostgreSQL master username for ${var.environment}"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-db-username"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db_username" {
+  secret_id     = aws_secretsmanager_secret.db_username.id
+  secret_string = var.db_username
+}
+
+# -----------------------------------------------------------------------------
+# Database URL (DEPRECATED — composed secret, DO NOT USE for new deployments)
+# -----------------------------------------------------------------------------
+# WARNING: This secret embeds db_password in the connection string at
+# terraform-apply time. When db_password rotates (every 30 days), this secret
+# becomes STALE and will cause authentication failures. It is preserved here
+# only for backward compatibility during migration to individual components.
+#
+# TODO: Remove this resource once all ECS task definitions have been updated
+# to compose the URL from individual secrets (db_host, db_port, db_name,
+# db_username, db_password) at container startup.
 # -----------------------------------------------------------------------------
 resource "aws_secretsmanager_secret" "database_url" {
   name        = "${var.project_name}-${var.environment}-database-url"
-  description = "Full database connection URL for ${var.environment}"
+  description = "DEPRECATED — Full database connection URL for ${var.environment}. Use individual db_* secrets instead."
 
   tags = {
     Name = "${var.project_name}-${var.environment}-database-url"
@@ -68,6 +158,41 @@ resource "aws_secretsmanager_secret" "database_url" {
 resource "aws_secretsmanager_secret_version" "database_url" {
   secret_id     = aws_secretsmanager_secret.database_url.id
   secret_string = "postgresql+asyncpg://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.address}:${aws_db_instance.postgres.port}/${var.db_name}"
+}
+
+# -----------------------------------------------------------------------------
+# locals: Database URL Template (for reference / documentation)
+# -----------------------------------------------------------------------------
+# This block shows how the application should compose the database URL from
+# individual secret components. It is NOT used as a secret itself — it exists
+# purely to document the expected format for developers and for use in ECS
+# task definition environment variable templates.
+#
+# In ECS task definitions, inject each secret ARN separately:
+#   DB_HOST     -> aws_secretsmanager_secret.db_host.arn
+#   DB_PORT     -> aws_secretsmanager_secret.db_port.arn
+#   DB_NAME     -> aws_secretsmanager_secret.db_name.arn
+#   DB_USERNAME -> aws_secretsmanager_secret.db_username.arn
+#   DB_PASSWORD -> aws_secretsmanager_secret.db_password.arn
+#
+# Then in the application entrypoint (e.g., entrypoint.sh or Python config):
+#   DATABASE_URL="postgresql+asyncpg://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+# -----------------------------------------------------------------------------
+locals {
+  # Reference-only: demonstrates how the URL is composed from components.
+  # Application code should replicate this logic at startup.
+  database_url_template = "postgresql+asyncpg://<DB_USERNAME>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/<DB_NAME>"
+
+  # Convenience map of all individual DB secret ARNs for use in ECS task
+  # definitions. Pass these as `secrets` (not `environment`) in the container
+  # definition so ECS resolves them from Secrets Manager at task launch time.
+  db_secret_arns = {
+    DB_HOST     = aws_secretsmanager_secret.db_host.arn
+    DB_PORT     = aws_secretsmanager_secret.db_port.arn
+    DB_NAME     = aws_secretsmanager_secret.db_name.arn
+    DB_USERNAME = aws_secretsmanager_secret.db_username.arn
+    DB_PASSWORD = aws_secretsmanager_secret.db_password.arn
+  }
 }
 
 # =============================================================================
@@ -440,7 +565,12 @@ resource "aws_secretsmanager_secret_rotation" "app_secret_key" {
   ]
 }
 
-# NOTE: database_url is a composed secret derived from db_password. When
-# db_password rotates, the rotation Lambda should also update database_url.
-# This is typically handled by customizing the PostgreSQL rotation Lambda's
-# finishSecret step to reconstruct and store the new connection URL.
+# NOTE: The stale database_url problem has been resolved by introducing
+# individual db_* secrets (db_host, db_port, db_name, db_username, db_password).
+# Applications MUST compose the connection URL at startup from these individual
+# components. When db_password rotates, the app will pick up the new value
+# automatically on the next ECS task launch.
+#
+# The deprecated database_url secret is retained for backward compatibility.
+# Remove it once all consumers have migrated to individual secret references.
+# See the `locals` block above for the ARN map and URL template.

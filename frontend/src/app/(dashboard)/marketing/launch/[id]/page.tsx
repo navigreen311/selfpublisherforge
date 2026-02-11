@@ -1,19 +1,18 @@
 "use client";
 
-import { use, useCallback } from "react";
+import { useCallback } from "react";
+import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLaunchPlan, useUpdateLaunchPlan } from "@/modules/marketing/hooks";
 import type { LaunchPlan, PhaseTask } from "@/modules/marketing/hooks";
 import { LaunchTimeline } from "@/modules/marketing/components/LaunchTimeline";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 import Link from "next/link";
 
-interface LaunchPlanDetailPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function LaunchPlanDetailPage({ params }: LaunchPlanDetailPageProps) {
-  const { id } = use(params);
+export default function LaunchPlanDetailPage() {
+  const params = useParams();
+  const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
   const queryClient = useQueryClient();
   const { data: plan, isLoading, error } = useLaunchPlan(id);
   const updateMutation = useUpdateLaunchPlan(id);
@@ -61,7 +60,7 @@ export default function LaunchPlanDetailPage({ params }: LaunchPlanDetailPagePro
         if (previousPlan) {
           queryClient.setQueryData<LaunchPlan>(queryKey, previousPlan);
         }
-        alert("Failed to update task status. Please try again.");
+        toast.error("Failed to update task status. Please try again.");
       }
     },
     [id, queryClient]
@@ -146,6 +145,7 @@ export default function LaunchPlanDetailPage({ params }: LaunchPlanDetailPagePro
             <button
               onClick={() => handleStatusChange("active")}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+              aria-label="Activate launch plan"
             >
               Activate Plan
             </button>
@@ -154,6 +154,7 @@ export default function LaunchPlanDetailPage({ params }: LaunchPlanDetailPagePro
             <button
               onClick={() => handleStatusChange("completed")}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+              aria-label="Mark launch plan as complete"
             >
               Mark Complete
             </button>

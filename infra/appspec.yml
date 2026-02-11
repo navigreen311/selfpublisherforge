@@ -1,26 +1,49 @@
+# =============================================================================
+# AppSpec for ECS Blue-Green Deployment via AWS CodeDeploy
+# =============================================================================
+#
+# This file is used by the aws-actions/amazon-ecs-deploy-task-definition GitHub
+# Action during blue-green deployments. The action reads this file, replaces
+# the <TASK_DEFINITION> placeholder with the actual task definition ARN that
+# was just registered, and submits it to CodeDeploy.
+#
+# CodeDeploy application:       selfpublisherforge-production
+# CodeDeploy deployment group:  selfpublisherforge-api-production-dg
+#
+# Reference: https://docs.aws.amazon.com/codedeploy/latest/userguide/reference-appspec-file-structure-resources.html
+# =============================================================================
+
 version: 0.0
-os: linux
-files:
-  - source: /
-    destination: /opt/selfpublisherforge
-hooks:
-  BeforeInstall:
-    - location: infra/scripts/before_install.sh
-      timeout: 300
-      runas: root
-  AfterInstall:
-    - location: infra/scripts/after_install.sh
-      timeout: 300
-      runas: root
-  ApplicationStart:
-    - location: infra/scripts/start_server.sh
-      timeout: 300
-      runas: root
-  ApplicationStop:
-    - location: infra/scripts/stop_server.sh
-      timeout: 300
-      runas: root
-  ValidateService:
-    - location: infra/scripts/validate_service.sh
-      timeout: 300
-      runas: root
+
+# ---------------------------------------------------------------------------
+# Resources — defines the ECS service to update during the deployment
+# ---------------------------------------------------------------------------
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        # The <TASK_DEFINITION> placeholder is replaced at deploy time by the
+        # amazon-ecs-deploy-task-definition GitHub Action with the ARN of the
+        # newly registered task definition (family: selfpublisherforge-api-production).
+        TaskDefinition: <TASK_DEFINITION>
+
+        # Load balancer routing configuration — must match the container name
+        # and port defined in the ECS task definition (see infra/terraform/ecs.tf,
+        # resource "aws_ecs_task_definition" "api").
+        LoadBalancerInfo:
+          ContainerName: "api"
+          ContainerPort: 8000
+
+        # Use the latest Fargate platform version for security patches and
+        # runtime improvements.
+        PlatformVersion: "LATEST"
+
+        # Optional — capacity provider strategy can be specified here if needed.
+        # Currently the ECS service defaults are used (FARGATE base + FARGATE_SPOT).
+        # CapacityProviderStrategy:
+        #   - Base: 1
+        #     CapacityProvider: "FARGATE"
+        #     Weight: 1
+        #   - Base: 0
+        #     CapacityProvider: "FARGATE_SPOT"
+        #     Weight: 3

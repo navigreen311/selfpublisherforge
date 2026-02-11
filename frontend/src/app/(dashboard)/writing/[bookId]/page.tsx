@@ -28,7 +28,13 @@ import {
  */
 export default function ManuscriptEditorPage() {
   const params = useParams();
-  const bookId = params.bookId as string;
+  const rawBookId = params.bookId;
+  const bookId =
+    typeof rawBookId === "string"
+      ? rawBookId
+      : Array.isArray(rawBookId)
+        ? rawBookId[0] ?? ""
+        : "";
 
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState("");
@@ -145,6 +151,15 @@ export default function ManuscriptEditorPage() {
   const handleSave = useCallback(() => {
     saveNow();
   }, [saveNow]);
+
+  // Guard: invalid or missing book ID
+  if (!bookId) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Invalid book ID
+      </div>
+    );
+  }
 
   const activeChapter = chapters.find((c) => c.id === activeChapterId);
   const isLoading = manuscriptLoading || chaptersLoading;

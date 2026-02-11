@@ -52,6 +52,7 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== "undefined") {
           localStorage.setItem("access_token", accessToken);
           localStorage.setItem("refresh_token", refreshToken);
+          document.cookie = `access_token=${accessToken}; path=/; SameSite=Lax; max-age=86400`;
         }
         set({ refreshToken });
       },
@@ -61,6 +62,7 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== "undefined") {
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
+          document.cookie = "access_token=; path=/; max-age=0";
         }
         set({ user: null, refreshToken: null, isAuthenticated: false });
       },

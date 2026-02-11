@@ -35,19 +35,19 @@ export default function ExportPage() {
       {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
-        className="flex items-center space-x-2 text-sm text-gray-500"
+        className="flex items-center space-x-2 text-sm text-muted-foreground"
       >
-        <Link href="/publishing" className="hover:text-gray-700">
+        <Link href="/publishing" className="hover:text-foreground">
           Publishing
         </Link>
         <span>/</span>
-        <span className="text-gray-900">Export</span>
+        <span className="text-foreground">Export</span>
       </nav>
 
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Export Manuscript</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-foreground">Export Manuscript</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Generate an EPUB for digital distribution or a print-ready PDF for KDP
           / IngramSpark.
         </p>
@@ -57,7 +57,7 @@ export default function ExportPage() {
       <div>
         <label
           htmlFor="book-selector"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-foreground mb-1"
         >
           Select a Book
         </label>
@@ -82,11 +82,11 @@ export default function ExportPage() {
 
         {!booksLoading && !booksError && books && books.length === 0 && (
           <div
-            className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center"
+            className="rounded-lg border border-dashed border bg-muted p-8 text-center"
             role="status"
           >
-            <h3 className="font-medium text-gray-900">No books found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="font-medium text-foreground">No books found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Create a project first before exporting a manuscript.
             </p>
             <Link
@@ -104,7 +104,7 @@ export default function ExportPage() {
             aria-label="Select a book to export"
             value={selectedBookId}
             onChange={(e) => setSelectedBookId(e.target.value)}
-            className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full max-w-md rounded-md border px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             <option value="">-- Choose a book --</option>
             {books.map((book) => (
@@ -119,7 +119,7 @@ export default function ExportPage() {
       {/* Chapters loading state */}
       {selectedBookId && chaptersLoading && (
         <div
-          className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+          className="rounded-lg border bg-card p-6 shadow-sm"
           role="status"
           aria-label="Loading chapters"
         >
@@ -153,11 +153,11 @@ export default function ExportPage() {
         chapters &&
         chapters.length === 0 && (
           <div
-            className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center"
+            className="rounded-lg border border-dashed border bg-muted p-8 text-center"
             role="status"
           >
-            <h3 className="font-medium text-gray-900">No chapters yet</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="font-medium text-foreground">No chapters yet</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               This book has no chapters to export. Add some content in the
               Writing Studio first.
             </p>
@@ -176,10 +176,10 @@ export default function ExportPage() {
         !chaptersError &&
         chapters &&
         chapters.length > 0 && (
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <p className="mb-4 text-sm text-gray-600">
+          <div className="rounded-lg border bg-card p-6 shadow-sm">
+            <p className="mb-4 text-sm text-muted-foreground">
               Exporting{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-foreground">
                 {selectedBook?.title}
               </span>{" "}
               ({exportChapters.length} chapter

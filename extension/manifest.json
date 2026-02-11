@@ -4,9 +4,6 @@
   "version": "1.0.0",
   "description": "Extract Amazon product data, track BSR, research niches, and save clips to your SelfPublisherForge account.",
   "update_url": "https://selfpublisherforge.com/extension/updates.xml",
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  },
   "permissions": [
     "activeTab",
     "storage",

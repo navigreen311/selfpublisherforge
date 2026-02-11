@@ -214,6 +214,13 @@ class TestProductionOptionalWarnings:
             "STRIPE_PRICE_ENTERPRISE": "price_enterprise_123",
             "AMAZON_ADS_CLIENT_ID": "amazon-ads-id",
             "AMAZON_ADS_CLIENT_SECRET": "amazon-ads-secret",
+            "FACEBOOK_APP_ID": "facebook-app-id",
+            "FACEBOOK_APP_SECRET": "facebook-app-secret",
+            "FACEBOOK_ACCESS_TOKEN": "facebook-access-token",
+            "FACEBOOK_AD_ACCOUNT_ID": "facebook-ad-account-id",
+            "AMAZON_PAAPI_ACCESS_KEY": "amazon-paapi-access-key",
+            "AMAZON_PAAPI_SECRET_KEY": "amazon-paapi-secret-key",
+            "AMAZON_PAAPI_PARTNER_TAG": "amazon-paapi-partner-tag",
         }
 
         with warnings.catch_warnings(record=True) as caught:

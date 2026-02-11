@@ -17,6 +17,7 @@ from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from typing import Optional
 
+import redis.exceptions
 from redis.asyncio import Redis
 
 from app.config import get_settings
@@ -173,7 +174,7 @@ class CostTracker:
                 )
                 await self._redis.ping()
                 self._redis_available = True
-            except Exception:
+            except (redis.exceptions.RedisError, ConnectionError, OSError):
                 logger.warning(
                     "Redis connection unavailable for cost tracking — "
                     "falling back to in-memory only",
@@ -305,7 +306,7 @@ class CostTracker:
                 cost,
                 model_id,
             )
-        except Exception:
+        except (redis.exceptions.RedisError, ConnectionError, OSError):
             logger.warning(
                 "Failed to persist cost to Redis for org=%s — "
                 "in-memory tracking continues",
@@ -338,7 +339,7 @@ class CostTracker:
                 return await self._get_costs_from_redis(
                     client, org_id, start_date, end_date, model_id
                 )
-        except Exception:
+        except (redis.exceptions.RedisError, ConnectionError, OSError):
             logger.warning(
                 "Failed to read costs from Redis for org=%s — "
                 "falling back to in-memory",

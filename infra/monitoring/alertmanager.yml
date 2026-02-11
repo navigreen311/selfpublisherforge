@@ -2,6 +2,14 @@
 # Alertmanager Configuration -- SelfPublisherForge
 # =============================================================================
 #
+# IMPORTANT: AlertManager does NOT support shell-style variable substitution
+# (e.g., ${VAR:-default}). All configuration values below are hardcoded with
+# development defaults. For production, update the hardcoded values below.
+# Alternatively, use envsubst preprocessing before mounting this config:
+#   envsubst < alertmanager.yml.template > alertmanager.yml
+#
+# =============================================================================
+#
 # REQUIRED ENVIRONMENT VARIABLES
 # ---------------------------------------------------------------------------
 # Each variable below MUST be set on the alertmanager container (or via an
@@ -99,10 +107,10 @@
 # The localhost:587 fallback will cause silent email delivery failures.
 global:
   resolve_timeout: 5m
-  smtp_smarthost: "${SMTP_SMARTHOST:-localhost:587}"
-  smtp_from: "${SMTP_FROM:-alertmanager@localhost}"
-  smtp_auth_username: "${SMTP_AUTH_USERNAME}"
-  smtp_auth_password: "${SMTP_AUTH_PASSWORD}"
+  smtp_smarthost: "localhost:587"          # Production: smtp.gmail.com:587 or your SMTP relay
+  smtp_from: "alertmanager@localhost"      # Production: alerts@selfpublisherforge.com
+  smtp_auth_username: ""                   # Production: set your SMTP username
+  smtp_auth_password: ""                   # Production: set your SMTP password
   # require_tls: true -- enforces STARTTLS for every SMTP connection.
   # Disable only for local dev relays that do not support TLS.
   smtp_require_tls: true
@@ -246,7 +254,7 @@ receivers:
   # to its own stdout as a final safety net.
   - name: fallback-log
     slack_configs:
-      - api_url: "${SLACK_WEBHOOK_URL}"
+      - api_url: ""  # Production: set your Slack webhook URL (https://hooks.slack.com/...)
         channel: "#alerts"
         title: 'FALLBACK: {{ .GroupLabels.alertname }} [{{ .CommonLabels.severity }}]'
         text: >-
@@ -278,8 +286,8 @@ receivers:
   # repeat_interval is set on the route (15m) so P0 re-fires until resolved.
   - name: critical-pager
     email_configs:
-      - to: "${ALERT_EMAIL_TO:-oncall@localhost}"
-        from: "${SMTP_FROM:-alertmanager@localhost}"
+      - to: "oncall@localhost"               # Production: oncall@selfpublisherforge.com
+        from: "alertmanager@localhost"        # Production: alerts@selfpublisherforge.com
         # send_resolved: true -- sends a follow-up "RESOLVED" email when the
         # alert clears, so the on-call engineer knows the incident is over
         # without needing to check dashboards.
@@ -289,7 +297,7 @@ receivers:
           Priority: "urgent"
           X-Alert-Severity: "P0"
     slack_configs:
-      - api_url: "${SLACK_WEBHOOK_URL_CRITICAL}"
+      - api_url: ""  # Production: set your Slack webhook URL for #incidents (https://hooks.slack.com/...)
         channel: "#incidents"
         title: 'P0 CRITICAL: {{ .GroupLabels.alertname }}'
         text: >-
@@ -306,15 +314,15 @@ receivers:
   # Notifies via:  email (on-call) + Slack #alerts
   - name: urgent-slack
     email_configs:
-      - to: "${ALERT_EMAIL_TO:-oncall@localhost}"
-        from: "${SMTP_FROM:-alertmanager@localhost}"
+      - to: "oncall@localhost"               # Production: oncall@selfpublisherforge.com
+        from: "alertmanager@localhost"        # Production: alerts@selfpublisherforge.com
         # send_resolved: true -- notifies when the urgent condition clears.
         send_resolved: true
         headers:
           Subject: "[P1 URGENT] {{ .GroupLabels.alertname }} - SelfPublisherForge"
           X-Alert-Severity: "P1"
     slack_configs:
-      - api_url: "${SLACK_WEBHOOK_URL}"
+      - api_url: ""  # Production: set your Slack webhook URL (https://hooks.slack.com/...)
         channel: "#alerts"
         title: 'P1 URGENT: {{ .GroupLabels.alertname }}'
         text: >-
@@ -327,7 +335,7 @@ receivers:
   # Notifies via:  Slack #alerts only (no email to reduce noise)
   - name: default-slack
     slack_configs:
-      - api_url: "${SLACK_WEBHOOK_URL}"
+      - api_url: ""  # Production: set your Slack webhook URL (https://hooks.slack.com/...)
         channel: "#alerts"
         title: 'P2 WARNING: {{ .GroupLabels.alertname }}'
         text: >-
@@ -340,7 +348,7 @@ receivers:
   # Notifies via:  Slack #monitoring only (low-noise channel)
   - name: informational-slack
     slack_configs:
-      - api_url: "${SLACK_WEBHOOK_URL}"
+      - api_url: ""  # Production: set your Slack webhook URL (https://hooks.slack.com/...)
         channel: "#monitoring"
         title: 'P3 INFO: {{ .GroupLabels.alertname }}'
         text: >-

@@ -83,7 +83,16 @@ class Settings(BaseSettings):
     DEFAULT_BID_AMOUNT: float = float(os.environ.get("DEFAULT_BID_AMOUNT", "0.75"))
 
     # Facebook Ads
+    FACEBOOK_APP_ID: str = ""
+    FACEBOOK_APP_SECRET: str = ""
+    FACEBOOK_ACCESS_TOKEN: str = ""
+    FACEBOOK_AD_ACCOUNT_ID: str = ""
     FACEBOOK_ADS_API_VERSION: str = os.environ.get("FACEBOOK_ADS_API_VERSION", "v18.0")
+
+    # Amazon Product Advertising API (PA-API)
+    AMAZON_PAAPI_ACCESS_KEY: str = ""
+    AMAZON_PAAPI_SECRET_KEY: str = ""
+    AMAZON_PAAPI_PARTNER_TAG: str = ""
 
     # Chrome Extension
     CHROME_EXTENSION_ID: str = os.environ.get("CHROME_EXTENSION_ID", "")
@@ -151,6 +160,15 @@ class Settings(BaseSettings):
         # Amazon Ads
         "AMAZON_ADS_CLIENT_ID",
         "AMAZON_ADS_CLIENT_SECRET",
+        # Facebook Ads
+        "FACEBOOK_APP_ID",
+        "FACEBOOK_APP_SECRET",
+        "FACEBOOK_ACCESS_TOKEN",
+        "FACEBOOK_AD_ACCOUNT_ID",
+        # Amazon PA-API
+        "AMAZON_PAAPI_ACCESS_KEY",
+        "AMAZON_PAAPI_SECRET_KEY",
+        "AMAZON_PAAPI_PARTNER_TAG",
     ]
 
     @model_validator(mode="after")
@@ -168,7 +186,8 @@ class Settings(BaseSettings):
             warnings.warn(
                 "Production mode: the following optional integration credentials are "
                 "empty. Related features (OAuth login, Stripe billing tiers, "
-                "Amazon Ads) will be unavailable until configured:\n  - "
+                "Amazon Ads, Facebook Ads, Amazon PA-API) will be unavailable "
+                "until configured:\n  - "
                 + "\n  - ".join(empty),
                 UserWarning,
                 stacklevel=2,

@@ -46,7 +46,7 @@ export default function RevenuePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Revenue</h1>
+        <h1 className="text-2xl font-bold text-foreground">Revenue</h1>
         <a
           href="/analytics"
           aria-label="Back to Analytics Dashboard"
@@ -58,7 +58,7 @@ export default function RevenuePage() {
 
       {/* Filters */}
       <div
-        className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm"
+        className="bg-card rounded-lg border p-4 shadow-sm"
         role="region"
         aria-label="Revenue filters"
       >
@@ -66,7 +66,7 @@ export default function RevenuePage() {
           <legend className="sr-only">Filter revenue data by date, platform, and aggregation</legend>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="start-date" className="block text-sm font-medium text-foreground mb-1">
                 Start Date
               </label>
               <input
@@ -75,11 +75,11 @@ export default function RevenuePage() {
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 aria-label="Filter by start date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="end-date" className="block text-sm font-medium text-foreground mb-1">
                 End Date
               </label>
               <input
@@ -88,11 +88,11 @@ export default function RevenuePage() {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 aria-label="Filter by end date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label htmlFor="platform-filter" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="platform-filter" className="block text-sm font-medium text-foreground mb-1">
                 Platform
               </label>
               <select
@@ -100,7 +100,7 @@ export default function RevenuePage() {
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
                 aria-label="Filter by publishing platform"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {PLATFORM_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -110,7 +110,7 @@ export default function RevenuePage() {
               </select>
             </div>
             <div>
-              <label htmlFor="aggregation-filter" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="aggregation-filter" className="block text-sm font-medium text-foreground mb-1">
                 Aggregation
               </label>
               <select
@@ -118,7 +118,7 @@ export default function RevenuePage() {
                 value={aggregation}
                 onChange={(e) => setAggregation(e.target.value)}
                 aria-label="Select data aggregation period"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {AGGREGATION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -134,9 +134,9 @@ export default function RevenuePage() {
       {/* Revenue Summary */}
       <div aria-live="polite" aria-atomic="true">
         {revenueLoading ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse" role="status">
+          <div className="bg-card rounded-lg border p-6 animate-pulse" role="status">
             <span className="sr-only">Loading revenue data, please wait...</span>
-            <div className="h-48 bg-gray-200 rounded" />
+            <div className="h-48 bg-muted rounded" />
           </div>
         ) : (
           <>
@@ -149,32 +149,32 @@ export default function RevenuePage() {
                 Summary cards showing total revenue of ${totalRevenueFormatted}, total units sold of {totalUnitsFormatted}, and {totalBooks} portfolio books.
               </p>
               <div
-                className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm"
+                className="bg-card rounded-lg border p-6 shadow-sm"
                 role="group"
                 aria-label="Total Revenue"
               >
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-gray-900" aria-label={`Total Revenue: $${totalRevenueFormatted}`}>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-2xl font-bold text-foreground" aria-label={`Total Revenue: $${totalRevenueFormatted}`}>
                   ${totalRevenueFormatted}
                 </p>
               </div>
               <div
-                className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm"
+                className="bg-card rounded-lg border p-6 shadow-sm"
                 role="group"
                 aria-label="Total Units Sold"
               >
-                <p className="text-sm text-gray-600">Total Units</p>
-                <p className="text-2xl font-bold text-gray-900" aria-label={`Total Units: ${totalUnitsFormatted}`}>
+                <p className="text-sm text-muted-foreground">Total Units</p>
+                <p className="text-2xl font-bold text-foreground" aria-label={`Total Units: ${totalUnitsFormatted}`}>
                   {totalUnitsFormatted}
                 </p>
               </div>
               <div
-                className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm"
+                className="bg-card rounded-lg border p-6 shadow-sm"
                 role="group"
                 aria-label="Portfolio Books Count"
               >
-                <p className="text-sm text-gray-600">Portfolio Books</p>
-                <p className="text-2xl font-bold text-gray-900" aria-label={`Portfolio Books: ${totalBooks}`}>
+                <p className="text-sm text-muted-foreground">Portfolio Books</p>
+                <p className="text-2xl font-bold text-foreground" aria-label={`Portfolio Books: ${totalBooks}`}>
                   {totalBooks}
                 </p>
               </div>

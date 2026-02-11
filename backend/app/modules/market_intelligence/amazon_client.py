@@ -438,8 +438,8 @@ class LiveAmazonClient(AmazonClientBase):
         except httpx.HTTPError as exc:
             logger.error("PA-API %s HTTP error: %s", operation, exc)
             return {}
-        except Exception:
-            logger.exception("Unexpected error calling PA-API %s", operation)
+        except (ConnectionError, TimeoutError, ValueError):
+            logger.error("Unexpected error calling PA-API %s", operation, exc_info=True)
             return {}
 
     # -- Response parsers ---------------------------------------------------

@@ -52,34 +52,33 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("provider", sa.String(50), nullable=False),
         sa.Column("provider_user_id", sa.String(255), nullable=False),
-        sa.Column("email", sa.String(320), nullable=True),
-        sa.Column("access_token_encrypted", sa.Text(), nullable=True),
-        sa.Column("refresh_token_encrypted", sa.Text(), nullable=True),
-        sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("provider_email", sa.String(320), nullable=True),
+        sa.Column("access_token", sa.Text(), nullable=True),
+        sa.Column("refresh_token", sa.Text(), nullable=True),
+        sa.Column("avatar_url", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_oauth_accounts_user_id", "oauth_accounts", ["user_id"])
-    op.create_index("ix_oauth_accounts_provider", "oauth_accounts", ["provider"])
     op.create_index(
-        "uq_oauth_accounts_provider_user",
+        "ix_oauth_accounts_provider_user",
         "oauth_accounts",
         ["provider", "provider_user_id"],
         unique=True,
-    )
-    op.create_index("ix_oauth_accounts_email", "oauth_accounts", ["email"])
-    op.create_index(
-        "ix_oauth_accounts_active",
-        "oauth_accounts",
-        ["id"],
-        postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index(
         "ix_oauth_accounts_user_provider",
         "oauth_accounts",
         ["user_id", "provider"],
+        unique=True,
+    )
+    op.create_index(
+        "ix_oauth_accounts_deleted_at_partial",
+        "oauth_accounts",
+        ["id"],
+        postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
 

@@ -136,7 +136,7 @@ services:
         condition: service_healthy
     command: celery -A app.tasks beat -l info
     healthcheck:
-      test: ["CMD-SHELL", "celery -A app.tasks inspect ping --timeout 10"]
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' || exit 1"]
       interval: 60s
       timeout: 15s
       retries: 3
@@ -175,6 +175,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9187/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     networks:
       - spf-network
 
@@ -187,6 +193,12 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9121/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     networks:
       - spf-network
 
@@ -194,6 +206,12 @@ services:
     image: prom/node-exporter:latest
     ports:
       - "9100:9100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9100/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     networks:
       - spf-network
 
@@ -205,6 +223,12 @@ services:
       - "9808:9808"
     depends_on:
       - redis
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9808/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     networks:
       - spf-network
     restart: unless-stopped
@@ -219,6 +243,12 @@ services:
       - "9114:9114"
     depends_on:
       - elasticsearch
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9114/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     networks:
       - spf-network
     restart: unless-stopped
@@ -232,6 +262,26 @@ services:
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
+    networks:
+      - spf-network
+    restart: unless-stopped
+
+  alertmanager-logger:
+    image: python:3.12-alpine
+    command: >
+      python -c "
+      from http.server import HTTPServer, BaseHTTPRequestHandler
+      import json, sys
+      class H(BaseHTTPRequestHandler):
+          def do_POST(self):
+              data = self.rfile.read(int(self.headers.get('Content-Length', 0)))
+              print(f'ALERT: {data.decode()}', flush=True)
+              self.send_response(200)
+              self.end_headers()
+      HTTPServer(('0.0.0.0', 9095), H).serve_forever()
+      "
+    ports:
+      - "9095:9095"
     networks:
       - spf-network
     restart: unless-stopped

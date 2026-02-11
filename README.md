@@ -57,7 +57,7 @@ AI-powered, end-to-end self-publishing platform for independent authors, small p
 | **Email** | SendGrid |
 | **Infrastructure** | Docker, AWS (ECS, RDS, ElastiCache, S3, CloudFront, ALB), Terraform |
 | **CI/CD** | GitHub Actions (CI, staging deploy, production blue-green deploy) |
-| **Monitoring** | Prometheus, Datadog, Grafana, CloudWatch |
+| **Monitoring** | Prometheus, Grafana, AlertManager, CloudWatch |
 | **Chrome Extension** | Manifest V3, Content Scripts, Side Panel API |
 
 ## Getting Started
@@ -264,7 +264,7 @@ selfpublisherforge/
 ├── infra/                     # Infrastructure and deployment
 │   ├── terraform/             # AWS infrastructure-as-code (ECS, RDS, ElastiCache, S3, etc.)
 │   ├── docker/                # Production Docker Compose config
-│   ├── monitoring/            # Prometheus, Datadog, Grafana configs + alert rules
+│   ├── monitoring/            # Prometheus, Grafana, AlertManager configs + alert rules
 │   └── scripts/               # Deploy, rollback, setup, and build scripts
 ├── docs/                      # Architecture and deployment documentation
 ├── .github/workflows/         # CI/CD pipelines (ci.yml, deploy-staging.yml, deploy-production.yml)
@@ -386,13 +386,13 @@ All infrastructure is defined in `infra/terraform/` and deployed per environment
 - **S3** -- Asset storage (book files, covers, exports)
 - **ALB** -- Application load balancer with health checks
 - **ECR** -- Docker image registry
-- **SSM Parameter Store** -- Secrets management
+- **AWS Secrets Manager** -- Secrets management
 
 ### Monitoring
 
 - **Prometheus** -- Metrics collection from PostgreSQL, Redis, and Node exporters
-- **Datadog** -- APM dashboard with latency P50/P95/P99, error rates, queue depth
-- **Alert tiers** -- P0 (immediate, PagerDuty) through P3 (next business day, Slack)
+- **Grafana** -- Dashboards with latency P50/P95/P99, error rates, queue depth
+- **AlertManager** -- Alert routing with tiers P0 (immediate, PagerDuty) through P3 (next business day, Slack)
 - **CloudWatch** -- ECS logs, ALB metrics, auto-scaling triggers
 
 ## Deployment Guide
@@ -578,8 +578,8 @@ Access Grafana at [http://localhost:3001](http://localhost:3001) (default creden
 
 - **AWS CloudWatch** -- ECS logs, ALB metrics, auto-scaling triggers
 - **Prometheus** -- Application and infrastructure metrics scraped from exporters
-- **Datadog** -- APM dashboard with latency percentiles, error rates, and queue depth (dashboard config in `infra/monitoring/datadog-dashboard.json`)
-- **Alert tiers** -- P0 (immediate, PagerDuty) through P3 (next business day, Slack). See `infra/monitoring/alerts.yml`.
+- **Grafana** -- Dashboards with latency percentiles, error rates, and queue depth
+- **AlertManager** -- Alert routing with tiers P0 (immediate, PagerDuty) through P3 (next business day, Slack). See `infra/monitoring/alerts.yml`.
 
 ## Troubleshooting
 

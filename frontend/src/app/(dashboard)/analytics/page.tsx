@@ -12,11 +12,11 @@ export default function AnalyticsDashboardPage() {
   if (isLoading) {
     return (
       <div className="space-y-6" aria-busy="true" aria-label="Loading analytics dashboard">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+        <h1 className="text-2xl font-bold text-foreground">Analytics Dashboard</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" role="status">
           <span className="sr-only">Loading key performance indicators...</span>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-lg border border-gray-200 p-6">
+            <div key={i} className="bg-card rounded-lg border p-6">
               <Skeleton className="h-4 w-24 mb-2" />
               <Skeleton className="h-8 w-32" />
             </div>
@@ -30,7 +30,7 @@ export default function AnalyticsDashboardPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+        <h1 className="text-2xl font-bold text-foreground">Analytics Dashboard</h1>
         <div className="bg-red-50 border border-red-200 rounded-md p-4" role="alert">
           <p className="text-red-800">Failed to load analytics data. Please try again.</p>
         </div>
@@ -41,12 +41,12 @@ export default function AnalyticsDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+        <h1 className="text-2xl font-bold text-foreground">Analytics Dashboard</h1>
         <nav aria-label="Analytics navigation" className="flex space-x-2">
           <a
             href="/analytics/revenue"
             aria-label="View detailed revenue analytics"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-foreground bg-card border rounded-md hover:bg-muted"
           >
             Revenue Details
           </a>
@@ -110,10 +110,10 @@ export default function AnalyticsDashboardPage() {
             Visual breakdown of revenue distribution across publishing platforms, showing each platform&apos;s revenue amount and percentage of total revenue.
           </p>
           <div
-            className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm"
+            className="bg-card rounded-lg border p-6 shadow-sm"
             aria-describedby="platform-breakdown-desc"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Breakdown</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Platform Breakdown</h3>
             {dashboard?.platform_breakdown &&
             Object.keys(dashboard.platform_breakdown).length > 0 ? (
               <div className="space-y-3" role="list" aria-label="Platform revenue distribution">
@@ -135,16 +135,16 @@ export default function AnalyticsDashboardPage() {
                       aria-label={`${platformName}: $${formattedRevenue}, ${percentage.toFixed(1)}% of total revenue`}
                     >
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-gray-700 capitalize">
+                        <span className="font-medium text-foreground capitalize">
                           {platformName}
                         </span>
-                        <span className="text-gray-600">
+                        <span className="text-muted-foreground">
                           ${formattedRevenue}{" "}
                           ({percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div
-                        className="w-full bg-gray-200 rounded-full h-2"
+                        className="w-full bg-muted rounded-full h-2"
                         role="progressbar"
                         aria-valuenow={Math.round(percentage)}
                         aria-valuemin={0}
@@ -161,7 +161,7 @@ export default function AnalyticsDashboardPage() {
                 })}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-4">No platform data available</p>
+              <p className="text-muted-foreground text-center py-4">No platform data available</p>
             )}
           </div>
         </section>

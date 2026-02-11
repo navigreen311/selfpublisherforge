@@ -70,11 +70,28 @@ def _upload_to_s3(
 
 
 # ---------------------------------------------------------------------------
-# Platform API availability registry
+# Platform API availability registry  (v2 feature -- intentionally empty)
 # ---------------------------------------------------------------------------
-
-# Platforms whose external APIs are currently integrated and reachable.
-# Extend this set as real API adapters are implemented.
+#
+# _SUPPORTED_PLATFORM_APIS controls which platform adapters are considered
+# "live" for external listing sync.  In v1.0 this set is intentionally empty:
+# all sync requests will be accepted and the listing is persisted locally, but
+# no outbound API call is made.  The listing is marked ``sync_pending`` so it
+# can be automatically synced once the corresponding adapter ships.
+#
+# Planned platform adapters for v2:
+#   - "amazon_kdp"       -- Amazon Kindle Direct Publishing
+#   - "apple_books"      -- Apple Books for Authors
+#   - "barnes_noble"     -- Barnes & Noble Press
+#   - "kobo"             -- Kobo Writing Life
+#   - "google_play"      -- Google Play Books Partner Center
+#   - "draft2digital"    -- Draft2Digital / Smashwords
+#   - "ingramspark"      -- IngramSpark
+#
+# To enable a platform, implement its adapter in
+# ``app.modules.publishing_ops.platform_adapters`` and add its lowercase key
+# to this set.
+# ---------------------------------------------------------------------------
 _SUPPORTED_PLATFORM_APIS: set[str] = set()
 
 
@@ -316,6 +333,11 @@ def task_sync_listing(
 
             now = datetime.now(timezone.utc)
 
+            logger.info(
+                "Listing sync attempted: listing_id=%s, platform=%s",
+                listing_id, effective_platform,
+            )
+
             if effective_platform.lower() in _SUPPORTED_PLATFORM_APIS:
                 # Platform API is integrated -- perform real sync here.
                 # When a real adapter exists this is where it would be called,
@@ -335,8 +357,9 @@ def task_sync_listing(
                 listing.last_synced = now
                 sync_status = "sync_pending"
                 message = (
-                    f"Platform API for {effective_platform} is not yet available; "
-                    f"listing marked as sync_pending"
+                    f"Platform sync for {effective_platform} is coming in a future release. "
+                    f"Your listing has been saved locally and will be synced automatically "
+                    f"when the integration is available."
                 )
                 logger.info(
                     "Listing %s marked sync_pending -- no API adapter for %s",

@@ -116,7 +116,7 @@ export default function MarketingDashboard() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold">Marketing & Launch Command</h1>
-        <p className="text-gray-500 mt-1">
+        <p className="text-muted-foreground mt-1">
           Manage launch plans, email campaigns, social media, and ARC distribution.
         </p>
       </div>
@@ -131,7 +131,7 @@ export default function MarketingDashboard() {
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -233,10 +233,10 @@ function OverviewTab({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-lg border p-6">
+          <div key={stat.label} className="bg-card rounded-lg border p-6">
             <div className="flex items-center gap-3">
               <div className={`w-3 h-3 rounded-full ${stat.color}`} />
-              <span className="text-sm text-gray-500">{stat.label}</span>
+              <span className="text-sm text-muted-foreground">{stat.label}</span>
             </div>
             <div className="text-3xl font-bold mt-2">{stat.value}</div>
           </div>
@@ -244,7 +244,7 @@ function OverviewTab({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg border p-6">
+        <div className="bg-card rounded-lg border p-6">
           <h3 className="font-semibold mb-4">Quick Actions</h3>
           <div className="space-y-2">
             <Link
@@ -262,7 +262,7 @@ function OverviewTab({
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border p-6">
+        <div className="bg-card rounded-lg border p-6">
           <h3 className="font-semibold mb-4">Recent Activity</h3>
           {activityLoading ? (
             <div className="space-y-3">
@@ -297,12 +297,12 @@ function OverviewTab({
                     {item.type === "social_post" && "SP"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {item.action}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">{item.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{item.title}</p>
                   </div>
-                  <span className="text-xs text-gray-400 flex-shrink-0">
+                  <span className="text-xs text-muted-foreground flex-shrink-0">
                     {formatRelativeDate(item.timestamp)}
                   </span>
                 </div>
@@ -343,7 +343,7 @@ function LaunchPlansTab({
   };
 
   const statusColors: Record<string, string> = {
-    draft: "bg-gray-100 text-gray-700",
+    draft: "bg-muted text-foreground",
     active: "bg-green-100 text-green-700",
     completed: "bg-blue-100 text-blue-700",
     archived: "bg-red-100 text-red-700",
@@ -385,7 +385,7 @@ function LaunchPlansTab({
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-3"
+              className="bg-card border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-3"
             >
               <Link
                 href={`/marketing/launch/${plan.id}`}
@@ -394,7 +394,7 @@ function LaunchPlansTab({
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{plan.title}</h3>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                       {plan.genre && <span>{plan.genre}</span>}
                       <span>Launch: {formatDate(plan.launch_date)}</span>
                     </div>
@@ -419,7 +419,7 @@ function LaunchPlansTab({
                     type: "launch-plan",
                   });
                 }}
-                className="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="flex-shrink-0 p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 aria-label={`Delete ${plan.title}`}
               >
                 <Trash2 className="w-4 h-4" />
@@ -451,7 +451,7 @@ function EmailTab({
   const router = useRouter();
 
   const statusColors: Record<string, string> = {
-    draft: "bg-gray-100 text-gray-700",
+    draft: "bg-muted text-foreground",
     active: "bg-green-100 text-green-700",
     paused: "bg-yellow-100 text-yellow-700",
     completed: "bg-blue-100 text-blue-700",
@@ -494,7 +494,7 @@ function EmailTab({
           {sequences.map((seq) => (
             <div
               key={seq.id}
-              className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-3"
+              className="bg-card border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-3"
             >
               <Link
                 href={`/marketing/email?id=${seq.id}`}
@@ -503,7 +503,7 @@ function EmailTab({
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{seq.name}</h3>
-                    <div className="text-sm text-gray-500 mt-1">
+                    <div className="text-sm text-muted-foreground mt-1">
                       {seq.sent_count} / {seq.recipient_count} sent
                     </div>
                   </div>
@@ -527,7 +527,7 @@ function EmailTab({
                     type: "email-sequence",
                   });
                 }}
-                className="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="flex-shrink-0 p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 aria-label={`Delete ${seq.name}`}
               >
                 <Trash2 className="w-4 h-4" />

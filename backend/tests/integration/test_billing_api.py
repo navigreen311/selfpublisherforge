@@ -94,7 +94,11 @@ def _create_test_app() -> FastAPI:
 def client():
     """Return a TestClient for the billing test app."""
     app = _create_test_app()
-    return TestClient(app)
+    with patch(
+        "app.modules.billing.service._ensure_stripe_configured",
+        return_value=None,
+    ):
+        yield TestClient(app)
 
 
 # ===========================================================================

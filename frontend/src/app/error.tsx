@@ -6,6 +6,8 @@ import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
+
 export default function Error({
   error,
   reset,
@@ -16,7 +18,8 @@ export default function Error({
   const router = useRouter();
 
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
+    if (IS_DEVELOPMENT) {
+      // eslint-disable-next-line no-console
       console.error("App error:", error);
     }
   }, [error]);

@@ -1,13 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useReports, useDownloadReport } from "@/modules/analytics/hooks";
+import type { ReportResponse } from "@/modules/analytics/hooks";
 import { ReportBuilder } from "@/modules/analytics/components/ReportBuilder";
 
 export default function ReportsPage() {
-  const { data: reports, isLoading } = useReports();
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [allItems, setAllItems] = useState<ReportResponse[]>([]);
+  const { data: reports, isLoading, isFetching } = useReports(cursor);
   const downloadReport = useDownloadReport();
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // Accumulate items as new pages are loaded
+  useEffect(() => {
+    if (reports?.items) {
+      if (!cursor) {
+        // First page — replace all items
+        setAllItems(reports.items);
+      } else {
+        // Subsequent pages — append new items, deduplicating by id
+        setAllItems((prev) => {
+          const existingIds = new Set(prev.map((item) => item.id));
+          const newItems = reports.items.filter(
+            (item) => !existingIds.has(item.id)
+          );
+          return [...prev, ...newItems];
+        });
+      }
+    }
+  }, [reports, cursor]);
+
+  const handleLoadMore = useCallback(() => {
+    if (reports?.next_cursor) {
+      setCursor(reports.next_cursor);
+    }
+  }, [reports?.next_cursor]);
 
   const handleDownload = (reportId: string, fileName: string) => {
     setDownloadError(null);
@@ -49,10 +77,13 @@ export default function ReportsPage() {
     });
   };
 
+  const displayItems = allItems.length > 0 ? allItems : reports?.items ?? [];
+  const isLoadingMore = isFetching && !!cursor;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+        <h1 className="text-2xl font-bold text-foreground">Reports</h1>
         <a
           href="/analytics"
           aria-label="Back to Analytics Dashboard"
@@ -99,30 +130,30 @@ export default function ReportsPage() {
 
         {/* Reports List */}
         <div className="lg:col-span-2" role="region" aria-label="Generated Reports List">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900" id="reports-table-heading">
+          <div className="bg-card rounded-lg border border-border shadow-sm">
+            <div className="p-6 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground" id="reports-table-heading">
                 Generated Reports
               </h3>
             </div>
 
             <div aria-live="polite" aria-atomic="true">
-              {isLoading ? (
+              {isLoading && !cursor ? (
                 <div className="p-6" role="status" aria-label="Loading reports">
                   <span className="sr-only">Loading reports, please wait...</span>
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="animate-pulse flex items-center space-x-4">
-                        <div className="h-10 bg-gray-200 rounded flex-1" />
-                        <div className="h-10 bg-gray-200 rounded w-24" />
+                        <div className="h-10 bg-muted rounded flex-1" />
+                        <div className="h-10 bg-muted rounded w-24" />
                       </div>
                     ))}
                   </div>
                 </div>
-              ) : reports?.items && reports.items.length > 0 ? (
+              ) : displayItems.length > 0 ? (
                 <>
                   <p id="reports-table-desc" className="sr-only">
-                    A list of {reports.items.length} generated reports showing title, type, format, status, and download options.
+                    A list of {displayItems.length} generated reports showing title, type, format, status, and download options.
                   </p>
                   <table
                     className="w-full"
@@ -138,17 +169,17 @@ export default function ReportsPage() {
                         <th scope="col">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {reports.items.map((report) => (
-                        <tr key={report.id} className="hover:bg-gray-50">
+                    <tbody className="divide-y divide-border">
+                      {displayItems.map((report) => (
+                        <tr key={report.id} className="hover:bg-muted/50">
                           <td className="p-4">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{report.title}</p>
+                              <p className="text-sm font-medium text-foreground truncate">{report.title}</p>
                               <div className="flex items-center space-x-4 mt-1">
-                                <span className="text-xs text-gray-500 capitalize">
+                                <span className="text-xs text-muted-foreground capitalize">
                                   {report.report_type.replace("_", " ")}
                                 </span>
-                                <span className="text-xs text-gray-500 uppercase">{report.output_format}</span>
+                                <span className="text-xs text-muted-foreground uppercase">{report.output_format}</span>
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                     report.status === "completed"
@@ -157,7 +188,7 @@ export default function ReportsPage() {
                                         ? "bg-red-100 text-red-800"
                                         : report.status === "processing"
                                           ? "bg-yellow-100 text-yellow-800"
-                                          : "bg-gray-100 text-gray-800"
+                                          : "bg-muted text-muted-foreground"
                                   }`}
                                   role="status"
                                   aria-label={`Status: ${report.status}`}
@@ -165,13 +196,13 @@ export default function ReportsPage() {
                                   {report.status}
                                 </span>
                                 {report.file_size && (
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-muted-foreground">
                                     {(report.file_size / 1024).toFixed(1)} KB
                                   </span>
                                 )}
                               </div>
                               {report.generated_at && (
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-muted-foreground/70 mt-1">
                                   Generated: {new Date(report.generated_at).toLocaleString()}
                                 </p>
                               )}
@@ -208,18 +239,20 @@ export default function ReportsPage() {
                 </>
               ) : (
                 <div className="p-6 text-center">
-                  <p className="text-gray-500">No reports generated yet. Use the builder to create one.</p>
+                  <p className="text-muted-foreground">No reports generated yet. Use the builder to create one.</p>
                 </div>
               )}
             </div>
 
             {reports?.has_more && (
-              <div className="p-4 border-t border-gray-200 text-center">
+              <div className="p-4 border-t border-border text-center">
                 <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
                   aria-label="Load more reports"
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
                 >
-                  Load More
+                  {isLoadingMore ? "Loading..." : "Load More"}
                 </button>
               </div>
             )}
