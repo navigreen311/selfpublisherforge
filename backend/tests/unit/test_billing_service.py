@@ -410,11 +410,20 @@ class TestWebhookHandling:
     def teardown_method(self):
         service._stripe_configured = False
 
+    def _mock_idempotency(self):
+        """Helper to mock idempotency checks."""
+        return patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock, return_value=False), \
+               patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
+
     @pytest.mark.asyncio
+    @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
+    @patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
     @patch("app.modules.billing.service.stripe")
-    async def test_subscription_created_updates_org(self, mock_stripe):
+    async def test_subscription_created_updates_org(self, mock_stripe, mock_mark, mock_is_processed):
+        mock_is_processed.return_value = False  # Event not processed yet
         org_id = uuid.uuid4()
         mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_test_123",
             "type": "customer.subscription.created",
             "data": {
                 "object": {
@@ -433,8 +442,11 @@ class TestWebhookHandling:
         }
 
         mock_db = AsyncMock()
-        mock_db.execute = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.mappings.return_value.first.return_value = {"id": org_id, "plan_tier": "free"}
+        mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
+        mock_db.commit = AsyncMock()
 
         result = await service.handle_webhook_event(
             mock_db, b"payload", "sig_header"
@@ -444,10 +456,15 @@ class TestWebhookHandling:
         assert result["event_type"] == "customer.subscription.created"
 
     @pytest.mark.asyncio
+    @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
+    @patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
     @patch("app.modules.billing.service.stripe")
-    async def test_subscription_deleted_sets_free(self, mock_stripe):
+    async def test_subscription_deleted_sets_free(self, mock_stripe, mock_mark, mock_is_processed):
+        mock_is_processed.return_value = False
         org_id = uuid.uuid4()
+        user_id = uuid.uuid4()
         mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_deleted_123",
             "type": "customer.subscription.deleted",
             "data": {
                 "object": {
@@ -466,22 +483,32 @@ class TestWebhookHandling:
         }
 
         mock_db = AsyncMock()
-        mock_db.execute = AsyncMock()
+        # Mock org owner lookup
+        mock_result = MagicMock()
+        mock_result.mappings.return_value.first.return_value = {"id": user_id, "email": "owner@test.com"}
+        mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
+        mock_db.commit = AsyncMock()
 
-        result = await service.handle_webhook_event(
-            mock_db, b"payload", "sig_header"
-        )
+        with patch("app.modules.billing.webhook_handlers.create_notification", new_callable=AsyncMock):
+            result = await service.handle_webhook_event(
+                mock_db, b"payload", "sig_header"
+            )
 
         assert result["status"] == "processed"
         assert result["event_type"] == "customer.subscription.deleted"
 
     @pytest.mark.asyncio
+    @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
+    @patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
     @patch("app.modules.billing.service.stripe")
-    async def test_subscription_updated_processed(self, mock_stripe):
+    async def test_subscription_updated_processed(self, mock_stripe, mock_mark, mock_is_processed):
         """customer.subscription.updated events should be processed."""
+        mock_is_processed.return_value = False
         org_id = uuid.uuid4()
+        user_id = uuid.uuid4()
         mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_updated_123",
             "type": "customer.subscription.updated",
             "data": {
                 "object": {
@@ -500,20 +527,27 @@ class TestWebhookHandling:
         }
 
         mock_db = AsyncMock()
-        mock_db.execute = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.mappings.return_value.first.return_value = {"id": org_id, "plan_tier": "pro"}
+        mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
+        mock_db.commit = AsyncMock()
 
-        result = await service.handle_webhook_event(
-            mock_db, b"payload", "sig_header"
-        )
+        with patch("app.modules.billing.webhook_handlers.create_notification", new_callable=AsyncMock):
+            result = await service.handle_webhook_event(
+                mock_db, b"payload", "sig_header"
+            )
 
         assert result["status"] == "processed"
         assert result["event_type"] == "customer.subscription.updated"
 
     @pytest.mark.asyncio
+    @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
     @patch("app.modules.billing.service.stripe")
-    async def test_unhandled_event_is_ignored(self, mock_stripe):
+    async def test_unhandled_event_is_ignored(self, mock_stripe, mock_is_processed):
+        mock_is_processed.return_value = False  # Not processed yet
         mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_unhandled_123",
             "type": "payment_intent.created",
             "data": {"object": {}},
         }
@@ -542,10 +576,14 @@ class TestWebhookHandling:
         assert exc_info.value.status_code == 400
 
     @pytest.mark.asyncio
+    @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
+    @patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
     @patch("app.modules.billing.service.stripe")
-    async def test_invoice_paid_sets_active(self, mock_stripe):
+    async def test_invoice_paid_sets_active(self, mock_stripe, mock_mark, mock_is_processed):
+        mock_is_processed.return_value = False
         org_id = uuid.uuid4()
         mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_paid_123",
             "type": "invoice.paid",
             "data": {
                 "object": {
@@ -560,6 +598,7 @@ class TestWebhookHandling:
         mock_result.mappings.return_value.first.return_value = {"id": org_id}
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
+        mock_db.commit = AsyncMock()
 
         result = await service.handle_webhook_event(
             mock_db, b"payload", "sig_header"
@@ -568,10 +607,17 @@ class TestWebhookHandling:
         assert result["event_type"] == "invoice.paid"
 
     @pytest.mark.asyncio
+    @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
+    @patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
+    @patch("app.modules.billing.webhook_handlers.get_payment_attempt_count", new_callable=AsyncMock)
     @patch("app.modules.billing.service.stripe")
-    async def test_invoice_payment_failed_sets_past_due(self, mock_stripe):
+    async def test_invoice_payment_failed_sets_past_due(self, mock_stripe, mock_count, mock_mark, mock_is_processed):
+        mock_is_processed.return_value = False
+        mock_count.return_value = 1
         org_id = uuid.uuid4()
+        user_id = uuid.uuid4()
         mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_failed_123",
             "type": "invoice.payment_failed",
             "data": {
                 "object": {
@@ -583,24 +629,30 @@ class TestWebhookHandling:
 
         mock_db = AsyncMock()
         mock_result = MagicMock()
-        mock_result.mappings.return_value.first.return_value = {"id": org_id}
+        mock_result.mappings.return_value.first.return_value = {"id": user_id, "email": "owner@test.com"}
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
+        mock_db.commit = AsyncMock()
 
-        result = await service.handle_webhook_event(
-            mock_db, b"payload", "sig_header"
-        )
+        with patch("app.modules.billing.webhook_handlers.create_notification", new_callable=AsyncMock):
+            result = await service.handle_webhook_event(
+                mock_db, b"payload", "sig_header"
+            )
         assert result["status"] == "processed"
         assert result["event_type"] == "invoice.payment_failed"
 
     @pytest.mark.asyncio
+    @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
+    @patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
     @patch("app.modules.billing.service.stripe")
     async def test_subscription_event_without_org_id_resolves_from_customer(
-        self, mock_stripe
+        self, mock_stripe, mock_mark, mock_is_processed
     ):
         """When metadata has no org_id, the handler should resolve from customer."""
+        mock_is_processed.return_value = False
         org_id = uuid.uuid4()
         mock_stripe.Webhook.construct_event.return_value = {
+            "id": "evt_no_meta_123",
             "type": "customer.subscription.created",
             "data": {
                 "object": {
@@ -622,6 +674,7 @@ class TestWebhookHandling:
         mock_result.mappings.return_value.first.return_value = {"id": org_id}
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
+        mock_db.commit = AsyncMock()
 
         result = await service.handle_webhook_event(
             mock_db, b"payload", "sig_header"
