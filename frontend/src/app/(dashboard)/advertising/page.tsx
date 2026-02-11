@@ -57,7 +57,7 @@ export default function AdvertisingDashboardPage() {
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90"
           aria-label={t("viewAllCampaignsLabel")}
         >
-          View All Campaigns
+          {t("viewAllCampaigns")}
         </Link>
       </div>
 
@@ -147,7 +147,7 @@ export default function AdvertisingDashboardPage() {
               className="text-primary hover:underline mt-2 inline-block"
               aria-label={t("createFirstCampaignLabel")}
             >
-              Create your first campaign
+              {t("createFirstCampaign")}
             </Link>
           </div>
         )}

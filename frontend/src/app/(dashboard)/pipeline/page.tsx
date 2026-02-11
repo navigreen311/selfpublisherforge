@@ -257,7 +257,7 @@ export default function PipelineDashboardPage() {
                 : "bg-card hover:bg-muted"
             }`}
           >
-            {f.label}
+            {t(f.label)}
           </button>
         ))}
       </div>
