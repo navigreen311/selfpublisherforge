@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  # Locust master node - web UI and coordination
+  locust-master:
+    image: locustio/locust:latest
+    container_name: spf-locust-master
+    ports:
+      - "8089:8089"  # Web UI
+      - "5557:5557"  # Master communication port
+    volumes:
+      - ./:/mnt/locust
+    working_dir: /mnt/locust
+    environment:
+      - LOCUST_MODE=master
+      - LOCUST_EXPECT_WORKERS=4
+      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:8000}
+      - LOAD_PROFILE=${LOAD_PROFILE:-normal}
+      - LOAD_TEST_USER_EMAIL=${LOAD_TEST_USER_EMAIL:-loadtest@example.com}
+      - LOAD_TEST_USER_PASSWORD=${LOAD_TEST_USER_PASSWORD:-LoadTest123!}
+    command: >
+      -f locustfile.py
+      --master
+      --expect-workers 4
+      --host ${BACKEND_URL:-http://host.docker.internal:8000}
+    networks:
+      - locust-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Locust worker 1
+  locust-worker-1:
+    image: locustio/locust:latest
+    container_name: spf-locust-worker-1
+    volumes:
+      - ./:/mnt/locust
+    working_dir: /mnt/locust
+    environment:
+      - LOCUST_MODE=worker
+      - LOCUST_MASTER_NODE_HOST=locust-master
+      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:8000}
+      - LOAD_PROFILE=${LOAD_PROFILE:-normal}
+      - LOAD_TEST_USER_EMAIL=${LOAD_TEST_USER_EMAIL:-loadtest@example.com}
+      - LOAD_TEST_USER_PASSWORD=${LOAD_TEST_USER_PASSWORD:-LoadTest123!}
+    command: >
+      -f locustfile.py
+      --worker
+      --master-host locust-master
+    depends_on:
+      - locust-master
+    networks:
+      - locust-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Locust worker 2
+  locust-worker-2:
+    image: locustio/locust:latest
+    container_name: spf-locust-worker-2
+    volumes:
+      - ./:/mnt/locust
+    working_dir: /mnt/locust
+    environment:
+      - LOCUST_MODE=worker
+      - LOCUST_MASTER_NODE_HOST=locust-master
+      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:8000}
+      - LOAD_PROFILE=${LOAD_PROFILE:-normal}
+      - LOAD_TEST_USER_EMAIL=${LOAD_TEST_USER_EMAIL:-loadtest@example.com}
+      - LOAD_TEST_USER_PASSWORD=${LOAD_TEST_USER_PASSWORD:-LoadTest123!}
+    command: >
+      -f locustfile.py
+      --worker
+      --master-host locust-master
+    depends_on:
+      - locust-master
+    networks:
+      - locust-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Locust worker 3
+  locust-worker-3:
+    image: locustio/locust:latest
+    container_name: spf-locust-worker-3
+    volumes:
+      - ./:/mnt/locust
+    working_dir: /mnt/locust
+    environment:
+      - LOCUST_MODE=worker
+      - LOCUST_MASTER_NODE_HOST=locust-master
+      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:8000}
+      - LOAD_PROFILE=${LOAD_PROFILE:-normal}
+      - LOAD_TEST_USER_EMAIL=${LOAD_TEST_USER_EMAIL:-loadtest@example.com}
+      - LOAD_TEST_USER_PASSWORD=${LOAD_TEST_USER_PASSWORD:-LoadTest123!}
+    command: >
+      -f locustfile.py
+      --worker
+      --master-host locust-master
+    depends_on:
+      - locust-master
+    networks:
+      - locust-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Locust worker 4
+  locust-worker-4:
+    image: locustio/locust:latest
+    container_name: spf-locust-worker-4
+    volumes:
+      - ./:/mnt/locust
+    working_dir: /mnt/locust
+    environment:
+      - LOCUST_MODE=worker
+      - LOCUST_MASTER_NODE_HOST=locust-master
+      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:8000}
+      - LOAD_PROFILE=${LOAD_PROFILE:-normal}
+      - LOAD_TEST_USER_EMAIL=${LOAD_TEST_USER_EMAIL:-loadtest@example.com}
+      - LOAD_TEST_USER_PASSWORD=${LOAD_TEST_USER_PASSWORD:-LoadTest123!}
+    command: >
+      -f locustfile.py
+      --worker
+      --master-host locust-master
+    depends_on:
+      - locust-master
+    networks:
+      - locust-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  locust-network:
+    driver: bridge
