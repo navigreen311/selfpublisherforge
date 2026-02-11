@@ -7,6 +7,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import (
     JSON,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     Index,

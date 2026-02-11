@@ -157,7 +157,6 @@ class UserSession(BaseModel):
     device_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True, default=None)
-    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     last_active_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )

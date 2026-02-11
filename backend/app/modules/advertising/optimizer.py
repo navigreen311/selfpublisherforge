@@ -99,7 +99,7 @@ class AdOptimizer:
                 if isinstance(adjustment, str) and adjustment == "negate":
                     keywords_to_negate.append(kw_data.keyword)
                 elif isinstance(adjustment, BidAdjustment):
-                    bid_adjustments.append(adjustment)
+                    bid_adjustments.append(adjustment)  # type: ignore[arg-type]
 
         # Calculate budget recommendation
         budget_recommendation = self._recommend_budget(

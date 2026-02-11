@@ -70,7 +70,7 @@ class AnthropicProvider(BaseLLMProvider):
                 metadata={"error": str(exc)},
             )
 
-    async def generate_stream(
+    async def generate_stream(  # type: ignore[override]
         self, request: LLMRequest
     ) -> AsyncIterator[LLMStreamChunk]:
         """Stream response chunks from Claude using SSE."""

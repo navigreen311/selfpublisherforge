@@ -206,9 +206,9 @@ class MockAmazonClient(AmazonClientBase):
                     return [cat]
                 children = cat.get("children", [])
                 if isinstance(children, list):
-                    for child in children:
-                        if isinstance(child, dict) and child.get("id") == root_id:
-                            return [child]
+                    for child in children:  # type: ignore[union-attr]
+                        if isinstance(child, dict) and child.get("id") == root_id:  # type: ignore[index]
+                            return [child]  # type: ignore[list-item]
             return []
         return _SAMPLE_CATEGORIES
 

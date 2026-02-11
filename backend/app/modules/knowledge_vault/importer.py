@@ -143,7 +143,8 @@ async def extract_key_facts(content: str) -> dict[str, Any]:
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw_text = message.content[0].text
+        content_block = message.content[0]
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)
         return _parse_extraction_response(raw_text)
     except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI fact extraction failed due to connection issue", exc_info=True)
@@ -194,7 +195,8 @@ async def summarize_content(content: str) -> dict[str, Any]:
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw_text = message.content[0].text
+        content_block = message.content[0]
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)
         return _parse_summary_response(raw_text)
     except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI summarization failed due to connection issue", exc_info=True)
@@ -245,7 +247,8 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw_text = message.content[0].text
+        content_block = message.content[0]
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)
         import json
 
         data = json.loads(raw_text)

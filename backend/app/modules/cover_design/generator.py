@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 import openai
 
@@ -220,7 +220,7 @@ async def generate_cover_image(
         response = await client.images.generate(
             model="dall-e-3",
             prompt=prompt,
-            size=dalle_size,
+            size=cast(Any, dalle_size),  # dalle_size is validated to be one of the correct sizes
             quality="hd",
             n=1,
         )
