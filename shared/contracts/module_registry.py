@@ -1,4 +1,4 @@
-"""Registry of all 29 platform modules with metadata.
+"""Registry of all 33 platform modules with metadata.
 
 Each entry captures:
 * **name** -- human-readable module name
@@ -304,6 +304,42 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         tier=PlanTier.FREE,
         api_prefix="/usage",
         dependencies=("auth", "org", "billing"),
+    ),
+    ModuleInfo(
+        id=30,
+        slug="review-intelligence",
+        name="Review Intelligence",
+        description="Amazon review analysis, sentiment tracking, weakness detection.",
+        tier=PlanTier.STARTER,
+        api_prefix="/review-intelligence",
+        dependencies=("auth", "org", "books"),
+    ),
+    ModuleInfo(
+        id=31,
+        slug="competitor-finder",
+        name="Competitor Weakness Finder",
+        description="Identify competitor gaps, weaknesses, and market opportunities.",
+        tier=PlanTier.STARTER,
+        api_prefix="/competitors",
+        dependencies=("auth", "org", "market-research"),
+    ),
+    ModuleInfo(
+        id=32,
+        slug="pricing-automation",
+        name="Pricing Automation",
+        description="Dynamic pricing strategies, A/B testing, competitor price tracking.",
+        tier=PlanTier.STARTER,
+        api_prefix="/pricing",
+        dependencies=("auth", "org", "books", "market-research"),
+    ),
+    ModuleInfo(
+        id=33,
+        slug="portfolio-economics",
+        name="Portfolio Economics",
+        description="Multi-book portfolio analysis, ROI tracking, revenue projections.",
+        tier=PlanTier.PRO,
+        api_prefix="/portfolio",
+        dependencies=("auth", "org", "books", "sales-analytics"),
     ),
 )
 
