@@ -6,35 +6,37 @@ import { useCampaigns, useCreateCampaign } from "@/modules/advertising/hooks";
 import { CampaignCard } from "@/modules/advertising/components/CampaignCard";
 import { toast } from "sonner";
 import { AD_PLATFORMS, DEFAULT_AD_PLATFORM } from "@/lib/constants";
+import { useTranslations } from "@/hooks/use-translations";
 
 // ---------------------------------------------------------------------------
 // Validation helpers
 // ---------------------------------------------------------------------------
 
-function getCampaignNameError(value: string, touched: boolean): string | undefined {
+function getCampaignNameError(value: string, touched: boolean, t: (key: string) => string): string | undefined {
   if (!touched) return undefined;
   const trimmed = value.trim();
-  if (!trimmed) return "Campaign name is required.";
-  if (trimmed.length < 2) return "Campaign name must be at least 2 characters.";
-  if (trimmed.length > 100) return "Campaign name must be 100 characters or fewer.";
+  if (!trimmed) return t("campaigns.nameRequired");
+  if (trimmed.length < 2) return t("campaigns.nameMinLength");
+  if (trimmed.length > 100) return t("campaigns.nameMaxLength");
   return undefined;
 }
 
-function getDailyBudgetError(value: number, touched: boolean): string | undefined {
+function getDailyBudgetError(value: number, touched: boolean, t: (key: string) => string): string | undefined {
   if (!touched) return undefined;
-  if (value <= 0) return "Daily budget must be a positive number.";
-  if (value > 50000) return "Daily budget cannot exceed $50,000.";
+  if (value <= 0) return t("campaigns.budgetRequired");
+  if (value > 50000) return t("campaigns.budgetMax");
   return undefined;
 }
 
-function getTargetAcosError(value: number, touched: boolean): string | undefined {
+function getTargetAcosError(value: number, touched: boolean, t: (key: string) => string): string | undefined {
   if (!touched) return undefined;
-  if (value < 0) return "Target ACOS cannot be negative.";
-  if (value > 100) return "Target ACOS cannot exceed 100%.";
+  if (value < 0) return t("campaigns.acosNegative");
+  if (value > 100) return t("campaigns.acosMax");
   return undefined;
 }
 
 export default function CampaignsListPage() {
+  const t = useTranslations("advertising");
   const [platformFilter, setPlatformFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -61,15 +63,15 @@ export default function CampaignsListPage() {
   const [touchedBudget, setTouchedBudget] = useState(false);
   const [touchedAcos, setTouchedAcos] = useState(false);
 
-  const nameError = getCampaignNameError(newCampaign.name, touchedName);
-  const budgetError = getDailyBudgetError(newCampaign.daily_budget, touchedBudget);
-  const acosError = getTargetAcosError(newCampaign.target_acos, touchedAcos);
+  const nameError = getCampaignNameError(newCampaign.name, touchedName, t);
+  const budgetError = getDailyBudgetError(newCampaign.daily_budget, touchedBudget, t);
+  const acosError = getTargetAcosError(newCampaign.target_acos, touchedAcos, t);
 
   // Form is valid when there are no errors (checked ignoring touched state)
   const isFormValid =
-    !getCampaignNameError(newCampaign.name, true) &&
-    !getDailyBudgetError(newCampaign.daily_budget, true) &&
-    !getTargetAcosError(newCampaign.target_acos, true);
+    !getCampaignNameError(newCampaign.name, true, t) &&
+    !getDailyBudgetError(newCampaign.daily_budget, true, t) &&
+    !getTargetAcosError(newCampaign.target_acos, true, t);
 
   const handleCreate = async () => {
     // Mark all fields as touched to reveal any remaining errors
@@ -87,7 +89,7 @@ export default function CampaignsListPage() {
           .map((k) => k.trim())
           .filter(Boolean),
       });
-      toast.success("Campaign created successfully");
+      toast.success(t("campaigns.successCreated"));
       setShowCreateForm(false);
       setNewCampaign({
         name: "",
@@ -102,7 +104,7 @@ export default function CampaignsListPage() {
       setTouchedBudget(false);
       setTouchedAcos(false);
     } catch {
-      toast.error("Failed to create campaign");
+      toast.error(t("campaigns.errorCreated"));
     }
   };
 
@@ -110,21 +112,21 @@ export default function CampaignsListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Campaigns</h1>
+          <h1 className="text-2xl font-bold">{t("campaigns.title")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your advertising campaigns across platforms
+            {t("campaigns.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
           <Link
             href="/advertising"
             className="px-4 py-2 border rounded-lg text-sm hover:bg-muted"
-            aria-label="Back to advertising dashboard"
+            aria-label={t("campaigns.backToDashboard")}
           >
-            Dashboard
+            {t("campaigns.dashboard")}
           </Link>
           <button
-            aria-label={showCreateForm ? "Cancel creating campaign" : "Create a new campaign"}
+            aria-label={showCreateForm ? t("campaigns.cancelCreating") : t("campaigns.createNew")}
             onClick={() => {
               if (showCreateForm) {
                 // Closing -- reset form and touched state
@@ -145,7 +147,7 @@ export default function CampaignsListPage() {
             }}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90"
           >
-            {showCreateForm ? "Cancel" : "Create Campaign"}
+            {showCreateForm ? t("campaigns.cancel") : t("campaigns.createCampaign")}
           </button>
         </div>
       </div>
@@ -153,10 +155,10 @@ export default function CampaignsListPage() {
       {/* Create Campaign Form */}
       {showCreateForm && (
         <div className="border rounded-lg p-5 bg-muted/10 space-y-4">
-          <h3 className="font-semibold">New Campaign</h3>
+          <h3 className="font-semibold">{t("campaigns.newCampaign")}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name *</label>
+              <label className="block text-sm font-medium mb-1">{t("campaigns.name")} *</label>
               <input
                 type="text"
                 className={`w-full border rounded-lg px-3 py-2 text-sm ${
@@ -167,22 +169,22 @@ export default function CampaignsListPage() {
                   setNewCampaign((prev) => ({ ...prev, name: e.target.value }))
                 }
                 onBlur={() => setTouchedName(true)}
-                placeholder="Campaign name"
-                aria-label="Campaign name"
+                placeholder={t("campaigns.namePlaceholder")}
+                aria-label={t("campaigns.name")}
               />
               {nameError && (
                 <p className="mt-1 text-sm text-red-600">{nameError}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Platform</label>
+              <label className="block text-sm font-medium mb-1">{t("campaigns.platform")}</label>
               <select
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={newCampaign.platform}
                 onChange={(e) =>
                   setNewCampaign((prev) => ({ ...prev, platform: e.target.value }))
                 }
-                aria-label="Select advertising platform"
+                aria-label={t("campaigns.selectPlatform")}
               >
                 {Object.entries(AD_PLATFORMS).map(([key, meta]) => (
                   <option key={key} value={key}>
@@ -192,7 +194,7 @@ export default function CampaignsListPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Campaign Type</label>
+              <label className="block text-sm font-medium mb-1">{t("campaigns.campaignType")}</label>
               <select
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={newCampaign.campaign_type}
@@ -202,18 +204,18 @@ export default function CampaignsListPage() {
                     campaign_type: e.target.value,
                   }))
                 }
-                aria-label="Select campaign type"
+                aria-label={t("campaigns.selectType")}
               >
-                <option value="sponsored_products">Sponsored Products</option>
-                <option value="sponsored_brands">Sponsored Brands</option>
-                <option value="sponsored_display">Sponsored Display</option>
-                <option value="lockscreen">Lockscreen</option>
-                <option value="facebook_feed">Facebook Feed</option>
-                <option value="facebook_stories">Facebook Stories</option>
+                <option value="sponsored_products">{t("campaigns.sponsoredProducts")}</option>
+                <option value="sponsored_brands">{t("campaigns.sponsoredBrands")}</option>
+                <option value="sponsored_display">{t("campaigns.sponsoredDisplay")}</option>
+                <option value="lockscreen">{t("campaigns.lockscreen")}</option>
+                <option value="facebook_feed">{t("campaigns.facebookFeed")}</option>
+                <option value="facebook_stories">{t("campaigns.facebookStories")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Daily Budget ($) *</label>
+              <label className="block text-sm font-medium mb-1">{t("campaigns.dailyBudget")} *</label>
               <input
                 type="number"
                 min="1"
@@ -229,14 +231,14 @@ export default function CampaignsListPage() {
                   }))
                 }
                 onBlur={() => setTouchedBudget(true)}
-                aria-label="Daily budget in dollars"
+                aria-label={t("campaigns.budgetLabel")}
               />
               {budgetError && (
                 <p className="mt-1 text-sm text-red-600">{budgetError}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Bid Strategy</label>
+              <label className="block text-sm font-medium mb-1">{t("campaigns.bidStrategy")}</label>
               <select
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={newCampaign.bid_strategy}
@@ -246,16 +248,16 @@ export default function CampaignsListPage() {
                     bid_strategy: e.target.value,
                   }))
                 }
-                aria-label="Select bid strategy"
+                aria-label={t("campaigns.selectStrategy")}
               >
-                <option value="manual">Manual</option>
-                <option value="auto_low">Auto (Low)</option>
-                <option value="auto_high">Auto (High)</option>
-                <option value="rule_based">Rule-based</option>
+                <option value="manual">{t("campaigns.manual")}</option>
+                <option value="auto_low">{t("campaigns.autoLow")}</option>
+                <option value="auto_high">{t("campaigns.autoHigh")}</option>
+                <option value="rule_based">{t("campaigns.ruleBased")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Target ACOS (%)</label>
+              <label className="block text-sm font-medium mb-1">{t("campaigns.targetAcos")}</label>
               <input
                 type="number"
                 min="0"
@@ -272,7 +274,7 @@ export default function CampaignsListPage() {
                   }))
                 }
                 onBlur={() => setTouchedAcos(true)}
-                aria-label="Target ACOS percentage"
+                aria-label={t("campaigns.acosLabel")}
               />
               {acosError && (
                 <p className="mt-1 text-sm text-red-600">{acosError}</p>
@@ -280,7 +282,7 @@ export default function CampaignsListPage() {
             </div>
             <div className="md:col-span-2 lg:col-span-3">
               <label className="block text-sm font-medium mb-1">
-                Targeting Keywords (comma-separated)
+                {t("campaigns.targetingKeywords")}
               </label>
               <input
                 type="text"
@@ -292,8 +294,8 @@ export default function CampaignsListPage() {
                     targeting_keywords: e.target.value,
                   }))
                 }
-                placeholder="fantasy books, epic fantasy, dragon books"
-                aria-label="Targeting keywords, comma-separated"
+                placeholder={t("campaigns.keywordsPlaceholder")}
+                aria-label={t("campaigns.keywordsLabel")}
               />
             </div>
           </div>
@@ -301,9 +303,9 @@ export default function CampaignsListPage() {
             onClick={handleCreate}
             disabled={createCampaign.isPending || !isFormValid}
             className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Submit new campaign"
+            aria-label={t("campaigns.submit")}
           >
-            {createCampaign.isPending ? "Creating..." : "Create Campaign"}
+            {createCampaign.isPending ? t("campaigns.creating") : t("campaigns.create")}
           </button>
         </div>
       )}
@@ -314,9 +316,9 @@ export default function CampaignsListPage() {
           className="border rounded-lg px-3 py-2 text-sm"
           value={platformFilter}
           onChange={(e) => setPlatformFilter(e.target.value)}
-          aria-label="Filter by advertising platform"
+          aria-label={t("campaigns.filterPlatform")}
         >
-          <option value="">All Platforms</option>
+          <option value="">{t("campaigns.allPlatforms")}</option>
           {Object.entries(AD_PLATFORMS).map(([key, meta]) => (
             <option key={key} value={key}>
               {meta.displayName}
@@ -327,18 +329,18 @@ export default function CampaignsListPage() {
           className="border rounded-lg px-3 py-2 text-sm"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          aria-label="Filter by campaign status"
+          aria-label={t("campaigns.filterStatus")}
         >
-          <option value="">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="ended">Ended</option>
-          <option value="archived">Archived</option>
+          <option value="">{t("campaigns.allStatuses")}</option>
+          <option value="draft">{t("campaigns.draft")}</option>
+          <option value="active">{t("campaigns.active")}</option>
+          <option value="paused">{t("campaigns.paused")}</option>
+          <option value="ended">{t("campaigns.ended")}</option>
+          <option value="archived">{t("campaigns.archived")}</option>
         </select>
         {data?.total_count !== undefined && (
           <span className="text-sm text-muted-foreground self-center">
-            {data.total_count} campaign(s)
+            {t("campaigns.campaignCount", { count: data.total_count.toString() })}
           </span>
         )}
       </div>
@@ -352,7 +354,7 @@ export default function CampaignsListPage() {
         </div>
       ) : error ? (
         <div className="border border-red-200 bg-red-50 rounded-lg p-4 text-red-700">
-          Failed to load campaigns. Please try again.
+          {t("campaigns.loadError")}
         </div>
       ) : data && data.items.length > 0 ? (
         <div className="space-y-3">
@@ -367,13 +369,13 @@ export default function CampaignsListPage() {
         </div>
       ) : (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
-          <p>No campaigns found matching your filters.</p>
+          <p>{t("campaigns.noCampaignsFound")}</p>
           <button
             onClick={() => setShowCreateForm(true)}
             className="text-primary hover:underline mt-2"
-            aria-label="Create your first advertising campaign"
+            aria-label={t("campaigns.createFirstLabel")}
           >
-            Create your first campaign
+            {t("campaigns.createFirstPrompt")}
           </button>
         </div>
       )}
