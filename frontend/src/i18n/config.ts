@@ -38,3 +38,58 @@ export function getLocaleFromNavigator(): Locale {
   const browserLocale = window.navigator.language.split("-")[0];
   return isValidLocale(browserLocale) ? browserLocale : defaultLocale;
 }
+
+/**
+ * Supported namespaces for per-namespace message files
+ * These can have their own files in messages/{locale}/ directory
+ */
+export const supportedNamespaces = [
+  "common",
+  "auth",
+  "navigation",
+  "errors",
+  "validation",
+  "dashboard",
+  "analytics",
+  "billing",
+  "projects",
+  "content",
+  "metadata",
+  "publications",
+  "settings",
+] as const;
+
+export type Namespace = (typeof supportedNamespaces)[number];
+
+/**
+ * Deep merge utility for combining translation objects
+ * Namespace files override/extend the main file
+ */
+export function deepMerge<T extends Record<string, any>>(
+  target: T,
+  source: Partial<T>
+): T {
+  const result = { ...target };
+
+  for (const key in source) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      const sourceValue = source[key];
+      const targetValue = result[key];
+
+      if (
+        sourceValue &&
+        typeof sourceValue === "object" &&
+        !Array.isArray(sourceValue) &&
+        targetValue &&
+        typeof targetValue === "object" &&
+        !Array.isArray(targetValue)
+      ) {
+        result[key] = deepMerge(targetValue, sourceValue);
+      } else if (sourceValue !== undefined) {
+        result[key] = sourceValue;
+      }
+    }
+  }
+
+  return result;
+}
