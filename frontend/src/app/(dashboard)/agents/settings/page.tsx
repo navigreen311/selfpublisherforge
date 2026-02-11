@@ -11,6 +11,7 @@ import {
 import { BudgetMeter } from "@/modules/agents/components/BudgetMeter";
 import { AuditLog } from "@/modules/agents/components/AuditLog";
 import type { Agent, AgentConfigUpdate, PermissionLevel } from "@/modules/agents/types";
+import { useTranslations } from "@/hooks/use-translations";
 
 const PERMISSION_OPTIONS: { value: PermissionLevel; label: string }[] = [
   { value: "draft_only", label: "Draft Only" },
@@ -29,6 +30,7 @@ function AgentConfigForm({
   onSave: (updates: AgentConfigUpdate) => void;
   isSaving: boolean;
 }) {
+  const t = useTranslations("agents");
   const [name, setName] = useState(agent.name);
   const [description, setDescription] = useState(agent.description || "");
   const [isEnabled, setIsEnabled] = useState(agent.is_enabled);
@@ -56,7 +58,7 @@ function AgentConfigForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium mb-1">Name</label>
+          <label className="block text-sm font-medium mb-1">{t("settings.name")}</label>
           <input
             type="text"
             value={name}
@@ -67,7 +69,7 @@ function AgentConfigForm({
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">
-            Permission Level
+            {t("settings.permissionLevel")}
           </label>
           <select
             value={permissionLevel}
@@ -84,7 +86,7 @@ function AgentConfigForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Model ID</label>
+          <label className="block text-sm font-medium mb-1">{t("settings.modelId")}</label>
           <input
             type="text"
             value={modelId}
@@ -93,7 +95,7 @@ function AgentConfigForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Max Tokens</label>
+          <label className="block text-sm font-medium mb-1">{t("settings.maxTokens")}</label>
           <input
             type="number"
             min={1}
@@ -105,7 +107,7 @@ function AgentConfigForm({
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">
-            Temperature ({temperature.toFixed(1)})
+            {t("settings.temperature", { value: temperature.toFixed(1) })}
           </label>
           <input
             type="range"
@@ -126,13 +128,13 @@ function AgentConfigForm({
             className="rounded"
           />
           <label htmlFor="enabled" className="text-sm font-medium">
-            Enabled
+            {t("settings.enabled")}
           </label>
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
+        <label className="block text-sm font-medium mb-1">{t("settings.description")}</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -142,7 +144,7 @@ function AgentConfigForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">System Prompt</label>
+        <label className="block text-sm font-medium mb-1">{t("settings.systemPrompt")}</label>
         <textarea
           value={systemPrompt}
           onChange={(e) => setSystemPrompt(e.target.value)}
@@ -156,13 +158,14 @@ function AgentConfigForm({
         disabled={isSaving}
         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        {isSaving ? "Saving..." : "Save Configuration"}
+        {isSaving ? t("settings.saving") : t("settings.saveConfiguration")}
       </button>
     </form>
   );
 }
 
 export default function AgentSettingsPage() {
+  const t = useTranslations("agents");
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
 
   const { data: agentsData, isLoading: agentsLoading } = useAgents();
@@ -181,21 +184,21 @@ export default function AgentSettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Agent Settings</h1>
+        <h1 className="text-2xl font-bold">{t("settings.title")}</h1>
         <p className="text-muted-foreground">
-          Configure agent permissions, models, budgets, and view the audit trail.
+          {t("settings.subtitle")}
         </p>
       </div>
 
       {/* Agent selector */}
       <div>
-        <label className="block text-sm font-medium mb-1">Select Agent</label>
+        <label className="block text-sm font-medium mb-1">{t("settings.selectAgent")}</label>
         <select
           value={selectedAgentId}
           onChange={(e) => setSelectedAgentId(e.target.value)}
           className="rounded-md border px-3 py-2 text-sm w-full max-w-sm"
         >
-          <option value="">Choose an agent...</option>
+          <option value="">{t("settings.chooseAgent")}</option>
           {agents.map((agent) => (
             <option key={agent.id} value={agent.id}>
               {agent.name} ({agent.agent_type})
@@ -205,7 +208,7 @@ export default function AgentSettingsPage() {
       </div>
 
       {agentsLoading && (
-        <div className="text-muted-foreground">Loading agents...</div>
+        <div className="text-muted-foreground">{t("settings.loadingAgents")}</div>
       )}
 
       {/* Agent config */}
@@ -213,7 +216,7 @@ export default function AgentSettingsPage() {
         <section className="space-y-6">
           <div className="rounded-lg border p-6">
             <h2 className="text-lg font-semibold mb-4">
-              Configuration: {selectedAgent.name}
+              {t("settings.configuration", { name: selectedAgent.name })}
             </h2>
             <AgentConfigForm
               agent={selectedAgent}
@@ -224,14 +227,14 @@ export default function AgentSettingsPage() {
             />
             {updateConfig.isSuccess && (
               <div className="mt-3 rounded-md bg-green-50 p-3 text-sm text-green-700">
-                Configuration saved successfully.
+                {t("settings.configSaved")}
               </div>
             )}
           </div>
 
           {/* Budget */}
           <div className="rounded-lg border p-6">
-            <h2 className="text-lg font-semibold mb-4">Budget</h2>
+            <h2 className="text-lg font-semibold mb-4">{t("settings.budget")}</h2>
             {selectedBudget ? (
               <div className="space-y-4">
                 <BudgetMeter
@@ -241,7 +244,7 @@ export default function AgentSettingsPage() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div>
                     <label className="block text-xs font-medium mb-1">
-                      Daily Token Limit
+                      {t("settings.dailyTokenLimit")}
                     </label>
                     <input
                       type="number"
@@ -259,7 +262,7 @@ export default function AgentSettingsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1">
-                      Daily USD Limit
+                      {t("settings.dailyUsdLimit")}
                     </label>
                     <input
                       type="number"
@@ -278,7 +281,7 @@ export default function AgentSettingsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1">
-                      Monthly USD Limit
+                      {t("settings.monthlyUsdLimit")}
                     </label>
                     <input
                       type="number"
@@ -299,8 +302,7 @@ export default function AgentSettingsPage() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No budget configured for this agent yet. It will be created
-                automatically when the first task runs.
+                {t("settings.noBudget")}
               </p>
             )}
           </div>
@@ -309,7 +311,7 @@ export default function AgentSettingsPage() {
 
       {/* Audit trail */}
       <section>
-        <h2 className="text-lg font-semibold mb-4">Audit Trail</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("settings.auditTrail")}</h2>
         <AuditLog
           entries={auditEntries}
           hasMore={auditData?.has_more}

@@ -1,4 +1,28 @@
 {
   "platformStatistics": "Plattform-Statistiken",
-  "recentActivity": "Letzte Aktivität"
+  "recentActivity": "Letzte Aktivität",
+  "billing": {
+    "title": "Abrechnungsübersicht",
+    "subtitle": "Plattform-Umsatz und Abonnement-Metriken",
+    "revenueMetrics": "Umsatz-Metriken",
+    "mrr": "MRR",
+    "arr": "ARR",
+    "activeSubscriptions": "Aktive Abonnements",
+    "payingCustomers": "Zahlende Kunden",
+    "topPayingOrganizations": "Top zahlende Organisationen",
+    "failedToLoadStats": "Fehler beim Laden der Umsatzstatistiken.",
+    "organization": "Organisation",
+    "plan": "Plan",
+    "members": "Mitglieder",
+    "status": "Status",
+    "noPayingOrgs": "Keine zahlenden Organisationen gefunden"
+  },
+  "organizations": {
+    "title": "Organisationsverwaltung",
+    "subtitle": "Organisationskonten und Abonnementpläne anzeigen und verwalten"
+  },
+  "users": {
+    "title": "Benutzerverwaltung",
+    "subtitle": "Benutzerkonten, Rollen und Zugriffsberechtigungen verwalten"
+  }
 }

@@ -1,4 +1,28 @@
 {
   "platformStatistics": "Platform Statistics",
-  "recentActivity": "Recent Activity"
+  "recentActivity": "Recent Activity",
+  "billing": {
+    "title": "Billing Overview",
+    "subtitle": "Platform revenue and subscription metrics",
+    "revenueMetrics": "Revenue Metrics",
+    "mrr": "MRR",
+    "arr": "ARR",
+    "activeSubscriptions": "Active Subscriptions",
+    "payingCustomers": "Paying Customers",
+    "topPayingOrganizations": "Top Paying Organizations",
+    "failedToLoadStats": "Failed to load revenue statistics.",
+    "organization": "Organization",
+    "plan": "Plan",
+    "members": "Members",
+    "status": "Status",
+    "noPayingOrgs": "No paying organizations found"
+  },
+  "organizations": {
+    "title": "Organization Management",
+    "subtitle": "View and manage organization accounts and subscription plans"
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "Manage user accounts, roles, and access permissions"
+  }
 }

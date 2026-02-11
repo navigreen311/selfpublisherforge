@@ -22,8 +22,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function AdminBillingPage() {
+  const t = useTranslations("admin");
   const { data: stats, isLoading: statsLoading } = usePlatformStats();
   const { data: orgsData, isLoading: orgsLoading } = useAdminOrgs(
     { subscription_status: "active" },
@@ -36,15 +38,15 @@ export default function AdminBillingPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-semibold text-foreground">Billing Overview</h2>
+        <h2 className="text-xl font-semibold text-foreground">{t("billing.title")}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Platform revenue and subscription metrics
+          {t("billing.subtitle")}
         </p>
       </div>
 
       {/* Revenue Stats */}
       <section>
-        <h3 className="text-lg font-semibold text-foreground mb-4">Revenue Metrics</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">{t("billing.revenueMetrics")}</h3>
         {statsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
@@ -57,7 +59,7 @@ export default function AdminBillingPage() {
         ) : stats ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="MRR"
+              label={t("billing.mrr")}
               value={`$${(stats.mrr / 100).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -65,7 +67,7 @@ export default function AdminBillingPage() {
               icon={DollarSign}
             />
             <StatCard
-              label="ARR"
+              label={t("billing.arr")}
               value={`$${calculateARR(stats.mrr).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -73,19 +75,19 @@ export default function AdminBillingPage() {
               icon={TrendingUp}
             />
             <StatCard
-              label="Active Subscriptions"
+              label={t("billing.activeSubscriptions")}
               value={stats.active_subscriptions.toLocaleString()}
               icon={CreditCard}
             />
             <StatCard
-              label="Paying Customers"
+              label={t("billing.payingCustomers")}
               value={stats.active_organizations.toLocaleString()}
               icon={Users}
             />
           </div>
         ) : (
           <div className="bg-red-50 border border-red-200 rounded-md p-4" role="alert">
-            <p className="text-red-800">Failed to load revenue statistics.</p>
+            <p className="text-red-800">{t("billing.failedToLoadStats")}</p>
           </div>
         )}
       </section>
@@ -93,7 +95,7 @@ export default function AdminBillingPage() {
       {/* Top Paying Organizations */}
       <section>
         <h3 className="text-lg font-semibold text-foreground mb-4">
-          Top Paying Organizations
+          {t("billing.topPayingOrganizations")}
         </h3>
         {orgsLoading ? (
           <div className="space-y-2">
@@ -106,11 +108,11 @@ export default function AdminBillingPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Members</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">MRR</TableHead>
+                  <TableHead>{t("billing.organization")}</TableHead>
+                  <TableHead>{t("billing.plan")}</TableHead>
+                  <TableHead>{t("billing.members")}</TableHead>
+                  <TableHead>{t("billing.status")}</TableHead>
+                  <TableHead className="text-right">{t("billing.mrr")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -164,7 +166,7 @@ export default function AdminBillingPage() {
           </div>
         ) : (
           <div className="border rounded-lg p-8 text-center text-muted-foreground">
-            No paying organizations found
+            {t("billing.noPayingOrgs")}
           </div>
         )}
       </section>

@@ -1,4 +1,28 @@
 {
   "platformStatistics": "Estadísticas de la Plataforma",
-  "recentActivity": "Actividad Reciente"
+  "recentActivity": "Actividad Reciente",
+  "billing": {
+    "title": "Resumen de Facturación",
+    "subtitle": "Métricas de ingresos y suscripciones de la plataforma",
+    "revenueMetrics": "Métricas de Ingresos",
+    "mrr": "MRR",
+    "arr": "ARR",
+    "activeSubscriptions": "Suscripciones Activas",
+    "payingCustomers": "Clientes de Pago",
+    "topPayingOrganizations": "Principales Organizaciones de Pago",
+    "failedToLoadStats": "Error al cargar estadísticas de ingresos.",
+    "organization": "Organización",
+    "plan": "Plan",
+    "members": "Miembros",
+    "status": "Estado",
+    "noPayingOrgs": "No se encontraron organizaciones de pago"
+  },
+  "organizations": {
+    "title": "Gestión de Organizaciones",
+    "subtitle": "Ver y gestionar cuentas de organizaciones y planes de suscripción"
+  },
+  "users": {
+    "title": "Gestión de Usuarios",
+    "subtitle": "Gestionar cuentas de usuario, roles y permisos de acceso"
+  }
 }
