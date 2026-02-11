@@ -165,7 +165,6 @@ export default function ReviewsPage() {
           hasMore={reviewsData.has_more}
           nextCursor={reviewsData.next_cursor}
           onLoadMore={() => {
-            console.log("Load more reviews");
           }}
           onSentimentFilter={setSelectedSentiment}
           selectedSentiment={selectedSentiment}

@@ -185,8 +185,6 @@ export function ReviewDashboard({ bookId, bookTitle }: ReviewDashboardProps) {
           hasMore={reviewsData.has_more}
           nextCursor={reviewsData.next_cursor}
           onLoadMore={() => {
-            // In a real implementation, this would trigger fetching more data
-            console.log("Load more reviews");
           }}
           onSentimentFilter={setSelectedSentiment}
           selectedSentiment={selectedSentiment}

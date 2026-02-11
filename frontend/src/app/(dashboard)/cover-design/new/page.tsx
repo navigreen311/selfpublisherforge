@@ -80,8 +80,7 @@ export default function NewCoverPage() {
               </p>
             </div>
             <TemplateSelector
-              onSelectTemplate={(template) => {
-                console.log("Selected template:", template);
+              onSelectTemplate={() => {
               }}
             />
           </div>

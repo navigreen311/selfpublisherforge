@@ -46,10 +46,8 @@ export function LanguageSwitcher({
       if (onLocaleChange) {
         onLocaleChange(locale);
       } else {
-        // Default behavior: update URL or cookie
-        // This would be implemented when integrating with next-intl routing
-        console.log(`Switching to locale: ${locale}`);
-        // Example: router.push(pathname, { locale });
+        // Default behavior: update URL or cookie when integrating with next-intl routing
+        document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
       }
     },
     [onLocaleChange]
