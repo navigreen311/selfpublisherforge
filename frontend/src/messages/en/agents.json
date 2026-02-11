@@ -1,0 +1,21 @@
+{
+  "title": "AI Agents",
+  "subtitle": "Manage your AI agent workforce, monitor tasks, and control budgets.",
+  "emergencyStop": "Emergency Stop",
+  "emergencyStopLabel": "Emergency stop all running agent tasks",
+  "confirmStopMessage": "Cancel ALL running tasks?",
+  "confirmStopLabel": "Confirm emergency stop of all running tasks",
+  "cancelStopLabel": "Cancel emergency stop",
+  "stopping": "Stopping...",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "availableAgents": "Available Agents",
+  "budgetOverview": "Budget Overview",
+  "recentTasks": "Recent Tasks",
+  "viewAll": "View all",
+  "viewAllLabel": "View all agent tasks",
+  "loadingDashboard": "Loading agent dashboard",
+  "loadingAgents": "Loading available agents",
+  "loadingBudget": "Loading budget overview",
+  "loadingTasks": "Loading recent tasks"
+}

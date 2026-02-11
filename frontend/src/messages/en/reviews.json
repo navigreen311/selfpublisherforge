@@ -1,0 +1,18 @@
+{
+  "title": "Review Intelligence",
+  "analytics": "Analytics",
+  "totalReviews": "Total Reviews",
+  "acrossAllBooks": "Across all books",
+  "activeAlerts": "Active Alerts",
+  "criticalHigh": "critical/high",
+  "positiveReviews": "Positive Reviews",
+  "ofTotal": "% of total",
+  "negativeReviews": "Negative Reviews",
+  "requiresAttention": "Requires attention",
+  "reviewByBook": "Review by Book",
+  "reviewByBookDescription": "Select a book to view detailed review analytics, sentiment trends, and alerts.",
+  "bookTitle1": "Book Title 1",
+  "bookTitle2": "Book Title 2",
+  "clickToViewDetails": "Click to view details",
+  "failedToLoad": "Failed to load review data. Please try again."
+}

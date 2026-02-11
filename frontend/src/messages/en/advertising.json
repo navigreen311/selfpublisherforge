@@ -1,0 +1,23 @@
+{
+  "title": "Advertising Intelligence",
+  "viewAllCampaigns": "View All Campaigns",
+  "viewAllCampaignsLabel": "View all advertising campaigns",
+  "activeCampaigns": "Active Campaigns",
+  "todaySpend": "Today's Spend",
+  "monthlySpend": "Monthly Spend",
+  "sales": "Sales: ${value}",
+  "overallAcos": "Overall ACOS",
+  "roas": "ROAS: {value}x",
+  "platformPerformance": "Platform Performance",
+  "spend": "Spend",
+  "salesLabel": "Sales",
+  "acos": "ACOS",
+  "impressions": "Impressions",
+  "clicks": "Clicks",
+  "roasLabel": "ROAS",
+  "topCampaigns": "Top Campaigns",
+  "noCampaigns": "No active campaigns yet.",
+  "createFirstCampaign": "Create your first campaign",
+  "createFirstCampaignLabel": "Create your first advertising campaign",
+  "failedToLoad": "Failed to load dashboard data. Please try again later."
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Inteligencia Publicitaria",
+  "viewAllCampaigns": "Ver Todas las Campañas",
+  "viewAllCampaignsLabel": "Ver todas las campañas publicitarias",
+  "activeCampaigns": "Campañas Activas",
+  "todaySpend": "Gasto de Hoy",
+  "monthlySpend": "Gasto Mensual",
+  "sales": "Ventas: ${value}",
+  "overallAcos": "ACOS General",
+  "roas": "ROAS: {value}x",
+  "platformPerformance": "Rendimiento de Plataforma",
+  "spend": "Gasto",
+  "salesLabel": "Ventas",
+  "acos": "ACOS",
+  "impressions": "Impresiones",
+  "clicks": "Clics",
+  "roasLabel": "ROAS",
+  "topCampaigns": "Mejores Campañas",
+  "noCampaigns": "Aún no hay campañas activas.",
+  "createFirstCampaign": "Crea tu primera campaña",
+  "createFirstCampaignLabel": "Crea tu primera campaña publicitaria",
+  "failedToLoad": "Error al cargar datos del panel. Por favor, inténtalo más tarde."
+}

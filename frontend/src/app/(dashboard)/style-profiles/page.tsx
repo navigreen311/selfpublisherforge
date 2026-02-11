@@ -7,8 +7,10 @@ import { ProfileList } from "@/modules/style-profiles/components/ProfileList";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useStyleProfiles, useDeleteProfile } from "@/modules/style-profiles/hooks";
 import type { ProfileResponse } from "@/modules/style-profiles/types";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function StyleProfilesPage() {
+  const t = useTranslations("style-profiles");
   const { data: profilesData, isPending } = useStyleProfiles();
   const deleteMutation = useDeleteProfile();
   const [deleteTarget, setDeleteTarget] = useState<ProfileResponse | null>(null);
@@ -39,21 +41,21 @@ export default function StyleProfilesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
-          <h1 className="text-2xl font-bold">Style Profiles</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
         </div>
         <Link
           href="/style-profiles/new"
           className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
-          New Profile
+          {t("newProfile")}
         </Link>
       </div>
 
       {/* Description */}
       <div className="border-l-4 border-primary pl-4 py-2">
         <p className="text-sm text-muted-foreground">
-          Analyze and clone writing styles. Create profiles from sample texts to match specific voices and tones.
+          {t("description")}
         </p>
       </div>
 
@@ -61,7 +63,7 @@ export default function StyleProfilesPage() {
       <div>
         {!isPending && profilesData && (
           <p className="text-sm text-muted-foreground mb-4">
-            {profilesData.total} {profilesData.total === 1 ? "profile" : "profiles"}
+            {profilesData.total} {profilesData.total === 1 ? t("profile") : t("profiles")}
           </p>
         )}
         <div className="relative">
@@ -81,7 +83,7 @@ export default function StyleProfilesPage() {
                         e.stopPropagation();
                         handleDeleteRequest(profile);
                       }}
-                      aria-label={`Delete profile: ${profile.name}`}
+                      aria-label={t("deleteProfileLabel", { name: profile.name })}
                       className="pointer-events-auto absolute top-3 right-3 p-1.5 rounded-md bg-background/80 border opacity-0 hover:opacity-100 focus:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -100,14 +102,14 @@ export default function StyleProfilesPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete Style Profile"
+        title={t("deleteProfileConfirmTitle")}
         description={
           deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
+            ? t("deleteProfileConfirm", { name: deleteTarget.name })
             : ""
         }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        confirmLabel={t("deleteButton")}
+        cancelLabel={t("cancelButton")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}

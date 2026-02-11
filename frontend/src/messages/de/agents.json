@@ -1,0 +1,21 @@
+{
+  "title": "KI-Agenten",
+  "subtitle": "Verwalten Sie Ihre KI-Agenten-Belegschaft, überwachen Sie Aufgaben und kontrollieren Sie Budgets.",
+  "emergencyStop": "Notaus",
+  "emergencyStopLabel": "Notaus für alle laufenden Agenten-Aufgaben",
+  "confirmStopMessage": "ALLE laufenden Aufgaben abbrechen?",
+  "confirmStopLabel": "Notaus für alle laufenden Aufgaben bestätigen",
+  "cancelStopLabel": "Notaus abbrechen",
+  "stopping": "Wird gestoppt...",
+  "confirm": "Bestätigen",
+  "cancel": "Abbrechen",
+  "availableAgents": "Verfügbare Agenten",
+  "budgetOverview": "Budget-Übersicht",
+  "recentTasks": "Letzte Aufgaben",
+  "viewAll": "Alle anzeigen",
+  "viewAllLabel": "Alle Agenten-Aufgaben anzeigen",
+  "loadingDashboard": "Lade Agenten-Dashboard",
+  "loadingAgents": "Lade verfügbare Agenten",
+  "loadingBudget": "Lade Budget-Übersicht",
+  "loadingTasks": "Lade letzte Aufgaben"
+}
