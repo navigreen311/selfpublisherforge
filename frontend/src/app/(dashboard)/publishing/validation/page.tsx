@@ -23,16 +23,16 @@ export default function ValidationPage() {
     runValidation.mutate(request, {
       onSuccess: (data) => {
         setValidationResult(data);
-        toast.success("Validation complete");
+        toast.success(t("validation.toast.validationComplete"));
       },
       onError: () => {
-        toast.error("Validation failed");
+        toast.error(t("validation.toast.validationFailed"));
       },
     });
   };
 
   const handleExportPdf = () => {
-    toast.info("PDF export functionality coming soon");
+    toast.info(t("validation.toast.pdfExportComingSoon"));
   };
 
   return (
