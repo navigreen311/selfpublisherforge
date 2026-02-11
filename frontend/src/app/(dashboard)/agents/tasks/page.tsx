@@ -24,20 +24,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { AgentTask, TaskStatus } from "@/modules/agents/types";
-
-const STATUS_OPTIONS: { value: TaskStatus | ""; label: string }[] = [
-  { value: "", label: "All Statuses" },
-  { value: "pending", label: "Pending" },
-  { value: "running", label: "Running" },
-  { value: "awaiting_approval", label: "Awaiting Approval" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
-  { value: "cancelled", label: "Cancelled" },
-];
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function TasksPage() {
+  const t = useTranslations("agents");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "">("");
   const [selectedTask, setSelectedTask] = useState<AgentTask | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -51,6 +41,18 @@ export default function TasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const STATUS_OPTIONS: { value: TaskStatus | ""; label: string }[] = [
+    { value: "", label: t("tasks.allStatuses") },
+    { value: "pending", label: t("tasks.pending") },
+    { value: "running", label: t("tasks.running") },
+    { value: "awaiting_approval", label: t("tasks.awaitingApproval") },
+    { value: "approved", label: t("tasks.approved") },
+    { value: "rejected", label: t("tasks.rejected") },
+    { value: "completed", label: t("tasks.completed") },
+    { value: "failed", label: t("tasks.failed") },
+    { value: "cancelled", label: t("tasks.cancelled") },
+  ];
 
   const { data: agentsData } = useAgents();
   const { data: tasksData, isLoading } = useTasks(
@@ -168,10 +170,10 @@ export default function TasksPage() {
             if (!open) setSelectedTaskId(null);
           }}
           onConfirm={handleApproveConfirm}
-          title="Approve Task"
-          description="Approve this task? The agent will proceed with execution once approved."
-          confirmText="Approve"
-          cancelText="Cancel"
+          title={t("tasks.approveTask")}
+          description={t("tasks.approveDescription")}
+          confirmText={t("tasks.approve")}
+          cancelText={t("cancel")}
           variant="default"
           loading={isProcessing}
         />
@@ -191,19 +193,18 @@ export default function TasksPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Reject Task</DialogTitle>
+              <DialogTitle>{t("tasks.rejectTask")}</DialogTitle>
               <DialogDescription>
-                Provide a reason for rejecting this task. The agent will be
-                notified of the rejection.
+                {t("tasks.rejectDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="py-2">
               <Textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Enter rejection reason..."
+                placeholder={t("tasks.rejectionReasonPlaceholder")}
                 rows={3}
-                aria-label="Rejection reason"
+                aria-label={t("tasks.rejectionReason")}
                 disabled={isProcessing}
               />
             </div>
@@ -216,20 +217,20 @@ export default function TasksPage() {
                   setRejectionReason("");
                 }}
                 disabled={isProcessing}
-                aria-label="Cancel rejection"
+                aria-label={t("tasks.cancelRejection")}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleRejectConfirm}
                 disabled={isProcessing || !rejectionReason.trim()}
-                aria-label="Confirm rejection"
+                aria-label={t("tasks.confirmRejection")}
               >
                 {isProcessing && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                {isProcessing ? "Processing..." : "Reject"}
+                {isProcessing ? t("tasks.processing") : t("tasks.reject")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -242,17 +243,17 @@ export default function TasksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Agent Tasks</h1>
+          <h1 className="text-2xl font-bold">{t("tasks.title")}</h1>
           <p className="text-muted-foreground">
-            View, approve, reject, and manage agent tasks.
+            {t("tasks.subtitle")}
           </p>
         </div>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          aria-label={showCreateForm ? "Cancel creating task" : "Create new task"}
+          aria-label={showCreateForm ? t("tasks.cancelCreate") : t("tasks.createNewTask")}
         >
-          {showCreateForm ? "Cancel" : "New Task"}
+          {showCreateForm ? t("cancel") : t("tasks.newTask")}
         </button>
       </div>
 
@@ -262,17 +263,17 @@ export default function TasksPage() {
           onSubmit={handleCreateTask}
           className="rounded-lg border p-4 space-y-3"
         >
-          <h3 className="text-sm font-semibold">Create New Task</h3>
+          <h3 className="text-sm font-semibold">{t("tasks.createTask")}</h3>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium mb-1">Agent</label>
+              <label className="block text-xs font-medium mb-1">{t("tasks.agent")}</label>
               <select
                 value={newTaskAgentId}
                 onChange={(e) => setNewTaskAgentId(e.target.value)}
                 className="w-full rounded-md border px-2 py-1.5 text-sm"
                 required
               >
-                <option value="">Select agent...</option>
+                <option value="">{t("tasks.selectAgent")}</option>
                 {agents.map((agent) => (
                   <option key={agent.id} value={agent.id}>
                     {agent.name}
@@ -281,12 +282,12 @@ export default function TasksPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Title</label>
+              <label className="block text-xs font-medium mb-1">{t("tasks.taskTitle")}</label>
               <input
                 type="text"
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="Task title..."
+                placeholder={t("tasks.taskTitlePlaceholder")}
                 className="w-full rounded-md border px-2 py-1.5 text-sm"
                 required
               />
@@ -294,12 +295,12 @@ export default function TasksPage() {
           </div>
           <div>
             <label className="block text-xs font-medium mb-1">
-              Description
+              {t("tasks.taskDescription")}
             </label>
             <textarea
               value={newTaskDescription}
               onChange={(e) => setNewTaskDescription(e.target.value)}
-              placeholder="Optional description..."
+              placeholder={t("tasks.taskDescriptionPlaceholder")}
               className="w-full rounded-md border px-2 py-1.5 text-sm"
               rows={2}
             />
@@ -308,9 +309,9 @@ export default function TasksPage() {
             type="submit"
             disabled={createTask.isPending}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            aria-label="Submit new task"
+            aria-label={t("tasks.submitTask")}
           >
-            {createTask.isPending ? "Creating..." : "Create Task"}
+            {createTask.isPending ? t("tasks.creating") : t("tasks.createTask")}
           </button>
         </form>
       )}
@@ -321,7 +322,7 @@ export default function TasksPage() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "")}
           className="rounded-md border px-3 py-1.5 text-sm"
-          aria-label="Filter tasks by status"
+          aria-label={t("tasks.filterByStatus")}
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -330,13 +331,13 @@ export default function TasksPage() {
           ))}
         </select>
         <span className="text-sm text-muted-foreground">
-          {tasksData?.total_count ?? 0} total tasks
+          {t("tasks.totalTasks", { count: tasksData?.total_count ?? 0 })}
         </span>
       </div>
 
       {/* Task list */}
       {isLoading ? (
-        <div className="text-muted-foreground">Loading tasks...</div>
+        <div className="text-muted-foreground">{t("tasks.loadingTasks")}</div>
       ) : (
         <TaskList
           tasks={tasks}
@@ -357,10 +358,10 @@ export default function TasksPage() {
           if (!open) setSelectedTaskId(null);
         }}
         onConfirm={handleApproveConfirm}
-        title="Approve Task"
-        description="Approve this task? The agent will proceed with execution once approved."
-        confirmText="Approve"
-        cancelText="Cancel"
+        title={t("tasks.approveTask")}
+        description={t("tasks.approveDescription")}
+        confirmText={t("tasks.approve")}
+        cancelText={t("cancel")}
         variant="default"
         loading={isProcessing}
       />
@@ -380,19 +381,18 @@ export default function TasksPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Task</DialogTitle>
+            <DialogTitle>{t("tasks.rejectTask")}</DialogTitle>
             <DialogDescription>
-              Provide a reason for rejecting this task. The agent will be
-              notified of the rejection.
+              {t("tasks.rejectDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
             <Textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Enter rejection reason..."
+              placeholder={t("tasks.rejectionReasonPlaceholder")}
               rows={3}
-              aria-label="Rejection reason"
+              aria-label={t("tasks.rejectionReason")}
               disabled={isProcessing}
             />
           </div>
@@ -405,20 +405,20 @@ export default function TasksPage() {
                 setRejectionReason("");
               }}
               disabled={isProcessing}
-              aria-label="Cancel rejection"
+              aria-label={t("tasks.cancelRejection")}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleRejectConfirm}
               disabled={isProcessing || !rejectionReason.trim()}
-              aria-label="Confirm rejection"
+              aria-label={t("tasks.confirmRejection")}
             >
               {isProcessing && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isProcessing ? "Processing..." : "Reject"}
+              {isProcessing ? t("tasks.processing") : t("tasks.reject")}
             </Button>
           </DialogFooter>
         </DialogContent>

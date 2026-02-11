@@ -6,6 +6,7 @@ import { WorkflowBuilder } from "@/modules/agents/components/WorkflowBuilder";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import type { AgentWorkflow, WorkflowCreate, WorkflowStatus } from "@/modules/agents/types";
+import { useTranslations } from "@/hooks/use-translations";
 
 const STATUS_STYLES: Record<WorkflowStatus, string> = {
   draft: "bg-gray-100 text-gray-800",
@@ -17,6 +18,7 @@ const STATUS_STYLES: Record<WorkflowStatus, string> = {
 };
 
 export default function WorkflowsPage() {
+  const t = useTranslations("agents");
   const [showBuilder, setShowBuilder] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<AgentWorkflow | null>(null);
 
@@ -39,23 +41,23 @@ export default function WorkflowsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Workflows</h1>
+          <h1 className="text-2xl font-bold">{t("workflows.title")}</h1>
           <p className="text-muted-foreground">
-            Build and manage multi-step agent workflows.
+            {t("workflows.subtitle")}
           </p>
         </div>
         <button
           onClick={() => setShowBuilder(!showBuilder)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
-          {showBuilder ? "Cancel" : "New Workflow"}
+          {showBuilder ? t("workflows.cancelCreate") : t("workflows.newWorkflow")}
         </button>
       </div>
 
       {/* Workflow builder */}
       {showBuilder && (
         <div className="rounded-lg border p-6">
-          <h2 className="text-lg font-semibold mb-4">Create Workflow</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("workflows.createWorkflow")}</h2>
           <WorkflowBuilder
             agents={agents}
             onSubmit={handleCreateWorkflow}
@@ -73,7 +75,7 @@ export default function WorkflowsPage() {
               onClick={() => setSelectedWorkflow(null)}
               className="rounded-md border px-3 py-1 text-sm hover:bg-accent"
             >
-              Close
+              {t("workflows.close")}
             </button>
           </div>
           {selectedWorkflow.description && (
@@ -81,21 +83,21 @@ export default function WorkflowsPage() {
           )}
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="font-medium text-muted-foreground">Status:</span>{" "}
+              <span className="font-medium text-muted-foreground">{t("workflows.status")}</span>{" "}
               <span className="capitalize">{selectedWorkflow.status.replace(/_/g, " ")}</span>
             </div>
             <div>
-              <span className="font-medium text-muted-foreground">Steps:</span>{" "}
+              <span className="font-medium text-muted-foreground">{t("workflows.steps")}</span>{" "}
               {selectedWorkflow.steps.length}
             </div>
             <div>
-              <span className="font-medium text-muted-foreground">Current step:</span>{" "}
+              <span className="font-medium text-muted-foreground">{t("workflows.currentStep")}</span>{" "}
               {selectedWorkflow.current_step_index + 1}
             </div>
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Steps</h3>
+            <h3 className="text-sm font-semibold">{t("workflows.stepsLabel")}</h3>
             {selectedWorkflow.steps.map((step, idx) => (
               <div
                 key={idx}
@@ -106,7 +108,7 @@ export default function WorkflowsPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">
-                    {idx + 1}. {String(step.title || `Step ${idx + 1}`)}
+                    {idx + 1}. {String(step.title || t("workflows.step", { number: idx + 1 }))}
                   </span>
                   <span className="text-xs capitalize text-muted-foreground">
                     {String(step.status || "pending")}
@@ -131,10 +133,10 @@ export default function WorkflowsPage() {
 
       {/* Workflow list */}
       {isLoading ? (
-        <div className="text-muted-foreground">Loading workflows...</div>
+        <div className="text-muted-foreground">{t("workflows.loadingWorkflows")}</div>
       ) : workflows.length === 0 ? (
         <div className="flex items-center justify-center rounded-lg border border-dashed p-8 text-muted-foreground">
-          No workflows created yet. Click "New Workflow" to get started.
+          {t("workflows.noWorkflows")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -157,7 +159,7 @@ export default function WorkflowsPage() {
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  {wf.steps.length} steps |{" "}
+                  {t("workflows.stepsCount", { count: wf.steps.length })} |{" "}
                   {formatDistanceToNow(new Date(wf.created_at), {
                     addSuffix: true,
                   })}
