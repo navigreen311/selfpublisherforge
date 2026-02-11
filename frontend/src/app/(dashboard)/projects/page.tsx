@@ -143,15 +143,15 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Projects</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage all your publishing projects
           </p>
         </div>
-        <Button asChild aria-label="Create a new project">
+        <Button asChild aria-label="Create a new project" className="w-full sm:w-auto">
           <Link href="/projects/new">
             <Plus className="mr-2 h-4 w-4" /> New Project
           </Link>
@@ -171,7 +171,7 @@ export default function ProjectsPage() {
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[140px]" aria-label="Filter by project type">
+          <SelectTrigger className="w-full sm:w-[140px]" aria-label="Filter by project type">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
           <SelectContent>
@@ -182,7 +182,7 @@ export default function ProjectsPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]" aria-label="Filter by project status">
+          <SelectTrigger className="w-full sm:w-[140px]" aria-label="Filter by project status">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -213,7 +213,7 @@ export default function ProjectsPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <ProjectCardSkeleton key={i} />
           ))}
@@ -233,25 +233,25 @@ export default function ProjectsPage() {
 
       {/* Projects Grid */}
       {!isLoading && !isError && filteredProjects.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project: Project) => (
             <Card
               key={project.id}
               className="hover:shadow-md transition-shadow h-full"
             >
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <Link
                     href={`/projects/${project.id}`}
                     className="flex-1 min-w-0"
                     aria-label={`Open project ${project.title}`}
                   >
-                    <CardTitle className="text-base hover:underline cursor-pointer">
+                    <CardTitle className="text-sm sm:text-base hover:underline cursor-pointer">
                       {project.title}
                     </CardTitle>
                   </Link>
-                  <div className="flex items-center gap-2 ml-2 shrink-0">
-                    <Badge variant={badgeVariant(project.status)}>
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <Badge variant={badgeVariant(project.status)} className="text-[10px] sm:text-xs">
                       {project.status}
                     </Badge>
                     <DropdownMenu>
@@ -259,11 +259,11 @@ export default function ProjectsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
                           aria-label={`Actions for project ${project.title}`}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <MoreHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -299,7 +299,7 @@ export default function ProjectsPage() {
                     </DropdownMenu>
                   </div>
                 </div>
-                <CardDescription className="capitalize">
+                <CardDescription className="capitalize text-xs sm:text-sm">
                   {project.type}
                 </CardDescription>
               </CardHeader>
@@ -309,12 +309,12 @@ export default function ProjectsPage() {
                   className="block cursor-pointer"
                   aria-label={`View details for project ${project.title}`}
                 >
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                     <span>
                       {project.books?.length ?? 0}{" "}
                       {(project.books?.length ?? 0) === 1 ? "book" : "books"}
                     </span>
-                    <span>
+                    <span className="text-[10px] sm:text-xs">
                       Updated{" "}
                       {new Date(project.updated_at).toLocaleDateString()}
                     </span>

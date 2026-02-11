@@ -89,27 +89,27 @@ export default function KnowledgeVaultPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BookOpen className="h-6 w-6 text-primary" aria-hidden="true" />
-          <h1 className="text-2xl font-bold">Knowledge Vault</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-primary" aria-hidden="true" />
+          <h1 className="text-xl sm:text-2xl font-bold">Knowledge Vault</h1>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setImportOpen(true)}
             aria-label="Import knowledge entry from URL or file"
-            className="px-4 py-2 text-sm border rounded-lg hover:bg-accent transition-colors"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-lg hover:bg-accent transition-colors"
           >
             Import
           </button>
           <button
             onClick={() => setCreateOpen(true)}
             aria-label="Create new knowledge entry"
-            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            <Plus className="h-4 w-4" aria-hidden="true" /> New Entry
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" /> New Entry
           </button>
         </div>
       </div>
@@ -129,31 +129,31 @@ export default function KnowledgeVaultPage() {
 
       {/* Search results */}
       {searchResults && (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <h2 id="search-results-heading" className="text-sm font-medium text-muted-foreground">
+            <h2 id="search-results-heading" className="text-xs sm:text-sm font-medium text-muted-foreground">
               Search results ({searchResults.length})
             </h2>
             <button
               onClick={() => setSearchResults(null)}
               aria-label="Clear search results"
-              className="text-xs text-primary hover:underline"
+              className="text-[10px] sm:text-xs text-primary hover:underline"
             >
               Clear search
             </button>
           </div>
           <div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
             role="list"
             aria-describedby="search-results-heading"
             aria-label="Search results"
           >
             {searchResults.map((hit) => (
-              <div key={hit.id} className="border rounded-lg p-4 bg-card" role="listitem">
+              <div key={hit.id} className="border rounded-lg p-3 sm:p-4 bg-card" role="listitem">
                 <div className="flex items-start justify-between gap-2">
                   <a
                     href={`/knowledge/${hit.id}`}
-                    className="font-semibold text-sm hover:text-primary transition-colors"
+                    className="font-semibold text-xs sm:text-sm hover:text-primary transition-colors truncate"
                     aria-label={`View entry: ${hit.title}`}
                   >
                     {hit.title}
@@ -178,23 +178,23 @@ export default function KnowledgeVaultPage() {
                     aria-label={`Delete entry: ${hit.title}`}
                     className="shrink-0 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground line-clamp-3">
+                <p className="mt-1 text-[10px] sm:text-xs text-muted-foreground line-clamp-3">
                   {hit.content_snippet}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="mt-1.5 sm:mt-2 flex flex-wrap gap-1">
                   {hit.tags.slice(0, 3).map((tag) => (
                     <span
                       key={tag}
-                      className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
+                      className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
                     >
                       {tag}
                     </span>
                   ))}
                 </div>
-                <div className="mt-1 text-[10px] text-muted-foreground">
+                <div className="mt-1 text-[9px] sm:text-[10px] text-muted-foreground">
                   Relevance: {hit.score.toFixed(2)}
                 </div>
               </div>
@@ -208,20 +208,20 @@ export default function KnowledgeVaultPage() {
         <div>
           {entriesPending ? (
             <div
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
               aria-label="Loading knowledge entries"
             >
               {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-32" />
+                <Skeleton key={i} className="h-28 sm:h-32" />
               ))}
             </div>
           ) : entries && entries.items.length > 0 ? (
             <>
-              <p id="entries-count" className="text-sm text-muted-foreground mb-3">
+              <p id="entries-count" className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
                 {entries.total_count} entries
               </p>
               <div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
                 role="list"
                 aria-describedby="entries-count"
                 aria-label="Knowledge entries"
@@ -236,19 +236,19 @@ export default function KnowledgeVaultPage() {
                         handleDeleteRequest(entry);
                       }}
                       aria-label={`Delete entry: ${entry.title}`}
-                      className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80 border opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                      className="absolute top-2 right-2 p-1 sm:p-1.5 rounded-md bg-background/80 border opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                     >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 ))}
               </div>
             </>
           ) : (
-            <div className="text-center py-12">
-              <BookOpen className="mx-auto h-12 w-12 text-muted-foreground/30" aria-hidden="true" />
-              <h3 className="mt-4 text-lg font-medium">No entries yet</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+            <div className="text-center py-8 sm:py-12">
+              <BookOpen className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30" aria-hidden="true" />
+              <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-medium">No entries yet</h3>
+              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
                 Create your first research entry or import from a URL or file.
               </p>
             </div>
@@ -259,7 +259,7 @@ export default function KnowledgeVaultPage() {
       {/* Create entry dialog (inline) */}
       {createOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="create-dialog-title"
@@ -269,28 +269,28 @@ export default function KnowledgeVaultPage() {
             onClick={() => setCreateOpen(false)}
             aria-label="Close create entry dialog"
           />
-          <div className="relative bg-background border rounded-xl shadow-xl w-full max-w-lg mx-4 p-6">
-            <h2 id="create-dialog-title" className="text-lg font-semibold mb-4">New Knowledge Entry</h2>
-            <form onSubmit={handleCreate} className="space-y-4" aria-label="Create knowledge entry form">
+          <div className="relative bg-background border rounded-xl shadow-xl w-full max-w-lg p-4 sm:p-6">
+            <h2 id="create-dialog-title" className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">New Knowledge Entry</h2>
+            <form onSubmit={handleCreate} className="space-y-3 sm:space-y-4" aria-label="Create knowledge entry form">
               <div>
-                <label htmlFor="new-entry-title" className="block text-sm font-medium mb-1">Title</label>
+                <label htmlFor="new-entry-title" className="block text-xs sm:text-sm font-medium mb-1">Title</label>
                 <input
                   id="new-entry-title"
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full border rounded-lg px-3 py-2 text-xs sm:text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="new-entry-content" className="block text-sm font-medium mb-1">Content</label>
+                <label htmlFor="new-entry-content" className="block text-xs sm:text-sm font-medium mb-1">Content</label>
                 <textarea
                   id="new-entry-content"
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
                   rows={6}
-                  className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full border rounded-lg px-3 py-2 text-xs sm:text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
               <div className="flex gap-2 justify-end">
@@ -298,7 +298,7 @@ export default function KnowledgeVaultPage() {
                   type="button"
                   onClick={() => setCreateOpen(false)}
                   aria-label="Cancel creating entry"
-                  className="px-4 py-2 text-sm border rounded-lg hover:bg-accent"
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-lg hover:bg-accent"
                 >
                   Cancel
                 </button>
@@ -306,7 +306,7 @@ export default function KnowledgeVaultPage() {
                   type="submit"
                   disabled={createMutation.isPending}
                   aria-label={createMutation.isPending ? "Creating entry" : "Create entry"}
-                  className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   {createMutation.isPending ? "Creating..." : "Create"}
                 </button>

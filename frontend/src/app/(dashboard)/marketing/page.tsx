@@ -96,7 +96,7 @@ export default function MarketingDashboard() {
   const deleteConfig = deleteTarget ? DELETE_CONFIG[deleteTarget.type] : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={!!deleteTarget}
@@ -115,20 +115,20 @@ export default function MarketingDashboard() {
 
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold">Marketing & Launch Command</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-xl sm:text-2xl font-bold">Marketing & Launch Command</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           Manage launch plans, email campaigns, social media, and ARC distribution.
         </p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b">
-        <nav className="flex gap-4">
+      <div className="border-b overflow-x-auto -mx-4 sm:mx-0">
+        <nav className="flex gap-2 sm:gap-4 px-4 sm:px-0 min-w-max">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -230,40 +230,40 @@ function OverviewTab({
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map((stat) => (
-          <div key={stat.label} className="bg-card rounded-lg border p-6">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${stat.color}`} />
-              <span className="text-sm text-muted-foreground">{stat.label}</span>
+          <div key={stat.label} className="bg-card rounded-lg border p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${stat.color}`} />
+              <span className="text-xs sm:text-sm text-muted-foreground">{stat.label}</span>
             </div>
-            <div className="text-3xl font-bold mt-2">{stat.value}</div>
+            <div className="text-2xl sm:text-3xl font-bold mt-1 sm:mt-2">{stat.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-card rounded-lg border p-6">
-          <h3 className="font-semibold mb-4">Quick Actions</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="bg-card rounded-lg border p-4 sm:p-6">
+          <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">Quick Actions</h3>
           <div className="space-y-2">
             <Link
               href="/marketing/launch/new"
-              className="block p-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm"
+              className="block p-2 sm:p-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs sm:text-sm"
             >
               Generate a new launch plan with AI
             </Link>
             <Link
               href="/marketing/email"
-              className="block p-3 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-sm"
+              className="block p-2 sm:p-3 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-xs sm:text-sm"
             >
               Create an email sequence
             </Link>
           </div>
         </div>
 
-        <div className="bg-card rounded-lg border p-6">
-          <h3 className="font-semibold mb-4">Recent Activity</h3>
+        <div className="bg-card rounded-lg border p-4 sm:p-6">
+          <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">Recent Activity</h3>
           {activityLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -285,11 +285,11 @@ function OverviewTab({
               onAction={() => setActiveTab("launch-plans")}
             />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {recentActivity.map((item) => (
-                <div key={item.id} className="flex items-start gap-3">
+                <div key={item.id} className="flex items-start gap-2 sm:gap-3">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium ${ACTIVITY_ICONS[item.type]}`}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] sm:text-xs font-medium ${ACTIVITY_ICONS[item.type]}`}
                   >
                     {item.type === "launch_plan" && "LP"}
                     {item.type === "email_sequence" && "ES"}
@@ -297,12 +297,12 @@ function OverviewTab({
                     {item.type === "social_post" && "SP"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">
+                    <p className="text-xs sm:text-sm font-medium text-foreground truncate">
                       {item.action}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">{item.title}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{item.title}</p>
                   </div>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
                     {formatRelativeDate(item.timestamp)}
                   </span>
                 </div>
@@ -360,11 +360,11 @@ function LaunchPlansTab({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex justify-end">
         <Link
           href="/marketing/launch/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+          className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm text-center"
         >
           + Generate Launch Plan
         </Link>
@@ -381,26 +381,26 @@ function LaunchPlansTab({
           />
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="bg-card border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center gap-3"
+              className="bg-card border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow flex items-center gap-2 sm:gap-3"
             >
               <Link
                 href={`/marketing/launch/${plan.id}`}
                 className="flex-1 min-w-0"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">{plan.title}</h3>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-semibold truncate">{plan.title}</h3>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-muted-foreground">
                       {plan.genre && <span>{plan.genre}</span>}
                       <span>Launch: {formatDate(plan.launch_date)}</span>
                     </div>
                   </div>
                   <span
-                    className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    className={`text-[10px] sm:text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${
                       statusColors[plan.status] || ""
                     }`}
                   >
@@ -419,10 +419,10 @@ function LaunchPlansTab({
                     type: "launch-plan",
                   });
                 }}
-                className="flex-shrink-0 p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="flex-shrink-0 p-1.5 sm:p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 aria-label={`Delete ${plan.title}`}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           ))}
@@ -469,11 +469,11 @@ function EmailTab({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex justify-end">
         <Link
           href="/marketing/email"
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+          className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs sm:text-sm text-center"
         >
           + Create Sequence
         </Link>
