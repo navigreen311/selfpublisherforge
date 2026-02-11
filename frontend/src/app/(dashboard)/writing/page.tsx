@@ -214,42 +214,44 @@ function WritingSessionsSection({
 
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/30">
-          <tr>
-            <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Book
-            </th>
-            <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Words Written
-            </th>
-            <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Duration
-            </th>
-            <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Date
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.map((session) => (
-            <tr key={session.id} className="border-t">
-              <td className="px-4 py-2">
-                {session.book_title ||
-                  bookTitleMap[session.book_id] ||
-                  "Unknown Book"}
-              </td>
-              <td className="px-4 py-2">
-                {session.words_written.toLocaleString()}
-              </td>
-              <td className="px-4 py-2">{session.duration_minutes} min</td>
-              <td className="px-4 py-2 text-muted-foreground">
-                {formatSessionDate(session.created_at)}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs sm:text-sm min-w-[600px]">
+          <thead className="bg-muted/30">
+            <tr>
+              <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
+                Book
+              </th>
+              <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
+                Words Written
+              </th>
+              <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
+                Duration
+              </th>
+              <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
+                Date
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sessions.map((session) => (
+              <tr key={session.id} className="border-t">
+                <td className="px-2 sm:px-4 py-2">
+                  {session.book_title ||
+                    bookTitleMap[session.book_id] ||
+                    "Unknown Book"}
+                </td>
+                <td className="px-2 sm:px-4 py-2">
+                  {session.words_written.toLocaleString()}
+                </td>
+                <td className="px-2 sm:px-4 py-2">{session.duration_minutes} min</td>
+                <td className="px-2 sm:px-4 py-2 text-muted-foreground">
+                  {formatSessionDate(session.created_at)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -282,35 +284,35 @@ export default function WritingStudioPage() {
   }, [books, searchQuery]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Writing Studio</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Writing Studio</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Write, edit, and polish your manuscripts with AI-powered assistance.
         </p>
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <Link
           href="/writing/new"
-          className="rounded-lg border bg-card p-4 hover:border-primary/50 transition-colors"
+          className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors"
         >
-          <h3 className="font-medium text-sm">New Manuscript</h3>
-          <p className="text-xs text-muted-foreground mt-1">
+          <h3 className="font-medium text-xs sm:text-sm">New Manuscript</h3>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             Start a new book from scratch or with an AI-generated outline.
           </p>
         </Link>
-        <Link href="/writing/outline" className="rounded-lg border bg-card p-4 hover:border-primary/50 transition-colors">
-          <h3 className="font-medium text-sm">AI Outline Generator</h3>
-          <p className="text-xs text-muted-foreground mt-1">
+        <Link href="/writing/outline" className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors">
+          <h3 className="font-medium text-xs sm:text-sm">AI Outline Generator</h3>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             Generate a complete book outline with chapter summaries.
           </p>
         </Link>
-        <div className="rounded-lg border bg-card p-4 hover:border-primary/50 transition-colors">
-          <h3 className="font-medium text-sm">Writing Analytics</h3>
-          <p className="text-xs text-muted-foreground mt-1">
+        <div className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors">
+          <h3 className="font-medium text-xs sm:text-sm">Writing Analytics</h3>
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             Track your writing sessions, word counts, and productivity.
           </p>
         </div>
@@ -330,7 +332,7 @@ export default function WritingStudioPage() {
 
       {/* Book list */}
       <div>
-        <h2 className="text-lg font-semibold text-foreground mb-3">
+        <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3">
           Your Manuscripts
         </h2>
 
@@ -362,33 +364,33 @@ export default function WritingStudioPage() {
         {/* Loaded with results */}
         {!booksLoading && !booksError && books && books.length > 0 && (
           <>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {filteredBooks.map((book) => (
                 <Link
                   key={book.id}
                   href={`/writing/${book.id}`}
-                  className="block rounded-lg border bg-card p-4 hover:border-primary/50 hover:shadow-sm transition-all"
+                  className="block rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 hover:shadow-sm transition-all"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-sm sm:text-base text-foreground truncate">
                         {book.title}
                       </h3>
-                      <div className="flex items-center gap-3 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                         <StatusBadge status={book.status} />
                         {book.chapter_count !== undefined && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-[10px] sm:text-xs text-muted-foreground">
                             {book.chapter_count} chapters
                           </span>
                         )}
                         {book.word_count !== undefined && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-[10px] sm:text-xs text-muted-foreground">
                             {book.word_count.toLocaleString()} words
                           </span>
                         )}
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
                       {formatRelativeDate(book.updated_at)}
                     </span>
                   </div>
@@ -407,15 +409,17 @@ export default function WritingStudioPage() {
 
       {/* Recent sessions */}
       <div>
-        <h2 className="text-lg font-semibold text-foreground mb-3">
+        <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3">
           Recent Writing Sessions
         </h2>
-        <WritingSessionsSection
-          sessions={sessions}
-          isLoading={sessionsLoading}
-          error={sessionsError as Error | null}
-          books={books}
-        />
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <WritingSessionsSection
+            sessions={sessions}
+            isLoading={sessionsLoading}
+            error={sessionsError as Error | null}
+            books={books}
+          />
+        </div>
       </div>
     </div>
   );
