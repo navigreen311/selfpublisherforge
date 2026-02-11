@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Bell,
   Search,
   Sun,
   Moon,
@@ -14,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
@@ -26,7 +24,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/hooks/use-theme";
 import { useSidebar } from "@/hooks/use-sidebar";
-import { useAuthStore, useUIStore } from "@/lib/store";
+import { useAuthStore } from "@/lib/store";
+import { NotificationCenter } from "@/modules/notifications/components/NotificationCenter";
 
 const pageLabels: Record<string, string> = {
   dashboard: "Dashboard",
@@ -50,8 +49,6 @@ export function Header() {
   const { openMobile } = useSidebar();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const notifications = useUIStore((s) => s.notifications);
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const firstSegment = pathname
     ?.split("/")
@@ -143,28 +140,7 @@ export function Header() {
         </DropdownMenu>
 
         {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 relative"
-          onClick={() => router.push("/settings")}
-          aria-label={
-            unreadCount > 0
-              ? `Notifications (${unreadCount} unread)`
-              : "Notifications"
-          }
-        >
-          <Bell className="h-4 w-4" aria-hidden="true" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
-              aria-hidden="true"
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
-          )}
-        </Button>
+        {user?.id && <NotificationCenter userId={user.id} />}
 
         <Separator orientation="vertical" className="h-6" />
 
