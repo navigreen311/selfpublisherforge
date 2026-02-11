@@ -6,9 +6,11 @@ import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { TextIngestion } from "@/modules/style-profiles/components/TextIngestion";
 import { useCreateProfile } from "@/modules/style-profiles/hooks";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function NewStyleProfilePage() {
   const router = useRouter();
+  const t = useTranslations("style-profiles");
   const createMutation = useCreateProfile();
 
   const [step, setStep] = useState(1);
@@ -46,11 +48,11 @@ export default function NewStyleProfilePage() {
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to profiles
+          {t("new.backToProfiles")}
         </Link>
         <div className="flex items-center gap-3">
           <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
-          <h1 className="text-2xl font-bold">Create Style Profile</h1>
+          <h1 className="text-2xl font-bold">{t("new.title")}</h1>
         </div>
       </div>
 
@@ -68,18 +70,18 @@ export default function NewStyleProfilePage() {
       {/* Step 1: Basic Information */}
       {step === 1 && (
         <div className="border rounded-lg bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("new.basicInfo")}</h2>
           <form onSubmit={handleBasicInfoSubmit} className="space-y-4">
             <div>
               <label htmlFor="profile-name" className="block text-sm font-medium mb-2">
-                Profile Name <span className="text-destructive">*</span>
+                {t("new.profileName")} <span className="text-destructive">*</span>
               </label>
               <input
                 id="profile-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="E.g., Hemingway Style, Business Blog Voice"
+                placeholder={t("new.profileNamePlaceholder")}
                 className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
@@ -87,13 +89,13 @@ export default function NewStyleProfilePage() {
 
             <div>
               <label htmlFor="profile-description" className="block text-sm font-medium mb-2">
-                Description
+                {t("new.description")}
               </label>
               <textarea
                 id="profile-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the purpose or characteristics of this style profile..."
+                placeholder={t("new.descriptionPlaceholder")}
                 rows={3}
                 className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
@@ -101,14 +103,14 @@ export default function NewStyleProfilePage() {
 
             <div>
               <label htmlFor="profile-genre" className="block text-sm font-medium mb-2">
-                Genre
+                {t("new.genre")}
               </label>
               <input
                 id="profile-genre"
                 type="text"
                 value={genre}
                 onChange={(e) => setGenre(e.target.value)}
-                placeholder="E.g., Fiction, Non-fiction, Technical Writing"
+                placeholder={t("new.genrePlaceholder")}
                 className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
@@ -119,7 +121,7 @@ export default function NewStyleProfilePage() {
                 disabled={!name.trim()}
                 className="px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next: Add Samples
+                {t("new.nextAddSamples")}
               </button>
             </div>
           </form>
@@ -130,17 +132,16 @@ export default function NewStyleProfilePage() {
       {step === 2 && (
         <div className="border rounded-lg bg-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Add Sample Texts</h2>
+            <h2 className="text-lg font-semibold">{t("new.addSampleTexts")}</h2>
             <button
               onClick={() => setStep(1)}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
-              Edit Info
+              {t("new.editInfo")}
             </button>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Add at least one sample text (minimum a few paragraphs) to analyze the writing style.
-            More samples will improve accuracy.
+            {t("new.samplesDescription")}
           </p>
           <TextIngestion
             onSubmit={handleTextSubmit}
@@ -153,7 +154,7 @@ export default function NewStyleProfilePage() {
       {createMutation.isError && (
         <div className="border border-destructive rounded-lg p-4 bg-destructive/10">
           <p className="text-sm text-destructive">
-            Failed to create profile. Please try again.
+            {t("new.errorMessage")}
           </p>
         </div>
       )}

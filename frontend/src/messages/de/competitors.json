@@ -1,3 +1,43 @@
 {
-  "title": "Wettbewerbsanalyse"
+  "title": "Wettbewerbsanalyse",
+  "detail": {
+    "notFound": "Wettbewerbsanalyse nicht gefunden",
+    "defaultTitle": "Wettbewerbsanalyse",
+    "by": "von",
+    "overview": "Übersicht",
+    "stats": {
+      "bsr": "BSR",
+      "price": "Preis",
+      "rating": "Bewertung",
+      "reviews": "Rezensionen",
+      "overallScore": "Gesamtpunktzahl",
+      "sentiment": "Stimmung",
+      "weaknesses": "Schwächen",
+      "strengths": "Stärken"
+    },
+    "reviewSummary": "Rezensionszusammenfassung",
+    "weaknessesTitle": "Erkannte Schwächen ({count})",
+    "analysisFailed": "Analyse fehlgeschlagen",
+    "actionable": "Umsetzbar",
+    "frequency": "Häufigkeit",
+    "confidence": "Vertrauen",
+    "suggestion": "Vorschlag",
+    "evidence": "Beweis",
+    "rating": "Bewertung",
+    "foundHelpful": "fanden hilfreich",
+    "moreEvidence": "+{count} weitere Beweisartikel",
+    "severity": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch",
+      "critical": "Kritisch"
+    },
+    "category": {
+      "contentQuality": "Inhalt",
+      "formatLayout": "Format",
+      "missingFeatures": "Funktionen",
+      "pricing": "Preisgestaltung",
+      "coverageGaps": "Abdeckung"
+    }
+  }
 }

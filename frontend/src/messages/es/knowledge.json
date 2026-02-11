@@ -25,5 +25,23 @@
   "deleteConfirmMessage": "¿Estás seguro de que quieres eliminar \"{title}\"? Esta acción no se puede deshacer.",
   "deleteButton": "Eliminar",
   "cancelButton": "Cancelar",
-  "relevance": "Relevancia: {score}"
+  "relevance": "Relevancia: {score}",
+  "detail": {
+    "invalidId": "ID de entrada inválido",
+    "notFound": "Entrada no encontrada",
+    "backToVault": "Volver a la Bóveda de Conocimiento",
+    "sourceManual": "Entrada manual",
+    "sourceUrl": "Importado desde URL",
+    "sourceFile": "Importado desde archivo",
+    "sourceClip": "Recorte web",
+    "created": "Creado",
+    "credibility": "{score}% credibilidad",
+    "aiSummary": "Resumen IA",
+    "delete": "Eliminar",
+    "keyPoints": "Puntos Clave",
+    "suggestedTags": "Etiquetas Sugeridas",
+    "metadata": "Metadatos",
+    "deleteConfirmTitle": "Eliminar entrada",
+    "deleteConfirmMessage": "¿Estás seguro de que quieres eliminar esta entrada? Esta acción no se puede deshacer."
+  }
 }

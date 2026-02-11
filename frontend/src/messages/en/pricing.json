@@ -2,7 +2,12 @@
   "title": "Pricing Automation",
   "subtitle": "Optimize your book prices to maximize royalties and sales",
   "simulator": {
-    "button": "Price Simulator"
+    "button": "Price Simulator",
+    "title": "Pricing Tools",
+    "subtitle": "Interactive calculators to optimize your book pricing and revenue",
+    "backToDashboard": "Back to Dashboard",
+    "priceSimulator": "Price Simulator",
+    "kuCalculator": "KU Calculator"
   },
   "stats": {
     "activeRules": "Active Rules",

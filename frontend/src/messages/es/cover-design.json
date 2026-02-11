@@ -3,5 +3,35 @@
   "generateNewCover": "Generar nueva portada",
   "generateCover": "Generar Portada",
   "description": "Crea portadas de libros impresionantes con diseño impulsado por IA. Genera portadas personalizadas basadas en género, ambiente y preferencias de estilo.",
-  "noCoverMessage": "Aún no hay portadas. Haz clic en 'Generar Portada' para crear tu primer diseño."
+  "noCoverMessage": "Aún no hay portadas. Haz clic en 'Generar Portada' para crear tu primer diseño.",
+  "detail": {
+    "notFound": "Portada no encontrada",
+    "title": "Detalles de la Portada",
+    "subtitle": "Ver y gestionar tu diseño de portada",
+    "goBack": "Volver",
+    "generateVariations": "Generar Variaciones",
+    "delete": "Eliminar",
+    "deleteLabel": "Eliminar portada",
+    "deleteCover": "Eliminar portada",
+    "coverInfo": "Información de la Portada",
+    "status": "Estado",
+    "created": "Creado",
+    "lastUpdated": "Última Actualización",
+    "metadata": "Metadatos",
+    "deleteConfirmTitle": "Eliminar Portada",
+    "deleteConfirmMessage": "¿Estás seguro de que quieres eliminar \"{title}\"? Esta acción no se puede deshacer.",
+    "cancel": "Cancelar",
+    "closeDialog": "Cerrar diálogo",
+    "numberOfVariations": "Número de Variaciones",
+    "generate": "Generar",
+    "generating": "Generando..."
+  },
+  "new": {
+    "title": "Crear Nueva Portada",
+    "subtitle": "Genera una portada de libro personalizada con IA o explora plantillas",
+    "goBack": "Volver",
+    "aiGenerator": "Generador IA",
+    "templates": "Plantillas",
+    "templatesDescription": "Explora y selecciona entre nuestras plantillas diseñadas profesionalmente. Puedes personalizarlas después de la selección."
+  }
 }

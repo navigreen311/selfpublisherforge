@@ -13,7 +13,6 @@
   "noEntriesTitle": "No entries yet",
   "noEntriesMessage": "Create your first research entry or import from a URL or file.",
   "newKnowledgeEntry": "New Knowledge Entry",
-  "title": "Title",
   "content": "Content",
   "cancel": "Cancel",
   "cancelLabel": "Cancel creating entry",
@@ -25,5 +24,23 @@
   "deleteConfirmMessage": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
   "deleteButton": "Delete",
   "cancelButton": "Cancel",
-  "relevance": "Relevance: {score}"
+  "relevance": "Relevance: {score}",
+  "detail": {
+    "invalidId": "Invalid entry ID",
+    "notFound": "Entry not found",
+    "backToVault": "Back to Knowledge Vault",
+    "sourceManual": "Manual entry",
+    "sourceUrl": "Imported from URL",
+    "sourceFile": "Imported from file",
+    "sourceClip": "Web clip",
+    "created": "Created",
+    "credibility": "{score}% credibility",
+    "aiSummary": "AI Summary",
+    "delete": "Delete",
+    "keyPoints": "Key Points",
+    "suggestedTags": "Suggested Tags",
+    "metadata": "Metadata",
+    "deleteConfirmTitle": "Delete entry",
+    "deleteConfirmMessage": "Are you sure you want to delete this entry? This action cannot be undone."
+  }
 }

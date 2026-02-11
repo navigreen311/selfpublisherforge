@@ -6,10 +6,12 @@ import { cn } from "@/lib/utils";
 import { BlurbEditor } from "@/modules/product-page/components/BlurbEditor";
 import { ABTestPanel } from "@/modules/product-page/components/ABTestPanel";
 import { useProjects } from "@/modules/projects/hooks";
+import { useTranslations } from "@/hooks/use-translations";
 
 function BlurbOptimizationContent() {
   const searchParams = useSearchParams();
   const bookIdFromUrl = searchParams.get("bookId");
+  const t = useTranslations("product-page");
 
   const { data: projects, isLoading: isLoadingProjects } = useProjects();
 
@@ -31,8 +33,8 @@ function BlurbOptimizationContent() {
     ) ?? [];
 
   const tabs = [
-    { key: "editor" as const, label: "Blurb Editor" },
-    { key: "ab-test" as const, label: "A/B Testing" },
+    { key: "editor" as const, label: t("blurb.editorTab") },
+    { key: "ab-test" as const, label: t("blurb.abTestTab") },
   ];
 
   // Loading state while fetching projects
@@ -40,8 +42,8 @@ function BlurbOptimizationContent() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Blurb Optimization</h1>
-          <p className="text-muted-foreground mt-1">Loading your books...</p>
+          <h1 className="text-2xl font-bold">{t("blurb.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("blurb.loading")}</p>
         </div>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
@@ -55,17 +57,17 @@ function BlurbOptimizationContent() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Blurb Optimization</h1>
+          <h1 className="text-2xl font-bold">{t("blurb.title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Generate, test, and optimize your book blurb for maximum conversion.
+            {t("blurb.subtitle")}
           </p>
         </div>
         <div className="rounded-lg border bg-card p-8 shadow-sm text-center">
           <h3 className="text-lg font-semibold text-foreground mb-2">
-            No books found
+            {t("blurb.noBooksTitle")}
           </h3>
           <p className="text-muted-foreground text-sm">
-            Create a project first to start optimizing your blurbs.
+            {t("blurb.noBooksMessage")}
           </p>
         </div>
       </div>
@@ -75,9 +77,9 @@ function BlurbOptimizationContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Blurb Optimization</h1>
+        <h1 className="text-2xl font-bold">{t("blurb.title")}</h1>
         <p className="text-muted-foreground mt-1">
-          Generate, test, and optimize your book blurb for maximum conversion.
+          {t("blurb.subtitle")}
         </p>
       </div>
 
@@ -85,14 +87,14 @@ function BlurbOptimizationContent() {
       {!bookIdFromUrl && allBooks.length > 0 && (
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <label className="block text-sm font-medium text-foreground mb-1">
-            Select a Book
+            {t("blurb.selectBook")}
           </label>
           <select
             value={selectedBookId ?? ""}
             onChange={(e) => setSelectedBookId(e.target.value || undefined)}
             className="w-full max-w-md rounded-md border px-3 py-2 text-sm"
           >
-            <option value="">-- Choose a book --</option>
+            <option value="">{t("blurb.chooseBook")}</option>
             {allBooks.map((book) => (
               <option key={book.id} value={book.id}>
                 {book.title} ({book.projectTitle})
@@ -131,18 +133,21 @@ function BlurbOptimizationContent() {
   );
 }
 
+function BlurbFallback() {
+  const t = useTranslations("product-page");
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">{t("blurb.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("blurb.loading")}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function BlurbOptimizationPage() {
   return (
-    <React.Suspense
-      fallback={
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold">Blurb Optimization</h1>
-            <p className="text-muted-foreground mt-1">Loading...</p>
-          </div>
-        </div>
-      }
-    >
+    <React.Suspense fallback={<BlurbFallback />}>
       <BlurbOptimizationContent />
     </React.Suspense>
   );

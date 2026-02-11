@@ -11,11 +11,13 @@ import {
   useGenerateVariations,
 } from "@/modules/cover-design/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function CoverDetailPage() {
   const router = useRouter();
   const params = useParams();
   const coverId = params?.id as string;
+  const t = useTranslations("cover-design");
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [variationsOpen, setVariationsOpen] = useState(false);
@@ -65,7 +67,7 @@ export default function CoverDetailPage() {
   if (!cover) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Cover not found</p>
+        <p className="text-muted-foreground">{t("detail.notFound")}</p>
       </div>
     );
   }
@@ -77,15 +79,15 @@ export default function CoverDetailPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
-            aria-label="Go back"
+            aria-label={t("detail.goBack")}
             className="p-2 hover:bg-accent rounded-lg transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold">Cover Details</h1>
+            <h1 className="text-2xl font-bold">{t("detail.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              View and manage your cover design
+              {t("detail.subtitle")}
             </p>
           </div>
         </div>
@@ -95,15 +97,15 @@ export default function CoverDetailPage() {
             className="flex items-center gap-2 px-4 py-2 text-sm border rounded-lg hover:bg-accent transition-colors"
           >
             <Wand2 className="h-4 w-4" />
-            Generate Variations
+            {t("detail.generateVariations")}
           </button>
           <button
             onClick={() => setDeleteOpen(true)}
-            aria-label="Delete cover"
+            aria-label={t("detail.deleteLabel")}
             className="flex items-center gap-2 px-4 py-2 text-sm border border-destructive text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
           >
             <Trash2 className="h-4 w-4" />
-            Delete
+            {t("detail.delete")}
           </button>
         </div>
       </div>
@@ -115,22 +117,22 @@ export default function CoverDetailPage() {
         </div>
         <div className="space-y-6">
           <div className="p-6 border rounded-lg bg-card">
-            <h2 className="text-lg font-semibold mb-4">Cover Information</h2>
+            <h2 className="text-lg font-semibold mb-4">{t("detail.coverInfo")}</h2>
             <dl className="space-y-3 text-sm">
               <div>
-                <dt className="font-medium">Status</dt>
+                <dt className="font-medium">{t("detail.status")}</dt>
                 <dd className="text-muted-foreground capitalize">
                   {cover.status}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium">Created</dt>
+                <dt className="font-medium">{t("detail.created")}</dt>
                 <dd className="text-muted-foreground">
                   {new Date(cover.created_at).toLocaleString()}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium">Last Updated</dt>
+                <dt className="font-medium">{t("detail.lastUpdated")}</dt>
                 <dd className="text-muted-foreground">
                   {new Date(cover.updated_at).toLocaleString()}
                 </dd>
@@ -140,7 +142,7 @@ export default function CoverDetailPage() {
 
           {cover.metadata && Object.keys(cover.metadata).length > 0 && (
             <div className="p-6 border rounded-lg bg-card">
-              <h2 className="text-lg font-semibold mb-4">Metadata</h2>
+              <h2 className="text-lg font-semibold mb-4">{t("detail.metadata")}</h2>
               <pre className="text-xs bg-muted p-3 rounded overflow-auto">
                 {JSON.stringify(cover.metadata, null, 2)}
               </pre>
@@ -153,10 +155,10 @@ export default function CoverDetailPage() {
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Delete Cover"
-        description={`Are you sure you want to delete "${cover.title}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t("detail.deleteConfirmTitle")}
+        description={t("detail.deleteConfirmMessage", { title: cover.title })}
+        confirmLabel={t("detail.delete")}
+        cancelLabel={t("detail.cancel")}
         variant="destructive"
         onConfirm={handleDelete}
         onCancel={() => setDeleteOpen(false)}
@@ -174,16 +176,16 @@ export default function CoverDetailPage() {
           <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setVariationsOpen(false)}
-            aria-label="Close variations dialog"
+            aria-label={t("detail.closeDialog")}
           />
           <div className="relative bg-background border rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
             <h2 id="variations-dialog-title" className="text-lg font-semibold mb-4">
-              Generate Variations
+              {t("detail.generateVariations")}
             </h2>
             <div className="space-y-4">
               <div>
                 <label htmlFor="variation-count" className="block text-sm font-medium mb-2">
-                  Number of Variations
+                  {t("detail.numberOfVariations")}
                 </label>
                 <input
                   id="variation-count"
@@ -201,14 +203,14 @@ export default function CoverDetailPage() {
                   onClick={() => setVariationsOpen(false)}
                   className="px-4 py-2 text-sm border rounded-lg hover:bg-accent"
                 >
-                  Cancel
+                  {t("detail.cancel")}
                 </button>
                 <button
                   onClick={handleGenerateVariations}
                   disabled={variationsMutation.isPending}
                   className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {variationsMutation.isPending ? "Generating..." : "Generate"}
+                  {variationsMutation.isPending ? t("detail.generating") : t("detail.generate")}
                 </button>
               </div>
             </div>

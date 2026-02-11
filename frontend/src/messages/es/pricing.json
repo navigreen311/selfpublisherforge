@@ -2,7 +2,12 @@
   "title": "Automatización de Precios",
   "subtitle": "Optimiza los precios de tus libros para maximizar regalías y ventas",
   "simulator": {
-    "button": "Simulador de Precios"
+    "button": "Simulador de Precios",
+    "title": "Herramientas de Precios",
+    "subtitle": "Calculadoras interactivas para optimizar tus precios de libros e ingresos",
+    "backToDashboard": "Volver al Panel",
+    "priceSimulator": "Simulador de Precios",
+    "kuCalculator": "Calculadora KU"
   },
   "stats": {
     "activeRules": "Reglas Activas",

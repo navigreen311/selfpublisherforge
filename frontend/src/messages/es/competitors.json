@@ -1,3 +1,43 @@
 {
-  "title": "Análisis de Competidores"
+  "title": "Análisis de Competidores",
+  "detail": {
+    "notFound": "Análisis de competidor no encontrado",
+    "defaultTitle": "Análisis de Competidor",
+    "by": "por",
+    "overview": "Resumen",
+    "stats": {
+      "bsr": "BSR",
+      "price": "Precio",
+      "rating": "Calificación",
+      "reviews": "Reseñas",
+      "overallScore": "Puntuación General",
+      "sentiment": "Sentimiento",
+      "weaknesses": "Debilidades",
+      "strengths": "Fortalezas"
+    },
+    "reviewSummary": "Resumen de Reseñas",
+    "weaknessesTitle": "Debilidades Detectadas ({count})",
+    "analysisFailed": "Análisis Fallido",
+    "actionable": "Accionable",
+    "frequency": "Frecuencia",
+    "confidence": "Confianza",
+    "suggestion": "Sugerencia",
+    "evidence": "Evidencia",
+    "rating": "Calificación",
+    "foundHelpful": "encontraron útil",
+    "moreEvidence": "+{count} elementos de evidencia más",
+    "severity": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta",
+      "critical": "Crítica"
+    },
+    "category": {
+      "contentQuality": "Contenido",
+      "formatLayout": "Formato",
+      "missingFeatures": "Características",
+      "pricing": "Precio",
+      "coverageGaps": "Cobertura"
+    }
+  }
 }

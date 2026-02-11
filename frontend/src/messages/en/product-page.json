@@ -69,5 +69,16 @@
   "errors": {
     "analyzeFailed": "Failed to analyze listing. Please check your ASIN or URL and try again.",
     "mobileCheckFailed": "Failed to check mobile display. Please try again."
+  },
+  "blurb": {
+    "title": "Blurb Optimization",
+    "subtitle": "Generate, test, and optimize your book blurb for maximum conversion.",
+    "loading": "Loading your books...",
+    "noBooksTitle": "No books found",
+    "noBooksMessage": "Create a project first to start optimizing your blurbs.",
+    "selectBook": "Select a Book",
+    "chooseBook": "-- Choose a book --",
+    "editorTab": "Blurb Editor",
+    "abTestTab": "A/B Testing"
   }
 }
