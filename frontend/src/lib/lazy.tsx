@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { ComponentType } from "react";
+import { ComponentType, ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function lazyLoad<T extends ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
-  fallback?: React.ReactNode
+  fallback?: ReactNode
 ) {
   return dynamic(importFn, {
     loading: () => (fallback ? <>{fallback}</> : <Skeleton className="h-64 w-full" />),
@@ -26,7 +26,7 @@ export function lazyLoad<T extends ComponentType<any>>(
  */
 export function lazyLoadSSR<T extends ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
-  fallback?: React.ReactNode
+  fallback?: ReactNode
 ) {
   return dynamic(importFn, {
     loading: () => (fallback ? <>{fallback}</> : <Skeleton className="h-64 w-full" />),
@@ -44,7 +44,7 @@ export function lazyLoadSSR<T extends ComponentType<any>>(
 export function lazyLoadNamed<T extends ComponentType<any>>(
   importFn: () => Promise<any>,
   exportName: string,
-  fallback?: React.ReactNode
+  fallback?: ReactNode
 ) {
   return dynamic(() => importFn().then((mod) => ({ default: mod[exportName] })), {
     loading: () => (fallback ? <>{fallback}</> : <Skeleton className="h-64 w-full" />),
