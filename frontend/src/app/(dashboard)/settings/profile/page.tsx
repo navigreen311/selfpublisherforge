@@ -3,16 +3,18 @@
 import { ProfileForm } from "@/modules/users/components/ProfileForm";
 import { DangerZone } from "@/modules/users/components/DangerZone";
 import { Separator } from "@/components/ui/separator";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function ProfileSettingsPage() {
+  const t = useTranslations("settings.profile");
   return (
     <div className="space-y-6">
       <div>
         <h2 id="profile-settings-heading" className="text-lg font-semibold">
-          Profile
+          {t("heading")}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Update your personal information and display preferences.
+          {t("description")}
         </p>
       </div>
 

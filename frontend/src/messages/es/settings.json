@@ -1,0 +1,62 @@
+{
+  "profile": {
+    "heading": "Perfil",
+    "description": "Actualiza tu información personal y preferencias de visualización."
+  },
+  "security": {
+    "heading": "Seguridad",
+    "description": "Administra la configuración de seguridad de tu cuenta y la autenticación de dos factores.",
+    "loadingSettings": "Cargando configuración de seguridad",
+    "mfa": {
+      "title": "Autenticación de dos factores",
+      "description": "Agrega una capa adicional de seguridad a tu cuenta al requerir un código de verificación además de tu contraseña.",
+      "setupTitle": "Configurar autenticación de dos factores",
+      "setupDescription": "Escanea el código QR a continuación con tu aplicación de autenticación (por ejemplo, Google Authenticator, Authy o 1Password), luego ingresa el código de 6 dígitos para verificar.",
+      "settingUpTitle": "Configurando autenticación de dos factores",
+      "generatingSecret": "Generando tu secreto MFA...",
+      "setupFailed": "Configuración fallida",
+      "cancel": "Cancelar",
+      "tryAgain": "Intentar de nuevo",
+      "enabledTitle": "Autenticación de dos factores habilitada",
+      "enabledDescription": "Tu cuenta ahora está protegida con autenticación de dos factores.",
+      "enabled": "La autenticación de dos factores está habilitada",
+      "enabledPrompt": "Se te pedirá un código de verificación al iniciar sesión.",
+      "disableButton": "Deshabilitar autenticación de dos factores",
+      "enableButton": "Habilitar autenticación de dos factores",
+      "cantScanQr": "¿No puedes escanear el código QR? Ingresa esta clave manualmente:",
+      "verifyPrompt": "Ingresa el código de 6 dígitos de tu aplicación de autenticación para completar la configuración:",
+      "verifyPlaceholder": "000000",
+      "verifyButton": "Verificar y habilitar",
+      "verifying": "Verificando...",
+      "verificationError": "La verificación falló. Por favor intenta de nuevo.",
+      "enterValidCode": "Por favor ingresa un código de 6 dígitos.",
+      "cancelSetup": "Cancelar configuración",
+      "done": "Hecho",
+      "backupCodesTitle": "Guarda tus códigos de respaldo",
+      "backupCodesDescription": "Estos códigos se pueden usar para acceder a tu cuenta si pierdes tu dispositivo de autenticación. Cada código solo se puede usar una vez. Guárdalos en un lugar seguro.",
+      "backupCodesLabel": "Códigos de respaldo",
+      "copyAll": "Copiar todo",
+      "copied": "¡Copiado!",
+      "downloadTxt": "Descargar como .txt",
+      "copyAllLabel": "Copiar todos los códigos de respaldo al portapapeles",
+      "downloadLabel": "Descargar códigos de respaldo como archivo de texto",
+      "disableTitle": "Deshabilitar autenticación de dos factores",
+      "disableDescription": "Esto eliminará la capa adicional de seguridad de tu cuenta. Ingresa tu contraseña para confirmar.",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Ingresa tu contraseña",
+      "passwordRequired": "Por favor ingresa tu contraseña.",
+      "disableConfirm": "Deshabilitar MFA",
+      "disabling": "Deshabilitando...",
+      "disableFailed": "No se pudo deshabilitar MFA.",
+      "benefits": {
+        "title": "La autenticación de dos factores (2FA) ayuda a proteger tu cuenta al:",
+        "requireCode": "Requerir un código basado en tiempo de tu aplicación de autenticación al iniciar sesión",
+        "preventUnauthorized": "Prevenir acceso no autorizado incluso si tu contraseña está comprometida",
+        "backupCodes": "Proporcionar códigos de respaldo para recuperación de cuenta si pierdes tu dispositivo"
+      },
+      "qrAlt": "Escanea este código QR con tu aplicación de autenticación para configurar la autenticación de dos factores",
+      "manualKeyDescription": "Clave secreta MFA",
+      "verifyFieldset": "Verificar configuración del autenticador"
+    }
+  }
+}
