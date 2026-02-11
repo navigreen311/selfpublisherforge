@@ -60,6 +60,10 @@ export const supportedNamespaces = [
   "pricing",
   "product-page",
   "onboarding",
+  "home",
+  "market",
+  "marketing",
+  "pipeline",
 ] as const;
 
 export type Namespace = (typeof supportedNamespaces)[number];

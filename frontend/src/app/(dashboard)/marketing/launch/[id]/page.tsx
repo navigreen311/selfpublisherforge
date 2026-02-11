@@ -9,8 +9,10 @@ import { LaunchTimeline } from "@/modules/marketing/components/LaunchTimeline";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function LaunchPlanDetailPage() {
+  const t = useTranslations("marketing");
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
   const queryClient = useQueryClient();
@@ -60,7 +62,7 @@ export default function LaunchPlanDetailPage() {
         if (previousPlan) {
           queryClient.setQueryData<LaunchPlan>(queryKey, previousPlan);
         }
-        toast.error("Failed to update task status. Please try again.");
+        toast.error(t("launchPlanDetail.updateTaskError"));
       }
     },
     [id, queryClient]
@@ -83,15 +85,15 @@ export default function LaunchPlanDetailPage() {
   if (error || !plan) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl font-bold text-gray-700">Launch Plan Not Found</h2>
+        <h2 className="text-xl font-bold text-gray-700">{t("launchPlanDetail.notFound")}</h2>
         <p className="text-gray-500 mt-2">
-          The launch plan you are looking for does not exist or has been deleted.
+          {t("launchPlanDetail.notFoundMessage")}
         </p>
         <Link
           href="/marketing"
           className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
         >
-          Back to Marketing
+          {t("launchPlanDetail.backToMarketing")}
         </Link>
       </div>
     );
@@ -116,10 +118,10 @@ export default function LaunchPlanDetailPage() {
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-500">
         <Link href="/marketing" className="hover:text-blue-600">
-          Marketing
+          {t("title")}
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-700">Launch Plan</span>
+        <span className="text-gray-700">{t("launchPlanDetail.breadcrumb")}</span>
       </nav>
 
       {/* Header */}
@@ -145,18 +147,18 @@ export default function LaunchPlanDetailPage() {
             <button
               onClick={() => handleStatusChange("active")}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-              aria-label="Activate launch plan"
+              aria-label={t("launchPlanDetail.activatePlan")}
             >
-              Activate Plan
+              {t("launchPlanDetail.activatePlan")}
             </button>
           )}
           {plan.status === "active" && (
             <button
               onClick={() => handleStatusChange("completed")}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-              aria-label="Mark launch plan as complete"
+              aria-label={t("launchPlanDetail.markComplete")}
             >
-              Mark Complete
+              {t("launchPlanDetail.markComplete")}
             </button>
           )}
         </div>
@@ -165,25 +167,25 @@ export default function LaunchPlanDetailPage() {
       {/* Plan Summary */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">Launch Date</div>
+          <div className="text-sm text-gray-500">{t("launchPlanDetail.launchDate")}</div>
           <div className="font-semibold mt-1">{formatDate(plan.launch_date)}</div>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">Genre</div>
+          <div className="text-sm text-gray-500">{t("launchPlanDetail.genre")}</div>
           <div className="font-semibold mt-1">{plan.genre || "--"}</div>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">Budget</div>
+          <div className="text-sm text-gray-500">{t("launchPlanDetail.budget")}</div>
           <div className="font-semibold mt-1">
             {plan.budget ? `$${plan.budget.toLocaleString()}` : "--"}
           </div>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">Total Tasks</div>
+          <div className="text-sm text-gray-500">{t("launchPlanDetail.totalTasks")}</div>
           <div className="font-semibold mt-1">{totalTasks}</div>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">Completion</div>
+          <div className="text-sm text-gray-500">{t("launchPlanDetail.completion")}</div>
           <div className="font-semibold mt-1">{completionPercent}%</div>
           <div className="w-full h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
             <div
@@ -196,7 +198,7 @@ export default function LaunchPlanDetailPage() {
 
       {/* Timeline */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Launch Timeline</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("launchPlanDetail.launchTimeline")}</h2>
         <LaunchTimeline
           phases={plan.phases}
           onTaskStatusChange={handleTaskStatusChange}

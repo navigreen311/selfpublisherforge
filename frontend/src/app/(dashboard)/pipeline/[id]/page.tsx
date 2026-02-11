@@ -15,23 +15,25 @@ import { TaskBoard } from "@/modules/pipeline/components/TaskBoard";
 import { TimelineView } from "@/modules/pipeline/components/TimelineView";
 import { TaskForm } from "@/modules/pipeline/components/TaskForm";
 import type { PipelineTask, PipelineStatus } from "@/modules/pipeline/hooks";
+import { useTranslations } from "@/hooks/use-translations";
 
 type ViewMode = "kanban" | "timeline";
 
-const statusActions: Record<PipelineStatus, { label: string; target: PipelineStatus }[]> = {
-  draft: [{ label: "Activate", target: "active" }],
-  active: [
-    { label: "Pause", target: "paused" },
-    { label: "Complete", target: "completed" },
-  ],
-  paused: [{ label: "Resume", target: "active" }],
-  completed: [],
-  cancelled: [],
-};
-
 export default function PipelineDetailPage() {
+  const t = useTranslations("pipeline");
   const params = useParams();
   const id = params.id as string;
+
+  const statusActions: Record<PipelineStatus, { label: string; target: PipelineStatus }[]> = {
+    draft: [{ label: t("detail.activate"), target: "active" }],
+    active: [
+      { label: t("detail.pause"), target: "paused" },
+      { label: t("detail.complete"), target: "completed" },
+    ],
+    paused: [{ label: t("detail.resume"), target: "active" }],
+    completed: [],
+    cancelled: [],
+  };
 
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -68,7 +70,7 @@ export default function PipelineDetailPage() {
   if (isPending) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading pipeline...</p>
+        <p className="text-muted-foreground">{t("detail.loadingPipeline")}</p>
       </div>
     );
   }
@@ -76,7 +78,7 @@ export default function PipelineDetailPage() {
   if (error || !pipeline) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-red-600">Pipeline not found.</p>
+        <p className="text-red-600">{t("detail.pipelineNotFound")}</p>
       </div>
     );
   }
@@ -115,13 +117,12 @@ export default function PipelineDetailPage() {
             </span>
             {pipeline.deadline && (
               <span>
-                Deadline:{" "}
+                {t("detail.deadline")}:{" "}
                 {format(new Date(pipeline.deadline), "MMM d, yyyy")}
               </span>
             )}
             <span>
-              {completedCount}/{pipeline.tasks.length} tasks completed (
-              {progress}%)
+              {t("detail.tasksCompleted", { completed: completedCount, total: pipeline.tasks.length, progress })}
             </span>
           </div>
         </div>
@@ -142,7 +143,7 @@ export default function PipelineDetailPage() {
             onClick={() => setShowTaskForm(!showTaskForm)}
             className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
-            Add Task
+            {t("detail.addTask")}
           </button>
         </div>
       </div>
@@ -182,7 +183,7 @@ export default function PipelineDetailPage() {
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          Kanban Board
+          {t("detail.kanbanBoard")}
         </button>
         <button
           onClick={() => setViewMode("timeline")}
@@ -193,7 +194,7 @@ export default function PipelineDetailPage() {
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          Timeline
+          {t("detail.timeline")}
         </button>
       </div>
 
@@ -208,7 +209,7 @@ export default function PipelineDetailPage() {
         <TimelineView timeline={timeline} />
       )}
       {viewMode === "timeline" && !timeline && (
-        <p className="text-muted-foreground text-sm">Loading timeline...</p>
+        <p className="text-muted-foreground text-sm">{t("detail.loadingTimeline")}</p>
       )}
 
       {/* Selected task detail panel */}
@@ -232,6 +233,7 @@ interface TaskDetailPanelProps {
 }
 
 function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
+  const t = useTranslations("pipeline");
   const updateTaskMutation = useUpdateTask(pipelineId, task.id);
 
   const statusOptions = getNextStatuses(task.status);
@@ -246,19 +248,19 @@ function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
     <div className="fixed inset-y-0 right-0 w-96 bg-white border-l shadow-lg z-50 overflow-y-auto">
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg">Task Details</h3>
+          <h3 className="font-semibold text-lg">{t("detail.taskDetails")}</h3>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground"
           >
-            Close
+            {t("detail.close")}
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground">
-              Title
+              {t("detail.title")}
             </label>
             <p className="text-sm font-medium">{task.title}</p>
           </div>
@@ -266,7 +268,7 @@ function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
           {task.description && (
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                Description
+                {t("detail.description")}
               </label>
               <p className="text-sm">{task.description}</p>
             </div>
@@ -275,13 +277,13 @@ function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                Type
+                {t("detail.type")}
               </label>
               <p className="text-sm capitalize">{task.type}</p>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                Status
+                {t("detail.status")}
               </label>
               <p className="text-sm capitalize">
                 {task.status.replace("_", " ")}
@@ -292,7 +294,7 @@ function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
           {task.due_date && (
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                Due Date
+                {t("detail.dueDate")}
               </label>
               <p className="text-sm">
                 {format(new Date(task.due_date), "MMM d, yyyy")}
@@ -303,9 +305,9 @@ function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
           {task.depends_on.length > 0 && (
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                Dependencies
+                {t("detail.dependencies")}
               </label>
-              <p className="text-sm">{task.depends_on.length} task(s)</p>
+              <p className="text-sm">{t("detail.dependenciesCount", { count: task.depends_on.length })}</p>
             </div>
           )}
 
@@ -313,7 +315,7 @@ function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
           {statusOptions.length > 0 && (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                Change Status
+                {t("detail.changeStatus")}
               </label>
               <div className="flex flex-wrap gap-2">
                 {statusOptions.map((s) => (

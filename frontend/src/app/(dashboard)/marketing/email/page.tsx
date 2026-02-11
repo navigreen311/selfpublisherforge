@@ -5,57 +5,10 @@ import { useEmailSequences, useCreateEmailSequence, useTriggerEmailSend } from "
 import { EmailSequenceBuilder } from "@/modules/marketing/components/EmailSequenceBuilder";
 import { toast } from "sonner";
 import Link from "next/link";
-
-// ---------------------------------------------------------------------------
-// Validation helpers for email sequence data
-// ---------------------------------------------------------------------------
-
-function validateEmailSequence(data: {
-  name: string;
-  description?: string;
-  emails: Array<Record<string, unknown>>;
-}): string[] {
-  const errors: string[] = [];
-
-  // Sequence name: required, 2-100 chars
-  const trimmedName = data.name.trim();
-  if (!trimmedName) {
-    errors.push("Sequence name is required.");
-  } else if (trimmedName.length < 2) {
-    errors.push("Sequence name must be at least 2 characters.");
-  } else if (trimmedName.length > 100) {
-    errors.push("Sequence name must be 100 characters or fewer.");
-  }
-
-  // At least one email required
-  if (!data.emails || data.emails.length === 0) {
-    errors.push("At least one email is required in the sequence.");
-  } else {
-    data.emails.forEach((email, index) => {
-      const emailNum = index + 1;
-      const subject = (email.subject as string) || "";
-      const body = (email.body_html as string) || "";
-
-      // Email subject: required, max 200 chars
-      if (!subject.trim()) {
-        errors.push(`Email #${emailNum}: Subject is required.`);
-      } else if (subject.trim().length > 200) {
-        errors.push(`Email #${emailNum}: Subject must be 200 characters or fewer.`);
-      }
-
-      // Email body: required, min 10 chars
-      if (!body.trim()) {
-        errors.push(`Email #${emailNum}: Body is required.`);
-      } else if (body.trim().length < 10) {
-        errors.push(`Email #${emailNum}: Body must be at least 10 characters.`);
-      }
-    });
-  }
-
-  return errors;
-}
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function EmailSequencePage() {
+  const t = useTranslations("marketing");
   const searchParams = useSearchParams();
   const sequenceId = searchParams.get("id");
 
@@ -66,12 +19,51 @@ export default function EmailSequencePage() {
     ? sequencesData?.items?.find((s) => s.id === sequenceId)
     : undefined;
 
+  const validateEmailSequence = (data: {
+    name: string;
+    description?: string;
+    emails: Array<Record<string, unknown>>;
+  }): string[] => {
+    const errors: string[] = [];
+    const trimmedName = data.name.trim();
+    if (!trimmedName) {
+      errors.push(t("email.validationError.nameRequired"));
+    } else if (trimmedName.length < 2) {
+      errors.push(t("email.validationError.nameMin"));
+    } else if (trimmedName.length > 100) {
+      errors.push(t("email.validationError.nameMax"));
+    }
+
+    if (!data.emails || data.emails.length === 0) {
+      errors.push(t("email.validationError.emailsRequired"));
+    } else {
+      data.emails.forEach((email, index) => {
+        const emailNum = index + 1;
+        const subject = (email.subject as string) || "";
+        const body = (email.body_html as string) || "";
+
+        if (!subject.trim()) {
+          errors.push(t("email.validationError.subjectRequired", { num: emailNum }));
+        } else if (subject.trim().length > 200) {
+          errors.push(t("email.validationError.subjectMax", { num: emailNum }));
+        }
+
+        if (!body.trim()) {
+          errors.push(t("email.validationError.bodyRequired", { num: emailNum }));
+        } else if (body.trim().length < 10) {
+          errors.push(t("email.validationError.bodyMin", { num: emailNum }));
+        }
+      });
+    }
+
+    return errors;
+  };
+
   const handleSave = (data: {
     name: string;
     description?: string;
     emails: Array<Record<string, unknown>>;
   }) => {
-    // Validate before saving
     const validationErrors = validateEmailSequence(data);
     if (validationErrors.length > 0) {
       validationErrors.forEach((err) => toast.error(err));
@@ -86,18 +78,17 @@ export default function EmailSequencePage() {
       } as never,
       {
         onSuccess: () => {
-          toast.success("Email sequence saved successfully");
+          toast.success(t("email.saveSuccess"));
         },
         onError: () => {
-          toast.error("Failed to save email sequence");
+          toast.error(t("email.saveError"));
         },
       }
     );
   };
 
   const handleSend = (recipientEmails: string[]) => {
-    // In production, this would use the trigger send endpoint
-    toast.info(`Sending to ${recipientEmails.length} recipients...`);
+    toast.info(t("email.sendingTo", { count: recipientEmails.length }));
   };
 
   return (
@@ -105,10 +96,10 @@ export default function EmailSequencePage() {
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-500">
         <Link href="/marketing" className="hover:text-blue-600">
-          Marketing
+          {t("title")}
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-700">Email Sequences</span>
+        <span className="text-gray-700">{t("email.breadcrumb")}</span>
       </nav>
 
       {/* Main Content */}
@@ -116,7 +107,7 @@ export default function EmailSequencePage() {
         {/* Sidebar - Sequence List */}
         <div className="lg:col-span-1 space-y-2">
           <h3 className="font-semibold text-sm text-gray-500 uppercase tracking-wider">
-            Sequences
+            {t("email.sequencesLabel")}
           </h3>
           {isLoading ? (
             <div className="animate-pulse space-y-2">
@@ -138,14 +129,14 @@ export default function EmailSequencePage() {
                 >
                   <div className="font-medium truncate">{seq.name}</div>
                   <div className="text-xs text-gray-400 mt-1">
-                    {seq.status} &middot; {seq.sent_count}/{seq.recipient_count} sent
+                    {t("email.sequenceStatus", { status: seq.status, sent: seq.sent_count, total: seq.recipient_count })}
                   </div>
                 </Link>
               ))}
               {(!sequencesData?.items || sequencesData.items.length === 0) && (
                 <div className="p-3 text-center">
-                  <p className="text-sm text-muted-foreground">No sequences yet.</p>
-                  <p className="text-xs text-muted-foreground mt-1">Create one to get started.</p>
+                  <p className="text-sm text-muted-foreground">{t("email.noSequences")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("email.noSequencesHint")}</p>
                 </div>
               )}
             </>

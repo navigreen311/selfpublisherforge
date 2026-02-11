@@ -27,6 +27,7 @@ import { z } from "zod";
 import { validateForm } from "@/lib/validation";
 import { useGenerateLaunchPlan } from "@/modules/marketing/hooks";
 import { useProjects } from "@/modules/projects/hooks";
+import { useTranslations } from "@/hooks/use-translations";
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -95,6 +96,7 @@ const channels = [
 // ---------------------------------------------------------------------------
 
 export default function NewLaunchPlanPage() {
+  const t = useTranslations("marketing");
   const router = useRouter();
   const generatePlan = useGenerateLaunchPlan();
   const { data: projects, isLoading: projectsLoading } = useProjects();
@@ -187,10 +189,10 @@ export default function NewLaunchPlanPage() {
         goals: selectedChannels.length > 0 ? selectedChannels : undefined,
         additional_context: additionalContext || undefined,
       });
-      toast.success("Launch plan generated successfully!");
+      toast.success(t("newLaunchPlan.generateSuccess"));
       router.push(`/marketing/launch/${result.id}`);
     } catch {
-      toast.error("Failed to generate launch plan. Please try again.");
+      toast.error(t("newLaunchPlan.generateError"));
     }
   };
 
@@ -210,17 +212,17 @@ export default function NewLaunchPlanPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild aria-label="Back to marketing">
+        <Button variant="ghost" size="icon" asChild aria-label={t("newLaunchPlan.backToMarketing")}>
           <Link href="/marketing">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Generate Launch Plan
+            {t("newLaunchPlan.pageTitle")}
           </h1>
           <p className="text-muted-foreground">
-            Create an AI-powered launch plan for your book
+            {t("newLaunchPlan.pageSubtitle")}
           </p>
         </div>
       </div>
@@ -228,10 +230,9 @@ export default function NewLaunchPlanPage() {
       <form onSubmit={handleSubmit} noValidate>
         <Card>
           <CardHeader>
-            <CardTitle>Launch Plan Details</CardTitle>
+            <CardTitle>{t("newLaunchPlan.cardTitle")}</CardTitle>
             <CardDescription>
-              Provide details about your book launch and our AI will generate a
-              comprehensive plan with phases and tasks.
+              {t("newLaunchPlan.cardDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -242,7 +243,7 @@ export default function NewLaunchPlanPage() {
                 className="text-sm font-medium"
                 id="launch-book-label"
               >
-                Book <span className="text-destructive">*</span>
+                {t("newLaunchPlan.bookLabel")} <span className="text-destructive">{t("newLaunchPlan.required")}</span>
               </label>
               {projectsLoading ? (
                 <div className="h-10 bg-gray-100 rounded-md animate-pulse" />
@@ -253,12 +254,12 @@ export default function NewLaunchPlanPage() {
                 >
                   <SelectTrigger
                     id="launch-book"
-                    aria-label="Select book"
+                    aria-label={t("newLaunchPlan.bookLabel")}
                     aria-labelledby="launch-book-label"
                     aria-invalid={!!bookIdError}
                     aria-describedby={bookIdError ? "launch-book-error" : undefined}
                   >
-                    <SelectValue placeholder="Select a book" />
+                    <SelectValue placeholder={t("newLaunchPlan.bookPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {projects && projects.length > 0 ? (
@@ -269,7 +270,7 @@ export default function NewLaunchPlanPage() {
                       ))
                     ) : (
                       <SelectItem value="__none" disabled>
-                        No books found
+                        {t("newLaunchPlan.noBooksFound")}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -289,17 +290,17 @@ export default function NewLaunchPlanPage() {
                 className="text-sm font-medium"
                 id="launch-genre-label"
               >
-                Genre <span className="text-destructive">*</span>
+                {t("newLaunchPlan.genreLabel")} <span className="text-destructive">{t("newLaunchPlan.required")}</span>
               </label>
               <Select value={genre} onValueChange={setGenre}>
                 <SelectTrigger
                   id="launch-genre"
-                  aria-label="Select genre"
+                  aria-label={t("newLaunchPlan.genreLabel")}
                   aria-labelledby="launch-genre-label"
                   aria-invalid={!!genreError}
                   aria-describedby={genreError ? "launch-genre-error" : undefined}
                 >
-                  <SelectValue placeholder="Select genre" />
+                  <SelectValue placeholder={t("newLaunchPlan.genrePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {genres.map((g) => (
@@ -319,15 +320,15 @@ export default function NewLaunchPlanPage() {
             {/* Target Audience */}
             <div className="space-y-1.5">
               <label htmlFor="launch-target-audience" className="text-sm font-medium">
-                Target Audience <span className="text-destructive">*</span>
+                {t("newLaunchPlan.targetAudienceLabel")} <span className="text-destructive">{t("newLaunchPlan.required")}</span>
               </label>
               <Input
                 id="launch-target-audience"
-                placeholder="e.g., Women 25-45 who enjoy cozy mysteries"
+                placeholder={t("newLaunchPlan.targetAudiencePlaceholder")}
                 value={targetAudience}
                 onChange={(e) => setTargetAudience(e.target.value)}
                 onBlur={() => markTouched("target_audience")}
-                aria-label="Target audience"
+                aria-label={t("newLaunchPlan.targetAudienceLabel")}
                 aria-invalid={!!targetAudienceError}
                 aria-describedby={
                   targetAudienceError ? "launch-target-audience-error" : undefined
@@ -346,7 +347,7 @@ export default function NewLaunchPlanPage() {
             {/* Launch Date */}
             <div className="space-y-1.5">
               <label htmlFor="launch-date" className="text-sm font-medium">
-                Launch Date <span className="text-destructive">*</span>
+                {t("newLaunchPlan.launchDateLabel")} <span className="text-destructive">{t("newLaunchPlan.required")}</span>
               </label>
               <Input
                 id="launch-date"
@@ -355,7 +356,7 @@ export default function NewLaunchPlanPage() {
                 value={launchDate}
                 onChange={(e) => setLaunchDate(e.target.value)}
                 onBlur={() => markTouched("launch_date")}
-                aria-label="Launch date"
+                aria-label={t("newLaunchPlan.launchDateLabel")}
                 aria-invalid={!!launchDateError}
                 aria-describedby={
                   launchDateError ? "launch-date-error" : undefined
@@ -371,18 +372,18 @@ export default function NewLaunchPlanPage() {
             {/* Budget */}
             <div className="space-y-1.5">
               <label htmlFor="launch-budget" className="text-sm font-medium">
-                Budget (USD)
+                {t("newLaunchPlan.budgetLabel")}
               </label>
               <Input
                 id="launch-budget"
                 type="number"
                 min="0"
                 step="1"
-                placeholder="e.g., 500"
+                placeholder={t("newLaunchPlan.budgetPlaceholder")}
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 onBlur={() => markTouched("budget")}
-                aria-label="Budget in USD"
+                aria-label={t("newLaunchPlan.budgetLabel")}
                 aria-invalid={!!budgetError}
                 aria-describedby={
                   budgetError ? "launch-budget-error" : "launch-budget-hint"
@@ -394,7 +395,7 @@ export default function NewLaunchPlanPage() {
                 </p>
               ) : (
                 <p id="launch-budget-hint" className="text-xs text-muted-foreground">
-                  Optional. Helps the AI tailor recommendations to your budget.
+                  {t("newLaunchPlan.budgetHint")}
                 </p>
               )}
             </div>
@@ -402,11 +403,10 @@ export default function NewLaunchPlanPage() {
             {/* Channels */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium" id="launch-channels-label">
-                Marketing Channels
+                {t("newLaunchPlan.channelsLabel")}
               </label>
               <p className="text-xs text-muted-foreground">
-                Select the channels you plan to use. This helps the AI focus the
-                plan.
+                {t("newLaunchPlan.channelsHint")}
               </p>
               <div
                 className="flex flex-wrap gap-2 mt-2"
@@ -438,11 +438,11 @@ export default function NewLaunchPlanPage() {
             {/* Additional Context */}
             <div className="space-y-1.5">
               <label htmlFor="launch-context" className="text-sm font-medium">
-                Additional Context
+                {t("newLaunchPlan.contextLabel")}
               </label>
               <Textarea
                 id="launch-context"
-                placeholder="Any additional details about your book, audience, or launch goals..."
+                placeholder={t("newLaunchPlan.contextPlaceholder")}
                 value={additionalContext}
                 onChange={(e) => setAdditionalContext(e.target.value)}
                 onBlur={() => markTouched("additional_context")}
@@ -479,14 +479,14 @@ export default function NewLaunchPlanPage() {
                       : "text-muted-foreground"
                   }`}
                 >
-                  {contextCharCount}/2000
+                  {t("newLaunchPlan.contextCharCount", { count: contextCharCount })}
                 </p>
               </div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" type="button" asChild>
-              <Link href="/marketing">Cancel</Link>
+              <Link href="/marketing">{t("newLaunchPlan.cancel")}</Link>
             </Button>
             <Button
               type="submit"
@@ -496,15 +496,15 @@ export default function NewLaunchPlanPage() {
               aria-disabled={
                 (submitAttempted && !isFormValid) || generatePlan.isPending
               }
-              aria-label="Generate launch plan"
+              aria-label={t("newLaunchPlan.generate")}
             >
               {generatePlan.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
+                  {t("newLaunchPlan.generating")}
                 </>
               ) : (
-                "Generate Launch Plan"
+                t("newLaunchPlan.generate")
               )}
             </Button>
           </CardFooter>
