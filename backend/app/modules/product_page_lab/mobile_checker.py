@@ -201,8 +201,8 @@ def check_mobile_display(
     # --- Device-specific previews ---
     device_previews: dict[str, dict] = {}
     for device_id, config in DEVICE_CONFIGS.items():
-        title_limit = int(config["title_char_limit"])  # type: ignore[arg-type]
-        blurb_fold = int(config["blurb_fold_chars"])  # type: ignore[arg-type]
+        title_limit = int(config["title_char_limit"])  # type: ignore[arg-type,call-overload]
+        blurb_fold = int(config["blurb_fold_chars"])  # type: ignore[arg-type,call-overload]
         device_title = _check_truncation("title", title, title_limit)
         device_blurb_above = blurb_plain[:blurb_fold]  # type: ignore[misc]
         device_previews[device_id] = {

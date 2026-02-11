@@ -782,7 +782,7 @@ Return ONLY valid JSON."""
             messages=[{"role": "user", "content": prompt}],
         )
 
-        response_text = message.content[0].text.strip()
+        response_text = message.content[0].text.strip()  # type: ignore[union-attr]
         result_data = json.loads(response_text)
 
         tips = [

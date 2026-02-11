@@ -94,7 +94,7 @@ class DeadLetterQueue:
     def count(self) -> int:
         """Return total number of dead letters."""
         result = self._redis.zcard(DLQ_KEY)  # type: ignore[assignment]
-        return int(result) if result else 0
+        return int(result) if result else 0  # type: ignore[arg-type]
 
     # ------------------------------------------------------------------
     # Retry / discard
