@@ -512,7 +512,7 @@ jobs:
       - name: Run E2E smoke tests (with retries)
         working-directory: frontend
         run: |
-          npx playwright test e2e/smoke.spec.ts \
+          npx playwright test e2e/smoke.spec.ts e2e/new-modules.spec.ts \
             --config=e2e/playwright.config.ts \
             --project=chromium \
             --reporter=list \
