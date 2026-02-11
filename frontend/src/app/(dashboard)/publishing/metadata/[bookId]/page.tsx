@@ -1,17 +1,19 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useTranslations } from "@/hooks/use-translations";
 import { MetadataForm } from "@/modules/publishing/components/MetadataForm";
 import Link from "next/link";
 
 export default function MetadataEditorPage() {
+  const t = useTranslations("publishing");
   const params = useParams();
   const bookId = params.bookId as string;
 
   if (!bookId) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-gray-500">No book selected.</p>
+        <p className="text-gray-500">{t("metadata.noBookSelected")}</p>
       </div>
     );
   }
@@ -21,17 +23,17 @@ export default function MetadataEditorPage() {
       {/* Breadcrumb */}
       <nav className="flex items-center space-x-2 text-sm text-gray-500">
         <Link href="/publishing" className="hover:text-gray-700">
-          Publishing
+          {t("metadata.breadcrumb.publishing")}
         </Link>
         <span>/</span>
-        <span className="text-gray-900">Metadata Editor</span>
+        <span className="text-gray-900">{t("metadata.breadcrumb.metadata")}</span>
       </nav>
 
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Book Metadata</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("metadata.title")}</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Edit title, description, keywords, categories, pricing, and identifiers for your book.
+          {t("metadata.subtitle")}
         </p>
       </div>
 

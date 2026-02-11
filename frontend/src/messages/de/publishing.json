@@ -41,5 +41,52 @@
   },
   "listings": {
     "title": "Einträge"
+  },
+  "export": {
+    "breadcrumb": {
+      "publishing": "Publishing",
+      "export": "Export"
+    },
+    "title": "Manuskript exportieren",
+    "subtitle": "Generieren Sie ein EPUB für digitale Verteilung oder ein druckfertiges PDF für KDP / IngramSpark.",
+    "selectBook": "Wählen Sie ein Buch",
+    "loading": "Bücher werden geladen...",
+    "error": {
+      "failedToLoad": "Fehler beim Laden der Bücher",
+      "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten."
+    },
+    "empty": {
+      "noBooksTitle": "Keine Bücher gefunden",
+      "noBooksDescription": "Erstellen Sie zuerst ein Projekt, bevor Sie ein Manuskript exportieren.",
+      "noBooksAction": "Projekt erstellen",
+      "noChaptersTitle": "Noch keine Kapitel",
+      "noChaptersDescription": "Dieses Buch hat keine Kapitel zum Exportieren. Fügen Sie zuerst Inhalte im Schreibstudio hinzu.",
+      "noChaptersAction": "Im Schreibstudio öffnen"
+    },
+    "bookSelector": {
+      "choose": "-- Wählen Sie ein Buch --"
+    },
+    "exporting": "{title} exportieren ({count} Kapitel)",
+    "exportingPlural": "{title} exportieren ({count} Kapitel)",
+    "chaptersLoading": "Kapitel werden geladen"
+  },
+  "metadata": {
+    "breadcrumb": {
+      "publishing": "Publishing",
+      "metadata": "Metadaten-Editor"
+    },
+    "title": "Buch-Metadaten",
+    "subtitle": "Bearbeiten Sie Titel, Beschreibung, Schlüsselwörter, Kategorien, Preise und Identifikatoren für Ihr Buch.",
+    "noBookSelected": "Kein Buch ausgewählt."
+  },
+  "validation": {
+    "title": "KDP-Validierung",
+    "subtitle": "Vorabvalidierung für Amazon KDP Druck- und E-Book-Anforderungen",
+    "selectBook": "Buch zur Validierung auswählen",
+    "toast": {
+      "validationComplete": "Validierung abgeschlossen",
+      "validationFailed": "Validierung fehlgeschlagen",
+      "pdfExportComingSoon": "PDF-Exportfunktion kommt bald"
+    }
   }
 }

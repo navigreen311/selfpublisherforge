@@ -63,5 +63,97 @@
   },
   "error": {
     "title": "Etwas ist schief gelaufen"
+  },
+  "editor": {
+    "invalidBookId": "Ungültige Buch-ID",
+    "selectChapter": "Wählen Sie ein Kapitel",
+    "readingLevel": "Lesestufe",
+    "save": "Speichern",
+    "hideAI": "KI ausblenden",
+    "showAI": "KI anzeigen",
+    "loading": "Lädt...",
+    "emptyState": "Kein Kapitel ausgewählt. Erstellen Sie ein Kapitel, um mit dem Schreiben zu beginnen.",
+    "createFirstChapter": "Erstes Kapitel erstellen",
+    "chapter": "Kapitel {number}",
+    "saveStatus": {
+      "saving": "Speichert...",
+      "saved": "Gespeichert",
+      "error": "Fehler beim Speichern"
+    },
+    "readability": {
+      "fkGrade": "FK-Grad",
+      "fog": "FOG",
+      "smog": "SMOG",
+      "total": "Gesamt"
+    }
+  },
+  "newManuscript": {
+    "backToStudio": "Zurück zum Schreibstudio",
+    "title": "Neues Manuskript erstellen",
+    "subtitle": "Starten Sie ein neues Buchprojekt mit KI-Unterstützung",
+    "success": "Manuskript erfolgreich erstellt",
+    "error": "Fehler beim Erstellen des Manuskripts. Bitte versuchen Sie es erneut.",
+    "form": {
+      "title": "Manuskriptdetails",
+      "description": "Füllen Sie die grundlegenden Informationen zu Ihrem Manuskript aus",
+      "titleLabel": "Buchtitel",
+      "titlePlaceholder": "Geben Sie Ihren Buchtitel ein",
+      "genreLabel": "Genre",
+      "genrePlaceholder": "Wählen Sie ein Genre",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Beschreiben Sie die Prämisse, Themen oder Handlung Ihres Buches...",
+      "cancel": "Abbrechen",
+      "create": "Manuskript erstellen",
+      "creating": "Erstellt..."
+    }
+  },
+  "outline": {
+    "backToStudio": "Zurück",
+    "title": "KI-Gliederungsgenerator",
+    "subtitle": "Erstellen Sie eine vollständige Buchgliederung mit Kapitelzusammenfassungen",
+    "linkProject": {
+      "title": "Mit Projekt verknüpfen",
+      "label": "Projekt (optional)",
+      "description": "Wählen Sie ein Projekt aus, um die generierte Gliederung zu speichern, oder lassen Sie sie eigenständig.",
+      "none": "Keine (eigenständig)",
+      "loading": "Projekte werden geladen...",
+      "empty": "Keine Projekte gefunden"
+    },
+    "form": {
+      "bookDetails": "Buchdetails",
+      "bookTitle": "Buchtitel *",
+      "bookTitlePlaceholder": "Geben Sie Ihren Buchtitel ein",
+      "bookTitleError": "Bitte geben Sie einen Buchtitel ein",
+      "genre": "Genre",
+      "tone": "Ton",
+      "targetAudience": "Zielgruppe",
+      "targetAudiencePlaceholder": "z.B. Junge Erwachsene, Geschäftsleute",
+      "numChapters": "Anzahl der Kapitel",
+      "premise": "Prämisse / Beschreibung",
+      "premisePlaceholder": "Beschreiben Sie die Prämisse, Hauptthemen oder wichtigsten Handlungspunkte Ihres Buches...",
+      "generate": "Gliederung generieren",
+      "generating": "Gliederung wird generiert..."
+    },
+    "results": {
+      "exportMarkdown": "Als Markdown exportieren",
+      "copied": "Kopiert",
+      "saveToProject": "In Projekt speichern",
+      "saving": "Speichert...",
+      "saved": "In Projekt gespeichert",
+      "tipSelectProject": "Tipp: Wählen Sie oben ein Projekt aus, um diese Gliederung direkt darin zu speichern.",
+      "synopsis": "Synopsis",
+      "chapter": "Kapitel",
+      "estimatedWords": "Wörter",
+      "moveUp": "Kapitel {number} nach oben verschieben",
+      "moveDown": "Kapitel {number} nach unten verschieben"
+    },
+    "errors": {
+      "titleRequired": "Bitte geben Sie einen Buchtitel ein",
+      "generateFailed": "Fehler beim Generieren der Gliederung. Bitte versuchen Sie es erneut.",
+      "projectRequired": "Bitte wählen Sie zuerst ein Projekt aus",
+      "saveFailed": "Fehler beim Speichern der Gliederung im Projekt. Bitte versuchen Sie es erneut."
+    },
+    "saveSuccess": "Gliederung erfolgreich in \"{title}\" gespeichert",
+    "copySuccess": "Gliederung als Markdown in die Zwischenablage kopiert"
   }
 }

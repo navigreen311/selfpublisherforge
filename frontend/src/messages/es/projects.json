@@ -45,5 +45,69 @@
     "books": "libros",
     "book": "libro",
     "updated": "Actualizado"
+  },
+  "detail": {
+    "backToProjects": "Volver a proyectos",
+    "title": "Detalles del Proyecto",
+    "notFound": "Proyecto No Encontrado",
+    "notFoundDescription": "Este proyecto no se pudo encontrar. Puede haber sido eliminado.",
+    "backToList": "Volver a Proyectos",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "details": {
+      "title": "Detalles del Proyecto",
+      "description": "Descripción general de la configuración y los metadatos de su proyecto",
+      "type": "Tipo",
+      "status": "Estado",
+      "created": "Creado",
+      "lastUpdated": "Última Actualización",
+      "genre": "Género"
+    },
+    "editForm": {
+      "projectTitle": "Título del Proyecto",
+      "projectType": "Tipo de Proyecto",
+      "status": "Estado",
+      "cancel": "Cancelar",
+      "save": "Guardar Cambios",
+      "saving": "Guardando..."
+    },
+    "books": {
+      "title": "Libros ({count})",
+      "description": "Libros asociados con este proyecto"
+    },
+    "messages": {
+      "titleEmpty": "El título no puede estar vacío.",
+      "updateSuccess": "Proyecto actualizado con éxito.",
+      "updateError": "Error al actualizar el proyecto. Por favor, inténtelo de nuevo.",
+      "deleteSuccess": "Proyecto eliminado con éxito.",
+      "deleteError": "Error al eliminar el proyecto. Por favor, inténtelo de nuevo."
+    }
+  },
+  "new": {
+    "backToProjects": "Volver a proyectos",
+    "title": "Crear Nuevo Proyecto",
+    "subtitle": "Configure un nuevo proyecto de publicación",
+    "form": {
+      "title": "Detalles del Proyecto",
+      "description": "Complete la información básica sobre su proyecto",
+      "projectTitle": "Título del Proyecto",
+      "projectTitlePlaceholder": "Ingrese el título de su proyecto",
+      "projectType": "Tipo de Proyecto",
+      "projectTypePlaceholder": "Seleccione el tipo de proyecto",
+      "genre": "Género",
+      "genrePlaceholder": "Seleccione el género",
+      "penName": "Seudónimo",
+      "penNamePlaceholder": "Seudónimo del autor (opcional)",
+      "penNameHelp": "Deje en blanco para usar el nombre de su cuenta",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Breve descripción de su proyecto...",
+      "cancel": "Cancelar",
+      "create": "Crear Proyecto",
+      "creating": "Creando..."
+    },
+    "messages": {
+      "success": "Proyecto creado con éxito",
+      "error": "Error al crear el proyecto. Por favor, inténtelo de nuevo."
+    }
   }
 }

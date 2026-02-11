@@ -41,5 +41,52 @@
   },
   "listings": {
     "title": "Listings"
+  },
+  "export": {
+    "breadcrumb": {
+      "publishing": "Publishing",
+      "export": "Export"
+    },
+    "title": "Export Manuscript",
+    "subtitle": "Generate an EPUB for digital distribution or a print-ready PDF for KDP / IngramSpark.",
+    "selectBook": "Select a Book",
+    "loading": "Loading books...",
+    "error": {
+      "failedToLoad": "Failed to load books",
+      "unexpectedError": "An unexpected error occurred."
+    },
+    "empty": {
+      "noBooksTitle": "No books found",
+      "noBooksDescription": "Create a project first before exporting a manuscript.",
+      "noBooksAction": "Create a Project",
+      "noChaptersTitle": "No chapters yet",
+      "noChaptersDescription": "This book has no chapters to export. Add some content in the Writing Studio first.",
+      "noChaptersAction": "Open in Writing Studio"
+    },
+    "bookSelector": {
+      "choose": "-- Choose a book --"
+    },
+    "exporting": "Exporting {title} ({count} chapter)",
+    "exportingPlural": "Exporting {title} ({count} chapters)",
+    "chaptersLoading": "Loading chapters"
+  },
+  "metadata": {
+    "breadcrumb": {
+      "publishing": "Publishing",
+      "metadata": "Metadata Editor"
+    },
+    "title": "Book Metadata",
+    "subtitle": "Edit title, description, keywords, categories, pricing, and identifiers for your book.",
+    "noBookSelected": "No book selected."
+  },
+  "validation": {
+    "title": "KDP Validation",
+    "subtitle": "Pre-flight validation for Amazon KDP print and ebook requirements",
+    "selectBook": "Select Book to Validate",
+    "toast": {
+      "validationComplete": "Validation complete",
+      "validationFailed": "Validation failed",
+      "pdfExportComingSoon": "PDF export functionality coming soon"
+    }
   }
 }

@@ -45,5 +45,69 @@
     "books": "Bücher",
     "book": "Buch",
     "updated": "Aktualisiert"
+  },
+  "detail": {
+    "backToProjects": "Zurück zu Projekten",
+    "title": "Projektdetails",
+    "notFound": "Projekt nicht gefunden",
+    "notFoundDescription": "Dieses Projekt konnte nicht gefunden werden. Es wurde möglicherweise gelöscht.",
+    "backToList": "Zurück zu Projekten",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "details": {
+      "title": "Projektdetails",
+      "description": "Übersicht über Ihre Projekteinstellungen und Metadaten",
+      "type": "Typ",
+      "status": "Status",
+      "created": "Erstellt",
+      "lastUpdated": "Zuletzt aktualisiert",
+      "genre": "Genre"
+    },
+    "editForm": {
+      "projectTitle": "Projekttitel",
+      "projectType": "Projekttyp",
+      "status": "Status",
+      "cancel": "Abbrechen",
+      "save": "Änderungen speichern",
+      "saving": "Speichert..."
+    },
+    "books": {
+      "title": "Bücher ({count})",
+      "description": "Mit diesem Projekt verbundene Bücher"
+    },
+    "messages": {
+      "titleEmpty": "Der Titel darf nicht leer sein.",
+      "updateSuccess": "Projekt erfolgreich aktualisiert.",
+      "updateError": "Fehler beim Aktualisieren des Projekts. Bitte versuchen Sie es erneut.",
+      "deleteSuccess": "Projekt erfolgreich gelöscht.",
+      "deleteError": "Fehler beim Löschen des Projekts. Bitte versuchen Sie es erneut."
+    }
+  },
+  "new": {
+    "backToProjects": "Zurück zu Projekten",
+    "title": "Neues Projekt erstellen",
+    "subtitle": "Richten Sie ein neues Publishing-Projekt ein",
+    "form": {
+      "title": "Projektdetails",
+      "description": "Füllen Sie die grundlegenden Informationen zu Ihrem Projekt aus",
+      "projectTitle": "Projekttitel",
+      "projectTitlePlaceholder": "Geben Sie Ihren Projekttitel ein",
+      "projectType": "Projekttyp",
+      "projectTypePlaceholder": "Projekttyp auswählen",
+      "genre": "Genre",
+      "genrePlaceholder": "Genre auswählen",
+      "penName": "Pseudonym",
+      "penNamePlaceholder": "Autoren-Pseudonym (optional)",
+      "penNameHelp": "Leer lassen, um Ihren Kontonamen zu verwenden",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Kurze Beschreibung Ihres Projekts...",
+      "cancel": "Abbrechen",
+      "create": "Projekt erstellen",
+      "creating": "Erstellt..."
+    },
+    "messages": {
+      "success": "Projekt erfolgreich erstellt",
+      "error": "Fehler beim Erstellen des Projekts. Bitte versuchen Sie es erneut."
+    }
   }
 }

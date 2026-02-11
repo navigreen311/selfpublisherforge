@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, ChevronUp, ChevronDown, Copy, Check, Save } from "lucide-react";
+import { useTranslations } from "@/hooks/use-translations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ const TONES = [
 const NO_PROJECT = "__none__";
 
 export default function OutlineGeneratorPage() {
+  const t = useTranslations("writing");
   const [title, setTitle] = React.useState("");
   const [genre, setGenre] = React.useState("Fiction");
   const [audience, setAudience] = React.useState("");
@@ -49,7 +51,7 @@ export default function OutlineGeneratorPage() {
 
   const handleGenerate = async () => {
     if (!title.trim()) {
-      toast.error("Please enter a book title");
+      toast.error(t("outline.errors.titleRequired"));
       return;
     }
     // Reset save state when generating a new outline
@@ -65,14 +67,14 @@ export default function OutlineGeneratorPage() {
       });
       setResult(data);
     } catch {
-      toast.error("Failed to generate outline. Please try again.");
+      toast.error(t("outline.errors.generateFailed"));
     }
   };
 
   const handleSaveToProject = async () => {
     if (!result) return;
     if (selectedProjectId === NO_PROJECT) {
-      toast.error("Please select a project first");
+      toast.error(t("outline.errors.projectRequired"));
       return;
     }
     try {
@@ -94,10 +96,10 @@ export default function OutlineGeneratorPage() {
       setSavedToProject(true);
       const project = projects?.find((p) => p.id === selectedProjectId);
       toast.success(
-        `Outline saved to "${project?.title || "project"}" successfully`
+        t("outline.saveSuccess", { title: project?.title || "project" })
       );
     } catch {
-      toast.error("Failed to save outline to project. Please try again.");
+      toast.error(t("outline.errors.saveFailed"));
     }
   };
 
@@ -134,7 +136,7 @@ export default function OutlineGeneratorPage() {
     }
     navigator.clipboard.writeText(md);
     setCopied(true);
-    toast.success("Outline copied to clipboard as Markdown");
+    toast.success(t("outline.copySuccess"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -145,13 +147,13 @@ export default function OutlineGeneratorPage() {
         <Link href="/writing">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
+            {t("outline.backToStudio")}
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Outline Generator</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("outline.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Generate a complete book outline with chapter summaries
+            {t("outline.subtitle")}
           </p>
         </div>
       </div>
@@ -159,15 +161,15 @@ export default function OutlineGeneratorPage() {
       {/* Project Selector */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Link to Project</CardTitle>
+          <CardTitle className="text-lg">{t("outline.linkProject.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div>
             <label htmlFor="project-selector" className="text-sm font-medium">
-              Project (optional)
+              {t("outline.linkProject.label")}
             </label>
             <p className="text-xs text-muted-foreground mb-2">
-              Select a project to save the generated outline to, or leave as standalone.
+              {t("outline.linkProject.description")}
             </p>
             <Select
               value={selectedProjectId}
@@ -180,10 +182,10 @@ export default function OutlineGeneratorPage() {
                 <SelectValue placeholder="No project selected" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_PROJECT}>None (standalone)</SelectItem>
+                <SelectItem value={NO_PROJECT}>{t("outline.linkProject.none")}</SelectItem>
                 {projectsLoading && (
                   <SelectItem value="__loading__" disabled>
-                    Loading projects...
+                    {t("outline.linkProject.loading")}
                   </SelectItem>
                 )}
                 {projects?.map((project) => (
@@ -194,7 +196,7 @@ export default function OutlineGeneratorPage() {
                 ))}
                 {!projectsLoading && projects?.length === 0 && (
                   <SelectItem value="__empty__" disabled>
-                    No projects found
+                    {t("outline.linkProject.empty")}
                   </SelectItem>
                 )}
               </SelectContent>
@@ -206,22 +208,22 @@ export default function OutlineGeneratorPage() {
       {/* Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Book Details</CardTitle>
+          <CardTitle className="text-lg">{t("outline.form.bookDetails")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Book Title *</label>
+            <label className="text-sm font-medium">{t("outline.form.bookTitle")}</label>
             <Input
-              placeholder="Enter your book title"
+              placeholder={t("outline.form.bookTitlePlaceholder")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              aria-label="Book title"
+              aria-label={t("outline.form.bookTitle")}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Genre</label>
+              <label className="text-sm font-medium">{t("outline.form.genre")}</label>
               <Select value={genre} onValueChange={setGenre}>
                 <SelectTrigger aria-label="Select genre">
                   <SelectValue />
@@ -234,7 +236,7 @@ export default function OutlineGeneratorPage() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium">Tone</label>
+              <label className="text-sm font-medium">{t("outline.form.tone")}</label>
               <Select value={tone} onValueChange={setTone}>
                 <SelectTrigger aria-label="Select tone">
                   <SelectValue />
@@ -250,16 +252,16 @@ export default function OutlineGeneratorPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Target Audience</label>
+              <label className="text-sm font-medium">{t("outline.form.targetAudience")}</label>
               <Input
-                placeholder="e.g. Young adults, business professionals"
+                placeholder={t("outline.form.targetAudiencePlaceholder")}
                 value={audience}
                 onChange={(e) => setAudience(e.target.value)}
-                aria-label="Target audience"
+                aria-label={t("outline.form.targetAudience")}
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Number of Chapters</label>
+              <label className="text-sm font-medium">{t("outline.form.numChapters")}</label>
               <Input
                 type="number"
                 min={3}
@@ -272,13 +274,13 @@ export default function OutlineGeneratorPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium">Premise / Description</label>
+            <label className="text-sm font-medium">{t("outline.form.premise")}</label>
             <textarea
               className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="Describe your book's premise, main themes, or key plot points..."
+              placeholder={t("outline.form.premisePlaceholder")}
               value={premise}
               onChange={(e) => setPremise(e.target.value)}
-              aria-label="Book premise or description"
+              aria-label={t("outline.form.premise")}
             />
           </div>
 
@@ -286,15 +288,15 @@ export default function OutlineGeneratorPage() {
             onClick={handleGenerate}
             disabled={generateMutation.isPending || !title.trim()}
             className="w-full sm:w-auto"
-            aria-label="Generate book outline"
+            aria-label={t("outline.form.generate")}
           >
             {generateMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating Outline...
+                {t("outline.form.generating")}
               </>
             ) : (
-              "Generate Outline"
+              t("outline.form.generate")
             )}
           </Button>
         </CardContent>
@@ -310,12 +312,12 @@ export default function OutlineGeneratorPage() {
                 variant="outline"
                 size="sm"
                 onClick={exportMarkdown}
-                aria-label="Export outline as Markdown to clipboard"
+                aria-label={t("outline.results.exportMarkdown")}
               >
                 {copied ? (
-                  <><Check className="h-4 w-4 mr-1" /> Copied</>
+                  <><Check className="h-4 w-4 mr-1" /> {t("outline.results.copied")}</>
                 ) : (
-                  <><Copy className="h-4 w-4 mr-1" /> Export as Markdown</>
+                  <><Copy className="h-4 w-4 mr-1" /> {t("outline.results.exportMarkdown")}</>
                 )}
               </Button>
               {selectedProjectId !== NO_PROJECT && (
@@ -326,24 +328,24 @@ export default function OutlineGeneratorPage() {
                   disabled={updateProjectMutation.isPending || savedToProject}
                   aria-label={
                     savedToProject
-                      ? "Outline already saved to project"
-                      : "Save outline to selected project"
+                      ? t("outline.results.saved")
+                      : t("outline.results.saveToProject")
                   }
                 >
                   {updateProjectMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      Saving...
+                      {t("outline.results.saving")}
                     </>
                   ) : savedToProject ? (
                     <>
                       <Check className="h-4 w-4 mr-1" />
-                      Saved to Project
+                      {t("outline.results.saved")}
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-1" />
-                      Save to Project
+                      {t("outline.results.saveToProject")}
                     </>
                   )}
                 </Button>
@@ -353,14 +355,14 @@ export default function OutlineGeneratorPage() {
 
           {selectedProjectId === NO_PROJECT && (
             <p className="text-xs text-muted-foreground italic">
-              Tip: Select a project above to save this outline directly to it.
+              {t("outline.results.tipSelectProject")}
             </p>
           )}
 
           {result.synopsis && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Synopsis</CardTitle>
+                <CardTitle className="text-base">{t("outline.results.synopsis")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{result.synopsis}</p>
@@ -375,7 +377,7 @@ export default function OutlineGeneratorPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <h3 className="font-medium">
-                        Chapter {ch.chapter_number}: {ch.title}
+                        {t("outline.results.chapter")} {ch.chapter_number}: {ch.title}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         {ch.description}
@@ -391,7 +393,7 @@ export default function OutlineGeneratorPage() {
                         </ul>
                       )}
                       <p className="text-xs text-muted-foreground mt-2">
-                        ~{ch.estimated_word_count.toLocaleString()} words
+                        ~{ch.estimated_word_count.toLocaleString()} {t("outline.results.estimatedWords")}
                       </p>
                     </div>
                     <div className="flex flex-col gap-1">
@@ -401,7 +403,7 @@ export default function OutlineGeneratorPage() {
                         onClick={() => moveChapter(index, "up")}
                         disabled={index === 0}
                         className="h-7 w-7 p-0"
-                        aria-label={`Move chapter ${ch.chapter_number} up`}
+                        aria-label={t("outline.results.moveUp", { number: ch.chapter_number })}
                       >
                         <ChevronUp className="h-4 w-4" />
                       </Button>
@@ -411,7 +413,7 @@ export default function OutlineGeneratorPage() {
                         onClick={() => moveChapter(index, "down")}
                         disabled={index === result.chapters.length - 1}
                         className="h-7 w-7 p-0"
-                        aria-label={`Move chapter ${ch.chapter_number} down`}
+                        aria-label={t("outline.results.moveDown", { number: ch.chapter_number })}
                       >
                         <ChevronDown className="h-4 w-4" />
                       </Button>
