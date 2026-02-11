@@ -55,7 +55,7 @@
         "https://www.amazon.in/dp/*",
         "https://www.amazon.in/*/dp/*"
       ],
-      "js": ["content/amazon-extractor.js"],
+      "js": ["content/enrichment.js", "content/amazon-extractor.js"],
       "run_at": "document_idle"
     }
   ],

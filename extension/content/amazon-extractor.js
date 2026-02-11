@@ -441,6 +441,16 @@ function extractProductData() {
   const bsrData = extractBSR();
   const bookDetails = extractBookDetails();
 
+  // Import enrichment functions (loaded via content_scripts in manifest)
+  let enrichmentData = {};
+  if (typeof extractEnrichmentData !== "undefined") {
+    try {
+      enrichmentData = extractEnrichmentData();
+    } catch (e) {
+      console.warn("Enrichment extraction failed:", e);
+    }
+  }
+
   return {
     asin,
     title: extractTitle() || "Unknown Title",
@@ -461,6 +471,15 @@ function extractProductData() {
     language: bookDetails.language,
     dimensions: bookDetails.dimensions,
     isbn: bookDetails.isbn,
+
+    // Extended enrichment data
+    frequently_bought_together: enrichmentData.frequentlyBoughtTogether || [],
+    editorial_reviews: enrichmentData.editorialReviews || {},
+    extended_book_details: enrichmentData.extendedBookDetails || {},
+    customer_qa: enrichmentData.customerQA || [],
+    look_inside_available: enrichmentData.lookInsideAvailable || false,
+    series_info: enrichmentData.seriesInfo || null,
+    kindle_features: enrichmentData.kindleFeatures || {},
   };
 }
 
