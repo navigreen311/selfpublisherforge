@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "AI Agents",
+  description: "Manage autonomous AI agents to automate your publishing workflows, monitor budgets, and track task progress.",
+  noindex: true,
+});
+
 "use client";
 
 import { useState } from "react";

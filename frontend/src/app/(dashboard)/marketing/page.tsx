@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Marketing",
+  description: "Plan book launches, manage email sequences, schedule social media, and run ARC campaigns.",
+  noindex: true,
+});
+
 "use client";
 
 import { useState, useCallback } from "react";

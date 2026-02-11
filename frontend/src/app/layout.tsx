@@ -2,13 +2,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { defaultMetadata } from "@/lib/metadata";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "SelfPublisherForge",
-  description: "AI-powered self-publishing platform",
-};
+export const metadata: Metadata = defaultMetadata;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

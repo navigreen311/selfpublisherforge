@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Writing Studio",
+  description: "Manage your manuscripts, track writing sessions, and organize your books with AI-powered writing tools.",
+  noindex: true,
+});
+
 "use client";
 
 import Link from "next/link";

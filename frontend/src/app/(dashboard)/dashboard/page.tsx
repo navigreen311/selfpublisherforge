@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Dashboard",
+  description: "View your publishing activity, track book performance, and monitor royalties in one place.",
+  noindex: true,
+});
+
 "use client";
 
 import {

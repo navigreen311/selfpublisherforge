@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Production Pipeline",
+  description: "Manage book production workflows from draft to publication with automated AI-powered pipelines.",
+  noindex: true,
+});
+
 "use client";
 
 import { useState } from "react";

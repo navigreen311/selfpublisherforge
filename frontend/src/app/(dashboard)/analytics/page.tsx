@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Analytics",
+  description: "Analyze your book sales, revenue trends, and platform performance with detailed analytics and reports.",
+  noindex: true,
+});
+
 "use client";
 
 import { useDashboard } from "@/modules/analytics/hooks";
