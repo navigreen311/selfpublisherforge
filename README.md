@@ -1,6 +1,6 @@
 # SelfPublisherForge
 
-AI-powered, end-to-end self-publishing platform for independent authors, small publishers, and publishing agencies. From manuscript to market, SelfPublisherForge provides 29 integrated modules covering writing, publishing, marketing, analytics, and AI automation.
+AI-powered, end-to-end self-publishing platform for independent authors, small publishers, and publishing agencies. From manuscript to market, SelfPublisherForge provides 33 integrated modules covering writing, publishing, marketing, analytics, and AI automation.
 
 ## Features
 
@@ -225,7 +225,7 @@ selfpublisherforge/
 │   │   ├── api/v1/           # API route handlers (versioned)
 │   │   ├── core/             # Security, middleware, rate limiting, logging, pagination
 │   │   ├── models/           # SQLAlchemy ORM models (user, org, project, content, etc.)
-│   │   ├── modules/          # 26 feature modules (business logic + routes + schemas)
+│   │   ├── modules/          # 33 feature modules (business logic + routes + schemas)
 │   │   │   ├── advertising/       # AMS + Facebook ad campaigns
 │   │   │   ├── agent_system/      # Agent framework, governance, workflow engine
 │   │   │   ├── ai_writing/        # Manuscript generation, readability analysis
@@ -300,7 +300,7 @@ selfpublisherforge/
 
 ## Module Registry
 
-The platform consists of 29 modules across 5 subscription tiers. Higher tiers include all modules from lower tiers.
+The platform consists of 33 modules across 5 subscription tiers. Higher tiers include all modules from lower tiers.
 
 | # | Module | Tier | API Prefix | Description |
 |---|---|---|---|---|
@@ -333,6 +333,10 @@ The platform consists of 29 modules across 5 subscription tiers. Higher tiers in
 | 27 | admin | Enterprise | `/admin` | Platform administration |
 | 28 | billing | Free | `/billing` | Stripe subscription management |
 | 29 | usage-tracking | Free | `/usage` | API and feature usage metering |
+| 30 | review-intelligence | Starter | `/review-intelligence` | Amazon review analysis, sentiment tracking |
+| 31 | competitor-finder | Starter | `/competitors` | Competitor gap detection and opportunities |
+| 32 | pricing-automation | Starter | `/pricing` | Dynamic pricing strategies and optimization |
+| 33 | portfolio-economics | Pro | `/portfolio` | Multi-book portfolio analysis and ROI tracking |
 
 ## Architecture
 
