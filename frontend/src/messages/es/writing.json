@@ -63,5 +63,97 @@
   },
   "error": {
     "title": "Algo salió mal"
+  },
+  "editor": {
+    "invalidBookId": "ID de libro no válido",
+    "selectChapter": "Seleccione un capítulo",
+    "readingLevel": "Nivel de lectura",
+    "save": "Guardar",
+    "hideAI": "Ocultar IA",
+    "showAI": "Mostrar IA",
+    "loading": "Cargando...",
+    "emptyState": "Ningún capítulo seleccionado. Cree un capítulo para comenzar a escribir.",
+    "createFirstChapter": "Crear primer capítulo",
+    "chapter": "Capítulo {number}",
+    "saveStatus": {
+      "saving": "Guardando...",
+      "saved": "Guardado",
+      "error": "Error al guardar"
+    },
+    "readability": {
+      "fkGrade": "Grado FK",
+      "fog": "FOG",
+      "smog": "SMOG",
+      "total": "Total"
+    }
+  },
+  "newManuscript": {
+    "backToStudio": "Volver al Estudio de Escritura",
+    "title": "Crear Nuevo Manuscrito",
+    "subtitle": "Comience un nuevo proyecto de libro con asistencia de IA",
+    "success": "Manuscrito creado con éxito",
+    "error": "Error al crear el manuscrito. Por favor, inténtelo de nuevo.",
+    "form": {
+      "title": "Detalles del Manuscrito",
+      "description": "Complete la información básica sobre su manuscrito",
+      "titleLabel": "Título del Libro",
+      "titlePlaceholder": "Ingrese el título de su libro",
+      "genreLabel": "Género",
+      "genrePlaceholder": "Seleccione un género",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Describa la premisa, los temas o la trama de su libro...",
+      "cancel": "Cancelar",
+      "create": "Crear Manuscrito",
+      "creating": "Creando..."
+    }
+  },
+  "outline": {
+    "backToStudio": "Volver",
+    "title": "Generador de Esquemas IA",
+    "subtitle": "Genere un esquema completo del libro con resúmenes de capítulos",
+    "linkProject": {
+      "title": "Vincular a Proyecto",
+      "label": "Proyecto (opcional)",
+      "description": "Seleccione un proyecto para guardar el esquema generado, o déjelo como independiente.",
+      "none": "Ninguno (independiente)",
+      "loading": "Cargando proyectos...",
+      "empty": "No se encontraron proyectos"
+    },
+    "form": {
+      "bookDetails": "Detalles del Libro",
+      "bookTitle": "Título del Libro *",
+      "bookTitlePlaceholder": "Ingrese el título de su libro",
+      "bookTitleError": "Por favor ingrese un título de libro",
+      "genre": "Género",
+      "tone": "Tono",
+      "targetAudience": "Público Objetivo",
+      "targetAudiencePlaceholder": "p. ej. Jóvenes adultos, profesionales de negocios",
+      "numChapters": "Número de Capítulos",
+      "premise": "Premisa / Descripción",
+      "premisePlaceholder": "Describa la premisa, los temas principales o los puntos clave de la trama de su libro...",
+      "generate": "Generar Esquema",
+      "generating": "Generando Esquema..."
+    },
+    "results": {
+      "exportMarkdown": "Exportar como Markdown",
+      "copied": "Copiado",
+      "saveToProject": "Guardar en Proyecto",
+      "saving": "Guardando...",
+      "saved": "Guardado en Proyecto",
+      "tipSelectProject": "Consejo: Seleccione un proyecto arriba para guardar este esquema directamente en él.",
+      "synopsis": "Sinopsis",
+      "chapter": "Capítulo",
+      "estimatedWords": "palabras",
+      "moveUp": "Mover capítulo {number} hacia arriba",
+      "moveDown": "Mover capítulo {number} hacia abajo"
+    },
+    "errors": {
+      "titleRequired": "Por favor ingrese un título de libro",
+      "generateFailed": "Error al generar el esquema. Por favor, inténtelo de nuevo.",
+      "projectRequired": "Por favor seleccione un proyecto primero",
+      "saveFailed": "Error al guardar el esquema en el proyecto. Por favor, inténtelo de nuevo."
+    },
+    "saveSuccess": "Esquema guardado en \"{title}\" exitosamente",
+    "copySuccess": "Esquema copiado al portapapeles como Markdown"
   }
 }

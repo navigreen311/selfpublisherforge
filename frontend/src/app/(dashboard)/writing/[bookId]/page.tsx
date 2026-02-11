@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "@/hooks/use-translations";
 import { ManuscriptEditor } from "@/modules/writing/components/editor";
 import { ChapterSidebar } from "@/modules/writing/components/chapter-sidebar";
 import { AIPanel } from "@/modules/writing/components/ai-panel";
@@ -27,6 +28,7 @@ import {
  * - Word count and readability metrics
  */
 export default function ManuscriptEditorPage() {
+  const t = useTranslations("writing");
   const params = useParams();
   const rawBookId = params.bookId;
   const bookId =
@@ -84,7 +86,7 @@ export default function ManuscriptEditorPage() {
     const order = chapters.length + 1;
     createChapter.mutate(
       {
-        title: `Chapter ${order}`,
+        title: t("editor.chapter", { number: order }),
         content: "",
         order,
       },
@@ -95,7 +97,7 @@ export default function ManuscriptEditorPage() {
         },
       }
     );
-  }, [chapters.length, createChapter]);
+  }, [chapters.length, createChapter, t]);
 
   // Reorder chapters via drag and drop
   const handleReorderChapters = useCallback(
@@ -156,7 +158,7 @@ export default function ManuscriptEditorPage() {
   if (!bookId) {
     return (
       <div className="p-8 text-center text-muted-foreground">
-        Invalid book ID
+        {t("editor.invalidBookId")}
       </div>
     );
   }
@@ -166,9 +168,9 @@ export default function ManuscriptEditorPage() {
 
   const saveStatusLabel: Record<SaveStatus, string> = {
     idle: "",
-    saving: "Saving...",
-    saved: "Saved",
-    error: "Save failed",
+    saving: t("editor.saveStatus.saving"),
+    saved: t("editor.saveStatus.saved"),
+    error: t("editor.saveStatus.error"),
   };
 
   const saveStatusColor: Record<SaveStatus, string> = {
@@ -196,18 +198,18 @@ export default function ManuscriptEditorPage() {
         <div className="flex items-center justify-between px-4 py-2 border-b bg-card">
           <div className="flex items-center gap-4">
             <h2 className="text-sm font-medium text-foreground truncate max-w-md">
-              {activeChapter?.title || manuscript?.title || "Select a chapter"}
+              {activeChapter?.title || manuscript?.title || t("editor.selectChapter")}
             </h2>
             {activeChapter && (
               <span className="text-xs text-muted-foreground">
-                {activeChapter.word_count.toLocaleString()} words
+                {activeChapter.word_count.toLocaleString()} {t("stats.words")}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
             {readability && (
               <span className="text-xs text-muted-foreground">
-                Reading level: {readability.reading_level} | Flesch:{" "}
+                {t("editor.readingLevel")}: {readability.reading_level} | Flesch:{" "}
                 {readability.flesch_reading_ease}
               </span>
             )}
@@ -230,13 +232,13 @@ export default function ManuscriptEditorPage() {
               disabled={saveStatus === "saving"}
               className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              Save
+              {t("editor.save")}
             </button>
             <button
               onClick={() => setShowAIPanel(!showAIPanel)}
               className="text-xs px-3 py-1 rounded border hover:bg-accent transition-colors"
             >
-              {showAIPanel ? "Hide AI" : "Show AI"}
+              {showAIPanel ? t("editor.hideAI") : t("editor.showAI")}
             </button>
           </div>
         </div>
@@ -244,7 +246,7 @@ export default function ManuscriptEditorPage() {
         {/* Editor */}
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-muted-foreground">Loading manuscript...</p>
+            <p className="text-muted-foreground">{t("editor.loading")}</p>
           </div>
         ) : activeChapterId ? (
           <ManuscriptEditor
@@ -260,15 +262,13 @@ export default function ManuscriptEditorPage() {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center space-y-3">
               <p className="text-muted-foreground">
-                Select a chapter from the sidebar to start editing,
-                <br />
-                or create a new chapter.
+                {t("editor.emptyState")}
               </p>
               <button
                 onClick={handleCreateChapter}
                 className="text-sm px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                Create First Chapter
+                {t("editor.createFirstChapter")}
               </button>
             </div>
           </div>
@@ -277,11 +277,11 @@ export default function ManuscriptEditorPage() {
         {/* Readability bar */}
         {readability && (
           <div className="flex items-center gap-6 px-4 py-1.5 border-t bg-muted/30 text-xs text-muted-foreground">
-            <span>FK Grade: {readability.flesch_kincaid_grade}</span>
-            <span>Fog: {readability.gunning_fog}</span>
-            <span>SMOG: {readability.smog_index}</span>
+            <span>{t("editor.readability.fkGrade")}: {readability.flesch_kincaid_grade}</span>
+            <span>{t("editor.readability.fog")}: {readability.gunning_fog}</span>
+            <span>{t("editor.readability.smog")}: {readability.smog_index}</span>
             <span>
-              Total: {manuscript?.total_word_count?.toLocaleString() || 0} words
+              {t("editor.readability.total")}: {manuscript?.total_word_count?.toLocaleString() || 0} {t("stats.words")}
             </span>
           </div>
         )}

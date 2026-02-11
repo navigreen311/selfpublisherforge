@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useTranslations } from "@/hooks/use-translations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,6 +68,7 @@ const genres = [
 // ---------------------------------------------------------------------------
 
 export default function NewManuscriptPage() {
+  const t = useTranslations("writing");
   const router = useRouter();
   const createProject = useCreateProject();
   const [title, setTitle] = React.useState("");
@@ -124,10 +126,10 @@ export default function NewManuscriptPage() {
         genre: genre || undefined,
         description: description || undefined,
       });
-      toast.success("Manuscript created successfully");
+      toast.success(t("newManuscript.success"));
       router.push(`/writing/${result.id}`);
     } catch {
-      toast.error("Failed to create manuscript. Please try again.");
+      toast.error(t("newManuscript.error"));
     }
   };
 
@@ -140,17 +142,17 @@ export default function NewManuscriptPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild aria-label="Back to writing studio">
+        <Button variant="ghost" size="icon" asChild aria-label={t("newManuscript.backToStudio")}>
           <Link href="/writing">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            New Manuscript
+            {t("newManuscript.title")}
           </h1>
           <p className="text-muted-foreground">
-            Start a new book from scratch
+            {t("newManuscript.subtitle")}
           </p>
         </div>
       </div>
@@ -158,22 +160,22 @@ export default function NewManuscriptPage() {
       <form onSubmit={handleSubmit} noValidate>
         <Card>
           <CardHeader>
-            <CardTitle>Manuscript Details</CardTitle>
+            <CardTitle>{t("newManuscript.form.title")}</CardTitle>
             <CardDescription>
-              Fill in the basic information about your manuscript
+              {t("newManuscript.form.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
-              label="Title"
-              placeholder="Enter your manuscript title"
+              label={t("newManuscript.form.titleLabel")}
+              placeholder={t("newManuscript.form.titlePlaceholder")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={() => markTouched("title")}
               error={titleError}
               required
               aria-required="true"
-              aria-label="Manuscript title"
+              aria-label={t("newManuscript.form.titleLabel")}
             />
 
             <div className="space-y-1.5">
@@ -182,15 +184,15 @@ export default function NewManuscriptPage() {
                 className="text-sm font-medium"
                 id="manuscript-genre-label"
               >
-                Genre
+                {t("newManuscript.form.genreLabel")}
               </label>
               <Select value={genre} onValueChange={setGenre}>
                 <SelectTrigger
                   id="manuscript-genre"
-                  aria-label="Select genre"
+                  aria-label={t("newManuscript.form.genreLabel")}
                   aria-labelledby="manuscript-genre-label"
                 >
-                  <SelectValue placeholder="Select genre (optional)" />
+                  <SelectValue placeholder={t("newManuscript.form.genrePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {genres.map((g) => (
@@ -204,11 +206,11 @@ export default function NewManuscriptPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="manuscript-description" className="text-sm font-medium">
-                Description
+                {t("newManuscript.form.descriptionLabel")}
               </label>
               <Textarea
                 id="manuscript-description"
-                placeholder="Brief description of your manuscript..."
+                placeholder={t("newManuscript.form.descriptionPlaceholder")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 onBlur={() => markTouched("description")}
@@ -224,7 +226,7 @@ export default function NewManuscriptPage() {
                     ? "manuscript-description-error"
                     : "manuscript-description-hint"
                 }
-                aria-label="Manuscript description"
+                aria-label={t("newManuscript.form.descriptionLabel")}
                 maxLength={2000}
               />
               <div className="flex justify-between items-start">
@@ -253,7 +255,7 @@ export default function NewManuscriptPage() {
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" type="button" asChild>
-              <Link href="/writing">Cancel</Link>
+              <Link href="/writing">{t("newManuscript.form.cancel")}</Link>
             </Button>
             <Button
               type="submit"
@@ -263,15 +265,15 @@ export default function NewManuscriptPage() {
               aria-disabled={
                 (submitAttempted && !isFormValid) || createProject.isPending
               }
-              aria-label="Create manuscript"
+              aria-label={t("newManuscript.form.create")}
             >
               {createProject.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {t("newManuscript.form.creating")}
                 </>
               ) : (
-                "Create Manuscript"
+                t("newManuscript.form.create")
               )}
             </Button>
           </CardFooter>

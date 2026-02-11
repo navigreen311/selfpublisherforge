@@ -45,5 +45,69 @@
     "books": "books",
     "book": "book",
     "updated": "Updated"
+  },
+  "detail": {
+    "backToProjects": "Back to projects",
+    "title": "Project Details",
+    "notFound": "Project Not Found",
+    "notFoundDescription": "This project could not be found. It may have been deleted.",
+    "backToList": "Back to Projects",
+    "edit": "Edit",
+    "delete": "Delete",
+    "details": {
+      "title": "Project Details",
+      "description": "Overview of your project settings and metadata",
+      "type": "Type",
+      "status": "Status",
+      "created": "Created",
+      "lastUpdated": "Last Updated",
+      "genre": "Genre"
+    },
+    "editForm": {
+      "projectTitle": "Project Title",
+      "projectType": "Project Type",
+      "status": "Status",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving..."
+    },
+    "books": {
+      "title": "Books ({count})",
+      "description": "Books associated with this project"
+    },
+    "messages": {
+      "titleEmpty": "Title cannot be empty.",
+      "updateSuccess": "Project updated successfully.",
+      "updateError": "Failed to update project. Please try again.",
+      "deleteSuccess": "Project deleted successfully.",
+      "deleteError": "Failed to delete project. Please try again."
+    }
+  },
+  "new": {
+    "backToProjects": "Back to projects",
+    "title": "Create New Project",
+    "subtitle": "Set up a new publishing project",
+    "form": {
+      "title": "Project Details",
+      "description": "Fill in the basic information about your project",
+      "projectTitle": "Project Title",
+      "projectTitlePlaceholder": "Enter your project title",
+      "projectType": "Project Type",
+      "projectTypePlaceholder": "Select project type",
+      "genre": "Genre",
+      "genrePlaceholder": "Select genre",
+      "penName": "Pen Name",
+      "penNamePlaceholder": "Author pen name (optional)",
+      "penNameHelp": "Leave blank to use your account name",
+      "description": "Description",
+      "descriptionPlaceholder": "Brief description of your project...",
+      "cancel": "Cancel",
+      "create": "Create Project",
+      "creating": "Creating..."
+    },
+    "messages": {
+      "success": "Project created successfully",
+      "error": "Failed to create project. Please try again."
+    }
   }
 }

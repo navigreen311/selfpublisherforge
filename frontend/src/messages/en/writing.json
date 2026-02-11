@@ -63,5 +63,97 @@
   },
   "error": {
     "title": "Something went wrong"
+  },
+  "editor": {
+    "invalidBookId": "Invalid book ID",
+    "selectChapter": "Select a chapter",
+    "readingLevel": "Reading Level",
+    "save": "Save",
+    "hideAI": "Hide AI",
+    "showAI": "Show AI",
+    "loading": "Loading...",
+    "emptyState": "No chapter selected. Create a chapter to start writing.",
+    "createFirstChapter": "Create First Chapter",
+    "chapter": "Chapter {number}",
+    "saveStatus": {
+      "saving": "Saving...",
+      "saved": "Saved",
+      "error": "Error saving"
+    },
+    "readability": {
+      "fkGrade": "FK Grade",
+      "fog": "FOG",
+      "smog": "SMOG",
+      "total": "Total"
+    }
+  },
+  "newManuscript": {
+    "backToStudio": "Back to Writing Studio",
+    "title": "Create New Manuscript",
+    "subtitle": "Start a new book project with AI assistance",
+    "success": "Manuscript created successfully",
+    "error": "Failed to create manuscript. Please try again.",
+    "form": {
+      "title": "Manuscript Details",
+      "description": "Fill in the basic information about your manuscript",
+      "titleLabel": "Book Title",
+      "titlePlaceholder": "Enter your book title",
+      "genreLabel": "Genre",
+      "genrePlaceholder": "Select a genre",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe your book's premise, themes, or plot...",
+      "cancel": "Cancel",
+      "create": "Create Manuscript",
+      "creating": "Creating..."
+    }
+  },
+  "outline": {
+    "backToStudio": "Back",
+    "title": "AI Outline Generator",
+    "subtitle": "Generate a complete book outline with chapter summaries",
+    "linkProject": {
+      "title": "Link to Project",
+      "label": "Project (optional)",
+      "description": "Select a project to save the generated outline to, or leave as standalone.",
+      "none": "None (standalone)",
+      "loading": "Loading projects...",
+      "empty": "No projects found"
+    },
+    "form": {
+      "bookDetails": "Book Details",
+      "bookTitle": "Book Title *",
+      "bookTitlePlaceholder": "Enter your book title",
+      "bookTitleError": "Please enter a book title",
+      "genre": "Genre",
+      "tone": "Tone",
+      "targetAudience": "Target Audience",
+      "targetAudiencePlaceholder": "e.g. Young adults, business professionals",
+      "numChapters": "Number of Chapters",
+      "premise": "Premise / Description",
+      "premisePlaceholder": "Describe your book's premise, main themes, or key plot points...",
+      "generate": "Generate Outline",
+      "generating": "Generating Outline..."
+    },
+    "results": {
+      "exportMarkdown": "Export as Markdown",
+      "copied": "Copied",
+      "saveToProject": "Save to Project",
+      "saving": "Saving...",
+      "saved": "Saved to Project",
+      "tipSelectProject": "Tip: Select a project above to save this outline directly to it.",
+      "synopsis": "Synopsis",
+      "chapter": "Chapter",
+      "estimatedWords": "words",
+      "moveUp": "Move chapter {number} up",
+      "moveDown": "Move chapter {number} down"
+    },
+    "errors": {
+      "titleRequired": "Please enter a book title",
+      "generateFailed": "Failed to generate outline. Please try again.",
+      "projectRequired": "Please select a project first",
+      "saveFailed": "Failed to save outline to project. Please try again."
+    },
+    "saveSuccess": "Outline saved to \"{title}\" successfully",
+    "copySuccess": "Outline copied to clipboard as Markdown"
   }
 }

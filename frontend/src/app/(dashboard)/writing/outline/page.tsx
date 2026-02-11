@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, ChevronUp, ChevronDown, Copy, Check, Save } from "lucide-react";
+import { useTranslations } from "@/hooks/use-translations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ const TONES = [
 const NO_PROJECT = "__none__";
 
 export default function OutlineGeneratorPage() {
+  const t = useTranslations("writing");
   const [title, setTitle] = React.useState("");
   const [genre, setGenre] = React.useState("Fiction");
   const [audience, setAudience] = React.useState("");
@@ -49,7 +51,7 @@ export default function OutlineGeneratorPage() {
 
   const handleGenerate = async () => {
     if (!title.trim()) {
-      toast.error("Please enter a book title");
+      toast.error(t("outline.errors.titleRequired"));
       return;
     }
     // Reset save state when generating a new outline
@@ -65,14 +67,14 @@ export default function OutlineGeneratorPage() {
       });
       setResult(data);
     } catch {
-      toast.error("Failed to generate outline. Please try again.");
+      toast.error(t("outline.errors.generateFailed"));
     }
   };
 
   const handleSaveToProject = async () => {
     if (!result) return;
     if (selectedProjectId === NO_PROJECT) {
-      toast.error("Please select a project first");
+      toast.error(t("outline.errors.projectRequired"));
       return;
     }
     try {
@@ -94,10 +96,10 @@ export default function OutlineGeneratorPage() {
       setSavedToProject(true);
       const project = projects?.find((p) => p.id === selectedProjectId);
       toast.success(
-        `Outline saved to "${project?.title || "project"}" successfully`
+        t("outline.saveSuccess", { title: project?.title || "project" })
       );
     } catch {
-      toast.error("Failed to save outline to project. Please try again.");
+      toast.error(t("outline.errors.saveFailed"));
     }
   };
 
@@ -134,7 +136,7 @@ export default function OutlineGeneratorPage() {
     }
     navigator.clipboard.writeText(md);
     setCopied(true);
-    toast.success("Outline copied to clipboard as Markdown");
+    toast.success(t("outline.copySuccess"));
     setTimeout(() => setCopied(false), 2000);
   };
 
