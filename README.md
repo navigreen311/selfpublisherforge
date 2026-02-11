@@ -47,7 +47,7 @@ AI-powered, end-to-end self-publishing platform for independent authors, small p
 - **Amazon Research Assistant** -- Browser extension (Manifest V3) for extracting Amazon product data, tracking BSR, researching niches, and saving clips to your SelfPublisherForge account. Supports 10 Amazon marketplaces with sidebar panel and popup interface. Enhanced with deeper metadata extraction.
 
 ### Platform Administration
-- **Admin Panel** -- Enterprise-tier administration dashboard with user management, organization management, billing oversight, system health monitoring, and analytics (Enterprise tier only)
+- **Admin Panel** -- Enterprise-tier administration dashboard with user management, organization management, billing oversight, system health monitoring, platform analytics, and feature flag control (Enterprise tier only)
 
 ## Tech Stack
 
