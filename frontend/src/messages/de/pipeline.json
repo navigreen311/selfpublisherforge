@@ -26,5 +26,29 @@
   "noPipelines": "Keine Pipelines gefunden. Erstellen Sie eine, um zu beginnen.",
   "previous": "Zurück",
   "next": "Weiter",
-  "page": "Seite {page} von {pages}"
+  "page": "Seite {page} von {pages}",
+  "detail": {
+    "loadingPipeline": "Pipeline wird geladen...",
+    "pipelineNotFound": "Pipeline nicht gefunden.",
+    "description": "Beschreibung",
+    "status": "Status",
+    "deadline": "Frist",
+    "tasksCompleted": "{completed}/{total} Aufgaben abgeschlossen ({progress}%)",
+    "activate": "Aktivieren",
+    "pause": "Pausieren",
+    "complete": "Abschließen",
+    "resume": "Fortsetzen",
+    "addTask": "Aufgabe Hinzufügen",
+    "kanbanBoard": "Kanban-Board",
+    "timeline": "Zeitachse",
+    "loadingTimeline": "Zeitachse wird geladen...",
+    "taskDetails": "Aufgabendetails",
+    "close": "Schließen",
+    "title": "Titel",
+    "type": "Typ",
+    "dueDate": "Fälligkeitsdatum",
+    "dependencies": "Abhängigkeiten",
+    "dependenciesCount": "{count} Aufgabe(n)",
+    "changeStatus": "Status Ändern"
+  }
 }

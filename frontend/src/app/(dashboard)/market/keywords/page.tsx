@@ -6,8 +6,10 @@ import {
   useKeywordSuggestions,
 } from "@/modules/market/hooks";
 import { KeywordTable } from "@/modules/market/components";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function KeywordsPage() {
+  const t = useTranslations("market");
   const [keywordInput, setKeywordInput] = useState("");
   const [genreInput, setGenreInput] = useState("");
   const [activeTab, setActiveTab] = useState<"research" | "suggestions">("research");
@@ -36,9 +38,9 @@ export default function KeywordsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div role="region" aria-label="Page header">
-        <h1 className="text-2xl font-bold">Keyword Research</h1>
+        <h1 className="text-2xl font-bold">{t("keywordResearch")}</h1>
         <p className="text-muted-foreground mt-1">
-          Discover high-value keywords and analyze search trends for your book niche
+          {t("keywordResearchSubtitle")}
         </p>
       </div>
 
@@ -57,7 +59,7 @@ export default function KeywordsPage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          Keyword Research
+          {t("keywordResearchTab")}
         </button>
         <button
           onClick={() => setActiveTab("suggestions")}
@@ -72,7 +74,7 @@ export default function KeywordsPage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          AI Suggestions
+          {t("aiSuggestionsTab")}
         </button>
       </div>
 
@@ -86,29 +88,29 @@ export default function KeywordsPage() {
         >
           <div className="flex gap-3" role="region" aria-label="Keyword research input">
             <label htmlFor="keyword-input" className="sr-only">
-              Keywords to research
+              {t("keywordsToResearch")}
             </label>
             <input
               id="keyword-input"
               type="text"
-              placeholder="Enter keywords separated by commas (e.g., 'self help, productivity, mindset')..."
+              placeholder={t("keywordInputPlaceholder")}
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleResearch()}
-              aria-label="Enter keywords separated by commas for research"
+              aria-label={t("keywordInputAriaLabel")}
               className="flex-1 px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <button
               onClick={handleResearch}
               disabled={keywordResearch.isPending || !keywordInput.trim()}
-              aria-label={keywordResearch.isPending ? "Keyword research in progress" : "Research entered keywords"}
+              aria-label={keywordResearch.isPending ? t("researchInProgress") : t("researchKeywords")}
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {keywordResearch.isPending ? "Researching..." : "Research"}
+              {keywordResearch.isPending ? t("researching") : t("research")}
             </button>
           </div>
 
-          <div role="region" aria-label="Keyword research results" aria-live="polite">
+          <div role="region" aria-label={t("keywordResearchResults")} aria-live="polite">
             <KeywordTable
               keywords={keywordResearch.data?.keywords ?? []}
               isLoading={keywordResearch.isPending}
@@ -118,7 +120,7 @@ export default function KeywordsPage() {
           <div aria-live="polite" aria-atomic="true">
             {keywordResearch.isError && (
               <div role="alert" className="border border-red-200 rounded-lg bg-red-50 p-4 text-sm text-red-700">
-                Failed to research keywords. Please try again.
+                {t("keywordResearchError")}
               </div>
             )}
           </div>
@@ -135,29 +137,29 @@ export default function KeywordsPage() {
         >
           <div className="flex gap-3" role="region" aria-label="Genre suggestion input">
             <label htmlFor="genre-input" className="sr-only">
-              Genre for keyword suggestions
+              {t("genreForSuggestions")}
             </label>
             <input
               id="genre-input"
               type="text"
-              placeholder="Enter a genre (e.g., 'science fiction', 'self-help')..."
+              placeholder={t("genreInputPlaceholder")}
               value={genreInput}
               onChange={(e) => setGenreInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSuggest()}
-              aria-label="Enter a genre to get AI keyword suggestions"
+              aria-label={t("genreInputAriaLabel")}
               className="flex-1 px-4 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <button
               onClick={handleSuggest}
               disabled={!genreInput.trim()}
-              aria-label="Get AI keyword suggestions for entered genre"
+              aria-label={t("genreInputAriaLabel")}
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Get Suggestions
+              {t("getSuggestions")}
             </button>
           </div>
 
-          <div role="region" aria-label="AI keyword suggestions results" aria-live="polite">
+          <div role="region" aria-label={t("aiKeywordSuggestions")} aria-live="polite">
             <KeywordTable
               keywords={suggestions}
               isLoading={suggestionsPending}
