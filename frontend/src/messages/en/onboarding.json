@@ -1,0 +1,56 @@
+{
+  "welcome": {
+    "title": "Welcome to SelfPublisherForge!",
+    "description": "We will guide you through setting up your account in just a few steps. You will create your first project, connect your KDP account, and experience the power of AI-assisted publishing."
+  },
+  "createProject": {
+    "description": "Create your first publishing project to get started.",
+    "projectTitle": "Project Title",
+    "projectTitlePlaceholder": "My First Book",
+    "projectType": "Project Type",
+    "projectTypePlaceholder": "Select type",
+    "typeBook": "Book",
+    "typeSeries": "Series",
+    "typeCourse": "Course",
+    "genre": "Genre",
+    "genrePlaceholder": "Select genre",
+    "genreFiction": "Fiction",
+    "genreNonFiction": "Non-Fiction",
+    "genreRomance": "Romance",
+    "genreMystery": "Mystery",
+    "genreSelfHelp": "Self-Help",
+    "successMessage": "Project \"{title}\" created successfully.",
+    "titleRequired": "Project title is required.",
+    "titleMinLength": "Project title must be at least 3 characters.",
+    "genreRequired": "Please select a genre."
+  },
+  "connectKdp": {
+    "description": "Connect your Amazon KDP account to sync your books and sales data.",
+    "kdpEmail": "KDP Email",
+    "kdpEmailPlaceholder": "your-kdp-email@example.com",
+    "oauthDescription": "We use secure OAuth to connect to your KDP account. Your credentials are never stored.",
+    "connectButton": "Connect KDP Account",
+    "connecting": "Connecting...",
+    "successMessage": "KDP account connected successfully.",
+    "invalidEmail": "Please enter a valid email address."
+  },
+  "aiGeneration": {
+    "description": "Experience AI-powered content generation. Try generating a book description!",
+    "sampleTitle": "Sample AI Generation",
+    "generatedTitle": "Generated Book Description",
+    "generating": "Generating your book description...",
+    "sampleContent": "Discover the secrets of successful self-publishing in this comprehensive guide. From manuscript to marketplace, learn proven strategies that have helped thousands of authors turn their writing dreams into reality...",
+    "generateButton": "Generate Book Description",
+    "successMessage": "Description generated successfully."
+  },
+  "steps": {
+    "welcome": "Welcome",
+    "welcomeDescription": "Let us get you set up",
+    "project": "First Project",
+    "projectDescription": "Create your first publishing project",
+    "kdp": "Connect KDP",
+    "kdpDescription": "Link your Amazon KDP account",
+    "ai": "AI Tools",
+    "aiDescription": "Try AI-powered generation"
+  }
+}
