@@ -59,6 +59,7 @@ export const supportedNamespaces = [
   "settings",
   "pricing",
   "product-page",
+  "onboarding",
 ] as const;
 
 export type Namespace = (typeof supportedNamespaces)[number];

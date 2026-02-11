@@ -1,0 +1,56 @@
+{
+  "welcome": {
+    "title": "¡Bienvenido a SelfPublisherForge!",
+    "description": "Te guiaremos a través de la configuración de tu cuenta en solo unos pasos. Crearás tu primer proyecto, conectarás tu cuenta de KDP y experimentarás el poder de la publicación asistida por IA."
+  },
+  "createProject": {
+    "description": "Crea tu primer proyecto de publicación para comenzar.",
+    "projectTitle": "Título del proyecto",
+    "projectTitlePlaceholder": "Mi primer libro",
+    "projectType": "Tipo de proyecto",
+    "projectTypePlaceholder": "Seleccionar tipo",
+    "typeBook": "Libro",
+    "typeSeries": "Serie",
+    "typeCourse": "Curso",
+    "genre": "Género",
+    "genrePlaceholder": "Seleccionar género",
+    "genreFiction": "Ficción",
+    "genreNonFiction": "No ficción",
+    "genreRomance": "Romance",
+    "genreMystery": "Misterio",
+    "genreSelfHelp": "Autoayuda",
+    "successMessage": "Proyecto \"{title}\" creado exitosamente.",
+    "titleRequired": "El título del proyecto es obligatorio.",
+    "titleMinLength": "El título del proyecto debe tener al menos 3 caracteres.",
+    "genreRequired": "Por favor selecciona un género."
+  },
+  "connectKdp": {
+    "description": "Conecta tu cuenta de Amazon KDP para sincronizar tus libros y datos de ventas.",
+    "kdpEmail": "Email de KDP",
+    "kdpEmailPlaceholder": "tu-email-kdp@ejemplo.com",
+    "oauthDescription": "Usamos OAuth seguro para conectar a tu cuenta de KDP. Tus credenciales nunca se almacenan.",
+    "connectButton": "Conectar cuenta KDP",
+    "connecting": "Conectando...",
+    "successMessage": "Cuenta KDP conectada exitosamente.",
+    "invalidEmail": "Por favor ingresa una dirección de correo electrónico válida."
+  },
+  "aiGeneration": {
+    "description": "Experimenta la generación de contenido impulsada por IA. ¡Intenta generar una descripción de libro!",
+    "sampleTitle": "Generación de IA de muestra",
+    "generatedTitle": "Descripción del libro generada",
+    "generating": "Generando la descripción de tu libro...",
+    "sampleContent": "Descubre los secretos de la autopublicación exitosa en esta guía completa. Desde el manuscrito hasta el mercado, aprende estrategias probadas que han ayudado a miles de autores a convertir sus sueños de escritura en realidad...",
+    "generateButton": "Generar descripción del libro",
+    "successMessage": "Descripción generada exitosamente."
+  },
+  "steps": {
+    "welcome": "Bienvenida",
+    "welcomeDescription": "Vamos a configurarte",
+    "project": "Primer proyecto",
+    "projectDescription": "Crea tu primer proyecto de publicación",
+    "kdp": "Conectar KDP",
+    "kdpDescription": "Vincula tu cuenta de Amazon KDP",
+    "ai": "Herramientas de IA",
+    "aiDescription": "Prueba la generación impulsada por IA"
+  }
+}

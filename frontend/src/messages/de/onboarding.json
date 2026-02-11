@@ -1,0 +1,56 @@
+{
+  "welcome": {
+    "title": "Willkommen bei SelfPublisherForge!",
+    "description": "Wir führen Sie in nur wenigen Schritten durch die Einrichtung Ihres Kontos. Sie werden Ihr erstes Projekt erstellen, Ihr KDP-Konto verbinden und die Kraft der KI-unterstützten Veröffentlichung erleben."
+  },
+  "createProject": {
+    "description": "Erstellen Sie Ihr erstes Veröffentlichungsprojekt, um zu beginnen.",
+    "projectTitle": "Projekttitel",
+    "projectTitlePlaceholder": "Mein erstes Buch",
+    "projectType": "Projekttyp",
+    "projectTypePlaceholder": "Typ auswählen",
+    "typeBook": "Buch",
+    "typeSeries": "Serie",
+    "typeCourse": "Kurs",
+    "genre": "Genre",
+    "genrePlaceholder": "Genre auswählen",
+    "genreFiction": "Fiktion",
+    "genreNonFiction": "Sachbuch",
+    "genreRomance": "Romantik",
+    "genreMystery": "Krimi",
+    "genreSelfHelp": "Selbsthilfe",
+    "successMessage": "Projekt \"{title}\" erfolgreich erstellt.",
+    "titleRequired": "Projekttitel ist erforderlich.",
+    "titleMinLength": "Der Projekttitel muss mindestens 3 Zeichen lang sein.",
+    "genreRequired": "Bitte wählen Sie ein Genre aus."
+  },
+  "connectKdp": {
+    "description": "Verbinden Sie Ihr Amazon KDP-Konto, um Ihre Bücher und Verkaufsdaten zu synchronisieren.",
+    "kdpEmail": "KDP-E-Mail",
+    "kdpEmailPlaceholder": "ihre-kdp-email@beispiel.de",
+    "oauthDescription": "Wir verwenden sicheres OAuth, um eine Verbindung zu Ihrem KDP-Konto herzustellen. Ihre Anmeldedaten werden niemals gespeichert.",
+    "connectButton": "KDP-Konto verbinden",
+    "connecting": "Verbinden...",
+    "successMessage": "KDP-Konto erfolgreich verbunden.",
+    "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein."
+  },
+  "aiGeneration": {
+    "description": "Erleben Sie KI-gestützte Inhaltserstellung. Versuchen Sie, eine Buchbeschreibung zu generieren!",
+    "sampleTitle": "Beispiel-KI-Generierung",
+    "generatedTitle": "Generierte Buchbeschreibung",
+    "generating": "Ihre Buchbeschreibung wird generiert...",
+    "sampleContent": "Entdecken Sie die Geheimnisse erfolgreicher Selbstveröffentlichung in diesem umfassenden Leitfaden. Vom Manuskript bis zum Marktplatz lernen Sie bewährte Strategien, die Tausenden von Autoren geholfen haben, ihre Schreibträume in die Realität umzusetzen...",
+    "generateButton": "Buchbeschreibung generieren",
+    "successMessage": "Beschreibung erfolgreich generiert."
+  },
+  "steps": {
+    "welcome": "Willkommen",
+    "welcomeDescription": "Lassen Sie uns Sie einrichten",
+    "project": "Erstes Projekt",
+    "projectDescription": "Erstellen Sie Ihr erstes Veröffentlichungsprojekt",
+    "kdp": "KDP verbinden",
+    "kdpDescription": "Verknüpfen Sie Ihr Amazon KDP-Konto",
+    "ai": "KI-Tools",
+    "aiDescription": "Probieren Sie KI-gestützte Generierung aus"
+  }
+}
