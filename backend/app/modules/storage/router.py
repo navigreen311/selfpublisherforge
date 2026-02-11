@@ -11,7 +11,6 @@ from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
 from app.database import get_db
 from app.modules.storage.schemas import (
-    AssetListParams,
     AssetResponse,
     AssetType,
     ProcessRequest,

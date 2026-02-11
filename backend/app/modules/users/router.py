@@ -8,25 +8,25 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.core.dependencies import get_current_user, require_role
-from app.schemas.common import MessageResponse
+from app.database import get_db
 from app.modules.users.schemas import (
-    UserProfile,
-    UpdateUserRequest,
-    UpdatePreferencesRequest,
-    SessionResponse,
-    OrgDetails,
-    UpdateOrgRequest,
-    OrgMember,
+    ApiKeyCreate,
+    ApiKeyCreatedResponse,
+    ApiKeyResponse,
+    ChangeRoleRequest,
     InviteRequest,
     InviteResponse,
-    ChangeRoleRequest,
-    ApiKeyCreate,
-    ApiKeyResponse,
-    ApiKeyCreatedResponse,
+    OrgDetails,
+    OrgMember,
+    SessionResponse,
+    UpdateOrgRequest,
+    UpdatePreferencesRequest,
+    UpdateUserRequest,
+    UserProfile,
 )
 from app.modules.users.service import UserService
+from app.schemas.common import MessageResponse
 
 router = APIRouter(tags=["users"])
 

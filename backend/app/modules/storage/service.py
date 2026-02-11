@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -267,7 +267,7 @@ class StorageService:
     ) -> None:
         asset = await self._get_asset_or_404(asset_id, org_id)
         asset.status = AssetStatus.DELETED.value
-        asset.deleted_at = datetime.now(timezone.utc)
+        asset.deleted_at = datetime.now(UTC)
         await self.db.flush()
         await self.db.refresh(asset)
 
@@ -329,7 +329,7 @@ class StorageService:
                 code="PROCESSING_FAILED",
                 message="Asset processing failed due to a storage service error.",
             )
-        except IOError as exc:
+        except OSError as exc:
             logger.error("I/O error during asset processing for %s: %s", asset_id, exc)
             asset.status = AssetStatus.FAILED.value
             await self.db.flush()

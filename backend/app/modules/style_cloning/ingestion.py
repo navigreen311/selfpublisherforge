@@ -5,10 +5,8 @@ from __future__ import annotations
 
 import io
 import re
-import textwrap
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Sequence
-
 
 # ---------------------------------------------------------------------------
 # Data containers
@@ -151,7 +149,7 @@ def _extract_pdf(content: bytes) -> str:
         try:
             from pypdf import PdfReader
         except ImportError:
-            from PyPDF2 import PdfReader  # type: ignore[no-redef]
+            from PyPDF2 import PdfReader  # type: ignore[assignment,no-redef,misc]
 
         reader = PdfReader(_io.BytesIO(content))
         pages: list[str] = []

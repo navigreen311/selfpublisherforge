@@ -7,8 +7,7 @@ from __future__ import annotations
 
 import math
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,10 +25,7 @@ from app.modules.production_pipeline.schemas import (
     CreateTask,
     CreateTemplate,
     PaginatedPipelines,
-    PipelineResponse,
     PipelineSummaryResponse,
-    TaskResponse,
-    TemplateResponse,
     TimelineTask,
     TimelineView,
     UpdatePipeline,
@@ -43,11 +39,9 @@ from app.modules.production_pipeline.workflow import (
     detect_cycle,
     get_overdue_tasks,
     get_ready_tasks,
-    topological_sort,
     validate_pipeline_transition,
     validate_task_transition,
 )
-
 
 # ── Pipeline CRUD ─────────────────────────────────────────────────────────
 
@@ -99,7 +93,7 @@ async def create_pipeline(
 
 async def get_pipeline(
     db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID
-) -> Optional[Pipeline]:
+) -> Pipeline | None:
     """Get a single pipeline with its tasks."""
     stmt = select(Pipeline).where(
         Pipeline.id == pipeline_id,
@@ -115,8 +109,8 @@ async def list_pipelines(
     org_id: uuid.UUID,
     page: int = 1,
     page_size: int = 20,
-    status: Optional[PipelineStatus] = None,
-    book_id: Optional[uuid.UUID] = None,
+    status: PipelineStatus | None = None,
+    book_id: uuid.UUID | None = None,
 ) -> PaginatedPipelines:
     """List pipelines with pagination and optional filters."""
     base = select(Pipeline).where(
@@ -139,7 +133,7 @@ async def list_pipelines(
     result = await db.execute(stmt)
     pipelines = list(result.scalars().all())
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     items: list[PipelineSummaryResponse] = []
     for p in pipelines:
         tasks = p.tasks or []
@@ -175,7 +169,7 @@ async def update_pipeline(
     pipeline_id: uuid.UUID,
     org_id: uuid.UUID,
     payload: UpdatePipeline,
-) -> Optional[Pipeline]:
+) -> Pipeline | None:
     """Update pipeline settings / status."""
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:
@@ -202,7 +196,7 @@ async def delete_pipeline(
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:
         return False
-    pipeline.deleted_at = datetime.now(timezone.utc)
+    pipeline.deleted_at = datetime.now(UTC)
     await db.flush()
     return True
 
@@ -215,7 +209,7 @@ async def add_task(
     pipeline_id: uuid.UUID,
     org_id: uuid.UUID,
     payload: CreateTask,
-) -> Optional[PipelineTask]:
+) -> PipelineTask | None:
     """Add a task to a pipeline."""
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:
@@ -255,7 +249,7 @@ async def update_task(
     task_id: uuid.UUID,
     org_id: uuid.UUID,
     payload: UpdateTask,
-) -> Optional[PipelineTask]:
+) -> PipelineTask | None:
     """Update a task's status, assignee, etc."""
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:
@@ -271,7 +265,7 @@ async def update_task(
     if "status" in update_data and update_data["status"] is not None:
         validate_task_transition(task.status, update_data["status"])
         if update_data["status"] == TaskStatus.COMPLETED:
-            update_data["completed_at"] = datetime.now(timezone.utc)
+            update_data["completed_at"] = datetime.now(UTC)
 
     for field, value in update_data.items():
         setattr(task, field, value)
@@ -297,7 +291,7 @@ async def update_task(
 
 async def _get_task(
     db: AsyncSession, task_id: uuid.UUID, pipeline_id: uuid.UUID
-) -> Optional[PipelineTask]:
+) -> PipelineTask | None:
     stmt = select(PipelineTask).where(
         PipelineTask.id == task_id,
         PipelineTask.pipeline_id == pipeline_id,
@@ -330,7 +324,7 @@ async def _refresh_blocked_statuses(
 
 async def get_timeline(
     db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID
-) -> Optional[TimelineView]:
+) -> TimelineView | None:
     """Generate a Gantt-style timeline view for a pipeline."""
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:
@@ -403,8 +397,8 @@ async def create_template_from_pipeline(
     pipeline_id: uuid.UUID,
     org_id: uuid.UUID,
     name: str,
-    description: Optional[str] = None,
-) -> Optional[PipelineTemplate]:
+    description: str | None = None,
+) -> PipelineTemplate | None:
     """Save an existing pipeline as a reusable template."""
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:

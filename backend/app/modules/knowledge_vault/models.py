@@ -1,9 +1,8 @@
 """Knowledge Vault database models."""
 
-from sqlalchemy import Column, Float, String, Text, DateTime, func
+
+from sqlalchemy import Column, Float, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from datetime import datetime
-from typing import Optional
 
 from app.database import TenantModel
 
@@ -15,13 +14,13 @@ class KnowledgeEntry(TenantModel):
 
     title: str = Column(String(500), nullable=False, index=True)
     content: str = Column(Text, nullable=False, default="")
-    source_url: Optional[str] = Column(String(2048), nullable=True)
+    source_url: str | None = Column(String(2048), nullable=True)
     source_type: str = Column(
         String(20), nullable=False, default="manual",
         comment="manual | url | file | clip",
     )
     tags: list[str] = Column(ARRAY(String(100)), nullable=False, server_default="{}")
-    credibility_score: Optional[float] = Column(Float, nullable=True)
+    credibility_score: float | None = Column(Float, nullable=True)
     metadata_: dict = Column("metadata", JSONB, nullable=False, server_default="{}")
 
     def __repr__(self) -> str:

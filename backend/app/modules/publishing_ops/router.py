@@ -95,7 +95,7 @@ async def delete_account(
     deleted = await service.delete_account(db, account_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Account not found")
-    return None
+    return
 
 
 # ---------- Export ----------

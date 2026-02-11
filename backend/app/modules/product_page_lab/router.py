@@ -16,13 +16,14 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
+from app.core.exceptions import ValidationError
 from app.database import get_db
 from app.modules.product_page_lab import service
 from app.modules.product_page_lab.schemas import (
@@ -41,8 +42,6 @@ from app.modules.product_page_lab.schemas import (
     MobileCheckRequest,
     MobileCheckResult,
 )
-from app.core.exceptions import ValidationError
-from app.core.contracts import SuccessResponse
 
 router = APIRouter()
 
@@ -116,8 +115,8 @@ async def create_ab_test(
     description="List A/B tests for the current organisation with optional filters.",
 )
 async def list_ab_tests(
-    book_id: Optional[UUID] = Query(None, description="Filter by book ID"),
-    test_status: Optional[ABTestStatus] = Query(
+    book_id: UUID | None = Query(None, description="Filter by book ID"),
+    test_status: ABTestStatus | None = Query(
         None, alias="status", description="Filter by test status"
     ),
     db: AsyncSession = Depends(get_db),

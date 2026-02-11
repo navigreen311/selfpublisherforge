@@ -16,23 +16,20 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.contracts import PaginatedResponse, SuccessResponse
 from app.core.dependencies import get_current_user
 from app.database import get_db
-from app.modules.marketing.arc_manager import ARCManager
-from app.modules.marketing.email_builder import EmailBuilder
 from app.modules.marketing.launch_planner import LaunchPlanner
 from app.modules.marketing.schemas import (
     ARCCampaignCreate,
     ARCCampaignResponse,
     ARCCampaignSummary,
-    ARCCampaignUpdate,
     EmailSequenceCreate,
     EmailSequenceResponse,
     EmailSequenceSummary,
     EmailSequenceUpdate,
     GenerateLaunchPlanRequest,
     GenerateSocialContentRequest,
-    LaunchPlanCreate,
     LaunchPlanResponse,
     LaunchPlanSummary,
     LaunchPlanUpdate,
@@ -43,7 +40,6 @@ from app.modules.marketing.schemas import (
 )
 from app.modules.marketing.service import MarketingService
 from app.modules.marketing.social_generator import SocialContentGenerator
-from app.core.contracts import PaginatedResponse, SuccessResponse
 
 router = APIRouter()
 

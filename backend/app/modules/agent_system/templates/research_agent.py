@@ -26,7 +26,10 @@ TEMPLATE: dict[str, Any] = {
     "steps": [
         {
             "title": "Analyze bestseller lists",
-            "description": "Scrape and analyze current bestseller rankings across major platforms (Amazon, Apple Books, etc.)",
+            "description": (
+                "Scrape and analyze current bestseller rankings across major platforms "
+                "(Amazon, Apple Books, etc.)"
+            ),
             "agent_type": "research",
             "input_schema": {
                 "genre": "string",

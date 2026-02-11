@@ -6,20 +6,32 @@ and coordination between platform clients (Amazon/Facebook), optimizer, and crea
 
 import logging
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import httpx
-from sqlalchemy import select, func, and_, update, delete
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AppException
+from app.modules.advertising.amazon_ads import AmazonAdsClient, AmazonAdsError
+from app.modules.advertising.creative_generator import AdCreativeGenerator
+from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
 from app.modules.advertising.models import (
+    AdCreative,
     Campaign,
     CampaignPerformance,
     KeywordBid,
-    AdCreative,
+)
+from app.modules.advertising.optimizer import (
+    AdOptimizer,
+    CampaignPerformanceData,
+    KeywordPerformanceData,
 )
 from app.modules.advertising.schemas import (
+    AdCreativeResponse,
+    AdDashboard,
+    AdPerformance,
     AdPlatform,
     CampaignCreate,
     CampaignFilter,
@@ -27,35 +39,20 @@ from app.modules.advertising.schemas import (
     CampaignStatus,
     CampaignUpdate,
     CampaignWithPerformance,
-    PerformanceQuery,
-    PerformanceSummary,
-    AdPerformance,
-    KeywordBidCreate,
-    KeywordBidUpdate,
-    KeywordBidBulkUpdate,
-    KeywordBidResponse,
-    AdCreativeCreate,
-    AdCreativeResponse,
     CreativeGenerateRequest,
     CreativeGenerateResponse,
-    OptimizationRequest,
-    OptimizationSuggestion,
-    AdDashboard,
     FacebookCampaignCreate,
-    FacebookCampaignUpdate,
-    FacebookCampaignResponse,
     FacebookCampaignListResponse,
     FacebookCampaignMetrics,
+    FacebookCampaignResponse,
+    FacebookCampaignUpdate,
+    KeywordBidBulkUpdate,
+    KeywordBidResponse,
+    OptimizationRequest,
+    OptimizationSuggestion,
+    PerformanceQuery,
+    PerformanceSummary,
 )
-from app.modules.advertising.optimizer import (
-    AdOptimizer,
-    CampaignPerformanceData,
-    KeywordPerformanceData,
-)
-from app.modules.advertising.creative_generator import AdCreativeGenerator
-from app.modules.advertising.amazon_ads import AmazonAdsClient, AmazonAdsError
-from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
-from app.core.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 
@@ -249,9 +246,7 @@ class AdvertisingService:
 
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
-            if field == "status" and value is not None:
-                setattr(campaign, field, value.value if hasattr(value, "value") else value)
-            elif field == "bid_strategy" and value is not None:
+            if field == "status" and value is not None or field == "bid_strategy" and value is not None:
                 setattr(campaign, field, value.value if hasattr(value, "value") else value)
             else:
                 setattr(campaign, field, value)
@@ -306,7 +301,7 @@ class AdvertisingService:
         days: int = 30,
     ) -> PerformanceSummary:
         """Calculate performance summary for a campaign over a period."""
-        since = datetime.now(timezone.utc) - timedelta(days=days)
+        since = datetime.now(UTC) - timedelta(days=days)
         result = await self.db.execute(
             select(
                 func.sum(CampaignPerformance.impressions).label("total_impressions"),
@@ -555,7 +550,7 @@ class AdvertisingService:
         total_active = active_count_result.scalar() or 0
 
         # Today's spend
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
         today_spend_result = await self.db.execute(
             select(func.sum(CampaignPerformance.spend)).join(Campaign).where(
                 and_(

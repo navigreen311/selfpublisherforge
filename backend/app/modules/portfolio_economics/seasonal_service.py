@@ -6,20 +6,17 @@ Provides:
 - AI-recommended launch dates
 - Upcoming events relevant to user's genres
 """
-from datetime import datetime, date, timedelta, timezone
-from uuid import uuid4
-from typing import Optional
+from datetime import UTC, date, datetime, timedelta
 
 from app.modules.portfolio_economics.schemas import (
-    SeasonalEvent,
-    NicheSeasonality,
-    LaunchRecommendRequest,
-    LaunchRecommendation,
-    SeasonalCalendarResponse,
-    SeasonType,
     ConfidenceLevel,
+    LaunchRecommendation,
+    LaunchRecommendRequest,
+    NicheSeasonality,
+    SeasonalCalendarResponse,
+    SeasonalEvent,
+    SeasonType,
 )
-
 
 # ─── Seasonal Events Database ────────────────────────────────────────────────
 
@@ -502,7 +499,7 @@ def recommend_launch_date(request: LaunchRecommendRequest) -> LaunchRecommendati
         favorable_events=best["favorable_events"],
         pre_launch_checklist=pre_launch_checklist,
         marketing_timeline=marketing_timeline,
-        calculated_at=datetime.now(timezone.utc),
+        calculated_at=datetime.now(UTC),
     )
 
 

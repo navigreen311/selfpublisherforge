@@ -12,7 +12,6 @@ Credentials are read from environment variables:
 
 import logging
 import os
-from datetime import datetime, timezone
 
 import httpx
 

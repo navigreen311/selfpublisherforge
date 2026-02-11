@@ -8,33 +8,32 @@ Provides:
 """
 import logging
 from collections import defaultdict
-from datetime import datetime, date, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, func, select
-from sqlalchemy.exc import SQLAlchemyError, OperationalError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session
+from app.models.market import CompetitorBook
+from app.models.project import Book
 from app.modules.analytics.models import AnalyticsEvent, RoyaltyRecord
 from app.modules.review_intelligence.models import BookReview
-from app.models.project import Book
-from app.models.market import CompetitorBook
 
 logger = logging.getLogger(__name__)
 
 from app.modules.portfolio_economics.schemas import (
-    AudienceAnalyzeRequest,
-    AudiencePersona,
-    AlsoBoughtItem,
     AlsoBoughtIntelligence,
+    AlsoBoughtItem,
+    AudienceAnalyzeRequest,
     AudienceGrowthPoint,
     AudienceGrowthResponse,
+    AudiencePersona,
     ChurnPredictionRequest,
     ChurnPredictionResult,
     ChurnRisk,
 )
-
 
 # ─── Genre Persona Templates ─────────────────────────────────────────────────
 
@@ -298,7 +297,7 @@ async def build_audience_personas(
     try:
         async with async_session() as db:
             insights = await _fetch_book_insights(db, request.book_id, request.genre)
-    except (SQLAlchemyError, OperationalError) as e:
+    except (SQLAlchemyError, OperationalError):
         logger.warning(
             "build_audience_personas: database query for book insights failed, using defaults",
             exc_info=True,
@@ -389,7 +388,7 @@ async def build_audience_personas(
             pain_points=pain_points,
             favorite_authors=insights.get("favorite_authors", []),
             percentage_of_audience=percentage,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         personas.append(persona)
 
@@ -463,7 +462,7 @@ async def build_also_bought_intelligence(
                         review_count=comp.reviews_count or 0,
                         overlap_score=round(max(0.0, 0.9 - (i * 0.12)), 2),
                     ))
-    except (SQLAlchemyError, OperationalError) as e:
+    except (SQLAlchemyError, OperationalError):
         logger.warning(
             "build_also_bought_intelligence: database query for competitor data failed, falling back to genre-based defaults",
             exc_info=True,
@@ -531,7 +530,7 @@ async def build_also_bought_intelligence(
         average_rating=round(avg_rating, 1),
         audience_insights=audience_insights,
         positioning_suggestions=positioning_suggestions,
-        analyzed_at=datetime.now(timezone.utc),
+        analyzed_at=datetime.now(UTC),
     )
 
 
@@ -547,8 +546,8 @@ async def get_audience_growth(
     """
     today = date.today()
     start_date = today - timedelta(days=days)
-    start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc)
-    end_dt = datetime.combine(today, datetime.max.time(), tzinfo=timezone.utc)
+    start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
+    end_dt = datetime.combine(today, datetime.max.time(), tzinfo=UTC)
 
     daily_units: dict[date, int] = {}
     daily_revenue: dict[date, float] = {}
@@ -603,7 +602,7 @@ async def get_audience_growth(
                     d = row.day.date() if hasattr(row.day, "date") else row.day
                     daily_engagement_events[d] = int(row.engagement_events) if row.engagement_events else 0
                     daily_total_events[d] = int(row.total_events) if row.total_events else 0
-    except (SQLAlchemyError, OperationalError) as e:
+    except (SQLAlchemyError, OperationalError):
         logger.warning(
             "get_audience_growth: database query for royalty/analytics data failed, returning empty growth data",
             exc_info=True,
@@ -810,5 +809,5 @@ def predict_churn(request: ChurnPredictionRequest) -> ChurnPredictionResult:
         risk_factors=risk_factors,
         retention_suggestions=retention_suggestions,
         estimated_lifetime_value=round(estimated_ltv, 2),
-        predicted_at=datetime.now(timezone.utc),
+        predicted_at=datetime.now(UTC),
     )

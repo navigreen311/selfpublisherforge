@@ -7,8 +7,6 @@ conversion factors.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from app.modules.product_page_lab.schemas import (
     MobileCheckResult,
     MobileTruncation,
@@ -83,9 +81,9 @@ def check_mobile_display(
     title: str,
     blurb: str,
     author_name: str,
-    subtitle: Optional[str] = None,
-    cover_image_url: Optional[str] = None,
-    price: Optional[float] = None,
+    subtitle: str | None = None,
+    cover_image_url: str | None = None,
+    price: float | None = None,
 ) -> MobileCheckResult:
     """Simulate mobile display and check for conversion issues."""
     recommendations: list[Recommendation] = []
@@ -106,7 +104,7 @@ def check_mobile_display(
         ))
 
     # --- Subtitle truncation ---
-    subtitle_display: Optional[MobileTruncation] = None
+    subtitle_display: MobileTruncation | None = None
     if subtitle:
         sub_limit = DEFAULT_MOBILE_CONFIG["subtitle_char_limit"]
         subtitle_display = _check_truncation("subtitle", subtitle, sub_limit)
@@ -203,8 +201,10 @@ def check_mobile_display(
     # --- Device-specific previews ---
     device_previews: dict[str, dict] = {}
     for device_id, config in DEVICE_CONFIGS.items():
-        device_title = _check_truncation("title", title, config["title_char_limit"])
-        device_blurb_above = blurb_plain[:config["blurb_fold_chars"]]
+        title_limit = int(config["title_char_limit"])
+        blurb_fold = int(config["blurb_fold_chars"])
+        device_title = _check_truncation("title", title, title_limit)
+        device_blurb_above = blurb_plain[:blurb_fold]
         device_previews[device_id] = {
             "device_name": config["name"],
             "title_truncated": device_title.is_truncated,

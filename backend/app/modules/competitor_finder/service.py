@@ -6,13 +6,17 @@ review analyzer, opportunity generator, and gap detector.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.competitor_finder.gap_detector import (
+    BookData,
+    run_gap_analysis,
+)
 from app.modules.competitor_finder.models import (
     CompetitorAlert,
     CompetitorAnalysis,
@@ -22,25 +26,20 @@ from app.modules.competitor_finder.models import (
     OpportunityBlueprint,
     WeaknessSignal,
 )
-from app.modules.competitor_finder.review_analyzer import (
-    AnalysisResult,
-    ReviewData,
-    analyze_reviews,
-    analyze_reviews_with_ai,
-)
 from app.modules.competitor_finder.opportunity_generator import (
     generate_opportunity_blueprint,
 )
-from app.modules.competitor_finder.gap_detector import (
-    BookData,
-    run_gap_analysis,
+from app.modules.competitor_finder.review_analyzer import (
+    AnalysisResult,
+    ReviewData,
+    analyze_reviews_with_ai,
 )
 from app.modules.competitor_finder.schemas import (
     AlertSeverity,
     AlertType,
     AnalysisStatus,
-    CompetitorAnalyzeRequest,
     BatchAnalyzeRequest,
+    CompetitorAnalyzeRequest,
     GapAnalysisRequest,
 )
 
@@ -150,7 +149,7 @@ class CompetitorFinderService:
                 self.db.add(blueprint)
 
             analysis.status = AnalysisStatus.COMPLETED.value
-            analysis.completed_at = datetime.now(timezone.utc)
+            analysis.completed_at = datetime.now(UTC)
 
         except (SQLAlchemyError, ValueError, RuntimeError, OSError) as e:
             logger.error("Analysis failed for book %s: %s", request.book_id, e, exc_info=True)

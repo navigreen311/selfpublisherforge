@@ -7,17 +7,16 @@ and expected outputs.
 
 from typing import Any
 
-from .research_agent import TEMPLATE as RESEARCH_TEMPLATE
-from .writing_coach import TEMPLATE as WRITING_COACH_TEMPLATE
+from .backlist_analyzer import TEMPLATE as BACKLIST_ANALYZER_TEMPLATE
+from .competitor_tracker import TEMPLATE as COMPETITOR_TRACKER_TEMPLATE
 from .cover_designer import TEMPLATE as COVER_DESIGNER_TEMPLATE
-from .price_optimizer import TEMPLATE as PRICE_OPTIMIZER_TEMPLATE
-from .review_monitor import TEMPLATE as REVIEW_MONITOR_TEMPLATE
 from .keyword_scout import TEMPLATE as KEYWORD_SCOUT_TEMPLATE
 from .launch_planner import TEMPLATE as LAUNCH_PLANNER_TEMPLATE
-from .competitor_tracker import TEMPLATE as COMPETITOR_TRACKER_TEMPLATE
+from .price_optimizer import TEMPLATE as PRICE_OPTIMIZER_TEMPLATE
+from .research_agent import TEMPLATE as RESEARCH_TEMPLATE
+from .review_monitor import TEMPLATE as REVIEW_MONITOR_TEMPLATE
 from .social_content import TEMPLATE as SOCIAL_CONTENT_TEMPLATE
-from .backlist_analyzer import TEMPLATE as BACKLIST_ANALYZER_TEMPLATE
-
+from .writing_coach import TEMPLATE as WRITING_COACH_TEMPLATE
 
 # Template registry
 _TEMPLATES: list[dict[str, Any]] = [
@@ -79,7 +78,10 @@ def validate_template(template: dict[str, Any]) -> bool:
     Returns:
         True if valid, raises ValueError otherwise
     """
-    required_fields = ["name", "slug", "description", "category", "tier", "default_config", "steps", "triggers", "outputs"]
+    required_fields = [
+        "name", "slug", "description", "category", "tier",
+        "default_config", "steps", "triggers", "outputs"
+    ]
 
     for field in required_fields:
         if field not in template:

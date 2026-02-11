@@ -6,7 +6,6 @@ for how to write a better competing book.
 from __future__ import annotations
 
 import logging
-from uuid import UUID
 
 from app.config import get_settings
 from app.modules.competitor_finder.schemas import (

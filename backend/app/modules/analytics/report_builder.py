@@ -7,12 +7,10 @@ marketing ROI, and portfolio overviews.
 from __future__ import annotations
 
 import io
-import json
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
-from decimal import Decimal
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import and_, func, select
@@ -77,7 +75,7 @@ async def generate_report(
         report.file_path = file_path
         report.file_size = len(file_bytes)
         report.status = ReportStatus.COMPLETED.value
-        report.generated_at = datetime.now(timezone.utc)
+        report.generated_at = datetime.now(UTC)
         await db.flush()
 
         return report
@@ -105,14 +103,13 @@ async def _gather_report_data(
     """Gather data needed for a specific report type."""
     if report_type == ReportType.REVENUE_SUMMARY:
         return await _gather_revenue_summary(db, org_id, parameters)
-    elif report_type == ReportType.BOOK_PERFORMANCE:
+    if report_type == ReportType.BOOK_PERFORMANCE:
         return await _gather_book_performance(db, org_id, parameters)
-    elif report_type == ReportType.PORTFOLIO_OVERVIEW:
+    if report_type == ReportType.PORTFOLIO_OVERVIEW:
         return await _gather_portfolio_overview(db, org_id, parameters)
-    elif report_type == ReportType.MARKETING_ROI:
+    if report_type == ReportType.MARKETING_ROI:
         return await _gather_marketing_roi(db, org_id, parameters)
-    else:
-        return await _gather_revenue_summary(db, org_id, parameters)
+    return await _gather_revenue_summary(db, org_id, parameters)
 
 
 async def _gather_revenue_summary(
@@ -320,7 +317,7 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
     elements: list[Any] = []
 
     # --- Header ---
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    generated_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     report_type = data.get("report_type", "Report")
 
     elements.append(Paragraph(title, title_style))
@@ -371,7 +368,7 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
         elements.append(Spacer(1, 12))
 
     # --- Platform Breakdown Table ---
-    if "by_platform" in data and data["by_platform"]:
+    if data.get("by_platform"):
         elements.append(Paragraph("Revenue by Platform", section_style))
         header = ["Platform", "Revenue", "Units"]
         rows = [header] + [
@@ -394,7 +391,7 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
         elements.append(Spacer(1, 12))
 
     # --- Book Performance Table ---
-    if "books" in data and data["books"]:
+    if data.get("books"):
         elements.append(Paragraph("Book Performance", section_style))
         header = ["Title", "Revenue", "Units", "Records"]
         rows = [header] + [
@@ -493,7 +490,7 @@ def _build_xlsx(title: str, data: dict[str, Any]) -> bytes:
                     length = max(length, min(len(str(cell.value)) + 2, max_width))
             ws.column_dimensions[col_letter].width = length
 
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    generated_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     report_type = data.get("report_type", "Report")
 
     # ================================================================
@@ -558,7 +555,7 @@ def _build_xlsx(title: str, data: dict[str, Any]) -> bytes:
     # ================================================================
     # SHEET 2 -- Platform Breakdown (if applicable)
     # ================================================================
-    if "by_platform" in data and data["by_platform"]:
+    if data.get("by_platform"):
         ws_plat = wb.create_sheet("Platform Breakdown")
         ws_plat.sheet_properties.tabColor = "16213E"
 
@@ -588,7 +585,7 @@ def _build_xlsx(title: str, data: dict[str, Any]) -> bytes:
     # ================================================================
     # SHEET 3 -- Book Performance (if applicable)
     # ================================================================
-    if "books" in data and data["books"]:
+    if data.get("books"):
         ws_books = wb.create_sheet("Book Performance")
         ws_books.sheet_properties.tabColor = "E94560"
 

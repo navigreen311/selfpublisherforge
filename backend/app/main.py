@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -150,7 +151,8 @@ def _register_routers(app: FastAPI):
     from app.modules.production_pipeline.router import router as pipeline_router
     app.include_router(pipeline_router, prefix=f"{prefix}/pipelines", tags=["pipelines"])
 
-    from app.modules.publishing_ops.router import router as publishing_router, metadata_router as publishing_metadata_router
+    from app.modules.publishing_ops.router import metadata_router as publishing_metadata_router
+    from app.modules.publishing_ops.router import router as publishing_router
     app.include_router(publishing_router, prefix=f"{prefix}/publishing", tags=["publishing"])
     app.include_router(publishing_metadata_router, prefix=prefix, tags=["publishing"])
 
@@ -184,7 +186,7 @@ def _register_routers(app: FastAPI):
     from app.modules.agent_system.router import router as agent_router
     app.include_router(agent_router, prefix=f"{prefix}/agents", tags=["agents"])
 
-    from app.modules.portfolio_economics.router import portfolio_router, audience_router, seasonal_router
+    from app.modules.portfolio_economics.router import audience_router, portfolio_router, seasonal_router
     app.include_router(portfolio_router, prefix=prefix, tags=["portfolio"])
     app.include_router(audience_router, prefix=prefix, tags=["audience"])
     app.include_router(seasonal_router, prefix=prefix, tags=["seasonal"])

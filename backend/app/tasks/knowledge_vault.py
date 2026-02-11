@@ -16,7 +16,6 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
@@ -38,6 +37,7 @@ def import_from_url_task(self, org_id: str, url: str, extract_facts: bool = True
     Runs the import pipeline: fetch -> extract -> AI facts -> persist -> index.
     """
     import asyncio
+
     from app.database import async_session
     from app.modules.knowledge_vault.service import KnowledgeService
 
@@ -88,6 +88,7 @@ def import_from_file_task(
     Async Celery task to import a knowledge entry from an uploaded file.
     """
     import asyncio
+
     from app.database import async_session
     from app.modules.knowledge_vault.service import KnowledgeService
 
@@ -127,7 +128,9 @@ def reindex_all_task(self, org_id: str):
     Useful after schema changes or index rebuilds.
     """
     import asyncio
-    from sqlalchemy import select, and_
+
+    from sqlalchemy import and_, select
+
     from app.database import async_session
     from app.modules.knowledge_vault.models import KnowledgeEntry
     from app.modules.knowledge_vault.search import KnowledgeSearchService

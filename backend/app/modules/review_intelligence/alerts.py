@@ -3,8 +3,7 @@ competitor review surge.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
@@ -16,10 +15,7 @@ from app.modules.review_intelligence.schemas import (
     AlertSeverity,
     AlertType,
     SentimentLabel,
-    VelocityDataPoint,
-    VelocityTrend,
 )
-from app.modules.review_intelligence.velocity import detect_trend
 
 logger = logging.getLogger(__name__)
 
@@ -42,33 +38,33 @@ def _determine_severity(
     if alert_type == AlertType.NEGATIVE_SPIKE:
         if magnitude > 200:
             return AlertSeverity.CRITICAL
-        elif magnitude > 100:
+        if magnitude > 100:
             return AlertSeverity.HIGH
-        elif magnitude > 50:
+        if magnitude > 50:
             return AlertSeverity.MEDIUM
         return AlertSeverity.LOW
-    elif alert_type == AlertType.VELOCITY_DROP:
+    if alert_type == AlertType.VELOCITY_DROP:
         if magnitude < -80:
             return AlertSeverity.CRITICAL
-        elif magnitude < -60:
+        if magnitude < -60:
             return AlertSeverity.HIGH
-        elif magnitude < -40:
+        if magnitude < -40:
             return AlertSeverity.MEDIUM
         return AlertSeverity.LOW
-    elif alert_type == AlertType.RATING_DECLINE:
+    if alert_type == AlertType.RATING_DECLINE:
         if magnitude > 1.0:
             return AlertSeverity.CRITICAL
-        elif magnitude > 0.5:
+        if magnitude > 0.5:
             return AlertSeverity.HIGH
-        elif magnitude > 0.3:
+        if magnitude > 0.3:
             return AlertSeverity.MEDIUM
         return AlertSeverity.LOW
-    elif alert_type == AlertType.COMPETITOR_SURGE:
+    if alert_type == AlertType.COMPETITOR_SURGE:
         if magnitude > 300:
             return AlertSeverity.CRITICAL
-        elif magnitude > 200:
+        if magnitude > 200:
             return AlertSeverity.HIGH
-        elif magnitude > 100:
+        if magnitude > 100:
             return AlertSeverity.MEDIUM
         return AlertSeverity.LOW
 
@@ -83,7 +79,7 @@ async def _create_alert(
     magnitude: float,
     title: str,
     description: str,
-    data: Optional[dict] = None,
+    data: dict | None = None,
 ) -> ReviewAlert:
     """Create a new review alert."""
     severity = _determine_severity(alert_type, magnitude)
@@ -110,11 +106,11 @@ async def check_negative_spike(
     org_id: UUID,
     book_id: UUID,
     window_days: int = 7,
-    thresholds: Optional[dict] = None,
-) -> Optional[ReviewAlert]:
+    thresholds: dict | None = None,
+) -> ReviewAlert | None:
     """Check if there's a spike in negative reviews compared to the previous window."""
     thresholds = thresholds or DEFAULT_THRESHOLDS
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_start = now - timedelta(days=window_days)
     previous_start = current_start - timedelta(days=window_days)
 
@@ -183,11 +179,11 @@ async def check_velocity_drop(
     org_id: UUID,
     book_id: UUID,
     window_days: int = 14,
-    thresholds: Optional[dict] = None,
-) -> Optional[ReviewAlert]:
+    thresholds: dict | None = None,
+) -> ReviewAlert | None:
     """Check if review velocity has dropped significantly."""
     thresholds = thresholds or DEFAULT_THRESHOLDS
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_start = now - timedelta(days=window_days)
     previous_start = current_start - timedelta(days=window_days)
 
@@ -229,7 +225,7 @@ async def check_velocity_drop(
             book_id=book_id,
             alert_type=AlertType.VELOCITY_DROP,
             magnitude=change_pct,
-            title=f"Review velocity drop detected",
+            title="Review velocity drop detected",
             description=(
                 f"Review velocity dropped by {abs(change_pct):.0f}% over the "
                 f"last {window_days} days ({previous_count} -> {current_count})."
@@ -249,11 +245,11 @@ async def check_rating_decline(
     org_id: UUID,
     book_id: UUID,
     window_days: int = 30,
-    thresholds: Optional[dict] = None,
-) -> Optional[ReviewAlert]:
+    thresholds: dict | None = None,
+) -> ReviewAlert | None:
     """Check if average star rating has declined significantly."""
     thresholds = thresholds or DEFAULT_THRESHOLDS
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_start = now - timedelta(days=window_days)
     previous_start = current_start - timedelta(days=window_days)
 
@@ -315,11 +311,11 @@ async def check_competitor_surge(
     org_id: UUID,
     book_id: UUID,
     window_days: int = 14,
-    thresholds: Optional[dict] = None,
-) -> Optional[ReviewAlert]:
+    thresholds: dict | None = None,
+) -> ReviewAlert | None:
     """Check if competitor books are seeing a review surge relative to this book."""
     thresholds = thresholds or DEFAULT_THRESHOLDS
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_start = now - timedelta(days=window_days)
 
     # Count own-book reviews in window
@@ -366,7 +362,7 @@ async def check_competitor_surge(
             book_id=book_id,
             alert_type=AlertType.COMPETITOR_SURGE,
             magnitude=surge_pct,
-            title=f"Competitor review surge detected",
+            title="Competitor review surge detected",
             description=(
                 f"Competitor books received {comp_count} reviews while your book "
                 f"received {own_count} in the last {window_days} days "
@@ -386,7 +382,7 @@ async def run_all_checks(
     db: AsyncSession,
     org_id: UUID,
     book_id: UUID,
-    thresholds: Optional[dict] = None,
+    thresholds: dict | None = None,
 ) -> list[ReviewAlert]:
     """Run all alert checks for a book. Returns list of newly created alerts."""
     alerts = []

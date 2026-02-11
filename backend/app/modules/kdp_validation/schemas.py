@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -150,7 +149,7 @@ class ValidationResult(BaseModel):
     validation_type: ValidationType
     status: ValidationStatus
     issues: list[ValidationIssue] = Field(default_factory=list)
-    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @property
@@ -169,7 +168,7 @@ class FullValidationResponse(BaseModel):
     results: list[ValidationResult] = Field(default_factory=list)
     total_errors: int = 0
     total_warnings: int = 0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ValidationResultResponse(BaseModel):

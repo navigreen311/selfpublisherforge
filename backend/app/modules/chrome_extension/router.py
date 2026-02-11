@@ -8,11 +8,10 @@ Endpoints:
 """
 from __future__ import annotations
 
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.chrome_extension import service
@@ -32,7 +31,6 @@ from app.modules.chrome_extension.schemas import (
     QuickResearchQuery,
     QuickResearchResponse,
 )
-from app.core.contracts import SuccessResponse
 
 router = APIRouter(prefix="/extension", tags=["chrome-extension"])
 

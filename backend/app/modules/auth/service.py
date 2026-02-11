@@ -3,44 +3,41 @@ password reset, email verification, MFA, session management, and OAuth."""
 
 import re
 import secrets
-from datetime import datetime, timedelta, timezone
-from urllib.parse import urlencode
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-import httpx
-from sqlalchemy import select, delete, func, update
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.exceptions import AppException
 from app.core.security import (
-    hash_password,
-    verify_password,
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
+    verify_password,
 )
-from app.modules.auth.utils import (
-    generate_token,
-    generate_token_hash,
-    token_expiry,
-    generate_totp_secret,
-    verify_totp,
-    build_totp_uri,
-    generate_backup_codes,
-)
-from app.modules.auth.schemas import (
-    TokenResponse,
-    MFASetupResponse,
-    MFARequiredResponse,
-    UserResponse,
-    OAuthAuthorizationURL,
-)
-from app.modules.auth.oauth_providers import get_oauth_provider
 
 # Import canonical ORM models from the shared models package
 from app.models.organization import Organization
-from app.models.user import User, UserRole, UserSession, OAuthAccount
+from app.models.user import OAuthAccount, User, UserRole, UserSession
+from app.modules.auth.oauth_providers import get_oauth_provider
+from app.modules.auth.schemas import (
+    MFARequiredResponse,
+    MFASetupResponse,
+    OAuthAuthorizationURL,
+    TokenResponse,
+)
+from app.modules.auth.utils import (
+    build_totp_uri,
+    generate_backup_codes,
+    generate_token,
+    generate_token_hash,
+    generate_totp_secret,
+    token_expiry,
+    verify_totp,
+)
 
 settings = get_settings()
 
@@ -201,7 +198,7 @@ async def refresh_access_token(db: AsyncSession, *, refresh_token: str) -> Token
     result = await db.execute(
         select(UserSession).where(
             UserSession.refresh_token_hash == token_hash,
-            UserSession.expires_at > datetime.now(timezone.utc),
+            UserSession.expires_at > datetime.now(UTC),
         )
     )
     session = result.scalar_one_or_none()
@@ -218,7 +215,7 @@ async def refresh_access_token(db: AsyncSession, *, refresh_token: str) -> Token
 
     # Rotate refresh token in session
     session.refresh_token_hash = generate_token_hash(new_refresh)
-    session.expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    session.expires_at = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     await db.flush()
 
     return TokenResponse(
@@ -266,7 +263,7 @@ async def reset_password(db: AsyncSession, *, token: str, new_password: str) -> 
     result = await db.execute(
         select(User).where(
             User.password_reset_token == token_hash,
-            User.password_reset_expires > datetime.now(timezone.utc),
+            User.password_reset_expires > datetime.now(UTC),
         )
     )
     user = result.scalar_one_or_none()
@@ -289,7 +286,7 @@ async def verify_email(db: AsyncSession, *, token: str) -> None:
     result = await db.execute(
         select(User).where(
             User.email_verify_token == token_hash,
-            User.email_verify_expires > datetime.now(timezone.utc),
+            User.email_verify_expires > datetime.now(UTC),
         )
     )
     user = result.scalar_one_or_none()
@@ -376,7 +373,7 @@ def _store_oauth_state(state: str, provider: str) -> None:
     """
     _oauth_states[state] = {
         "provider": provider,
-        "created_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
     }
 
 
@@ -409,7 +406,7 @@ def _validate_oauth_state(state: str | None, provider: str) -> None:
         )
 
     # Check if state is expired (10 minutes)
-    age = (datetime.now(timezone.utc) - stored["created_at"]).total_seconds()
+    age = (datetime.now(UTC) - stored["created_at"]).total_seconds()
     if age > 600:  # 10 minutes
         _oauth_states.pop(state, None)
         raise AppException(
@@ -588,7 +585,7 @@ async def _create_session(
         refresh_token_hash=generate_token_hash(refresh_token),
         user_agent=user_agent,
         ip_address=ip_address,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
     db.add(session)
     await db.flush()

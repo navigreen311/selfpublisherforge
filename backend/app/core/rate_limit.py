@@ -11,12 +11,15 @@ import logging
 from typing import Any
 
 from fastapi import Request, Response
-from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import RedisError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse
 
 from app.core.rate_limiter import (
     SlidingWindowRateLimiter as _NewSlidingWindowRateLimiter,
+)
+from app.core.rate_limiter import (
     get_rate_limiter as _get_new_limiter,
 )
 from app.schemas.common import PlanTier
@@ -218,7 +221,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     tier=tier,
                     path=path,
                 )
-        except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError) as exc:
+        except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError):
             # If Redis is unavailable, allow the request through
             logger.warning("Rate limiter unavailable, allowing request through", exc_info=True)
             return await call_next(request)

@@ -236,7 +236,7 @@ async def delete_profile(
     success = await service.delete_profile(db, profile_id, org_id)
     if not success:
         raise HTTPException(status_code=404, detail="Profile not found")
-    return None
+    return
 
 
 @router.post(

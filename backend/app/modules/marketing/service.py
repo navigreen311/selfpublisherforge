@@ -6,10 +6,10 @@ Handles CRUD for launch plans, email sequences, social posts, and ARC campaigns.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,19 +25,17 @@ from app.models.marketing import (
     LaunchPlan,
     LaunchPlanStatus,
     PhaseTask,
+    SocialPlatform,
     SocialPost,
     SocialPostStatus,
-    SocialPlatform,
 )
 from app.modules.marketing.schemas import (
     ARCCampaignCreate,
-    ARCCampaignUpdate,
     EmailSequenceCreate,
     EmailSequenceUpdate,
     LaunchPlanCreate,
     LaunchPlanUpdate,
     SocialPostCreate,
-    SocialPostUpdate,
 )
 
 
@@ -513,7 +511,7 @@ class MarketingService:
             return None
 
         campaign.status = ARCCampaignStatus.SENDING
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
 
         sent_count = 0
         for recipient in campaign.recipients:

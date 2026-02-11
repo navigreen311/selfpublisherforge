@@ -10,7 +10,7 @@ import logging
 import os
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 AGENT_QUALITY_WEIGHT = float(os.environ.get("AGENT_QUALITY_WEIGHT", "0.5"))
@@ -20,14 +20,7 @@ AGENT_COST_WEIGHT = float(os.environ.get("AGENT_COST_WEIGHT", "0.25"))
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.agent_system.models import (
-    Agent,
-    AgentTask,
-    AgentType,
-    AuditAction,
-    PermissionLevel,
-    TaskStatus,
-)
+from app.modules.agent_system.audit import record_audit
 from app.modules.agent_system.governance import (
     BudgetExceeded,
     PermissionDenied,
@@ -38,22 +31,28 @@ from app.modules.agent_system.governance import (
     requires_approval,
     validate_quality,
 )
-from app.modules.agent_system.audit import record_audit
+from app.modules.agent_system.models import (
+    Agent,
+    AgentTask,
+    AgentType,
+    AuditAction,
+    TaskStatus,
+)
+from app.modules.llm_orchestration.cache import SemanticCache
+from app.modules.llm_orchestration.cost_tracker import CostTracker
 from app.modules.llm_orchestration.orchestrator import (
     GenerationOptions,
     GenerationResult,
     LLMOrchestrator,
 )
+from app.modules.llm_orchestration.providers.anthropic import AnthropicProvider
+from app.modules.llm_orchestration.providers.base import LLMRequest, LLMResponse
+from app.modules.llm_orchestration.quality import QualityAssurance
 from app.modules.llm_orchestration.router_config import (
     ModelRouter,
     ProviderName,
     TaskType,
 )
-from app.modules.llm_orchestration.cost_tracker import CostTracker
-from app.modules.llm_orchestration.cache import SemanticCache
-from app.modules.llm_orchestration.quality import QualityAssurance
-from app.modules.llm_orchestration.providers.anthropic import AnthropicProvider
-from app.modules.llm_orchestration.providers.base import LLMRequest, LLMResponse
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +140,7 @@ async def _call_llm(
                 "Orchestrated generation failed (error=%s), falling back to direct provider call",
                 result.metadata.get("error", "unknown"),
             )
-        except (RuntimeError, ConnectionError, TimeoutError) as e:
+        except (RuntimeError, ConnectionError, TimeoutError):
             logger.exception("Orchestrator raised an unexpected error; falling back to direct provider call")
 
     # Direct provider call as fallback (or when no TaskType mapping exists)
@@ -308,7 +307,7 @@ class TaskExecutor:
 
         # Mark as running
         task.status = TaskStatus.RUNNING
-        task.started_at = datetime.now(timezone.utc)
+        task.started_at = datetime.now(UTC)
         await self.db.flush()
 
         await record_audit(
@@ -401,7 +400,7 @@ class TaskExecutor:
                     task.status = TaskStatus.AWAITING_APPROVAL
                 else:
                     task.status = TaskStatus.COMPLETED
-                    task.completed_at = datetime.now(timezone.utc)
+                    task.completed_at = datetime.now(UTC)
 
             # 8. Record budget usage
             await record_usage(
@@ -438,21 +437,21 @@ class TaskExecutor:
             logger.warning("Task %s failed: permission denied — %s", task.id, exc.message)
             task.status = TaskStatus.FAILED
             task.error_message = f"Permission denied: {exc.message}"
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
             await self._audit_failure(task, exc.message, ip_address)
 
         except BudgetExceeded as exc:
             logger.warning("Task %s failed: budget exceeded — %s", task.id, exc.message)
             task.status = TaskStatus.FAILED
             task.error_message = f"Budget exceeded: {exc.message}"
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
             await self._audit_failure(task, exc.message, ip_address)
 
         except (RuntimeError, ValueError, OSError) as exc:
             logger.error("Task %s failed with unexpected error: %s", task.id, exc, exc_info=True)
             task.status = TaskStatus.FAILED
-            task.error_message = f"Execution error: {str(exc)}"
-            task.completed_at = datetime.now(timezone.utc)
+            task.error_message = f"Execution error: {exc!s}"
+            task.completed_at = datetime.now(UTC)
             await self._audit_failure(task, str(exc), ip_address)
 
         await self.db.flush()

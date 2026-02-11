@@ -9,7 +9,6 @@ from __future__ import annotations
 from app.modules.kdp_validation.rules import (
     ALLOWED_EBOOK_COVER_FORMATS,
     ALLOWED_PRINT_COVER_FORMATS,
-    BLEED_SIZE,
     COVER_COLOR_SPACE,
     COVER_DIMENSION_TOLERANCE,
     MIN_EBOOK_DPI,

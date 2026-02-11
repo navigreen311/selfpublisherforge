@@ -7,7 +7,7 @@ suitable for the target genre when generating EPUB or print-ready PDF.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.modules.publishing_ops.schemas import (
     FormattingTemplate,
@@ -16,7 +16,7 @@ from app.modules.publishing_ops.schemas import (
     TrimSize,
 )
 
-_NOW = datetime(2025, 1, 1, tzinfo=timezone.utc)
+_NOW = datetime(2025, 1, 1, tzinfo=UTC)
 
 
 def _builtin(

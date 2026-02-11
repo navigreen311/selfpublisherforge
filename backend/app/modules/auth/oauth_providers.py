@@ -138,13 +138,13 @@ class GoogleOAuth(OAuthProvider):
                     status_code=401,
                     code="OAUTH_TOKEN_ERROR",
                     message=f"Failed to exchange Google authorization code: {e.response.status_code}",
-                )
+                ) from e
             except httpx.RequestError as e:
                 raise AppException(
                     status_code=502,
                     code="OAUTH_NETWORK_ERROR",
-                    message=f"Network error during Google token exchange: {str(e)}",
-                )
+                    message=f"Network error during Google token exchange: {e!s}",
+                ) from e
 
             token_data = response.json()
             access_token = token_data.get("access_token")
@@ -176,13 +176,13 @@ class GoogleOAuth(OAuthProvider):
                     status_code=401,
                     code="OAUTH_PROFILE_ERROR",
                     message=f"Failed to fetch Google user profile: {e.response.status_code}",
-                )
+                ) from e
             except httpx.RequestError as e:
                 raise AppException(
                     status_code=502,
                     code="OAUTH_NETWORK_ERROR",
-                    message=f"Network error fetching Google profile: {str(e)}",
-                )
+                    message=f"Network error fetching Google profile: {e!s}",
+                ) from e
 
             profile = response.json()
 
@@ -280,13 +280,13 @@ class GitHubOAuth(OAuthProvider):
                     status_code=401,
                     code="OAUTH_TOKEN_ERROR",
                     message=f"Failed to exchange GitHub authorization code: {e.response.status_code}",
-                )
+                ) from e
             except httpx.RequestError as e:
                 raise AppException(
                     status_code=502,
                     code="OAUTH_NETWORK_ERROR",
-                    message=f"Network error during GitHub token exchange: {str(e)}",
-                )
+                    message=f"Network error during GitHub token exchange: {e!s}",
+                ) from e
 
             token_data = response.json()
             access_token = token_data.get("access_token")
@@ -324,13 +324,13 @@ class GitHubOAuth(OAuthProvider):
                     status_code=401,
                     code="OAUTH_PROFILE_ERROR",
                     message=f"Failed to fetch GitHub user profile: {e.response.status_code}",
-                )
+                ) from e
             except httpx.RequestError as e:
                 raise AppException(
                     status_code=502,
                     code="OAUTH_NETWORK_ERROR",
-                    message=f"Network error fetching GitHub profile: {str(e)}",
-                )
+                    message=f"Network error fetching GitHub profile: {e!s}",
+                ) from e
 
             profile = profile_resp.json()
 

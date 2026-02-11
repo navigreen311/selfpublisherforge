@@ -5,13 +5,11 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import re
 import statistics
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 from app.modules.style_cloning.ingestion import SegmentedText
 from app.modules.style_cloning.schemas import (

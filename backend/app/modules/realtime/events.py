@@ -17,8 +17,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
 
 from app.config import get_settings
 from app.modules.realtime.schemas import WSChannel
@@ -63,7 +64,7 @@ async def publish_to_channel(
             "channel": channel.value,
             "room_id": room_id,
             "data": event.get("data", event),
-            "timestamp": event.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            "timestamp": event.get("timestamp", datetime.now(UTC).isoformat()),
         }
         await redis.publish(_channel_key(channel, room_id), json.dumps(payload, default=str))
     finally:

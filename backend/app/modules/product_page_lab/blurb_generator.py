@@ -7,14 +7,13 @@ blurb variations for Amazon book listings.
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
+from app.modules.product_page_lab.analyzer import analyze_blurb
 from app.modules.product_page_lab.schemas import (
     BlurbGenerateResponse,
     BlurbVariant,
     Genre,
 )
-from app.modules.product_page_lab.analyzer import analyze_blurb
 
 # ---------------------------------------------------------------------------
 # Genre-specific templates
@@ -147,9 +146,9 @@ BLURB_STYLES = [
 def build_blurb_generation_prompt(
     current_blurb: str,
     genre: Genre,
-    target_audience: Optional[str] = None,
-    keywords: Optional[list[str]] = None,
-    tone: Optional[str] = None,
+    target_audience: str | None = None,
+    keywords: list[str] | None = None,
+    tone: str | None = None,
     variant_index: int = 0,
 ) -> str:
     """Build an AI prompt for generating an optimized blurb variant."""
@@ -202,9 +201,9 @@ Return ONLY the optimized blurb text with HTML formatting. No explanations or co
 def generate_blurb_variants_local(
     current_blurb: str,
     genre: Genre,
-    target_audience: Optional[str] = None,
-    keywords: Optional[list[str]] = None,
-    tone: Optional[str] = None,
+    target_audience: str | None = None,
+    keywords: list[str] | None = None,
+    tone: str | None = None,
     num_variants: int = 3,
 ) -> BlurbGenerateResponse:
     """Generate blurb variants using local template-based approach.
@@ -317,11 +316,11 @@ def _create_template_variant(
 async def generate_blurb_variants_ai(
     current_blurb: str,
     genre: Genre,
-    target_audience: Optional[str] = None,
-    keywords: Optional[list[str]] = None,
-    tone: Optional[str] = None,
+    target_audience: str | None = None,
+    keywords: list[str] | None = None,
+    tone: str | None = None,
     num_variants: int = 3,
-    llm_client: Optional[object] = None,
+    llm_client: object | None = None,
 ) -> BlurbGenerateResponse:
     """Generate blurb variants using AI.
 

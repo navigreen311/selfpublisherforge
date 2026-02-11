@@ -13,22 +13,26 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import Book
 from app.models.publishing import (
     Listing as ListingModel,
-    PublishingAccount as PublishingAccountModel,
+)
+from app.models.publishing import (
     ListingStatus as ListingStatusEnum,
 )
+from app.models.publishing import (
+    PublishingAccount as PublishingAccountModel,
+)
+from app.modules.publishing_ops.epub_generator import generate_epub
 from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
+from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
-    BookMetadataBase,
     BookMetadataUpdate,
     ExportFormat,
     ExportRequest,
@@ -36,7 +40,6 @@ from app.modules.publishing_ops.schemas import (
     FormattingTemplate,
     FormattingTemplateCreate,
     ListingDetail,
-    ListingStatus,
     ListingSyncResponse,
     PlatformType,
     PricingInfo,
@@ -46,12 +49,12 @@ from app.modules.publishing_ops.schemas import (
     TemplateStyleSettings,
     TrimSize,
 )
-from app.modules.publishing_ops.epub_generator import generate_epub
-from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.templates import get_all_templates
 from app.tasks.publishing_ops import (
     task_generate_epub,
     task_generate_pdf,
+)
+from app.tasks.publishing_ops import (
     task_sync_listing as celery_sync_listing,
 )
 
@@ -63,7 +66,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +106,7 @@ async def create_account(
     data: PublishingAccountCreate,
 ) -> PublishingAccount:
     """Connect a new publishing platform account."""
-    from app.models.publishing import PublishingPlatform, PublishingAccountStatus
+    from app.models.publishing import PublishingAccountStatus, PublishingPlatform
 
     # Map schema PlatformType to DB PublishingPlatform where values align
     platform_value = data.platform.value if hasattr(data.platform, "value") else str(data.platform)

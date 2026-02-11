@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 
 from app.modules.style_cloning.features import AllFeatures
-from app.modules.style_cloning.ingestion import SegmentedText, HIGH_CONFIDENCE_WORDS
+from app.modules.style_cloning.ingestion import HIGH_CONFIDENCE_WORDS, SegmentedText
 from app.modules.style_cloning.schemas import (
     StyleCard,
     VoiceFingerprint,
@@ -132,9 +132,9 @@ def _build_voice_vector(features: AllFeatures) -> tuple[list[float], list[str]]:
 def _describe_vocabulary_level(v) -> str:
     if v.reading_level < 6:
         return "accessible / elementary"
-    elif v.reading_level < 10:
+    if v.reading_level < 10:
         return "moderate / general audience"
-    elif v.reading_level < 14:
+    if v.reading_level < 14:
         return "advanced / literary"
     return "highly complex / academic"
 
@@ -191,7 +191,7 @@ def _describe_paragraph_style(features: AllFeatures) -> str:
     p = features.paragraph
     if p.short_paragraph_ratio > 0.6:
         return f"Short paragraphs averaging {p.avg_length:.1f} sentences; many brief passages"
-    elif p.long_paragraph_ratio > 0.3:
+    if p.long_paragraph_ratio > 0.3:
         return f"Dense paragraphs averaging {p.avg_length:.1f} sentences; extended blocks"
     return f"Mixed paragraph lengths averaging {p.avg_length:.1f} sentences"
 

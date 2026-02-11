@@ -3,12 +3,12 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.config import get_settings
 from app.core.dependencies import get_current_user
-from app.schemas.common import MessageResponse
+from app.database import get_db
 from app.modules.auth import schemas, service
 from app.modules.notifications.email import send_transactional_email
+from app.schemas.common import MessageResponse
 
 router = APIRouter()
 

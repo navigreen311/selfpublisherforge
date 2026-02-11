@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, From, To, Subject, Content, MimeType
 from python_http_client.exceptions import (
     BadRequestsError,
     ForbiddenError,
     UnauthorizedError,
 )
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Content, From, Mail, MimeType, Subject, To
 
 from app.config import get_settings
 

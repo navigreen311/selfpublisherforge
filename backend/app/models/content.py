@@ -1,17 +1,17 @@
 """Manuscript, Chapter, StyleProfile, WritingSession, and ContentAsset models."""
 import enum
 import uuid
-from datetime import datetime
 
 from sqlalchemy import (
-    DateTime,
+    Enum as SAEnum,
+)
+from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
     Integer,
     String,
     Text,
-    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship

@@ -15,7 +15,8 @@ Usage from ``main.py``::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from fastapi.openapi.utils import get_openapi
 
@@ -37,12 +38,18 @@ production, launch, advertising, and long-term growth analytics.
 
 | Tier | Modules | Purpose |
 |------|---------|---------|
-| **0 -- Foundation** | auth, users, billing, storage, notifications, realtime | Identity, payments, file storage, real-time events |
-| **1-2 -- Data & Creation** | llm, market, knowledge, writing, style | LLM orchestration, market intelligence, knowledge vault, AI writing studio, style cloning |
-| **3 -- Production** | pipelines, publishing, kdp-validation | Manuscript production pipeline, multi-platform publishing, KDP validation |
-| **4 -- Optimization** | product-page, pricing, competitors | A/B product-page testing, dynamic pricing, competitor tracking |
-| **5 -- Growth** | marketing, advertising, reviews, analytics | Launch campaigns, ad management, review monitoring, revenue analytics |
-| **6-8 -- Intelligence & Scale** | agents, portfolio, audience, seasonal, covers, chrome-extension | Autonomous agents, portfolio economics, audience building, seasonal planning, cover design, browser extension |
+| **0 -- Foundation** | auth, users, billing, storage, notifications, realtime | Identity, \
+payments, file storage, real-time events |
+| **1-2 -- Data & Creation** | llm, market, knowledge, writing, style | LLM orchestration, \
+market intelligence, knowledge vault, AI writing studio, style cloning |
+| **3 -- Production** | pipelines, publishing, kdp-validation | Manuscript production \
+pipeline, multi-platform publishing, KDP validation |
+| **4 -- Optimization** | product-page, pricing, competitors | A/B product-page \
+testing, dynamic pricing, competitor tracking |
+| **5 -- Growth** | marketing, advertising, reviews, analytics | Launch campaigns, \
+ad management, review monitoring, revenue analytics |
+| **6-8 -- Intelligence & Scale** | agents, portfolio, audience, seasonal, covers, chrome-extension | \
+Autonomous agents, portfolio economics, audience building, seasonal planning, cover design, browser extension |
 
 ## Authentication
 
@@ -205,7 +212,7 @@ _SECURITY_SCHEMES: dict[str, Any] = {
 # Factory
 # ---------------------------------------------------------------------------
 
-def custom_openapi_schema(app: "FastAPI") -> Callable[[], dict[str, Any]]:
+def custom_openapi_schema(app: FastAPI) -> Callable[[], dict[str, Any]]:
     """Return a zero-arg callable that lazily builds and caches the OpenAPI schema.
 
     Assign the return value directly to ``app.openapi``::

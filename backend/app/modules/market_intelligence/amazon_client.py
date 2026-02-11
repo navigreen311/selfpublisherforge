@@ -19,8 +19,8 @@ import logging
 import random
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import httpx
 
@@ -33,7 +33,6 @@ from app.modules.market_intelligence.schemas import (
     TrendDirection,
 )
 
-
 # ---------------------------------------------------------------------------
 # Abstract base
 # ---------------------------------------------------------------------------
@@ -45,7 +44,7 @@ class AmazonClientBase(ABC):
     async def search_products(
         self,
         keywords: str,
-        category_id: Optional[str] = None,
+        category_id: str | None = None,
         marketplace: str = "US",
         max_results: int = 20,
     ) -> list[CompetitorSummary]:
@@ -54,7 +53,7 @@ class AmazonClientBase(ABC):
     @abstractmethod
     async def get_product_detail(
         self, asin: str, marketplace: str = "US"
-    ) -> Optional[CompetitorSummary]:
+    ) -> CompetitorSummary | None:
         ...
 
     @abstractmethod
@@ -71,7 +70,7 @@ class AmazonClientBase(ABC):
 
     @abstractmethod
     async def get_category_tree(
-        self, root_id: Optional[str] = None, marketplace: str = "US"
+        self, root_id: str | None = None, marketplace: str = "US"
     ) -> list[dict]:
         ...
 
@@ -119,7 +118,7 @@ class MockAmazonClient(AmazonClientBase):
     async def search_products(
         self,
         keywords: str,
-        category_id: Optional[str] = None,
+        category_id: str | None = None,
         marketplace: str = "US",
         max_results: int = 20,
     ) -> list[CompetitorSummary]:
@@ -143,7 +142,7 @@ class MockAmazonClient(AmazonClientBase):
 
     async def get_product_detail(
         self, asin: str, marketplace: str = "US"
-    ) -> Optional[CompetitorSummary]:
+    ) -> CompetitorSummary | None:
         rng = random.Random(_seed_from(asin))
         return CompetitorSummary(
             asin=asin,
@@ -189,7 +188,7 @@ class MockAmazonClient(AmazonClientBase):
     ) -> list[BSRHistoryPoint]:
         rng = random.Random(_seed_from(asin))
         base_bsr = rng.randint(1000, 100000)
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         points: list[BSRHistoryPoint] = []
         for d in range(days):
             date = now - timedelta(days=days - d)
@@ -199,15 +198,17 @@ class MockAmazonClient(AmazonClientBase):
         return points
 
     async def get_category_tree(
-        self, root_id: Optional[str] = None, marketplace: str = "US"
+        self, root_id: str | None = None, marketplace: str = "US"
     ) -> list[dict]:
         if root_id:
             for cat in _SAMPLE_CATEGORIES:
                 if cat["id"] == root_id:
                     return [cat]
-                for child in cat.get("children", []):
-                    if child["id"] == root_id:
-                        return [child]
+                children = cat.get("children", [])
+                if isinstance(children, list):
+                    for child in children:
+                        if isinstance(child, dict) and child.get("id") == root_id:
+                            return [child]
             return []
         return _SAMPLE_CATEGORIES
 
@@ -296,7 +297,7 @@ class LiveAmazonClient(AmazonClientBase):
     def _get_signing_key(self, date_stamp: str, region: str) -> bytes:
         """Derive the AWS V4 signing key for the given date/region."""
         k_date = self._hmac_sha256(
-            f"AWS4{self._secret_key}".encode("utf-8"), date_stamp
+            f"AWS4{self._secret_key}".encode(), date_stamp
         )
         k_region = self._hmac_sha256(k_date, region)
         k_service = self._hmac_sha256(k_region, self._SERVICE)
@@ -316,7 +317,7 @@ class LiveAmazonClient(AmazonClientBase):
 
         Returns a dict of HTTP headers to include in the request.
         """
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         date_stamp = now.strftime("%Y%m%d")
         amz_date = now.strftime("%Y%m%dT%H%M%SZ")
 
@@ -460,14 +461,14 @@ class LiveAmazonClient(AmazonClientBase):
 
         offers = item.get("Offers", {})
         listings = offers.get("Listings", [])
-        price: Optional[float] = None
+        price: float | None = None
         if listings:
             price_info = listings[0].get("Price", {})
             price = price_info.get("Amount")
 
         browse_info = item.get("BrowseNodeInfo", {})
         sales_rank = browse_info.get("WebsiteSalesRank", {})
-        bsr: Optional[int] = None
+        bsr: int | None = None
         if sales_rank:
             bsr = sales_rank.get("SalesRank")
 
@@ -477,7 +478,7 @@ class LiveAmazonClient(AmazonClientBase):
         image_url = medium_img.get("URL")
 
         reviews_count = 0
-        rating: Optional[float] = None
+        rating: float | None = None
 
         return CompetitorSummary(
             asin=item.get("ASIN", ""),
@@ -509,7 +510,7 @@ class LiveAmazonClient(AmazonClientBase):
     async def search_products(
         self,
         keywords: str,
-        category_id: Optional[str] = None,
+        category_id: str | None = None,
         marketplace: str = "US",
         max_results: int = 20,
     ) -> list[CompetitorSummary]:
@@ -562,7 +563,7 @@ class LiveAmazonClient(AmazonClientBase):
 
     async def get_product_detail(
         self, asin: str, marketplace: str = "US"
-    ) -> Optional[CompetitorSummary]:
+    ) -> CompetitorSummary | None:
         """Retrieve details for a single ASIN via PA-API GetItems.
 
         Args:
@@ -690,14 +691,14 @@ class LiveAmazonClient(AmazonClientBase):
             return []
         return [
             BSRHistoryPoint(
-                date=datetime.now(tz=timezone.utc),
+                date=datetime.now(tz=UTC),
                 bsr=detail.bsr,
                 price=detail.price,
             )
         ]
 
     async def get_category_tree(
-        self, root_id: Optional[str] = None, marketplace: str = "US"
+        self, root_id: str | None = None, marketplace: str = "US"
     ) -> list[dict]:
         """Retrieve the browse-node tree via PA-API GetBrowseNodes.
 

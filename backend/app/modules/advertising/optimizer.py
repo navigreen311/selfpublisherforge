@@ -5,7 +5,6 @@ Uses statistical analysis and optional LLM-assisted strategy recommendations.
 """
 
 import logging
-import math
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -97,9 +96,9 @@ class AdOptimizer:
             )
 
             if adjustment is not None:
-                if adjustment == "negate":
+                if isinstance(adjustment, str) and adjustment == "negate":
                     keywords_to_negate.append(kw_data.keyword)
-                else:
+                elif isinstance(adjustment, BidAdjustment):
                     bid_adjustments.append(adjustment)
 
         # Calculate budget recommendation

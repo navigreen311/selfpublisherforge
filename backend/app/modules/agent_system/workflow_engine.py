@@ -7,14 +7,14 @@ retry), and resume from paused state.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.agent_system.audit import record_audit
+from app.modules.agent_system.executor import TaskExecutor
 from app.modules.agent_system.models import (
-    Agent,
     AgentTask,
     AgentWorkflow,
     AuditAction,
@@ -23,8 +23,6 @@ from app.modules.agent_system.models import (
     WorkflowStatus,
     WorkflowStepStatus,
 )
-from app.modules.agent_system.executor import TaskExecutor
-from app.modules.agent_system.audit import record_audit
 
 
 class WorkflowEngine:
@@ -47,7 +45,7 @@ class WorkflowEngine:
     ) -> AgentWorkflow:
         """Start a workflow from the beginning."""
         workflow.status = WorkflowStatus.RUNNING
-        workflow.started_at = datetime.now(timezone.utc)
+        workflow.started_at = datetime.now(UTC)
         workflow.current_step_index = 0
         await self.db.flush()
 
@@ -150,7 +148,7 @@ class WorkflowEngine:
                         context[f"step_{idx}_output"] = task.output_data
                     break
 
-                elif task.status == TaskStatus.AWAITING_APPROVAL:
+                if task.status == TaskStatus.AWAITING_APPROVAL:
                     # Pause workflow until approval
                     step_def["status"] = WorkflowStepStatus.PENDING.value
                     steps[idx] = step_def
@@ -160,7 +158,7 @@ class WorkflowEngine:
                     await self.db.flush()
                     return workflow
 
-                elif task.status == TaskStatus.FAILED:
+                if task.status == TaskStatus.FAILED:
                     if retries < max_retries:
                         retries += 1
                         # Reset task for retry
@@ -175,36 +173,34 @@ class WorkflowEngine:
                         step_def["status"] = WorkflowStepStatus.SKIPPED.value
                         step_def["error"] = task.error_message
                         break
-                    else:
-                        # "stop" – fail the workflow
-                        step_def["status"] = WorkflowStepStatus.FAILED.value
-                        step_def["error"] = task.error_message
-                        steps[idx] = step_def
-                        workflow.steps = steps
-                        workflow.context = context
-                        workflow.status = WorkflowStatus.FAILED
-                        workflow.error_message = (
-                            f"Step {idx + 1} failed: {task.error_message}"
-                        )
-                        workflow.completed_at = datetime.now(timezone.utc)
-                        await self.db.flush()
-
-                        await record_audit(
-                            self.db,
-                            org_id=workflow.org_id,
-                            action=AuditAction.WORKFLOW_FAILED,
-                            actor_id=workflow.created_by,
-                            actor_type="system",
-                            resource_type="agent_workflow",
-                            resource_id=workflow.id,
-                            details={"failed_step": idx, "error": task.error_message},
-                            ip_address=ip_address,
-                        )
-                        return workflow
-                else:
-                    # Unexpected status – treat as failure
+                    # "stop" – fail the workflow
                     step_def["status"] = WorkflowStepStatus.FAILED.value
-                    break
+                    step_def["error"] = task.error_message
+                    steps[idx] = step_def
+                    workflow.steps = steps
+                    workflow.context = context
+                    workflow.status = WorkflowStatus.FAILED
+                    workflow.error_message = (
+                        f"Step {idx + 1} failed: {task.error_message}"
+                    )
+                    workflow.completed_at = datetime.now(UTC)
+                    await self.db.flush()
+
+                    await record_audit(
+                        self.db,
+                        org_id=workflow.org_id,
+                        action=AuditAction.WORKFLOW_FAILED,
+                        actor_id=workflow.created_by,
+                        actor_type="system",
+                        resource_type="agent_workflow",
+                        resource_id=workflow.id,
+                        details={"failed_step": idx, "error": task.error_message},
+                        ip_address=ip_address,
+                    )
+                    return workflow
+                # Unexpected status – treat as failure
+                step_def["status"] = WorkflowStepStatus.FAILED.value
+                break
 
             steps[idx] = step_def
             workflow.steps = steps
@@ -214,7 +210,7 @@ class WorkflowEngine:
 
         # All steps completed
         workflow.status = WorkflowStatus.COMPLETED
-        workflow.completed_at = datetime.now(timezone.utc)
+        workflow.completed_at = datetime.now(UTC)
         await self.db.flush()
 
         await record_audit(

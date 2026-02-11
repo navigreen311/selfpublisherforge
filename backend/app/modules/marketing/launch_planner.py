@@ -12,7 +12,6 @@ import json
 import logging
 from datetime import datetime, timedelta
 from typing import Any
-from uuid import UUID
 
 from app.config import get_settings
 from app.models.marketing import LaunchPhaseType, PhaseTaskStatus

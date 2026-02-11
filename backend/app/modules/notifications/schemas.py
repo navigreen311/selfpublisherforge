@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.notifications.models import NotificationChannel, NotificationType
 
-
 # ---------------------------------------------------------------------------
 # Notification schemas
 # ---------------------------------------------------------------------------

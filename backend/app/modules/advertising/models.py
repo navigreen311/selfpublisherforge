@@ -1,15 +1,13 @@
 """SQLAlchemy models for Advertising Intelligence module."""
 
-from sqlalchemy import (
-    Column, String, Float, Integer, Boolean, DateTime, Text,
-    ForeignKey, Index, Enum as SAEnum, JSON, func
-)
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from datetime import datetime
 import uuid
+from datetime import datetime
 
-from app.database import TenantModel, BaseModel
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.database import BaseModel, TenantModel
 
 
 class Campaign(TenantModel):

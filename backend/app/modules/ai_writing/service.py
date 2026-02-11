@@ -14,9 +14,9 @@ import json
 import logging
 import os
 import uuid as _uuid
-from datetime import datetime, timezone
-from sqlalchemy import select, update, func
-from sqlalchemy.exc import SQLAlchemyError
+from datetime import UTC, datetime
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
@@ -25,37 +25,35 @@ logger = logging.getLogger(__name__)
 
 WORD_COUNT_MULTIPLIER = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
 
-from app.modules.ai_writing.readability import analyze_readability
-from app.modules.ai_writing.schemas import (
-    ChapterContent,
-    ChapterCreate,
-    ChapterReorderRequest,
-    ChapterUpdate,
-    ManuscriptAnalysis,
-    ManuscriptResponse,
-    OutlineRequest,
-    OutlineResponse,
-    OutlineChapter,
-    OutlineGenerateRequest,
-    OutlineGenerateResponse,
-    ChapterOutline,
-    ReadabilityScore,
-    WritingSessionCreate,
-    WritingSessionRecord,
-)
-
 # ---------------------------------------------------------------------------
 # Canonical ORM models -- imported from the shared models registry so that
 # SQLAlchemy sees a single table definition for each table name.
 # ---------------------------------------------------------------------------
 from app.models.content import (
-    Manuscript,
     Chapter,
-    WritingSession,
     ContentType,
+    Manuscript,
     ManuscriptStatus,
+    WritingSession,
 )
-
+from app.modules.ai_writing.readability import analyze_readability
+from app.modules.ai_writing.schemas import (
+    ChapterContent,
+    ChapterCreate,
+    ChapterOutline,
+    ChapterReorderRequest,
+    ChapterUpdate,
+    ManuscriptAnalysis,
+    ManuscriptResponse,
+    OutlineChapter,
+    OutlineGenerateRequest,
+    OutlineGenerateResponse,
+    OutlineRequest,
+    OutlineResponse,
+    ReadabilityScore,
+    WritingSessionCreate,
+    WritingSessionRecord,
+)
 
 # ---------------------------------------------------------------------------
 # Manuscript helpers
@@ -316,8 +314,8 @@ async def generate_outline(
     request: OutlineRequest,
 ) -> OutlineResponse:
     """Generate a book outline using AI and optionally save chapters."""
-    from app.modules.ai_writing.prompts import outline_prompt
     from app.modules.ai_writing.generator import _call_llm, resolve_model
+    from app.modules.ai_writing.prompts import outline_prompt
 
     context = {
         "genre": request.genre,
@@ -360,7 +358,7 @@ async def generate_outline(
         book_id=book_id,
         chapters=chapters,
         summary=data.get("summary", ""),
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
     )
 
 

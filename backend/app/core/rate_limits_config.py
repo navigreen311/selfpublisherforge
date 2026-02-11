@@ -8,7 +8,6 @@ Supports pattern matching with wildcards (*) for flexible endpoint grouping.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 from app.schemas.common import PlanTier
 
@@ -22,7 +21,7 @@ class RateLimitRule:
 
 
 # Tier-based multipliers for scaling limits
-TIER_MULTIPLIERS: Dict[PlanTier, float] = {
+TIER_MULTIPLIERS: dict[PlanTier, float] = {
     PlanTier.FREE: 1.0,
     PlanTier.STARTER: 2.0,
     PlanTier.PRO: 5.0,
@@ -34,7 +33,7 @@ TIER_MULTIPLIERS: Dict[PlanTier, float] = {
 # Per-endpoint rate limits (base limits for FREE tier)
 # Format: "{METHOD} {path_pattern}": RateLimitRule(limit, window_seconds)
 # Patterns support wildcards (*) for flexible matching
-RATE_LIMITS: Dict[str, RateLimitRule] = {
+RATE_LIMITS: dict[str, RateLimitRule] = {
     # Auth endpoints (strict - security critical)
     "POST /api/v1/auth/login": RateLimitRule(limit=5, window=300),  # 5 per 5 min
     "POST /api/v1/auth/register": RateLimitRule(limit=3, window=3600),  # 3 per hour
@@ -109,7 +108,7 @@ def match_pattern(pattern: str, path: str) -> bool:
 
 def find_rate_limit(
     method: str, path: str, tier: PlanTier = PlanTier.FREE
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     """
     Find the applicable rate limit for a given method, path, and tier.
 
@@ -132,8 +131,7 @@ def find_rate_limit(
         >>> find_rate_limit("GET", "/api/v1/books/list", PlanTier.STARTER)
         (200, 60)  # 100 * 2x multiplier
     """
-    key = f"{method} {path}"
-    matches: list[Tuple[str, RateLimitRule, int]] = []
+    matches: list[tuple[str, RateLimitRule, int]] = []
 
     # Find all matching patterns with their specificity scores
     for pattern, rule in RATE_LIMITS.items():

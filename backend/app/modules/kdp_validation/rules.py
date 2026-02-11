@@ -6,9 +6,8 @@ file format rules, and all KDP-specific constraints.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -141,12 +140,11 @@ def get_inside_margin(base_margin: float, page_count: int) -> float:
     """
     if page_count <= 150:
         return base_margin
-    elif page_count <= 300:
+    if page_count <= 300:
         return base_margin + 0.125
-    elif page_count <= 500:
+    if page_count <= 500:
         return base_margin + 0.25
-    else:
-        return base_margin + 0.375
+    return base_margin + 0.375
 
 
 # ---------------------------------------------------------------------------

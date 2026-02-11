@@ -16,8 +16,7 @@ Endpoints:
 from __future__ import annotations
 
 import os
-from datetime import date, datetime, timezone
-from typing import Any
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -68,11 +67,11 @@ async def get_dashboard(
 ) -> DashboardData:
     """Main analytics dashboard with KPIs, charts, and trends."""
     period_start = (
-        datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        datetime.combine(start_date, datetime.min.time()).replace(tzinfo=UTC)
         if start_date else None
     )
     period_end = (
-        datetime.combine(end_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+        datetime.combine(end_date, datetime.max.time()).replace(tzinfo=UTC)
         if end_date else None
     )
     return await service.get_dashboard(
@@ -280,11 +279,11 @@ async def get_trends(
 ) -> TrendData:
     """Trend data for key metrics."""
     period_start = (
-        datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        datetime.combine(start_date, datetime.min.time()).replace(tzinfo=UTC)
         if start_date else None
     )
     period_end = (
-        datetime.combine(end_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+        datetime.combine(end_date, datetime.max.time()).replace(tzinfo=UTC)
         if end_date else None
     )
     return await service.get_trends(

@@ -17,19 +17,17 @@ Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 from __future__ import annotations
 
 import logging
-import uuid
-from typing import Optional
 
 from celery.exceptions import SoftTimeLimitExceeded
 
-from app.tasks import celery_app
-from app.modules.style_cloning.ingestion import ingest_text, merge_segmented, SegmentedText
 from app.modules.style_cloning.features import extract_all_features
+from app.modules.style_cloning.ingestion import SegmentedText, ingest_text, merge_segmented
 from app.modules.style_cloning.profile_generator import (
     compute_confidence,
     generate_style_card,
     generate_voice_fingerprint,
 )
+from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -143,8 +141,8 @@ def conformity_check_task(self, profile_id: str, fingerprint_data: dict, text: s
     dict
         Conformity check results.
     """
-    from app.modules.style_cloning.schemas import VoiceFingerprint
     from app.modules.style_cloning.conformity import check_conformity
+    from app.modules.style_cloning.schemas import VoiceFingerprint
 
     fingerprint = VoiceFingerprint(**fingerprint_data)
     result = check_conformity(fingerprint, text)

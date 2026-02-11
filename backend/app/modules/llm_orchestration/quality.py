@@ -16,7 +16,6 @@ import re
 import struct
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +121,8 @@ class QualityAssurance:
     def assess(
         self,
         content: str,
-        task_type: Optional[str] = None,
-        context: Optional[str] = None,
+        task_type: str | None = None,
+        context: str | None = None,
     ) -> QualityReport:
         """Run all quality checks and return a unified report.
 
@@ -238,7 +237,7 @@ class QualityAssurance:
         max_minhash_sim: float = 0.0
 
         for ref_sig, ref_ngrams in zip(
-            self._reference_signatures, self._reference_ngram_sets
+            self._reference_signatures, self._reference_ngram_sets, strict=False
         ):
             # Raw n-gram overlap (Jaccard on the actual sets)
             if ngrams and ref_ngrams:
@@ -304,7 +303,7 @@ class QualityAssurance:
         content: str,
         report: QualityReport,
         *,
-        context: Optional[str] = None,
+        context: str | None = None,
     ) -> None:
         """Detect potential hallucinations via claim extraction and scoring.
 
@@ -524,7 +523,7 @@ class QualityAssurance:
         """Estimate Jaccard similarity from two MinHash signatures."""
         if not sig_a or not sig_b or len(sig_a) != len(sig_b):
             return 0.0
-        matches = sum(1 for a, b in zip(sig_a, sig_b) if a == b)
+        matches = sum(1 for a, b in zip(sig_a, sig_b, strict=False) if a == b)
         return matches / len(sig_a)
 
     # ------------------------------------------------------------------

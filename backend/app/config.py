@@ -1,9 +1,10 @@
 import os
 import warnings
+from functools import lru_cache
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
-from functools import lru_cache
+
 
 class Settings(BaseSettings):
     # App
@@ -138,7 +139,7 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Production mode (ENVIRONMENT=production) requires real values for the "
                 "following environment variables that still contain placeholder "
-                f"defaults:\n  - " + "\n  - ".join(missing)
+                "defaults:\n  - " + "\n  - ".join(missing)
             )
         return self
 

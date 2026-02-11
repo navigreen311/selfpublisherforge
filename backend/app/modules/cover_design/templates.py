@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 
 from app.modules.cover_design.schemas import CoverDimensions, CoverGenre, CoverPlatform
 
-
 # ---------------------------------------------------------------------------
 # Platform dimension presets
 # ---------------------------------------------------------------------------

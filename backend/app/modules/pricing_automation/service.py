@@ -7,11 +7,10 @@ promotions, A/B tests, and price simulation.
 from __future__ import annotations
 
 import statistics
-from datetime import datetime, timezone
-from typing import Any, Sequence
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.pricing_automation.ku_calculator import calculate_ku_vs_wide
@@ -157,7 +156,7 @@ class PricingAutomationService:
         if rule is None:
             return False
 
-        rule.deleted_at = datetime.now(timezone.utc)
+        rule.deleted_at = datetime.now(UTC)
         rule.status = RuleStatus.ARCHIVED
         await self.db.flush()
         return True

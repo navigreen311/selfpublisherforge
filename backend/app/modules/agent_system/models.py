@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum as SAEnum,
     Float,
     ForeignKey,
     Integer,
@@ -18,13 +17,13 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy import (
+    Enum as SAEnum,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
-import enum
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -120,7 +119,7 @@ class Agent(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     permission_level: Mapped[PermissionLevel] = mapped_column(
         SAEnum(PermissionLevel, name="permission_level_enum", create_constraint=False),
@@ -128,10 +127,10 @@ class Agent(Base):
         nullable=False,
     )
     model_id: Mapped[str] = mapped_column(String(255), default="claude-sonnet-4-5-20250929", nullable=False)
-    system_prompt: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096, nullable=False)
     temperature: Mapped[float] = mapped_column(Float, default=0.7, nullable=False)
-    config: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
+    config: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -139,13 +138,13 @@ class Agent(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
 
     # Relationships
-    tasks: Mapped[list["AgentTask"]] = relationship(back_populates="agent", lazy="selectin")
-    budget: Mapped[Optional["AgentBudget"]] = relationship(back_populates="agent", uselist=False, lazy="selectin")
+    tasks: Mapped[list[AgentTask]] = relationship(back_populates="agent", lazy="selectin")
+    budget: Mapped[AgentBudget | None] = relationship(back_populates="agent", uselist=False, lazy="selectin")
     organization = relationship(
         "Organization", back_populates="agents",
         primaryjoin="Agent.org_id == Organization.id",
@@ -168,13 +167,13 @@ class AgentTask(Base):
     agent_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agents.id"), index=True, nullable=False
     )
-    workflow_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    workflow_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agent_workflows.id"), nullable=True, index=True
     )
-    workflow_step_index: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    workflow_step_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(
         SAEnum(TaskStatus, name="task_status_enum", create_constraint=False),
         default=TaskStatus.PENDING,
@@ -186,19 +185,19 @@ class AgentTask(Base):
         default=TaskPriority.MEDIUM,
         nullable=False,
     )
-    input_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    output_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    input_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    output_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     tokens_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    quality_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    approved_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -206,13 +205,13 @@ class AgentTask(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
 
     # Relationships
-    agent: Mapped["Agent"] = relationship(back_populates="tasks", lazy="selectin")
-    workflow: Mapped[Optional["AgentWorkflow"]] = relationship(back_populates="tasks", lazy="selectin")
+    agent: Mapped[Agent] = relationship(back_populates="tasks", lazy="selectin")
+    workflow: Mapped[AgentWorkflow | None] = relationship(back_populates="tasks", lazy="selectin")
 
 
 class AgentWorkflow(Base):
@@ -228,7 +227,7 @@ class AgentWorkflow(Base):
     )
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[WorkflowStatus] = mapped_column(
         SAEnum(WorkflowStatus, name="workflow_status_enum", create_constraint=False),
         default=WorkflowStatus.DRAFT,
@@ -237,13 +236,13 @@ class AgentWorkflow(Base):
     )
     steps: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)
     current_step_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    context: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
-    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    context: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -251,12 +250,12 @@ class AgentWorkflow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
 
     # Relationships
-    tasks: Mapped[list["AgentTask"]] = relationship(back_populates="workflow", lazy="selectin")
+    tasks: Mapped[list[AgentTask]] = relationship(back_populates="workflow", lazy="selectin")
     organization = relationship(
         "Organization", back_populates="agent_workflows",
         primaryjoin="AgentWorkflow.org_id == Organization.id",
@@ -290,10 +289,10 @@ class AgentBudget(Base):
     total_tokens_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total_usd_used: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
-    last_reset_daily: Mapped[Optional[datetime]] = mapped_column(
+    last_reset_daily: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_reset_monthly: Mapped[Optional[datetime]] = mapped_column(
+    last_reset_monthly: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -305,7 +304,7 @@ class AgentBudget(Base):
     )
 
     # Relationships
-    agent: Mapped["Agent"] = relationship(back_populates="budget", lazy="selectin")
+    agent: Mapped[Agent] = relationship(back_populates="budget", lazy="selectin")
     organization = relationship(
         "Organization", back_populates="agent_budgets",
         primaryjoin="AgentBudget.org_id == Organization.id",
@@ -336,8 +335,8 @@ class AuditTrail(Base):
     resource_type: Mapped[str] = mapped_column(String(100), nullable=False)
     resource_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
-    details: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True

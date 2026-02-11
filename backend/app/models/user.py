@@ -10,13 +10,14 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+)
+from sqlalchemy import (
     Enum as SAEnum,
-    func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import BaseModel, TenantModel
+from app.database import BaseModel
 
 
 class UserRole(str, enum.Enum):

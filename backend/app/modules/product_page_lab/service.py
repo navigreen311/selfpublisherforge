@@ -10,8 +10,7 @@ import logging
 import math
 import re
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -75,7 +74,7 @@ async def analyze_amazon_listing(
         asin = _extract_asin_from_url(request.url)
 
     # Attempt to resolve a Book record from the database.
-    book: Optional[Book] = None
+    book: Book | None = None
 
     if request.book_id is not None:
         result = await db.execute(
@@ -116,7 +115,7 @@ async def analyze_amazon_listing(
             Listing.deleted_at.is_(None),
         ).order_by(Listing.updated_at.desc())
     )
-    listing: Optional[Listing] = listing_result.scalars().first()
+    listing: Listing | None = listing_result.scalars().first()
 
     listing_data: dict = {}
     if listing is not None and listing.listing_data:
@@ -173,11 +172,11 @@ async def analyze_amazon_listing(
 async def analyze_listing_with_data(
     title: str,
     blurb: str,
-    keywords: Optional[list[str]] = None,
-    categories: Optional[list[str]] = None,
-    price: Optional[float] = None,
-    genre: Optional[str] = None,
-    asin: Optional[str] = None,
+    keywords: list[str] | None = None,
+    categories: list[str] | None = None,
+    price: float | None = None,
+    genre: str | None = None,
+    asin: str | None = None,
 ) -> ListingAnalysis:
     """Analyze a listing using directly provided data.
 
@@ -266,8 +265,8 @@ async def create_ab_test(
 async def list_ab_tests(
     org_id: UUID,
     db: AsyncSession,
-    book_id: Optional[UUID] = None,
-    status: Optional[ABTestStatus] = None,
+    book_id: UUID | None = None,
+    status: ABTestStatus | None = None,
 ) -> list[ABTestResponse]:
     """List A/B tests for an organisation, with optional filtering."""
     stmt = select(ABTest).where(
@@ -343,9 +342,9 @@ async def update_ab_test(
     if request.status is not None:
         ab_test.status = request.status.value
         if request.status == ABTestStatus.RUNNING and ab_test.started_at is None:
-            ab_test.started_at = datetime.now(timezone.utc)
+            ab_test.started_at = datetime.now(UTC)
         elif request.status == ABTestStatus.COMPLETED and ab_test.completed_at is None:
-            ab_test.completed_at = datetime.now(timezone.utc)
+            ab_test.completed_at = datetime.now(UTC)
 
     await db.flush()
     await db.refresh(ab_test)
@@ -371,7 +370,7 @@ async def start_ab_test(
         )
 
     ab_test.status = ABTestStatus.RUNNING.value
-    ab_test.started_at = ab_test.started_at or datetime.now(timezone.utc)
+    ab_test.started_at = ab_test.started_at or datetime.now(UTC)
     await db.flush()
     await db.refresh(ab_test)
 
@@ -395,9 +394,9 @@ async def get_test_results(
         and ab_test.started_at is not None
     ):
         end_date = ab_test.started_at + timedelta(days=ab_test.duration_days)
-        if datetime.now(timezone.utc) >= end_date:
+        if datetime.now(UTC) >= end_date:
             ab_test.status = ABTestStatus.COMPLETED.value
-            ab_test.completed_at = datetime.now(timezone.utc)
+            ab_test.completed_at = datetime.now(UTC)
             await db.flush()
             await db.refresh(ab_test)
 
@@ -446,10 +445,10 @@ async def get_test_results(
             winner = "tie"
 
     # Time calculations
-    days_running: Optional[int] = None
-    days_remaining: Optional[int] = None
+    days_running: int | None = None
+    days_remaining: int | None = None
     if ab_test.started_at is not None:
-        delta = datetime.now(timezone.utc) - ab_test.started_at
+        delta = datetime.now(UTC) - ab_test.started_at
         days_running = max(0, delta.days)
         if ab_test.status == ABTestStatus.RUNNING.value:
             days_remaining = max(0, ab_test.duration_days - delta.days)
@@ -612,8 +611,8 @@ async def get_conversion_scores(
     )
     completed_tests = result.scalars().all()
 
-    blurb_score: Optional[float] = None
-    last_analyzed: Optional[datetime] = None
+    blurb_score: float | None = None
+    last_analyzed: datetime | None = None
     recommendations_count = 0
 
     if completed_tests:
@@ -689,7 +688,7 @@ async def get_conversion_scores(
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _extract_asin_from_url(url: str) -> Optional[str]:
+def _extract_asin_from_url(url: str) -> str | None:
     """Extract ASIN from an Amazon product URL."""
     patterns = [
         r"/dp/([A-Z0-9]{10})",

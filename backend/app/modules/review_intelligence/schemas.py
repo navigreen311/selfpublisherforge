@@ -2,11 +2,9 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 # --- Enums ---
 
@@ -60,13 +58,13 @@ class ReviewSource(str, Enum):
 class ReviewBase(BaseModel):
     book_id: UUID
     source: ReviewSource
-    source_review_id: Optional[str] = None
-    reviewer_name: Optional[str] = None
-    reviewer_profile_url: Optional[str] = None
+    source_review_id: str | None = None
+    reviewer_name: str | None = None
+    reviewer_profile_url: str | None = None
     star_rating: float = Field(..., ge=0.0, le=5.0)
-    title: Optional[str] = None
-    body: Optional[str] = None
-    review_date: Optional[datetime] = None
+    title: str | None = None
+    body: str | None = None
+    review_date: datetime | None = None
     verified_purchase: bool = False
     helpful_count: int = 0
     is_competitor: bool = False
@@ -77,22 +75,22 @@ class ReviewRead(ReviewBase):
 
     id: UUID
     org_id: UUID
-    sentiment: Optional[SentimentLabel] = None
-    sentiment_score: Optional[float] = None
-    themes: Optional[dict] = None
-    analyzed_at: Optional[datetime] = None
+    sentiment: SentimentLabel | None = None
+    sentiment_score: float | None = None
+    themes: dict | None = None
+    analyzed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class ReviewListParams(BaseModel):
-    cursor: Optional[str] = None
+    cursor: str | None = None
     limit: int = Field(default=20, ge=1, le=100)
-    source: Optional[ReviewSource] = None
-    min_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
-    max_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
-    sentiment: Optional[SentimentLabel] = None
-    is_competitor: Optional[bool] = None
+    source: ReviewSource | None = None
+    min_rating: float | None = Field(default=None, ge=0.0, le=5.0)
+    max_rating: float | None = Field(default=None, ge=0.0, le=5.0)
+    sentiment: SentimentLabel | None = None
+    is_competitor: bool | None = None
     sort_by: str = "review_date"
     sort_dir: str = "desc"
 
@@ -131,8 +129,8 @@ class SentimentAnalysisResult(BaseModel):
 
 
 class BatchAnalysisRequest(BaseModel):
-    review_ids: Optional[list[UUID]] = None
-    book_id: Optional[UUID] = None
+    review_ids: list[UUID] | None = None
+    book_id: UUID | None = None
     limit: int = Field(default=50, ge=1, le=200)
 
 
@@ -152,7 +150,7 @@ class VelocityDataPoint(BaseModel):
     period_start: datetime
     period_end: datetime
     review_count: int
-    avg_rating: Optional[float] = None
+    avg_rating: float | None = None
     positive_count: int = 0
     neutral_count: int = 0
     negative_count: int = 0
@@ -182,25 +180,25 @@ class ReviewAlertRead(BaseModel):
     severity: AlertSeverity
     title: str
     description: str
-    data: Optional[dict] = None
+    data: dict | None = None
     is_acknowledged: bool
-    acknowledged_at: Optional[datetime] = None
-    acknowledged_by: Optional[UUID] = None
+    acknowledged_at: datetime | None = None
+    acknowledged_by: UUID | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class AlertAcknowledgeRequest(BaseModel):
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class AlertListParams(BaseModel):
-    cursor: Optional[str] = None
+    cursor: str | None = None
     limit: int = Field(default=20, ge=1, le=100)
-    alert_type: Optional[AlertType] = None
-    severity: Optional[AlertSeverity] = None
-    is_acknowledged: Optional[bool] = False
-    book_id: Optional[UUID] = None
+    alert_type: AlertType | None = None
+    severity: AlertSeverity | None = None
+    is_acknowledged: bool | None = False
+    book_id: UUID | None = None
 
 
 # --- Reputation Schemas ---
@@ -218,7 +216,7 @@ class ReputationScoreRead(BaseModel):
     sentiment_ratio: float
     velocity_trend: VelocityTrend
     health_grade: str
-    details: Optional[dict] = None
+    details: dict | None = None
     last_calculated_at: datetime
     created_at: datetime
     updated_at: datetime
@@ -242,10 +240,10 @@ class ReputationHealthMetrics(BaseModel):
 
 class AcquisitionTipsRequest(BaseModel):
     book_id: UUID
-    current_review_count: Optional[int] = None
-    genre: Optional[str] = None
-    target_audience: Optional[str] = None
-    budget: Optional[str] = None  # low, medium, high
+    current_review_count: int | None = None
+    genre: str | None = None
+    target_audience: str | None = None
+    budget: str | None = None  # low, medium, high
 
 
 class AcquisitionTip(BaseModel):

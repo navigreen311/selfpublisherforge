@@ -4,7 +4,6 @@ theme extraction, complaint categorization (AI-powered via LLM).
 
 import json
 import logging
-from typing import Optional
 
 from app.config import get_settings
 from app.modules.review_intelligence.schemas import (
@@ -182,7 +181,7 @@ def _keyword_sentiment(text: str) -> SentimentAnalysisResult:
 
 
 async def analyze_sentiment_llm(
-    review_text: str, star_rating: Optional[float] = None
+    review_text: str, star_rating: float | None = None
 ) -> SentimentAnalysisResult:
     """Analyze sentiment using LLM (with keyword fallback).
 

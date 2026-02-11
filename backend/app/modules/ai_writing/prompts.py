@@ -6,7 +6,8 @@ fully-formed system/user prompt pair suitable for the LLM.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 def _base_system_prompt(genre: str = "", tone: str = "") -> str:

@@ -1,10 +1,9 @@
 """Pydantic v2 schemas for Portfolio Economics, Audience DNA, and Seasonal Calendar."""
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime, date, timezone
-from uuid import UUID
+from datetime import UTC, date, datetime
 from enum import Enum
-from typing import Optional
+from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -48,16 +47,16 @@ class GreenlightRequest(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=500, description="Working title of the book")
     genre: str = Field(..., min_length=1, max_length=200, description="Primary genre/niche")
-    sub_genre: Optional[str] = Field(None, max_length=200, description="Sub-genre or niche")
+    sub_genre: str | None = Field(None, max_length=200, description="Sub-genre or niche")
     estimated_word_count: int = Field(50000, ge=5000, le=500000, description="Target word count")
     estimated_price: float = Field(4.99, ge=0.99, le=99.99, description="Planned retail price (USD)")
     royalty_rate: float = Field(0.7, ge=0.0, le=1.0, description="Expected royalty rate (0.35 or 0.70)")
     estimated_production_cost: float = Field(500.0, ge=0.0, description="Cover, editing, formatting costs")
     estimated_marketing_budget: float = Field(200.0, ge=0.0, description="Launch marketing spend")
     is_series: bool = Field(False, description="Part of a series")
-    series_position: Optional[int] = Field(None, ge=1, description="Position in series if applicable")
+    series_position: int | None = Field(None, ge=1, description="Position in series if applicable")
     comparable_asins: list[str] = Field(default_factory=list, description="ASINs of comparable titles")
-    market_size_estimate: Optional[int] = Field(None, ge=0, description="Estimated monthly searches or market size")
+    market_size_estimate: int | None = Field(None, ge=0, description="Estimated monthly searches or market size")
 
 
 class GreenlightResult(BaseModel):
@@ -77,7 +76,7 @@ class GreenlightResult(BaseModel):
     projected_monthly_revenue: float = Field(..., ge=0.0, description="Projected monthly gross revenue")
     projected_monthly_royalty: float = Field(..., ge=0.0, description="Projected monthly royalty income")
     total_investment: float = Field(..., ge=0.0, description="Total upfront investment")
-    breakeven_months: Optional[float] = Field(None, ge=0.0, description="Months to break even")
+    breakeven_months: float | None = Field(None, ge=0.0, description="Months to break even")
     first_year_roi: float = Field(..., description="Projected first-year ROI percentage")
     first_year_profit: float = Field(..., description="Projected first-year net profit")
 
@@ -86,7 +85,7 @@ class GreenlightResult(BaseModel):
     opportunity_factors: list[str] = Field(default_factory=list, description="Identified opportunities")
     suggestions: list[str] = Field(default_factory=list, description="Suggestions to improve ROI")
 
-    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class KillScaleRequest(BaseModel):
@@ -101,10 +100,10 @@ class KillScaleRequest(BaseModel):
     total_revenue_to_date: float = Field(..., ge=0.0)
     monthly_marketing_spend: float = Field(0.0, ge=0.0)
     trend_direction: str = Field("flat", description="up / flat / down")
-    review_rating: Optional[float] = Field(None, ge=1.0, le=5.0)
+    review_rating: float | None = Field(None, ge=1.0, le=5.0)
     review_count: int = Field(0, ge=0)
     is_series: bool = False
-    series_position: Optional[int] = Field(None, ge=1)
+    series_position: int | None = Field(None, ge=1)
 
 
 class KillScaleDecision(BaseModel):
@@ -125,10 +124,10 @@ class KillScaleDecision(BaseModel):
     # Recommendations
     reasoning: list[str] = Field(default_factory=list)
     actions: list[str] = Field(default_factory=list, description="Recommended actions")
-    estimated_additional_investment: Optional[float] = Field(None, ge=0.0)
-    estimated_additional_return: Optional[float] = Field(None)
+    estimated_additional_investment: float | None = Field(None, ge=0.0)
+    estimated_additional_return: float | None = Field(None)
 
-    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class BacklistProjection(BaseModel):
@@ -158,7 +157,7 @@ class BookSummary(BaseModel):
     book_id: UUID
     title: str
     genre: str
-    launch_date: Optional[date] = None
+    launch_date: date | None = None
     monthly_revenue: float = 0.0
     monthly_units: int = 0
     total_revenue: float = 0.0
@@ -182,7 +181,7 @@ class PortfolioOverview(BaseModel):
     underperformers: list[BookSummary] = Field(default_factory=list)
     genre_distribution: dict[str, int] = Field(default_factory=dict)
     revenue_by_genre: dict[str, float] = Field(default_factory=dict)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class PortfolioRecommendation(BaseModel):
@@ -193,7 +192,7 @@ class PortfolioRecommendation(BaseModel):
     priority: str = Field(..., description="high / medium / low")
     title: str
     description: str
-    estimated_impact: Optional[str] = None
+    estimated_impact: str | None = None
     actions: list[str] = Field(default_factory=list)
 
 
@@ -203,14 +202,14 @@ class AudienceAnalyzeRequest(BaseModel):
     """Request to build audience profile from book data."""
     model_config = ConfigDict(from_attributes=True)
 
-    book_id: Optional[UUID] = None
+    book_id: UUID | None = None
     genre: str = Field(..., min_length=1, max_length=200)
-    sub_genre: Optional[str] = Field(None, max_length=200)
-    book_description: Optional[str] = Field(None, max_length=5000)
+    sub_genre: str | None = Field(None, max_length=200)
+    book_description: str | None = Field(None, max_length=5000)
     keywords: list[str] = Field(default_factory=list)
     comparable_asins: list[str] = Field(default_factory=list)
-    target_age_range: Optional[str] = Field(None, description="e.g., '25-45'")
-    target_gender: Optional[str] = Field(None, description="e.g., 'female', 'male', 'all'")
+    target_age_range: str | None = Field(None, description="e.g., '25-45'")
+    target_gender: str | None = Field(None, description="e.g., 'female', 'male', 'all'")
 
 
 class AudiencePersona(BaseModel):
@@ -234,7 +233,7 @@ class AudiencePersona(BaseModel):
     pain_points: list[str] = Field(default_factory=list, description="What frustrates them")
     favorite_authors: list[str] = Field(default_factory=list)
     percentage_of_audience: float = Field(..., ge=0.0, le=100.0)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class AlsoBoughtItem(BaseModel):
@@ -265,7 +264,7 @@ class AlsoBoughtIntelligence(BaseModel):
     average_rating: float = 0.0
     audience_insights: list[str] = Field(default_factory=list)
     positioning_suggestions: list[str] = Field(default_factory=list)
-    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class AudienceGrowthPoint(BaseModel):
@@ -297,13 +296,13 @@ class ChurnPredictionRequest(BaseModel):
     """Request for churn prediction."""
     model_config = ConfigDict(from_attributes=True)
 
-    book_id: Optional[UUID] = None
-    genre: Optional[str] = None
+    book_id: UUID | None = None
+    genre: str | None = None
     days_since_last_purchase: int = Field(0, ge=0)
     total_purchases: int = Field(0, ge=0)
-    average_rating_given: Optional[float] = Field(None, ge=1.0, le=5.0)
-    series_completion_rate: Optional[float] = Field(None, ge=0.0, le=1.0)
-    email_open_rate: Optional[float] = Field(None, ge=0.0, le=1.0)
+    average_rating_given: float | None = Field(None, ge=1.0, le=5.0)
+    series_completion_rate: float | None = Field(None, ge=0.0, le=1.0)
+    email_open_rate: float | None = Field(None, ge=0.0, le=1.0)
 
 
 class ChurnPredictionResult(BaseModel):
@@ -315,7 +314,7 @@ class ChurnPredictionResult(BaseModel):
     risk_factors: list[str] = Field(default_factory=list)
     retention_suggestions: list[str] = Field(default_factory=list)
     estimated_lifetime_value: float = Field(0.0, ge=0.0)
-    predicted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    predicted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 # ─── Seasonal Calendar Schemas ────────────────────────────────────────────────
@@ -363,10 +362,10 @@ class LaunchRecommendRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     genre: str = Field(..., min_length=1, max_length=200)
-    sub_genre: Optional[str] = Field(None, max_length=200)
+    sub_genre: str | None = Field(None, max_length=200)
     book_type: str = Field("ebook", description="ebook / paperback / hardcover / audio")
     is_series: bool = False
-    series_position: Optional[int] = Field(None, ge=1)
+    series_position: int | None = Field(None, ge=1)
     earliest_ready_date: date = Field(..., description="Earliest date the book could be ready")
     marketing_lead_time_days: int = Field(14, ge=0, le=180)
     target_audience_timezone: str = Field("US", description="Primary audience region")
@@ -395,7 +394,7 @@ class LaunchRecommendation(BaseModel):
         description="[{date, action, channel}]"
     )
 
-    calculated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    calculated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class SeasonalCalendarResponse(BaseModel):

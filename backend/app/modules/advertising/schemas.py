@@ -1,10 +1,10 @@
 """Pydantic v2 schemas for Advertising Intelligence module."""
 
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
+from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
 

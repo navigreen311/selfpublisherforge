@@ -1,9 +1,8 @@
 """FastAPI router for Portfolio Economics, Audience DNA, and Seasonal Calendar endpoints."""
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
-from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,52 +10,50 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.project import Book, BookStatus, Project
 from app.modules.analytics.models import RoyaltyRecord
-from app.schemas.responses import SuccessResponse
-from app.core.pagination import PaginatedResponse
-from app.modules.portfolio_economics.schemas import (
-    # Portfolio
-    GreenlightRequest,
-    GreenlightResult,
-    KillScaleRequest,
-    KillScaleDecision,
-    BacklistProjection,
-    PortfolioOverview,
-    PortfolioRecommendation,
-    ProjectionPeriod,
-    # Audience
-    AudienceAnalyzeRequest,
-    AudiencePersona,
-    AlsoBoughtIntelligence,
-    AudienceGrowthResponse,
-    ChurnPredictionRequest,
-    ChurnPredictionResult,
-    # Seasonal
-    SeasonalCalendarResponse,
-    NicheSeasonality,
-    LaunchRecommendRequest,
-    LaunchRecommendation,
-    SeasonalEvent,
-)
-from app.modules.portfolio_economics.greenlight import calculate_greenlight
-from app.modules.portfolio_economics.backlist import calculate_backlist_projection
-from app.modules.portfolio_economics.portfolio_service import (
-    calculate_kill_scale,
-    build_portfolio_overview,
-    generate_portfolio_recommendations,
-)
 from app.modules.portfolio_economics.audience_service import (
-    build_audience_personas,
     build_also_bought_intelligence,
+    build_audience_personas,
     get_audience_growth,
     predict_churn,
 )
-from app.modules.portfolio_economics.seasonal_service import (
-    get_seasonal_calendar,
-    get_niche_seasonality,
-    recommend_launch_date,
-    get_upcoming_events,
+from app.modules.portfolio_economics.backlist import calculate_backlist_projection
+from app.modules.portfolio_economics.greenlight import calculate_greenlight
+from app.modules.portfolio_economics.portfolio_service import (
+    build_portfolio_overview,
+    calculate_kill_scale,
+    generate_portfolio_recommendations,
 )
-
+from app.modules.portfolio_economics.schemas import (
+    AlsoBoughtIntelligence,
+    # Audience
+    AudienceAnalyzeRequest,
+    AudienceGrowthResponse,
+    AudiencePersona,
+    BacklistProjection,
+    ChurnPredictionRequest,
+    ChurnPredictionResult,
+    # Portfolio
+    GreenlightRequest,
+    GreenlightResult,
+    KillScaleDecision,
+    KillScaleRequest,
+    LaunchRecommendation,
+    LaunchRecommendRequest,
+    NicheSeasonality,
+    PortfolioOverview,
+    PortfolioRecommendation,
+    ProjectionPeriod,
+    # Seasonal
+    SeasonalCalendarResponse,
+    SeasonalEvent,
+)
+from app.modules.portfolio_economics.seasonal_service import (
+    get_niche_seasonality,
+    get_seasonal_calendar,
+    get_upcoming_events,
+    recommend_launch_date,
+)
+from app.schemas.responses import SuccessResponse
 
 # ─── Routers ─────────────────────────────────────────────────────────────────
 
@@ -117,7 +114,7 @@ async def get_portfolio_overview(
     total_by_book = {row.book_id: row for row in total_result.all()}
 
     # Aggregate last-30-day royalty revenue per book for monthly metrics
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
     monthly_royalty_query = (
         select(
             RoyaltyRecord.book_id,
@@ -265,7 +262,7 @@ async def get_recommendations(
     total_by_book = {row.book_id: row for row in total_result.all()}
 
     # Aggregate last-30-day royalty revenue per book
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
     monthly_royalty_query = (
         select(
             RoyaltyRecord.book_id,
@@ -390,7 +387,7 @@ async def churn_prediction(request: ChurnPredictionRequest):
 )
 async def seasonal_calendar(
     year: int = Query(default=None, description="Calendar year (defaults to current year)"),
-    genres: Optional[str] = Query(None, description="Comma-separated list of genres"),
+    genres: str | None = Query(None, description="Comma-separated list of genres"),
 ):
     """Get full seasonal calendar with genre-specific events."""
     target_year = year or date.today().year
@@ -407,7 +404,7 @@ async def seasonal_calendar(
 )
 async def niche_seasonality(
     genre: str,
-    year: Optional[int] = Query(None, description="Year for events"),
+    year: int | None = Query(None, description="Year for events"),
 ):
     """Get seasonality data for a specific genre."""
     result = get_niche_seasonality(genre, year)
@@ -434,7 +431,7 @@ async def recommend_launch(request: LaunchRecommendRequest):
     description="Upcoming events and triggers relevant to user's genres.",
 )
 async def upcoming_events(
-    genres: Optional[str] = Query(None, description="Comma-separated list of genres"),
+    genres: str | None = Query(None, description="Comma-separated list of genres"),
     days_ahead: int = Query(90, ge=7, le=365, description="Days to look ahead"),
 ):
     """Get upcoming events relevant to the user's genres."""

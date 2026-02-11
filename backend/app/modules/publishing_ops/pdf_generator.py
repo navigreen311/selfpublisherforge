@@ -15,42 +15,42 @@ from __future__ import annotations
 import io
 import json
 import logging
-import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 try:
-    from reportlab.lib.pagesizes import letter, A4, inch
-    from reportlab.lib.units import inch as rl_inch, mm
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
-    from reportlab.lib.colors import black, gray, white, HexColor
-    from reportlab.platypus import (
-        SimpleDocTemplate,
-        Paragraph,
-        Spacer,
-        PageBreak,
-        Table,
-        TableStyle,
-        BaseDocTemplate,
-        PageTemplate,
-        Frame,
-        NextPageTemplate,
-        KeepTogether,
-    )
-    from reportlab.platypus.flowables import HRFlowable
+    from reportlab.lib.colors import HexColor, black, gray, white
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+    from reportlab.lib.pagesizes import A4, inch, letter
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch as rl_inch
+    from reportlab.lib.units import mm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import (
+        BaseDocTemplate,
+        Frame,
+        KeepTogether,
+        NextPageTemplate,
+        PageBreak,
+        PageTemplate,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+    from reportlab.platypus.flowables import HRFlowable
 
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
 
 try:
+    from reportlab.graphics import renderPDF
     from reportlab.graphics.barcode.eanbc import Ean13BarcodeWidget
     from reportlab.graphics.shapes import Drawing
-    from reportlab.graphics import renderPDF
 
     BARCODE_WIDGET_AVAILABLE = True
 except ImportError:
@@ -828,7 +828,7 @@ def generate_pdf(
         pages=pages,
         isbn=request.isbn,
         include_isbn_barcode=request.include_isbn_barcode,
-        generated_at=datetime.now(timezone.utc).isoformat(),
+        generated_at=datetime.now(UTC).isoformat(),
         total_pages=total_pages,
         _pdf_bytes=pdf_bytes,
     )

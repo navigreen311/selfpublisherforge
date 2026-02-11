@@ -6,7 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -113,7 +113,7 @@ class ConnectionManager:
                     dead: list[WebSocket] = []
                     for ws in list(sockets):
                         try:
-                            await ws.send_json({"type": "ping", "ts": datetime.now(timezone.utc).isoformat()})
+                            await ws.send_json({"type": "ping", "ts": datetime.now(UTC).isoformat()})
                         except (ConnectionError, RuntimeError, WebSocketDisconnect) as exc:
                             logger.debug("Heartbeat failed for WebSocket, marking dead: %s", exc)
                             dead.append(ws)
@@ -194,7 +194,7 @@ class ConnectionManager:
         # Ensure envelope fields
         message.setdefault("channel", channel.value)
         message.setdefault("room_id", room_id)
-        message.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+        message.setdefault("timestamp", datetime.now(UTC).isoformat())
 
         redis = await self._get_redis()
         if redis is not None:

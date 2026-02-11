@@ -12,7 +12,6 @@ Pricing Tiers:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from app.schemas.common import PlanTier
 
@@ -35,7 +34,7 @@ class PlanDefinition:
     price_monthly: int  # cents
     description: str
     limits: PlanLimits
-    stripe_price_env_key: Optional[str] = None
+    stripe_price_env_key: str | None = None
     highlight: bool = False  # whether to highlight in the UI
 
 

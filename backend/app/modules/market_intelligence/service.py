@@ -14,8 +14,7 @@ from __future__ import annotations
 
 import statistics
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +23,8 @@ from app.core.exceptions import AppException
 from app.models.market import (
     CompetitorBook,
     MarketCategory,
+)
+from app.models.market import (
     MarketSnapshot as MarketSnapshotDB,
 )
 from app.modules.market_intelligence.amazon_client import (
@@ -60,7 +61,7 @@ from app.modules.market_intelligence.scoring import (
 class MarketIntelligenceService:
     """Stateless service -- instantiated per-request with a client."""
 
-    def __init__(self, client: Optional[AmazonClientBase] = None) -> None:
+    def __init__(self, client: AmazonClientBase | None = None) -> None:
         self._client = client or get_amazon_client()
 
     # ------------------------------------------------------------------
@@ -69,9 +70,9 @@ class MarketIntelligenceService:
 
     async def get_categories(
         self,
-        root_id: Optional[str] = None,
+        root_id: str | None = None,
         marketplace: str = "US",
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> list[CategoryNode]:
         raw = await self._client.get_category_tree(root_id=root_id, marketplace=marketplace)
         return [self._map_category(c) for c in raw]
@@ -80,7 +81,7 @@ class MarketIntelligenceService:
         self,
         category_id: str,
         marketplace: str = "US",
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> CategoryAnalysis:
         products = await self._client.search_products(
             keywords="", category_id=category_id, marketplace=marketplace, max_results=20
@@ -134,7 +135,7 @@ class MarketIntelligenceService:
     async def research_keywords(
         self,
         request: KeywordResearchRequest,
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> KeywordResearchResponse:
         keyword_data = await self._client.get_keyword_data(
             request.keywords, marketplace=request.marketplace
@@ -142,13 +143,13 @@ class MarketIntelligenceService:
         return KeywordResearchResponse(
             keywords=keyword_data,
             marketplace=request.marketplace,
-            generated_at=datetime.now(tz=timezone.utc),
+            generated_at=datetime.now(tz=UTC),
         )
 
     async def suggest_keywords(
         self,
         params: KeywordSuggestionsParams,
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> list[KeywordData]:
         """AI-suggested keywords for a genre / niche.
 
@@ -179,7 +180,7 @@ class MarketIntelligenceService:
     async def analyze_niche(
         self,
         request: NicheAnalysisRequest,
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> NicheAnalysisResponse:
         # 1. Fetch products matching the niche
         products = await self._client.search_products(
@@ -237,7 +238,7 @@ class MarketIntelligenceService:
             avg_monthly_revenue=round(metrics.avg_price * search_volume * 0.03, 2) if search_volume else None,
             avg_bsr=round(statistics.mean(bsr_values), 2) if bsr_values else None,
             recommendation=scores.recommendation,
-            analyzed_at=datetime.now(tz=timezone.utc),
+            analyzed_at=datetime.now(tz=UTC),
         )
 
     # ------------------------------------------------------------------
@@ -245,7 +246,7 @@ class MarketIntelligenceService:
     # ------------------------------------------------------------------
 
     async def list_competitors(
-        self, db: AsyncSession, org_id: Optional[uuid.UUID] = None, marketplace: str = "US"
+        self, db: AsyncSession, org_id: uuid.UUID | None = None, marketplace: str = "US"
     ) -> list[CompetitorListItem]:
         """List tracked competitor books from the database."""
         query = select(CompetitorBook).where(CompetitorBook.deleted_at.is_(None))
@@ -256,7 +257,7 @@ class MarketIntelligenceService:
         return [self._map_db_competitor_list_item(row, marketplace) for row in rows]
 
     async def track_competitor(
-        self, db: AsyncSession, request: CompetitorTrackRequest, org_id: Optional[uuid.UUID] = None
+        self, db: AsyncSession, request: CompetitorTrackRequest, org_id: uuid.UUID | None = None
     ) -> CompetitorDetail:
         """Start tracking a competitor by ASIN. Uses DB persistence."""
         # Check if already tracked in DB
@@ -316,7 +317,7 @@ class MarketIntelligenceService:
         self,
         db: AsyncSession,
         competitor_id: uuid.UUID,
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> CompetitorDetail:
         """Get a single competitor by ID from the database.
 
@@ -345,12 +346,12 @@ class MarketIntelligenceService:
 
     async def get_trends(
         self,
-        category_id: Optional[str] = None,
-        keyword: Optional[str] = None,
+        category_id: str | None = None,
+        keyword: str | None = None,
         days: int = 30,
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> MarketTrendsResponse:
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         trends: list[MarketTrend] = []
 
         if keyword:
@@ -399,9 +400,9 @@ class MarketIntelligenceService:
     async def get_snapshots(
         self,
         db: AsyncSession,
-        category_id: Optional[str] = None,
+        category_id: str | None = None,
         limit: int = 30,
-        org_id: Optional[uuid.UUID] = None,
+        org_id: uuid.UUID | None = None,
     ) -> list[MarketSnapshot]:
         """Return recent market snapshots from the database.
 
@@ -467,7 +468,7 @@ class MarketIntelligenceService:
 
     @staticmethod
     def _generate_gap_analysis(
-        products: list[CompetitorSummary], scores: "NicheMetrics | object"
+        products: list[CompetitorSummary], scores: NicheMetrics | object
     ) -> list[GapAnalysisItem]:
         gaps: list[GapAnalysisItem] = []
         if not products:
@@ -618,7 +619,7 @@ class MarketIntelligenceService:
             id=snap.id,
             category_id=category_id_str,
             category_name=category_name,
-            snapshot_date=datetime.combine(snap.snapshot_date, datetime.min.time(), tzinfo=timezone.utc)
+            snapshot_date=datetime.combine(snap.snapshot_date, datetime.min.time(), tzinfo=UTC)
             if not isinstance(snap.snapshot_date, datetime)
             else snap.snapshot_date,
             avg_bsr=metrics.get("avg_bsr", 0.0),

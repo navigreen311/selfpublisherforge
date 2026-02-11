@@ -10,10 +10,8 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 import redis.asyncio as redis
-from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
 
 from app.config import get_settings
 from app.core.rate_limits_config import find_rate_limit
@@ -30,7 +28,7 @@ class RateLimitResult:
     limit: int  # The limit that was applied
     remaining: int  # Remaining requests in the window
     reset_at: int  # Unix timestamp when the window resets
-    retry_after: Optional[int] = None  # Seconds to wait before retrying (if denied)
+    retry_after: int | None = None  # Seconds to wait before retrying (if denied)
 
 
 class SlidingWindowRateLimiter:
@@ -49,7 +47,7 @@ class SlidingWindowRateLimiter:
     window boundary" problem of fixed windows.
     """
 
-    def __init__(self, redis_client: Optional[redis.Redis] = None) -> None:
+    def __init__(self, redis_client: redis.Redis | None = None) -> None:
         """
         Initialize the rate limiter.
 
@@ -57,7 +55,7 @@ class SlidingWindowRateLimiter:
             redis_client: Optional Redis client. If None, will be lazily
                          initialized from settings.
         """
-        self._redis: Optional[redis.Redis] = redis_client
+        self._redis: redis.Redis | None = redis_client
 
     async def _get_redis(self) -> redis.Redis:
         """Get or create the Redis client."""
@@ -189,7 +187,7 @@ class SlidingWindowRateLimiter:
 # Module-level singleton
 # ---------------------------------------------------------------------------
 
-_limiter: Optional[SlidingWindowRateLimiter] = None
+_limiter: SlidingWindowRateLimiter | None = None
 
 
 def get_rate_limiter() -> SlidingWindowRateLimiter:
