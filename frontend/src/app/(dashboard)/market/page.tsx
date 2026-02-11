@@ -51,16 +51,16 @@ export default function MarketDashboardPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div role="region" aria-label="Page header">
-        <h1 className="text-2xl font-bold">Market Intelligence</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1">
-          Analyze niches, explore categories, and discover market opportunities
+          {t("subtitle")}
         </p>
       </div>
 
       {/* Search bar */}
       <div role="search" aria-label="Niche analysis search" className="flex gap-3">
         <label htmlFor="niche-search" className="sr-only">
-          Enter a niche to analyze
+          {t("nicheSearchLabel")}
         </label>
         <input
           id="niche-search"
@@ -73,7 +73,7 @@ export default function MarketDashboardPage() {
           aria-describedby="niche-search-hint"
         />
         <span id="niche-search-hint" className="sr-only">
-          Type a niche keyword and press Enter or click Analyze Niche to get market analysis
+          {t("nicheSearchHint")}
         </span>
         <button
           onClick={handleAnalyzeNiche}
@@ -91,7 +91,7 @@ export default function MarketDashboardPage() {
 
         {nicheAnalysis.isError && (
           <div role="alert" className="border border-red-200 rounded-lg bg-red-50 p-4 text-sm text-red-700">
-            Failed to analyze niche. Please try again.
+            {t("nicheAnalysisError")}
           </div>
         )}
       </div>
@@ -126,7 +126,7 @@ export default function MarketDashboardPage() {
                 <div
                   className="grid grid-cols-2 sm:grid-cols-4 gap-4"
                   role="group"
-                  aria-label="Category statistics"
+                  aria-label={t("categoryStatistics")}
                 >
                   <StatCard label={t("books")} value={categoryAnalysis.book_count.toLocaleString()} />
                   <StatCard label={t("avgBsr")} value={Math.round(categoryAnalysis.avg_bsr).toLocaleString()} />
@@ -138,7 +138,7 @@ export default function MarketDashboardPage() {
                 </div>
 
                 {/* BSR Distribution */}
-                <div className="mt-6" role="region" aria-label="BSR distribution chart">
+                <div className="mt-6" role="region" aria-label={t("bsrDistribution")}>
                   <h4 className="text-sm font-medium mb-3">{t("bsrDistribution")}</h4>
                   <div
                     className="flex gap-2"
@@ -160,13 +160,13 @@ export default function MarketDashboardPage() {
                     ))}
                   </div>
                   <p id="bsr-distribution-desc" className="sr-only">
-                    Bar chart showing the distribution of Best Sellers Rank across different ranges for this category
+                    {t("bsrDistributionDesc")}
                   </p>
                 </div>
 
                 {/* Top books */}
                 {categoryAnalysis.top_books.length > 0 && (
-                  <div className="mt-6" role="region" aria-label="Top books in category">
+                  <div className="mt-6" role="region" aria-label={t("topBooks")}>
                     <h4 className="text-sm font-medium mb-3">{t("topBooks")}</h4>
                     <div
                       className="space-y-2"
@@ -174,7 +174,7 @@ export default function MarketDashboardPage() {
                       aria-describedby="top-books-desc"
                     >
                       <span id="top-books-desc" className="sr-only">
-                        List of top-performing books showing title, BSR rank, and price
+                        {t("topBooksDesc")}
                       </span>
                       {categoryAnalysis.top_books.map((book) => (
                         <div
@@ -184,10 +184,10 @@ export default function MarketDashboardPage() {
                         >
                           <span className="font-medium flex-1 truncate">{book.title}</span>
                           <span className="text-muted-foreground text-xs">
-                            BSR: {book.bsr?.toLocaleString() ?? "N/A"}
+                            {t("bsr", { value: book.bsr?.toLocaleString() ?? "N/A" })}
                           </span>
                           <span className="text-muted-foreground text-xs">
-                            ${book.price?.toFixed(2) ?? "N/A"}
+                            {t("price", { value: book.price?.toFixed(2) ?? "N/A" })}
                           </span>
                         </div>
                       ))}
@@ -198,13 +198,13 @@ export default function MarketDashboardPage() {
             </>
           ) : (
             <div className="border rounded-lg bg-card p-8 text-center text-muted-foreground">
-              Select a category from the tree to view analysis
+              {t("selectCategoryMessage")}
             </div>
           )}
 
           {/* Trends */}
           {trends && trends.trends.length > 0 && (
-            <div className="space-y-4" role="region" aria-label="Market trends">
+            <div className="space-y-4" role="region" aria-label={t("marketTrends")}>
               <h3 className="font-semibold">{t("marketTrends")}</h3>
               {trends.trends.map((t, i) => (
                 <TrendChart key={i} trend={t} />
@@ -223,8 +223,10 @@ export default function MarketDashboardPage() {
               <div className="border rounded-lg bg-card p-6">
                 <h3 className="font-semibold mb-3">{t("recentSnapshots")}</h3>
                 <div className="text-sm text-muted-foreground">
-                  {snapshots.length} daily snapshots available for analysis.
-                  Latest: {new Date(snapshots[0].snapshot_date).toLocaleDateString()}
+                  {t("snapshotsAvailable", {
+                    count: snapshots.length,
+                    date: new Date(snapshots[0].snapshot_date).toLocaleDateString()
+                  })}
                 </div>
               </div>
             ) : null}
@@ -236,8 +238,9 @@ export default function MarketDashboardPage() {
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
+  const t = useTranslations("market");
   return (
-    <div className="p-3 rounded-md bg-muted/50 text-center" role="group" aria-label={`${label}: ${value}`}>
+    <div className="p-3 rounded-md bg-muted/50 text-center" role="group" aria-label={t("statLabel", { label, value })}>
       <div className="text-lg font-semibold" aria-hidden="true">{value}</div>
       <div className="text-xs text-muted-foreground" aria-hidden="true">{label}</div>
     </div>

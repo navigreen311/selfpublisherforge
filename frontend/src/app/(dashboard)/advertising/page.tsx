@@ -14,14 +14,16 @@ import { useAdDashboard } from "@/modules/advertising/hooks";
 import { CampaignCard } from "@/modules/advertising/components/CampaignCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AD_PLATFORMS } from "@/lib/constants";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function AdvertisingDashboardPage() {
+  const t = useTranslations("advertising");
   const { data: dashboard, isLoading, error } = useAdDashboard();
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Advertising Intelligence</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-24" />
@@ -35,9 +37,9 @@ export default function AdvertisingDashboardPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Advertising Intelligence</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <div className="border border-red-200 bg-red-50 rounded-lg p-4 text-red-700">
-          Failed to load dashboard data. Please try again later.
+          {t("failedToLoad")}
         </div>
       </div>
     );
@@ -49,11 +51,11 @@ export default function AdvertisingDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Advertising Intelligence</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Link
           href="/advertising/campaigns"
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90"
-          aria-label="View all advertising campaigns"
+          aria-label={t("viewAllCampaignsLabel")}
         >
           View All Campaigns
         </Link>
@@ -62,22 +64,22 @@ export default function AdvertisingDashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          label="Active Campaigns"
+          label={t("activeCampaigns")}
           value={d.total_active_campaigns.toString()}
         />
         <KPICard
-          label="Today's Spend"
+          label={t("todaySpend")}
           value={`$${d.total_spend_today.toFixed(2)}`}
         />
         <KPICard
-          label="Monthly Spend"
+          label={t("monthlySpend")}
           value={`$${d.total_spend_month.toFixed(2)}`}
-          subtext={`Sales: $${d.total_sales_month.toFixed(2)}`}
+          subtext={t("sales", { value: d.total_sales_month.toFixed(2) })}
         />
         <KPICard
-          label="Overall ACOS"
+          label={t("overallAcos")}
           value={`${d.overall_acos.toFixed(1)}%`}
-          subtext={`ROAS: ${d.overall_roas.toFixed(2)}x`}
+          subtext={t("roas", { value: d.overall_roas.toFixed(2) })}
           highlight={d.overall_acos > 40 ? "danger" : d.overall_acos > 0 ? "success" : undefined}
         />
       </div>
@@ -85,7 +87,7 @@ export default function AdvertisingDashboardPage() {
       {/* Platform Breakdown */}
       {Object.keys(d.platform_breakdown).length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Platform Performance</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("platformPerformance")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(d.platform_breakdown).map(([platform, perf]) => (
               <div key={platform} className="border rounded-lg p-4">
@@ -94,31 +96,31 @@ export default function AdvertisingDashboardPage() {
                 </h3>
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Spend</p>
+                    <p className="text-muted-foreground">{t("spend")}</p>
                     <p className="font-semibold">${perf.total_spend.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Sales</p>
+                    <p className="text-muted-foreground">{t("salesLabel")}</p>
                     <p className="font-semibold">${perf.total_sales.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">ACOS</p>
+                    <p className="text-muted-foreground">{t("acos")}</p>
                     <p className="font-semibold">{perf.avg_acos.toFixed(1)}%</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Impressions</p>
+                    <p className="text-muted-foreground">{t("impressions")}</p>
                     <p className="font-semibold">
                       {perf.total_impressions.toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Clicks</p>
+                    <p className="text-muted-foreground">{t("clicks")}</p>
                     <p className="font-semibold">
                       {perf.total_clicks.toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">ROAS</p>
+                    <p className="text-muted-foreground">{t("roasLabel")}</p>
                     <p className="font-semibold">{perf.avg_roas.toFixed(2)}x</p>
                   </div>
                 </div>
@@ -130,7 +132,7 @@ export default function AdvertisingDashboardPage() {
 
       {/* Top Campaigns */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">Top Campaigns</h2>
+        <h2 className="text-lg font-semibold mb-3">{t("topCampaigns")}</h2>
         {d.top_campaigns.length > 0 ? (
           <div className="space-y-3">
             {d.top_campaigns.map((campaign) => (
@@ -139,11 +141,11 @@ export default function AdvertisingDashboardPage() {
           </div>
         ) : (
           <div className="border rounded-lg p-8 text-center text-muted-foreground">
-            <p>No active campaigns yet.</p>
+            <p>{t("noCampaigns")}</p>
             <Link
               href="/advertising/campaigns"
               className="text-primary hover:underline mt-2 inline-block"
-              aria-label="Create your first advertising campaign"
+              aria-label={t("createFirstCampaignLabel")}
             >
               Create your first campaign
             </Link>

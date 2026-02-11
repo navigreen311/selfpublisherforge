@@ -25,8 +25,10 @@ import {
 } from "@/modules/knowledge/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { KnowledgeEntry, SearchHit } from "@/modules/knowledge/hooks";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function KnowledgeVaultPage() {
+  const t = useTranslations("knowledge");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -103,22 +105,22 @@ export default function KnowledgeVaultPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-primary" aria-hidden="true" />
-          <h1 className="text-xl sm:text-2xl font-bold">Knowledge Vault</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t("title")}</h1>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setImportOpen(true)}
-            aria-label="Import knowledge entry from URL or file"
+            aria-label={t("importLabel")}
             className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-lg hover:bg-accent transition-colors"
           >
-            Import
+            {t("import")}
           </button>
           <button
             onClick={() => setCreateOpen(true)}
-            aria-label="Create new knowledge entry"
+            aria-label={t("newEntryLabel")}
             className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" /> New Entry
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" /> {t("newEntry")}
           </button>
         </div>
       </div>
@@ -141,14 +143,14 @@ export default function KnowledgeVaultPage() {
         <div className="space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
             <h2 id="search-results-heading" className="text-xs sm:text-sm font-medium text-muted-foreground">
-              Search results ({searchResults.length})
+              {t("searchResults", { count: searchResults.length })}
             </h2>
             <button
               onClick={() => setSearchResults(null)}
-              aria-label="Clear search results"
+              aria-label={t("clearSearchLabel")}
               className="text-[10px] sm:text-xs text-primary hover:underline"
             >
-              Clear search
+              {t("clearSearch")}
             </button>
           </div>
           <div
@@ -163,7 +165,7 @@ export default function KnowledgeVaultPage() {
                   <a
                     href={`/knowledge/${hit.id}`}
                     className="font-semibold text-xs sm:text-sm hover:text-primary transition-colors truncate"
-                    aria-label={`View entry: ${hit.title}`}
+                    aria-label={t("viewEntry", { title: hit.title })}
                   >
                     {hit.title}
                   </a>
@@ -184,7 +186,7 @@ export default function KnowledgeVaultPage() {
                         deleted_at: null,
                       })
                     }
-                    aria-label={`Delete entry: ${hit.title}`}
+                    aria-label={t("deleteEntry", { title: hit.title })}
                     className="shrink-0 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                   >
                     <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
@@ -204,7 +206,7 @@ export default function KnowledgeVaultPage() {
                   ))}
                 </div>
                 <div className="mt-1 text-[9px] sm:text-[10px] text-muted-foreground">
-                  Relevance: {hit.score.toFixed(2)}
+                  {t("relevance", { score: hit.score.toFixed(2) })}
                 </div>
               </div>
             ))}
@@ -227,7 +229,7 @@ export default function KnowledgeVaultPage() {
           ) : entries && entries.items.length > 0 ? (
             <>
               <p id="entries-count" className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
-                {entries.total_count} entries
+                {entries.total_count} {t("entries")}
               </p>
               <div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
@@ -244,7 +246,7 @@ export default function KnowledgeVaultPage() {
                         e.stopPropagation();
                         handleDeleteRequest(entry);
                       }}
-                      aria-label={`Delete entry: ${entry.title}`}
+                      aria-label={t("deleteEntry", { title: entry.title })}
                       className="absolute top-2 right-2 p-1 sm:p-1.5 rounded-md bg-background/80 border opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                     >
                       <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
@@ -256,9 +258,9 @@ export default function KnowledgeVaultPage() {
           ) : (
             <div className="text-center py-8 sm:py-12">
               <BookOpen className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30" aria-hidden="true" />
-              <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-medium">No entries yet</h3>
+              <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-medium">{t("noEntriesTitle")}</h3>
               <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                Create your first research entry or import from a URL or file.
+                {t("noEntriesMessage")}
               </p>
             </div>
           )}
@@ -279,10 +281,10 @@ export default function KnowledgeVaultPage() {
             aria-label="Close create entry dialog"
           />
           <div className="relative bg-background border rounded-xl shadow-xl w-full max-w-lg p-4 sm:p-6">
-            <h2 id="create-dialog-title" className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">New Knowledge Entry</h2>
+            <h2 id="create-dialog-title" className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t("newKnowledgeEntry")}</h2>
             <form onSubmit={handleCreate} className="space-y-3 sm:space-y-4" aria-label="Create knowledge entry form">
               <div>
-                <label htmlFor="new-entry-title" className="block text-xs sm:text-sm font-medium mb-1">Title</label>
+                <label htmlFor="new-entry-title" className="block text-xs sm:text-sm font-medium mb-1">{t("title")}</label>
                 <input
                   id="new-entry-title"
                   type="text"
@@ -293,7 +295,7 @@ export default function KnowledgeVaultPage() {
                 />
               </div>
               <div>
-                <label htmlFor="new-entry-content" className="block text-xs sm:text-sm font-medium mb-1">Content</label>
+                <label htmlFor="new-entry-content" className="block text-xs sm:text-sm font-medium mb-1">{t("content")}</label>
                 <textarea
                   id="new-entry-content"
                   value={newContent}
@@ -306,18 +308,18 @@ export default function KnowledgeVaultPage() {
                 <button
                   type="button"
                   onClick={() => setCreateOpen(false)}
-                  aria-label="Cancel creating entry"
+                  aria-label={t("cancelLabel")}
                   className="px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-lg hover:bg-accent"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={createMutation.isPending}
-                  aria-label={createMutation.isPending ? "Creating entry" : "Create entry"}
+                  aria-label={createMutation.isPending ? t("creatingLabel") : t("createLabel")}
                   className="px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {createMutation.isPending ? "Creating..." : "Create"}
+                  {createMutation.isPending ? t("creating") : t("create")}
                 </button>
               </div>
             </form>
@@ -331,14 +333,14 @@ export default function KnowledgeVaultPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete Knowledge Entry"
+        title={t("deleteConfirmTitle")}
         description={
           deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`
+            ? t("deleteConfirmMessage", { title: deleteTarget.title })
             : ""
         }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        confirmLabel={t("deleteButton")}
+        cancelLabel={t("cancelButton")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
