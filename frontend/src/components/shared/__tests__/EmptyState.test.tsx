@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { EmptyState } from "../empty-state";
-import { BookOpen, Inbox } from "lucide-react";
+import { BookOpen, FileText, Inbox } from "lucide-react";
 
 // ── Mock lucide-react icons ──────────────────────────────────────────────
 
@@ -13,6 +13,9 @@ jest.mock("lucide-react", () => ({
   ),
   BookOpen: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="icon-book-open" {...props} />
+  ),
+  FileText: (props: React.SVGAttributes<SVGElement>) => (
+    <svg data-testid="icon-file-text" {...props} />
   ),
 }));
 
@@ -26,11 +29,18 @@ describe("EmptyState", () => {
     expect(screen.getByText("No items found")).toBeInTheDocument();
   });
 
-  it("renders with custom icon", () => {
+  it("renders with custom BookOpen icon", () => {
     render(<EmptyState icon={BookOpen} title="No books yet" />);
 
     expect(screen.getByTestId("icon-book-open")).toBeInTheDocument();
     expect(screen.getByText("No books yet")).toBeInTheDocument();
+  });
+
+  it("renders with custom FileText icon", () => {
+    render(<EmptyState icon={FileText} title="No documents" />);
+
+    expect(screen.getByTestId("icon-file-text")).toBeInTheDocument();
+    expect(screen.getByText("No documents")).toBeInTheDocument();
   });
 
   it("renders title", () => {
@@ -110,6 +120,23 @@ describe("EmptyState", () => {
     expect(handleAction).toHaveBeenCalledTimes(1);
   });
 
+  it("has proper semantic structure", () => {
+    render(
+      <EmptyState
+        title="No items found"
+        description="Create your first item to get started."
+        actionLabel="Create Item"
+        onAction={jest.fn()}
+      />
+    );
+
+    // Check for heading
+    expect(screen.getByRole("heading", { name: "No items found" })).toBeInTheDocument();
+
+    // Check for button
+    expect(screen.getByRole("button", { name: "Create Item" })).toBeInTheDocument();
+  });
+
   it("renders all parts together", async () => {
     const user = userEvent.setup();
     const handleAction = jest.fn();
@@ -141,6 +168,30 @@ describe("EmptyState", () => {
 
     await user.click(button);
     expect(handleAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders all props together correctly with FileText icon", async () => {
+    const user = userEvent.setup();
+    const mockAction = jest.fn();
+
+    render(
+      <EmptyState
+        icon={FileText}
+        title="No manuscripts"
+        description="Start writing your first book to see it here."
+        actionLabel="Start Writing"
+        onAction={mockAction}
+      />
+    );
+
+    expect(screen.getByTestId("icon-file-text")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No manuscripts" })).toBeInTheDocument();
+    expect(screen.getByText("Start writing your first book to see it here.")).toBeInTheDocument();
+
+    const button = screen.getByRole("button", { name: "Start Writing" });
+    await user.click(button);
+
+    expect(mockAction).toHaveBeenCalledTimes(1);
   });
 
   it("applies correct CSS classes for styling", () => {
