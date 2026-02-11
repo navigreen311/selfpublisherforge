@@ -69,5 +69,16 @@
   "errors": {
     "analyzeFailed": "Listing konnte nicht analysiert werden. Bitte überprüfen Sie Ihre ASIN oder URL und versuchen Sie es erneut.",
     "mobileCheckFailed": "Mobile Ansicht konnte nicht überprüft werden. Bitte versuchen Sie es erneut."
+  },
+  "blurb": {
+    "title": "Klappentext-Optimierung",
+    "subtitle": "Generieren, testen und optimieren Sie Ihren Buchklappentext für maximale Konversion.",
+    "loading": "Ihre Bücher werden geladen...",
+    "noBooksTitle": "Keine Bücher gefunden",
+    "noBooksMessage": "Erstellen Sie zuerst ein Projekt, um mit der Optimierung Ihrer Klappentexte zu beginnen.",
+    "selectBook": "Buch auswählen",
+    "chooseBook": "-- Buch wählen --",
+    "editorTab": "Klappentext-Editor",
+    "abTestTab": "A/B-Tests"
   }
 }

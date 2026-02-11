@@ -69,5 +69,16 @@
   "errors": {
     "analyzeFailed": "No se pudo analizar el listado. Verifica tu ASIN o URL e intenta de nuevo.",
     "mobileCheckFailed": "No se pudo verificar la vista móvil. Intenta de nuevo."
+  },
+  "blurb": {
+    "title": "Optimización de Descripción",
+    "subtitle": "Genera, prueba y optimiza la descripción de tu libro para máxima conversión.",
+    "loading": "Cargando tus libros...",
+    "noBooksTitle": "No se encontraron libros",
+    "noBooksMessage": "Crea un proyecto primero para comenzar a optimizar tus descripciones.",
+    "selectBook": "Selecciona un Libro",
+    "chooseBook": "-- Elige un libro --",
+    "editorTab": "Editor de Descripción",
+    "abTestTab": "Pruebas A/B"
   }
 }

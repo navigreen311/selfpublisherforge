@@ -2,7 +2,12 @@
   "title": "Preisautomatisierung",
   "subtitle": "Optimieren Sie Ihre Buchpreise für maximale Tantiemen und Verkäufe",
   "simulator": {
-    "button": "Preissimulator"
+    "button": "Preissimulator",
+    "title": "Preis-Tools",
+    "subtitle": "Interaktive Rechner zur Optimierung Ihrer Buchpreise und Einnahmen",
+    "backToDashboard": "Zurück zum Dashboard",
+    "priceSimulator": "Preissimulator",
+    "kuCalculator": "KU-Rechner"
   },
   "stats": {
     "activeRules": "Aktive Regeln",

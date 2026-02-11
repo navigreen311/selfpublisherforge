@@ -25,5 +25,23 @@
   "deleteConfirmMessage": "Sind Sie sicher, dass Sie \"{title}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
   "deleteButton": "Löschen",
   "cancelButton": "Abbrechen",
-  "relevance": "Relevanz: {score}"
+  "relevance": "Relevanz: {score}",
+  "detail": {
+    "invalidId": "Ungültige Eintrags-ID",
+    "notFound": "Eintrag nicht gefunden",
+    "backToVault": "Zurück zum Wissens-Tresor",
+    "sourceManual": "Manueller Eintrag",
+    "sourceUrl": "Von URL importiert",
+    "sourceFile": "Aus Datei importiert",
+    "sourceClip": "Web-Clip",
+    "created": "Erstellt",
+    "credibility": "{score}% Glaubwürdigkeit",
+    "aiSummary": "KI-Zusammenfassung",
+    "delete": "Löschen",
+    "keyPoints": "Schlüsselpunkte",
+    "suggestedTags": "Vorgeschlagene Tags",
+    "metadata": "Metadaten",
+    "deleteConfirmTitle": "Eintrag löschen",
+    "deleteConfirmMessage": "Sind Sie sicher, dass Sie diesen Eintrag löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+  }
 }

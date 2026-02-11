@@ -14,5 +14,9 @@
   "bookTitle1": "Título del Libro 1",
   "bookTitle2": "Título del Libro 2",
   "clickToViewDetails": "Haz clic para ver detalles",
-  "failedToLoad": "Error al cargar datos de reseñas. Por favor, inténtalo de nuevo."
+  "failedToLoad": "Error al cargar datos de reseñas. Por favor, inténtalo de nuevo.",
+  "detail": {
+    "backToAllReviews": "Volver a Todas las Reseñas",
+    "bookTitle": "Libro {id}"
+  }
 }

@@ -14,5 +14,9 @@
   "bookTitle1": "Buchtitel 1",
   "bookTitle2": "Buchtitel 2",
   "clickToViewDetails": "Klicken Sie, um Details anzuzeigen",
-  "failedToLoad": "Fehler beim Laden der Rezensionsdaten. Bitte versuchen Sie es erneut."
+  "failedToLoad": "Fehler beim Laden der Rezensionsdaten. Bitte versuchen Sie es erneut.",
+  "detail": {
+    "backToAllReviews": "Zurück zu allen Rezensionen",
+    "bookTitle": "Buch {id}"
+  }
 }
