@@ -77,7 +77,10 @@ TAGS_METADATA: list[dict[str, Any]] = [
     # Tier 0: Foundation
     {
         "name": "auth",
-        "description": "Authentication -- registration, login, logout, password reset, email verification, MFA, and OAuth (Google / GitHub).",
+        "description": (
+            "Authentication -- registration, login, logout, password reset, "
+            "email verification, MFA, and OAuth (Google / GitHub)."
+        ),
     },
     {
         "name": "users",
@@ -106,15 +109,24 @@ TAGS_METADATA: list[dict[str, Any]] = [
     },
     {
         "name": "market",
-        "description": "Market Intelligence Engine -- category browsing, keyword research, niche analysis, competitor tracking, and trend data.",
+        "description": (
+            "Market Intelligence Engine -- category browsing, keyword research, "
+            "niche analysis, competitor tracking, and trend data."
+        ),
     },
     {
         "name": "knowledge",
-        "description": "Knowledge Vault -- CRUD, semantic search, import, tags, and AI summaries for research notes and references.",
+        "description": (
+            "Knowledge Vault -- CRUD, semantic search, import, tags, "
+            "and AI summaries for research notes and references."
+        ),
     },
     {
         "name": "writing",
-        "description": "AI Writing Studio -- AI content generation (streaming), manuscript/chapter CRUD, outlines, readability analysis, and writing sessions.",
+        "description": (
+            "AI Writing Studio -- AI content generation (streaming), "
+            "manuscript/chapter CRUD, outlines, readability analysis, and writing sessions."
+        ),
     },
     {
         "name": "style",
@@ -123,11 +135,17 @@ TAGS_METADATA: list[dict[str, Any]] = [
     # Tier 3: Production
     {
         "name": "pipelines",
-        "description": "Production Pipeline -- manuscript formatting, EPUB/PDF export orchestration, and stage tracking.",
+        "description": (
+            "Production Pipeline -- manuscript formatting, "
+            "EPUB/PDF export orchestration, and stage tracking."
+        ),
     },
     {
         "name": "publishing",
-        "description": "Publishing Operations Center -- platform account connections, listing management, book metadata, and export to EPUB/PDF.",
+        "description": (
+            "Publishing Operations Center -- platform account connections, "
+            "listing management, book metadata, and export to EPUB/PDF."
+        ),
     },
     {
         "name": "kdp-validation",
@@ -149,11 +167,17 @@ TAGS_METADATA: list[dict[str, Any]] = [
     # Tier 5: Growth
     {
         "name": "marketing",
-        "description": "Marketing & Launch Command -- launch plans, email sequences, social media content, and ARC campaigns.",
+        "description": (
+            "Marketing & Launch Command -- launch plans, email sequences, "
+            "social media content, and ARC campaigns."
+        ),
     },
     {
         "name": "advertising",
-        "description": "Advertising Intelligence -- Amazon Ads and Facebook Ads campaign management, bid optimization, creative generation, and performance dashboards.",
+        "description": (
+            "Advertising Intelligence -- Amazon Ads and Facebook Ads campaign management, "
+            "bid optimization, creative generation, and performance dashboards."
+        ),
     },
     {
         "name": "reviews",
@@ -161,7 +185,10 @@ TAGS_METADATA: list[dict[str, Any]] = [
     },
     {
         "name": "analytics",
-        "description": "Analytics & BI -- revenue dashboards, royalty imports, portfolio metrics, report generation, event tracking, and trend analysis.",
+        "description": (
+            "Analytics & BI -- revenue dashboards, royalty imports, portfolio metrics, "
+            "report generation, event tracking, and trend analysis."
+        ),
     },
     # Tier 6-8: Intelligence & Scale
     {

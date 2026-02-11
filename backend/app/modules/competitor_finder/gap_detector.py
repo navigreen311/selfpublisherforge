@@ -425,14 +425,14 @@ def _build_recommendations(
             recs.append(f"HIGH PRIORITY - Content: {gap.description}")
 
     # Cover gaps
-    for gap in cover_gaps[:2]:
-        if gap.opportunity:
-            recs.append(f"Cover: {gap.opportunity}")
+    for cover_gap in cover_gaps[:2]:
+        if cover_gap.opportunity:
+            recs.append(f"Cover: {cover_gap.opportunity}")
 
     # Title gaps
-    for gap in title_gaps[:2]:
-        if gap.opportunity:
-            recs.append(f"Title: {gap.opportunity}")
+    for title_gap in title_gaps[:2]:
+        if title_gap.opportunity:
+            recs.append(f"Title: {title_gap.opportunity}")
 
     if not recs:
         recs.append(

@@ -432,7 +432,7 @@ async def _anthropic_stream(
         model=model if model.startswith("claude") else settings.DEFAULT_LLM_MODEL,
         max_tokens=4096,
         system=system_content,
-        messages=user_messages,
+        messages=user_messages,  # type: ignore[arg-type]
     ) as stream:
         async for text in stream.text_stream:
             yield text
