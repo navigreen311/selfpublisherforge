@@ -5,12 +5,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import require_role
+from app.core.tier_guard import require_module
 from app.database import get_db
 from app.modules.admin import schemas, service
 from app.schemas.common import MessageResponse
 
 router = APIRouter()
+
+
+# Admin access requires both:
+# 1. Enterprise tier (module-level)
+# 2. Admin or owner role (endpoint-level)
+require_admin = require_module("admin")
 
 
 # ---------------------------------------------------------------------------
@@ -27,12 +34,13 @@ async def list_users(
     offset: int = 0,
     search: str | None = None,
     tier: str | None = None,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """List all users (admin only).
 
-    TODO: Add admin-only permission check.
+    Requires Enterprise tier and admin/owner role.
     """
     request = schemas.UserListRequest(
         limit=limit,
@@ -53,12 +61,13 @@ async def list_users(
     description="Retrieve all platform feature flags.",
 )
 async def get_feature_flags(
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Get all feature flags (admin only).
 
-    TODO: Add admin-only permission check.
+    Requires Enterprise tier and admin/owner role.
     """
     return await service.get_feature_flags(db)
 
@@ -75,12 +84,13 @@ async def get_feature_flags(
 async def update_feature_flag(
     flag_key: str,
     body: schemas.FeatureFlagUpdateRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Update a feature flag (admin only).
 
-    TODO: Add admin-only permission check.
+    Requires Enterprise tier and admin/owner role.
     """
     return await service.update_feature_flag(
         db,
@@ -102,12 +112,13 @@ async def update_feature_flag(
 )
 async def deactivate_user(
     user_id: UUID,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Deactivate a user account (admin only).
 
-    TODO: Add admin-only permission check.
+    Requires Enterprise tier and admin/owner role.
     """
     await service.deactivate_user(db, user_id)
     return MessageResponse(message=f"User {user_id} deactivated successfully")
