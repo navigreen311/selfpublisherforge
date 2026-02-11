@@ -156,6 +156,95 @@ export interface ListingDetail {
 }
 
 // ---------------------------------------------------------------------------
+// KDP Validation
+// ---------------------------------------------------------------------------
+
+export type Severity = "error" | "warning" | "info";
+export type ValidationType = "print" | "ebook" | "cover" | "compliance" | "full";
+export type ValidationStatus = "passed" | "failed" | "warnings" | "pending";
+
+export interface ValidationIssue {
+  severity: Severity;
+  rule: string;
+  message: string;
+  location?: string;
+  details?: Record<string, any>;
+}
+
+export interface ValidationResult {
+  validation_type: ValidationType;
+  status: ValidationStatus;
+  issues: ValidationIssue[];
+  checked_at: string;
+  metadata: Record<string, any>;
+}
+
+export interface FullValidationResponse {
+  id: string;
+  overall_status: ValidationStatus;
+  results: ValidationResult[];
+  total_errors: number;
+  total_warnings: number;
+  created_at: string;
+}
+
+export interface FullValidationRequest {
+  print_validation?: {
+    trim_size: string;
+    page_count: number;
+    paper_type?: string;
+    has_bleed?: boolean;
+    inside_margin: number;
+    outside_margin: number;
+    top_margin: number;
+    bottom_margin: number;
+    image_dpi?: number;
+    fonts_embedded?: boolean;
+    color_space?: string;
+  };
+  ebook_validation?: {
+    has_ncx_toc?: boolean;
+    has_html_toc?: boolean;
+    images?: Array<{
+      filename: string;
+      format: string;
+      size_bytes: number;
+      dpi?: number;
+    }>;
+    links?: Array<{
+      href: string;
+      text?: string;
+      is_internal?: boolean;
+      is_valid?: boolean;
+    }>;
+    has_javascript?: boolean;
+    has_external_resources?: boolean;
+    min_font_size_pt?: number;
+    file_size_bytes?: number;
+  };
+  cover_validation?: {
+    cover_type?: string;
+    width_inches: number;
+    height_inches: number;
+    dpi: number;
+    file_format: string;
+    color_space?: string;
+    trim_size?: string;
+    page_count?: number;
+    paper_type?: string;
+    has_text_in_bleed?: boolean;
+  };
+  compliance_scan?: {
+    title?: string;
+    subtitle?: string;
+    description?: string;
+    keywords?: string[];
+    categories?: string[];
+    content_sample?: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Query Keys
 // ---------------------------------------------------------------------------
 
@@ -165,6 +254,7 @@ export const publishingKeys = {
   templates: () => [...publishingKeys.all, "templates"] as const,
   listings: () => [...publishingKeys.all, "listings"] as const,
   metadata: (bookId: string) => [...publishingKeys.all, "metadata", bookId] as const,
+  validation: (validationId: string) => [...publishingKeys.all, "validation", validationId] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -328,5 +418,32 @@ export function useSyncListing() {
     onError: (error) => {
       toast.error(extractApiError(error));
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// KDP Validation
+// ---------------------------------------------------------------------------
+
+export function useRunFullValidation() {
+  return useMutation<FullValidationResponse, Error, FullValidationRequest>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/publishing/validate", payload);
+      return data;
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useValidationResults(validationId: string) {
+  return useQuery<FullValidationResponse>({
+    queryKey: publishingKeys.validation(validationId),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/publishing/validate/${validationId}/results`);
+      return data;
+    },
+    enabled: !!validationId,
   });
 }
