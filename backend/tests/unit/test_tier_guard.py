@@ -1,70 +1,17 @@
 """Unit tests for tier-based module access control.
 
-Tests the tier_guard module which enforces subscription tier requirements
-for accessing different platform modules.
+Tests the `require_module` dependency factory and tier gating logic.
 """
 
 import pytest
-import pytest_asyncio
 from uuid import uuid4
-from unittest.mock import AsyncMock, MagicMock
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tier_guard import require_module, _get_org_tier
 from app.models.organization import Organization, PlanTier
-from shared.types.enums import PlanTier as SharedPlanTier
-
-
-# ---------------------------------------------------------------------------
-# Helper fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest_asyncio.fixture
-async def mock_org(db_session: AsyncSession):
-    """Create a test organization with FREE tier."""
-    org_id = uuid4()
-    org = Organization(
-        id=org_id,
-        name="TestOrg",
-        slug=f"testorg-{str(org_id)[:8]}",
-        plan_tier=PlanTier.FREE,
-    )
-    db_session.add(org)
-    await db_session.flush()
-    return org
-
-
-@pytest_asyncio.fixture
-async def mock_org_starter(db_session: AsyncSession):
-    """Create a test organization with STARTER tier."""
-    org_id = uuid4()
-    org = Organization(
-        id=org_id,
-        name="StarterOrg",
-        slug=f"starterorg-{str(org_id)[:8]}",
-        plan_tier=PlanTier.STARTER,
-    )
-    db_session.add(org)
-    await db_session.flush()
-    return org
-
-
-@pytest_asyncio.fixture
-async def mock_org_pro(db_session: AsyncSession):
-    """Create a test organization with PRO tier."""
-    org_id = uuid4()
-    org = Organization(
-        id=org_id,
-        name="ProOrg",
-        slug=f"proorg-{str(org_id)[:8]}",
-        plan_tier=PlanTier.PRO,
-    )
-    db_session.add(org)
-    await db_session.flush()
-    return org
+from shared.contracts.module_registry import get_module
 
 
 # ---------------------------------------------------------------------------
@@ -73,22 +20,53 @@ async def mock_org_pro(db_session: AsyncSession):
 
 
 class TestGetOrgTier:
-    """Test the internal _get_org_tier function."""
+    """Tests for the _get_org_tier internal helper."""
 
     @pytest.mark.asyncio
-    async def test_get_org_tier_success(self, db_session: AsyncSession, mock_org):
-        """Should return the organization's tier."""
-        tier = await _get_org_tier(db_session, mock_org.id)
-        assert tier == PlanTier.FREE
+    async def test_get_org_tier_success(self, db_session):
+        """Should return the organization's plan tier."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
+            name="TestOrg",
+            slug=f"testorg-{str(org_id)[:8]}",
+            plan_tier=PlanTier.PRO,
+        )
+        db_session.add(org)
+        await db_session.flush()
+
+        tier = await _get_org_tier(db_session, org_id)
+        assert tier == PlanTier.PRO
 
     @pytest.mark.asyncio
-    async def test_get_org_tier_not_found(self, db_session: AsyncSession):
-        """Should raise 404 for non-existent organization."""
+    async def test_get_org_tier_not_found(self, db_session):
+        """Should raise 404 if organization not found."""
         fake_org_id = uuid4()
+
         with pytest.raises(HTTPException) as exc_info:
             await _get_org_tier(db_session, fake_org_id)
+
         assert exc_info.value.status_code == 404
         assert "Organization not found" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_get_org_tier_soft_deleted(self, db_session):
+        """Should raise 404 if organization is soft-deleted."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
+            name="DeletedOrg",
+            slug=f"deletedorg-{str(org_id)[:8]}",
+            plan_tier=PlanTier.FREE,
+            deleted_at=datetime.now(timezone.utc),
+        )
+        db_session.add(org)
+        await db_session.flush()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await _get_org_tier(db_session, org_id)
+
+        assert exc_info.value.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -97,232 +75,193 @@ class TestGetOrgTier:
 
 
 class TestRequireModule:
-    """Test the require_module dependency factory."""
+    """Tests for the require_module dependency factory."""
 
-    def test_invalid_module_slug_raises_at_startup(self):
-        """Should raise ValueError for unknown module slug at dependency creation."""
+    def test_require_module_invalid_slug(self):
+        """Should raise ValueError if module slug doesn't exist in registry."""
         with pytest.raises(ValueError) as exc_info:
-            require_module("non-existent-module")
-        assert "Unknown module slug" in str(exc_info.value)
+            require_module("nonexistent-module")
 
-    def test_valid_module_slug_creates_dependency(self):
+        assert "Unknown module slug: nonexistent-module" in str(exc_info.value)
+
+    def test_require_module_valid_slug(self):
         """Should successfully create a dependency for a valid module slug."""
-        dependency = require_module("notifications")
-        assert callable(dependency)
+        # All of these should exist in the module registry
+        dep = require_module("competitor-finder")
+        assert callable(dep)
 
+        dep = require_module("ai-cover")
+        assert callable(dep)
 
-# ---------------------------------------------------------------------------
-# Test tier access enforcement
-# ---------------------------------------------------------------------------
-
-
-class TestTierAccessEnforcement:
-    """Test that the tier guard correctly allows/denies access based on tier."""
+        dep = require_module("review-intelligence")
+        assert callable(dep)
 
     @pytest.mark.asyncio
-    async def test_free_tier_can_access_free_module(
-        self, db_session: AsyncSession, mock_org
-    ):
-        """FREE tier should access FREE modules (notifications)."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": mock_org.id,
-            "role": "owner",
-        }
-
-        # Create dependency and call it
-        dependency = require_module("notifications")
-        result = await dependency(current_user=current_user, db=db_session)
-
-        assert result == current_user
-
-    @pytest.mark.asyncio
-    async def test_free_tier_denied_starter_module(
-        self, db_session: AsyncSession, mock_org
-    ):
-        """FREE tier should be denied access to STARTER modules."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": mock_org.id,
-            "role": "owner",
-        }
-
-        dependency = require_module("competitor-finder")
-        with pytest.raises(HTTPException) as exc_info:
-            await dependency(current_user=current_user, db=db_session)
-
-        assert exc_info.value.status_code == 403
-        assert "competitor-finder" in exc_info.value.detail.lower() or "Competitor Weakness Finder" in exc_info.value.detail
-        assert "starter" in exc_info.value.detail.lower()
-
-    @pytest.mark.asyncio
-    async def test_starter_tier_can_access_free_module(
-        self, db_session: AsyncSession, mock_org_starter
-    ):
-        """STARTER tier should access FREE modules (inheritance)."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": mock_org_starter.id,
-            "role": "owner",
-        }
-
-        dependency = require_module("style-profiles")
-        result = await dependency(current_user=current_user, db=db_session)
-
-        assert result == current_user
-
-    @pytest.mark.asyncio
-    async def test_starter_tier_can_access_starter_module(
-        self, db_session: AsyncSession, mock_org_starter
-    ):
-        """STARTER tier should access STARTER modules."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": mock_org_starter.id,
-            "role": "owner",
-        }
-
-        dependency = require_module("review-intelligence")
-        result = await dependency(current_user=current_user, db=db_session)
-
-        assert result == current_user
-
-    @pytest.mark.asyncio
-    async def test_starter_tier_denied_pro_module(
-        self, db_session: AsyncSession, mock_org_starter
-    ):
-        """STARTER tier should be denied access to PRO modules."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": mock_org_starter.id,
-            "role": "owner",
-        }
-
-        dependency = require_module("ai-cover")
-        with pytest.raises(HTTPException) as exc_info:
-            await dependency(current_user=current_user, db=db_session)
-
-        assert exc_info.value.status_code == 403
-        assert "pro" in exc_info.value.detail.lower()
-
-    @pytest.mark.asyncio
-    async def test_pro_tier_can_access_all_lower_tiers(
-        self, db_session: AsyncSession, mock_org_pro
-    ):
-        """PRO tier should access FREE, STARTER, and PRO modules."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": mock_org_pro.id,
-            "role": "owner",
-        }
-
-        # Test FREE module
-        dep_free = require_module("notifications")
-        result = await dep_free(current_user=current_user, db=db_session)
-        assert result == current_user
-
-        # Test STARTER module
-        dep_starter = require_module("pricing-automation")
-        result = await dep_starter(current_user=current_user, db=db_session)
-        assert result == current_user
-
-        # Test PRO module
-        dep_pro = require_module("portfolio-economics")
-        result = await dep_pro(current_user=current_user, db=db_session)
-        assert result == current_user
-
-    @pytest.mark.asyncio
-    async def test_user_without_org_denied(self, db_session: AsyncSession):
-        """User without org_id should be denied access."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": None,
-            "role": "viewer",
-        }
-
-        dependency = require_module("notifications")
-        with pytest.raises(HTTPException) as exc_info:
-            await dependency(current_user=current_user, db=db_session)
-
-        assert exc_info.value.status_code == 403
-        assert "belong to an organization" in exc_info.value.detail
-
-
-# ---------------------------------------------------------------------------
-# Test module registry integration
-# ---------------------------------------------------------------------------
-
-
-class TestModuleRegistryIntegration:
-    """Test that tier guard properly integrates with the module registry."""
-
-    @pytest.mark.asyncio
-    async def test_all_new_modules_accessible_at_correct_tier(
-        self, db_session: AsyncSession
-    ):
-        """Verify that all newly added modules are accessible at their declared tiers."""
-        # Test review-intelligence (STARTER)
-        org_starter_id = uuid4()
-        org_starter = Organization(
-            id=org_starter_id,
+    async def test_tier_access_granted_exact_tier(self, db_session):
+        """Should allow access when org tier matches module tier exactly."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
             name="StarterOrg",
-            slug=f"starter-{str(org_starter_id)[:8]}",
+            slug=f"starterorg-{str(org_id)[:8]}",
             plan_tier=PlanTier.STARTER,
         )
-        db_session.add(org_starter)
+        db_session.add(org)
         await db_session.flush()
 
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": org_starter_id,
-            "role": "owner",
-        }
+        # competitor-finder requires STARTER tier
+        dep = require_module("competitor-finder")
+        current_user = {"user_id": uuid4(), "org_id": org_id}
 
-        # review-intelligence should work with STARTER
-        dep = require_module("review-intelligence")
+        # Should not raise
         result = await dep(current_user=current_user, db=db_session)
         assert result == current_user
 
-        # Test portfolio-economics (PRO)
-        org_pro_id = uuid4()
-        org_pro = Organization(
-            id=org_pro_id,
+    @pytest.mark.asyncio
+    async def test_tier_access_granted_higher_tier(self, db_session):
+        """Should allow access when org tier is higher than module tier."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
             name="ProOrg",
-            slug=f"pro-{str(org_pro_id)[:8]}",
+            slug=f"proorg-{str(org_id)[:8]}",
             plan_tier=PlanTier.PRO,
         )
-        db_session.add(org_pro)
+        db_session.add(org)
         await db_session.flush()
 
-        current_user_pro = {
-            "user_id": uuid4(),
-            "org_id": org_pro_id,
-            "role": "owner",
-        }
+        # competitor-finder requires STARTER tier, but PRO is higher
+        dep = require_module("competitor-finder")
+        current_user = {"user_id": uuid4(), "org_id": org_id}
 
-        # portfolio-economics should work with PRO
-        dep_pro = require_module("portfolio-economics")
-        result = await dep_pro(current_user=current_user_pro, db=db_session)
-        assert result == current_user_pro
+        # Should not raise
+        result = await dep(current_user=current_user, db=db_session)
+        assert result == current_user
 
     @pytest.mark.asyncio
-    async def test_module_detail_in_error_message(
-        self, db_session: AsyncSession, mock_org
-    ):
-        """Error message should include helpful module and tier information."""
-        current_user = {
-            "user_id": uuid4(),
-            "org_id": mock_org.id,
-            "role": "owner",
-        }
+    async def test_tier_access_denied_lower_tier(self, db_session):
+        """Should deny access when org tier is lower than module tier."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
+            name="FreeOrg",
+            slug=f"freeorg-{str(org_id)[:8]}",
+            plan_tier=PlanTier.FREE,
+        )
+        db_session.add(org)
+        await db_session.flush()
 
-        dependency = require_module("portfolio-economics")
+        # competitor-finder requires STARTER tier
+        dep = require_module("competitor-finder")
+        current_user = {"user_id": uuid4(), "org_id": org_id}
+
         with pytest.raises(HTTPException) as exc_info:
-            await dependency(current_user=current_user, db=db_session)
+            await dep(current_user=current_user, db=db_session)
 
-        # Should mention the module name or slug
-        assert "portfolio" in exc_info.value.detail.lower() or "Portfolio Economics" in exc_info.value.detail
-        # Should mention the required tier
-        assert "pro" in exc_info.value.detail.lower()
-        # Should mention the current tier
-        assert "free" in exc_info.value.detail.lower()
+        assert exc_info.value.status_code == 403
+        assert "requires starter tier or higher" in exc_info.value.detail.lower()
+        assert "current tier: free" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_tier_access_denied_no_org(self, db_session):
+        """Should deny access when user has no organization."""
+        dep = require_module("competitor-finder")
+        current_user = {"user_id": uuid4(), "org_id": None}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(current_user=current_user, db=db_session)
+
+        assert exc_info.value.status_code == 403
+        assert "must belong to an organization" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_free_tier_module_access(self, db_session):
+        """Should allow access to FREE tier modules for all users."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
+            name="FreeOrg",
+            slug=f"freeorg-{str(org_id)[:8]}",
+            plan_tier=PlanTier.FREE,
+        )
+        db_session.add(org)
+        await db_session.flush()
+
+        # notifications is a FREE tier module
+        dep = require_module("notifications")
+        current_user = {"user_id": uuid4(), "org_id": org_id}
+
+        # Should not raise
+        result = await dep(current_user=current_user, db=db_session)
+        assert result == current_user
+
+    @pytest.mark.asyncio
+    async def test_pro_tier_module_access_denied(self, db_session):
+        """Should deny access to PRO modules for STARTER tier orgs."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
+            name="StarterOrg",
+            slug=f"starterorg-{str(org_id)[:8]}",
+            plan_tier=PlanTier.STARTER,
+        )
+        db_session.add(org)
+        await db_session.flush()
+
+        # ai-cover requires PRO tier
+        dep = require_module("ai-cover")
+        current_user = {"user_id": uuid4(), "org_id": org_id}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(current_user=current_user, db=db_session)
+
+        assert exc_info.value.status_code == 403
+        assert "requires pro tier or higher" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_enterprise_tier_access_all(self, db_session):
+        """ENTERPRISE tier should have access to all modules."""
+        org_id = uuid4()
+        org = Organization(
+            id=org_id,
+            name="EnterpriseOrg",
+            slug=f"enterpriseorg-{str(org_id)[:8]}",
+            plan_tier=PlanTier.ENTERPRISE,
+        )
+        db_session.add(org)
+        await db_session.flush()
+
+        current_user = {"user_id": uuid4(), "org_id": org_id}
+
+        # Test a few modules across different tiers
+        for module_slug in ["notifications", "competitor-finder", "ai-cover", "admin"]:
+            dep = require_module(module_slug)
+            result = await dep(current_user=current_user, db=db_session)
+            assert result == current_user
+
+
+# ---------------------------------------------------------------------------
+# Module registry validation
+# ---------------------------------------------------------------------------
+
+
+class TestModuleRegistryCompleteness:
+    """Verify all required modules exist in the registry."""
+
+    def test_required_modules_exist(self):
+        """All task-specified modules should exist in the registry."""
+        required_modules = [
+            ("ai-cover", PlanTier.PRO),  # cover-design
+            ("review-intelligence", PlanTier.STARTER),
+            ("competitor-finder", PlanTier.STARTER),
+            ("style-profiles", PlanTier.FREE),
+            ("pricing-automation", PlanTier.STARTER),
+            ("portfolio-economics", PlanTier.PRO),
+            ("notifications", PlanTier.FREE),
+            ("publishing-validation", PlanTier.STARTER),  # kdp-validation
+        ]
+
+        for slug, expected_tier in required_modules:
+            module = get_module(slug)
+            assert module.slug == slug
+            assert module.tier == expected_tier
