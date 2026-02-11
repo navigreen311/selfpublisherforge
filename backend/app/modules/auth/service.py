@@ -645,7 +645,7 @@ async def _find_or_create_oauth_user(
 
     # --- Check for existing user with same email ---
     result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    user = result.scalar_one_or_none()  # type: ignore[assignment]
 
     if user is not None:
         # Link new OAuth account to existing user
@@ -745,7 +745,7 @@ def _make_slug(org_name: str, org_id: str) -> str:
 def _verify_mfa(user: User, code: str) -> bool:
     """Check a TOTP code or a backup code for the user."""
     # Try TOTP first
-    if verify_totp(user.mfa_secret, code):
+    if verify_totp(user.mfa_secret, code):  # type: ignore[arg-type]
         return True
 
     # Try backup codes

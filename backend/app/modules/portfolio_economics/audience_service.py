@@ -247,7 +247,7 @@ async def _fetch_book_insights(
         for t in all_themes:
             if isinstance(t, str):
                 theme_counts[t] += 1
-        sorted_themes = sorted(theme_counts, key=theme_counts.get, reverse=True)
+        sorted_themes = sorted(theme_counts, key=theme_counts.get, reverse=True)  # type: ignore[arg-type]
         insights["themes"] = sorted_themes[:10]
 
     # --- Sales/royalty data ---

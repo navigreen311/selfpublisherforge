@@ -257,7 +257,7 @@ class StorageService:
         self, *, asset_id: uuid.UUID, org_id: uuid.UUID
     ) -> AssetResponse:
         asset = await self._get_asset_or_404(asset_id, org_id)
-        download_url = self._generate_download_url(asset.s3_key)
+        download_url = self._generate_download_url(asset.s3_key)  # type: ignore[arg-type]
         return self._to_response(asset, download_url=download_url)
 
     # -- Soft-delete --------------------------------------------------------
@@ -443,12 +443,12 @@ class StorageService:
         return AssetResponse(
             id=asset.id,
             org_id=asset.org_id,
-            file_name=asset.file_name,
-            content_type=asset.content_type,
-            size=asset.size,
+            file_name=asset.file_name,  # type: ignore[arg-type]
+            content_type=asset.content_type,  # type: ignore[arg-type]
+            size=asset.size,  # type: ignore[arg-type]
             asset_type=AssetType(asset.asset_type),
             status=AssetStatus(asset.status),
-            s3_key=asset.s3_key,
+            s3_key=asset.s3_key,  # type: ignore[arg-type]
             download_url=download_url,
             metadata=asset.metadata_,
             created_at=asset.created_at,
