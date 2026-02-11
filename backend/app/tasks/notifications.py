@@ -1,9 +1,22 @@
-"""Celery tasks for asynchronous notification delivery."""
+"""Celery tasks for asynchronous notification delivery.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
+"""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
+
+from celery.exceptions import SoftTimeLimitExceeded
 
 from app.tasks import celery_app
 
@@ -16,6 +29,8 @@ logger = logging.getLogger(__name__)
     max_retries=3,
     default_retry_delay=60,
     acks_late=True,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def send_email_task(
     self,
@@ -46,6 +61,9 @@ def send_email_task(
             exc_info=True,
         )
         raise self.retry(exc=exc)
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.warning(
             "Email task failed (attempt %s/%s): to=%s template=%s error=%s",
@@ -65,6 +83,8 @@ def send_email_task(
     max_retries=2,
     default_retry_delay=10,
     acks_late=True,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def create_in_app_notification_task(
     self,
@@ -112,6 +132,9 @@ def create_in_app_notification_task(
             notification_type,
         )
         return {"status": "created", "notification_id": notification_id}
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.warning(
             "In-app notification task failed (attempt %s/%s): user=%s error=%s",
@@ -132,6 +155,8 @@ def create_in_app_notification_task(
     max_retries=2,
     default_retry_delay=30,
     acks_late=True,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def batch_notification_delivery_task(
     self,

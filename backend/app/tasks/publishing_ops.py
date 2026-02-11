@@ -4,6 +4,16 @@ Async tasks for:
 - EPUB export generation
 - PDF export generation
 - Listing sync with external platforms
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
@@ -16,6 +26,7 @@ from datetime import datetime, timezone
 import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
+from celery.exceptions import SoftTimeLimitExceeded
 
 from app.config import get_settings
 from app.tasks import celery_app
@@ -73,6 +84,8 @@ _SUPPORTED_PLATFORM_APIS: set[str] = set()
     max_retries=3,
     default_retry_delay=60,
     acks_late=True,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def task_generate_epub(
     self,
@@ -148,6 +161,9 @@ def task_generate_epub(
     except (ValueError, TypeError, KeyError) as exc:
         logger.error("Data validation error in EPUB generation for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("EPUB generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
@@ -159,6 +175,8 @@ def task_generate_epub(
     max_retries=3,
     default_retry_delay=60,
     acks_late=True,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def task_generate_pdf(
     self,
@@ -230,6 +248,9 @@ def task_generate_pdf(
     except (ValueError, TypeError, KeyError) as exc:
         logger.error("Data validation error in PDF generation for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("PDF generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
         raise self.retry(exc=exc)
@@ -241,6 +262,8 @@ def task_generate_pdf(
     max_retries=5,
     default_retry_delay=120,
     acks_late=True,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def task_sync_listing(
     self,
@@ -345,6 +368,9 @@ def task_sync_listing(
             result = loop.run_until_complete(_sync())
     except RuntimeError:
         result = asyncio.run(_sync())
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("Listing sync failed for listing_id=%s: %s", listing_id, exc, exc_info=True)
         raise self.retry(exc=exc)

@@ -47,16 +47,19 @@ variable "allowed_cidr_blocks" {
   type        = list(string)
   default     = []
 
+  # Empty list means no SSH/direct access allowed. Set explicitly for your environment.
+  #
   # SECURITY NOTE: If this list contains "0.0.0.0/0", the ALB will be open to
   # the entire internet. This is acceptable for staging/public-facing sites but
   # should be reviewed carefully for production. Consider restricting to known
   # IP ranges (e.g., office IPs, VPN CIDR) if the application is not public.
-  # A validation block cannot be used here because staging legitimately needs
-  # open access, and Terraform validations cannot reference other variables.
 
   validation {
-    condition     = length(var.allowed_cidr_blocks) > 0
-    error_message = "allowed_cidr_blocks must contain at least one CIDR block. Open access (0.0.0.0/0) is not set by default for security — provide explicit CIDR ranges."
+    condition = alltrue([
+      for cidr in var.allowed_cidr_blocks :
+      can(cidrhost(cidr, 0))
+    ])
+    error_message = "Each entry in allowed_cidr_blocks must be a valid CIDR block (e.g., '10.0.0.0/16' or '0.0.0.0/0')."
   }
 }
 
@@ -216,22 +219,62 @@ variable "redis_engine_version" {
 # -----------------------------------------------------------------------------
 # S3
 # -----------------------------------------------------------------------------
-variable "assets_bucket_name" {
-  description = "Name of the S3 bucket for static assets"
+# IMPORTANT: S3 bucket names are globally unique across all AWS accounts.
+# The defaults below include the environment suffix to reduce collisions, but
+# you MUST override these in your .tfvars file with account-specific names
+# (e.g., include your AWS account ID or a unique org prefix).
+# Recommended pattern: "<org>-<project>-<purpose>-<account-id>-<environment>"
+#
+# Since Terraform cannot interpolate variables in defaults, use a locals block
+# in your root module to build dynamic names:
+#   locals {
+#     assets_bucket   = "${var.project_prefix}-assets-${data.aws_caller_identity.current.account_id}-${var.environment}"
+#     backups_bucket  = "${var.project_prefix}-backups-${data.aws_caller_identity.current.account_id}-${var.environment}"
+#     frontend_bucket = "${var.project_prefix}-frontend-${data.aws_caller_identity.current.account_id}-${var.environment}"
+#   }
+
+variable "project_prefix" {
+  description = "Prefix for resource names including S3 buckets — override to ensure global uniqueness"
   type        = string
-  default     = "selfpublisherforge-assets"
+  default     = "selfpublisherforge"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]*[a-z0-9]$", var.project_prefix))
+    error_message = "project_prefix must contain only lowercase letters, numbers, and hyphens, and must not start or end with a hyphen."
+  }
+}
+
+variable "assets_bucket_name" {
+  description = "Name of the S3 bucket for static assets — MUST be globally unique, override in .tfvars"
+  type        = string
+  default     = "selfpublisherforge-assets-CHANGE-ME"
+
+  validation {
+    condition     = var.assets_bucket_name != "selfpublisherforge-assets"
+    error_message = "assets_bucket_name 'selfpublisherforge-assets' is not globally unique. Override it in your .tfvars (e.g., 'myorg-selfpublisherforge-assets-123456789012-staging')."
+  }
 }
 
 variable "backups_bucket_name" {
-  description = "Name of the S3 bucket for database backups"
+  description = "Name of the S3 bucket for database backups — MUST be globally unique, override in .tfvars"
   type        = string
-  default     = "selfpublisherforge-backups"
+  default     = "selfpublisherforge-backups-CHANGE-ME"
+
+  validation {
+    condition     = var.backups_bucket_name != "selfpublisherforge-backups"
+    error_message = "backups_bucket_name 'selfpublisherforge-backups' is not globally unique. Override it in your .tfvars (e.g., 'myorg-selfpublisherforge-backups-123456789012-staging')."
+  }
 }
 
 variable "frontend_bucket_name" {
-  description = "Name of the S3 bucket for frontend static build output"
+  description = "Name of the S3 bucket for frontend static build output — MUST be globally unique, override in .tfvars"
   type        = string
-  default     = "selfpublisherforge-frontend"
+  default     = "selfpublisherforge-frontend-CHANGE-ME"
+
+  validation {
+    condition     = var.frontend_bucket_name != "selfpublisherforge-frontend"
+    error_message = "frontend_bucket_name 'selfpublisherforge-frontend' is not globally unique. Override it in your .tfvars (e.g., 'myorg-selfpublisherforge-frontend-123456789012-staging')."
+  }
 }
 
 # -----------------------------------------------------------------------------

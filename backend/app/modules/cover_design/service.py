@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AppException
 from app.modules.cover_design.analyzer import analyze_competitor_covers
 from app.modules.cover_design.generator import (
     build_cover_prompt,
@@ -162,7 +163,11 @@ async def create_variations(
     result = await db.execute(stmt)
     original = result.scalar_one_or_none()
     if original is None:
-        raise ValueError(f"Cover {cover_id} not found")
+        raise AppException(
+            status_code=404,
+            code="COVER_NOT_FOUND",
+            message=f"Cover {cover_id} not found",
+        )
 
     prompt = original.prompt_used or build_cover_prompt(
         title=original.title,
@@ -285,7 +290,7 @@ async def get_cover_by_id(
     db: AsyncSession,
     org_id: UUID,
     cover_id: UUID,
-) -> CoverResponse | None:
+) -> CoverResponse:
     """Return a single cover by ID."""
     stmt = select(Cover).where(
         Cover.id == cover_id,
@@ -295,7 +300,11 @@ async def get_cover_by_id(
     result = await db.execute(stmt)
     cover = result.scalar_one_or_none()
     if cover is None:
-        return None
+        raise AppException(
+            status_code=404,
+            code="COVER_NOT_FOUND",
+            message=f"Cover {cover_id} not found",
+        )
     return _cover_to_response(cover)
 
 
@@ -315,7 +324,11 @@ async def delete_cover(
     result = await db.execute(stmt)
     cover = result.scalar_one_or_none()
     if cover is None:
-        return False
+        raise AppException(
+            status_code=404,
+            code="COVER_NOT_FOUND",
+            message=f"Cover {cover_id} not found",
+        )
 
     cover.deleted_at = datetime.now(timezone.utc)
     await db.flush()

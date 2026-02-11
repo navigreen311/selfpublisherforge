@@ -12,6 +12,7 @@ from datetime import datetime, date, timedelta, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session
@@ -297,7 +298,7 @@ async def build_audience_personas(
     try:
         async with async_session() as db:
             insights = await _fetch_book_insights(db, request.book_id, request.genre)
-    except Exception:
+    except (SQLAlchemyError, OperationalError) as e:
         logger.warning(
             "build_audience_personas: database query for book insights failed, using defaults",
             exc_info=True,
@@ -462,7 +463,7 @@ async def build_also_bought_intelligence(
                         review_count=comp.reviews_count or 0,
                         overlap_score=round(max(0.0, 0.9 - (i * 0.12)), 2),
                     ))
-    except Exception:
+    except (SQLAlchemyError, OperationalError) as e:
         logger.warning(
             "build_also_bought_intelligence: database query for competitor data failed, falling back to genre-based defaults",
             exc_info=True,
@@ -602,7 +603,7 @@ async def get_audience_growth(
                     d = row.day.date() if hasattr(row.day, "date") else row.day
                     daily_engagement_events[d] = int(row.engagement_events) if row.engagement_events else 0
                     daily_total_events[d] = int(row.total_events) if row.total_events else 0
-    except Exception:
+    except (SQLAlchemyError, OperationalError) as e:
         logger.warning(
             "get_audience_growth: database query for royalty/analytics data failed, returning empty growth data",
             exc_info=True,

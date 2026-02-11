@@ -2,15 +2,16 @@
 # Staging Environment — Terraform variable overrides
 # =============================================================================
 #
-# Staging uses smaller, cost-efficient resource sizes for development and
-# testing. Most values are pre-configured; you only need to set the four
-# secret environment variables before deploying.
+# This file configures a cost-effective staging environment for testing and
+# development. Instance sizes are smaller than production, and access is open
+# to simplify testing workflows.
 #
-# REQUIRED environment variables (set before running terraform):
-#   - TF_VAR_db_password   (database master password)
-#   - TF_VAR_db_username   (database master username)
-#   - TF_VAR_jwt_secret_key (JWT signing secret)
-#   - TF_VAR_app_secret_key (Django SECRET_KEY)
+# CHECKLIST — complete every item before running terraform apply:
+#
+#   [ ] 1. Export the four required secret environment variables (see Secrets section)
+#   [ ] 2. (Optional) Set domain_name if you have a staging subdomain
+#   [ ] 3. (Optional) Set certificate_arn if using HTTPS in staging
+#   [ ] 4. (Optional) Set alarm_sns_topic_arn for staging alerts
 #
 # HOW TO DEPLOY:
 #   1. Export the four required environment variables (see "Secrets" section).
@@ -25,29 +26,11 @@ aws_region  = "us-east-1"
 # =============================================================================
 # Networking
 # =============================================================================
-#
-# allowed_cidr_blocks — CIDR blocks permitted to reach the ALB.
-# This is REQUIRED (Terraform validation will fail if empty).
-#
-# For staging, you might restrict access to your office/VPN IP to prevent
-# public exposure, or use "0.0.0.0/0" if the staging site should be
-# publicly accessible.
-#
-# Examples:
-#   allowed_cidr_blocks = ["0.0.0.0/0"]                  # open to everyone
-#   allowed_cidr_blocks = ["203.0.113.0/24"]              # single office range
-#   allowed_cidr_blocks = ["10.0.0.0/8", "172.16.0.0/12"] # internal ranges
-#
-allowed_cidr_blocks = ["0.0.0.0/0"]   # open access for staging — restrict for sensitive workloads
+vpc_cidr                 = "10.1.0.0/16"   # Different CIDR from production (10.0.0.0/16) to allow VPC peering
+availability_zones_count = 2
 
-# vpc_cidr — CIDR block for the staging VPC.
-# Default: "10.0.0.0/16" (defined in variables.tf). Override only if you
-# need to avoid CIDR conflicts with peered VPCs or VPN tunnels.
-# vpc_cidr = "10.0.0.0/16"
-
-# availability_zones_count — Number of AZs to spread resources across.
-# Default: 2 (defined in variables.tf). Two is a good minimum for ALB.
-# availability_zones_count = 2
+# Staging — open for testing. Restrict in production.
+allowed_cidr_blocks = ["0.0.0.0/0"]
 
 # =============================================================================
 # ECS — Smaller containers suitable for staging workloads
@@ -62,107 +45,77 @@ api_desired_count  = 1      # single instance is sufficient for staging
 api_min_count      = 1      # auto-scaling floor
 api_max_count      = 3      # auto-scaling ceiling
 
-# --- Frontend service ---
-frontend_cpu       = 256
-frontend_memory    = 512
+# --- Frontend service (Next.js / static serving) ---
+frontend_cpu           = 256
+frontend_memory        = 512
 frontend_desired_count = 1
 
-# --- Celery worker ---
-worker_cpu         = 256
-worker_memory      = 512
+# --- Celery worker (async task processing) ---
+worker_cpu           = 256
+worker_memory        = 512
 worker_desired_count = 1
 
-# --- Celery beat ---
-beat_cpu           = 256
-beat_memory        = 256
+# --- Celery beat (periodic task scheduler — only ever 1 instance) ---
+beat_cpu    = 256
+beat_memory = 256
 
 # =============================================================================
 # RDS — PostgreSQL staging database (smaller, single-AZ)
 # =============================================================================
-db_instance_class        = "db.t3.small"   # 2 vCPU, 2 GB RAM
-db_allocated_storage     = 20              # initial storage in GB
-db_max_allocated_storage = 50              # auto-scaling upper limit in GB
+db_instance_class        = "db.t3.small"   # 1 vCPU, 2 GB RAM (production: db.t3.medium)
+db_allocated_storage     = 20              # initial storage in GB (production: 50)
+db_max_allocated_storage = 50              # auto-scaling upper limit (production: 200)
+db_name                  = "selfpublisherforge"
 db_multi_az              = false           # single-AZ is fine for staging (saves cost)
-db_backup_retention      = 3              # fewer backup days for staging
-
-# db_name — Name of the PostgreSQL database created on the RDS instance.
-# Default: "selfpublisherforge" (defined in variables.tf).
-# Override if you want a different DB name in staging, e.g., to run
-# multiple staging environments against the same account.
-# db_name = "selfpublisherforge_staging"
+db_backup_retention      = 3              # fewer backup days for staging (production: 7)
 
 # ---------------------------------------------------------------------------
 # Secrets — NEVER put actual values in this file.
 # Set each one as a shell environment variable before running terraform.
 #
-#   export TF_VAR_db_username="your_staging_db_username"
+#   export TF_VAR_db_username="staging_admin"
 #     - The master username for the staging RDS instance.
 #     - Can differ from production. Example: "spf_staging_admin"
 #
-#   export TF_VAR_db_password="your_staging_db_password"
+#   export TF_VAR_db_password="$(openssl rand -base64 24)"
 #     - The master password for the staging RDS instance.
-#     - Generate one:  openssl rand -base64 24
+#     - Requirements: at least 16 characters, mix of upper/lower/digits/symbols.
 #
-#   export TF_VAR_jwt_secret_key="your_staging_jwt_key"
+#   export TF_VAR_jwt_secret_key="$(openssl rand -hex 32)"
 #     - JWT signing secret for the staging API.
 #     - MUST differ from production for security isolation.
-#     - Generate one:  openssl rand -hex 32
 #
-#   export TF_VAR_app_secret_key="your_staging_django_key"
+#   export TF_VAR_app_secret_key="$(openssl rand -hex 50)"
 #     - Django SECRET_KEY for the staging environment.
 #     - MUST differ from production for security isolation.
-#     - Generate one:  openssl rand -hex 50
 # ---------------------------------------------------------------------------
 
 # =============================================================================
 # ElastiCache — Redis (smaller node for staging)
 # =============================================================================
-redis_node_type       = "cache.t3.small"   # 1.37 GB memory
+redis_node_type       = "cache.t3.micro"   # 0.5 GB memory (production: cache.t3.medium)
 redis_num_cache_nodes = 1
-
-# redis_engine_version — Redis engine version.
-# Default: "7.1" (defined in variables.tf). Override only if you need to
-# test against a specific Redis version before upgrading production.
-# redis_engine_version = "7.1"
+redis_engine_version  = "7.1"
 
 # =============================================================================
-# S3 Buckets
+# S3 — Bucket names with "-staging" suffix
 # =============================================================================
-#
-# S3 bucket names must be globally unique. The defaults in variables.tf
-# do NOT include an environment suffix, so you SHOULD override them for
-# staging to avoid collisions with production buckets.
-#
-# Recommended pattern: "<project>-<purpose>-staging"
-#
-# assets_bucket_name — Stores user-uploaded assets (book covers, PDFs, etc.)
-# assets_bucket_name = "selfpublisherforge-assets-staging"
-#
-# backups_bucket_name — Stores automated database backups.
-# backups_bucket_name = "selfpublisherforge-backups-staging"
-#
-# frontend_bucket_name — Stores the Next.js static build output served by CloudFront.
-# frontend_bucket_name = "selfpublisherforge-frontend-staging"
+# S3 bucket names must be globally unique. The "-staging" suffix prevents
+# collisions with production buckets in the same AWS account.
+assets_bucket_name   = "selfpublisherforge-assets-staging"
+backups_bucket_name  = "selfpublisherforge-backups-staging"
+frontend_bucket_name = "selfpublisherforge-frontend-staging"
 
 # =============================================================================
 # Logging
 # =============================================================================
-log_retention_days = 14   # shorter retention for staging (saves cost)
-
-# flow_log_retention_days — Retention for VPC Flow Logs in CloudWatch.
-# Default: 14 days (defined in variables.tf). Flow logs help diagnose
-# network connectivity issues. Reduce to 7 days if cost is a concern.
-# flow_log_retention_days = 7
+log_retention_days      = 14   # shorter retention for staging (production: 30)
+flow_log_retention_days = 7    # shorter retention for staging (production: 14)
 
 # =============================================================================
-# WAF — Web Application Firewall
+# WAF — More permissive rate limit for testing
 # =============================================================================
-#
-# waf_rate_limit — Max requests per 5-minute window per IP before WAF blocks.
-# Default: 2000 (defined in variables.tf).
-# A lower limit in staging can help catch runaway scripts or load tests
-# that accidentally target the wrong environment.
-# waf_rate_limit = 1000
+waf_rate_limit = 5000   # requests per 5-min per IP (production: 2000) — permissive for load testing
 
 # =============================================================================
 # Domain & SSL/TLS (Optional for staging)
@@ -174,38 +127,23 @@ log_retention_days = 14   # shorter retention for staging (saves cost)
 #
 # To set up a staging domain:
 #   1. Request an ACM certificate (see production.tfvars for step-by-step).
-#   2. Point your staging DNS record (e.g., staging.selfpublisherforge.com)
-#      to the ALB DNS name output by Terraform.
+#   2. Point your staging DNS record to the ALB DNS name output by Terraform.
 #
-# If left empty, HTTPS will not be configured on the ALB/CloudFront
-# and the service will be available on the ALB's default DNS.
-#
-# domain_name — The staging domain name used for ALB listener rules,
-#   CloudFront, and Route 53. Leave empty ("") to skip custom domain setup.
-#   Example: "staging.selfpublisherforge.com"
-#
-# certificate_arn — ARN of the ACM certificate covering the staging domain.
-#   Must be in us-east-1 (required by CloudFront). Leave empty ("") if not
-#   using a custom domain.
-#   Example: "arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234-efgh-5678"
-#
-domain_name     = ""   # TODO: (Optional) Set to staging domain, e.g., "staging.selfpublisherforge.com"
-certificate_arn = ""   # TODO: (Optional) Set to ACM certificate ARN if using a custom staging domain
+# >>> TODO (Optional): Set staging domain and certificate <<<
+domain_name     = ""   # TODO (Optional): e.g., "staging.selfpublisherforge.com"
+certificate_arn = ""   # TODO (Optional): e.g., "arn:aws:acm:us-east-1:123456789012:certificate/<UUID>"
 
 # =============================================================================
 # Monitoring & Alerting (Optional for staging)
 # =============================================================================
 #
-# alarm_sns_topic_arn — ARN of the SNS topic that receives CloudWatch Alarm
-#   notifications (CPU spikes, unhealthy targets, high error rates, etc.).
-#   Default: "" (alarms created but have no notification target).
+# Setting this in staging is optional but recommended for early warning of
+# issues in your pre-production environment.
 #
-#   Setting this in staging is optional but recommended if you want early
-#   warning of issues in your pre-production environment.
+# To create a staging SNS topic:
+#   aws sns create-topic --name selfpublisherforge-staging-alarms --region us-east-1
+#   aws sns subscribe --topic-arn <TopicArn> --protocol email \
+#     --notification-endpoint your-email@example.com --region us-east-1
 #
-#   To create a staging SNS topic:
-#     aws sns create-topic --name selfpublisherforge-staging-alarms --region us-east-1
-#     aws sns subscribe --topic-arn <TopicArn> --protocol email \
-#       --notification-endpoint your-email@example.com --region us-east-1
-#
-# alarm_sns_topic_arn = "arn:aws:sns:us-east-1:123456789012:selfpublisherforge-staging-alarms"
+# >>> TODO (Optional): Set SNS topic ARN for staging alerts <<<
+alarm_sns_topic_arn = ""   # TODO (Optional): e.g., "arn:aws:sns:us-east-1:123456789012:selfpublisherforge-staging-alarms"

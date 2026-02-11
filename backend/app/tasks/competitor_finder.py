@@ -4,12 +4,23 @@ Tasks:
   - process_single_analysis: Analyze a single competitor book asynchronously.
   - process_batch_analysis: Analyze multiple competitor books.
   - check_competitor_alerts: Periodic task to check for competitor changes.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 from __future__ import annotations
 
 import logging
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
@@ -23,6 +34,8 @@ logger = logging.getLogger(__name__)
     max_retries=3,
     default_retry_delay=60,
     acks_late=True,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def process_single_analysis(
     self,
@@ -107,6 +120,9 @@ def process_single_analysis(
             return result
         finally:
             loop.close()
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("Task failed, retrying: %s", exc, exc_info=True)
         raise self.retry(exc=exc)
@@ -118,6 +134,8 @@ def process_single_analysis(
     max_retries=2,
     default_retry_delay=120,
     acks_late=True,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def process_batch_analysis(
     self,
@@ -162,6 +180,8 @@ def process_batch_analysis(
     max_retries=1,
     default_retry_delay=300,
     acks_late=True,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def check_competitor_alerts(self, org_id: str | None = None) -> dict:
     """Periodic task to check for competitor changes and generate alerts.
@@ -427,6 +447,9 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
             return loop.run_until_complete(_run())
         finally:
             loop.close()
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("Alert check task failed: %s", exc, exc_info=True)
         raise self.retry(exc=exc)

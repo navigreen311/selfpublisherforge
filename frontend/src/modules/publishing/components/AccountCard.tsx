@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useDeleteAccount, type PublishingAccount } from "../hooks";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 const platformLabels: Record<string, string> = {
   kdp: "Amazon KDP",
@@ -31,14 +33,16 @@ interface AccountCardProps {
 
 export function AccountCard({ account }: AccountCardProps) {
   const deleteAccount = useDeleteAccount();
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   const handleDisconnect = () => {
-    if (confirm(`Disconnect ${account.account_name}?`)) {
-      deleteAccount.mutate(account.id, {
-        onSuccess: () => toast.success("Account disconnected"),
-        onError: () => toast.error("Failed to disconnect account"),
-      });
-    }
+    deleteAccount.mutate(account.id, {
+      onSuccess: () => {
+        setShowDisconnectConfirm(false);
+        toast.success("Account disconnected");
+      },
+      onError: () => toast.error("Failed to disconnect account"),
+    });
   };
 
   const label = platformLabels[account.platform] || account.platform;
@@ -72,13 +76,25 @@ export function AccountCard({ account }: AccountCardProps) {
             : "Never synced"}
         </span>
         <button
-          onClick={handleDisconnect}
+          onClick={() => setShowDisconnectConfirm(true)}
           disabled={deleteAccount.isPending}
+          aria-label={`Disconnect ${account.account_name}`}
           className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
         >
           {deleteAccount.isPending ? "Disconnecting..." : "Disconnect"}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={showDisconnectConfirm}
+        onOpenChange={setShowDisconnectConfirm}
+        onConfirm={handleDisconnect}
+        title="Disconnect Account"
+        description={`Are you sure you want to disconnect "${account.account_name}"? This will remove the account connection and stop syncing data from ${label}. You can reconnect it later.`}
+        confirmText="Disconnect"
+        variant="destructive"
+        loading={deleteAccount.isPending}
+      />
     </div>
   );
 }

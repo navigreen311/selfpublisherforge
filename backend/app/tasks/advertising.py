@@ -4,12 +4,24 @@ Handles:
 - Periodic performance sync from ad platforms
 - Auto-optimize bids based on ACOS targets
 - Budget alerts when thresholds are exceeded
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
+
+from celery.exceptions import SoftTimeLimitExceeded
 
 from app.tasks import celery_app
 from app.database import async_session
@@ -39,7 +51,7 @@ def _run_async(coro):
         loop.close()
 
 
-@celery_app.task(name="app.tasks.advertising.sync_performance", bind=True, max_retries=3)
+@celery_app.task(name="app.tasks.advertising.sync_performance", bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
 def sync_campaign_performance(self, campaign_id: str | None = None):
     """Sync performance data from ad platforms for campaigns.
 
@@ -124,13 +136,17 @@ async def _sync_performance_async(campaign_id: str | None = None):
 
             await db.commit()
 
+        except SoftTimeLimitExceeded:
+            await db.rollback()
+            logger.warning("sync_campaign_performance hit soft time limit, cleaning up")
+            raise
         except Exception as e:
             await db.rollback()
             logger.error(f"Performance sync failed: {e}")
             raise
 
 
-@celery_app.task(name="app.tasks.advertising.auto_optimize", bind=True, max_retries=3)
+@celery_app.task(name="app.tasks.advertising.auto_optimize", bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
 def auto_optimize_bids(self):
     """Automatically optimize bids for campaigns with ACOS targets.
 
@@ -220,13 +236,17 @@ async def _auto_optimize_async():
 
             await db.commit()
 
+        except SoftTimeLimitExceeded:
+            await db.rollback()
+            logger.warning("auto_optimize_bids hit soft time limit, cleaning up")
+            raise
         except Exception as e:
             await db.rollback()
             logger.error(f"Auto optimization failed: {e}")
             raise
 
 
-@celery_app.task(name="app.tasks.advertising.budget_alerts", bind=True, max_retries=3)
+@celery_app.task(name="app.tasks.advertising.budget_alerts", bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
 def check_budget_alerts(self):
     """Check for campaigns approaching budget limits and send alerts.
 
@@ -353,6 +373,10 @@ async def _check_budget_alerts_async():
 
                 await db.commit()
 
+        except SoftTimeLimitExceeded:
+            await db.rollback()
+            logger.warning("check_budget_alerts hit soft time limit, cleaning up")
+            raise
         except Exception as e:
             await db.rollback()
             logger.error(f"Budget alert check failed: {e}")

@@ -101,31 +101,33 @@ class TestRedisEventPublisher:
 
     @pytest.mark.asyncio
     async def test_publish_writes_to_two_streams(self):
-        redis_mock = _async_redis_mock()
-        publisher = RedisEventPublisher(redis_mock)
+        """RedisEventPublisher publishes to the correct Pub/Sub channel."""
+        redis_mock = AsyncMock()
+        redis_mock.publish = AsyncMock(return_value=1)
+
+        publisher = RedisEventPublisher(redis_url="redis://localhost")
+        publisher._redis = redis_mock  # inject mock directly
+
         event = _make_event()
+        await publisher.publish(event)
 
-        msg_id = await publisher.publish(event)
-
-        pipe = redis_mock.pipeline.return_value
-        assert pipe.xadd.call_count == 2
-
-        # First call should be the type-specific stream
-        first_call_stream = pipe.xadd.call_args_list[0][0][0]
-        assert first_call_stream == f"{STREAM_PREFIX}{event.event_type.value}"
-
-        # Second call should be the global stream
-        second_call_stream = pipe.xadd.call_args_list[1][0][0]
-        assert second_call_stream == GLOBAL_STREAM
+        expected_channel = f"events:{event.event_type.value}"
+        redis_mock.publish.assert_called_once()
+        actual_channel = redis_mock.publish.call_args[0][0]
+        assert actual_channel == expected_channel
 
     @pytest.mark.asyncio
     async def test_publish_returns_message_id(self):
-        redis_mock = _async_redis_mock()
-        publisher = RedisEventPublisher(redis_mock)
-        event = _make_event()
+        """RedisEventPublisher.publish returns None (Pub/Sub, no message id)."""
+        redis_mock = AsyncMock()
+        redis_mock.publish = AsyncMock(return_value=1)
 
-        msg_id = await publisher.publish(event)
-        assert msg_id == "1234-0"
+        publisher = RedisEventPublisher(redis_url="redis://localhost")
+        publisher._redis = redis_mock  # inject mock directly
+
+        event = _make_event()
+        result = await publisher.publish(event)
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_publisher_implements_interface(self):

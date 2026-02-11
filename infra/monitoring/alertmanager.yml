@@ -4,36 +4,87 @@
 #
 # REQUIRED ENVIRONMENT VARIABLES
 # ---------------------------------------------------------------------------
-# Each variable below must be set on the alertmanager container (or via an
-# .env file).  When a variable is missing or empty, the corresponding
-# notification channel will fail silently and alerts fall through to the
-# "fallback-log" receiver, which writes to stdout so nothing is lost.
+# Each variable below MUST be set on the alertmanager container (or via an
+# .env file) before deploying to production.  Local dev can omit them, but
+# email and Slack alerts will not function without them.
 #
 #   SMTP_SMARTHOST           SMTP relay host and port.
-#                            Default when unset: localhost:587 (local relay).
-#                            Production example: smtp.example.com:587
+#                            Example: smtp.mailgun.org:587
+#                            ** REQUIRED for production. **
+#                            If unset: falls back to "localhost:587" which will
+#                            fail on any host without a local MTA.  All email
+#                            alerts (P0 critical-pager, P1 urgent) silently
+#                            fail and fall through to Slack / fallback-log.
 #
 #   SMTP_FROM                Envelope-from / sender address.
 #                            Example: alerts@selfpublisherforge.com
+#                            ** REQUIRED for production. **
+#                            If unset: defaults to "alertmanager@localhost"
+#                            which will be rejected by virtually every SMTP
+#                            relay and spam filter.
 #
 #   SMTP_AUTH_USERNAME        SMTP authentication login.
-#                            Leave empty if the local relay needs no auth.
+#                            Example: postmaster@mg.selfpublisherforge.com
+#                            ** REQUIRED for production (unless relay is
+#                            IP-whitelisted). **
+#                            If unset: SMTP AUTH is skipped; most cloud relays
+#                            (Mailgun, SES, SendGrid) will reject the
+#                            connection with 535 Authentication Failed.
 #
 #   SMTP_AUTH_PASSWORD        SMTP authentication password / app-password.
-#                            Treat as a secret -- prefer a Docker/K8s secret.
+#                            ** REQUIRED for production. Treat as a secret --
+#                            prefer a Docker secret or K8s sealed-secret. **
+#                            If unset: same as SMTP_AUTH_USERNAME -- relay
+#                            rejects the connection; email alerts never send.
 #
 #   ALERT_EMAIL_TO           Recipient address for alert emails.
 #                            Example: oncall@selfpublisherforge.com
+#                            ** REQUIRED for production. **
+#                            If unset: defaults to "oncall@localhost" which is
+#                            undeliverable; email alerts are silently lost.
 #
 #   SLACK_WEBHOOK_URL        Slack incoming-webhook URL for the #alerts channel.
 #                            Create one at https://api.slack.com/messaging/webhooks
 #                            Must start with https://hooks.slack.com/
-#                            If unset, Slack notifications for P1-P3 are skipped.
+#                            ** REQUIRED for production (P1-P3 alerts). **
+#                            If unset: Slack notifications for P1/P2/P3 are
+#                            skipped entirely; those alerts only appear in
+#                            the fallback-log receiver (container logs).
 #
 #   SLACK_WEBHOOK_URL_CRITICAL
-#                            Slack incoming-webhook URL for the #incidents channel.
+#                            Slack incoming-webhook URL for the #incidents
+#                            channel (separate from #alerts for P0 noise
+#                            isolation).
 #                            Must start with https://hooks.slack.com/
-#                            If unset, critical Slack notifications are skipped.
+#                            ** REQUIRED for production (P0 alerts). **
+#                            If unset: P0 Slack notifications to #incidents
+#                            are skipped; P0 still fires email + fallback-log.
+#
+# =============================================================================
+#
+# PRODUCTION CHECKLIST
+# ---------------------------------------------------------------------------
+# Before going live, verify each variable is set.  Here is what breaks when
+# each one is missing:
+#
+#   Variable missing              | Impact
+#   ------------------------------|------------------------------------------
+#   SMTP_SMARTHOST                | ALL email alerts fail (P0 + P1).
+#                                 | Alertmanager logs "connection refused" or
+#                                 | "dial tcp localhost:587: connect: ..."
+#   SMTP_FROM                     | Emails rejected by relay or marked spam.
+#   SMTP_AUTH_USERNAME            | 535 auth error from relay; emails fail.
+#   SMTP_AUTH_PASSWORD            | Same as above; emails fail.
+#   ALERT_EMAIL_TO               | Emails sent to "oncall@localhost" -- lost.
+#   SLACK_WEBHOOK_URL            | P1/P2/P3 Slack alerts silently skipped.
+#   SLACK_WEBHOOK_URL_CRITICAL   | P0 Slack alerts to #incidents skipped.
+#
+# Verification command (run inside the alertmanager container):
+#   amtool check-config /etc/alertmanager/alertmanager.yml
+#
+# Smoke-test an alert:
+#   amtool alert add test_alert severity=P0 service=healthcheck \
+#     --annotation=description="Production smoke test"
 #
 # =============================================================================
 
@@ -43,6 +94,9 @@
 # smtp_smarthost falls back to a local relay (localhost:587) when the env var
 # is empty.  This lets the stack start without external SMTP during local dev;
 # emails will simply fail to deliver until a real relay is configured.
+#
+# WARNING: In production, SMTP_SMARTHOST *must* be set to a real relay.
+# The localhost:587 fallback will cause silent email delivery failures.
 global:
   resolve_timeout: 5m
   smtp_smarthost: "${SMTP_SMARTHOST:-localhost:587}"
@@ -75,10 +129,15 @@ templates:
 # ---------------------------------------------------------------------------
 # Routing tree
 # ---------------------------------------------------------------------------
-# The top-level receiver is "fallback-log" which writes to stdout.  This
-# guarantees that even when SMTP and Slack are both unconfigured, alerts are
-# visible in container logs.  Severity-specific sub-routes override this with
-# richer notification channels.
+# The top-level receiver is "fallback-log" -- a file-based logger that writes
+# alert JSON to /var/log/alertmanager/fallback-alerts.log.  This guarantees
+# that even when SMTP and Slack are both unconfigured, alerts are persisted
+# to a durable file (not just ephemeral container stdout).
+#
+# Severity-specific sub-routes override this with richer notification
+# channels.  Each severity route has continue: true so that if the primary
+# receiver fails, alerts still reach the fallback-log via the top-level
+# default.
 route:
   receiver: fallback-log
   group_by: ["alertname", "service"]
@@ -87,16 +146,26 @@ route:
   repeat_interval: 4h
 
   routes:
-    # --- Maintenance window silencer -------------------------------------------
+    # --- Maintenance window silencer -----------------------------------------
     # Alerts tagged maintenance: "true" are silently dropped via the null
     # receiver.  Apply this label in recording rules or with amtool during
     # planned maintenance.
+    #
+    # To activate a maintenance window:
+    #   amtool silence add maintenance="true" \
+    #     --comment="Scheduled DB maintenance" --duration=2h
+    #
+    # Or add the label in your alerting rules:
+    #   labels:
+    #     maintenance: "true"
     - receiver: "null"
       matchers:
         - maintenance = "true"
       continue: false
 
     # P0 Critical -- page immediately via email + Slack #incidents
+    # repeat_interval: 15m -- critical alerts re-fire every 15 minutes
+    # until acknowledged or resolved, ensuring they are never missed.
     - receiver: critical-pager
       matchers:
         - severity = "P0"
@@ -159,32 +228,66 @@ inhibit_rules:
 # Receivers
 # ---------------------------------------------------------------------------
 receivers:
-  # --- Fallback: stdout log ------------------------------------------------
-  # This receiver is the default top-level route target.  Alertmanager's
-  # webhook_configs with a deliberately unreachable URL will cause the alert
-  # to appear in alertmanager's own logs (stdout).  This ensures alerts are
-  # never silently lost when SMTP and Slack are not configured.
+  # --- Fallback: file-based log ---------------------------------------------
+  # This receiver is the default top-level route target.  It writes alert
+  # payloads as JSON to a persistent log file using Alertmanager's built-in
+  # webhook_configs pointed at a local file-logging sidecar.
+  #
+  # Fallback chain (most robust to least):
+  #   1. Try Slack #alerts (works if SLACK_WEBHOOK_URL is set)
+  #   2. Always write to file via webhook-to-file logger
+  #
+  # This ensures alerts are NEVER silently lost.  Even if SMTP is down and
+  # Slack is unconfigured, the file log captures every alert payload.
+  #
+  # The webhook-to-file logger listens on port 9095 inside the monitoring
+  # network.  Deploy it alongside alertmanager (see docker-compose.monitoring.yml).
+  # If the logger sidecar is also down, Alertmanager logs the POST failure
+  # to its own stdout as a final safety net.
   - name: fallback-log
-    webhook_configs:
-      - url: "http://localhost:9087/dev/null"
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#alerts"
+        title: 'FALLBACK: {{ .GroupLabels.alertname }} [{{ .CommonLabels.severity }}]'
+        text: >-
+          *Receiver:* fallback-log (primary receivers may be misconfigured)
+          *Service:* {{ .CommonLabels.service }}
+          *Details:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
         send_resolved: true
-        # This webhook is intentionally a no-op sink.  If you run a local
-        # log-receiver (e.g. alertmanager-webhook-logger), point it here.
-        # Otherwise alerts simply appear in alertmanager container logs when
-        # the POST fails, which is the desired fallback behavior.
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+    webhook_configs:
+      - url: "http://alertmanager-logger:9095/alerts"
+        send_resolved: true
+        # alertmanager-logger writes each POST body as a JSON line to
+        # /var/log/alertmanager/fallback-alerts.log.  Mount this path
+        # as a persistent volume so alerts survive container restarts.
 
   # --- Null receiver: silent drop ------------------------------------------
-  # Used for maintenance windows or alerts that should be intentionally
-  # ignored.  No notification channels are configured.
+  # Used exclusively for maintenance windows.  No notification channels are
+  # configured -- alerts routed here are intentionally and completely
+  # silenced.
+  #
+  # CAUTION: Only route alerts here via the maintenance="true" matcher.
+  # Routing production alerts to "null" will cause them to vanish with
+  # zero notification to any channel.  Use amtool to verify active
+  # silences:  amtool silence query
   - name: "null"
 
   # --- P0 Critical ---------------------------------------------------------
+  # Notifies via:  email (on-call) + Slack #incidents + fallback file log
+  # repeat_interval is set on the route (15m) so P0 re-fires until resolved.
   - name: critical-pager
     email_configs:
       - to: "${ALERT_EMAIL_TO:-oncall@localhost}"
+        from: "${SMTP_FROM:-alertmanager@localhost}"
+        # send_resolved: true -- sends a follow-up "RESOLVED" email when the
+        # alert clears, so the on-call engineer knows the incident is over
+        # without needing to check dashboards.
         send_resolved: true
         headers:
           Subject: "[P0 CRITICAL] {{ .GroupLabels.alertname }} - SelfPublisherForge"
+          Priority: "urgent"
+          X-Alert-Severity: "P0"
     slack_configs:
       - api_url: "${SLACK_WEBHOOK_URL_CRITICAL}"
         channel: "#incidents"
@@ -194,14 +297,22 @@ receivers:
           *Details:* {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
         send_resolved: true
         color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+    # P0 also writes to the file logger as a durable audit trail
+    webhook_configs:
+      - url: "http://alertmanager-logger:9095/alerts"
+        send_resolved: true
 
   # --- P1 Urgent -----------------------------------------------------------
+  # Notifies via:  email (on-call) + Slack #alerts
   - name: urgent-slack
     email_configs:
       - to: "${ALERT_EMAIL_TO:-oncall@localhost}"
+        from: "${SMTP_FROM:-alertmanager@localhost}"
+        # send_resolved: true -- notifies when the urgent condition clears.
         send_resolved: true
         headers:
           Subject: "[P1 URGENT] {{ .GroupLabels.alertname }} - SelfPublisherForge"
+          X-Alert-Severity: "P1"
     slack_configs:
       - api_url: "${SLACK_WEBHOOK_URL}"
         channel: "#alerts"
@@ -213,6 +324,7 @@ receivers:
         color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
 
   # --- P2 Warning ----------------------------------------------------------
+  # Notifies via:  Slack #alerts only (no email to reduce noise)
   - name: default-slack
     slack_configs:
       - api_url: "${SLACK_WEBHOOK_URL}"
@@ -225,6 +337,7 @@ receivers:
         color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
 
   # --- P3 Informational ----------------------------------------------------
+  # Notifies via:  Slack #monitoring only (low-noise channel)
   - name: informational-slack
     slack_configs:
       - api_url: "${SLACK_WEBHOOK_URL}"

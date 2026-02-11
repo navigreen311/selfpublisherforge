@@ -1,5 +1,15 @@
 """Celery tasks for Review Intelligence: periodic review fetch,
 sentiment analysis batch, alert checking.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 import asyncio
@@ -7,6 +17,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
@@ -28,6 +39,8 @@ def _run_async(coro):
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
     """Analyze reviews that have not yet been sentiment-analyzed.
@@ -117,6 +130,9 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
 
     try:
         return _run_async(_analyze())
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as e:
         logger.error(f"Task analyze_pending_reviews failed: {e}", exc_info=True)
         raise self.retry(exc=e)
@@ -127,6 +143,8 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
     bind=True,
     max_retries=3,
     default_retry_delay=120,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def check_alerts(self, org_id: str, book_id: str):
     """Run all alert checks for a specific book.
@@ -164,6 +182,9 @@ def check_alerts(self, org_id: str, book_id: str):
 
     try:
         return _run_async(_check())
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as e:
         logger.error(f"Alert check task failed: {e}", exc_info=True)
         raise self.retry(exc=e)
@@ -174,6 +195,8 @@ def check_alerts(self, org_id: str, book_id: str):
     bind=True,
     max_retries=2,
     default_retry_delay=300,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "weekly"):
     """Compute and store velocity snapshots for a book.
@@ -278,12 +301,15 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
 
     try:
         return _run_async(_compute())
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as e:
         logger.error(f"Velocity snapshot task failed: {e}", exc_info=True)
         raise self.retry(exc=e)
 
 
-@celery_app.task(name="review_intelligence.compute_reputation")
+@celery_app.task(name="review_intelligence.compute_reputation", soft_time_limit=300, time_limit=600)
 def compute_reputation(org_id: str, book_id: str):
     """Recompute reputation score for a book."""
     logger.info(f"Computing reputation for org {org_id}, book {book_id}")

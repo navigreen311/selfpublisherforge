@@ -4,6 +4,16 @@ Tasks:
   - daily_metric_aggregation: Computes and stores daily portfolio metric snapshots
   - scheduled_report_generation: Generates scheduled/queued reports
   - royalty_sync: Syncs royalty data from connected publishing platform accounts
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
@@ -20,6 +30,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
@@ -61,6 +72,8 @@ def _run_async(coro):
     bind=True,
     max_retries=3,
     default_retry_delay=300,
+    soft_time_limit=3300,
+    time_limit=3600,
 )
 def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
     """Compute and store daily portfolio metric snapshots.
@@ -128,6 +141,9 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
         result = _run_async(_aggregate())
         logger.info("Daily metric aggregation complete: %s", result)
         return result
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.exception("Daily metric aggregation failed: %s", exc)
         raise self.retry(exc=exc)
@@ -138,6 +154,8 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
     """Generate a queued report by its ID.
@@ -184,6 +202,9 @@ def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
         result = _run_async(_generate())
         logger.info("Report generation complete: %s", result)
         return result
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.exception("Report generation failed for %s: %s", report_id, exc)
         raise self.retry(exc=exc)
@@ -194,6 +215,8 @@ def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
     bind=True,
     max_retries=3,
     default_retry_delay=600,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, Any]:
     """Sync royalty data from connected publishing platform accounts.
@@ -387,6 +410,9 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
         result = _run_async(_sync())
         logger.info("Royalty sync complete for org %s: %s", org_id, result)
         return result
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.exception("Royalty sync failed for org %s: %s", org_id, exc)
         raise self.retry(exc=exc)

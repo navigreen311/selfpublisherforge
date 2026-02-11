@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.core.error_handler import register_error_handlers
+from app.core.openapi import custom_openapi_schema
 from app.database import init_db
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,12 @@ def create_app() -> FastAPI:
 
     # Register module routers
     _register_routers(app)
+
+    # Custom OpenAPI schema -- provides enhanced API documentation with:
+    #   - Structured tag descriptions for all 22 module groups
+    #   - BearerAuth security scheme applied globally
+    #   - Rich API overview with tier-based module table
+    app.openapi = custom_openapi_schema(app)
 
     return app
 

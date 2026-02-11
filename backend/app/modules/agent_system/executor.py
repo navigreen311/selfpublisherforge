@@ -141,7 +141,7 @@ async def _call_llm(
                 "Orchestrated generation failed (error=%s), falling back to direct provider call",
                 result.metadata.get("error", "unknown"),
             )
-        except Exception:
+        except (RuntimeError, ConnectionError, TimeoutError) as e:
             logger.exception("Orchestrator raised an unexpected error; falling back to direct provider call")
 
     # Direct provider call as fallback (or when no TaskType mapping exists)
@@ -448,7 +448,7 @@ class TaskExecutor:
             task.completed_at = datetime.now(timezone.utc)
             await self._audit_failure(task, exc.message, ip_address)
 
-        except Exception as exc:
+        except (RuntimeError, ValueError, OSError) as exc:
             logger.error("Task %s failed with unexpected error: %s", task.id, exc, exc_info=True)
             task.status = TaskStatus.FAILED
             task.error_message = f"Execution error: {str(exc)}"

@@ -1,6 +1,6 @@
-"""Redis Streams-based event bus for inter-module communication.
+"""Redis-based event bus for inter-module communication.
 
-Provides publish, subscribe, replay, and dead-letter handling.
+Provides publish (Pub/Sub + Streams), subscribe, replay, and dead-letter handling.
 """
 from __future__ import annotations
 
@@ -64,8 +64,8 @@ def _deserialize_event(fields: dict[bytes | str, bytes | str]) -> BaseEvent:
     return BaseEvent.model_validate_json(raw)
 
 
-class RedisEventPublisher(EventPublisher):
-    """Publishes events into a Redis Stream.
+class RedisStreamPublisher:
+    """Publishes events into a Redis Stream (legacy / Streams-based).
 
     Each event is added to both a per-type stream (``spf:events:<event_type>``)
     and the global stream (``spf:events:all``) so consumers can subscribe to
@@ -91,6 +91,57 @@ class RedisEventPublisher(EventPublisher):
             msg_id = msg_id.decode()
         logger.info("Event published | type=%s stream_id=%s", event.event_type.value, msg_id)
         return msg_id
+
+
+class RedisEventPublisher(EventPublisher):
+    """Publishes events to Redis Pub/Sub channels.
+
+    Uses lazy Redis connection initialization -- the connection is only
+    created on the first ``publish()`` call.  Falls back to ``settings.REDIS_URL``
+    when no explicit *redis_url* is provided.
+
+    Event publishing failures are logged but **never** re-raised so that the
+    caller's workflow is not interrupted by infrastructure issues.
+    """
+
+    def __init__(self, redis_url: str | None = None) -> None:
+        self._redis_url = redis_url
+        self._redis: Any = None  # redis.asyncio.Redis | None
+
+    async def _get_redis(self) -> Any:
+        """Return (and lazily create) the async Redis client."""
+        if self._redis is None:
+            if aioredis is None:
+                raise RuntimeError(
+                    "redis package is not installed -- cannot create RedisEventPublisher"
+                )
+            from app.config import get_settings
+            url = self._redis_url or get_settings().REDIS_URL
+            self._redis = aioredis.Redis.from_url(url)
+        return self._redis
+
+    async def publish(self, event: BaseEvent) -> None:
+        """Publish an event to a Redis Pub/Sub channel.
+
+        The channel name follows the convention ``events:<event_type_value>``,
+        e.g. ``events:project.created``.
+        """
+        try:
+            redis_client = await self._get_redis()
+            channel = f"events:{event.event_type.value}"
+            payload = event.model_dump_json()
+            await redis_client.publish(channel, payload)
+            logger.debug(
+                "Published event %s to channel %s", event.event_type, channel
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to publish event %s: %s",
+                event.event_type,
+                e,
+                exc_info=True,
+            )
+            # Don't raise - event publishing should not break the caller
 
 
 class RedisEventSubscriber:
@@ -236,3 +287,22 @@ class RedisEventSubscriber:
                 },
                 str(exc),
             )
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton
+# ---------------------------------------------------------------------------
+
+_publisher: EventPublisher | None = None
+
+
+def get_event_publisher() -> EventPublisher:
+    """Return the module-level ``RedisEventPublisher`` singleton.
+
+    The publisher is created lazily on first call and reused for
+    the lifetime of the process.
+    """
+    global _publisher
+    if _publisher is None:
+        _publisher = RedisEventPublisher()
+    return _publisher

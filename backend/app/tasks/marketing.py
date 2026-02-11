@@ -4,6 +4,16 @@ Handles:
 - Scheduled email sends
 - Social post reminders
 - ARC follow-up emails
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
@@ -11,6 +21,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
+
+from celery.exceptions import SoftTimeLimitExceeded
 
 from app.tasks import celery_app
 
@@ -22,6 +34,8 @@ logger = logging.getLogger(__name__)
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
     """Send scheduled emails for an active email sequence.
@@ -90,6 +104,9 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
         loop = asyncio.new_event_loop()
         result = loop.run_until_complete(_process())
         return result
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(f"Failed to send scheduled emails: {exc}", exc_info=True)
         raise self.retry(exc=exc)
@@ -102,6 +119,8 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def send_social_post_reminders(self, org_id: str) -> dict:
     """Send reminders for social posts that are scheduled within the next 24 hours.
@@ -163,6 +182,9 @@ def send_social_post_reminders(self, org_id: str) -> dict:
         loop = asyncio.new_event_loop()
         result = loop.run_until_complete(_process())
         return result
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(f"Failed to send social post reminders: {exc}", exc_info=True)
         raise self.retry(exc=exc)
@@ -175,6 +197,8 @@ def send_social_post_reminders(self, org_id: str) -> dict:
     bind=True,
     max_retries=3,
     default_retry_delay=120,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
     """Send follow-up emails to ARC recipients who have not submitted reviews.
@@ -224,6 +248,9 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
         loop = asyncio.new_event_loop()
         result = loop.run_until_complete(_process())
         return result
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(f"Failed to send ARC follow-ups: {exc}", exc_info=True)
         raise self.retry(exc=exc)
@@ -231,7 +258,7 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
         loop.close()
 
 
-@celery_app.task(name="marketing.generate_launch_plan_async")
+@celery_app.task(name="marketing.generate_launch_plan_async", soft_time_limit=1800, time_limit=3600)
 def generate_launch_plan_async(
     org_id: str,
     user_id: str,

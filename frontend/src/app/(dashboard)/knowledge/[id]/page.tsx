@@ -17,6 +17,7 @@ import {
   useDeleteEntry,
   useSummarizeEntry,
 } from "@/modules/knowledge/hooks";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 const sourceLabels: Record<string, string> = {
   manual: "Manual entry",
@@ -35,10 +36,17 @@ const sourceIcons: Record<string, React.ReactNode> = {
 export default function KnowledgeEntryDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const entryId = params.id as string;
+  const rawId = params.id;
+  const entryId =
+    typeof rawId === "string"
+      ? rawId
+      : Array.isArray(rawId)
+        ? rawId[0]
+        : "";
   const { data: entry, isLoading } = useKnowledgeEntry(entryId);
   const deleteMutation = useDeleteEntry();
   const summarizeMutation = useSummarizeEntry(entryId);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [summary, setSummary] = useState<{
     summary: string;
     key_points: string[];
@@ -46,7 +54,6 @@ export default function KnowledgeEntryDetailPage() {
   } | null>(null);
 
   const handleDelete = useCallback(async () => {
-    if (!confirm("Are you sure you want to delete this entry?")) return;
     await deleteMutation.mutateAsync(entryId);
     router.push("/knowledge");
   }, [deleteMutation, entryId, router]);
@@ -59,6 +66,20 @@ export default function KnowledgeEntryDetailPage() {
       suggested_tags: result.suggested_tags,
     });
   }, [summarizeMutation]);
+
+  if (!entryId) {
+    return (
+      <div className="text-center py-24">
+        <h2 className="text-lg font-medium">Invalid entry ID</h2>
+        <button
+          onClick={() => router.push("/knowledge")}
+          className="mt-4 text-sm text-primary hover:underline"
+        >
+          Back to Knowledge Vault
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -125,7 +146,7 @@ export default function KnowledgeEntryDetailPage() {
             AI Summary
           </button>
           <button
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             disabled={deleteMutation.isPending}
             className="flex items-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
           >
@@ -215,6 +236,17 @@ export default function KnowledgeEntryDetailPage() {
           </pre>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete entry"
+        description="Are you sure you want to delete this entry? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

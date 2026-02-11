@@ -76,11 +76,17 @@ class TestCacheKeyGeneration:
         )
         assert key.startswith(CACHE_KEY_PREFIX)
 
-    def test_key_contains_task_type(self, cache: SemanticCache):
+    def test_key_embeds_task_type(self, cache: SemanticCache):
         key = cache.build_cache_key(
             TaskType.MARKET_ANALYSIS, "test prompt", "claude-sonnet"
         )
-        assert TaskType.MARKET_ANALYSIS.value in key
+        # Key format: "llm_cache:<task_type>:<64-char hex digest>"
+        assert key.startswith(CACHE_KEY_PREFIX)
+        remainder = key[len(CACHE_KEY_PREFIX):]
+        task_segment, hex_part = remainder.split(":", 1)
+        assert task_segment == TaskType.MARKET_ANALYSIS.value
+        assert len(hex_part) == 64
+        assert all(c in "0123456789abcdef" for c in hex_part)
 
     def test_same_inputs_same_key(self, cache: SemanticCache):
         key1 = cache.build_cache_key(TaskType.BLURB_AD_COPY, "hello", "model-a")

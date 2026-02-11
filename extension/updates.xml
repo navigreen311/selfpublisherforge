@@ -1,6 +1,32 @@
 <?xml version='1.0' encoding='UTF-8'?>
+<!--
+  Chrome Extension Auto-Update Manifest (Omaha / Google Update protocol v2).
+
+  Format reference:
+    https://developer.chrome.com/docs/extensions/how-to/distribute/host-externally#update_manifest
+
+  Structure:
+    <gupdate>              Root element — declares the update protocol version.
+      <app appid="...">   Matches the extension's unique ID.
+        <updatecheck>      Declares the latest version, minimum Chrome version,
+                           and the URL to the signed .crx package.
+
+  IMPORTANT — CRX hosting requirements:
+    - The .crx file MUST be served over HTTPS.
+    - The .crx MUST be signed with the same private key used to generate the
+      extension ID; otherwise Chrome will reject the update.
+    - The "version" attribute below MUST match (or exceed) the version in
+      manifest.json; Chrome compares this value to decide whether to download.
+    - The server MUST return Content-Type: application/x-chrome-extension
+      (or application/octet-stream) for the .crx download.
+    - This XML file itself must be reachable at the URL specified in
+      manifest.json's "update_url" field.
+
+  Current version: 1.0.0  (keep in sync with manifest.json)
+-->
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
   <app appid='selfpublisherforge-extension'>
+    <!-- version must match manifest.json "version" field -->
     <updatecheck crid='selfpublisherforge-extension' version='1.0.0'
       prodversionmin='88.0'
       url='https://selfpublisherforge.com/extension/selfpublisherforge.crx' />

@@ -5,9 +5,10 @@ import pytest
 import pytest_asyncio
 from datetime import date, timedelta
 from uuid import uuid4
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy.exc import SQLAlchemyError
 from app.main import create_app
 
 
@@ -64,9 +65,20 @@ async def client(mock_db, mock_user):
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: mock_user
 
+    # Patch async_session in the audience_service module so that internal DB
+    # calls (which bypass the FastAPI get_db dependency) raise SQLAlchemyError
+    # instead of attempting a real connection.  The service catches
+    # (SQLAlchemyError, OperationalError) and falls back to defaults.
+    mock_session_factory = MagicMock()
+    mock_session_factory.side_effect = SQLAlchemyError("mocked: no real DB in tests")
+
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
+    with patch(
+        "app.modules.portfolio_economics.audience_service.async_session",
+        mock_session_factory,
+    ):
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
 
     app.dependency_overrides.clear()
 

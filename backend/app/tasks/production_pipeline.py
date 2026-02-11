@@ -1,12 +1,24 @@
 """Celery tasks for the Production Pipeline module.
 
 Handles deadline reminder notifications and overdue alerts.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+
+from celery.exceptions import SoftTimeLimitExceeded
 
 from app.tasks import celery_app
 
@@ -18,6 +30,8 @@ logger = logging.getLogger(__name__)
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def check_deadlines(self) -> dict:
     """Periodic task: scan active pipelines for upcoming and overdue deadlines.
@@ -32,6 +46,9 @@ def check_deadlines(self) -> dict:
     try:
         result = loop.run_until_complete(_check_deadlines_async())
         return result
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("check_deadlines failed: %s", exc, exc_info=True)
         raise self.retry(exc=exc)
@@ -106,6 +123,8 @@ async def _check_deadlines_async() -> dict:
     bind=True,
     max_retries=3,
     default_retry_delay=30,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def send_overdue_alert(self, pipeline_id: str, task_id: str) -> dict:
     """Send an overdue notification for a specific task."""
@@ -145,6 +164,8 @@ def send_overdue_alert(self, pipeline_id: str, task_id: str) -> dict:
     bind=True,
     max_retries=3,
     default_retry_delay=30,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def send_deadline_reminder(self, pipeline_id: str, task_id: str) -> dict:
     """Send a deadline reminder for a task approaching its due date."""

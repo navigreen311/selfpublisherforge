@@ -548,16 +548,13 @@ export default function OnboardingPage() {
     },
   ];
 
-  // Propagate loading state to the wizard's Continue button
-  const isLoading = createProjectMutation.isPending;
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-8">
       <OnboardingWizard
         steps={steps}
         onComplete={() => router.push("/dashboard")}
         onSkip={() => router.push("/dashboard")}
-        isLoading={isLoading}
+        isLoading={createProjectMutation.isPending}
       />
     </div>
   );

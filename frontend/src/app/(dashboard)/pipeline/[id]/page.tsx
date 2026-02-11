@@ -37,7 +37,7 @@ export default function PipelineDetailPage() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<PipelineTask | null>(null);
 
-  const { data: pipeline, isLoading, error } = usePipeline(id);
+  const { data: pipeline, isPending, error } = usePipeline(id);
   const { data: timeline } = useTimeline(id);
   const addTaskMutation = useAddTask(id);
   const updatePipelineMutation = useUpdatePipeline(id);
@@ -65,7 +65,7 @@ export default function PipelineDetailPage() {
     updatePipelineMutation.mutate({ status: target });
   }
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Loading pipeline...</p>

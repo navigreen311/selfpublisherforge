@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AppException
 from app.modules.agent_system.models import (
     Agent,
     AgentBudget,
@@ -130,7 +131,7 @@ async def list_agents(db: AsyncSession, org_id: uuid.UUID) -> list[Agent]:
     return agents
 
 
-async def get_agent(db: AsyncSession, agent_id: uuid.UUID, org_id: uuid.UUID) -> Agent | None:
+async def get_agent(db: AsyncSession, agent_id: uuid.UUID, org_id: uuid.UUID) -> Agent:
     """Get a single agent by ID."""
     result = await db.execute(
         select(Agent).where(
@@ -139,7 +140,14 @@ async def get_agent(db: AsyncSession, agent_id: uuid.UUID, org_id: uuid.UUID) ->
             Agent.deleted_at.is_(None),
         )
     )
-    return result.scalar_one_or_none()
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise AppException(
+            status_code=404,
+            code="AGENT_NOT_FOUND",
+            message=f"Agent {agent_id} not found",
+        )
+    return agent
 
 
 async def update_agent_config(
@@ -149,11 +157,9 @@ async def update_agent_config(
     updates: AgentConfigUpdate,
     actor_id: uuid.UUID,
     ip_address: str | None = None,
-) -> Agent | None:
+) -> Agent:
     """Update agent configuration."""
     agent = await get_agent(db, agent_id, org_id)
-    if agent is None:
-        return None
 
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -276,7 +282,7 @@ async def list_tasks(
     return tasks, next_cursor, has_more, total_count
 
 
-async def get_task(db: AsyncSession, task_id: uuid.UUID, org_id: uuid.UUID) -> AgentTask | None:
+async def get_task(db: AsyncSession, task_id: uuid.UUID, org_id: uuid.UUID) -> AgentTask:
     """Get a single task by ID."""
     result = await db.execute(
         select(AgentTask).where(
@@ -285,7 +291,14 @@ async def get_task(db: AsyncSession, task_id: uuid.UUID, org_id: uuid.UUID) -> A
             AgentTask.deleted_at.is_(None),
         )
     )
-    return result.scalar_one_or_none()
+    task = result.scalar_one_or_none()
+    if task is None:
+        raise AppException(
+            status_code=404,
+            code="TASK_NOT_FOUND",
+            message=f"Task {task_id} not found",
+        )
+    return task
 
 
 async def approve_task(
@@ -295,11 +308,9 @@ async def approve_task(
     approved_by: uuid.UUID,
     payload: TaskApproveRequest,
     ip_address: str | None = None,
-) -> AgentTask | None:
+) -> AgentTask:
     """Approve a task that is awaiting approval."""
     task = await get_task(db, task_id, org_id)
-    if task is None:
-        return None
 
     if task.status != TaskStatus.AWAITING_APPROVAL:
         raise ValueError(f"Task is not awaiting approval (status: {task.status.value})")
@@ -331,11 +342,9 @@ async def reject_task(
     rejected_by: uuid.UUID,
     payload: TaskRejectRequest,
     ip_address: str | None = None,
-) -> AgentTask | None:
+) -> AgentTask:
     """Reject a task, optionally requesting regeneration."""
     task = await get_task(db, task_id, org_id)
-    if task is None:
-        return None
 
     if task.status != TaskStatus.AWAITING_APPROVAL:
         raise ValueError(f"Task is not awaiting approval (status: {task.status.value})")
@@ -383,11 +392,9 @@ async def cancel_task(
     cancelled_by: uuid.UUID,
     reason: str | None = None,
     ip_address: str | None = None,
-) -> AgentTask | None:
+) -> AgentTask:
     """Cancel a running or pending task."""
     task = await get_task(db, task_id, org_id)
-    if task is None:
-        return None
 
     if task.status not in (TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.AWAITING_APPROVAL):
         raise ValueError(f"Cannot cancel task in status '{task.status.value}'")
@@ -503,7 +510,8 @@ async def get_workflow(
     db: AsyncSession,
     workflow_id: uuid.UUID,
     org_id: uuid.UUID,
-) -> AgentWorkflow | None:
+) -> AgentWorkflow:
+    """Get a single workflow by ID."""
     result = await db.execute(
         select(AgentWorkflow).where(
             AgentWorkflow.id == workflow_id,
@@ -511,7 +519,14 @@ async def get_workflow(
             AgentWorkflow.deleted_at.is_(None),
         )
     )
-    return result.scalar_one_or_none()
+    workflow = result.scalar_one_or_none()
+    if workflow is None:
+        raise AppException(
+            status_code=404,
+            code="WORKFLOW_NOT_FOUND",
+            message=f"Workflow {workflow_id} not found",
+        )
+    return workflow
 
 
 # ---------------------------------------------------------------------------
@@ -533,7 +548,7 @@ async def update_budget(
     payload: BudgetUpdate,
     actor_id: uuid.UUID,
     ip_address: str | None = None,
-) -> AgentBudget | None:
+) -> AgentBudget:
     """Update budget limits for a specific agent."""
     result = await db.execute(
         select(AgentBudget).where(

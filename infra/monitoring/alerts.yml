@@ -96,16 +96,22 @@ groups:
           description: "P0 CRITICAL: API error rate has exceeded 5%. Current value: {{ $value | printf \"%.2f\" }}%. Widespread failures affecting users."
           runbook_url: "docs/runbooks/high-error-rate.md"
 
-      - alert: RDSStorageSpaceCritical
-        expr: aws_rds_free_storage_space_average{dbinstance_identifier="selfpublisherforge-production-postgres"} < 2147483648
+      - alert: DatabaseStorageCritical
+        # Uses pg_database_size_bytes from postgres_exporter to detect storage growth.
+        # Alerts when total database size exceeds 95% of provisioned storage (40 GB).
+        # Provisioned storage: 40 GB = 42949672960 bytes. 95% = 40802189312 bytes.
+        # Replaces aws_rds_free_storage_space_average which required a CloudWatch
+        # exporter that is not configured in prometheus.yml.
+        expr: >
+          sum(pg_database_size_bytes{instance=~"selfpublisherforge-production-postgres.*"}) > 40802189312
         for: 5m
         labels:
           severity: P0
           service: database
           env: production
         annotations:
-          summary: "RDS free storage is below 2 GB"
-          description: "P0 CRITICAL: RDS free storage is below 2 GB. Database writes may fail imminently."
+          summary: "Database storage exceeds 95% of provisioned 40 GB"
+          description: "P0 CRITICAL: Total database size has exceeded 95% of provisioned 40 GB storage. Current size: {{ $value | humanize1024 }}B. Database writes may fail imminently."
           runbook_url: "docs/runbooks/rds-storage-critical.md"
 
   # ---------------------------------------------------------------------------
@@ -160,17 +166,22 @@ groups:
           description: "P1 URGENT: Celery queue depth has exceeded 500 tasks. Current depth: {{ $value }}. Background job processing is severely backed up."
           runbook_url: "docs/runbooks/celery-queue-backup.md"
 
-      - alert: RDSCPUCritical
-        expr: aws_rds_cpuutilization_average{dbinstance_identifier="selfpublisherforge-production-postgres"} > 90
+      - alert: APIProcessCPUHigh
+        # Uses process_cpu_seconds_total from the API server's /metrics endpoint.
+        # rate() gives the fraction of a CPU core used per second (1.0 = 100% of one core).
+        # Alerts when the API process sustains above 0.9 (90% of a CPU core) for 10m.
+        # Replaces aws_rds_cpuutilization_average which required a CloudWatch
+        # exporter that is not configured in prometheus.yml.
+        expr: rate(process_cpu_seconds_total{job="spf-api"}[5m]) > 0.9
         for: 10m
         labels:
           severity: P1
-          service: database
+          service: api
           env: production
         annotations:
-          summary: "RDS CPU utilization is above 90%"
-          description: "P1 URGENT: RDS CPU utilization is above 90%. Current: {{ $value | printf \"%.1f\" }}%. Database performance is likely degraded."
-          runbook_url: "docs/runbooks/rds-high-cpu.md"
+          summary: "API process CPU usage is sustained above 90%"
+          description: "P1 URGENT: API process CPU usage is sustained above 90% of a core. Current: {{ $value | printf \"%.2f\" }} cores. Performance is likely degraded."
+          runbook_url: "docs/runbooks/api-high-cpu.md"
 
       - alert: RedisMemoryUsageCritical
         expr: >
@@ -262,16 +273,22 @@ groups:
           description: "P2 WARNING: Celery task failure rate exceeds 5%. Current rate: {{ $value | printf \"%.2f\" }}%."
           runbook_url: "docs/runbooks/celery-failures.md"
 
-      - alert: RDSFreeStorageLow
-        expr: aws_rds_free_storage_space_average{dbinstance_identifier="selfpublisherforge-production-postgres"} < 10737418240
+      - alert: DatabaseStorageWarning
+        # Uses pg_database_size_bytes from postgres_exporter to detect storage growth.
+        # Alerts when total database size exceeds 80% of provisioned storage (40 GB).
+        # Provisioned storage: 40 GB = 42949672960 bytes. 80% = 34359738368 bytes.
+        # Replaces aws_rds_free_storage_space_average which required a CloudWatch
+        # exporter that is not configured in prometheus.yml.
+        expr: >
+          sum(pg_database_size_bytes{instance=~"selfpublisherforge-production-postgres.*"}) > 34359738368
         for: 15m
         labels:
           severity: P2
           service: database
           env: production
         annotations:
-          summary: "RDS free storage is below 10 GB"
-          description: "P2 WARNING: RDS free storage is below 10 GB. Current free: {{ $value | humanize1024 }}B. Plan for storage expansion."
+          summary: "Database storage exceeds 80% of provisioned 40 GB"
+          description: "P2 WARNING: Total database size has exceeded 80% of provisioned 40 GB storage. Current size: {{ $value | humanize1024 }}B. Plan for storage expansion."
           runbook_url: "docs/runbooks/rds-storage-low.md"
 
       - alert: DBConnectionPoolNearCapacity
@@ -304,18 +321,37 @@ groups:
   # ---------------------------------------------------------------------------
   - name: selfpublisherforge-p3-informational
     rules:
-      - alert: HighCPUUsageSustained
-        # container_cpu_usage_seconds_total is a standard cAdvisor/ECS Container Insights metric
-        expr: >
-          avg(rate(container_cpu_usage_seconds_total{container_label_com_amazonaws_ecs_cluster="selfpublisherforge-production"}[5m])) by (container_label_com_amazonaws_ecs_task_definition_family) > 0.7
+      - alert: APIProcessMemoryHigh
+        # Uses process_resident_memory_bytes from the API server's /metrics endpoint.
+        # Alerts when the API process RSS exceeds 512 MB (536870912 bytes) for 1 hour,
+        # which may indicate a memory leak or need for scaling.
+        # Replaces container_cpu_usage_seconds_total with ECS container labels which
+        # required a cAdvisor/ECS Container Insights exporter not configured in prometheus.yml.
+        expr: process_resident_memory_bytes{job="spf-api"} > 536870912
         for: 1h
         labels:
           severity: P3
-          service: ecs
+          service: api
           env: production
         annotations:
-          summary: "ECS task family {{ $labels.container_label_com_amazonaws_ecs_task_definition_family }} CPU sustained above 70%"
-          description: "P3 INFO: ECS task family {{ $labels.container_label_com_amazonaws_ecs_task_definition_family }} CPU has been above 70% for 1 hour. Consider scaling review."
+          summary: "API process resident memory sustained above 512 MB"
+          description: "P3 INFO: API process resident memory has been above 512 MB for 1 hour. Current: {{ $value | humanize1024 }}B. Consider scaling review or check for memory leaks."
+          runbook_url: "docs/runbooks/high-memory.md"
+
+      - alert: APIProcessCPUSustained
+        # Uses process_cpu_seconds_total from the API server's /metrics endpoint.
+        # Alerts when the API process sustains above 70% of a CPU core for 1 hour.
+        # Replaces container_cpu_usage_seconds_total with ECS container labels which
+        # required a cAdvisor/ECS Container Insights exporter not configured in prometheus.yml.
+        expr: rate(process_cpu_seconds_total{job="spf-api"}[5m]) > 0.7
+        for: 1h
+        labels:
+          severity: P3
+          service: api
+          env: production
+        annotations:
+          summary: "API process CPU sustained above 70% for 1 hour"
+          description: "P3 INFO: API process CPU usage has been above 70% of a core for 1 hour. Current: {{ $value | printf \"%.2f\" }} cores. Consider scaling review."
           runbook_url: "docs/runbooks/high-cpu.md"
 
       - alert: RedisCacheHitRateLow
@@ -354,15 +390,27 @@ groups:
           description: "P3 INFO: Celery queue depth has been above 100 for 1 hour. Current depth: {{ $value }}. May need more workers or task optimization."
           runbook_url: "docs/runbooks/celery-queue-growing.md"
 
-      - alert: DeploymentCompleted
-        expr: >
-          time() - deploy_last_timestamp{env="production", app="selfpublisherforge"} < 300
-        for: 0m
-        labels:
-          severity: P3
-          service: deploy
-          env: production
-        annotations:
-          summary: "A new deployment to production has been detected"
-          description: "P3 INFO: A new deployment to production has been detected. Review deployment health metrics."
-          runbook_url: "docs/runbooks/deployment-completed.md"
+      # -----------------------------------------------------------------------
+      # DISABLED: DeploymentCompleted alert
+      # This alert requires the custom metric `deploy_last_timestamp` which must
+      # be pushed by the application or CI/CD pipeline (e.g., via Pushgateway or
+      # direct instrumentation in the deploy script). No scrape target currently
+      # exposes this metric. To enable this alert:
+      #   1. Instrument your deploy pipeline to push `deploy_last_timestamp` to
+      #      a Pushgateway or expose it from the API /metrics endpoint.
+      #   2. Add the Pushgateway as a scrape target in prometheus.yml (if using
+      #      Pushgateway approach).
+      #   3. Uncomment the alert below.
+      # -----------------------------------------------------------------------
+      # - alert: DeploymentCompleted
+      #   expr: >
+      #     time() - deploy_last_timestamp{env="production", app="selfpublisherforge"} < 300
+      #   for: 0m
+      #   labels:
+      #     severity: P3
+      #     service: deploy
+      #     env: production
+      #   annotations:
+      #     summary: "A new deployment to production has been detected"
+      #     description: "P3 INFO: A new deployment to production has been detected. Review deployment health metrics."
+      #     runbook_url: "docs/runbooks/deployment-completed.md"

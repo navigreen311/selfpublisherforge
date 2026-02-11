@@ -55,6 +55,7 @@ from app.modules.advertising.optimizer import (
 from app.modules.advertising.creative_generator import AdCreativeGenerator
 from app.modules.advertising.amazon_ads import AmazonAdsClient, AmazonAdsError
 from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
+from app.core.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ class AdvertisingService:
 
         return enriched, next_cursor, total_count
 
-    async def get_campaign(self, org_id: UUID, campaign_id: UUID) -> CampaignWithPerformance | None:
+    async def get_campaign(self, org_id: UUID, campaign_id: UUID) -> CampaignWithPerformance:
         """Get a single campaign with performance summary."""
         result = await self.db.execute(
             select(Campaign).where(
@@ -146,7 +147,11 @@ class AdvertisingService:
         )
         campaign = result.scalar_one_or_none()
         if not campaign:
-            return None
+            raise AppException(
+                status_code=404,
+                code="CAMPAIGN_NOT_FOUND",
+                message="Campaign not found",
+            )
 
         summary = await self._get_performance_summary(campaign.id)
         resp = CampaignWithPerformance.model_validate(campaign)
@@ -223,7 +228,7 @@ class AdvertisingService:
         org_id: UUID,
         campaign_id: UUID,
         data: CampaignUpdate,
-    ) -> CampaignResponse | None:
+    ) -> CampaignResponse:
         """Update an existing campaign."""
         result = await self.db.execute(
             select(Campaign).where(
@@ -236,7 +241,11 @@ class AdvertisingService:
         )
         campaign = result.scalar_one_or_none()
         if not campaign:
-            return None
+            raise AppException(
+                status_code=404,
+                code="CAMPAIGN_NOT_FOUND",
+                message="Campaign not found",
+            )
 
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
@@ -270,7 +279,11 @@ class AdvertisingService:
             )
         )
         if not campaign.scalar_one_or_none():
-            return []
+            raise AppException(
+                status_code=404,
+                code="CAMPAIGN_NOT_FOUND",
+                message="Campaign not found",
+            )
 
         perf_query = select(CampaignPerformance).where(
             CampaignPerformance.campaign_id == campaign_id
@@ -353,7 +366,11 @@ class AdvertisingService:
                 )
             )
             if not campaign.scalar_one_or_none():
-                return []
+                raise AppException(
+                    status_code=404,
+                    code="CAMPAIGN_NOT_FOUND",
+                    message="Campaign not found",
+                )
 
             query = select(KeywordBid).where(KeywordBid.campaign_id == campaign_id)
         else:
@@ -454,7 +471,7 @@ class AdvertisingService:
         org_id: UUID,
         campaign_id: UUID,
         request: OptimizationRequest,
-    ) -> OptimizationSuggestion | None:
+    ) -> OptimizationSuggestion:
         """Run AI optimization on a campaign."""
         # Get campaign
         result = await self.db.execute(
@@ -468,7 +485,11 @@ class AdvertisingService:
         )
         campaign = result.scalar_one_or_none()
         if not campaign:
-            return None
+            raise AppException(
+                status_code=404,
+                code="CAMPAIGN_NOT_FOUND",
+                message="Campaign not found",
+            )
 
         # Get keyword performance data
         kw_result = await self.db.execute(

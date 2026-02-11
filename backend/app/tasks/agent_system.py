@@ -2,6 +2,16 @@
 
 These tasks run outside the HTTP request/response cycle, allowing
 long-running LLM calls and multi-step workflows to proceed asynchronously.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
@@ -11,6 +21,7 @@ import logging
 import uuid
 from typing import Any
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
@@ -34,6 +45,8 @@ def _run_async(coro):
     max_retries=2,
     default_retry_delay=30,
     acks_late=True,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def execute_agent_task(self, task_id: str, user_role: str = "viewer") -> dict[str, Any]:
     """Execute an agent task asynchronously.
@@ -99,6 +112,10 @@ async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, A
                 "status": "failed",
                 "error": str(exc),
             }
+        except SoftTimeLimitExceeded:
+            await db.rollback()
+            logger.warning("Agent task %s hit soft time limit, cleaning up", task_id)
+            raise
         except Exception as exc:
             await db.rollback()
             logger.error("Unexpected error executing agent task %s: %s", task_id, exc, exc_info=True)
@@ -115,6 +132,8 @@ async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, A
     max_retries=1,
     default_retry_delay=60,
     acks_late=True,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def execute_agent_workflow(
     self,
@@ -197,6 +216,10 @@ async def _execute_agent_workflow_async(
                 "status": "failed",
                 "error": str(exc),
             }
+        except SoftTimeLimitExceeded:
+            await db.rollback()
+            logger.warning("Workflow %s hit soft time limit, cleaning up", workflow_id)
+            raise
         except Exception as exc:
             await db.rollback()
             logger.error("Unexpected error executing workflow %s: %s", workflow_id, exc, exc_info=True)
@@ -210,6 +233,8 @@ async def _execute_agent_workflow_async(
 @celery_app.task(
     name="agent_system.reset_daily_budgets",
     bind=True,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def reset_daily_budgets(self) -> dict[str, Any]:
     """Periodic task to reset daily budget counters.
@@ -244,6 +269,8 @@ async def _reset_daily_budgets_async() -> dict[str, Any]:
 @celery_app.task(
     name="agent_system.reset_monthly_budgets",
     bind=True,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def reset_monthly_budgets(self) -> dict[str, Any]:
     """Periodic task to reset monthly budget counters.

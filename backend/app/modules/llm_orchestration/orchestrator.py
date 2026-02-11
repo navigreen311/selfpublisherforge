@@ -204,7 +204,7 @@ class LLMOrchestrator:
                 result.cost_usd = cost
 
                 if opts.org_id:
-                    self._cost_tracker.record_usage(
+                    await self._cost_tracker.record_usage(
                         org_id=opts.org_id,
                         model_id=result.model_id,
                         task_type=task.value,
@@ -314,7 +314,7 @@ class LLMOrchestrator:
             if had_content and not errored:
                 # Track cost (approximate — stream may not report exact token counts)
                 if opts.org_id:
-                    self._cost_tracker.record_usage(
+                    await self._cost_tracker.record_usage(
                         org_id=opts.org_id,
                         model_id=model_id.value,
                         task_type=task.value,

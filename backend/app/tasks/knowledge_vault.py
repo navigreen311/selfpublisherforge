@@ -1,10 +1,22 @@
-"""Celery tasks for async Knowledge Vault import and indexing."""
+"""Celery tasks for async Knowledge Vault import and indexing.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
+"""
 
 from __future__ import annotations
 
 import logging
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.tasks import celery_app
@@ -17,6 +29,8 @@ logger = logging.getLogger(__name__)
     bind=True,
     max_retries=3,
     default_retry_delay=30,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def import_from_url_task(self, org_id: str, url: str, extract_facts: bool = True):
     """
@@ -60,6 +74,8 @@ def import_from_url_task(self, org_id: str, url: str, extract_facts: bool = True
     bind=True,
     max_retries=3,
     default_retry_delay=30,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def import_from_file_task(
     self,
@@ -104,7 +120,7 @@ def import_from_file_task(
         loop.close()
 
 
-@celery_app.task(name="knowledge_vault.reindex_all", bind=True)
+@celery_app.task(name="knowledge_vault.reindex_all", bind=True, soft_time_limit=1800, time_limit=3600)
 def reindex_all_task(self, org_id: str):
     """
     Re-index all non-deleted knowledge entries for an org in Elasticsearch.

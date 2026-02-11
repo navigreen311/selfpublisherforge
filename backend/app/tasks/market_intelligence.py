@@ -4,6 +4,16 @@ These tasks run periodically to:
   1. Refresh Amazon category metadata.
   2. Update BSR history for tracked competitors.
   3. Generate daily market snapshots for each tracked category.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
@@ -12,6 +22,7 @@ import asyncio
 import logging
 from datetime import date, datetime, timezone
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -40,6 +51,8 @@ def _run_async(coro):
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def refresh_category_data(self):
     """Refresh Amazon category tree and metadata.
@@ -84,6 +97,9 @@ def refresh_category_data(self):
         count = _run_async(_refresh())
         logger.info("Category refresh complete: %d categories", count)
         return {"status": "success", "categories_updated": count}
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except SQLAlchemyError as exc:
         logger.error("Category refresh DB error: %s", exc)
         raise self.retry(exc=exc)
@@ -118,6 +134,8 @@ def _flatten_category_tree(nodes: list[dict]) -> list[dict]:
     bind=True,
     max_retries=3,
     default_retry_delay=120,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def update_bsr_history(self):
     """Update BSR history for all tracked competitor books.
@@ -175,6 +193,9 @@ def update_bsr_history(self):
         updated = _run_async(_update())
         logger.info("BSR history update complete: %d competitors updated", updated)
         return {"status": "success", "competitors_updated": updated}
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except SQLAlchemyError as exc:
         logger.error("BSR history update DB error: %s", exc)
         raise self.retry(exc=exc)
@@ -192,6 +213,8 @@ def update_bsr_history(self):
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def generate_market_snapshot(self, category_id: str | None = None):
     """Generate a daily market snapshot for a category.
@@ -256,6 +279,9 @@ def generate_market_snapshot(self, category_id: str | None = None):
         count = _run_async(_snapshot())
         logger.info("Market snapshot generation complete: %d snapshots", count)
         return {"status": "success", "snapshots_created": count}
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except SQLAlchemyError as exc:
         logger.error("Market snapshot generation DB error: %s", exc)
         raise self.retry(exc=exc)

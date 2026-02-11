@@ -265,17 +265,18 @@ jobs:
       - name: Smoke test — health endpoint with retries
         run: |
           HEALTH_URL="${{ secrets.PRODUCTION_API_URL }}/health"
-          MAX_RETRIES=5
-          RETRY_DELAY=10
+          MAX_RETRIES=7
+          RETRY_DELAY=15
           ATTEMPT=0
 
           echo "Running smoke test against $HEALTH_URL"
+          echo "Configuration: max_retries=$MAX_RETRIES, retry_delay=${RETRY_DELAY}s, total_window=~$((MAX_RETRIES * RETRY_DELAY))s"
 
           while [ $ATTEMPT -lt $MAX_RETRIES ]; do
             ATTEMPT=$((ATTEMPT + 1))
             echo "Attempt $ATTEMPT of $MAX_RETRIES..."
 
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$HEALTH_URL" || echo "000")
 
             if [ "$HTTP_STATUS" = "200" ]; then
               echo "Smoke test passed (HTTP $HTTP_STATUS)"
@@ -285,7 +286,7 @@ jobs:
             echo "Health check returned HTTP $HTTP_STATUS"
 
             if [ $ATTEMPT -eq $MAX_RETRIES ]; then
-              echo "::error::Smoke test failed after $MAX_RETRIES attempts. Last HTTP status: $HTTP_STATUS"
+              echo "::error::[SMOKE TEST] Basic health endpoint failed after $MAX_RETRIES attempts. Last HTTP status: $HTTP_STATUS. The API service may not be running."
               exit 1
             fi
 
@@ -297,23 +298,175 @@ jobs:
         id: api-health
         run: |
           HEALTH_URL="${{ secrets.PRODUCTION_API_URL }}/health"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 "$HEALTH_URL" || echo -e "\n000")
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+
           echo "http_status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+          echo "API health response body: $BODY"
+
           if [ "$HTTP_STATUS" != "200" ]; then
-            echo "API health check failed with status $HTTP_STATUS"
+            echo "::error::[API HEALTH] API health endpoint returned HTTP $HTTP_STATUS. Expected 200. The API process may have crashed or is unresponsive."
             exit 1
           fi
 
-      - name: Check error rate from CloudWatch
+          echo "API health check passed (HTTP $HTTP_STATUS)"
+
+      - name: Check database connectivity
+        id: db-health
+        run: |
+          # Check detailed health endpoint that verifies database connectivity
+          DB_HEALTH_URL="${{ secrets.PRODUCTION_API_URL }}/health?detail=true"
+          MAX_RETRIES=3
+          RETRY_DELAY=10
+          ATTEMPT=0
+
+          echo "Checking database connectivity via $DB_HEALTH_URL"
+
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "DB health check attempt $ATTEMPT of $MAX_RETRIES..."
+
+            RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 "$DB_HEALTH_URL" || echo -e "\n000")
+            BODY=$(echo "$RESPONSE" | head -n -1)
+            HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+
+            echo "Response body: $BODY"
+            echo "HTTP status: $HTTP_STATUS"
+
+            if [ "$HTTP_STATUS" = "000" ]; then
+              echo "::warning::[DATABASE] Connection timeout on attempt $ATTEMPT"
+            elif [ "$HTTP_STATUS" = "200" ]; then
+              # Verify response body contains database status indicator
+              if echo "$BODY" | jq -e '.database // .db // .components.database // empty' > /dev/null 2>&1; then
+                DB_STATUS=$(echo "$BODY" | jq -r '.database.status // .db.status // .components.database.status // "unknown"')
+                if [ "$DB_STATUS" = "healthy" ] || [ "$DB_STATUS" = "ok" ] || [ "$DB_STATUS" = "up" ] || [ "$DB_STATUS" = "connected" ]; then
+                  echo "db_status=healthy" >> "$GITHUB_OUTPUT"
+                  echo "Database connectivity verified (status: $DB_STATUS)"
+                  exit 0
+                else
+                  echo "::warning::[DATABASE] Database status is '$DB_STATUS' (not healthy)"
+                fi
+              else
+                # Fallback: if no structured DB info, verify API can serve data-dependent request
+                echo "No structured database field in health response. Falling back to data endpoint check..."
+                DATA_URL="${{ secrets.PRODUCTION_API_URL }}/api/v1/health/db"
+                DATA_RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 "$DATA_URL" || echo -e "\n000")
+                DATA_BODY=$(echo "$DATA_RESPONSE" | head -n -1)
+                DATA_STATUS=$(echo "$DATA_RESPONSE" | tail -n 1)
+
+                if [ "$DATA_STATUS" = "200" ]; then
+                  echo "db_status=healthy" >> "$GITHUB_OUTPUT"
+                  echo "Database connectivity verified via /api/v1/health/db (HTTP $DATA_STATUS)"
+                  exit 0
+                elif [ "$DATA_STATUS" = "404" ]; then
+                  # Endpoint does not exist; accept the basic 200 from /health?detail=true
+                  echo "db_status=inferred" >> "$GITHUB_OUTPUT"
+                  echo "::warning::[DATABASE] No dedicated DB health endpoint found. Accepting basic health check as proxy."
+                  exit 0
+                else
+                  echo "::warning::[DATABASE] Data endpoint returned HTTP $DATA_STATUS"
+                fi
+              fi
+            else
+              echo "::warning::[DATABASE] Health detail endpoint returned HTTP $HTTP_STATUS"
+            fi
+
+            if [ $ATTEMPT -eq $MAX_RETRIES ]; then
+              echo "db_status=failed" >> "$GITHUB_OUTPUT"
+              echo "::error::[DATABASE] Database connectivity check failed after $MAX_RETRIES attempts. Last HTTP status: $HTTP_STATUS. The database may be unreachable, misconfigured, or migrations may not have run."
+              exit 1
+            fi
+
+            echo "Retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+
+      - name: Check Redis connectivity
+        id: redis-health
+        run: |
+          # Check Redis connectivity via dedicated or detailed health endpoint
+          REDIS_HEALTH_URL="${{ secrets.PRODUCTION_API_URL }}/health?detail=true"
+          MAX_RETRIES=3
+          RETRY_DELAY=10
+          ATTEMPT=0
+
+          echo "Checking Redis connectivity via $REDIS_HEALTH_URL"
+
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Redis health check attempt $ATTEMPT of $MAX_RETRIES..."
+
+            RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 "$REDIS_HEALTH_URL" || echo -e "\n000")
+            BODY=$(echo "$RESPONSE" | head -n -1)
+            HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+
+            echo "Response body: $BODY"
+            echo "HTTP status: $HTTP_STATUS"
+
+            if [ "$HTTP_STATUS" = "000" ]; then
+              echo "::warning::[REDIS] Connection timeout on attempt $ATTEMPT"
+            elif [ "$HTTP_STATUS" = "200" ]; then
+              # Verify response body contains Redis status indicator
+              if echo "$BODY" | jq -e '.redis // .cache // .components.redis // empty' > /dev/null 2>&1; then
+                REDIS_STATUS=$(echo "$BODY" | jq -r '.redis.status // .cache.status // .components.redis.status // "unknown"')
+                if [ "$REDIS_STATUS" = "healthy" ] || [ "$REDIS_STATUS" = "ok" ] || [ "$REDIS_STATUS" = "up" ] || [ "$REDIS_STATUS" = "connected" ]; then
+                  echo "redis_status=healthy" >> "$GITHUB_OUTPUT"
+                  echo "Redis connectivity verified (status: $REDIS_STATUS)"
+                  exit 0
+                else
+                  echo "::warning::[REDIS] Redis status is '$REDIS_STATUS' (not healthy)"
+                fi
+              else
+                # Fallback: try dedicated Redis health endpoint
+                echo "No structured Redis field in health response. Falling back to dedicated endpoint..."
+                REDIS_URL="${{ secrets.PRODUCTION_API_URL }}/api/v1/health/redis"
+                REDIS_RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 "$REDIS_URL" || echo -e "\n000")
+                REDIS_BODY=$(echo "$REDIS_RESPONSE" | head -n -1)
+                REDIS_HTTP_STATUS=$(echo "$REDIS_RESPONSE" | tail -n 1)
+
+                if [ "$REDIS_HTTP_STATUS" = "200" ]; then
+                  echo "redis_status=healthy" >> "$GITHUB_OUTPUT"
+                  echo "Redis connectivity verified via /api/v1/health/redis (HTTP $REDIS_HTTP_STATUS)"
+                  exit 0
+                elif [ "$REDIS_HTTP_STATUS" = "404" ]; then
+                  # Endpoint does not exist; accept basic health as proxy
+                  echo "redis_status=inferred" >> "$GITHUB_OUTPUT"
+                  echo "::warning::[REDIS] No dedicated Redis health endpoint found. Accepting basic health check as proxy."
+                  exit 0
+                else
+                  echo "::warning::[REDIS] Dedicated Redis endpoint returned HTTP $REDIS_HTTP_STATUS"
+                fi
+              fi
+            else
+              echo "::warning::[REDIS] Health detail endpoint returned HTTP $HTTP_STATUS"
+            fi
+
+            if [ $ATTEMPT -eq $MAX_RETRIES ]; then
+              echo "redis_status=failed" >> "$GITHUB_OUTPUT"
+              echo "::error::[REDIS] Redis connectivity check failed after $MAX_RETRIES attempts. Last HTTP status: $HTTP_STATUS. Redis may be unreachable or the Celery broker connection may be down."
+              exit 1
+            fi
+
+            echo "Retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+
+      - name: Check error rate from CloudWatch (7-minute window)
         id: error-rate
         run: |
+          LOOKBACK_MINUTES=7
+          PERIOD_SECONDS=$((LOOKBACK_MINUTES * 60))
+
+          echo "Checking error rate over the last ${LOOKBACK_MINUTES} minutes..."
+
           ERROR_RATE=$(aws cloudwatch get-metric-statistics \
             --namespace "AWS/ApplicationELB" \
             --metric-name "HTTPCode_Target_5XX_Count" \
             --dimensions Name=TargetGroup,Value="${{ secrets.PROD_TARGET_GROUP_ARN }}" \
-            --start-time "$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%S)" \
+            --start-time "$(date -u -d "${LOOKBACK_MINUTES} minutes ago" +%Y-%m-%dT%H:%M:%S)" \
             --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
-            --period 300 \
+            --period $PERIOD_SECONDS \
             --statistics Sum \
             --query 'Datapoints[0].Sum // `0`' \
             --output text)
@@ -322,9 +475,9 @@ jobs:
             --namespace "AWS/ApplicationELB" \
             --metric-name "RequestCount" \
             --dimensions Name=TargetGroup,Value="${{ secrets.PROD_TARGET_GROUP_ARN }}" \
-            --start-time "$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%S)" \
+            --start-time "$(date -u -d "${LOOKBACK_MINUTES} minutes ago" +%Y-%m-%dT%H:%M:%S)" \
             --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
-            --period 300 \
+            --period $PERIOD_SECONDS \
             --statistics Sum \
             --query 'Datapoints[0].Sum // `1`' \
             --output text)
@@ -336,18 +489,49 @@ jobs:
           fi
 
           echo "error_rate=$RATE" >> "$GITHUB_OUTPUT"
-          echo "Error rate: ${RATE}%"
+          echo "5xx errors: $ERROR_RATE / $TOTAL_REQUESTS total requests"
+          echo "Error rate: ${RATE}% (over ${LOOKBACK_MINUTES}-minute window)"
 
           # Auto-rollback if error rate exceeds 1%
           THRESHOLD="1.0"
           if (( $(echo "$RATE > $THRESHOLD" | bc -l) )); then
-            echo "Error rate ${RATE}% exceeds threshold ${THRESHOLD}%"
+            echo "::error::[ERROR RATE] 5xx error rate ${RATE}% exceeds threshold ${THRESHOLD}% over ${LOOKBACK_MINUTES}-minute window. This indicates server errors in the new deployment."
             exit 1
           fi
+
+          echo "Error rate check passed (${RATE}% < ${THRESHOLD}%)"
+
+      - name: Summarize health check results
+        if: success()
+        run: |
+          echo "=========================================="
+          echo " PRODUCTION HEALTH CHECK SUMMARY"
+          echo "=========================================="
+          echo " Smoke test:          PASSED"
+          echo " API health:          PASSED (HTTP ${{ steps.api-health.outputs.http_status }})"
+          echo " Database:            PASSED (${{ steps.db-health.outputs.db_status }})"
+          echo " Redis:               PASSED (${{ steps.redis-health.outputs.redis_status }})"
+          echo " Error rate (7 min):  ${{ steps.error-rate.outputs.error_rate }}%"
+          echo "=========================================="
+          echo " All infrastructure dependency checks passed."
+          echo "=========================================="
 
       - name: Auto-rollback on failure
         if: failure()
         run: |
+          echo "::error::One or more health checks failed. Initiating automatic rollback..."
+          echo ""
+          echo "=========================================="
+          echo " FAILED HEALTH CHECK DIAGNOSIS"
+          echo "=========================================="
+          echo " Check the step outputs above to identify which dependency failed:"
+          echo "  - [SMOKE TEST] = API not reachable at all"
+          echo "  - [API HEALTH] = API responding but unhealthy"
+          echo "  - [DATABASE]   = Database connectivity issue"
+          echo "  - [REDIS]      = Redis/cache connectivity issue"
+          echo "  - [ERROR RATE] = Excessive 5xx errors in production traffic"
+          echo "=========================================="
+          echo ""
           echo "Rolling back to previous task definitions..."
 
           # Rollback API

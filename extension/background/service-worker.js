@@ -11,7 +11,16 @@
 
 const API_V1 = "/api/v1";
 const UPDATE_CHECK_ALARM = "spf-update-check";
+const UPDATE_CHECK_RETRY_ALARM = "spf-update-retry";
 const UPDATE_CHECK_INTERVAL_MINUTES = 360; // 6 hours
+
+// Exponential backoff schedule for update-check retries (in minutes)
+const UPDATE_RETRY_BACKOFF_MINUTES = [1, 5, 30, 360]; // 1 min, 5 min, 30 min, 6 hours
+
+// Fallback URL when the primary backend version endpoint is unreachable.
+// Points to a GitHub Releases API (or raw JSON file) that mirrors the version info.
+const UPDATE_FALLBACK_URL =
+  "https://raw.githubusercontent.com/selfpublisherforge/extension/main/version.json";
 
 const MAX_PENDING_EXTRACTIONS = 50;
 const RETRY_ALARM = "spf-retry-pending";
@@ -207,72 +216,166 @@ function compareSemver(a, b) {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-update check
+// Auto-update check (with fallback + exponential backoff retry)
 // ---------------------------------------------------------------------------
 
 /**
- * Call the backend /extension/version endpoint and compare with the
- * locally-installed version. If an update is available, fire a Chrome
- * notification and store the result in chrome.storage.local.
+ * Attempt to fetch version info from a single URL.
+ * Returns the parsed remote version object or null on failure.
  */
-async function checkForUpdate() {
-  const { apiUrl } = await chrome.storage.local.get(["apiUrl"]);
-  if (!apiUrl) {
-    console.log("[SPF] Skipping update check — no API URL configured.");
+async function fetchVersionFrom(url, label) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`[SPF] Version check (${label}) failed: HTTP ${response.status}`);
+      return null;
+    }
+    const json = await response.json();
+    return json.data || json;
+  } catch (err) {
+    console.warn(`[SPF] Version check (${label}) error: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Schedule an exponential-backoff retry alarm for a failed update check.
+ * Reads the current retry count from storage, picks the next delay from
+ * UPDATE_RETRY_BACKOFF_MINUTES, and creates a one-shot alarm. If all
+ * retries are exhausted the next check will happen at the normal 6-hour
+ * interval.
+ */
+async function scheduleUpdateRetry() {
+  const { updateRetryCount = 0 } = await chrome.storage.local.get(["updateRetryCount"]);
+
+  if (updateRetryCount >= UPDATE_RETRY_BACKOFF_MINUTES.length) {
+    console.log(
+      "[SPF] All update-check retries exhausted. Will try again at the next scheduled interval."
+    );
+    await chrome.storage.local.set({ updateRetryCount: 0 });
     return;
   }
 
-  try {
-    const response = await fetch(`${apiUrl}${API_V1}/extension/version`);
-    if (!response.ok) {
-      console.warn(`[SPF] Version check failed: HTTP ${response.status}`);
-      return;
-    }
+  const delayMinutes = UPDATE_RETRY_BACKOFF_MINUTES[updateRetryCount];
+  console.log(
+    `[SPF] Scheduling update-check retry #${updateRetryCount + 1} in ${delayMinutes} minute(s).`
+  );
 
-    const json = await response.json();
-    const remote = json.data || json;
-    const localVersion = chrome.runtime.getManifest().version;
+  await chrome.storage.local.set({ updateRetryCount: updateRetryCount + 1 });
+  chrome.alarms.create(UPDATE_CHECK_RETRY_ALARM, { delayInMinutes: delayMinutes });
+}
 
-    // Persist timestamp regardless of result
+/**
+ * Core update-check logic.
+ *
+ * 1. Bail out early if the browser is offline.
+ * 2. Try the primary backend endpoint.
+ * 3. If that fails, try the fallback URL (e.g. GitHub-hosted version.json).
+ * 4. On total failure, schedule an exponential-backoff retry.
+ * 5. On success, reset the retry counter, persist timestamps, and notify
+ *    the user when a new version (or a required update) is available.
+ *
+ * @param {Object}  opts
+ * @param {boolean} opts.manual  True when triggered by the user (popup button).
+ *                               Manual checks skip the offline guard so the
+ *                               user gets immediate feedback.
+ * @returns {Object} Result summary suitable for returning to the popup.
+ */
+async function checkForUpdate({ manual = false } = {}) {
+  // --- Offline guard (skip for manual checks so the user gets feedback) ---
+  if (!manual && typeof navigator !== "undefined" && !navigator.onLine) {
+    const msg = "Skipping update check — browser is offline.";
+    console.log(`[SPF] ${msg}`);
+    return { success: false, error: msg, offline: true };
+  }
+
+  const { apiUrl } = await chrome.storage.local.get(["apiUrl"]);
+  const primaryUrl = apiUrl ? `${apiUrl}${API_V1}/extension/version` : null;
+
+  // --- Try primary, then fallback ---
+  let remote = null;
+  let source = null;
+
+  if (primaryUrl) {
+    remote = await fetchVersionFrom(primaryUrl, "primary");
+    if (remote) source = "primary";
+  }
+
+  if (!remote) {
+    remote = await fetchVersionFrom(UPDATE_FALLBACK_URL, "fallback");
+    if (remote) source = "fallback";
+  }
+
+  // --- Both sources failed ---
+  if (!remote) {
+    const msg = "Update check failed: both primary and fallback URLs unreachable.";
+    console.warn(`[SPF] ${msg}`);
+
     await chrome.storage.local.set({
-      lastUpdateCheck: Date.now(),
-      latestVersion: remote.version,
+      lastUpdateCheckStatus: "failure",
+      lastUpdateCheckError: msg,
+      lastUpdateCheckTimestamp: Date.now(),
     });
 
-    const updateAvailable = compareSemver(remote.version, localVersion) > 0;
-
-    if (updateAvailable) {
-      await chrome.storage.local.set({ updateAvailable: true });
-
-      // Show a notification so the user knows an update is ready
-      chrome.notifications.create("spf-update-available", {
-        type: "basic",
-        iconUrl: chrome.runtime.getURL("icons/icon128.png"),
-        title: "SelfPublisherForge Update Available",
-        message: `Version ${remote.version} is available (you have ${localVersion}). Click to update.`,
-        priority: 1,
-      });
-    } else {
-      await chrome.storage.local.set({ updateAvailable: false });
+    if (!manual) {
+      await scheduleUpdateRetry();
     }
 
-    // Warn if the installed version is below the minimum supported version
-    if (compareSemver(localVersion, remote.min_version) < 0) {
-      chrome.notifications.create("spf-update-required", {
-        type: "basic",
-        iconUrl: chrome.runtime.getURL("icons/icon128.png"),
-        title: "SelfPublisherForge Update Required",
-        message: `Your version (${localVersion}) is below the minimum supported version (${remote.min_version}). Please update now.`,
-        priority: 2,
-      });
-    }
-
-    console.log(
-      `[SPF] Update check complete. Local: ${localVersion}, Remote: ${remote.version}, Update available: ${updateAvailable}`
-    );
-  } catch (err) {
-    console.warn("[SPF] Update check error:", err.message);
+    return { success: false, error: msg };
   }
+
+  // --- Success path ---
+  const localVersion = chrome.runtime.getManifest().version;
+  const updateAvailable = compareSemver(remote.version, localVersion) > 0;
+
+  // Reset retry counter on success
+  await chrome.storage.local.set({
+    updateRetryCount: 0,
+    lastUpdateCheck: Date.now(),
+    lastUpdateCheckStatus: "success",
+    lastUpdateCheckError: null,
+    lastUpdateCheckTimestamp: Date.now(),
+    lastUpdateCheckSource: source,
+    latestVersion: remote.version,
+    updateAvailable,
+  });
+
+  // Cancel any pending retry alarm
+  chrome.alarms.clear(UPDATE_CHECK_RETRY_ALARM);
+
+  if (updateAvailable) {
+    chrome.notifications.create("spf-update-available", {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icons/icon128.png"),
+      title: "SelfPublisherForge Update Available",
+      message: `Version ${remote.version} is available (you have ${localVersion}). Click to update.`,
+      priority: 1,
+    });
+  }
+
+  // Warn if below minimum supported version
+  if (remote.min_version && compareSemver(localVersion, remote.min_version) < 0) {
+    chrome.notifications.create("spf-update-required", {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icons/icon128.png"),
+      title: "SelfPublisherForge Update Required",
+      message: `Your version (${localVersion}) is below the minimum supported version (${remote.min_version}). Please update now.`,
+      priority: 2,
+    });
+  }
+
+  console.log(
+    `[SPF] Update check complete (source: ${source}). Local: ${localVersion}, ` +
+      `Remote: ${remote.version}, Update available: ${updateAvailable}`
+  );
+
+  return {
+    success: true,
+    localVersion,
+    remoteVersion: remote.version,
+    updateAvailable,
+    source,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +415,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === UPDATE_CHECK_ALARM) {
     checkForUpdate();
   }
+  if (alarm.name === UPDATE_CHECK_RETRY_ALARM) {
+    console.log("[SPF] Firing update-check retry alarm.");
+    checkForUpdate();
+  }
   if (alarm.name === RETRY_ALARM) {
     retryPendingExtractions();
   }
@@ -329,9 +436,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     saveExtraction: () => saveExtraction(message.data),
     quickResearch: () => quickResearch(message.asin),
     saveClip: () => saveClip(message.clip),
-    checkForUpdate: () =>
-      checkForUpdate().then(() => ({ success: true })),
+    checkForUpdate: () => checkForUpdate({ manual: true }),
     retryPending: () => retryPendingExtractions().then(() => ({ success: true })),
+    getUpdateStatus: async () => {
+      const status = await chrome.storage.local.get([
+        "lastUpdateCheck",
+        "lastUpdateCheckStatus",
+        "lastUpdateCheckError",
+        "lastUpdateCheckTimestamp",
+        "lastUpdateCheckSource",
+        "latestVersion",
+        "updateAvailable",
+        "updateRetryCount",
+      ]);
+      return {
+        success: true,
+        data: {
+          ...status,
+          localVersion: chrome.runtime.getManifest().version,
+        },
+      };
+    },
     getPendingCount: async () => {
       const { pendingExtractions = [] } = await chrome.storage.local.get(["pendingExtractions"]);
       return { success: true, data: { count: pendingExtractions.length } };

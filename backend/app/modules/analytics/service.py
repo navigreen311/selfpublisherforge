@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone, date
 from decimal import Decimal
 from typing import Any
 
+from kombu.exceptions import OperationalError as BrokerOperationalError
 from sqlalchemy import and_, func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -266,7 +267,7 @@ async def create_report(
             report.id,
             task_result.id,
         )
-    except Exception:
+    except (ConnectionError, OSError, BrokerOperationalError) as e:
         logger.exception(
             "Failed to dispatch Celery task for report_id=%s; "
             "falling back to synchronous generation.",

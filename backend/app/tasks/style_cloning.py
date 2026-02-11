@@ -1,7 +1,17 @@
 """Celery tasks for asynchronous style profile analysis.
 
-Large manuscripts can take minutes to analyze — these tasks allow the
+Large manuscripts can take minutes to analyze -- these tasks allow the
 analysis to run in the background while the API returns immediately.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
@@ -9,6 +19,8 @@ from __future__ import annotations
 import logging
 import uuid
 from typing import Optional
+
+from celery.exceptions import SoftTimeLimitExceeded
 
 from app.tasks import celery_app
 from app.modules.style_cloning.ingestion import ingest_text, merge_segmented, SegmentedText
@@ -28,6 +40,8 @@ logger = logging.getLogger(__name__)
     max_retries=2,
     default_retry_delay=30,
     acks_late=True,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def analyze_profile_task(self, profile_id: str, sample_texts: list[str]) -> dict:
     """Run the full NLP pipeline on the given sample texts.
@@ -90,6 +104,9 @@ def analyze_profile_task(self, profile_id: str, sample_texts: list[str]) -> dict
                 "status": "failed",
                 "error": str(exc),
             }
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("Unexpected error in style analysis for profile %s: %s", profile_id, exc, exc_info=True)
         try:
@@ -106,6 +123,8 @@ def analyze_profile_task(self, profile_id: str, sample_texts: list[str]) -> dict
     name="style_cloning.conformity_check",
     bind=True,
     acks_late=True,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def conformity_check_task(self, profile_id: str, fingerprint_data: dict, text: str) -> dict:
     """Run a conformity check asynchronously.

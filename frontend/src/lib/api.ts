@@ -78,9 +78,9 @@ api.interceptors.response.use(
       }
 
       // Refresh failed -- clear auth state and redirect to login
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
         useAuthStore.getState().logout();
-        window.location.href = "/login";
+        window.location.href = "/login?returnTo=" + encodeURIComponent(window.location.pathname);
       }
     }
 

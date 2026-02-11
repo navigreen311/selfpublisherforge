@@ -17,12 +17,14 @@
 #          (must NOT contain "YOUR_AWS_ACCOUNT_ID" or "REPLACE_ME")
 #   [ ] 3. Replace alarm_sns_topic_arn with your real SNS topic ARN
 #          (must NOT contain "YOUR_AWS_ACCOUNT_ID")
-#   [ ] 4. Export the four required secret environment variables:
+#   [ ] 4. Replace allowed_cidr_blocks with your actual IP ranges
+#          (or ["0.0.0.0/0"] if the app is public-facing)
+#   [ ] 5. Replace S3 bucket name suffixes with your AWS account ID
+#   [ ] 6. Export the four required secret environment variables:
 #            export TF_VAR_db_username="..."
 #            export TF_VAR_db_password="..."
 #            export TF_VAR_jwt_secret_key="..."
 #            export TF_VAR_app_secret_key="..."
-#   [ ] 5. Set allowed_cidr_blocks in networking section
 #
 # HOW TO DEPLOY:
 #   1. Complete all TODO items below (replace every placeholder).
@@ -33,6 +35,24 @@
 
 environment = "production"
 aws_region  = "us-east-1"
+
+# =============================================================================
+# Networking
+# =============================================================================
+vpc_cidr                 = "10.0.0.0/16"
+availability_zones_count = 2
+
+# ---------------------------------------------------------------------------
+# Allowed CIDR Blocks — Controls who can reach the ALB
+# ---------------------------------------------------------------------------
+# SECURITY: For a public-facing web app, use ["0.0.0.0/0"].
+# For internal/restricted apps, list specific IP ranges (office, VPN, etc.).
+#
+# >>> TODO: Replace with your actual allowed CIDR ranges <<<
+# Examples:
+#   ["0.0.0.0/0"]                           — public-facing app (open to all)
+#   ["203.0.113.0/24", "198.51.100.0/24"]   — office + VPN only
+allowed_cidr_blocks = ["0.0.0.0/0"]   # TODO: Review — restrict if app is not public-facing
 
 # =============================================================================
 # ECS — Container sizing for production workloads
@@ -48,18 +68,18 @@ api_min_count      = 2      # auto-scaling floor
 api_max_count      = 10     # auto-scaling ceiling
 
 # --- Frontend service (Next.js / static serving) ---
-frontend_cpu       = 256    # 0.25 vCPU
-frontend_memory    = 512    # 512 MB
+frontend_cpu           = 256    # 0.25 vCPU
+frontend_memory        = 512    # 512 MB
 frontend_desired_count = 2
 
 # --- Celery worker (async task processing) ---
-worker_cpu         = 512
-worker_memory      = 1024
+worker_cpu           = 512
+worker_memory        = 1024
 worker_desired_count = 2
 
 # --- Celery beat (periodic task scheduler — only ever 1 instance) ---
-beat_cpu           = 256
-beat_memory        = 512
+beat_cpu    = 256
+beat_memory = 512
 
 # =============================================================================
 # RDS — PostgreSQL production database
@@ -67,6 +87,7 @@ beat_memory        = 512
 db_instance_class        = "db.t3.medium"   # 2 vCPU, 4 GB RAM
 db_allocated_storage     = 50               # initial storage in GB
 db_max_allocated_storage = 200              # auto-scaling upper limit in GB
+db_name                  = "selfpublisherforge"
 db_multi_az              = true             # REQUIRED for production HA
 db_backup_retention      = 7               # days to retain automated backups
 
@@ -99,11 +120,31 @@ db_backup_retention      = 7               # days to retain automated backups
 # =============================================================================
 redis_node_type       = "cache.t3.medium"   # 3.09 GB memory
 redis_num_cache_nodes = 1
+redis_engine_version  = "7.1"
+
+# =============================================================================
+# S3 — Bucket names with account-specific suffix for global uniqueness
+# =============================================================================
+# S3 bucket names must be globally unique across all AWS accounts. Using your
+# AWS account ID as a suffix guarantees uniqueness and clearly ties buckets
+# to your account.
+#
+# >>> TODO: Replace YOUR_AWS_ACCOUNT_ID with your 12-digit AWS account ID <<<
+# To find your account ID:  aws sts get-caller-identity --query Account --output text
+assets_bucket_name   = "selfpublisherforge-assets-YOUR_AWS_ACCOUNT_ID"     # TODO: Replace YOUR_AWS_ACCOUNT_ID
+backups_bucket_name  = "selfpublisherforge-backups-YOUR_AWS_ACCOUNT_ID"    # TODO: Replace YOUR_AWS_ACCOUNT_ID
+frontend_bucket_name = "selfpublisherforge-frontend-YOUR_AWS_ACCOUNT_ID"   # TODO: Replace YOUR_AWS_ACCOUNT_ID
 
 # =============================================================================
 # Logging
 # =============================================================================
-log_retention_days = 30   # CloudWatch log retention in days
+log_retention_days      = 30   # CloudWatch log retention in days
+flow_log_retention_days = 14   # VPC Flow Logs retention in days
+
+# =============================================================================
+# WAF — Web Application Firewall
+# =============================================================================
+waf_rate_limit = 2000   # requests per 5-min per IP — tune based on expected traffic
 
 # =============================================================================
 # Domain & SSL/TLS

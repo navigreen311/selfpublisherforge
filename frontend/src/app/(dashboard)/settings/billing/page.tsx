@@ -65,6 +65,8 @@ export default function BillingSettingsPage() {
     }
     if (tier === currentTier) return;
 
+    // Build absolute callback URLs for Stripe redirect - window.location.origin is
+    // required here to construct full URLs that Stripe will redirect back to.
     checkout.mutate({
       plan_tier: tier,
       success_url: `${window.location.origin}/settings/billing?success=true`,
@@ -73,6 +75,8 @@ export default function BillingSettingsPage() {
   };
 
   const handleManageBilling = () => {
+    // Build absolute return URL for Stripe portal - window.location.origin is
+    // required here to construct the full URL that Stripe will redirect back to.
     portal.mutate({
       return_url: `${window.location.origin}/settings/billing`,
     });
@@ -138,6 +142,7 @@ export default function BillingSettingsPage() {
             <button
               onClick={handleManageBilling}
               disabled={portal.isPending}
+              aria-label="Manage billing through Stripe portal"
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
               {portal.isPending ? "Loading..." : "Manage Billing"}

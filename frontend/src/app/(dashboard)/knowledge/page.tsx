@@ -27,7 +27,7 @@ export default function KnowledgeVaultPage() {
   const [deleteTarget, setDeleteTarget] = useState<KnowledgeEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: entries, isLoading: entriesLoading } = useKnowledgeEntries({
+  const { data: entries, isPending: entriesPending } = useKnowledgeEntries({
     tag: selectedTags.length > 0 ? selectedTags : undefined,
   });
   const { data: tagData } = useKnowledgeTags();
@@ -206,7 +206,7 @@ export default function KnowledgeVaultPage() {
       {/* Entry list */}
       {!searchResults && (
         <div>
-          {entriesLoading ? (
+          {entriesPending ? (
             <div
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
               aria-label="Loading knowledge entries"

@@ -166,7 +166,7 @@ export function useCreateCheckout() {
       return data;
     },
     onSuccess: (data) => {
-      // Redirect to Stripe Checkout
+      // External redirect to Stripe - must use window.location
       window.location.href = data.checkout_url;
     },
   });
@@ -185,6 +185,7 @@ export function useCreatePortal() {
       return data;
     },
     onSuccess: (data) => {
+      // External redirect to Stripe - must use window.location
       window.location.href = data.portal_url;
     },
   });

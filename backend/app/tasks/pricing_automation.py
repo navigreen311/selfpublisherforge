@@ -5,6 +5,16 @@ Periodic tasks:
   - evaluate_auto_pricing_rules: Check active auto-apply rules and trigger price adjustments.
   - activate_scheduled_promotions: Activate promotions whose start_date has passed.
   - complete_expired_promotions: Mark promotions as completed when end_date has passed.
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
@@ -15,6 +25,7 @@ import statistics
 from datetime import datetime, timezone
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -37,6 +48,8 @@ def _run_async(coro):
     bind=True,
     max_retries=3,
     default_retry_delay=300,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
     """Fetch latest competitor pricing data for a book.
@@ -215,6 +228,9 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
         )
         return result
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(
             "Competitor price check failed for book=%s org=%s: %s",
@@ -228,6 +244,8 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
     bind=True,
     max_retries=2,
     default_retry_delay=600,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
     """Evaluate and apply all active auto-pricing rules for an organization.
@@ -405,6 +423,9 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
         )
         return result
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(
             "Auto-pricing evaluation failed for org=%s: %s",
@@ -418,6 +439,8 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
     bind=True,
     max_retries=2,
     default_retry_delay=120,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def activate_scheduled_promotions(self) -> dict:
     """Activate promotions whose start_date has passed.
@@ -498,6 +521,9 @@ def activate_scheduled_promotions(self) -> dict:
         )
         return result
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(
             "Promotion activation failed: %s", str(exc), exc_info=True,
@@ -510,6 +536,8 @@ def activate_scheduled_promotions(self) -> dict:
     bind=True,
     max_retries=2,
     default_retry_delay=120,
+    soft_time_limit=60,
+    time_limit=120,
 )
 def complete_expired_promotions(self) -> dict:
     """Mark active promotions as completed when their end_date has passed.
@@ -600,6 +628,9 @@ def complete_expired_promotions(self) -> dict:
         )
         return result
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(
             "Promotion expiration check failed: %s", str(exc), exc_info=True,

@@ -99,7 +99,7 @@ async def test_openapi_spec_accessible(client: AsyncClient):
     assert "openapi" in spec
     assert "paths" in spec
     assert "info" in spec
-    assert spec["info"]["title"] == "SelfPublisherForge"
+    assert spec["info"]["title"] == "SelfPublisherForge API"
 
 
 @pytest.mark.asyncio

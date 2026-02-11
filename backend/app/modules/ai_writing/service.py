@@ -11,11 +11,17 @@ during integration.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import uuid as _uuid
 from datetime import datetime, timezone
 from sqlalchemy import select, update, func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import AppException
+
+logger = logging.getLogger(__name__)
 
 WORD_COUNT_MULTIPLIER = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
 
@@ -124,7 +130,7 @@ async def list_chapters(db: AsyncSession, book_id: _uuid.UUID) -> list[ChapterCo
 
 async def get_chapter(
     db: AsyncSession, book_id: _uuid.UUID, chapter_id: _uuid.UUID
-) -> ChapterContent | None:
+) -> ChapterContent:
     """Fetch a single chapter."""
     manuscript = await _get_or_create_manuscript(db, book_id)
     result = await db.execute(
@@ -135,7 +141,11 @@ async def get_chapter(
     )
     ch = result.scalar_one_or_none()
     if not ch:
-        return None
+        raise AppException(
+            status_code=404,
+            code="CHAPTER_NOT_FOUND",
+            message=f"Chapter {chapter_id} not found for book {book_id}",
+        )
     return _chapter_to_schema(ch, book_id)
 
 
@@ -166,7 +176,7 @@ async def update_chapter(
     book_id: _uuid.UUID,
     chapter_id: _uuid.UUID,
     data: ChapterUpdate,
-) -> ChapterContent | None:
+) -> ChapterContent:
     """Update an existing chapter."""
     manuscript = await _get_or_create_manuscript(db, book_id)
     result = await db.execute(
@@ -177,7 +187,11 @@ async def update_chapter(
     )
     chapter = result.scalar_one_or_none()
     if not chapter:
-        return None
+        raise AppException(
+            status_code=404,
+            code="CHAPTER_NOT_FOUND",
+            message=f"Chapter {chapter_id} not found for book {book_id}",
+        )
 
     update_data = data.model_dump(exclude_unset=True)
     if "content" in update_data:

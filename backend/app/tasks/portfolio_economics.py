@@ -4,6 +4,16 @@ Scheduled tasks:
 - Daily portfolio metric snapshots
 - Audience data refresh
 - Seasonal calendar updates
+
+Time limit strategy
+-------------------
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 import asyncio
 import logging
@@ -11,6 +21,7 @@ from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import async_session
@@ -33,6 +44,8 @@ def _run_async(coro):
     bind=True,
     max_retries=3,
     default_retry_delay=300,
+    soft_time_limit=3300,
+    time_limit=3600,
 )
 def snapshot_portfolio_metrics(self, org_id: str) -> dict:
     """Take a daily snapshot of portfolio metrics for an organization.
@@ -268,6 +281,9 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
 
         return snapshot
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(
             "Failed to snapshot portfolio metrics for org %s: %s",
@@ -282,6 +298,8 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
     bind=True,
     max_retries=3,
     default_retry_delay=600,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict:
     """Refresh audience data for an organization or specific book.
@@ -423,6 +441,9 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
 
         return result
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(
             "Failed to refresh audience data for org %s: %s",
@@ -437,6 +458,8 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
     bind=True,
     max_retries=3,
     default_retry_delay=300,
+    soft_time_limit=1800,
+    time_limit=3600,
 )
 def generate_kill_scale_alerts(self, org_id: str) -> dict:
     """Generate automated kill/scale alerts for portfolio books.
@@ -658,6 +681,9 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
 
         return result
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error(
             "Failed to generate kill/scale alerts for org %s: %s",
@@ -672,6 +698,8 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
     bind=True,
     max_retries=3,
     default_retry_delay=300,
+    soft_time_limit=300,
+    time_limit=600,
 )
 def update_seasonal_calendar(self) -> dict:
     """Update the seasonal calendar with latest event data.
@@ -767,6 +795,9 @@ def update_seasonal_calendar(self) -> dict:
 
         return result
 
+    except SoftTimeLimitExceeded:
+        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
+        raise
     except Exception as exc:
         logger.error("Failed to update seasonal calendar: %s", str(exc), exc_info=True)
         raise self.retry(exc=exc)

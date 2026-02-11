@@ -353,7 +353,7 @@ class TestCostTrackingIntegration:
         org_id = "org-broke"
         orchestrator._cost_tracker.set_budget(org_id, 0.0001)
         # Spend past budget
-        orchestrator._cost_tracker.record_usage(
+        await orchestrator._cost_tracker.record_usage(
             org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000
         )
         opts = GenerationOptions(org_id=org_id)
@@ -487,7 +487,7 @@ class TestStreamingGeneration:
     async def test_stream_budget_exceeded(self, orchestrator: LLMOrchestrator):
         org_id = "org-stream-broke"
         orchestrator._cost_tracker.set_budget(org_id, 0.0001)
-        orchestrator._cost_tracker.record_usage(
+        await orchestrator._cost_tracker.record_usage(
             org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000
         )
         opts = GenerationOptions(org_id=org_id)

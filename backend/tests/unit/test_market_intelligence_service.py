@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.core.exceptions import AppException
 from app.modules.market_intelligence.schemas import (
     CompetitorDetail,
     CompetitorListItem,
@@ -287,7 +288,7 @@ class TestTrackCompetitor:
     async def test_raises_value_error_when_product_not_found(
         self, service, mock_db, mock_client, org_id
     ):
-        """track_competitor should raise ValueError when Amazon returns no product."""
+        """track_competitor should raise AppException when Amazon returns no product."""
         # No existing competitor
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
@@ -297,8 +298,10 @@ class TestTrackCompetitor:
         mock_client.get_product_detail.return_value = None
 
         request = CompetitorTrackRequest(asin="B999999999", marketplace="US")
-        with pytest.raises(ValueError, match="Product B999999999 not found"):
+        with pytest.raises(AppException) as exc_info:
             await service.track_competitor(db=mock_db, request=request, org_id=org_id)
+        assert exc_info.value.status_code == 404
+        assert "B999999999" in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_stores_bsr_history_as_json(self, service, mock_db, mock_client, org_id):
@@ -382,14 +385,16 @@ class TestGetCompetitor:
 
     @pytest.mark.asyncio
     async def test_returns_none_when_not_found(self, service, mock_db):
-        """get_competitor should return None when the ID doesn't match any row."""
+        """get_competitor should raise AppException when the ID doesn't match any row."""
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_competitor(db=mock_db, competitor_id=uuid.uuid4())
-
-        assert result is None
+        comp_id = uuid.uuid4()
+        with pytest.raises(AppException) as exc_info:
+            await service.get_competitor(db=mock_db, competitor_id=comp_id)
+        assert exc_info.value.status_code == 404
+        assert str(comp_id) in exc_info.value.message
 
     @pytest.mark.asyncio
     async def test_deserializes_bsr_history_from_jsonb(self, service, mock_db):

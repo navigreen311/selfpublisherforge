@@ -113,6 +113,11 @@ resource "aws_security_group_rule" "rds_from_rotation_lambda" {
 # -----------------------------------------------------------------------------
 # Secrets Manager VPC Endpoint (rotation Lambda needs API access from VPC)
 # -----------------------------------------------------------------------------
+# Network path: Lambda (private subnet) → VPC Endpoint ENI → Secrets Manager API
+# With private_dns_enabled = true, the standard secretsmanager.<region>.amazonaws.com
+# hostname resolves to the VPC endpoint's private IP within the VPC. We also pass
+# the VPC endpoint DNS name explicitly to the Lambda via SECRETS_MANAGER_ENDPOINT
+# to guarantee traffic never leaves the VPC (no NAT gateway required).
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
@@ -136,9 +141,11 @@ resource "aws_serverlessapplicationrepository_cloudformation_stack" "db_password
   capabilities = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY"]
 
   parameters = {
-    functionName    = "${var.project_name}-${var.environment}-db-password-rotation"
-    endpoint        = "https://secretsmanager.${var.aws_region}.amazonaws.com"
-    vpcSubnetIds    = join(",", aws_subnet.private[*].id)
+    functionName = "${var.project_name}-${var.environment}-db-password-rotation"
+    # Route Secrets Manager API calls through the VPC endpoint (private link)
+    # instead of the public internet endpoint. This avoids NAT gateway dependency.
+    endpoint            = "https://${aws_vpc_endpoint.secretsmanager.dns_entry[0].dns_name}"
+    vpcSubnetIds        = join(",", aws_subnet.private[*].id)
     vpcSecurityGroupIds = aws_security_group.rotation_lambda.id
   }
 
@@ -149,12 +156,14 @@ resource "aws_serverlessapplicationrepository_cloudformation_stack" "db_password
 
 # -----------------------------------------------------------------------------
 # DB Password Rotation (30-day schedule)
+# Rotation cadence: every 30 days. Adjust automatically_after_days to change.
 # -----------------------------------------------------------------------------
 resource "aws_secretsmanager_secret_rotation" "db_password" {
   secret_id           = aws_secretsmanager_secret.db_password.id
   rotation_lambda_arn = aws_serverlessapplicationrepository_cloudformation_stack.db_password_rotation.outputs["RotationLambdaARN"]
 
   rotation_rules {
+    # 30-day rotation complies with security best practices.
     automatically_after_days = 30
   }
 
@@ -240,16 +249,54 @@ data "archive_file" "secret_rotation" {
     content  = <<-PYTHON
 import boto3
 import json
+import logging
 import os
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+def _get_client():
+    """Create a Secrets Manager client using the VPC endpoint URL."""
+    endpoint = os.environ.get('SECRETS_MANAGER_ENDPOINT')
+    logger.info("Connecting to Secrets Manager via endpoint: %s", endpoint)
+    return boto3.client('secretsmanager', endpoint_url=endpoint)
+
+def _health_check(client):
+    """Verify connectivity to Secrets Manager through the VPC endpoint.
+
+    Calls GetRandomPassword as a lightweight connectivity test before
+    performing any rotation steps. Raises an exception if the endpoint
+    is unreachable, which causes the rotation to fail fast with a clear
+    error rather than timing out silently.
+    """
+    try:
+        client.get_random_password(PasswordLength=8)
+        logger.info("Health check passed: Secrets Manager endpoint is reachable")
+    except Exception as e:
+        logger.error("Health check FAILED: Cannot reach Secrets Manager endpoint. "
+                     "Verify VPC endpoint configuration and security group rules. Error: %s", e)
+        raise RuntimeError(
+            "Secrets Manager endpoint unreachable. Ensure the VPC endpoint "
+            "(com.amazonaws.<region>.secretsmanager) is active and the Lambda "
+            "security group allows HTTPS (443) egress to the endpoint."
+        ) from e
+
 def lambda_handler(event, context):
-    """Rotates a generic secret by generating a new random password."""
+    """Rotates a generic secret by generating a new random password.
+
+    Network path: Lambda (private subnet) -> VPC Endpoint ENI -> Secrets Manager API.
+    No NAT gateway or internet access is required.
+    """
     secret_arn = event['SecretId']
     token      = event['ClientRequestToken']
     step       = event['Step']
 
-    client = boto3.client('secretsmanager',
-        endpoint_url=os.environ.get('SECRETS_MANAGER_ENDPOINT'))
+    logger.info("Rotation step '%s' for secret %s (token: %s)", step, secret_arn, token)
+
+    client = _get_client()
+
+    # Validate Secrets Manager connectivity before any rotation step
+    _health_check(client)
 
     if step == "createSecret":
         # Generate a new secret value
@@ -264,6 +311,7 @@ def lambda_handler(event, context):
             SecretString=passwd['RandomPassword'],
             VersionStages=['AWSPENDING']
         )
+        logger.info("createSecret: new pending version stored")
 
     elif step == "setSecret":
         # No external system to update for generic secrets
@@ -276,6 +324,7 @@ def lambda_handler(event, context):
             VersionId=token,
             VersionStage='AWSPENDING'
         )
+        logger.info("testSecret: pending version retrieved successfully")
 
     elif step == "finishSecret":
         # Promote AWSPENDING to AWSCURRENT
@@ -292,6 +341,7 @@ def lambda_handler(event, context):
             MoveToVersionId=token,
             RemoveFromVersionId=current_version
         )
+        logger.info("finishSecret: version %s promoted to AWSCURRENT", token)
 
     return {"statusCode": 200}
     PYTHON
@@ -299,6 +349,11 @@ def lambda_handler(event, context):
   }
 }
 
+# Network path: Lambda (private subnet) -> VPC Endpoint ENI -> Secrets Manager API
+# The Lambda runs inside the VPC with no internet access. It reaches
+# Secrets Manager exclusively through the VPC Interface Endpoint, so no
+# NAT gateway is needed. The SECRETS_MANAGER_ENDPOINT env var points to the
+# VPC endpoint's DNS name to guarantee all API traffic stays within the VPC.
 resource "aws_lambda_function" "secret_rotation" {
   function_name = "${var.project_name}-${var.environment}-generic-secret-rotation"
   description   = "Rotates application secrets (JWT, App Key) by generating new random values"
@@ -317,7 +372,10 @@ resource "aws_lambda_function" "secret_rotation" {
 
   environment {
     variables = {
-      SECRETS_MANAGER_ENDPOINT = "https://secretsmanager.${var.aws_region}.amazonaws.com"
+      # Use VPC endpoint DNS instead of the public Secrets Manager endpoint.
+      # This ensures the Lambda communicates via private link, avoiding the
+      # need for a NAT gateway or internet gateway.
+      SECRETS_MANAGER_ENDPOINT = "https://${aws_vpc_endpoint.secretsmanager.dns_entry[0].dns_name}"
     }
   }
 
@@ -346,12 +404,14 @@ resource "aws_lambda_permission" "app_secret_rotation" {
 
 # -----------------------------------------------------------------------------
 # JWT Secret Rotation (30-day schedule)
+# Rotation cadence: every 30 days. Adjust automatically_after_days to change.
 # -----------------------------------------------------------------------------
 resource "aws_secretsmanager_secret_rotation" "jwt_secret" {
   secret_id           = aws_secretsmanager_secret.jwt_secret.id
   rotation_lambda_arn = aws_lambda_function.secret_rotation.arn
 
   rotation_rules {
+    # 30-day rotation complies with security best practices.
     automatically_after_days = 30
   }
 
@@ -363,12 +423,14 @@ resource "aws_secretsmanager_secret_rotation" "jwt_secret" {
 
 # -----------------------------------------------------------------------------
 # App Secret Key Rotation (30-day schedule)
+# Rotation cadence: every 30 days. Adjust automatically_after_days to change.
 # -----------------------------------------------------------------------------
 resource "aws_secretsmanager_secret_rotation" "app_secret_key" {
   secret_id           = aws_secretsmanager_secret.app_secret_key.id
   rotation_lambda_arn = aws_lambda_function.secret_rotation.arn
 
   rotation_rules {
+    # 30-day rotation complies with security best practices.
     automatically_after_days = 30
   }
 

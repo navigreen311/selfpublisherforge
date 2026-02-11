@@ -5,6 +5,8 @@ Verifies USD cost calculation, usage recording, budget thresholds,
 and alert levels at 50/75/90/100%.
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from app.modules.llm_orchestration.cost_tracker import (
@@ -23,7 +25,12 @@ from app.modules.llm_orchestration.router_config import ModelID
 
 @pytest.fixture
 def tracker() -> CostTracker:
-    return CostTracker()
+    """Return a CostTracker with Redis persistence disabled."""
+    t = CostTracker()
+    # Prevent _get_redis from attempting a real connection;
+    # _persist_to_redis will see client=None and skip Redis writes.
+    t._get_redis = AsyncMock(return_value=None)
+    return t
 
 
 @pytest.fixture
@@ -87,8 +94,8 @@ class TestCostCalculation:
 class TestUsageRecording:
     """Verify that usage records are created and budgets updated."""
 
-    def test_record_creates_entry(self, tracker: CostTracker, org_id: str):
-        record = tracker.record_usage(
+    async def test_record_creates_entry(self, tracker: CostTracker, org_id: str):
+        record = await tracker.record_usage(
             org_id=org_id,
             model_id=ModelID.CLAUDE_SONNET.value,
             task_type="blurb_ad_copy",
@@ -101,25 +108,25 @@ class TestUsageRecording:
         assert record.output_tokens == 200
         assert record.cost_usd > 0
 
-    def test_multiple_records_accumulate_cost(self, tracker: CostTracker, org_id: str):
-        tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "test", 1000, 1000)
-        tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "test", 1000, 1000)
+    async def test_multiple_records_accumulate_cost(self, tracker: CostTracker, org_id: str):
+        await tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "test", 1000, 1000)
+        await tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "test", 1000, 1000)
         budget = tracker.get_budget(org_id)
         single_cost = tracker.calculate_cost(ModelID.CLAUDE_SONNET.value, 1000, 1000)
         assert budget.spent_usd == pytest.approx(single_cost * 2, abs=1e-6)
 
-    def test_usage_summary_aggregation(self, tracker: CostTracker, org_id: str):
-        tracker.record_usage(org_id, ModelID.CLAUDE_HAIKU.value, "review", 500, 100)
-        tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "blurb", 800, 300)
+    async def test_usage_summary_aggregation(self, tracker: CostTracker, org_id: str):
+        await tracker.record_usage(org_id, ModelID.CLAUDE_HAIKU.value, "review", 500, 100)
+        await tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "blurb", 800, 300)
         summary = tracker.get_usage_summary(org_id)
         assert summary["request_count"] == 2
         assert summary["total_input_tokens"] == 1300
         assert summary["total_output_tokens"] == 400
         assert summary["total_cost_usd"] > 0
 
-    def test_usage_summary_filter_by_model(self, tracker: CostTracker, org_id: str):
-        tracker.record_usage(org_id, ModelID.CLAUDE_HAIKU.value, "review", 500, 100)
-        tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "blurb", 800, 300)
+    async def test_usage_summary_filter_by_model(self, tracker: CostTracker, org_id: str):
+        await tracker.record_usage(org_id, ModelID.CLAUDE_HAIKU.value, "review", 500, 100)
+        await tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "blurb", 800, 300)
         summary = tracker.get_usage_summary(org_id, model_id=ModelID.CLAUDE_HAIKU.value)
         assert summary["request_count"] == 1
         assert summary["total_input_tokens"] == 500
@@ -150,15 +157,15 @@ class TestBudgetManagement:
         tracker.set_budget(org_id, 100.0)
         assert tracker.check_budget(org_id, estimated_cost=150.0) is False
 
-    def test_remaining_budget_decreases(self, tracker: CostTracker, org_id: str):
+    async def test_remaining_budget_decreases(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 10.0)
-        tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
+        await tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
         budget = tracker.get_budget(org_id)
         assert budget.remaining_usd < 10.0
 
-    def test_remaining_never_negative(self, tracker: CostTracker, org_id: str):
+    async def test_remaining_never_negative(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 0.001)
-        tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000)
+        await tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000)
         budget = tracker.get_budget(org_id)
         assert budget.remaining_usd >= 0.0
 
@@ -174,51 +181,51 @@ class TestAlertLevels:
         tracker.set_budget(org_id, 100.0)
         assert tracker.get_alert_level(org_id) == BudgetAlertLevel.NONE
 
-    def test_no_alert_below_50_percent(self, tracker: CostTracker, org_id: str):
+    async def test_no_alert_below_50_percent(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 100.0)
         # Spend ~$0.018 per call (Sonnet 1k/1k)
         # Need to stay below $50
         for _ in range(10):
-            tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "test", 1000, 1000)
+            await tracker.record_usage(org_id, ModelID.CLAUDE_SONNET.value, "test", 1000, 1000)
         assert tracker.get_alert_level(org_id) == BudgetAlertLevel.NONE
 
-    def test_warning_at_50_percent(self, tracker: CostTracker, org_id: str):
+    async def test_warning_at_50_percent(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 1.0)
         # Spend enough to hit ~50%
         # Opus: $0.015 input + $0.075 output = $0.09 per 1K each
         # 6 calls => ~$0.54 => 54%
         for _ in range(6):
-            tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
+            await tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
         level = tracker.get_alert_level(org_id)
         assert level == BudgetAlertLevel.WARNING_50
 
-    def test_warning_at_75_percent(self, tracker: CostTracker, org_id: str):
+    async def test_warning_at_75_percent(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 1.0)
         # 9 Opus calls => ~$0.81 => 81%
         for _ in range(9):
-            tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
+            await tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
         level = tracker.get_alert_level(org_id)
         assert level == BudgetAlertLevel.WARNING_75
 
-    def test_critical_at_90_percent(self, tracker: CostTracker, org_id: str):
+    async def test_critical_at_90_percent(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 1.0)
         # 10 Opus calls => ~$0.90 => 90%
         for _ in range(10):
-            tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
+            await tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
         level = tracker.get_alert_level(org_id)
         assert level == BudgetAlertLevel.CRITICAL_90
 
-    def test_exceeded_at_100_percent(self, tracker: CostTracker, org_id: str):
+    async def test_exceeded_at_100_percent(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 1.0)
         # 12 Opus calls => ~$1.08 => 108%
         for _ in range(12):
-            tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
+            await tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
         level = tracker.get_alert_level(org_id)
         assert level == BudgetAlertLevel.EXCEEDED_100
 
-    def test_budget_check_false_when_exceeded(self, tracker: CostTracker, org_id: str):
+    async def test_budget_check_false_when_exceeded(self, tracker: CostTracker, org_id: str):
         tracker.set_budget(org_id, 0.01)
-        tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
+        await tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 1000, 1000)
         assert tracker.check_budget(org_id) is False
 
 

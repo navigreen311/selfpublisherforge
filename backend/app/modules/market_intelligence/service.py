@@ -20,6 +20,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AppException
 from app.models.market import (
     CompetitorBook,
     MarketCategory,
@@ -275,7 +276,11 @@ class MarketIntelligenceService:
             request.asin, marketplace=request.marketplace
         )
         if not product:
-            raise ValueError(f"Product {request.asin} not found")
+            raise AppException(
+                status_code=404,
+                code="PRODUCT_NOT_FOUND",
+                message=f"Product {request.asin} not found on Amazon",
+            )
 
         bsr_history = await self._client.get_bsr_history(
             request.asin, days=30, marketplace=request.marketplace
@@ -312,7 +317,7 @@ class MarketIntelligenceService:
         db: AsyncSession,
         competitor_id: uuid.UUID,
         org_id: Optional[uuid.UUID] = None,
-    ) -> Optional[CompetitorDetail]:
+    ) -> CompetitorDetail:
         """Get a single competitor by ID from the database.
 
         When org_id is provided the query is scoped to that tenant,
@@ -327,7 +332,11 @@ class MarketIntelligenceService:
         result = await db.execute(query)
         row = result.scalar_one_or_none()
         if row is None:
-            return None
+            raise AppException(
+                status_code=404,
+                code="COMPETITOR_NOT_FOUND",
+                message=f"Competitor {competitor_id} not found",
+            )
         return self._map_db_competitor_detail(row)
 
     # ------------------------------------------------------------------

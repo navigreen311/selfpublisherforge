@@ -13,7 +13,7 @@ export default function KeywordsPage() {
   const [activeTab, setActiveTab] = useState<"research" | "suggestions">("research");
 
   const keywordResearch = useKeywordResearch();
-  const { data: suggestions = [], isLoading: suggestionsLoading } =
+  const { data: suggestions = [], isPending: suggestionsPending } =
     useKeywordSuggestions(activeTab === "suggestions" ? genreInput : "");
 
   const handleResearch = () => {
@@ -160,7 +160,7 @@ export default function KeywordsPage() {
           <div role="region" aria-label="AI keyword suggestions results" aria-live="polite">
             <KeywordTable
               keywords={suggestions}
-              isLoading={suggestionsLoading}
+              isLoading={suggestionsPending}
             />
           </div>
         </div>

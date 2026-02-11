@@ -99,7 +99,7 @@ def check_permission(
         return True
     except PermissionDenied:
         raise
-    except Exception:
+    except (AttributeError, TypeError) as e:
         logger.exception(
             "Permission check failed for agent '%s' action '%s' (role=%s) — denying by default",
             agent.name, action, user_role,
