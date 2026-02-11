@@ -79,11 +79,11 @@ class DialogueMetrics(BaseModel):
 
 
 class VoiceFingerprint(BaseModel):
-    vocabulary: VocabularyMetrics = Field(default_factory=lambda: VocabularyMetrics())
-    sentence: SentenceMetrics = Field(default_factory=lambda: SentenceMetrics())
-    paragraph: ParagraphMetrics = Field(default_factory=lambda: ParagraphMetrics())
-    rhetorical: RhetoricalMetrics = Field(default_factory=lambda: RhetoricalMetrics())
-    dialogue: DialogueMetrics = Field(default_factory=lambda: DialogueMetrics())
+    vocabulary: VocabularyMetrics = Field(default_factory=VocabularyMetrics)
+    sentence: SentenceMetrics = Field(default_factory=SentenceMetrics)
+    paragraph: ParagraphMetrics = Field(default_factory=ParagraphMetrics)
+    rhetorical: RhetoricalMetrics = Field(default_factory=RhetoricalMetrics)
+    dialogue: DialogueMetrics = Field(default_factory=DialogueMetrics)
     voice_vector: list[float] = Field(default_factory=list, description="200+ dimension numeric vector")
     dimension_labels: list[str] = Field(default_factory=list, description="Label for each vector dimension")
 

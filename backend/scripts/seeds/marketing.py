@@ -1,20 +1,19 @@
 """Seed demo marketing campaigns and email templates."""
 import uuid
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.advertising.models import Campaign
 from app.models.marketing import (
-    LaunchPlan,
-    LaunchPlanStatus,
     EmailSequence,
     EmailSequenceStatus,
     EmailTemplate,
     EmailTemplateType,
+    LaunchPlan,
+    LaunchPlanStatus,
 )
+from app.modules.advertising.models import Campaign
 
 
 async def seed_marketing(
@@ -50,7 +49,7 @@ async def seed_marketing(
         title="Dragon's Prophecy Launch Campaign",
         description="Complete launch campaign for epic fantasy debut novel",
         status=LaunchPlanStatus.COMPLETED,
-        launch_date=datetime.now(timezone.utc) - timedelta(days=180),
+        launch_date=datetime.now(UTC) - timedelta(days=180),
         genre="Epic Fantasy",
         target_audience="Adult fantasy readers aged 25-45 who enjoy epic quests and dragon lore",
         budget=500.0,
@@ -87,8 +86,8 @@ async def seed_marketing(
         status="active",
         total_budget=300.00,
         daily_budget=10.00,
-        start_date=datetime.now(timezone.utc) - timedelta(days=150),
-        end_date=datetime.now(timezone.utc) + timedelta(days=30),
+        start_date=datetime.now(UTC) - timedelta(days=150),
+        end_date=datetime.now(UTC) + timedelta(days=30),
         targeting_keywords=["epic fantasy", "dragon books", "fantasy adventure"],
         negative_keywords=["free", "pirated"],
     )

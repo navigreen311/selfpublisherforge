@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.content import Chapter, ChapterStatus, Manuscript
 
-
 # Sample chapter data for each book type
 FANTASY_CHAPTERS = [
     "The Awakening",

@@ -144,7 +144,7 @@ async def extract_key_facts(content: str) -> dict[str, Any]:
             messages=[{"role": "user", "content": prompt}],
         )
         content_block = message.content[0]
-        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
         return _parse_extraction_response(raw_text)
     except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI fact extraction failed due to connection issue", exc_info=True)
@@ -196,7 +196,7 @@ async def summarize_content(content: str) -> dict[str, Any]:
             messages=[{"role": "user", "content": prompt}],
         )
         content_block = message.content[0]
-        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
         return _parse_summary_response(raw_text)
     except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI summarization failed due to connection issue", exc_info=True)
@@ -248,7 +248,7 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
             messages=[{"role": "user", "content": prompt}],
         )
         content_block = message.content[0]
-        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)
+        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
         import json
 
         data = json.loads(raw_text)

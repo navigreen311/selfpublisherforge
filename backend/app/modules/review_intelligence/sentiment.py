@@ -228,7 +228,7 @@ Return ONLY valid JSON, no other text."""
         )
 
         content_block = message.content[0]
-        response_text = content_block.text.strip() if hasattr(content_block, 'text') else str(content_block)
+        response_text = content_block.text.strip() if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
         # Parse JSON from LLM response
         result_data = json.loads(response_text)
 

@@ -1,6 +1,6 @@
 """Seed demo users and organizations."""
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,8 +73,8 @@ async def seed_users(db: AsyncSession) -> dict[str, uuid.UUID]:
             slug=user_data["org_slug"],
             plan_tier=user_data["plan_tier"],
             subscription_status=SubscriptionStatus.ACTIVE,
-            current_period_start=datetime.now(timezone.utc),
-            current_period_end=datetime.now(timezone.utc) + timedelta(days=30),
+            current_period_start=datetime.now(UTC),
+            current_period_end=datetime.now(UTC) + timedelta(days=30),
             settings={
                 "notifications_enabled": True,
                 "ai_features_enabled": True,
@@ -97,7 +97,7 @@ async def seed_users(db: AsyncSession) -> dict[str, uuid.UUID]:
             role=user_data["role"],
             is_active=True,
             email_verified=True,
-            email_verified_at=datetime.now(timezone.utc),
+            email_verified_at=datetime.now(UTC),
             preferences={
                 "theme": "light",
                 "notifications": {
