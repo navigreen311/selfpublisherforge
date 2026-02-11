@@ -3,6 +3,13 @@
  *
  * Provides a convenient wrapper around next-intl's useTranslations hook
  * with type safety and default namespace handling.
+ *
+ * Supports loading messages from:
+ * 1. Main file: messages/{locale}.json under the namespace key (existing)
+ * 2. Namespace files: messages/{locale}/{namespace}.json (new, optional)
+ *
+ * Namespace files override/extend the main file, allowing gradual migration
+ * to per-namespace translation files.
  */
 
 "use client";
@@ -17,8 +24,17 @@ import { useTranslations as useNextIntlTranslations } from "next-intl";
  *
  * @example
  * ```tsx
- * const t = useTranslations("common");
- * return <button>{t("save")}</button>;
+ * // Loads keys from messages/en.json under "auth" namespace
+ * // AND from messages/en/auth.json if it exists (overrides/extends)
+ * const t = useTranslations("auth");
+ * return <button>{t("signIn")}</button>;
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // Without namespace parameter
+ * const t = useTranslations();
+ * return <div>{t("common.appName")}</div>;
  * ```
  */
 export function useTranslations(namespace?: string) {
