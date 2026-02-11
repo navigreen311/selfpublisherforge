@@ -148,13 +148,18 @@ export function Header() {
           size="icon"
           className="h-9 w-9 relative"
           onClick={() => router.push("/settings")}
-          aria-label="Notifications"
+          aria-label={
+            unreadCount > 0
+              ? `Notifications (${unreadCount} unread)`
+              : "Notifications"
+          }
         >
-          <Bell className="h-4 w-4" />
+          <Bell className="h-4 w-4" aria-hidden="true" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+              aria-hidden="true"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
