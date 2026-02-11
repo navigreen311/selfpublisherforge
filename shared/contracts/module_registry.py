@@ -17,6 +17,11 @@ Usage::
 
     for mod in modules_for_tier("free"):
         print(mod.name)
+
+NOTE: This registry declares 33 logical modules, but not all are implemented as
+standalone backend modules. Some entries represent sub-features or endpoints that
+are covered by other implementations. See inline comments for the actual module
+mappings.
 """
 
 from __future__ import annotations
@@ -71,6 +76,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/projects",
         dependencies=("auth", "org"),
     ),
+    # Covered by ai_writing module in backend
     ModuleInfo(
         id=4,
         slug="books",
@@ -89,6 +95,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/market-research",
         dependencies=("auth", "org"),
     ),
+    # Covered by market_intelligence module in backend
     ModuleInfo(
         id=6,
         slug="keyword-research",
@@ -107,6 +114,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/style-profiles",
         dependencies=("auth", "org"),
     ),
+    # Covered by style_cloning module in backend
     ModuleInfo(
         id=8,
         slug="brand-kits",
@@ -116,6 +124,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/brand-kits",
         dependencies=("auth", "org"),
     ),
+    # Covered by ai_writing module in backend
     ModuleInfo(
         id=9,
         slug="ai-outline",
@@ -134,6 +143,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/ai/writing",
         dependencies=("auth", "org", "books", "style-profiles"),
     ),
+    # Covered by ai_writing module in backend
     ModuleInfo(
         id=11,
         slug="ai-editing",
@@ -143,6 +153,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/ai/editing",
         dependencies=("auth", "org", "books"),
     ),
+    # Covered by cover_design module in backend
     ModuleInfo(
         id=12,
         slug="ai-cover",
@@ -152,6 +163,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/ai/covers",
         dependencies=("auth", "org", "books", "brand-kits"),
     ),
+    # Covered by publishing_ops module in backend
     ModuleInfo(
         id=13,
         slug="formatting",
@@ -179,6 +191,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/publishing/distribution",
         dependencies=("auth", "org", "books", "publishing-validation"),
     ),
+    # Covered by marketing module in backend
     ModuleInfo(
         id=16,
         slug="email-marketing",
@@ -188,6 +201,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/marketing/email",
         dependencies=("auth", "org"),
     ),
+    # Covered by marketing module in backend
     ModuleInfo(
         id=17,
         slug="social-marketing",
@@ -215,6 +229,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/agents",
         dependencies=("auth", "org"),
     ),
+    # Covered by agent_system module in backend
     ModuleInfo(
         id=20,
         slug="agent-marketplace",
@@ -224,6 +239,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/agents/marketplace",
         dependencies=("auth", "org", "agent-framework"),
     ),
+    # Covered by agent_system module in backend
     ModuleInfo(
         id=21,
         slug="agent-builder",
@@ -233,6 +249,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/agents/builder",
         dependencies=("auth", "org", "agent-framework"),
     ),
+    # Covered by analytics module in backend
     ModuleInfo(
         id=22,
         slug="sales-analytics",
@@ -242,6 +259,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/analytics/sales",
         dependencies=("auth", "org", "books"),
     ),
+    # Covered by analytics module in backend
     ModuleInfo(
         id=23,
         slug="marketing-analytics",
@@ -251,6 +269,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/analytics/marketing",
         dependencies=("auth", "org", "email-marketing", "social-marketing"),
     ),
+    # Covered by analytics module in backend
     ModuleInfo(
         id=24,
         slug="reports",
@@ -269,6 +288,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/notifications",
         dependencies=("auth",),
     ),
+    # Covered by users module in backend
     ModuleInfo(
         id=26,
         slug="user-settings",
@@ -296,6 +316,7 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         api_prefix="/billing",
         dependencies=("auth", "org"),
     ),
+    # Covered by billing module in backend
     ModuleInfo(
         id=29,
         slug="usage-tracking",

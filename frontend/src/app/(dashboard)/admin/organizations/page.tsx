@@ -1,3 +1,12 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Admin - Organizations",
+  description: "View and manage organization accounts and subscription plans.",
+  noindex: true,
+});
+
 "use client";
 
 import { OrgTable } from "@/modules/admin/components/OrgTable";
