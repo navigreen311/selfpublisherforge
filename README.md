@@ -5,43 +5,49 @@ AI-powered, end-to-end self-publishing platform for independent authors, small p
 ## Features
 
 ### Core Platform
-- **User Authentication** -- Email/password login, JWT (access + refresh tokens), multi-factor authentication (MFA), password reset, session management
+- **User Authentication** -- Email/password login, OAuth (Google + GitHub), JWT (access + refresh tokens), multi-factor authentication (MFA), password reset, session management
 - **Organization Management** -- Multi-tenant workspaces with role-based access control, team invitations, row-level data isolation via `org_id`
-- **Billing & Subscriptions** -- Stripe integration with tiered plan management (Free, Starter, Pro, Business, Enterprise), usage metering, invoices, and webhooks
-- **Notifications** -- In-app and email notification delivery via SendGrid, with real-time push through WebSockets
+- **Billing & Subscriptions** -- Stripe integration with tiered plan management (Free, Starter, Pro, Business, Enterprise), usage metering, invoices, webhooks (upgrade/downgrade/failure/cancel), and per-endpoint rate limiting with tier multipliers
+- **Notifications** -- In-app and email notification delivery via SendGrid, with real-time push through WebSockets and full notification center UI
+- **Internationalization** -- i18n framework with support for English, Spanish, and German
+- **Accessibility & Design** -- WCAG 2.1 AA compliant, mobile responsive, error boundaries, empty states, SEO meta tags, and Open Graph support
 
 ### Writing & Content
-- **AI Writing Studio** -- Manuscript editor with chapter management, AI-powered content generation, readability analysis, and writing prompts
-- **Style Cloning Engine** -- NLP pipeline for voice fingerprint analysis, style profile generation, and writing conformity scoring
+- **AI Writing Studio** -- Manuscript editor with chapter management, AI-powered content generation, readability analysis, writing prompts, and deep NLP analyzers (syntax, rhythm, vocabulary, tone)
+- **Style Cloning Engine** -- NLP pipeline for voice fingerprint analysis, style profile generation, writing conformity scoring, and style profile manager with real-time conformity checking
 - **Knowledge Vault** -- Research management with Elasticsearch full-text search, document importing, and AI-assisted note extraction
-- **Cover Design Studio** -- AI cover generation with template system, design analysis, and cover image management
+- **Cover Design Studio** -- AI cover generation with template system, design analysis, cover image management, and full-featured frontend studio with drag-and-drop editing
 
 ### Publishing & Distribution
 - **Production Pipeline** -- Workflow engine for EPUB and PDF generation with configurable formatting templates
 - **Publishing Operations** -- Multi-platform publishing support (KDP, IngramSpark, Draft2Digital) with listing sync and export management
-- **KDP Validation** -- Compliance scanning covering print specs, ebook validation, cover dimensions, and content policy rules
+- **KDP Validation** -- Compliance scanning covering print specs, ebook validation, cover dimensions, content policy rules, and full-featured validation dashboard with pre-flight checks
 
 ### Marketing & Sales
 - **Marketing Launch Planner** -- Campaign planning with ARC (Advance Reader Copy) management, email builder, and social media content generation
 - **Advertising Intelligence** -- Amazon Ads (AMS) and Facebook Ads campaign management with bid optimization and creative generation
 - **Product Page Lab** -- A/B testing for book listings with mobile rendering checks, blurb generation, and conversion analysis
-- **Pricing Automation** -- Dynamic pricing strategies, Kindle Unlimited (KU) page-read calculator, price simulation, and rule-based optimization
-- **Review Intelligence** -- Sentiment analysis, review velocity tracking, reputation monitoring, and alert system
-- **Competitor Finder** -- Competitive gap detection, review analysis across competitor titles, and opportunity blueprint generation
+- **Pricing Automation** -- Dynamic pricing strategies, Kindle Unlimited (KU) page-read calculator, price simulation, rule-based optimization, and full-featured frontend tools
+- **Review Intelligence** -- Sentiment analysis, review velocity tracking, reputation monitoring, alert system, and full-featured dashboard with real-time alerts
+- **Competitor Finder** -- Competitive gap detection, review analysis across competitor titles, opportunity blueprint generation, and full-featured frontend with gap analysis tools
 
 ### Analytics & Intelligence
 - **Revenue & Royalty Tracking** -- Multi-platform royalty import, revenue aggregation, and custom report builder
-- **Portfolio Economics** -- Backlist analysis, audience DNA profiling, greenlight scoring for new titles, and seasonal trend calendars
+- **Portfolio Economics** -- Backlist analysis, audience DNA profiling, greenlight scoring for new titles, seasonal trend calendars, and full-featured dashboard with opportunity detection
 - **Market Intelligence Engine** -- Niche analysis, BSR tracking, competitor scoring, and Amazon marketplace data via API
 
 ### AI & Automation
-- **Agent System** -- Autonomous agent framework with workflow engine, governance rules, audit logging, and task execution
+- **Agent System** -- Autonomous agent framework with workflow engine, governance rules, audit logging, task execution, and 10 pre-built marketplace templates
 - **LLM Orchestration** -- Multi-provider model routing (Anthropic Claude, OpenAI GPT) with response caching, quality scoring, and cost tracking
 - **WebSocket Real-Time Updates** -- Live event streaming via Redis pub/sub with auto-reconnect client, used for agent progress, AI generation, and notifications
+- **Notification Center** -- Real-time notification system with WebSocket updates, in-app notifications, and full-featured frontend center
 - **Background Task Processing** -- Celery workers with Redis broker for long-running operations, dead letter handling, and scheduled task beats
 
 ### Chrome Extension
-- **Amazon Research Assistant** -- Browser extension (Manifest V3) for extracting Amazon product data, tracking BSR, researching niches, and saving clips to your SelfPublisherForge account. Supports 10 Amazon marketplaces with sidebar panel and popup interface.
+- **Amazon Research Assistant** -- Browser extension (Manifest V3) for extracting Amazon product data, tracking BSR, researching niches, and saving clips to your SelfPublisherForge account. Supports 10 Amazon marketplaces with sidebar panel and popup interface. Enhanced with deeper metadata extraction.
+
+### Platform Administration
+- **Admin Panel** -- Enterprise-tier administration dashboard with user management, organization management, billing oversight, system health monitoring, and analytics (Enterprise tier only)
 
 ## Tech Stack
 
@@ -85,6 +91,15 @@ Services will be available at:
 | Service | URL |
 |---|---|
 | Frontend | http://localhost:3000 |
+| Frontend - Cover Studio | http://localhost:3000/cover-studio |
+| Frontend - Review Intelligence | http://localhost:3000/review-intelligence |
+| Frontend - Competitor Finder | http://localhost:3000/competitor-finder |
+| Frontend - Style Profiles | http://localhost:3000/style-profiles |
+| Frontend - Pricing Tools | http://localhost:3000/pricing |
+| Frontend - Portfolio Economics | http://localhost:3000/portfolio-economics |
+| Frontend - Notifications | http://localhost:3000/notifications |
+| Frontend - KDP Validation | http://localhost:3000/kdp-validation |
+| Frontend - Admin Panel | http://localhost:3000/admin (Enterprise) |
 | API | http://localhost:8000 |
 | API Docs (Swagger) | http://localhost:8000/docs |
 | Flower (Celery monitor) | http://localhost:5555 |
@@ -249,7 +264,17 @@ selfpublisherforge/
 │       ├── components/        # Reusable UI components (layout, shared, ui)
 │       ├── hooks/             # Custom React hooks
 │       ├── lib/               # Utilities (API client, WebSocket, helpers)
-│       ├── modules/           # 13 frontend feature modules
+│       ├── modules/           # 19 frontend feature modules
+│       │   ├── admin/              # Admin panel (Enterprise)
+│       │   ├── analytics/          # Analytics dashboards
+│       │   ├── competitor-finder/  # Competitor research and gap analysis
+│       │   ├── cover-design/       # Cover Design Studio
+│       │   ├── kdp-validation/     # KDP validation dashboard
+│       │   ├── notifications/      # Notification Center
+│       │   ├── portfolio-economics/ # Portfolio Economics dashboard
+│       │   ├── pricing/            # Pricing Automation tools
+│       │   ├── review-intelligence/ # Review Intelligence dashboard
+│       │   └── style-profiles/     # Style Profile manager
 │       └── types/             # TypeScript type definitions
 ├── extension/                 # Chrome extension (Manifest V3)
 │   ├── background/            # Service worker

@@ -184,6 +184,17 @@ selfpublisherforge/
       components/       # Reusable UI components
       hooks/            # Custom React hooks (use-api, etc.)
       lib/              # Utilities (api client, websocket, helpers)
+      modules/          # 19 frontend feature modules
+        admin/              # Admin panel (Enterprise)
+        analytics/          # Analytics dashboards
+        competitor-finder/  # Competitor research and gap analysis
+        cover-design/       # Cover Design Studio
+        kdp-validation/     # KDP validation dashboard
+        notifications/      # Notification Center
+        portfolio-economics/ # Portfolio Economics dashboard
+        pricing/            # Pricing Automation tools
+        review-intelligence/ # Review Intelligence dashboard
+        style-profiles/     # Style Profile manager
       types/            # TypeScript type definitions
   shared/
     contracts/          # API contracts, module registry
@@ -204,11 +215,15 @@ selfpublisherforge/
 | State management | Zustand + React Query | Zustand for client state, React Query for server state |
 | Task queue | Celery + Redis | Battle-tested, rich ecosystem, Redis already in stack |
 | Rate limiting | Redis sliding window | Accurate, distributed, low latency |
-| Auth | JWT (access + refresh) | Stateless, scales horizontally, short-lived access tokens |
+| Auth | JWT (access + refresh) + OAuth | Stateless JWT for API, OAuth for social login (Google, GitHub), short-lived access tokens |
 | Multi-tenancy | Row-level (org_id) | Simple, no schema-per-tenant overhead, enforced at ORM level |
 | AI provider strategy | Anthropic Claude (primary) + OpenAI (fallback) | Best-in-class quality, failover resilience, cost tracking per request |
 | Event system | Redis Streams | Lightweight, no extra infrastructure, supports consumer groups |
+| Real-time updates | WebSocket + Redis pub/sub | Live notifications, agent progress, connection pooling |
 | Search engine | Elasticsearch 8.x | Mature full-text search, used primarily by Knowledge Vault |
+| i18n | Next-intl | Type-safe translations, SSR support, locale routing |
+| Accessibility | WCAG 2.1 AA | Keyboard navigation, screen readers, ARIA labels, focus management |
+| Rate limiting | Redis sliding window + tier multipliers | Accurate, distributed, tier-based limits (Free: 1x, Pro: 5x, etc.) |
 | IaC | Terraform | Declarative, multi-environment support, state locking via DynamoDB |
 | Deployment | ECS Fargate + CodeDeploy | Serverless containers, blue-green deploys, auto-rollback |
 | Monitoring | Prometheus + Datadog | Open-source metrics collection with enterprise APM overlay |
@@ -311,19 +326,95 @@ extension/
 
 ---
 
+## Frontend Module Architecture
+
+The frontend is organized into 19 feature modules, each following a standardized structure:
+
+```
+modules/<module-name>/
+  components/       # Module-specific React components
+  hooks.ts          # React Query hooks and custom hooks
+  types.ts          # TypeScript type definitions
+  utils.ts          # Utility functions
+```
+
+### Frontend Modules (v1.1.0)
+
+| Module | Route | Tier | Description |
+|---|---|---|---|
+| **admin** | `/admin` | Enterprise | User management, org management, billing oversight, system health |
+| **analytics** | `/analytics` | Starter | Revenue dashboards, sales tracking, custom reports |
+| **competitor-finder** | `/competitor-finder` | Pro | Gap analysis, opportunity detection, competitor research |
+| **cover-design** | `/cover-studio` | Pro | AI cover generation, template library, design editor |
+| **kdp-validation** | `/kdp-validation` | Starter | Pre-flight compliance checks, validation reports |
+| **notifications** | `/notifications` | Free | Real-time notification center, preferences |
+| **portfolio-economics** | `/portfolio-economics` | Pro | Backlist analysis, greenlight scoring, opportunity detection |
+| **pricing** | `/pricing` | Pro | Dynamic pricing, KU calculator, price simulator |
+| **review-intelligence** | `/review-intelligence` | Pro | Sentiment analysis, review velocity, alerts |
+| **style-profiles** | `/style-profiles` | Free | Voice fingerprinting, conformity checking |
+
+### Frontend Architecture Patterns
+
+**State Management**:
+- **Zustand** for client-side state (UI state, user preferences)
+- **TanStack React Query** for server state (API data, caching, mutations)
+- **WebSocket Context** for real-time updates
+
+**Data Fetching**:
+- Centralized API client in `lib/api.ts`
+- React Query hooks pattern: `useModuleData()`, `useModuleMutation()`
+- Optimistic updates for mutations
+- Automatic retry with exponential backoff
+
+**Real-Time Updates**:
+- Shared WebSocket connection (`lib/websocket.ts`)
+- Type-safe event handlers
+- Auto-reconnect with exponential backoff
+- Connection pooling across components
+
+**Styling & UI**:
+- Tailwind CSS utility classes
+- shadcn/ui component library
+- Consistent design tokens
+- Dark mode support (planned)
+
+**Internationalization**:
+- next-intl for translations
+- Supported locales: en, es, de
+- Type-safe translation keys
+- SSR-compatible locale routing
+
+**Accessibility**:
+- WCAG 2.1 AA compliant
+- Keyboard navigation throughout
+- Screen reader support with ARIA labels
+- Focus management in modals and dialogs
+- Error announcements for assistive tech
+
+**Performance**:
+- Code splitting per module
+- Lazy loading with React.lazy()
+- Image optimization with next/image
+- Bundle size monitoring
+- Lighthouse CI integration
+
+---
+
 ## Security Architecture
 
 | Layer | Implementation |
 |---|---|
-| Authentication | JWT access tokens (15 min) + refresh tokens (7 days) |
+| Authentication | JWT access tokens (15 min) + refresh tokens (7 days) + OAuth (Google, GitHub) |
 | MFA | TOTP-based multi-factor authentication |
 | Authorization | Role-based access control per organization |
 | Data isolation | Row-level multi-tenancy via `org_id` on all tenant-scoped models |
-| Rate limiting | Redis sliding window per endpoint and per user |
+| Rate limiting | Redis sliding window per endpoint with tier multipliers (Free: 1x, Pro: 5x, Enterprise: unlimited) |
 | Secrets | AWS SSM Parameter Store (production), `.env` files (development) |
-| API security | CORS whitelist, request validation via Pydantic, structured error responses |
+| API security | CORS whitelist, CSP headers, request validation via Pydantic, structured error responses |
 | Dependency scanning | pip-audit (backend), npm audit (frontend) in CI pipeline |
 | Input validation | Pydantic schemas on all API endpoints |
+| OAuth security | PKCE flow, state validation, token refresh |
+| Webhook security | Stripe signature verification, idempotency handling |
 
 ---
 
@@ -341,12 +432,16 @@ extension/
 
 **Test infrastructure**: Pytest with async support, PostgreSQL and Redis service containers in CI, coverage reporting via `pytest-cov`.
 
-### Frontend
+### Frontend (300+ tests passing)
 
 | Test Type | Tool | Scope |
 |---|---|---|
-| Unit tests | Jest | Component rendering, hooks, utilities |
+| Component tests | Jest + React Testing Library | Component rendering, hooks, user interactions |
+| Integration tests | Jest | WebSocket connections, API client, state management |
 | E2E tests | Playwright | Full user flows against staging |
+| Accessibility tests | axe-core | WCAG 2.1 AA compliance |
+| Visual regression | Playwright | UI consistency checks |
+| Load tests | Locust | Performance and scalability |
 
 ---
 
