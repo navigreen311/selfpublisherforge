@@ -238,7 +238,7 @@ async def oauth_google_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Google OAuth2 callback."""
-    result = await service.handle_google_callback(db, code=code)
+    result = await service.handle_google_callback(db, code=code, state=state)
     return {
         "user": result["user"],
         "tokens": result["tokens"].model_dump(),
@@ -271,7 +271,7 @@ async def oauth_github_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle GitHub OAuth callback."""
-    result = await service.handle_github_callback(db, code=code)
+    result = await service.handle_github_callback(db, code=code, state=state)
     return {
         "user": result["user"],
         "tokens": result["tokens"].model_dump(),

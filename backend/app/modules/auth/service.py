@@ -36,6 +36,7 @@ from app.modules.auth.schemas import (
     UserResponse,
     OAuthAuthorizationURL,
 )
+from app.modules.auth.oauth_providers import get_oauth_provider
 
 # Import canonical ORM models from the shared models package
 from app.models.organization import Organization
@@ -360,17 +361,92 @@ async def disable_mfa(db: AsyncSession, *, user_id: UUID, password: str) -> None
 
 
 # ---------------------------------------------------------------------------
-# OAuth — Google
+# OAuth state management (CSRF protection)
 # ---------------------------------------------------------------------------
 
-_GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-_GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+# In-memory state store for CSRF protection
+# In production, use Redis with expiration
+_oauth_states: dict[str, dict] = {}
 
-_GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
-_GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
-_GITHUB_USER_URL = "https://api.github.com/user"
-_GITHUB_EMAILS_URL = "https://api.github.com/user/emails"
+
+def _store_oauth_state(state: str, provider: str) -> None:
+    """Store OAuth state for CSRF validation.
+
+    Note: In production, this should use Redis with a TTL of ~10 minutes.
+    """
+    _oauth_states[state] = {
+        "provider": provider,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+
+def _validate_oauth_state(state: str | None, provider: str) -> None:
+    """Validate OAuth state parameter for CSRF protection.
+
+    Raises AppException if state is invalid or expired.
+    """
+    if not state:
+        raise AppException(
+            status_code=400,
+            code="OAUTH_INVALID_STATE",
+            message="Missing state parameter. CSRF validation failed.",
+        )
+
+    stored = _oauth_states.get(state)
+    if not stored:
+        raise AppException(
+            status_code=400,
+            code="OAUTH_INVALID_STATE",
+            message="Invalid state parameter. CSRF validation failed.",
+        )
+
+    # Check if state is for the correct provider
+    if stored["provider"] != provider:
+        raise AppException(
+            status_code=400,
+            code="OAUTH_INVALID_STATE",
+            message="State parameter provider mismatch.",
+        )
+
+    # Check if state is expired (10 minutes)
+    age = (datetime.now(timezone.utc) - stored["created_at"]).total_seconds()
+    if age > 600:  # 10 minutes
+        _oauth_states.pop(state, None)
+        raise AppException(
+            status_code=400,
+            code="OAUTH_STATE_EXPIRED",
+            message="OAuth state expired. Please try again.",
+        )
+
+    # State is valid, consume it (one-time use)
+    _oauth_states.pop(state, None)
+
+
+# ---------------------------------------------------------------------------
+# OAuth — Generic provider handling
+# ---------------------------------------------------------------------------
+
+
+def generate_oauth_auth_url(provider_name: str) -> OAuthAuthorizationURL:
+    """Build an OAuth authorization URL for the specified provider.
+
+    Args:
+        provider_name: The provider name ('google' or 'github')
+
+    Returns:
+        OAuthAuthorizationURL with the authorization URL and provider name
+
+    Raises:
+        AppException: If provider is not configured or invalid
+    """
+    provider = get_oauth_provider(provider_name)
+    state = provider.generate_state()
+    url = provider.get_authorization_url(state)
+
+    # Store state for CSRF validation
+    _store_oauth_state(state, provider_name)
+
+    return OAuthAuthorizationURL(authorization_url=url, provider=provider_name)
 
 
 def generate_google_auth_url() -> OAuthAuthorizationURL:
@@ -378,101 +454,70 @@ def generate_google_auth_url() -> OAuthAuthorizationURL:
 
     Raises AppException(501) when Google OAuth is not configured.
     """
-    if not settings.GOOGLE_CLIENT_ID:
-        raise AppException(
-            status_code=501,
-            code="OAUTH_NOT_CONFIGURED",
-            message="Google OAuth is not configured.",
-        )
-
-    state = secrets.token_urlsafe(32)
-    params = {
-        "client_id": settings.GOOGLE_CLIENT_ID,
-        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "access_type": "offline",
-        "prompt": "consent",
-        "state": state,
-    }
-    url = f"{_GOOGLE_AUTH_URL}?{urlencode(params)}"
-    return OAuthAuthorizationURL(authorization_url=url, provider="google")
+    return generate_oauth_auth_url("google")
 
 
-async def handle_google_callback(db: AsyncSession, *, code: str) -> dict:
+async def handle_oauth_callback(
+    db: AsyncSession,
+    *,
+    provider_name: str,
+    code: str,
+    state: str | None = None,
+) -> dict:
+    """Generic OAuth callback handler for any provider.
+
+    Args:
+        db: Database session
+        provider_name: The provider name ('google' or 'github')
+        code: Authorization code from the provider
+        state: CSRF state parameter from the provider
+
+    Returns:
+        dict with 'user' and 'tokens' keys
+
+    Raises:
+        AppException: If authentication fails or state is invalid
+    """
+    # 1. Validate CSRF state
+    _validate_oauth_state(state, provider_name)
+
+    # 2. Get provider instance
+    provider = get_oauth_provider(provider_name)
+
+    # 3. Exchange code for tokens
+    tokens = await provider.exchange_code(code)
+
+    # 4. Get user info
+    user_info = await provider.get_user_info(tokens.access_token)
+
+    # 5. Find or create user + link OAuth account
+    return await _find_or_create_oauth_user(
+        db,
+        provider=provider_name,
+        provider_user_id=user_info.provider_user_id,
+        email=user_info.email,
+        name=user_info.name,
+        avatar_url=user_info.avatar_url,
+        oauth_access_token=tokens.access_token,
+        oauth_refresh_token=tokens.refresh_token,
+    )
+
+
+async def handle_google_callback(
+    db: AsyncSession,
+    *,
+    code: str,
+    state: str | None = None,
+) -> dict:
     """Exchange the Google authorization code for tokens, fetch the user
     profile, find-or-create the local user, link the OAuth account, and
     return JWT tokens.
     """
-    if not settings.GOOGLE_CLIENT_ID:
-        raise AppException(
-            status_code=501,
-            code="OAUTH_NOT_CONFIGURED",
-            message="Google OAuth is not configured.",
-        )
-
-    # 1. Exchange code for access token
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(
-            _GOOGLE_TOKEN_URL,
-            data={
-                "code": code,
-                "client_id": settings.GOOGLE_CLIENT_ID,
-                "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
-                "grant_type": "authorization_code",
-            },
-        )
-        if token_resp.status_code != 200:
-            raise AppException(
-                status_code=401,
-                code="OAUTH_TOKEN_ERROR",
-                message="Failed to exchange Google authorization code for tokens.",
-            )
-        token_data = token_resp.json()
-        access_token = token_data.get("access_token")
-        if not access_token:
-            raise AppException(
-                status_code=401,
-                code="OAUTH_TOKEN_ERROR",
-                message="No access token in Google response.",
-            )
-
-        # 2. Fetch user profile
-        profile_resp = await client.get(
-            _GOOGLE_USERINFO_URL,
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
-        if profile_resp.status_code != 200:
-            raise AppException(
-                status_code=401,
-                code="OAUTH_PROFILE_ERROR",
-                message="Failed to fetch Google user profile.",
-            )
-        profile = profile_resp.json()
-
-    google_id = profile.get("id")
-    email = profile.get("email")
-    name = profile.get("name", email.split("@")[0] if email else "User")
-    avatar = profile.get("picture")
-
-    if not email:
-        raise AppException(
-            status_code=400,
-            code="OAUTH_NO_EMAIL",
-            message="Google account does not have an email address.",
-        )
-
-    # 3. Find or create user + link OAuth account
-    return await _find_or_create_oauth_user(
+    return await handle_oauth_callback(
         db,
-        provider="google",
-        provider_user_id=google_id,
-        email=email,
-        name=name,
-        avatar_url=avatar,
-        oauth_access_token=access_token,
-        oauth_refresh_token=token_data.get("refresh_token"),
+        provider_name="google",
+        code=code,
+        state=state,
     )
 
 
@@ -485,116 +530,24 @@ def generate_github_auth_url() -> OAuthAuthorizationURL:
 
     Raises AppException(501) when GitHub OAuth is not configured.
     """
-    if not settings.GITHUB_CLIENT_ID:
-        raise AppException(
-            status_code=501,
-            code="OAUTH_NOT_CONFIGURED",
-            message="GitHub OAuth is not configured.",
-        )
-
-    state = secrets.token_urlsafe(32)
-    params = {
-        "client_id": settings.GITHUB_CLIENT_ID,
-        "redirect_uri": settings.GITHUB_REDIRECT_URI,
-        "scope": "read:user user:email",
-        "state": state,
-    }
-    url = f"{_GITHUB_AUTH_URL}?{urlencode(params)}"
-    return OAuthAuthorizationURL(authorization_url=url, provider="github")
+    return generate_oauth_auth_url("github")
 
 
-async def handle_github_callback(db: AsyncSession, *, code: str) -> dict:
+async def handle_github_callback(
+    db: AsyncSession,
+    *,
+    code: str,
+    state: str | None = None,
+) -> dict:
     """Exchange the GitHub authorization code for tokens, fetch the user
     profile, find-or-create the local user, link the OAuth account, and
     return JWT tokens.
     """
-    if not settings.GITHUB_CLIENT_ID:
-        raise AppException(
-            status_code=501,
-            code="OAUTH_NOT_CONFIGURED",
-            message="GitHub OAuth is not configured.",
-        )
-
-    # 1. Exchange code for access token
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(
-            _GITHUB_TOKEN_URL,
-            data={
-                "client_id": settings.GITHUB_CLIENT_ID,
-                "client_secret": settings.GITHUB_CLIENT_SECRET,
-                "code": code,
-                "redirect_uri": settings.GITHUB_REDIRECT_URI,
-            },
-            headers={"Accept": "application/json"},
-        )
-        if token_resp.status_code != 200:
-            raise AppException(
-                status_code=401,
-                code="OAUTH_TOKEN_ERROR",
-                message="Failed to exchange GitHub authorization code for tokens.",
-            )
-        token_data = token_resp.json()
-        access_token = token_data.get("access_token")
-        if not access_token:
-            raise AppException(
-                status_code=401,
-                code="OAUTH_TOKEN_ERROR",
-                message="No access token in GitHub response.",
-            )
-
-        # 2. Fetch user profile
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Accept": "application/json",
-        }
-        profile_resp = await client.get(_GITHUB_USER_URL, headers=headers)
-        if profile_resp.status_code != 200:
-            raise AppException(
-                status_code=401,
-                code="OAUTH_PROFILE_ERROR",
-                message="Failed to fetch GitHub user profile.",
-            )
-        profile = profile_resp.json()
-
-        github_id = str(profile.get("id"))
-        email = profile.get("email")
-        name = profile.get("name") or profile.get("login", "User")
-        avatar = profile.get("avatar_url")
-
-        # GitHub may not return email in the profile; fetch from /user/emails
-        if not email:
-            emails_resp = await client.get(_GITHUB_EMAILS_URL, headers=headers)
-            if emails_resp.status_code == 200:
-                emails = emails_resp.json()
-                # Prefer the primary verified email
-                for em in emails:
-                    if em.get("primary") and em.get("verified"):
-                        email = em["email"]
-                        break
-                # Fallback to any verified email
-                if not email:
-                    for em in emails:
-                        if em.get("verified"):
-                            email = em["email"]
-                            break
-
-    if not email:
-        raise AppException(
-            status_code=400,
-            code="OAUTH_NO_EMAIL",
-            message="GitHub account does not have a verified email address.",
-        )
-
-    # 3. Find or create user + link OAuth account
-    return await _find_or_create_oauth_user(
+    return await handle_oauth_callback(
         db,
-        provider="github",
-        provider_user_id=github_id,
-        email=email,
-        name=name,
-        avatar_url=avatar,
-        oauth_access_token=access_token,
-        oauth_refresh_token=None,
+        provider_name="github",
+        code=code,
+        state=state,
     )
 
 
