@@ -12,6 +12,7 @@ Credentials are read from environment variables:
 
 import logging
 import os
+from typing import Any
 
 import httpx
 
@@ -253,7 +254,7 @@ class FacebookAdsClient:
         # daily_budget is in the currency's smallest unit (e.g. cents for USD)
         budget_cents = int(round(daily_budget * 100))
 
-        payload = {
+        payload: dict[str, Any] = {
             "name": name,
             "objective": objective,
             "status": status,

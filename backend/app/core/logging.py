@@ -106,11 +106,11 @@ def setup_logging() -> None:
             rename_fields={"asctime": "timestamp"},
         )
     else:
-        formatter = logging.Formatter(
+        formatter = logging.Formatter(  # type: ignore[assignment]
             "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
         )
 
-    handler.setFormatter(formatter)
+    handler.setFormatter(formatter)  # type: ignore[arg-type]
 
     # Root logger
     root = logging.getLogger()

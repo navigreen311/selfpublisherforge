@@ -472,10 +472,10 @@ async def _openai_stream(
     response = await client.chat.completions.create(
         model=oai_model,
         max_tokens=4096,
-        messages=messages,  # OpenAI accepts system role directly
+        messages=messages,  # type: ignore[arg-type]
         stream=True,
     )
-    async for chunk in response:
+    async for chunk in response:  # type: ignore[union-attr]
         delta = chunk.choices[0].delta if chunk.choices else None
         if delta and delta.content:
             yield delta.content
@@ -491,7 +491,7 @@ async def _openai_call(messages: list[dict[str, str]], model: str) -> str:
     response = await client.chat.completions.create(
         model=oai_model,
         max_tokens=4096,
-        messages=messages,
+        messages=messages,  # type: ignore[arg-type]
     )
     return response.choices[0].message.content or ""
 

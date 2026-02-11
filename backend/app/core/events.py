@@ -63,7 +63,7 @@ def _deserialize_event(fields: dict[bytes | str, bytes | str]) -> BaseEvent:
     raw = fields.get(b"_raw") or fields.get("_raw")
     if isinstance(raw, bytes):
         raw = raw.decode()
-    return BaseEvent.model_validate_json(raw)
+    return BaseEvent.model_validate_json(raw)  # type: ignore[arg-type]
 
 
 class RedisStreamPublisher:

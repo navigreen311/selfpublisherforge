@@ -71,7 +71,7 @@ class OpenAIProvider(BaseLLMProvider):
                 metadata={"error": str(exc)},
             )
 
-    async def generate_stream(  # type: ignore[override]
+    async def generate_stream(  # type: ignore[override,misc]
         self, request: LLMRequest
     ) -> AsyncIterator[LLMStreamChunk]:
         """Stream response chunks from OpenAI."""

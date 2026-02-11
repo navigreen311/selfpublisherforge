@@ -96,6 +96,7 @@ def analyze_profile_task(self, profile_id: str, sample_texts: list[str]) -> dict
         logger.error("Data error in style analysis for profile %s: %s", profile_id, exc, exc_info=True)
         try:
             self.retry(exc=exc)
+            return {}  # Never reached, retry raises exception
         except self.MaxRetriesExceededError:
             return {
                 "profile_id": profile_id,
@@ -109,6 +110,7 @@ def analyze_profile_task(self, profile_id: str, sample_texts: list[str]) -> dict
         logger.error("Unexpected error in style analysis for profile %s: %s", profile_id, exc, exc_info=True)
         try:
             self.retry(exc=exc)
+            return {}  # Never reached, retry raises exception
         except self.MaxRetriesExceededError:
             return {
                 "profile_id": profile_id,

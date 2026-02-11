@@ -301,7 +301,7 @@ class LLMOrchestrator:
             had_content = False
             errored = False
 
-            async for chunk in provider.generate_stream(request):
+            async for chunk in provider.generate_stream(request):  # type: ignore[attr-defined]
                 if chunk.finish_reason == "error":
                     errored = True
                     break

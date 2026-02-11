@@ -44,19 +44,19 @@ def _quality_report_to_schema(
     if report is None:
         return None
     return QualityReportSchema(
-        overall_level=report.overall_level.value,  # type: ignore[union-attr]
-        overall_score=report.overall_score,  # type: ignore[union-attr]
-        readability_score=report.readability_score,  # type: ignore[union-attr]
-        readability_grade_level=report.readability_grade_level,  # type: ignore[union-attr]
-        word_count=report.word_count,  # type: ignore[union-attr]
-        sentence_count=report.sentence_count,  # type: ignore[union-attr]
-        avg_sentence_length=report.avg_sentence_length,  # type: ignore[union-attr]
-        plagiarism_flag=report.plagiarism_flag,  # type: ignore[union-attr]
-        plagiarism_confidence=report.plagiarism_confidence,  # type: ignore[union-attr]
-        hallucination_flag=report.hallucination_flag,  # type: ignore[union-attr]
-        hallucination_confidence=report.hallucination_confidence,  # type: ignore[union-attr]
-        issues=report.issues,  # type: ignore[union-attr]
-        passes_threshold=report.passes_threshold,  # type: ignore[union-attr]
+        overall_level=report.overall_level.value,  # type: ignore[union-attr,attr-defined]
+        overall_score=report.overall_score,  # type: ignore[union-attr,attr-defined]
+        readability_score=report.readability_score,  # type: ignore[union-attr,attr-defined]
+        readability_grade_level=report.readability_grade_level,  # type: ignore[union-attr,attr-defined]
+        word_count=report.word_count,  # type: ignore[union-attr,attr-defined]
+        sentence_count=report.sentence_count,  # type: ignore[union-attr,attr-defined]
+        avg_sentence_length=report.avg_sentence_length,  # type: ignore[union-attr,attr-defined]
+        plagiarism_flag=report.plagiarism_flag,  # type: ignore[union-attr,attr-defined]
+        plagiarism_confidence=report.plagiarism_confidence,  # type: ignore[union-attr,attr-defined]
+        hallucination_flag=report.hallucination_flag,  # type: ignore[union-attr,attr-defined]
+        hallucination_confidence=report.hallucination_confidence,  # type: ignore[union-attr,attr-defined]
+        issues=report.issues,  # type: ignore[union-attr,attr-defined]
+        passes_threshold=report.passes_threshold,  # type: ignore[union-attr,attr-defined]
     )
 
 

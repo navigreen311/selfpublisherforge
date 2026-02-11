@@ -53,7 +53,8 @@ __all__ = [
     "Manuscript", "Chapter", "StyleProfile", "WritingSession", "ContentAsset",
     "MarketCategory", "MarketKeyword", "CompetitorBook", "CompetitorReview", "MarketSnapshot",
     "PublishingAccount", "Listing", "UploadValidation", "ComplianceScan", "PublishingPricingRule",
-    "LaunchPlan", "LaunchPhase", "PhaseTask", "EmailSequence", "EmailTemplate", "SocialPost", "ARCCampaign", "ARCRecipient",
+    "LaunchPlan", "LaunchPhase", "PhaseTask", "EmailSequence", "EmailTemplate",
+    "SocialPost", "ARCCampaign", "ARCRecipient",
     "DomainAgent", "DomainAgentTask", "DomainAgentWorkflow", "DomainAgentBudget", "DomainAuditTrail",
     "PortfolioMetric", "ABTestStatus", "ReportStatus",
     # Module models

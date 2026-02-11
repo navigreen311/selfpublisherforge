@@ -146,7 +146,7 @@ class UserService:
                 "uid": user_id,
             },
         )
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore[attr-defined]
             raise AppException(
                 status_code=404,
                 code="SESSION_NOT_FOUND",
@@ -317,7 +317,7 @@ class UserService:
                 "oid": org_id,
             },
         )
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore[attr-defined]
             raise AppException(
                 status_code=404,
                 code="MEMBER_NOT_FOUND",
@@ -484,7 +484,7 @@ class UserService:
                 "oid": org_id,
             },
         )
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore[attr-defined]
             raise AppException(
                 status_code=404,
                 code="API_KEY_NOT_FOUND",

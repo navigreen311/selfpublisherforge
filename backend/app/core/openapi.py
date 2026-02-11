@@ -193,7 +193,10 @@ TAGS_METADATA: list[dict[str, Any]] = [
     # Tier 6-8: Intelligence & Scale
     {
         "name": "agents",
-        "description": "AI Agent System -- autonomous task execution with governance, budgets, approvals, and audit logs.",
+        "description": (
+            "AI Agent System -- autonomous task execution with governance, "
+            "budgets, approvals, and audit logs."
+        ),
     },
     {
         "name": "portfolio",

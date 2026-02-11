@@ -31,7 +31,10 @@ def _log_startup_config_warnings() -> None:
     sendgrid_configured = s.SENDGRID_API_KEY != "YOUR_SENDGRID_API_KEY_HERE"
     smtp_configured = bool(s.SMTP_HOST and s.SMTP_USER)
     if not sendgrid_configured and not smtp_configured:
-        logger.warning("No email provider configured (neither SendGrid nor SMTP) — transactional emails will not be sent")
+        logger.warning(
+            "No email provider configured (neither SendGrid nor SMTP) — "
+            "transactional emails will not be sent"
+        )
     elif sendgrid_configured:
         logger.info("Email provider: SendGrid")
     else:
