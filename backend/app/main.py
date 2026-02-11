@@ -122,6 +122,12 @@ def _register_routers(app: FastAPI):
     from app.modules.users.router import router as users_router
     app.include_router(users_router, prefix=prefix, tags=["users"])
 
+    from app.modules.organization.router import router as organization_router
+    app.include_router(organization_router, prefix=f"{prefix}/orgs", tags=["organization"])
+
+    from app.modules.projects.router import router as projects_router
+    app.include_router(projects_router, prefix=f"{prefix}/projects", tags=["projects"])
+
     from app.modules.billing.router import router as billing_router
     app.include_router(billing_router, prefix=f"{prefix}/billing", tags=["billing"])
 
@@ -133,6 +139,9 @@ def _register_routers(app: FastAPI):
 
     from app.modules.realtime.router import router as realtime_router
     app.include_router(realtime_router, tags=["realtime"])
+
+    from app.modules.admin.router import router as admin_router
+    app.include_router(admin_router, prefix=f"{prefix}/admin", tags=["admin"])
 
     # Tier 1-2: Data & Creation
     from app.modules.llm_orchestration import router as llm_router
