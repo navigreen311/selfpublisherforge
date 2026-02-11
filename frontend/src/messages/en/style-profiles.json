@@ -1,0 +1,12 @@
+{
+  "title": "Style Profiles",
+  "newProfile": "New Profile",
+  "description": "Analyze and clone writing styles. Create profiles from sample texts to match specific voices and tones.",
+  "profile": "profile",
+  "profiles": "profiles",
+  "deleteProfileConfirmTitle": "Delete Style Profile",
+  "deleteProfileConfirm": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+  "deleteButton": "Delete",
+  "cancelButton": "Cancel",
+  "deleteProfileLabel": "Delete profile: {name}"
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Werbe-Intelligenz",
+  "viewAllCampaigns": "Alle Kampagnen Anzeigen",
+  "viewAllCampaignsLabel": "Alle Werbekampagnen anzeigen",
+  "activeCampaigns": "Aktive Kampagnen",
+  "todaySpend": "Heutige Ausgaben",
+  "monthlySpend": "Monatliche Ausgaben",
+  "sales": "Verkäufe: ${value}",
+  "overallAcos": "Gesamt-ACOS",
+  "roas": "ROAS: {value}x",
+  "platformPerformance": "Plattform-Leistung",
+  "spend": "Ausgaben",
+  "salesLabel": "Verkäufe",
+  "acos": "ACOS",
+  "impressions": "Impressionen",
+  "clicks": "Klicks",
+  "roasLabel": "ROAS",
+  "topCampaigns": "Top-Kampagnen",
+  "noCampaigns": "Noch keine aktiven Kampagnen.",
+  "createFirstCampaign": "Erstellen Sie Ihre erste Kampagne",
+  "createFirstCampaignLabel": "Erstellen Sie Ihre erste Werbekampagne",
+  "failedToLoad": "Fehler beim Laden der Dashboard-Daten. Bitte versuchen Sie es später erneut."
+}

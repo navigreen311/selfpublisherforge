@@ -15,6 +15,7 @@ import { useBooks } from "@/modules/writing/hooks";
 import { PipelineCard } from "@/modules/pipeline/components/PipelineCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PipelineStatus } from "@/modules/pipeline/hooks";
+import { useTranslations } from "@/hooks/use-translations";
 
 // ---------------------------------------------------------------------------
 // Constants & Validation helpers
@@ -23,31 +24,32 @@ import type { PipelineStatus } from "@/modules/pipeline/hooks";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const STATUS_FILTERS: { label: string; value: PipelineStatus | undefined }[] = [
-  { label: "All", value: undefined },
-  { label: "Draft", value: "draft" },
-  { label: "Active", value: "active" },
-  { label: "Paused", value: "paused" },
-  { label: "Completed", value: "completed" },
+  { label: "filterAll", value: undefined },
+  { label: "filterDraft", value: "draft" },
+  { label: "filterActive", value: "active" },
+  { label: "filterPaused", value: "paused" },
+  { label: "filterCompleted", value: "completed" },
 ];
 
-function getPipelineNameError(name: string, touched: boolean): string | undefined {
+function getPipelineNameError(name: string, touched: boolean, t: (key: string) => string): string | undefined {
   if (!touched) return undefined;
   const trimmed = name.trim();
-  if (!trimmed) return "Pipeline name is required.";
-  if (trimmed.length < 3) return "Pipeline name must be at least 3 characters.";
-  if (trimmed.length > 100) return "Pipeline name must be 100 characters or fewer.";
+  if (!trimmed) return t("pipelineNameRequired");
+  if (trimmed.length < 3) return t("pipelineNameMinLength");
+  if (trimmed.length > 100) return t("pipelineNameMaxLength");
   return undefined;
 }
 
-function getBookIdError(bookId: string, touched: boolean): string | undefined {
+function getBookIdError(bookId: string, touched: boolean, t: (key: string) => string): string | undefined {
   if (!touched) return undefined;
   const trimmed = bookId.trim();
-  if (!trimmed) return "Please select or enter a book.";
-  if (!UUID_REGEX.test(trimmed)) return "Book ID must be a valid UUID (e.g. 550e8400-e29b-41d4-a716-446655440000).";
+  if (!trimmed) return t("bookRequired");
+  if (!UUID_REGEX.test(trimmed)) return t("bookIdInvalid");
   return undefined;
 }
 
 export default function PipelineDashboardPage() {
+  const t = useTranslations("pipeline");
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<PipelineStatus | undefined>(
     undefined
@@ -65,8 +67,8 @@ export default function PipelineDashboardPage() {
   const createMutation = useCreatePipeline();
   const { data: books, isLoading: booksLoading } = useBooks();
 
-  const nameError = getPipelineNameError(newName, touchedName);
-  const bookIdError = getBookIdError(newBookId, touchedBookId);
+  const nameError = getPipelineNameError(newName, touchedName, t);
+  const bookIdError = getBookIdError(newBookId, touchedBookId, t);
 
   // Form is valid when there are no errors (checked ignoring touched state)
   const isFormValid =
@@ -112,12 +114,12 @@ export default function PipelineDashboardPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Production Pipeline</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <button
           onClick={handleToggleCreate}
           className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
         >
-          New Pipeline
+          {t("newPipeline")}
         </button>
       </div>
 
@@ -130,7 +132,7 @@ export default function PipelineDashboardPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="pl-name" className="block text-sm font-medium mb-1">
-                Pipeline Name
+                {t("pipelineName")}
               </label>
               <input
                 id="pl-name"
@@ -141,7 +143,7 @@ export default function PipelineDashboardPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onBlur={() => setTouchedName(true)}
-                placeholder="e.g. My Novel Production"
+                placeholder={t("pipelineNamePlaceholder")}
               />
               {nameError && (
                 <p className="mt-1 text-sm text-red-600">{nameError}</p>
@@ -149,7 +151,7 @@ export default function PipelineDashboardPage() {
             </div>
             <div>
               <label htmlFor="pl-book" className="block text-sm font-medium mb-1">
-                Book
+                {t("book")}
               </label>
               {/* Show dropdown when books are available and user hasn't opted for manual entry */}
               {!useManualBookId && books && books.length > 0 ? (
@@ -166,7 +168,7 @@ export default function PipelineDashboardPage() {
                     }}
                     onBlur={() => setTouchedBookId(true)}
                   >
-                    <option value="">Select a book...</option>
+                    <option value="">{t("selectBook")}</option>
                     {books.map((book) => (
                       <option key={book.id} value={book.id}>
                         {book.title}
@@ -182,7 +184,7 @@ export default function PipelineDashboardPage() {
                     }}
                     className="mt-1 text-xs text-blue-600 hover:underline"
                   >
-                    Enter Book ID manually instead
+                    {t("enterBookIdManually")}
                   </button>
                 </>
               ) : (
@@ -196,10 +198,10 @@ export default function PipelineDashboardPage() {
                     value={newBookId}
                     onChange={(e) => setNewBookId(e.target.value)}
                     onBlur={() => setTouchedBookId(true)}
-                    placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+                    placeholder={t("bookIdPlaceholder")}
                   />
                   {booksLoading && (
-                    <p className="mt-1 text-xs text-muted-foreground">Loading books...</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{t("loadingBooks")}</p>
                   )}
                   {useManualBookId && books && books.length > 0 && (
                     <button
@@ -211,7 +213,7 @@ export default function PipelineDashboardPage() {
                       }}
                       className="mt-1 text-xs text-blue-600 hover:underline"
                     >
-                      Select from your books instead
+                      {t("selectFromBooks")}
                     </button>
                   )}
                 </>
@@ -227,14 +229,14 @@ export default function PipelineDashboardPage() {
               onClick={handleToggleCreate}
               className="px-4 py-2 text-sm border rounded-md hover:bg-muted"
             >
-              Cancel
+              {t("cancel")}
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending || !isFormValid}
               className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
             >
-              {createMutation.isPending ? "Creating..." : "Create"}
+              {createMutation.isPending ? t("creating") : t("create")}
             </button>
           </div>
         </form>
@@ -255,7 +257,7 @@ export default function PipelineDashboardPage() {
                 : "bg-card hover:bg-muted"
             }`}
           >
-            {f.label}
+            {t(f.label)}
           </button>
         ))}
       </div>
@@ -270,13 +272,13 @@ export default function PipelineDashboardPage() {
       )}
       {error && (
         <p className="text-red-600 text-sm">
-          Failed to load pipelines. Please try again.
+          {t("failedToLoad")}
         </p>
       )}
       {data && data.items.length === 0 && (
         <div className="text-center py-16">
           <p className="text-muted-foreground">
-            No pipelines found. Create one to get started.
+            {t("noPipelines")}
           </p>
         </div>
       )}
@@ -296,17 +298,17 @@ export default function PipelineDashboardPage() {
                 disabled={page <= 1}
                 className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
               >
-                Previous
+                {t("previous")}
               </button>
               <span className="text-sm text-muted-foreground">
-                Page {data.page} of {data.pages}
+                {t("page", { page: data.page, pages: data.pages })}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
                 disabled={page >= data.pages}
                 className="px-3 py-1 text-sm border rounded-md disabled:opacity-50"
               >
-                Next
+                {t("next")}
               </button>
             </div>
           )}

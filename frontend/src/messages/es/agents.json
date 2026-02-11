@@ -1,0 +1,21 @@
+{
+  "title": "Agentes de IA",
+  "subtitle": "Gestiona tu fuerza de trabajo de agentes de IA, monitorea tareas y controla presupuestos.",
+  "emergencyStop": "Parada de Emergencia",
+  "emergencyStopLabel": "Parada de emergencia de todas las tareas de agente en ejecución",
+  "confirmStopMessage": "¿Cancelar TODAS las tareas en ejecución?",
+  "confirmStopLabel": "Confirmar parada de emergencia de todas las tareas en ejecución",
+  "cancelStopLabel": "Cancelar parada de emergencia",
+  "stopping": "Deteniendo...",
+  "confirm": "Confirmar",
+  "cancel": "Cancelar",
+  "availableAgents": "Agentes Disponibles",
+  "budgetOverview": "Resumen de Presupuesto",
+  "recentTasks": "Tareas Recientes",
+  "viewAll": "Ver todo",
+  "viewAllLabel": "Ver todas las tareas de agentes",
+  "loadingDashboard": "Cargando panel de agentes",
+  "loadingAgents": "Cargando agentes disponibles",
+  "loadingBudget": "Cargando resumen de presupuesto",
+  "loadingTasks": "Cargando tareas recientes"
+}

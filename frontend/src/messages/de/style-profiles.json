@@ -1,0 +1,12 @@
+{
+  "title": "Stil-Profile",
+  "newProfile": "Neues Profil",
+  "description": "Analysieren und klonen Sie Schreibstile. Erstellen Sie Profile aus Beispieltexten, um bestimmte Stimmen und Töne zu treffen.",
+  "profile": "Profil",
+  "profiles": "Profile",
+  "deleteProfileConfirmTitle": "Stil-Profil Löschen",
+  "deleteProfileConfirm": "Sind Sie sicher, dass Sie \"{name}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "deleteButton": "Löschen",
+  "cancelButton": "Abbrechen",
+  "deleteProfileLabel": "Profil löschen: {name}"
+}

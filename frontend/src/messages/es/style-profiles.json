@@ -1,0 +1,12 @@
+{
+  "title": "Perfiles de Estilo",
+  "newProfile": "Nuevo Perfil",
+  "description": "Analiza y clona estilos de escritura. Crea perfiles a partir de textos de muestra para coincidir con voces y tonos específicos.",
+  "profile": "perfil",
+  "profiles": "perfiles",
+  "deleteProfileConfirmTitle": "Eliminar Perfil de Estilo",
+  "deleteProfileConfirm": "¿Estás seguro de que quieres eliminar \"{name}\"? Esta acción no se puede deshacer.",
+  "deleteButton": "Eliminar",
+  "cancelButton": "Cancelar",
+  "deleteProfileLabel": "Eliminar perfil: {name}"
+}

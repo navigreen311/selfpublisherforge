@@ -19,8 +19,10 @@ import { TaskList } from "@/modules/agents/components/TaskList";
 import { BudgetMeter } from "@/modules/agents/components/BudgetMeter";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent } from "@/modules/agents/types";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function AgentDashboardPage() {
+  const t = useTranslations("agents");
   const router = useRouter();
   const { data: agentsData, isLoading: agentsLoading } = useAgents();
   const { data: tasksData, isLoading: tasksLoading } = useTasks({
@@ -48,7 +50,7 @@ export default function AgentDashboardPage() {
   // Full-page loading skeleton while initial data is being fetched
   if (agentsLoading && tasksLoading) {
     return (
-      <div className="space-y-8" aria-label="Loading agent dashboard">
+      <div className="space-y-8" aria-label={t("loadingDashboard")}>
         {/* Header skeleton */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -59,7 +61,7 @@ export default function AgentDashboardPage() {
         </div>
 
         {/* Agents grid skeleton */}
-        <section aria-label="Loading available agents">
+        <section aria-label={t("loadingAgents")}>
           <Skeleton className="h-6 w-40 mb-4" />
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
@@ -69,7 +71,7 @@ export default function AgentDashboardPage() {
         </section>
 
         {/* Budget skeleton */}
-        <section aria-label="Loading budget overview">
+        <section aria-label={t("loadingBudget")}>
           <Skeleton className="h-6 w-40 mb-4" />
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(2)].map((_, i) => (
@@ -79,7 +81,7 @@ export default function AgentDashboardPage() {
         </section>
 
         {/* Tasks skeleton */}
-        <section aria-label="Loading recent tasks">
+        <section aria-label={t("loadingTasks")}>
           <Skeleton className="h-6 w-32 mb-4" />
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
@@ -96,9 +98,9 @@ export default function AgentDashboardPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">AI Agents</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Manage your AI agent workforce, monitor tasks, and control budgets.
+            {t("subtitle")}
           </p>
         </div>
         <div>
@@ -106,34 +108,34 @@ export default function AgentDashboardPage() {
             <button
               onClick={() => setShowConfirmStop(true)}
               disabled={emergencyStop.isPending}
-              aria-label="Emergency stop all running agent tasks"
+              aria-label={t("emergencyStopLabel")}
               className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
-              Emergency Stop
+              {t("emergencyStop")}
             </button>
           ) : (
             <div className="flex items-center gap-2">
               <span className="text-sm text-red-600 font-medium">
-                Cancel ALL running tasks?
+                {t("confirmStopMessage")}
               </span>
               <button
                 onClick={handleEmergencyStop}
                 disabled={emergencyStop.isPending}
-                aria-label="Confirm emergency stop of all running tasks"
+                aria-label={t("confirmStopLabel")}
                 className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               >
                 {emergencyStop.isPending && (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                 )}
-                {emergencyStop.isPending ? "Stopping..." : "Confirm"}
+                {emergencyStop.isPending ? t("stopping") : t("confirm")}
               </button>
               <button
                 onClick={() => setShowConfirmStop(false)}
                 disabled={emergencyStop.isPending}
-                aria-label="Cancel emergency stop"
+                aria-label={t("cancelStopLabel")}
                 className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
               >
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           )}
@@ -149,7 +151,7 @@ export default function AgentDashboardPage() {
 
       {/* Available agents */}
       <section aria-labelledby="available-agents-heading">
-        <h2 id="available-agents-heading" className="text-lg font-semibold mb-4">Available Agents</h2>
+        <h2 id="available-agents-heading" className="text-lg font-semibold mb-4">{t("availableAgents")}</h2>
         {agentsLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
@@ -177,7 +179,7 @@ export default function AgentDashboardPage() {
       {/* Budget overview */}
       {budgets.length > 0 && (
         <section aria-labelledby="budget-overview-heading">
-          <h2 id="budget-overview-heading" className="text-lg font-semibold mb-4">Budget Overview</h2>
+          <h2 id="budget-overview-heading" className="text-lg font-semibold mb-4">{t("budgetOverview")}</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {budgets.map((budget) => (
               <BudgetMeter
@@ -193,13 +195,13 @@ export default function AgentDashboardPage() {
       {/* Recent tasks */}
       <section aria-labelledby="recent-tasks-heading">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="recent-tasks-heading" className="text-lg font-semibold">Recent Tasks</h2>
+          <h2 id="recent-tasks-heading" className="text-lg font-semibold">{t("recentTasks")}</h2>
           <Link
             href="/agents/tasks"
-            aria-label="View all agent tasks"
+            aria-label={t("viewAllLabel")}
             className="text-sm text-primary hover:underline"
           >
-            View all
+            {t("viewAll")}
           </Link>
         </div>
         {tasksLoading ? (

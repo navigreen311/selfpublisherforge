@@ -1,0 +1,18 @@
+{
+  "title": "Inteligencia de Reseñas",
+  "analytics": "Analíticas",
+  "totalReviews": "Reseñas Totales",
+  "acrossAllBooks": "En todos los libros",
+  "activeAlerts": "Alertas Activas",
+  "criticalHigh": "crítico/alto",
+  "positiveReviews": "Reseñas Positivas",
+  "ofTotal": "% del total",
+  "negativeReviews": "Reseñas Negativas",
+  "requiresAttention": "Requiere atención",
+  "reviewByBook": "Reseñas por Libro",
+  "reviewByBookDescription": "Selecciona un libro para ver análisis detallados de reseñas, tendencias de sentimiento y alertas.",
+  "bookTitle1": "Título del Libro 1",
+  "bookTitle2": "Título del Libro 2",
+  "clickToViewDetails": "Haz clic para ver detalles",
+  "failedToLoad": "Error al cargar datos de reseñas. Por favor, inténtalo de nuevo."
+}
