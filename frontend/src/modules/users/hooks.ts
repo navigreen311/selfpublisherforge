@@ -84,7 +84,11 @@ export function useCurrentUser() {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { name?: string; avatar_url?: string | null }) => {
+    mutationFn: async (body: {
+      name?: string;
+      avatar_url?: string | null;
+      preferences?: Record<string, unknown>;
+    }) => {
       const { data } = await api.patch<UserProfile>("/api/v1/users/me", body);
       return data;
     },
@@ -106,6 +110,14 @@ export function useUpdatePreferences() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: userKeys.me });
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: async (password: string) => {
+      await api.post("/api/v1/users/me/delete", { password });
     },
   });
 }
