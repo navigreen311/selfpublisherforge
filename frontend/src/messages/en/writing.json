@@ -1,0 +1,67 @@
+{
+  "title": "Writing Studio",
+  "subtitle": "Write, edit, and polish your manuscripts with AI-powered assistance.",
+  "quickActions": {
+    "newManuscript": {
+      "title": "New Manuscript",
+      "description": "Start a new book from scratch or with an AI-generated outline."
+    },
+    "aiOutline": {
+      "title": "AI Outline Generator",
+      "description": "Generate a complete book outline with chapter summaries."
+    },
+    "analytics": {
+      "title": "Writing Analytics",
+      "description": "Track your writing sessions, word counts, and productivity."
+    }
+  },
+  "search": {
+    "placeholder": "Search manuscripts...",
+    "noResults": "No manuscripts found matching \"{query}\"."
+  },
+  "manuscripts": {
+    "title": "Your Manuscripts",
+    "empty": {
+      "title": "No manuscripts yet",
+      "description": "Start your first book to begin writing. You can create a new manuscript from scratch or use the AI Outline Generator.",
+      "action": "Start your first book"
+    }
+  },
+  "sessions": {
+    "title": "Recent Writing Sessions",
+    "empty": "No writing sessions recorded yet. Open a manuscript and start writing!",
+    "table": {
+      "book": "Book",
+      "wordsWritten": "Words Written",
+      "duration": "Duration",
+      "date": "Date"
+    },
+    "minutes": "min"
+  },
+  "status": {
+    "draft": "Draft",
+    "writing": "Writing",
+    "editing": "Editing",
+    "formatting": "Formatting",
+    "published": "Published",
+    "archived": "Archived"
+  },
+  "stats": {
+    "chapters": "chapters",
+    "words": "words",
+    "unknownBook": "Unknown Book"
+  },
+  "timeAgo": {
+    "justNow": "Just now",
+    "minutesAgo": "{count} min ago",
+    "hoursAgo": "{count} hour ago",
+    "hoursAgoPlural": "{count} hours ago",
+    "daysAgo": "{count} day ago",
+    "daysAgoPlural": "{count} days ago",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "error": {
+    "title": "Something went wrong"
+  }
+}

@@ -14,8 +14,27 @@ export default getRequestConfig(async ({ locale }) => {
     ? (locale as Locale)
     : defaultLocale;
 
+  // Load main messages file
+  const mainMessages = (await import(`../messages/${validatedLocale}.json`)).default;
+
+  // Load namespace-specific messages
+  const dashboardMessages = (await import(`../messages/${validatedLocale}/dashboard.json`)).default;
+  const projectsMessages = (await import(`../messages/${validatedLocale}/projects.json`)).default;
+  const writingMessages = (await import(`../messages/${validatedLocale}/writing.json`)).default;
+  const analyticsMessages = (await import(`../messages/${validatedLocale}/analytics.json`)).default;
+  const publishingMessages = (await import(`../messages/${validatedLocale}/publishing.json`)).default;
+  const marketingMessages = (await import(`../messages/${validatedLocale}/marketing.json`)).default;
+
   return {
     locale: validatedLocale,
-    messages: (await import(`../messages/${validatedLocale}.json`)).default,
+    messages: {
+      ...mainMessages,
+      dashboard: dashboardMessages,
+      projects: projectsMessages,
+      writing: writingMessages,
+      analytics: analyticsMessages,
+      publishing: publishingMessages,
+      marketing: marketingMessages,
+    },
   };
 });

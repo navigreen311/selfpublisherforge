@@ -1,0 +1,67 @@
+{
+  "title": "Schreibstudio",
+  "subtitle": "Schreiben, bearbeiten und verfeinern Sie Ihre Manuskripte mit KI-gestützter Unterstützung.",
+  "quickActions": {
+    "newManuscript": {
+      "title": "Neues Manuskript",
+      "description": "Beginnen Sie ein neues Buch von Grund auf oder mit einer KI-generierten Gliederung."
+    },
+    "aiOutline": {
+      "title": "KI-Gliederungsgenerator",
+      "description": "Erstellen Sie eine vollständige Buchgliederung mit Kapitelzusammenfassungen."
+    },
+    "analytics": {
+      "title": "Schreibanalysen",
+      "description": "Verfolgen Sie Ihre Schreibsitzungen, Wortzahlen und Produktivität."
+    }
+  },
+  "search": {
+    "placeholder": "Manuskripte durchsuchen...",
+    "noResults": "Keine Manuskripte gefunden, die \"{query}\" entsprechen."
+  },
+  "manuscripts": {
+    "title": "Ihre Manuskripte",
+    "empty": {
+      "title": "Noch keine Manuskripte",
+      "description": "Beginnen Sie Ihr erstes Buch, um mit dem Schreiben zu beginnen. Sie können ein neues Manuskript von Grund auf erstellen oder den KI-Gliederungsgenerator verwenden.",
+      "action": "Beginnen Sie Ihr erstes Buch"
+    }
+  },
+  "sessions": {
+    "title": "Letzte Schreibsitzungen",
+    "empty": "Noch keine Schreibsitzungen aufgezeichnet. Öffnen Sie ein Manuskript und beginnen Sie zu schreiben!",
+    "table": {
+      "book": "Buch",
+      "wordsWritten": "Geschriebene Wörter",
+      "duration": "Dauer",
+      "date": "Datum"
+    },
+    "minutes": "Min"
+  },
+  "status": {
+    "draft": "Entwurf",
+    "writing": "Schreiben",
+    "editing": "Bearbeiten",
+    "formatting": "Formatieren",
+    "published": "Veröffentlicht",
+    "archived": "Archiviert"
+  },
+  "stats": {
+    "chapters": "Kapitel",
+    "words": "Wörter",
+    "unknownBook": "Unbekanntes Buch"
+  },
+  "timeAgo": {
+    "justNow": "Gerade eben",
+    "minutesAgo": "vor {count} Min",
+    "hoursAgo": "vor {count} Stunde",
+    "hoursAgoPlural": "vor {count} Stunden",
+    "daysAgo": "vor {count} Tag",
+    "daysAgoPlural": "vor {count} Tagen",
+    "today": "Heute",
+    "yesterday": "Gestern"
+  },
+  "error": {
+    "title": "Etwas ist schief gelaufen"
+  }
+}

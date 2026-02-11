@@ -1,0 +1,45 @@
+{
+  "title": "Operaciones de Publicación",
+  "subtitle": "Administre sus cuentas de publicación, exporte manuscritos y rastree listados.",
+  "newExport": "Nueva Exportación",
+  "quickActions": {
+    "exportManuscript": {
+      "title": "Exportar Manuscrito",
+      "description": "Genere EPUB o PDF listo para imprimir con plantillas de formato"
+    },
+    "connectedAccounts": {
+      "title": "Cuentas Conectadas"
+    },
+    "activeListings": {
+      "title": "Listados Activos",
+      "failedToLoad": "Error al cargar"
+    }
+  },
+  "accounts": {
+    "title": "Cuentas de Publicación",
+    "connectAccount": "Conectar Cuenta",
+    "cancel": "Cancelar",
+    "empty": {
+      "title": "No hay cuentas conectadas",
+      "description": "Conecte su primera cuenta de plataforma de publicación para comenzar.",
+      "action": "Conectar Cuenta"
+    },
+    "connectForm": {
+      "title": "Conectar Nueva Cuenta",
+      "platform": "Plataforma",
+      "accountName": "Nombre de Cuenta",
+      "accountNameRequired": "Nombre de Cuenta *",
+      "email": "Correo Electrónico",
+      "optional": "Opcional",
+      "connect": "Conectar",
+      "connecting": "Conectando...",
+      "errors": {
+        "nameRequired": "Este campo es obligatorio",
+        "emailInvalid": "Formato de correo electrónico no válido"
+      }
+    }
+  },
+  "listings": {
+    "title": "Listados"
+  }
+}

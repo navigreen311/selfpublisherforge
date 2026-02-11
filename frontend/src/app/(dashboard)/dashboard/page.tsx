@@ -10,6 +10,7 @@ export const metadata: Metadata = createMetadata({
 "use client";
 
 import { Suspense } from "react";
+import { useTranslations } from "@/hooks/use-translations";
 import {
   BookOpen,
   DollarSign,
@@ -155,18 +156,20 @@ function ProjectsSkeleton() {
 }
 
 function DashboardSkeleton() {
+  const t = useTranslations("dashboard");
+
   return (
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Welcome back! Here is an overview of your publishing activity.
+            {t("welcomeMessage")}
           </p>
         </div>
         <Button asChild className="w-full sm:w-auto">
           <Link href="/projects/new">
-            <Plus className="mr-2 h-4 w-4" /> New Project
+            <Plus className="mr-2 h-4 w-4" /> {t("newProject")}
           </Link>
         </Button>
       </div>
@@ -241,13 +244,15 @@ function DashboardSkeleton() {
 // ── Error state ─────────────────────────────────────────────────────────
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const t = useTranslations("dashboard");
+
   return (
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Welcome back! Here is an overview of your publishing activity.
+            {t("welcomeMessage")}
           </p>
         </div>
       </div>
@@ -259,15 +264,14 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Failed to load dashboard data</h3>
+              <h3 className="text-lg font-semibold">{t("error.title")}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                We could not retrieve your dashboard information. This may be due to a
-                network issue or a server error. Please try again.
+                {t("error.message")}
               </p>
             </div>
             <Button onClick={onRetry} variant="outline" className="gap-2">
               <RefreshCw className="h-4 w-4" />
-              Try again
+              {t("error.retry")}
             </Button>
           </div>
         </CardContent>
@@ -295,6 +299,7 @@ const badgeVariant = (status: string) => {
 // ── Main Dashboard Page ─────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard");
   const { data: dashboard, isLoading, error, refetch } = useDashboard();
 
   if (isLoading) {
@@ -344,14 +349,14 @@ export default function DashboardPage() {
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Welcome back! Here is an overview of your publishing activity.
+            {t("welcomeMessage")}
           </p>
         </div>
         <Button asChild className="w-full sm:w-auto">
           <Link href="/projects/new">
-            <Plus className="mr-2 h-4 w-4" /> New Project
+            <Plus className="mr-2 h-4 w-4" /> {t("newProject")}
           </Link>
         </Button>
       </div>
@@ -366,7 +371,7 @@ export default function DashboardPage() {
           ) : (
             <Card className="col-span-full">
               <CardContent className="p-6 text-center text-muted-foreground">
-                No KPI data available yet. Import royalty data to get started.
+                {t("stats.noKpiData")}
               </CardContent>
             </Card>
           )}
@@ -377,8 +382,8 @@ export default function DashboardPage() {
         {/* Recent Activity — from recent_royalties */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Recent Activity</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Your latest royalty activity</CardDescription>
+            <CardTitle className="text-base sm:text-lg">{t("recentActivity.title")}</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">{t("recentActivity.subtitle")}</CardDescription>
           </CardHeader>
           <CardContent>
             {recentActivity.length > 0 ? (
@@ -409,7 +414,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-6">
-                No recent activity. Import your first royalty report to see data here.
+                {t("recentActivity.noActivity")}
               </p>
             )}
           </CardContent>
@@ -418,8 +423,8 @@ export default function DashboardPage() {
         {/* Quick Actions — kept as-is */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Common tasks at a glance</CardDescription>
+            <CardTitle className="text-base sm:text-lg">{t("quickActions.title")}</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">{t("quickActions.subtitle")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-2">
@@ -448,11 +453,11 @@ export default function DashboardPage() {
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <CardTitle className="text-base sm:text-lg">Top Books</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Your best-performing titles</CardDescription>
+            <CardTitle className="text-base sm:text-lg">{t("topBooks.title")}</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">{t("topBooks.subtitle")}</CardDescription>
           </div>
           <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
-            <Link href="/analytics">View analytics</Link>
+            <Link href="/analytics">{t("viewAnalytics")}</Link>
           </Button>
         </CardHeader>
         <CardContent>
@@ -484,8 +489,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-6">
-              No book data available yet. Import royalty data to see your top
-              performers.
+              {t("topBooks.noData")}
             </p>
           )}
         </CardContent>

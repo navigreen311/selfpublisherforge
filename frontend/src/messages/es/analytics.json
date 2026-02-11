@@ -1,0 +1,37 @@
+{
+  "title": "Panel de Análisis",
+  "subtitle": "Rastree sus ingresos, ventas y rendimiento de libros",
+  "navigation": {
+    "revenueDetails": "Detalles de Ingresos",
+    "reports": "Informes"
+  },
+  "empty": {
+    "title": "Aún no hay datos de análisis",
+    "description": "Importe sus informes de regalías para comenzar a rastrear el rendimiento de su publicación. Sus ingresos, ventas y análisis de libros aparecerán aquí.",
+    "action": "Importar Datos de Regalías"
+  },
+  "kpi": {
+    "title": "Indicadores clave de rendimiento",
+    "description": "Tarjetas de resumen que muestran métricas clave, incluidos los ingresos, las unidades vendidas y los cambios porcentuales del período anterior.",
+    "noData": "No hay datos de KPI disponibles"
+  },
+  "revenueChart": {
+    "title": "Gráfico de ingresos",
+    "description": "Gráfico de barras que muestra los ingresos y las unidades vendidas a lo largo del tiempo. Cada barra representa un período de tiempo con su correspondiente cantidad de ingresos y recuento de unidades."
+  },
+  "topBooks": {
+    "title": "Libros de mejor rendimiento",
+    "description": "Tabla que enumera sus libros de mejor rendimiento clasificados por ingresos, mostrando el título, los ingresos totales, las unidades vendidas y los ingresos promedio por unidad."
+  },
+  "platformBreakdown": {
+    "title": "Desglose por Plataforma",
+    "label": "Ingresos por plataforma",
+    "description": "Desglose visual de la distribución de ingresos en las plataformas de publicación, que muestra la cantidad de ingresos de cada plataforma y el porcentaje de los ingresos totales.",
+    "revenueShare": "Participación de ingresos de {platform}: {percentage}%",
+    "noData": "No hay datos de plataforma disponibles"
+  },
+  "error": {
+    "title": "Error al cargar los datos de análisis",
+    "retry": "Intentar de nuevo"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "title": "Marketing & Launch Command",
+  "subtitle": "Manage launch plans, email campaigns, social media, and ARC distribution.",
+  "tabs": {
+    "overview": "Overview",
+    "launchPlans": "Launch Plans",
+    "email": "Email Sequences",
+    "social": "Social Media",
+    "arc": "ARC Campaigns"
+  },
+  "overview": {
+    "stats": {
+      "launchPlans": "Launch Plans",
+      "emailSequences": "Email Sequences",
+      "socialPosts": "Social Posts",
+      "arcCampaigns": "ARC Campaigns"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "generateLaunchPlan": "Generate a new launch plan with AI",
+      "createEmailSequence": "Create an email sequence"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "noActivity": "No recent activity",
+      "description": "Activity will appear here as you create campaigns, send emails, and publish posts.",
+      "action": "Create a launch plan"
+    }
+  },
+  "launchPlans": {
+    "generateNew": "Generate Launch Plan",
+    "empty": {
+      "title": "No launch plans yet",
+      "description": "Generate your first AI-powered launch plan to coordinate your book launch.",
+      "action": "Generate Launch Plan"
+    },
+    "launch": "Launch"
+  },
+  "emailSequences": {
+    "createNew": "Create Sequence",
+    "empty": {
+      "title": "No email sequences yet",
+      "description": "Create your first email sequence to engage your readers and build your audience.",
+      "action": "Create Sequence"
+    },
+    "sent": "sent"
+  },
+  "delete": {
+    "title": "Delete {type}?",
+    "description": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+    "confirm": "Delete"
+  },
+  "timeAgo": {
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
+  }
+}

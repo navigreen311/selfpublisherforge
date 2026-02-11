@@ -1,0 +1,43 @@
+{
+  "title": "Dashboard",
+  "welcomeMessage": "Welcome back! Here is an overview of your publishing activity.",
+  "newProject": "New Project",
+  "viewProjects": "View Projects",
+  "viewAnalytics": "View analytics",
+  "viewAll": "View all",
+  "quickActions": {
+    "title": "Quick Actions",
+    "subtitle": "Common tasks at a glance",
+    "newProject": "New Project",
+    "viewProjects": "View Projects",
+    "aiAgents": "AI Agents",
+    "analytics": "Analytics"
+  },
+  "recentActivity": {
+    "title": "Recent Activity",
+    "subtitle": "Your latest royalty activity",
+    "noActivity": "No recent activity. Import your first royalty report to see data here.",
+    "royalty": "Royalty"
+  },
+  "topBooks": {
+    "title": "Top Books",
+    "subtitle": "Your best-performing titles",
+    "noData": "No book data available yet. Import royalty data to see your top performers."
+  },
+  "stats": {
+    "noKpiData": "No KPI data available yet. Import royalty data to get started."
+  },
+  "error": {
+    "title": "Failed to load dashboard data",
+    "message": "We could not retrieve your dashboard information. This may be due to a network issue or a server error. Please try again.",
+    "retry": "Try again"
+  },
+  "timeAgo": {
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
+  },
+  "units": "units",
+  "revenue": "revenue"
+}

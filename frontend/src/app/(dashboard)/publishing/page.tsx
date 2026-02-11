@@ -22,8 +22,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PUBLISHING_PLATFORMS } from "@/lib/constants";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function PublishingDashboardPage() {
+  const t = useTranslations("publishing");
   const { data: accounts = [], isLoading: accountsLoading } = usePublishingAccounts();
   const { data: listings = [], isLoading: listingsLoading, isError: listingsError } = useListings();
   const createAccount = useCreateAccount();
@@ -39,9 +41,9 @@ export default function PublishingDashboardPage() {
 
   // Simple validation for connect form
   const connectErrors: Record<string, string> = {};
-  if (!newName.trim()) connectErrors.name = "This field is required";
+  if (!newName.trim()) connectErrors.name = t("accounts.connectForm.errors.nameRequired");
   if (newEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim()))
-    connectErrors.email = "Invalid email format";
+    connectErrors.email = t("accounts.connectForm.errors.emailInvalid");
 
   const showConnectError = (field: string): boolean =>
     !!(connectErrors[field] && (connectTouched[field] || connectSubmitAttempted));
@@ -86,16 +88,16 @@ export default function PublishingDashboardPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Publishing Operations</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            Manage your publishing accounts, export manuscripts, and track listings.
+            {t("subtitle")}
           </p>
         </div>
         <Link
           href="/publishing/export"
           className="w-full sm:w-auto rounded-md bg-indigo-600 px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-indigo-700 text-center"
         >
-          New Export
+          {t("newExport")}
         </Link>
       </div>
 
@@ -105,21 +107,21 @@ export default function PublishingDashboardPage() {
           href="/publishing/export"
           className="rounded-lg border bg-card p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow"
         >
-          <h3 className="text-sm sm:text-base font-semibold text-foreground">Export Manuscript</h3>
+          <h3 className="text-sm sm:text-base font-semibold text-foreground">{t("quickActions.exportManuscript.title")}</h3>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            Generate EPUB or print-ready PDF with formatting templates
+            {t("quickActions.exportManuscript.description")}
           </p>
         </Link>
         <div className="rounded-lg border bg-card p-4 sm:p-5 shadow-sm">
-          <h3 className="text-sm sm:text-base font-semibold text-foreground">Connected Accounts</h3>
+          <h3 className="text-sm sm:text-base font-semibold text-foreground">{t("quickActions.connectedAccounts.title")}</h3>
           <p className="mt-1 text-2xl sm:text-3xl font-bold text-indigo-600">{accounts.length}</p>
         </div>
         <div className="rounded-lg border bg-card p-4 sm:p-5 shadow-sm">
-          <h3 className="text-sm sm:text-base font-semibold text-foreground">Active Listings</h3>
+          <h3 className="text-sm sm:text-base font-semibold text-foreground">{t("quickActions.activeListings.title")}</h3>
           {listingsLoading ? (
             <Skeleton className="mt-1 h-8 sm:h-10 w-16 sm:w-20" />
           ) : listingsError ? (
-            <p className="mt-1 text-xs sm:text-sm text-red-500">Failed to load</p>
+            <p className="mt-1 text-xs sm:text-sm text-red-500">{t("quickActions.activeListings.failedToLoad")}</p>
           ) : (
             <p className="mt-1 text-2xl sm:text-3xl font-bold text-green-600">{activeListingsCount}</p>
           )}
@@ -129,14 +131,14 @@ export default function PublishingDashboardPage() {
       {/* Publishing Accounts */}
       <section aria-labelledby="publishing-accounts-heading">
         <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <h2 id="publishing-accounts-heading" className="text-base sm:text-lg font-semibold text-foreground">Publishing Accounts</h2>
+          <h2 id="publishing-accounts-heading" className="text-base sm:text-lg font-semibold text-foreground">{t("accounts.title")}</h2>
           <button
             onClick={() => setShowConnect(!showConnect)}
             aria-expanded={showConnect}
             aria-label={showConnect ? "Cancel connecting account" : "Connect a new publishing account"}
             className="text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-800"
           >
-            {showConnect ? "Cancel" : "+ Connect Account"}
+            {showConnect ? t("accounts.cancel") : `+ ${t("accounts.connectAccount")}`}
           </button>
         </div>
 
@@ -146,10 +148,10 @@ export default function PublishingDashboardPage() {
             aria-label="Connect new publishing account"
             className="mb-4 sm:mb-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4 sm:p-5 space-y-3 sm:space-y-4"
           >
-            <h3 className="text-sm sm:text-base font-medium text-foreground">Connect New Account</h3>
+            <h3 className="text-sm sm:text-base font-medium text-foreground">{t("accounts.connectForm.title")}</h3>
             <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
               <div>
-                <label htmlFor="connect-platform" className="block text-sm font-medium text-foreground mb-1">Platform</label>
+                <label htmlFor="connect-platform" className="block text-sm font-medium text-foreground mb-1">{t("accounts.connectForm.platform")}</label>
                 <select
                   id="connect-platform"
                   value={newPlatform}
@@ -165,7 +167,7 @@ export default function PublishingDashboardPage() {
               </div>
               <div>
                 <label htmlFor="connect-account-name" className="block text-sm font-medium text-foreground mb-1">
-                  Account Name *
+                  {t("accounts.connectForm.accountNameRequired")}
                 </label>
                 <input
                   id="connect-account-name"
@@ -185,7 +187,7 @@ export default function PublishingDashboardPage() {
                 )}
               </div>
               <div>
-                <label htmlFor="connect-email" className="block text-sm font-medium text-foreground mb-1">Email</label>
+                <label htmlFor="connect-email" className="block text-sm font-medium text-foreground mb-1">{t("accounts.connectForm.email")}</label>
                 <input
                   id="connect-email"
                   type="email"
@@ -194,7 +196,7 @@ export default function PublishingDashboardPage() {
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   onBlur={() => setConnectTouched((prev) => ({ ...prev, email: true }))}
-                  placeholder="Optional"
+                  placeholder={t("accounts.connectForm.optional")}
                   className={`w-full rounded-md border px-3 py-2 text-sm ${connectErrorClass("email")}`}
                 />
                 {showConnectError("email") && (
@@ -208,7 +210,7 @@ export default function PublishingDashboardPage() {
                 disabled={createAccount.isPending || connectHasErrors}
                 className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {createAccount.isPending ? "Connecting..." : "Connect"}
+                {createAccount.isPending ? t("accounts.connectForm.connecting") : t("accounts.connectForm.connect")}
               </button>
             </div>
           </form>
@@ -222,16 +224,16 @@ export default function PublishingDashboardPage() {
           </div>
         ) : accounts.length === 0 ? (
           <div className="rounded-lg border-2 border-dashed border p-6 sm:p-8 text-center">
-            <h3 className="text-sm sm:text-base font-medium text-foreground">No accounts connected</h3>
+            <h3 className="text-sm sm:text-base font-medium text-foreground">{t("accounts.empty.title")}</h3>
             <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-              Connect your first publishing platform account to get started.
+              {t("accounts.empty.description")}
             </p>
             <button
               onClick={() => setShowConnect(true)}
               aria-label="Connect your first publishing account"
               className="mt-3 sm:mt-4 rounded-md bg-indigo-600 px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-indigo-700"
             >
-              Connect Account
+              {t("accounts.empty.action")}
             </button>
           </div>
         ) : (
@@ -245,7 +247,7 @@ export default function PublishingDashboardPage() {
 
       {/* Listings */}
       <section aria-labelledby="listings-heading">
-        <h2 id="listings-heading" className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Listings</h2>
+        <h2 id="listings-heading" className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">{t("listings.title")}</h2>
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <ListingTable />
         </div>

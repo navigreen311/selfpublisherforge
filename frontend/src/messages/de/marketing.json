@@ -1,0 +1,59 @@
+{
+  "title": "Marketing- & Launch-Kommando",
+  "subtitle": "Verwalten Sie Launch-Pläne, E-Mail-Kampagnen, soziale Medien und ARC-Verteilung.",
+  "tabs": {
+    "overview": "Übersicht",
+    "launchPlans": "Launch-Pläne",
+    "email": "E-Mail-Sequenzen",
+    "social": "Soziale Medien",
+    "arc": "ARC-Kampagnen"
+  },
+  "overview": {
+    "stats": {
+      "launchPlans": "Launch-Pläne",
+      "emailSequences": "E-Mail-Sequenzen",
+      "socialPosts": "Social-Posts",
+      "arcCampaigns": "ARC-Kampagnen"
+    },
+    "quickActions": {
+      "title": "Schnellaktionen",
+      "generateLaunchPlan": "Generieren Sie einen neuen Launch-Plan mit KI",
+      "createEmailSequence": "Erstellen Sie eine E-Mail-Sequenz"
+    },
+    "recentActivity": {
+      "title": "Letzte Aktivität",
+      "noActivity": "Keine aktuelle Aktivität",
+      "description": "Aktivitäten werden hier angezeigt, wenn Sie Kampagnen erstellen, E-Mails senden und Beiträge veröffentlichen.",
+      "action": "Einen Launch-Plan erstellen"
+    }
+  },
+  "launchPlans": {
+    "generateNew": "Launch-Plan generieren",
+    "empty": {
+      "title": "Noch keine Launch-Pläne",
+      "description": "Generieren Sie Ihren ersten KI-gestützten Launch-Plan, um Ihren Buchlaunch zu koordinieren.",
+      "action": "Launch-Plan generieren"
+    },
+    "launch": "Launch"
+  },
+  "emailSequences": {
+    "createNew": "Sequenz erstellen",
+    "empty": {
+      "title": "Noch keine E-Mail-Sequenzen",
+      "description": "Erstellen Sie Ihre erste E-Mail-Sequenz, um Ihre Leser einzubinden und Ihr Publikum aufzubauen.",
+      "action": "Sequenz erstellen"
+    },
+    "sent": "gesendet"
+  },
+  "delete": {
+    "title": "{type} löschen?",
+    "description": "Sind Sie sicher, dass Sie \"{name}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirm": "Löschen"
+  },
+  "timeAgo": {
+    "justNow": "Gerade eben",
+    "minutesAgo": "vor {count}m",
+    "hoursAgo": "vor {count}h",
+    "daysAgo": "vor {count}d"
+  }
+}
