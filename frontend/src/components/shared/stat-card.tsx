@@ -30,12 +30,15 @@ export function StatCard({ label, value, icon: Icon, trend, className }: StatCar
                   trend.isPositive ? "text-green-600" : "text-red-600"
                 )}
               >
+                <span className="sr-only">
+                  {trend.isPositive ? "Increased" : "Decreased"} by{" "}
+                </span>
                 {trend.isPositive ? "+" : ""}
                 {trend.value}% from last month
               </p>
             )}
           </div>
-          <div className="rounded-full bg-primary/10 p-3">
+          <div className="rounded-full bg-primary/10 p-3" aria-hidden="true">
             <Icon className="h-6 w-6 text-primary" />
           </div>
         </div>

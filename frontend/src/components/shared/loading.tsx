@@ -23,9 +23,15 @@ export function Loading({
   };
 
   const content = (
-    <div className={cn("flex flex-col items-center justify-center gap-3", className)}>
-      <Loader2 className={cn("animate-spin text-primary", sizeClasses[size])} />
+    <div
+      className={cn("flex flex-col items-center justify-center gap-3", className)}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <Loader2 className={cn("animate-spin text-primary", sizeClasses[size])} aria-hidden="true" />
       {text && <p className="text-sm text-muted-foreground">{text}</p>}
+      {!text && <span className="sr-only">Loading...</span>}
     </div>
   );
 

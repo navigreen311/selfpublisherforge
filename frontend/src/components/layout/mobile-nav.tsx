@@ -72,22 +72,28 @@ export function MobileNav() {
       <div
         className="fixed inset-0 z-40 bg-black/50 md:hidden"
         onClick={closeMobile}
+        aria-hidden="true"
       />
 
       {/* Drawer */}
-      <div className="fixed inset-y-0 left-0 z-50 w-72 bg-card border-r flex flex-col md:hidden animate-in slide-in-from-left duration-300">
+      <div
+        className="fixed inset-y-0 left-0 z-50 w-72 bg-card border-r flex flex-col md:hidden animate-in slide-in-from-left duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation menu"
+      >
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4">
           <h2 className="text-lg font-bold">SelfPublisherForge</h2>
           <Button variant="ghost" size="icon" onClick={closeMobile} aria-label="Close menu">
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </Button>
         </div>
 
         <Separator />
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav aria-label="Main navigation" className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -98,6 +104,7 @@ export function MobileNav() {
                 key={item.href}
                 href={item.href}
                 onClick={closeMobile}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
                   isActive
@@ -105,7 +112,7 @@ export function MobileNav() {
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
-                <Icon className="h-5 w-5 shrink-0" />
+                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                 <span>{item.label}</span>
               </Link>
             );
@@ -138,7 +145,7 @@ export function MobileNav() {
                 closeMobile();
               }}
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>
