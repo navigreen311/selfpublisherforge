@@ -14,6 +14,7 @@ import {
   BookOpen,
   FolderOpen,
 } from "lucide-react";
+import { useTranslations } from "@/hooks/use-translations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,6 +135,7 @@ function ProjectDetailSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function ProjectDetailPage() {
+  const t = useTranslations("projects");
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -176,7 +178,7 @@ export default function ProjectDetailPage() {
 
     const trimmedTitle = editTitle.trim();
     if (!trimmedTitle) {
-      toast.error("Title cannot be empty.");
+      toast.error(t("detail.messages.titleEmpty"));
       return;
     }
 
@@ -190,10 +192,10 @@ export default function ProjectDetailPage() {
           status: editStatus as "draft" | "active" | "archived" | "completed",
         },
       });
-      toast.success("Project updated successfully.");
+      toast.success(t("detail.messages.updateSuccess"));
       setIsEditing(false);
     } catch {
-      toast.error("Failed to update project. Please try again.");
+      toast.error(t("detail.messages.updateError"));
     } finally {
       setIsSaving(false);
     }
@@ -204,10 +206,10 @@ export default function ProjectDetailPage() {
     setIsDeleting(true);
     try {
       await deleteProject.mutateAsync(project.id);
-      toast.success("Project deleted successfully.");
+      toast.success(t("detail.messages.deleteSuccess"));
       router.push("/projects");
     } catch {
-      toast.error("Failed to delete project. Please try again.");
+      toast.error(t("detail.messages.deleteError"));
       setIsDeleting(false);
       setShowDeleteDialog(false);
     }
@@ -223,12 +225,12 @@ export default function ProjectDetailPage() {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild aria-label="Back to projects">
+          <Button variant="ghost" size="icon" asChild aria-label={t("detail.backToProjects")}>
             <Link href="/projects">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Project Details</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("detail.title")}</h1>
         </div>
 
         <Card className="border-destructive">
@@ -236,10 +238,10 @@ export default function ProjectDetailPage() {
             <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
             <div>
               <p className="font-medium text-destructive">
-                Failed to load project
+                {t("error.title")}
               </p>
               <p className="text-sm text-muted-foreground">
-                {error?.message || "An unexpected error occurred. Please try again."}
+                {error?.message || t("error.fallback")}
               </p>
             </div>
           </CardContent>
@@ -253,22 +255,22 @@ export default function ProjectDetailPage() {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild aria-label="Back to projects">
+          <Button variant="ghost" size="icon" asChild aria-label={t("detail.backToProjects")}>
             <Link href="/projects">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Project Not Found</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("detail.notFound")}</h1>
         </div>
 
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <FolderOpen className="h-10 w-10 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              This project could not be found. It may have been deleted.
+              {t("detail.notFoundDescription")}
             </p>
-            <Button asChild className="mt-4" aria-label="Go back to projects list">
-              <Link href="/projects">Back to Projects</Link>
+            <Button asChild className="mt-4" aria-label={t("detail.backToList")}>
+              <Link href="/projects">{t("detail.backToList")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -281,7 +283,7 @@ export default function ProjectDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild aria-label="Back to projects">
+          <Button variant="ghost" size="icon" asChild aria-label={t("detail.backToProjects")}>
             <Link href="/projects">
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -300,20 +302,20 @@ export default function ProjectDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleEditStart}
-                aria-label="Edit project details"
+                aria-label={t("detail.edit")}
               >
                 <Pencil className="mr-2 h-4 w-4" />
-                Edit
+                {t("detail.edit")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDeleteDialog(true)}
                 className="text-destructive hover:text-destructive"
-                aria-label="Delete this project"
+                aria-label={t("detail.delete")}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t("detail.delete")}
               </Button>
             </>
           )}
@@ -324,7 +326,7 @@ export default function ProjectDetailPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Project Details</CardTitle>
+            <CardTitle>{t("detail.details.title")}</CardTitle>
             {!isEditing && (
               <Badge variant={badgeVariant(project.status)}>
                 {project.status}
@@ -333,7 +335,7 @@ export default function ProjectDetailPage() {
           </div>
           {!isEditing && (
             <CardDescription>
-              Overview of your project settings and metadata
+              {t("detail.details.description")}
             </CardDescription>
           )}
         </CardHeader>
@@ -343,13 +345,13 @@ export default function ProjectDetailPage() {
           <>
             <CardContent className="space-y-4">
               <Input
-                label="Project Title"
-                placeholder="Enter project title"
+                label={t("detail.editForm.projectTitle")}
+                placeholder={t("detail.editForm.projectTitle")}
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 required
                 aria-required="true"
-                aria-label="Project title"
+                aria-label={t("detail.editForm.projectTitle")}
               />
 
               <div className="space-y-1.5">
@@ -357,14 +359,14 @@ export default function ProjectDetailPage() {
                   htmlFor="edit-project-type"
                   className="text-sm font-medium"
                 >
-                  Project Type
+                  {t("detail.editForm.projectType")}
                 </label>
                 <Select value={editType} onValueChange={setEditType}>
                   <SelectTrigger
                     id="edit-project-type"
-                    aria-label="Select project type"
+                    aria-label={t("detail.editForm.projectType")}
                   >
-                    <SelectValue placeholder="Select project type" />
+                    <SelectValue placeholder={t("detail.editForm.projectType")} />
                   </SelectTrigger>
                   <SelectContent>
                     {PROJECT_TYPES.map((t) => (
@@ -381,14 +383,14 @@ export default function ProjectDetailPage() {
                   htmlFor="edit-project-status"
                   className="text-sm font-medium"
                 >
-                  Status
+                  {t("detail.editForm.status")}
                 </label>
                 <Select value={editStatus} onValueChange={setEditStatus}>
                   <SelectTrigger
                     id="edit-project-status"
-                    aria-label="Select project status"
+                    aria-label={t("detail.editForm.status")}
                   >
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder={t("detail.editForm.status")} />
                   </SelectTrigger>
                   <SelectContent>
                     {PROJECT_STATUSES.map((s) => (
@@ -405,22 +407,22 @@ export default function ProjectDetailPage() {
                 variant="outline"
                 onClick={handleEditCancel}
                 disabled={isSaving}
-                aria-label="Cancel editing"
+                aria-label={t("detail.editForm.cancel")}
               >
-                Cancel
+                {t("detail.editForm.cancel")}
               </Button>
               <Button
                 onClick={handleEditSave}
                 disabled={isSaving || !editTitle.trim()}
-                aria-label="Save project changes"
+                aria-label={t("detail.editForm.save")}
               >
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t("detail.editForm.saving")}
                   </>
                 ) : (
-                  "Save Changes"
+                  t("detail.editForm.save")
                 )}
               </Button>
             </CardFooter>
@@ -432,7 +434,7 @@ export default function ProjectDetailPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Tag className="h-3.5 w-3.5" />
-                  Type
+                  {t("detail.details.type")}
                 </div>
                 <p className="text-sm font-medium capitalize">{project.type}</p>
               </div>
@@ -440,7 +442,7 @@ export default function ProjectDetailPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Tag className="h-3.5 w-3.5" />
-                  Status
+                  {t("detail.details.status")}
                 </div>
                 <p className="text-sm font-medium capitalize">
                   {project.status}
@@ -450,7 +452,7 @@ export default function ProjectDetailPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
-                  Created
+                  {t("detail.details.created")}
                 </div>
                 <p className="text-sm font-medium">
                   {new Date(project.created_at).toLocaleDateString(undefined, {
@@ -464,7 +466,7 @@ export default function ProjectDetailPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
-                  Last Updated
+                  {t("detail.details.lastUpdated")}
                 </div>
                 <p className="text-sm font-medium">
                   {new Date(project.updated_at).toLocaleDateString(undefined, {
@@ -480,7 +482,7 @@ export default function ProjectDetailPage() {
               <div className="mt-6 space-y-1">
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <BookOpen className="h-3.5 w-3.5" />
-                  Genre
+                  {t("detail.details.genre")}
                 </div>
                 <p className="text-sm font-medium capitalize">
                   {String(project.settings?.genre)}
@@ -490,7 +492,7 @@ export default function ProjectDetailPage() {
 
             {Boolean(project.settings?.description) && (
               <div className="mt-6 space-y-1">
-                <p className="text-sm text-muted-foreground">Description</p>
+                <p className="text-sm text-muted-foreground">{t("new.form.description")}</p>
                 <p className="text-sm">{String(project.settings?.description)}</p>
               </div>
             )}
@@ -503,10 +505,10 @@ export default function ProjectDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Books ({project.books.length})
+              {t("detail.books.title", { count: project.books.length })}
             </CardTitle>
             <CardDescription>
-              Books associated with this project
+              {t("detail.books.description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -539,10 +541,10 @@ export default function ProjectDetailPage() {
           if (!open) setShowDeleteDialog(false);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Delete Project"
-        description={`Are you sure you want to delete "${project.title}"? This action cannot be undone and all associated data will be permanently removed.`}
-        confirmText="Delete Project"
-        cancelText="Cancel"
+        title={t("deleteDialog.title")}
+        description={t("deleteDialog.description", { title: project.title })}
+        confirmText={t("deleteDialog.confirm")}
+        cancelText={t("deleteDialog.cancel")}
         variant="destructive"
         loading={isDeleting}
       />

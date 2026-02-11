@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useTranslations } from "@/hooks/use-translations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +44,7 @@ const genres = [
 const PROJECT_TYPES = ["book", "series", "course"] as const;
 
 export default function NewProjectPage() {
+  const t = useTranslations("projects");
   const router = useRouter();
   const createProject = useCreateProject();
   const [title, setTitle] = React.useState("");
@@ -104,10 +106,10 @@ export default function NewProjectPage() {
         pen_name: penName || undefined,
         description: description || undefined,
       });
-      toast.success("Project created successfully");
+      toast.success(t("new.messages.success"));
       router.push(`/projects/${result.id}`);
     } catch {
-      toast.error("Failed to create project. Please try again.");
+      toast.error(t("new.messages.error"));
     }
   };
 
@@ -121,17 +123,17 @@ export default function NewProjectPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild aria-label="Back to projects">
+        <Button variant="ghost" size="icon" asChild aria-label={t("new.backToProjects")}>
           <Link href="/projects">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Create New Project
+            {t("new.title")}
           </h1>
           <p className="text-muted-foreground">
-            Set up a new publishing project
+            {t("new.subtitle")}
           </p>
         </div>
       </div>
@@ -139,15 +141,15 @@ export default function NewProjectPage() {
       <form onSubmit={handleSubmit} noValidate>
         <Card>
           <CardHeader>
-            <CardTitle>Project Details</CardTitle>
+            <CardTitle>{t("new.form.title")}</CardTitle>
             <CardDescription>
-              Fill in the basic information about your project
+              {t("new.form.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
-              label="Project Title"
-              placeholder="Enter your project title"
+              label={t("new.form.projectTitle")}
+              placeholder={t("new.form.projectTitlePlaceholder")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={() => markTouched("title")}
@@ -162,7 +164,7 @@ export default function NewProjectPage() {
                 className="text-sm font-medium"
                 id="project-type-label"
               >
-                Project Type
+                {t("new.form.projectType")}
               </label>
               <Select
                 value={type}
@@ -181,7 +183,7 @@ export default function NewProjectPage() {
                   aria-labelledby="project-type-label"
                   onBlur={() => markTouched("type")}
                 >
-                  <SelectValue placeholder="Select project type" />
+                  <SelectValue placeholder={t("new.form.projectTypePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {PROJECT_TYPES.map((t) => (
@@ -200,11 +202,11 @@ export default function NewProjectPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="project-genre" className="text-sm font-medium">
-                Genre
+                {t("new.form.genre")}
               </label>
               <Select value={genre} onValueChange={setGenre}>
                 <SelectTrigger id="project-genre">
-                  <SelectValue placeholder="Select genre" />
+                  <SelectValue placeholder={t("new.form.genrePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {genres.map((g) => (
@@ -217,20 +219,20 @@ export default function NewProjectPage() {
             </div>
 
             <Input
-              label="Pen Name"
-              placeholder="Author pen name (optional)"
+              label={t("new.form.penName")}
+              placeholder={t("new.form.penNamePlaceholder")}
               value={penName}
               onChange={(e) => setPenName(e.target.value)}
-              helperText="Leave blank to use your account name"
+              helperText={t("new.form.penNameHelp")}
             />
 
             <div className="space-y-1.5">
               <label htmlFor="project-description" className="text-sm font-medium">
-                Description
+                {t("new.form.description")}
               </label>
               <Textarea
                 id="project-description"
-                placeholder="Brief description of your project..."
+                placeholder={t("new.form.descriptionPlaceholder")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 onBlur={() => markTouched("description")}
@@ -274,7 +276,7 @@ export default function NewProjectPage() {
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" type="button" asChild>
-              <Link href="/projects">Cancel</Link>
+              <Link href="/projects">{t("new.form.cancel")}</Link>
             </Button>
             <Button
               type="submit"
@@ -288,10 +290,10 @@ export default function NewProjectPage() {
               {createProject.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {t("new.form.creating")}
                 </>
               ) : (
-                "Create Project"
+                t("new.form.create")
               )}
             </Button>
           </CardFooter>

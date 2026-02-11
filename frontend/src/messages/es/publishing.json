@@ -82,6 +82,11 @@
   "validation": {
     "title": "Validación KDP",
     "subtitle": "Validación previa al vuelo para requisitos de impresión y libro electrónico de Amazon KDP",
-    "selectBook": "Seleccione Libro para Validar"
+    "selectBook": "Seleccione Libro para Validar",
+    "toast": {
+      "validationComplete": "Validación completada",
+      "validationFailed": "Validación fallida",
+      "pdfExportComingSoon": "Funcionalidad de exportación PDF próximamente"
+    }
   }
 }

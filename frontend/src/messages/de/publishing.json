@@ -82,6 +82,11 @@
   "validation": {
     "title": "KDP-Validierung",
     "subtitle": "Vorabvalidierung für Amazon KDP Druck- und E-Book-Anforderungen",
-    "selectBook": "Buch zur Validierung auswählen"
+    "selectBook": "Buch zur Validierung auswählen",
+    "toast": {
+      "validationComplete": "Validierung abgeschlossen",
+      "validationFailed": "Validierung fehlgeschlagen",
+      "pdfExportComingSoon": "PDF-Exportfunktion kommt bald"
+    }
   }
 }

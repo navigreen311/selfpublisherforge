@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "@/hooks/use-translations";
 import { ValidationDashboard } from "@/modules/publishing/components/ValidationDashboard";
 import { ValidationRunner } from "@/modules/publishing/components/ValidationRunner";
 import { ValidationResults } from "@/modules/publishing/components/ValidationResults";
@@ -12,6 +13,7 @@ import {
 import { toast } from "sonner";
 
 export default function ValidationPage() {
+  const t = useTranslations("publishing");
   const [selectedBookId, setSelectedBookId] = useState("sample-book-id");
   const [validationResult, setValidationResult] = useState<FullValidationResponse | null>(null);
 
@@ -37,16 +39,16 @@ export default function ValidationPage() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">KDP Validation</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("validation.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pre-flight validation for Amazon KDP print and ebook requirements
+          {t("validation.subtitle")}
         </p>
       </div>
 
       {/* Book Selector */}
       <div className="rounded-lg border bg-card p-4">
         <label htmlFor="book-selector" className="block text-sm font-medium text-foreground mb-2">
-          Select Book to Validate
+          {t("validation.selectBook")}
         </label>
         <select
           id="book-selector"
