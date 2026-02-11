@@ -290,3 +290,237 @@ export function useRecordEvent() {
     },
   });
 }
+
+// ---------- Portfolio Economics Types ----------
+
+export interface BookSummary {
+  book_id: string;
+  title: string;
+  genre: string;
+  launch_date: string | null;
+  monthly_revenue: number;
+  monthly_units: number;
+  total_revenue: number;
+  roi: number;
+  status: string;
+}
+
+export interface PortfolioOverview {
+  org_id: string;
+  total_books: number;
+  active_books: number;
+  total_revenue: number;
+  total_investment: number;
+  portfolio_roi: number;
+  monthly_revenue: number;
+  monthly_trend: number;
+  top_performers: BookSummary[];
+  underperformers: BookSummary[];
+  genre_distribution: Record<string, number>;
+  revenue_by_genre: Record<string, number>;
+  updated_at: string;
+}
+
+export interface GreenlightRequest {
+  title: string;
+  genre: string;
+  sub_genre?: string;
+  estimated_word_count?: number;
+  estimated_price?: number;
+  royalty_rate?: number;
+  estimated_production_cost?: number;
+  estimated_marketing_budget?: number;
+  is_series?: boolean;
+  series_position?: number;
+  comparable_asins?: string[];
+  market_size_estimate?: number;
+}
+
+export interface GreenlightResult {
+  title: string;
+  genre: string;
+  greenlight_score: number;
+  recommendation: string;
+  confidence: string;
+  estimated_market_size: number;
+  estimated_capture_rate: number;
+  projected_monthly_units: number;
+  projected_monthly_revenue: number;
+  projected_monthly_royalty: number;
+  total_investment: number;
+  breakeven_months: number | null;
+  first_year_roi: number;
+  first_year_profit: number;
+  risk_factors: string[];
+  opportunity_factors: string[];
+  suggestions: string[];
+  calculated_at: string;
+}
+
+export interface AudiencePersona {
+  persona_id: string;
+  book_id: string;
+  name: string;
+  description: string;
+  age_range: string;
+  gender_skew: string;
+  reading_frequency: string;
+  preferred_formats: string[];
+  price_sensitivity: string;
+  discovery_channels: string[];
+  motivations: string[];
+  pain_points: string[];
+  favorite_authors: string[];
+  percentage_of_audience: number;
+  created_at: string;
+}
+
+export interface AlsoBoughtItem {
+  asin: string;
+  title: string;
+  author: string;
+  genre: string;
+  price: number;
+  rating: number;
+  review_count: number;
+  overlap_score: number;
+}
+
+export interface AlsoBoughtIntelligence {
+  book_id: string;
+  also_bought: AlsoBoughtItem[];
+  common_genres: string[];
+  average_price: number;
+  average_rating: number;
+  audience_insights: string[];
+  positioning_suggestions: string[];
+  analyzed_at: string;
+}
+
+export interface SeasonalEvent {
+  event_id: string;
+  name: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  genres_affected: string[];
+  impact_level: string;
+  demand_multiplier: number;
+  recommendations: string[];
+  is_recurring: boolean;
+}
+
+export interface NicheSeasonality {
+  genre: string;
+  monthly_demand: Record<string, number>;
+  peak_months: string[];
+  low_months: string[];
+  seasonal_events: SeasonalEvent[];
+  best_launch_windows: Array<{ start_month: string; end_month: string; reason: string }>;
+  avoid_windows: Array<{ start_month: string; end_month: string; reason: string }>;
+}
+
+export interface LaunchRecommendation {
+  recommended_date: string;
+  alternative_dates: string[];
+  season_type: string;
+  demand_index: number;
+  confidence: string;
+  reasoning: string[];
+  competing_events: string[];
+  favorable_events: string[];
+  pre_launch_checklist: Array<{ days_before: number; action: string; description: string }>;
+  marketing_timeline: Array<{ date: string; action: string; channel: string }>;
+  calculated_at: string;
+}
+
+// ---------- Portfolio Economics Query Keys ----------
+
+export const portfolioKeys = {
+  all: ["portfolio"] as const,
+  overview: () => [...portfolioKeys.all, "overview"] as const,
+  backlist: (params?: Record<string, unknown>) =>
+    [...portfolioKeys.all, "backlist", params] as const,
+};
+
+export const audienceKeys = {
+  all: ["audience"] as const,
+  personas: (bookId: string, genre?: string) =>
+    [...audienceKeys.all, "personas", bookId, genre] as const,
+  alsoBought: (bookId: string) =>
+    [...audienceKeys.all, "also-bought", bookId] as const,
+};
+
+export const seasonalKeys = {
+  all: ["seasonal"] as const,
+  calendar: (year?: number, genres?: string[]) =>
+    [...seasonalKeys.all, "calendar", year, genres] as const,
+  niche: (genre: string, year?: number) =>
+    [...seasonalKeys.all, "niche", genre, year] as const,
+};
+
+// ---------- Portfolio Economics Hooks ----------
+
+export function usePortfolioOverview() {
+  return useQuery<PortfolioOverview>({
+    queryKey: portfolioKeys.overview(),
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/portfolio");
+      return data.data;
+    },
+  });
+}
+
+export function useGreenlightMutation() {
+  return useMutation<GreenlightResult, Error, GreenlightRequest>({
+    mutationFn: async (request) => {
+      const { data } = await api.post("/api/v1/portfolio/greenlight", request);
+      return data.data;
+    },
+  });
+}
+
+export function useAudiencePersonas(bookId: string, genre: string = "romance") {
+  return useQuery<AudiencePersona[]>({
+    queryKey: audienceKeys.personas(bookId, genre),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/audience/personas/${bookId}?genre=${genre}`);
+      return data.data;
+    },
+  });
+}
+
+export function useAlsoBought(bookId: string, genre: string = "romance") {
+  return useQuery<AlsoBoughtIntelligence>({
+    queryKey: audienceKeys.alsoBought(bookId),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/audience/also-bought/${bookId}?genre=${genre}`);
+      return data.data;
+    },
+  });
+}
+
+export function useSeasonalCalendar(year?: number, genres?: string[]) {
+  return useQuery<{ events: SeasonalEvent[]; genre_seasonality: Record<string, NicheSeasonality> }>({
+    queryKey: seasonalKeys.calendar(year, genres),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (year) params.set("year", year.toString());
+      if (genres?.length) params.set("genres", genres.join(","));
+      const { data } = await api.get(`/api/v1/seasonal/calendar?${params}`);
+      return data.data;
+    },
+  });
+}
+
+export function useNicheSeasonality(genre: string, year?: number) {
+  return useQuery<NicheSeasonality>({
+    queryKey: seasonalKeys.niche(genre, year),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (year) params.set("year", year.toString());
+      const { data } = await api.get(`/api/v1/seasonal/niche/${genre}?${params}`);
+      return data.data;
+    },
+  });
+}
