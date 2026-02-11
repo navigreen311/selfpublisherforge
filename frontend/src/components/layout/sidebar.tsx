@@ -19,6 +19,14 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Palette,
+  Fingerprint,
+  Users,
+  Star,
+  DollarSign,
+  PieChart,
+  CheckCircle,
+  Settings2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,18 +52,26 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderOpen },
   { label: "Market Research", href: "/market", icon: TrendingUp },
+  { label: "Competitor Finder", href: "/competitors", icon: Users },
+  { label: "Review Intelligence", href: "/reviews", icon: Star },
   { label: "Writing Studio", href: "/writing", icon: PenTool },
+  { label: "Cover Design Studio", href: "/cover-design", icon: Palette },
+  { label: "Style Profiles", href: "/style-profiles", icon: Fingerprint },
   { label: "Knowledge Vault", href: "/knowledge", icon: LibraryBig },
   { label: "Publishing", href: "/publishing", icon: BookOpen },
+  { label: "KDP Validation", href: "/publishing/validation", icon: CheckCircle },
   { label: "Production Pipeline", href: "/pipeline", icon: Workflow },
   { label: "Marketing", href: "/marketing", icon: Megaphone },
   { label: "Product Page Lab", href: "/product-page", icon: FlaskConical },
   { label: "Advertising", href: "/advertising", icon: Target },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Portfolio Economics", href: "/analytics/portfolio", icon: PieChart },
+  { label: "Pricing Automation", href: "/pricing", icon: DollarSign },
   { label: "AI Agents", href: "/agents", icon: Bot },
 ];
 
 const bottomItems: NavItem[] = [
+  { label: "Admin Panel", href: "/admin", icon: Settings2 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
