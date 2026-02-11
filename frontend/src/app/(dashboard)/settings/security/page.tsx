@@ -23,6 +23,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQueryClient } from "@tanstack/react-query";
 import { userKeys } from "@/modules/users/hooks";
+import { useTranslations } from "@/hooks/use-translations";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ interface MFASetupResponse {
 // ─── Backup Codes Display ───────────────────────────────────────────────────
 
 function BackupCodesDisplay({ codes }: { codes: string[] }) {
+  const t = useTranslations("settings");
   const [copied, setCopied] = useState(false);
 
   const handleCopyAll = useCallback(async () => {
@@ -81,18 +83,16 @@ function BackupCodesDisplay({ codes }: { codes: string[] }) {
   return (
     <div className="space-y-3">
       <Alert>
-        <AlertTitle>Save your backup codes</AlertTitle>
+        <AlertTitle>{t("security.mfa.backupCodesTitle")}</AlertTitle>
         <AlertDescription>
-          These codes can be used to access your account if you lose your
-          authenticator device. Each code can only be used once. Store them in a
-          safe place.
+          {t("security.mfa.backupCodesDescription")}
         </AlertDescription>
       </Alert>
 
       <div
         className="grid grid-cols-2 gap-2 rounded-md border bg-muted/50 p-4"
         role="list"
-        aria-label="Backup codes"
+        aria-label={t("security.mfa.backupCodesLabel")}
       >
         {codes.map((code) => (
           <code
@@ -106,11 +106,11 @@ function BackupCodesDisplay({ codes }: { codes: string[] }) {
       </div>
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={handleCopyAll} aria-label="Copy all backup codes to clipboard">
-          {copied ? "Copied!" : "Copy All"}
+        <Button variant="outline" size="sm" onClick={handleCopyAll} aria-label={t("security.mfa.copyAllLabel")}>
+          {copied ? t("security.mfa.copied") : t("security.mfa.copyAll")}
         </Button>
-        <Button variant="outline" size="sm" onClick={handleDownload} aria-label="Download backup codes as text file">
-          Download as .txt
+        <Button variant="outline" size="sm" onClick={handleDownload} aria-label={t("security.mfa.downloadLabel")}>
+          {t("security.mfa.downloadTxt")}
         </Button>
       </div>
     </div>
@@ -126,6 +126,7 @@ function MFASetupFlow({
   onComplete: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("settings");
   const [setupData, setSetupData] = useState<MFASetupResponse | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -173,7 +174,7 @@ function MFASetupFlow({
 
   const handleVerify = async () => {
     if (verifyCode.length !== 6) {
-      setError("Please enter a 6-digit code.");
+      setError(t("security.mfa.enterValidCode"));
       return;
     }
 
@@ -191,9 +192,9 @@ function MFASetupFlow({
       ) {
         const resp = (err as { response: { data?: { detail?: string } } })
           .response;
-        setError(resp.data?.detail || "Verification failed. Please try again.");
+        setError(resp.data?.detail || t("security.mfa.verificationError"));
       } else {
-        setError("Verification failed. Please try again.");
+        setError(t("security.mfa.verificationError"));
       }
     } finally {
       setLoading(false);
@@ -205,26 +206,26 @@ function MFASetupFlow({
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            Setting Up Two-Factor Authentication
+            {t("security.mfa.settingUpTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden="true" />
-              Generating your MFA secret...
+              {t("security.mfa.generatingSecret")}
             </div>
           ) : error ? (
             <div className="space-y-3">
               <Alert variant="destructive">
-                <AlertTitle>Setup Failed</AlertTitle>
+                <AlertTitle>{t("security.mfa.setupFailed")}</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onCancel}>
-                  Cancel
+                  {t("security.mfa.cancel")}
                 </Button>
-                <Button onClick={initSetup}>Try Again</Button>
+                <Button onClick={initSetup}>{t("security.mfa.tryAgain")}</Button>
               </div>
             </div>
           ) : null}
@@ -238,15 +239,15 @@ function MFASetupFlow({
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            Two-Factor Authentication Enabled
+            {t("security.mfa.enabledTitle")}
           </CardTitle>
           <CardDescription>
-            Your account is now protected with two-factor authentication.
+            {t("security.mfa.enabledDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {setupData && <BackupCodesDisplay codes={setupData.backup_codes} />}
-          <Button onClick={onComplete}>Done</Button>
+          <Button onClick={onComplete}>{t("security.mfa.done")}</Button>
         </CardContent>
       </Card>
     );
@@ -256,12 +257,10 @@ function MFASetupFlow({
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">
-          Set Up Two-Factor Authentication
+          {t("security.mfa.setupTitle")}
         </CardTitle>
         <CardDescription>
-          Scan the QR code below with your authenticator app (e.g., Google
-          Authenticator, Authy, or 1Password), then enter the 6-digit code to
-          verify.
+          {t("security.mfa.setupDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -273,7 +272,7 @@ function MFASetupFlow({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={setupData.qr_code_url}
-                  alt="Scan this QR code with your authenticator app to set up two-factor authentication"
+                  alt={t("security.mfa.qrAlt")}
                   width={200}
                   height={200}
                   className="h-[200px] w-[200px]"
@@ -284,7 +283,7 @@ function MFASetupFlow({
             {/* Manual Secret Key */}
             <div className="space-y-1.5">
               <p id="manual-key-description" className="text-sm font-medium">
-                Can&apos;t scan the QR code? Enter this key manually:
+                {t("security.mfa.cantScanQr")}
               </p>
               <div className="flex items-center gap-2">
                 <code
@@ -292,7 +291,7 @@ function MFASetupFlow({
                   aria-describedby="manual-key-description"
                   role="textbox"
                   aria-readonly="true"
-                  aria-label="MFA secret key"
+                  aria-label={t("security.mfa.manualKeyDescription")}
                 >
                   {setupData.secret}
                 </code>
@@ -306,10 +305,9 @@ function MFASetupFlow({
 
         {/* Verification Input */}
         <fieldset className="space-y-3 border-t pt-4">
-          <legend className="sr-only">Verify authenticator setup</legend>
+          <legend className="sr-only">{t("security.mfa.verifyFieldset")}</legend>
           <label htmlFor="mfa-verify-code" className="text-sm font-medium">
-            Enter the 6-digit code from your authenticator app to complete
-            setup:
+            {t("security.mfa.verifyPrompt")}
           </label>
           <div className="flex gap-2">
             <Input
@@ -318,7 +316,7 @@ function MFASetupFlow({
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={6}
-              placeholder="000000"
+              placeholder={t("security.mfa.verifyPlaceholder")}
               value={verifyCode}
               onChange={(e) =>
                 setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))
@@ -332,7 +330,7 @@ function MFASetupFlow({
               onClick={handleVerify}
               disabled={verifyCode.length !== 6 || loading}
             >
-              {loading ? "Verifying..." : "Verify & Enable"}
+              {loading ? t("security.mfa.verifying") : t("security.mfa.verifyButton")}
             </Button>
           </div>
           {error && (
@@ -345,7 +343,7 @@ function MFASetupFlow({
         {/* Cancel */}
         <div className="border-t pt-4">
           <Button variant="ghost" onClick={onCancel}>
-            Cancel Setup
+            {t("security.mfa.cancelSetup")}
           </Button>
         </div>
       </CardContent>
@@ -364,13 +362,14 @@ function DisableMFADialog({
   onOpenChange: (open: boolean) => void;
   onDisabled: () => void;
 }) {
+  const t = useTranslations("settings");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleDisable = async () => {
     if (!password.trim()) {
-      setError("Please enter your password.");
+      setError(t("security.mfa.passwordRequired"));
       return;
     }
 
@@ -390,9 +389,9 @@ function DisableMFADialog({
       ) {
         const resp = (err as { response: { data?: { detail?: string } } })
           .response;
-        setError(resp.data?.detail || "Failed to disable MFA.");
+        setError(resp.data?.detail || t("security.mfa.disableFailed"));
       } else {
-        setError("Failed to disable MFA. Please try again.");
+        setError(t("security.mfa.disableFailed"));
       }
     } finally {
       setLoading(false);
@@ -403,10 +402,9 @@ function DisableMFADialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+          <DialogTitle>{t("security.mfa.disableTitle")}</DialogTitle>
           <DialogDescription>
-            This will remove the extra layer of security from your account.
-            Enter your password to confirm.
+            {t("security.mfa.disableDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -415,8 +413,8 @@ function DisableMFADialog({
           <Input
             id="disable-mfa-password"
             type="password"
-            label="Password"
-            placeholder="Enter your password"
+            label={t("security.mfa.passwordLabel")}
+            placeholder={t("security.mfa.passwordPlaceholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={error ?? undefined}
@@ -434,14 +432,14 @@ function DisableMFADialog({
               onOpenChange(false);
             }}
           >
-            Cancel
+            {t("security.mfa.cancel")}
           </Button>
           <Button
             variant="destructive"
             onClick={handleDisable}
             disabled={!password.trim() || loading}
           >
-            {loading ? "Disabling..." : "Disable MFA"}
+            {loading ? t("security.mfa.disabling") : t("security.mfa.disableConfirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -452,6 +450,7 @@ function DisableMFADialog({
 // ─── Main Security Page ─────────────────────────────────────────────────────
 
 export default function SecuritySettingsPage() {
+  const t = useTranslations("settings");
   const { data: currentUser, isLoading } = useCurrentUser();
   const queryClient = useQueryClient();
 
@@ -473,7 +472,7 @@ export default function SecuritySettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-4" aria-busy="true" aria-label="Loading security settings">
+      <div className="animate-pulse space-y-4" aria-busy="true" aria-label={t("security.loadingSettings")}>
         <div className="h-10 bg-gray-200 rounded w-1/3" />
         <div className="h-40 bg-gray-100 rounded" />
       </div>
@@ -483,9 +482,9 @@ export default function SecuritySettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 id="security-settings-heading" className="text-lg font-semibold">Security</h2>
+        <h2 id="security-settings-heading" className="text-lg font-semibold">{t("security.heading")}</h2>
         <p className="text-sm text-gray-500">
-          Manage your account security settings and two-factor authentication.
+          {t("security.description")}
         </p>
       </div>
 
@@ -500,10 +499,10 @@ export default function SecuritySettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              Two-Factor Authentication
+              {t("security.mfa.title")}
             </CardTitle>
             <CardDescription>
-              Your account is protected with two-factor authentication.
+              {t("security.mfa.enabledDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -526,10 +525,10 @@ export default function SecuritySettingsPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-green-800">
-                  Two-factor authentication is enabled
+                  {t("security.mfa.enabled")}
                 </p>
                 <p className="text-sm text-green-700">
-                  You will be asked for a verification code when signing in.
+                  {t("security.mfa.enabledPrompt")}
                 </p>
               </div>
             </div>
@@ -538,7 +537,7 @@ export default function SecuritySettingsPage() {
               variant="destructive"
               onClick={() => setDisableDialogOpen(true)}
             >
-              Disable Two-Factor Authentication
+              {t("security.mfa.disableButton")}
             </Button>
           </CardContent>
         </Card>
@@ -547,33 +546,29 @@ export default function SecuritySettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              Two-Factor Authentication
+              {t("security.mfa.title")}
             </CardTitle>
             <CardDescription>
-              Add an extra layer of security to your account by requiring a
-              verification code in addition to your password.
+              {t("security.mfa.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2 text-sm text-muted-foreground">
-              <p>Two-factor authentication (2FA) helps protect your account by:</p>
+              <p>{t("security.mfa.benefits.title")}</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>
-                  Requiring a time-based code from your authenticator app at
-                  sign-in
+                  {t("security.mfa.benefits.requireCode")}
                 </li>
                 <li>
-                  Preventing unauthorized access even if your password is
-                  compromised
+                  {t("security.mfa.benefits.preventUnauthorized")}
                 </li>
                 <li>
-                  Providing backup codes for account recovery if you lose your
-                  device
+                  {t("security.mfa.benefits.backupCodes")}
                 </li>
               </ul>
             </div>
             <Button onClick={() => setSetupMode(true)}>
-              Enable Two-Factor Authentication
+              {t("security.mfa.enableButton")}
             </Button>
           </CardContent>
         </Card>

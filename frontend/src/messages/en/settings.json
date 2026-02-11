@@ -1,0 +1,62 @@
+{
+  "profile": {
+    "heading": "Profile",
+    "description": "Update your personal information and display preferences."
+  },
+  "security": {
+    "heading": "Security",
+    "description": "Manage your account security settings and two-factor authentication.",
+    "loadingSettings": "Loading security settings",
+    "mfa": {
+      "title": "Two-Factor Authentication",
+      "description": "Add an extra layer of security to your account by requiring a verification code in addition to your password.",
+      "setupTitle": "Set Up Two-Factor Authentication",
+      "setupDescription": "Scan the QR code below with your authenticator app (e.g., Google Authenticator, Authy, or 1Password), then enter the 6-digit code to verify.",
+      "settingUpTitle": "Setting Up Two-Factor Authentication",
+      "generatingSecret": "Generating your MFA secret...",
+      "setupFailed": "Setup Failed",
+      "cancel": "Cancel",
+      "tryAgain": "Try Again",
+      "enabledTitle": "Two-Factor Authentication Enabled",
+      "enabledDescription": "Your account is now protected with two-factor authentication.",
+      "enabled": "Two-factor authentication is enabled",
+      "enabledPrompt": "You will be asked for a verification code when signing in.",
+      "disableButton": "Disable Two-Factor Authentication",
+      "enableButton": "Enable Two-Factor Authentication",
+      "cantScanQr": "Can't scan the QR code? Enter this key manually:",
+      "verifyPrompt": "Enter the 6-digit code from your authenticator app to complete setup:",
+      "verifyPlaceholder": "000000",
+      "verifyButton": "Verify & Enable",
+      "verifying": "Verifying...",
+      "verificationError": "Verification failed. Please try again.",
+      "enterValidCode": "Please enter a 6-digit code.",
+      "cancelSetup": "Cancel Setup",
+      "done": "Done",
+      "backupCodesTitle": "Save your backup codes",
+      "backupCodesDescription": "These codes can be used to access your account if you lose your authenticator device. Each code can only be used once. Store them in a safe place.",
+      "backupCodesLabel": "Backup codes",
+      "copyAll": "Copy All",
+      "copied": "Copied!",
+      "downloadTxt": "Download as .txt",
+      "copyAllLabel": "Copy all backup codes to clipboard",
+      "downloadLabel": "Download backup codes as text file",
+      "disableTitle": "Disable Two-Factor Authentication",
+      "disableDescription": "This will remove the extra layer of security from your account. Enter your password to confirm.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "passwordRequired": "Please enter your password.",
+      "disableConfirm": "Disable MFA",
+      "disabling": "Disabling...",
+      "disableFailed": "Failed to disable MFA.",
+      "benefits": {
+        "title": "Two-factor authentication (2FA) helps protect your account by:",
+        "requireCode": "Requiring a time-based code from your authenticator app at sign-in",
+        "preventUnauthorized": "Preventing unauthorized access even if your password is compromised",
+        "backupCodes": "Providing backup codes for account recovery if you lose your device"
+      },
+      "qrAlt": "Scan this QR code with your authenticator app to set up two-factor authentication",
+      "manualKeyDescription": "MFA secret key",
+      "verifyFieldset": "Verify authenticator setup"
+    }
+  }
+}

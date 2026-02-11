@@ -1,0 +1,62 @@
+{
+  "profile": {
+    "heading": "Profil",
+    "description": "Aktualisieren Sie Ihre persönlichen Informationen und Anzeigeeinstellungen."
+  },
+  "security": {
+    "heading": "Sicherheit",
+    "description": "Verwalten Sie Ihre Kontosicherheitseinstellungen und Zwei-Faktor-Authentifizierung.",
+    "loadingSettings": "Sicherheitseinstellungen werden geladen",
+    "mfa": {
+      "title": "Zwei-Faktor-Authentifizierung",
+      "description": "Fügen Sie Ihrem Konto eine zusätzliche Sicherheitsebene hinzu, indem Sie zusätzlich zu Ihrem Passwort einen Verifizierungscode benötigen.",
+      "setupTitle": "Zwei-Faktor-Authentifizierung einrichten",
+      "setupDescription": "Scannen Sie den unten stehenden QR-Code mit Ihrer Authentifizierungs-App (z.B. Google Authenticator, Authy oder 1Password) und geben Sie dann den 6-stelligen Code zur Verifizierung ein.",
+      "settingUpTitle": "Zwei-Faktor-Authentifizierung wird eingerichtet",
+      "generatingSecret": "Ihr MFA-Geheimnis wird generiert...",
+      "setupFailed": "Einrichtung fehlgeschlagen",
+      "cancel": "Abbrechen",
+      "tryAgain": "Erneut versuchen",
+      "enabledTitle": "Zwei-Faktor-Authentifizierung aktiviert",
+      "enabledDescription": "Ihr Konto ist jetzt mit Zwei-Faktor-Authentifizierung geschützt.",
+      "enabled": "Zwei-Faktor-Authentifizierung ist aktiviert",
+      "enabledPrompt": "Sie werden bei der Anmeldung nach einem Verifizierungscode gefragt.",
+      "disableButton": "Zwei-Faktor-Authentifizierung deaktivieren",
+      "enableButton": "Zwei-Faktor-Authentifizierung aktivieren",
+      "cantScanQr": "QR-Code kann nicht gescannt werden? Geben Sie diesen Schlüssel manuell ein:",
+      "verifyPrompt": "Geben Sie den 6-stelligen Code aus Ihrer Authentifizierungs-App ein, um die Einrichtung abzuschließen:",
+      "verifyPlaceholder": "000000",
+      "verifyButton": "Verifizieren & aktivieren",
+      "verifying": "Verifizierung läuft...",
+      "verificationError": "Verifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "enterValidCode": "Bitte geben Sie einen 6-stelligen Code ein.",
+      "cancelSetup": "Einrichtung abbrechen",
+      "done": "Fertig",
+      "backupCodesTitle": "Speichern Sie Ihre Backup-Codes",
+      "backupCodesDescription": "Diese Codes können verwendet werden, um auf Ihr Konto zuzugreifen, wenn Sie Ihr Authentifizierungsgerät verlieren. Jeder Code kann nur einmal verwendet werden. Bewahren Sie sie an einem sicheren Ort auf.",
+      "backupCodesLabel": "Backup-Codes",
+      "copyAll": "Alle kopieren",
+      "copied": "Kopiert!",
+      "downloadTxt": "Als .txt herunterladen",
+      "copyAllLabel": "Alle Backup-Codes in die Zwischenablage kopieren",
+      "downloadLabel": "Backup-Codes als Textdatei herunterladen",
+      "disableTitle": "Zwei-Faktor-Authentifizierung deaktivieren",
+      "disableDescription": "Dadurch wird die zusätzliche Sicherheitsebene von Ihrem Konto entfernt. Geben Sie Ihr Passwort zur Bestätigung ein.",
+      "passwordLabel": "Passwort",
+      "passwordPlaceholder": "Geben Sie Ihr Passwort ein",
+      "passwordRequired": "Bitte geben Sie Ihr Passwort ein.",
+      "disableConfirm": "MFA deaktivieren",
+      "disabling": "Deaktivierung läuft...",
+      "disableFailed": "MFA konnte nicht deaktiviert werden.",
+      "benefits": {
+        "title": "Die Zwei-Faktor-Authentifizierung (2FA) schützt Ihr Konto durch:",
+        "requireCode": "Erfordernis eines zeitbasierten Codes von Ihrer Authentifizierungs-App bei der Anmeldung",
+        "preventUnauthorized": "Verhinderung unbefugten Zugriffs, selbst wenn Ihr Passwort kompromittiert wurde",
+        "backupCodes": "Bereitstellung von Backup-Codes zur Kontowiederherstellung, falls Sie Ihr Gerät verlieren"
+      },
+      "qrAlt": "Scannen Sie diesen QR-Code mit Ihrer Authentifizierungs-App, um die Zwei-Faktor-Authentifizierung einzurichten",
+      "manualKeyDescription": "MFA-Geheimschlüssel",
+      "verifyFieldset": "Authentifizierungs-Einrichtung verifizieren"
+    }
+  }
+}
