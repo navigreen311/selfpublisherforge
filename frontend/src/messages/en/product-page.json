@@ -1,0 +1,73 @@
+{
+  "title": "Product Page Conversion Lab",
+  "subtitle": "Analyze and optimize your Amazon book listings for maximum conversion.",
+  "tabs": {
+    "analyze": "Listing Analysis",
+    "mobile": "Mobile Check"
+  },
+  "analyzeForm": {
+    "title": "Analyze a Listing",
+    "asinLabel": "ASIN",
+    "asinPlaceholder": "e.g., B09V2KKG1D",
+    "urlLabel": "or Amazon URL",
+    "urlPlaceholder": "https://www.amazon.com/dp/...",
+    "analyzeButton": "Analyze Listing",
+    "analyzingButton": "Analyzing...",
+    "analyzeAriaLabel": "Analyze listing",
+    "analyzingAriaLabel": "Analyzing listing"
+  },
+  "listingAnalysis": {
+    "title": "Listing Analysis",
+    "asinPrefix": "ASIN:",
+    "overall": "Overall",
+    "scoreLabels": {
+      "title": "Title",
+      "blurb": "Blurb",
+      "keywords": "Keywords",
+      "category": "Category",
+      "price": "Price"
+    },
+    "recommendationsTitle": "Recommendations",
+    "recommendationsCount": "Recommendations ({count})"
+  },
+  "mobileCheck": {
+    "formTitle": "Mobile Conversion Checker",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Book title",
+    "authorLabel": "Author",
+    "authorPlaceholder": "Author name",
+    "subtitleLabel": "Subtitle (optional)",
+    "subtitlePlaceholder": "Subtitle",
+    "priceLabel": "Price (optional)",
+    "pricePlaceholder": "3.99",
+    "blurbLabel": "Blurb",
+    "blurbPlaceholder": "Book description / blurb",
+    "checkButton": "Check Mobile Display",
+    "checkingButton": "Checking...",
+    "mobileScoreTitle": "Mobile Score",
+    "optimizationTips": "Mobile Optimization Tips",
+    "deviceBreakdown": "Device Breakdown",
+    "deviceOk": "OK",
+    "deviceTruncated": "Title truncated",
+    "stats": {
+      "titleTruncated": "Title truncated:",
+      "blurbFold": "Blurb fold:",
+      "aboveFoldWords": "Above fold words:",
+      "priceVisibility": "Price visibility:",
+      "chars": "chars",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "preview": {
+      "bookCover": "Book Cover",
+      "by": "by",
+      "kindleEdition": "Kindle Edition",
+      "buyButton": "Buy now with 1-Click",
+      "readMore": "Read more"
+    }
+  },
+  "errors": {
+    "analyzeFailed": "Failed to analyze listing. Please check your ASIN or URL and try again.",
+    "mobileCheckFailed": "Failed to check mobile display. Please try again."
+  }
+}

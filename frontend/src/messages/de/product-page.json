@@ -1,0 +1,73 @@
+{
+  "title": "Produktseiten-Konversions-Labor",
+  "subtitle": "Analysieren und optimieren Sie Ihre Amazon-Bucheinträge für maximale Konversion.",
+  "tabs": {
+    "analyze": "Listing-Analyse",
+    "mobile": "Mobile Überprüfung"
+  },
+  "analyzeForm": {
+    "title": "Listing analysieren",
+    "asinLabel": "ASIN",
+    "asinPlaceholder": "z.B. B09V2KKG1D",
+    "urlLabel": "oder Amazon-URL",
+    "urlPlaceholder": "https://www.amazon.com/dp/...",
+    "analyzeButton": "Listing analysieren",
+    "analyzingButton": "Analysiere...",
+    "analyzeAriaLabel": "Listing analysieren",
+    "analyzingAriaLabel": "Analysiere Listing"
+  },
+  "listingAnalysis": {
+    "title": "Listing-Analyse",
+    "asinPrefix": "ASIN:",
+    "overall": "Gesamt",
+    "scoreLabels": {
+      "title": "Titel",
+      "blurb": "Beschreibung",
+      "keywords": "Schlüsselwörter",
+      "category": "Kategorie",
+      "price": "Preis"
+    },
+    "recommendationsTitle": "Empfehlungen",
+    "recommendationsCount": "Empfehlungen ({count})"
+  },
+  "mobileCheck": {
+    "formTitle": "Mobile Konversions-Prüfer",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "Buchtitel",
+    "authorLabel": "Autor",
+    "authorPlaceholder": "Autorenname",
+    "subtitleLabel": "Untertitel (optional)",
+    "subtitlePlaceholder": "Untertitel",
+    "priceLabel": "Preis (optional)",
+    "pricePlaceholder": "3.99",
+    "blurbLabel": "Beschreibung",
+    "blurbPlaceholder": "Buchbeschreibung",
+    "checkButton": "Mobile Ansicht prüfen",
+    "checkingButton": "Prüfe...",
+    "mobileScoreTitle": "Mobile Bewertung",
+    "optimizationTips": "Mobile Optimierungs-Tipps",
+    "deviceBreakdown": "Geräte-Aufschlüsselung",
+    "deviceOk": "OK",
+    "deviceTruncated": "Titel gekürzt",
+    "stats": {
+      "titleTruncated": "Titel gekürzt:",
+      "blurbFold": "Beschreibungs-Falz:",
+      "aboveFoldWords": "Wörter über Falz:",
+      "priceVisibility": "Preis-Sichtbarkeit:",
+      "chars": "Zeichen",
+      "yes": "Ja",
+      "no": "Nein"
+    },
+    "preview": {
+      "bookCover": "Buchcover",
+      "by": "von",
+      "kindleEdition": "Kindle Edition",
+      "buyButton": "Jetzt mit 1-Click kaufen",
+      "readMore": "Mehr lesen"
+    }
+  },
+  "errors": {
+    "analyzeFailed": "Listing konnte nicht analysiert werden. Bitte überprüfen Sie Ihre ASIN oder URL und versuchen Sie es erneut.",
+    "mobileCheckFailed": "Mobile Ansicht konnte nicht überprüft werden. Bitte versuchen Sie es erneut."
+  }
+}

@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/hooks/use-translations";
 import { useAnalyzeListing } from "@/modules/product-page/hooks";
 import { ListingScoreCard } from "@/modules/product-page/components/ListingScoreCard";
 import { MobilePreview } from "@/modules/product-page/components/MobilePreview";
 
 export default function ProductPageLab() {
+  const t = useTranslations("product-page");
   const [asinInput, setAsinInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [activeTab, setActiveTab] = useState<"analyze" | "mobile">("analyze");
@@ -22,16 +24,16 @@ export default function ProductPageLab() {
   };
 
   const tabs = [
-    { key: "analyze" as const, label: "Listing Analysis" },
-    { key: "mobile" as const, label: "Mobile Check" },
+    { key: "analyze" as const, label: t("tabs.analyze") },
+    { key: "mobile" as const, label: t("tabs.mobile") },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Product Page Conversion Lab</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1">
-          Analyze and optimize your Amazon book listings for maximum conversion.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -69,11 +71,11 @@ export default function ProductPageLab() {
         >
           {/* Input */}
           <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Analyze a Listing</h3>
+            <h3 className="text-lg font-semibold mb-4">{t("analyzeForm.title")}</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label htmlFor="asin-input" className="block text-sm font-medium text-foreground mb-1">
-                  ASIN
+                  {t("analyzeForm.asinLabel")}
                 </label>
                 <input
                   id="asin-input"
@@ -81,13 +83,13 @@ export default function ProductPageLab() {
                   value={asinInput}
                   onChange={(e) => setAsinInput(e.target.value)}
                   className="w-full rounded-md border px-3 py-2 text-sm"
-                  placeholder="e.g., B09V2KKG1D"
+                  placeholder={t("analyzeForm.asinPlaceholder")}
                   maxLength={10}
                 />
               </div>
               <div>
                 <label htmlFor="url-input" className="block text-sm font-medium text-foreground mb-1">
-                  or Amazon URL
+                  {t("analyzeForm.urlLabel")}
                 </label>
                 <input
                   id="url-input"
@@ -95,14 +97,14 @@ export default function ProductPageLab() {
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   className="w-full rounded-md border px-3 py-2 text-sm"
-                  placeholder="https://www.amazon.com/dp/..."
+                  placeholder={t("analyzeForm.urlPlaceholder")}
                 />
               </div>
             </div>
             <button
               onClick={handleAnalyze}
               disabled={(!asinInput && !urlInput) || analyzeMutation.isPending}
-              aria-label={analyzeMutation.isPending ? "Analyzing listing" : "Analyze listing"}
+              aria-label={analyzeMutation.isPending ? t("analyzeForm.analyzingAriaLabel") : t("analyzeForm.analyzeAriaLabel")}
               className={cn(
                 "mt-4 rounded-md px-4 py-2 text-sm font-medium text-white",
                 !asinInput && !urlInput
@@ -110,7 +112,7 @@ export default function ProductPageLab() {
                   : "bg-indigo-600 hover:bg-indigo-700"
               )}
             >
-              {analyzeMutation.isPending ? "Analyzing..." : "Analyze Listing"}
+              {analyzeMutation.isPending ? t("analyzeForm.analyzingButton") : t("analyzeForm.analyzeButton")}
             </button>
           </div>
 
@@ -121,7 +123,7 @@ export default function ProductPageLab() {
 
           {analyzeMutation.isError && (
             <div role="alert" className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-              Failed to analyze listing. Please check your ASIN or URL and try again.
+              {t("errors.analyzeFailed")}
             </div>
           )}
         </div>

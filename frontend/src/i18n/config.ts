@@ -57,6 +57,8 @@ export const supportedNamespaces = [
   "metadata",
   "publications",
   "settings",
+  "pricing",
+  "product-page",
 ] as const;
 
 export type Namespace = (typeof supportedNamespaces)[number];

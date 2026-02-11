@@ -1,3 +1,39 @@
 {
-  "title": "Preisstrategie"
+  "title": "Preisautomatisierung",
+  "subtitle": "Optimieren Sie Ihre Buchpreise für maximale Tantiemen und Verkäufe",
+  "simulator": {
+    "button": "Preissimulator"
+  },
+  "stats": {
+    "activeRules": "Aktive Regeln",
+    "activeRulesCount": "Für {count} Bücher",
+    "avgPrice": "Durchschnittspreis",
+    "avgPriceChange": "+{percent}% vs. letzten Monat",
+    "avgRoyaltyRate": "Durchschn. Tantiemenrate",
+    "avgRoyaltyRateNote": "Gewichtet nach Umsatz",
+    "nextPriceChange": "Nächste Preisänderung",
+    "nextPriceChangeNote": "Diese Woche geplant"
+  },
+  "tabs": {
+    "overview": "Übersicht",
+    "strategies": "Strategien",
+    "history": "Preisverlauf",
+    "analysis": "Tantiemenanalyse"
+  },
+  "recentChanges": {
+    "title": "Kürzliche Preisänderungen",
+    "revenue": "Umsatz"
+  },
+  "recommendations": {
+    "title": "Empfehlungen",
+    "expectedImpact": "Erwartete Auswirkung:",
+    "apply": "Anwenden"
+  },
+  "competitivePricing": {
+    "title": "Wettbewerbspreisanalyse",
+    "subtitle": "Vergleichen Sie Ihre Preise mit ähnlichen Büchern in Ihrem Genre",
+    "marketAverage": "Marktdurchschnitt",
+    "yourAverage": "Ihr Durchschnitt",
+    "recommendation": "Empfehlung"
+  }
 }

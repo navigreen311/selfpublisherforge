@@ -1,3 +1,39 @@
 {
-  "title": "Estrategia de Precios"
+  "title": "Automatización de Precios",
+  "subtitle": "Optimiza los precios de tus libros para maximizar regalías y ventas",
+  "simulator": {
+    "button": "Simulador de Precios"
+  },
+  "stats": {
+    "activeRules": "Reglas Activas",
+    "activeRulesCount": "En {count} libros",
+    "avgPrice": "Precio Promedio",
+    "avgPriceChange": "+{percent}% vs. mes pasado",
+    "avgRoyaltyRate": "Tasa de Regalías Promedio",
+    "avgRoyaltyRateNote": "Ponderado por ingresos",
+    "nextPriceChange": "Próximo Cambio de Precio",
+    "nextPriceChangeNote": "Programado esta semana"
+  },
+  "tabs": {
+    "overview": "Resumen",
+    "strategies": "Estrategias",
+    "history": "Historial de Precios",
+    "analysis": "Análisis de Regalías"
+  },
+  "recentChanges": {
+    "title": "Cambios de Precio Recientes",
+    "revenue": "ingresos"
+  },
+  "recommendations": {
+    "title": "Recomendaciones",
+    "expectedImpact": "Impacto esperado:",
+    "apply": "Aplicar"
+  },
+  "competitivePricing": {
+    "title": "Análisis de Precios Competitivos",
+    "subtitle": "Compara tus precios con libros similares en tu género",
+    "marketAverage": "Promedio del Mercado",
+    "yourAverage": "Tu Promedio",
+    "recommendation": "Recomendación"
+  }
 }

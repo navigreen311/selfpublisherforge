@@ -1,3 +1,39 @@
 {
-  "title": "Pricing Strategy"
+  "title": "Pricing Automation",
+  "subtitle": "Optimize your book prices to maximize royalties and sales",
+  "simulator": {
+    "button": "Price Simulator"
+  },
+  "stats": {
+    "activeRules": "Active Rules",
+    "activeRulesCount": "Across {count} books",
+    "avgPrice": "Avg. Price",
+    "avgPriceChange": "+{percent}% vs. last month",
+    "avgRoyaltyRate": "Avg. Royalty Rate",
+    "avgRoyaltyRateNote": "Weighted by revenue",
+    "nextPriceChange": "Next Price Change",
+    "nextPriceChangeNote": "Scheduled this week"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "strategies": "Strategies",
+    "history": "Price History",
+    "analysis": "Royalty Analysis"
+  },
+  "recentChanges": {
+    "title": "Recent Price Changes",
+    "revenue": "revenue"
+  },
+  "recommendations": {
+    "title": "Recommendations",
+    "expectedImpact": "Expected impact:",
+    "apply": "Apply"
+  },
+  "competitivePricing": {
+    "title": "Competitive Price Analysis",
+    "subtitle": "Compare your pricing against similar books in your genre",
+    "marketAverage": "Market Average",
+    "yourAverage": "Your Average",
+    "recommendation": "Recommendation"
+  }
 }
