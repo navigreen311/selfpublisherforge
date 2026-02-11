@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+import { createMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createMetadata({
+  title: "Login",
+  description: "Sign in to your SelfPublisherForge account to manage your books, track royalties, and grow your publishing business.",
+});
+
 "use client";
 
 import * as React from "react";
