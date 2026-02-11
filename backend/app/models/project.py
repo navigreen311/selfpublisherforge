@@ -58,6 +58,7 @@ class Project(TenantModel):
     __tablename__ = "projects"
 
     title: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     type: Mapped[ProjectType] = mapped_column(
         SAEnum(ProjectType, name="project_type", create_constraint=True),
         nullable=False,

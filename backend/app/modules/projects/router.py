@@ -28,12 +28,8 @@ async def create_project(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new project.
-
-    TODO: Get organization_id from current_user.
-    """
-    # Placeholder: use current_user.organization_id
-    org_id = current_user.organization_id
+    """Create a new project."""
+    org_id = current_user["org_id"]
 
     return await service.create_project(
         db,
@@ -62,7 +58,7 @@ async def list_projects(
     db: AsyncSession = Depends(get_db),
 ):
     """List all projects for the current organization."""
-    org_id = current_user.organization_id
+    org_id = current_user["org_id"]
 
     request = schemas.ProjectListRequest(
         limit=limit,
@@ -88,11 +84,9 @@ async def get_project(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get project by ID.
-
-    TODO: Add permission check to ensure user belongs to the project's org.
-    """
-    return await service.get_project(db, project_id)
+    """Get project by ID."""
+    project = await service.get_project(db, project_id, current_user["org_id"])
+    return project
 
 
 # ---------------------------------------------------------------------------
@@ -110,13 +104,12 @@ async def update_project(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update project details.
-
-    TODO: Add permission check.
-    """
+    """Update project details."""
     return await service.update_project(
         db,
         project_id=project_id,
+        org_id=current_user["org_id"],
+        user_role=current_user["role"],
         title=body.title,
         description=body.description,
         status=body.status,
@@ -138,10 +131,11 @@ async def delete_project(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a project.
-
-    TODO: Add permission check.
-    TODO: Consider soft delete instead of hard delete.
-    """
-    await service.delete_project(db, project_id)
+    """Soft delete a project."""
+    await service.delete_project(
+        db,
+        project_id=project_id,
+        org_id=current_user["org_id"],
+        user_role=current_user["role"],
+    )
     return MessageResponse(message=f"Project {project_id} deleted successfully")
