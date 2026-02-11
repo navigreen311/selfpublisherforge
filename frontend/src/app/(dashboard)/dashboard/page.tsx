@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import {
   BookOpen,
   DollarSign,
@@ -26,6 +27,12 @@ import Link from "next/link";
 import { useDashboard } from "@/modules/analytics/hooks";
 import type { KPICard as KPICardType, RoyaltyRecord } from "@/modules/analytics/hooks";
 import { type LucideIcon } from "lucide-react";
+import { lazyLoad } from "@/lib/lazy";
+
+// ── Lazy-loaded components ──────────────────────────────────────────────
+// Example: Heavy chart components can be lazy-loaded to improve initial page load
+// const RevenueChart = lazyLoad(() => import("@/components/charts/revenue-chart"));
+// const PerformanceChart = lazyLoad(() => import("@/components/charts/performance-chart"));
 
 // ── Icon mapping for KPI labels ─────────────────────────────────────────
 
@@ -341,19 +348,21 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid — real KPI data from API */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiStats.length > 0 ? (
-          kpiStats.map((stat) => (
-            <StatCard key={stat.label} {...stat} />
-          ))
-        ) : (
-          <Card className="col-span-full">
-            <CardContent className="p-6 text-center text-muted-foreground">
-              No KPI data available yet. Import royalty data to get started.
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <Suspense fallback={<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">{[1, 2, 3, 4].map((i) => <StatCardSkeleton key={i} />)}</div>}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {kpiStats.length > 0 ? (
+            kpiStats.map((stat) => (
+              <StatCard key={stat.label} {...stat} />
+            ))
+          ) : (
+            <Card className="col-span-full">
+              <CardContent className="p-6 text-center text-muted-foreground">
+                No KPI data available yet. Import royalty data to get started.
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity — from recent_royalties */}
