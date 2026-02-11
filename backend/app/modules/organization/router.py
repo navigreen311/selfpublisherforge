@@ -2,13 +2,15 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
+from app.modules.notifications.email import send_transactional_email
 from app.modules.organization import schemas, service
 from app.schemas.common import MessageResponse
+from app.config import get_settings
 
 router = APIRouter()
 
@@ -24,13 +26,20 @@ router = APIRouter()
 )
 async def get_organization(
     org_id: UUID,
-    current_user=Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get organization details.
 
-    TODO: Add permission check to ensure user belongs to this org.
+    Requires user to be a member of the organization.
     """
+    # Check user belongs to org
+    if current_user["org_id"] != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
     return await service.get_organization(db, org_id)
 
 
@@ -46,13 +55,20 @@ async def get_organization(
 async def update_organization(
     org_id: UUID,
     body: schemas.OrganizationUpdateRequest,
-    current_user=Depends(get_current_user),
+    current_user: dict = Depends(require_role("owner", "admin")),
     db: AsyncSession = Depends(get_db),
 ):
     """Update organization details.
 
-    TODO: Add admin-only permission check.
+    Requires owner or admin role.
     """
+    # Check user belongs to org
+    if current_user["org_id"] != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
     return await service.update_organization(
         db,
         org_id=org_id,
@@ -72,13 +88,20 @@ async def update_organization(
 )
 async def list_members(
     org_id: UUID,
-    current_user=Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List all organization members.
 
-    TODO: Add permission check.
+    Requires user to be a member of the organization.
     """
+    # Check user belongs to org
+    if current_user["org_id"] != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
     return await service.list_members(db, org_id)
 
 
@@ -95,20 +118,46 @@ async def list_members(
 async def create_invitation(
     org_id: UUID,
     body: schemas.InvitationCreateRequest,
-    current_user=Depends(get_current_user),
+    current_user: dict = Depends(require_role("owner", "admin")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create an organization invitation.
 
-    TODO: Add admin-only permission check.
-    TODO: Send invitation email.
+    Requires owner or admin role.
+    Sends an invitation email to the invitee.
     """
-    return await service.create_invitation(
+    # Check user belongs to org
+    if current_user["org_id"] != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    # Create invitation
+    invitation = await service.create_invitation(
         db,
         org_id=org_id,
         email=body.email,
         role=body.role,
     )
+
+    # Get organization details for email
+    org = await service.get_organization(db, org_id)
+
+    # Send invitation email
+    settings = get_settings()
+    invite_url = f"{settings.FRONTEND_URL}/invitations/{invitation.id}"
+    send_transactional_email(
+        to_email=body.email,
+        template_name="team_invite",
+        context={
+            "name": body.email.split("@")[0],  # Use email prefix as name placeholder
+            "org_name": org.name,
+            "invite_url": invite_url,
+        },
+    )
+
+    return invitation
 
 
 # ---------------------------------------------------------------------------
@@ -122,13 +171,20 @@ async def create_invitation(
 )
 async def list_invitations(
     org_id: UUID,
-    current_user=Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List all pending invitations.
 
-    TODO: Add permission check.
+    Requires user to be a member of the organization.
     """
+    # Check user belongs to org
+    if current_user["org_id"] != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
     return await service.list_invitations(db, org_id)
 
 
@@ -145,13 +201,40 @@ async def list_invitations(
 async def remove_member(
     org_id: UUID,
     user_id: UUID,
-    current_user=Depends(get_current_user),
+    current_user: dict = Depends(require_role("owner", "admin")),
     db: AsyncSession = Depends(get_db),
 ):
     """Remove a member from the organization.
 
-    TODO: Add admin-only permission check.
-    TODO: Prevent removing the last admin.
+    Requires owner or admin role.
+    Prevents removing yourself or the last admin.
     """
+    # Check user belongs to org
+    if current_user["org_id"] != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    # Prevent removing yourself
+    if current_user["user_id"] == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove yourself from the organization"
+        )
+
+    # Check if removing the last admin/owner
+    members = await service.list_members(db, org_id)
+    admin_count = sum(
+        1 for m in members.members
+        if m.role in ["owner", "admin"] and m.user_id != user_id
+    )
+
+    if admin_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove the last admin from the organization"
+        )
+
     await service.remove_member(db, org_id, user_id)
     return MessageResponse(message=f"Member {user_id} removed successfully")

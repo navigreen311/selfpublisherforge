@@ -121,7 +121,7 @@ async def list_members(db: AsyncSession, org_id: UUID) -> MemberListResponse:
         This is a basic implementation. A full implementation would include
         a separate OrganizationMember table to track roles and permissions.
     """
-    query = select(User).where(User.organization_id == org_id).order_by(User.created_at)
+    query = select(User).where(User.org_id == org_id).order_by(User.created_at)
     result = await db.execute(query)
     users = result.scalars().all()
 
@@ -131,10 +131,10 @@ async def list_members(db: AsyncSession, org_id: UUID) -> MemberListResponse:
             user_id=user.id,
             email=user.email,
             name=user.name,
-            role="owner" if idx == 0 else "member",  # Placeholder role assignment
+            role=user.role.value,  # Use actual role from User model
             joined_at=user.created_at,
         )
-        for idx, user in enumerate(users)
+        for user in users
     ]
 
     return MemberListResponse(members=members, total=len(members))
@@ -213,7 +213,7 @@ async def remove_member(db: AsyncSession, org_id: UUID, user_id: UUID) -> None:
         This is a stub implementation. A full implementation would handle
         member removal properly, including permission checks.
     """
-    query = select(User).where(User.id == user_id, User.organization_id == org_id)
+    query = select(User).where(User.id == user_id, User.org_id == org_id)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
 
