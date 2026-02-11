@@ -291,6 +291,7 @@ HANDLED_EVENTS = {
     "customer.subscription.created",
     "customer.subscription.updated",
     "customer.subscription.deleted",
+    "customer.subscription.trial_will_end",
     "invoice.paid",
     "invoice.payment_failed",
 }
@@ -301,10 +302,17 @@ async def handle_webhook_event(
     payload: bytes,
     sig_header: str,
 ) -> dict[str, str]:
-    """Verify and process a Stripe webhook event.
+    """Verify and process a Stripe webhook event with idempotency.
 
     Returns a dict with at minimum ``{"status": "..."}`` indicating
     the processing result.
+
+    Features:
+    - Signature verification
+    - Idempotency via event ID tracking
+    - Upgrade/downgrade detection
+    - Payment failure retry tracking
+    - Trial ending notifications
     """
     _ensure_stripe_configured()
     try:
@@ -318,22 +326,35 @@ async def handle_webhook_event(
             message="Invalid Stripe webhook signature.",
         )
 
+    event_id: str = event["id"]
     event_type: str = event["type"]
-    logger.info("Received Stripe webhook event: %s", event_type)
+    logger.info("Received Stripe webhook event: %s (id: %s)", event_type, event_id)
+
+    # Check idempotency - has this event already been processed?
+    from app.modules.billing.webhook_handlers import is_event_processed, mark_event_processed
+
+    if await is_event_processed(db, event_id):
+        logger.info("Event %s already processed, skipping", event_id)
+        return {"status": "duplicate", "event_type": event_type, "event_id": event_id}
 
     if event_type not in HANDLED_EVENTS:
         return {"status": "ignored", "event_type": event_type}
 
     data_object: dict[str, Any] = event["data"]["object"]
 
+    # Process the event
     if event_type.startswith("customer.subscription."):
-        await _handle_subscription_event(db, event_type, data_object)
+        await _handle_subscription_event(db, event_type, data_object, event_id)
     elif event_type == "invoice.paid":
-        await _handle_invoice_paid(db, data_object)
+        await _handle_invoice_paid(db, data_object, event_id)
     elif event_type == "invoice.payment_failed":
-        await _handle_invoice_payment_failed(db, data_object)
+        await _handle_invoice_payment_failed(db, data_object, event_id)
 
-    return {"status": "processed", "event_type": event_type}
+    # Mark event as processed for idempotency
+    await mark_event_processed(db, event_id, event_type)
+    await db.commit()
+
+    return {"status": "processed", "event_type": event_type, "event_id": event_id}
 
 
 # ---------------------------------------------------------------------------
@@ -345,8 +366,18 @@ async def _handle_subscription_event(
     db: AsyncSession,
     event_type: str,
     subscription: dict[str, Any],
+    event_id: str,
 ) -> None:
-    """Process subscription created / updated / deleted events."""
+    """Process subscription created / updated / deleted events with upgrade/downgrade detection."""
+    from app.modules.billing.webhook_handlers import (
+        handle_subscription_upgrade,
+        handle_subscription_downgrade,
+        handle_subscription_canceled,
+        handle_trial_will_end,
+    )
+    from app.modules.billing.plans import is_upgrade
+
+    # Resolve org_id
     org_id_str = subscription.get("metadata", {}).get("org_id")
     if not org_id_str:
         # Try to resolve from customer
@@ -359,72 +390,136 @@ async def _handle_subscription_event(
 
     org_id = UUID(org_id_str) if isinstance(org_id_str, str) else org_id_str
 
-    status = subscription.get("status", "active")
-    plan_tier_value = subscription.get("metadata", {}).get("plan_tier")
-    cancel_at_period_end = subscription.get("cancel_at_period_end", False)
-
-    # Derive period timestamps
-    current_period_start = None
-    current_period_end = None
-    if subscription.get("current_period_start"):
-        current_period_start = datetime.fromtimestamp(
-            subscription["current_period_start"], tz=timezone.utc
-        )
-    if subscription.get("current_period_end"):
-        current_period_end = datetime.fromtimestamp(
-            subscription["current_period_end"], tz=timezone.utc
-        )
-
-    update_data: dict[str, Any] = {
-        "subscription_status": status,
-        "stripe_subscription_id": subscription.get("id"),
-        "cancel_at_period_end": cancel_at_period_end,
-        "current_period_start": current_period_start,
-        "current_period_end": current_period_end,
-    }
-    if plan_tier_value:
-        update_data["plan_tier"] = plan_tier_value
-
+    # Special handling for specific events
     if event_type == "customer.subscription.deleted":
-        update_data["subscription_status"] = "canceled"
-        update_data["plan_tier"] = PlanTier.FREE.value
+        await handle_subscription_canceled(db, org_id, subscription)
+        return
 
-    await _update_org(db, org_id, update_data)
+    if event_type == "customer.subscription.trial_will_end":
+        # Calculate days remaining
+        trial_end = subscription.get("trial_end")
+        if trial_end:
+            days_remaining = max(0, int((trial_end - datetime.now(timezone.utc).timestamp()) / 86400))
+            await handle_trial_will_end(db, org_id, subscription, days_remaining)
+        return
+
+    # For created/updated events, detect upgrade/downgrade
+    plan_tier_value = subscription.get("metadata", {}).get("plan_tier")
+    if not plan_tier_value:
+        # If no plan tier in metadata, fall back to basic update
+        logger.warning("No plan_tier in subscription metadata for event %s", event_type)
+        status = subscription.get("status", "active")
+        cancel_at_period_end = subscription.get("cancel_at_period_end", False)
+
+        current_period_start = None
+        current_period_end = None
+        if subscription.get("current_period_start"):
+            current_period_start = datetime.fromtimestamp(
+                subscription["current_period_start"], tz=timezone.utc
+            )
+        if subscription.get("current_period_end"):
+            current_period_end = datetime.fromtimestamp(
+                subscription["current_period_end"], tz=timezone.utc
+            )
+
+        await _update_org(
+            db,
+            org_id,
+            {
+                "subscription_status": status,
+                "stripe_subscription_id": subscription.get("id"),
+                "cancel_at_period_end": cancel_at_period_end,
+                "current_period_start": current_period_start,
+                "current_period_end": current_period_end,
+            },
+        )
+        return
+
+    new_tier = PlanTier(plan_tier_value)
+
+    # Get current tier
+    org_row = await _get_org_row(db, org_id)
+    old_tier = PlanTier(org_row.get("plan_tier", "free"))
+
+    # Detect upgrade vs downgrade
+    if old_tier != new_tier:
+        if is_upgrade(old_tier, new_tier):
+            await handle_subscription_upgrade(db, org_id, subscription, old_tier, new_tier)
+        else:
+            await handle_subscription_downgrade(db, org_id, subscription, old_tier, new_tier)
+    else:
+        # Same tier, just update subscription data
+        status = subscription.get("status", "active")
+        cancel_at_period_end = subscription.get("cancel_at_period_end", False)
+
+        current_period_start = None
+        current_period_end = None
+        if subscription.get("current_period_start"):
+            current_period_start = datetime.fromtimestamp(
+                subscription["current_period_start"], tz=timezone.utc
+            )
+        if subscription.get("current_period_end"):
+            current_period_end = datetime.fromtimestamp(
+                subscription["current_period_end"], tz=timezone.utc
+            )
+
+        await _update_org(
+            db,
+            org_id,
+            {
+                "subscription_status": status,
+                "stripe_subscription_id": subscription.get("id"),
+                "cancel_at_period_end": cancel_at_period_end,
+                "current_period_start": current_period_start,
+                "current_period_end": current_period_end,
+            },
+        )
+
     logger.info(
-        "Processed %s for org %s -> status=%s",
+        "Processed %s for org %s: %s -> %s",
         event_type,
         org_id,
-        update_data["subscription_status"],
+        old_tier.value,
+        new_tier.value,
     )
 
 
 async def _handle_invoice_paid(
     db: AsyncSession,
     invoice: dict[str, Any],
+    event_id: str,
 ) -> None:
     """Handle a successful invoice payment."""
+    from app.modules.billing.webhook_handlers import handle_invoice_paid
+
     customer_id = invoice.get("customer")
     org_id_str = await _org_id_from_customer(db, customer_id)
     if org_id_str:
-        logger.info("Invoice paid for org %s: %s", org_id_str, invoice.get("id"))
-        # Ensure subscription is active
-        await _update_org(db, UUID(org_id_str), {"subscription_status": "active"})
+        org_id = UUID(org_id_str)
+        await handle_invoice_paid(db, org_id, invoice)
 
 
 async def _handle_invoice_payment_failed(
     db: AsyncSession,
     invoice: dict[str, Any],
+    event_id: str,
 ) -> None:
-    """Handle a failed invoice payment."""
+    """Handle a failed invoice payment with retry tracking."""
+    from app.modules.billing.webhook_handlers import (
+        handle_payment_failure,
+        get_payment_attempt_count,
+    )
+
     customer_id = invoice.get("customer")
     org_id_str = await _org_id_from_customer(db, customer_id)
     if org_id_str:
-        logger.warning(
-            "Invoice payment failed for org %s: %s",
-            org_id_str,
-            invoice.get("id"),
-        )
-        await _update_org(db, UUID(org_id_str), {"subscription_status": "past_due"})
+        org_id = UUID(org_id_str)
+        invoice_id = invoice.get("id")
+
+        # Get attempt count for this invoice
+        attempt_count = await get_payment_attempt_count(db, org_id, invoice_id)
+
+        await handle_payment_failure(db, org_id, invoice, attempt_count)
 
 
 # ---------------------------------------------------------------------------
