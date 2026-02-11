@@ -78,11 +78,13 @@ Modules are gated by subscription tier. Higher tiers include all lower-tier modu
 |                           PRO                                 |
 |   ai-writing, ai-editing, ai-cover, publishing-distribution, |
 |   email-marketing, social-marketing, agent-framework,         |
-|   agent-marketplace, marketing-analytics, reports             |
+|   agent-marketplace, marketing-analytics, reports,            |
+|   portfolio-economics                                         |
 +---------------------------------------------------------------+
 |                         STARTER                               |
 |   market-research, keyword-research, brand-kits, ai-outline, |
-|   formatting, publishing-validation, sales-analytics          |
+|   formatting, publishing-validation, sales-analytics,         |
+|   review-intelligence, competitor-finder, pricing-automation  |
 +---------------------------------------------------------------+
 |                           FREE                                |
 |   auth, org, projects, books, style-profiles, notifications,  |
