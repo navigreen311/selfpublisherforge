@@ -188,8 +188,7 @@ class TestCrossOrganizationAccess:
         token = _make_token(user)
         resp = await client.get(f"{PREFIX}/{project.id}", headers=_auth_headers(token))
 
-        # TODO: Should be 403 when permission checks are implemented
-        assert resp.status_code in (200, 403, 404)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_cannot_update_other_org_project(self, client: AsyncClient, db: AsyncSession):
@@ -206,8 +205,7 @@ class TestCrossOrganizationAccess:
             headers=_auth_headers(token),
         )
 
-        # TODO: Should be 403 when permission checks are implemented
-        assert resp.status_code in (200, 403, 404)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_cannot_delete_other_org_project(self, client: AsyncClient, db: AsyncSession):
@@ -223,8 +221,7 @@ class TestCrossOrganizationAccess:
             headers=_auth_headers(token),
         )
 
-        # TODO: Should be 403 when permission checks are implemented
-        assert resp.status_code in (200, 403, 404)
+        assert resp.status_code == 403
 
 
 # ---------------------------------------------------------------------------
@@ -270,8 +267,7 @@ class TestRoleBasedAccess:
             headers=_auth_headers(token),
         )
 
-        # TODO: Should be 403 when role checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_viewer_cannot_delete_project(self, client: AsyncClient, db: AsyncSession):
@@ -286,8 +282,7 @@ class TestRoleBasedAccess:
             headers=_auth_headers(token),
         )
 
-        # TODO: Should be 403 when role checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_editor_can_create_project(self, client: AsyncClient, db: AsyncSession):
@@ -398,9 +393,7 @@ class TestSoftDeletedProjects:
             headers=_auth_headers(token),
         )
 
-        # Should return 404 when soft-delete filtering is implemented
-        # TODO: Verify this returns 404 after soft-delete filtering is added
-        assert resp.status_code in (200, 404)
+        assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------

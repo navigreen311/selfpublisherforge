@@ -146,9 +146,7 @@ class TestCrossOrganizationAccess:
         token = _make_token(user)
 
         resp = await client.get(f"{PREFIX}/{org2.id}", headers=_auth_headers(token))
-        # TODO: Should be 403 when permission checks are implemented
-        # For now, the router doesn't enforce org scoping
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_cannot_update_other_org(self, client: AsyncClient, db: AsyncSession):
@@ -163,8 +161,7 @@ class TestCrossOrganizationAccess:
             json={"name": "Hacked Name", "description": "Unauthorized"},
             headers=_auth_headers(token),
         )
-        # TODO: Should be 403 when permission checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_cannot_list_other_org_members(self, client: AsyncClient, db: AsyncSession):
@@ -178,8 +175,7 @@ class TestCrossOrganizationAccess:
             f"{PREFIX}/{org2.id}/members",
             headers=_auth_headers(token),
         )
-        # TODO: Should be 403 when permission checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
 
 # ---------------------------------------------------------------------------
@@ -201,8 +197,7 @@ class TestRoleBasedAccess:
             json={"name": "New Name", "description": "Test"},
             headers=_auth_headers(token),
         )
-        # TODO: Should be 403 when role checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_viewer_cannot_create_invitation(self, client: AsyncClient, db: AsyncSession):
@@ -216,8 +211,7 @@ class TestRoleBasedAccess:
             json={"email": "newuser@test.com", "role": "viewer"},
             headers=_auth_headers(token),
         )
-        # TODO: Should be 403 when role checks are implemented
-        assert resp.status_code in (201, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_viewer_cannot_remove_member(self, client: AsyncClient, db: AsyncSession):
@@ -231,8 +225,7 @@ class TestRoleBasedAccess:
             f"{PREFIX}/{org.id}/members/{member.id}",
             headers=_auth_headers(token),
         )
-        # TODO: Should be 403 when role checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_admin_can_update_org(self, client: AsyncClient, db: AsyncSession):

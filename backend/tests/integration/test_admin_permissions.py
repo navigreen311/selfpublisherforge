@@ -132,8 +132,7 @@ class TestNonAdminAccess:
 
         resp = await client.get(f"{PREFIX}/users", headers=_auth_headers(token))
 
-        # TODO: Should be 403 when admin checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_editor_cannot_get_feature_flags(self, client: AsyncClient, db: AsyncSession):
@@ -144,8 +143,7 @@ class TestNonAdminAccess:
 
         resp = await client.get(f"{PREFIX}/feature-flags", headers=_auth_headers(token))
 
-        # TODO: Should be 403 when admin checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_owner_cannot_update_feature_flags(self, client: AsyncClient, db: AsyncSession):
@@ -160,8 +158,7 @@ class TestNonAdminAccess:
             headers=_auth_headers(token),
         )
 
-        # TODO: Should be 403 when admin checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_admin_cannot_deactivate_users(self, client: AsyncClient, db: AsyncSession):
@@ -176,8 +173,7 @@ class TestNonAdminAccess:
             headers=_auth_headers(token),
         )
 
-        # TODO: Should be 403 when admin checks are implemented
-        assert resp.status_code in (200, 403)
+        assert resp.status_code == 403
 
 
 # ---------------------------------------------------------------------------
