@@ -21,7 +21,7 @@ SelfPublisherForge is a modular, AI-powered self-publishing platform built with:
 
 ## Module Dependency Map
 
-The platform is composed of **29 modules**, each with clear ownership, a dedicated API prefix, and explicit dependencies.
+The platform is composed of **33 modules**, each with clear ownership, a dedicated API prefix, and explicit dependencies.
 
 ```
 Module #   Slug                      Tier         API Prefix
@@ -55,6 +55,10 @@ Module #   Slug                      Tier         API Prefix
 27         admin                     enterprise   /admin
 28         billing                   free         /billing
 29         usage-tracking            free         /usage
+30         review-intelligence       starter      /review-intelligence
+31         competitor-finder         starter      /competitors
+32         pricing-automation        starter      /pricing
+33         portfolio-economics       pro          /portfolio
 ```
 
 ---
@@ -74,11 +78,13 @@ Modules are gated by subscription tier. Higher tiers include all lower-tier modu
 |                           PRO                                 |
 |   ai-writing, ai-editing, ai-cover, publishing-distribution, |
 |   email-marketing, social-marketing, agent-framework,         |
-|   agent-marketplace, marketing-analytics, reports             |
+|   agent-marketplace, marketing-analytics, reports,            |
+|   portfolio-economics                                         |
 +---------------------------------------------------------------+
 |                         STARTER                               |
 |   market-research, keyword-research, brand-kits, ai-outline, |
-|   formatting, publishing-validation, sales-analytics          |
+|   formatting, publishing-validation, sales-analytics,         |
+|   review-intelligence, competitor-finder, pricing-automation  |
 +---------------------------------------------------------------+
 |                           FREE                                |
 |   auth, org, projects, books, style-profiles, notifications,  |
@@ -121,6 +127,10 @@ graph TD
     ADMIN[admin] --> AUTH & ORG
     BILL[billing] --> AUTH & ORG
     USAGE[usage-tracking] --> AUTH & ORG & BILL
+    REVI[review-intelligence] --> AUTH & ORG & BOOKS
+    COMP[competitor-finder] --> AUTH & ORG & MR
+    PRICE[pricing-automation] --> AUTH & ORG & BOOKS & MR
+    PORT[portfolio-economics] --> AUTH & ORG & BOOKS & SA
 ```
 
 ---
