@@ -2,83 +2,74 @@
 Redis-based rate limiter with sliding window algorithm.
 
 Supports tier-based limits and endpoint-specific overrides.
+Re-exports the new rate limiter implementation for backward compatibility.
 """
 
 from __future__ import annotations
 
-import time
-from enum import Enum
+import logging
 from typing import Any
 
-import logging
-
-import redis.asyncio as redis
 from fastapi import Request, Response
 from redis.exceptions import ConnectionError as RedisConnectionError, RedisError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse
 
-from app.config import get_settings
+from app.core.rate_limiter import (
+    SlidingWindowRateLimiter as _NewSlidingWindowRateLimiter,
+    get_rate_limiter as _get_new_limiter,
+)
+from app.schemas.common import PlanTier
 
 logger = logging.getLogger(__name__)
 
+# Re-export for backward compatibility
+RateLimitTier = PlanTier
 
-class RateLimitTier(str, Enum):
-    """Rate limit tiers mapped to subscription plans."""
-
-    FREE = "free"
-    PRO = "pro"
-    ENTERPRISE = "enterprise"
-
-
-# Default requests-per-minute by tier
-DEFAULT_TIER_LIMITS: dict[RateLimitTier, int] = {
-    RateLimitTier.FREE: 60,
-    RateLimitTier.PRO: 300,
-    RateLimitTier.ENTERPRISE: 1000,
+# Legacy constants for backward compatibility
+DEFAULT_TIER_LIMITS: dict[PlanTier, int] = {
+    PlanTier.FREE: 60,
+    PlanTier.PRO: 300,
+    PlanTier.ENTERPRISE: 1000,
 }
 
-# Endpoint-specific overrides (path prefix -> requests per minute).
-# AI generation endpoints get lower limits.
-ENDPOINT_OVERRIDES: dict[str, dict[RateLimitTier, int]] = {
+ENDPOINT_OVERRIDES: dict[str, dict[PlanTier, int]] = {
     "/api/v1/ai/": {
-        RateLimitTier.FREE: 10,
-        RateLimitTier.PRO: 60,
-        RateLimitTier.ENTERPRISE: 200,
+        PlanTier.FREE: 10,
+        PlanTier.PRO: 60,
+        PlanTier.ENTERPRISE: 200,
     },
     "/api/v1/generation/": {
-        RateLimitTier.FREE: 10,
-        RateLimitTier.PRO: 60,
-        RateLimitTier.ENTERPRISE: 200,
+        PlanTier.FREE: 10,
+        PlanTier.PRO: 60,
+        PlanTier.ENTERPRISE: 200,
     },
 }
 
 WINDOW_SIZE = 60  # seconds (1 minute)
 
 
+# ---------------------------------------------------------------------------
+# Backward Compatibility Wrapper
+# ---------------------------------------------------------------------------
+
+
 class SlidingWindowRateLimiter:
     """
-    Sliding window rate limiter backed by Redis sorted sets.
+    Backward-compatible wrapper around the new rate limiter.
 
-    Each request is recorded as a member in a sorted set keyed by the
-    client identifier. The score is the request timestamp. On each
-    check we remove entries outside the window and count remaining
-    members.
+    This maintains the old API: check(identifier, tier, path) -> (bool, dict)
+    while using the new implementation under the hood.
     """
 
-    def __init__(self, redis_client: redis.Redis | None = None) -> None:
-        self._redis: redis.Redis | None = redis_client
+    def __init__(self, redis_client: Any | None = None) -> None:
+        self._limiter = _NewSlidingWindowRateLimiter(redis_client=redis_client)
 
-    async def _get_redis(self) -> redis.Redis:
-        if self._redis is None:
-            settings = get_settings()
-            self._redis = redis.from_url(
-                settings.REDIS_URL,
-                decode_responses=True,
-            )
-        return self._redis
+    async def _get_redis(self) -> Any:
+        """Get the Redis client (for test compatibility)."""
+        return await self._limiter._get_redis()
 
-    def _resolve_limit(self, tier: RateLimitTier, path: str) -> int:
+    def _resolve_limit(self, tier: PlanTier, path: str) -> int:
         """Return the applicable rate limit for a tier + path combination."""
         for prefix, overrides in ENDPOINT_OVERRIDES.items():
             if path.startswith(prefix):
@@ -88,56 +79,37 @@ class SlidingWindowRateLimiter:
     async def check(
         self,
         identifier: str,
-        tier: RateLimitTier = RateLimitTier.FREE,
+        tier: PlanTier = PlanTier.FREE,
         path: str = "/",
     ) -> tuple[bool, dict[str, str]]:
         """
-        Check whether the request is allowed.
+        Check whether the request is allowed (legacy API).
 
         Returns:
             (allowed, headers) where *headers* is a dict of
             X-RateLimit-* response headers.
         """
         limit = self._resolve_limit(tier, path)
-        now = time.time()
-        window_start = now - WINDOW_SIZE
+        key = identifier
 
-        r = await self._get_redis()
-        key = f"rl:{identifier}"
-
-        pipe = r.pipeline()
-        # Remove expired entries
-        pipe.zremrangebyscore(key, "-inf", window_start)
-        # Add current request
-        pipe.zadd(key, {f"{now}": now})
-        # Count entries in window
-        pipe.zcard(key)
-        # Set expiry so keys don't linger
-        pipe.expire(key, WINDOW_SIZE + 1)
-        results = await pipe.execute()
-
-        current_count: int = results[2]
-        allowed = current_count <= limit
-        remaining = max(0, limit - current_count)
-        reset_at = int(now) + WINDOW_SIZE
+        result = await self._limiter.check(key, limit, WINDOW_SIZE)
 
         headers = {
-            "X-RateLimit-Limit": str(limit),
-            "X-RateLimit-Remaining": str(remaining),
-            "X-RateLimit-Reset": str(reset_at),
+            "X-RateLimit-Limit": str(result.limit),
+            "X-RateLimit-Remaining": str(result.remaining),
+            "X-RateLimit-Reset": str(result.reset_at),
         }
 
-        if not allowed:
-            # Remove the request we just added since it's denied
-            await r.zrem(key, f"{now}")
-
-        return allowed, headers
+        return result.allowed, headers
 
     async def close(self) -> None:
         """Close the underlying Redis connection."""
-        if self._redis is not None:
-            await self._redis.close()
-            self._redis = None
+        await self._limiter.close()
+
+    @property
+    def _redis(self) -> Any:
+        """Access to internal Redis client (for test compatibility)."""
+        return self._limiter._redis
 
 
 # Module-level singleton -------------------------------------------------
@@ -152,7 +124,7 @@ def get_rate_limiter() -> SlidingWindowRateLimiter:
     return _limiter
 
 
-def _extract_tier(request: Request) -> RateLimitTier:
+def _extract_tier(request: Request) -> PlanTier:
     """
     Determine the caller's tier from the request state.
 
@@ -161,10 +133,10 @@ def _extract_tier(request: Request) -> RateLimitTier:
     user: dict[str, Any] | None = getattr(request.state, "user", None)
     if user and "tier" in user:
         try:
-            return RateLimitTier(user["tier"])
+            return PlanTier(user["tier"])
         except ValueError:
             pass
-    return RateLimitTier.FREE
+    return PlanTier.FREE
 
 
 def _extract_identifier(request: Request) -> str:
@@ -186,11 +158,28 @@ def _extract_identifier(request: Request) -> str:
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     FastAPI middleware that enforces per-request rate limiting.
+
+    Uses the new rate limiter with per-endpoint configuration and tier-based multipliers.
     """
 
     def __init__(self, app: Any, limiter: SlidingWindowRateLimiter | None = None) -> None:
         super().__init__(app)
-        self.limiter = limiter or get_rate_limiter()
+        # Use the wrapped legacy limiter if provided, or create a new one
+        if limiter is None:
+            self.limiter = _get_new_limiter()
+            self._legacy_limiter = None
+        elif hasattr(limiter, 'check_request'):
+            # Already a new limiter instance (has check_request method)
+            self.limiter = limiter
+            self._legacy_limiter = None
+        elif isinstance(limiter, SlidingWindowRateLimiter):
+            # Legacy wrapper - use its internal new limiter
+            self.limiter = limiter._limiter
+            self._legacy_limiter = None
+        else:
+            # Mock or other object - wrap it to use legacy API
+            self._legacy_limiter = limiter
+            self.limiter = None
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
@@ -201,13 +190,34 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         identifier = _extract_identifier(request)
         tier = _extract_tier(request)
+        method = request.method
+        path = request.url.path
 
         try:
-            allowed, headers = await self.limiter.check(
-                identifier=identifier,
-                tier=tier,
-                path=request.url.path,
-            )
+            # Use the new limiter if available, otherwise use legacy API
+            if self.limiter is not None:
+                # New rate limiter with check_request method
+                result = await self.limiter.check_request(
+                    identifier=identifier,
+                    method=method,
+                    path=path,
+                    tier=tier,
+                )
+                headers = {
+                    "X-RateLimit-Limit": str(result.limit),
+                    "X-RateLimit-Remaining": str(result.remaining),
+                    "X-RateLimit-Reset": str(result.reset_at),
+                }
+                allowed = result.allowed
+                if not allowed and result.retry_after is not None:
+                    headers["Retry-After"] = str(result.retry_after)
+            else:
+                # Legacy limiter with check method
+                allowed, headers = await self._legacy_limiter.check(
+                    identifier=identifier,
+                    tier=tier,
+                    path=path,
+                )
         except (RedisConnectionError, RedisError, ConnectionError, TimeoutError, OSError) as exc:
             # If Redis is unavailable, allow the request through
             logger.warning("Rate limiter unavailable, allowing request through", exc_info=True)
@@ -225,6 +235,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 headers=headers,
             )
 
+        # Request allowed, proceed and add rate limit headers
         response = await call_next(request)
         for name, value in headers.items():
             response.headers[name] = value

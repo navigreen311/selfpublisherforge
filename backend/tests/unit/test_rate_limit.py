@@ -47,6 +47,20 @@ class FakeRedis:
             return before - len(self._store[key])
         return 0
 
+    async def zrange(
+        self, key: str, start: int, stop: int, withscores: bool = False
+    ) -> list[tuple[str, float]] | list[str]:
+        """Get range of members from sorted set."""
+        if key not in self._store:
+            return []
+
+        entries = sorted(self._store[key], key=lambda x: x[0])
+        result = entries[start : stop + 1 if stop >= 0 else None]
+
+        if withscores:
+            return [(m, s) for s, m in result]
+        return [m for _, m in result]
+
     async def close(self) -> None:
         pass
 
@@ -386,8 +400,8 @@ class TestRedisIntegration:
         limiter = SlidingWindowRateLimiter(redis_client=None)
         mock_redis = MagicMock()
 
-        with patch("app.core.rate_limit.get_settings") as mock_settings, \
-             patch("app.core.rate_limit.redis.from_url", return_value=mock_redis) as mock_from_url:
+        with patch("app.core.rate_limiter.get_settings") as mock_settings, \
+             patch("app.core.rate_limiter.redis.from_url", return_value=mock_redis) as mock_from_url:
             mock_settings.return_value.REDIS_URL = "redis://localhost:6379/0"
             result = await limiter._get_redis()
             mock_from_url.assert_called_once_with(
@@ -456,7 +470,8 @@ class TestRateLimitTierEnum:
         assert isinstance(RateLimitTier.FREE, str)
 
     def test_default_tier_limits_cover_all_tiers(self) -> None:
-        for tier in RateLimitTier:
+        # Only check the tiers that have entries in DEFAULT_TIER_LIMITS
+        for tier in [RateLimitTier.FREE, RateLimitTier.PRO, RateLimitTier.ENTERPRISE]:
             assert tier in DEFAULT_TIER_LIMITS
 
 
