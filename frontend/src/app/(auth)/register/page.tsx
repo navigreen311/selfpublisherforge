@@ -62,8 +62,7 @@ const plans = [
 ];
 
 export default function RegisterPage() {
-  const t = useTranslations("auth");
-  const tCommon = useTranslations("common");
+  const t = useTranslations("auth.register");
   const { register, loginWithGoogle, loginWithGitHub, isLoading } = useAuth();
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -135,8 +134,8 @@ export default function RegisterPage() {
   return (
     <Card className="w-full max-w-lg mx-auto px-4 sm:px-6">
       <CardHeader className="text-center px-4 sm:px-6">
-        <CardTitle className="text-xl sm:text-2xl">{t("createAccountTitle")}</CardTitle>
-        <CardDescription className="text-sm sm:text-base">{t("createAccountSubtitle")}</CardDescription>
+        <CardTitle className="text-xl sm:text-2xl">{t("title")}</CardTitle>
+        <CardDescription className="text-sm sm:text-base">{t("description")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit} noValidate>
         <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
@@ -147,7 +146,7 @@ export default function RegisterPage() {
           )}
 
           <Input
-            label={t("fullNameLabel")}
+            label={t("fullName")}
             placeholder={t("fullNamePlaceholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -158,7 +157,7 @@ export default function RegisterPage() {
           />
 
           <Input
-            label={t("emailLabel")}
+            label={t("email")}
             type="email"
             placeholder={t("emailPlaceholder")}
             value={email}
@@ -171,13 +170,13 @@ export default function RegisterPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="register-password" className="text-sm font-medium">
-              {t("passwordLabel")}
+              {t("password")}
             </label>
             <div className="relative">
               <input
                 id="register-password"
                 type={showPassword ? "text" : "password"}
-                placeholder={t("createPasswordPlaceholder")}
+                placeholder={t("passwordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onBlur={() => handleBlur("password")}
@@ -198,7 +197,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? tCommon("hidePassword") : tCommon("showPassword")}
+                aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 {showPassword ? (
@@ -240,9 +239,9 @@ export default function RegisterPage() {
           </div>
 
           <Input
-            label={t("confirmPasswordLabel")}
+            label={t("confirmPassword")}
             type="password"
-            placeholder={t("reenterPasswordPlaceholder")}
+            placeholder={t("confirmPasswordPlaceholder")}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             onBlur={() => handleBlur("confirmPassword")}
@@ -252,7 +251,7 @@ export default function RegisterPage() {
           />
 
           <Input
-            label={t("orgNameLabel")}
+            label={t("orgName")}
             placeholder={t("orgNamePlaceholder")}
             value={orgName}
             onChange={(e) => setOrgName(e.target.value)}
@@ -269,9 +268,9 @@ export default function RegisterPage() {
                 {plans.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     <span className="flex items-center gap-2">
-                      <span className="font-medium">{p.name}</span>
+                      <span className="font-medium">{t(`plans.${p.id}`)}</span>
                       <span className="text-muted-foreground">
-                        - {p.price}
+                        - {t(`plans.${p.id}Price`)}
                       </span>
                     </span>
                   </SelectItem>
@@ -286,7 +285,7 @@ export default function RegisterPage() {
             className="w-full min-h-[44px]"
             disabled={isLoading}
           >
-            {isLoading ? t("creatingAccount") : t("register")}
+            {isLoading ? t("submitting") : t("submit")}
           </Button>
 
           <div className="relative w-full">
@@ -295,7 +294,7 @@ export default function RegisterPage() {
             </div>
             <div className="relative flex justify-center text-xs sm:text-sm uppercase">
               <span className="bg-card px-2 text-muted-foreground">
-                {t("continueWith")}
+                {t("orContinueWith")}
               </span>
             </div>
           </div>
@@ -343,9 +342,9 @@ export default function RegisterPage() {
           </div>
 
           <p className="text-sm sm:text-base text-muted-foreground text-center">
-            {t("alreadyHaveAccount")}{" "}
+            {t("haveAccount")}{" "}
             <Link href="/login" className="text-primary hover:underline min-h-[44px] inline-flex items-center">
-              {t("login")}
+              {t("signIn")}
             </Link>
           </p>
         </CardFooter>

@@ -18,7 +18,7 @@ import { api } from "@/lib/api";
 import { useTranslations } from "@/hooks/use-translations";
 
 export default function ForgotPasswordPage() {
-  const t = useTranslations("auth");
+  const t = useTranslations("auth.forgotPassword");
   const [email, setEmail] = React.useState("");
   const [submitted, setSubmitted] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -44,9 +44,9 @@ export default function ForgotPasswordPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-primary/10">
             <Mail className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
           </div>
-          <CardTitle className="text-xl sm:text-2xl">{t("checkYourEmail")}</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl">{t("checkEmailTitle")}</CardTitle>
           <CardDescription className="text-sm sm:text-base">
-            {t("resetEmailSent", { email })}
+            {t("checkEmailDescription", { email })}
           </CardDescription>
         </CardHeader>
         <CardFooter className="flex flex-col gap-3 sm:gap-4 px-4 sm:px-6">
@@ -71,15 +71,15 @@ export default function ForgotPasswordPage() {
   return (
     <Card className="w-full max-w-md mx-auto px-4 sm:px-6">
       <CardHeader className="text-center px-4 sm:px-6">
-        <CardTitle className="text-xl sm:text-2xl">{t("forgotPasswordTitle")}</CardTitle>
+        <CardTitle className="text-xl sm:text-2xl">{t("title")}</CardTitle>
         <CardDescription className="text-sm sm:text-base">
-          {t("forgotPasswordDescription")}
+          {t("description")}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
           <Input
-            label={t("emailLabel")}
+            label={t("email")}
             type="email"
             placeholder={t("emailPlaceholder")}
             value={email}
@@ -90,12 +90,12 @@ export default function ForgotPasswordPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3 sm:gap-4 px-4 sm:px-6">
           <Button type="submit" className="w-full min-h-[44px]" disabled={loading}>
-            {loading ? t("sendingResetLink") : t("sendResetLink")}
+            {loading ? t("submitting") : t("submit")}
           </Button>
           <p className="text-sm sm:text-base text-muted-foreground text-center">
-            {t("rememberYourPassword")}{" "}
+            {t("rememberPassword")}{" "}
             <Link href="/login" className="text-primary hover:underline min-h-[44px] inline-flex items-center">
-              {t("login")}
+              {t("signIn")}
             </Link>
           </p>
         </CardFooter>
