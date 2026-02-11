@@ -167,10 +167,11 @@ class ToneAnalyzer:
         negative_count = sum(1 for w in words_lower if w in _NEGATIVE_WORDS)
 
         emotional_count = positive_count + negative_count
-        if emotional_count > 0:
-            emotional_valence = (positive_count - negative_count) / emotional_count
-        else:
-            emotional_valence = 0.0
+        emotional_valence = (
+            (positive_count - negative_count) / emotional_count
+            if emotional_count > 0
+            else 0.0
+        )
 
         return ToneMetrics(
             formality_score=formality_score,

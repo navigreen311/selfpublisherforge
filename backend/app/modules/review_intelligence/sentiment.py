@@ -227,7 +227,8 @@ Return ONLY valid JSON, no other text."""
             messages=[{"role": "user", "content": prompt}],
         )
 
-        response_text = message.content[0].text.strip()
+        content_block = message.content[0]
+        response_text = content_block.text.strip() if hasattr(content_block, 'text') else str(content_block)
         # Parse JSON from LLM response
         result_data = json.loads(response_text)
 

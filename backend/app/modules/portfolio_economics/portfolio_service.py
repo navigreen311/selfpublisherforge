@@ -348,7 +348,7 @@ def generate_portfolio_recommendations(
         if concentration > 0.7:
             dominant_genre = max(
                 overview.genre_distribution,
-                key=lambda k: overview.genre_distribution.get(k, 0)
+                key=lambda k: overview.genre_distribution.get(k, 0)  # type: ignore[arg-type]
             )
             recommendations.append(PortfolioRecommendation(
                 category="diversification",
