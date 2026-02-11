@@ -4,10 +4,15 @@ import { useDashboard } from "@/modules/analytics/hooks";
 import { KPICard } from "@/modules/analytics/components/KPICard";
 import { RevenueChart } from "@/modules/analytics/components/RevenueChart";
 import { PortfolioTable } from "@/modules/analytics/components/PortfolioTable";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { BarChart3, RefreshCw, AlertCircle, Upload } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function AnalyticsDashboardPage() {
-  const { data: dashboard, isLoading, error } = useDashboard();
+  const { data: dashboard, isLoading, error, refetch } = useDashboard();
 
   if (isLoading) {
     return (
@@ -31,61 +36,107 @@ export default function AnalyticsDashboardPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-foreground">Analytics Dashboard</h1>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4" role="alert">
-          <p className="text-red-800">Failed to load analytics data. Please try again.</p>
-        </div>
+        <Card className="border-destructive/50">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+              <div className="rounded-full bg-destructive/10 p-3">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Failed to load analytics data</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  {error instanceof Error ? error.message : "An unexpected error occurred. Please try again."}
+                </p>
+              </div>
+              <Button onClick={() => refetch()} variant="outline" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Try again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
+  // Check if we have any data at all
+  const hasData = dashboard && (
+    (dashboard.kpis && dashboard.kpis.length > 0) ||
+    (dashboard.revenue_chart && dashboard.revenue_chart.length > 0) ||
+    (dashboard.top_books && dashboard.top_books.length > 0)
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Analytics Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Analytics Dashboard</h1>
+          <p className="text-muted-foreground">Track your revenue, sales, and book performance</p>
+        </div>
         <nav aria-label="Analytics navigation" className="flex space-x-2">
-          <a
-            href="/analytics/revenue"
-            aria-label="View detailed revenue analytics"
-            className="px-4 py-2 text-sm font-medium text-foreground bg-card border rounded-md hover:bg-muted"
-          >
-            Revenue Details
-          </a>
-          <a
-            href="/analytics/reports"
-            aria-label="View and generate analytics reports"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-          >
-            Reports
-          </a>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/analytics/revenue" aria-label="View detailed revenue analytics">
+              Revenue Details
+            </Link>
+          </Button>
+          <Button size="sm" asChild>
+            <Link href="/analytics/reports" aria-label="View and generate analytics reports">
+              Reports
+            </Link>
+          </Button>
         </nav>
       </div>
 
+      {/* Empty State - No Data */}
+      {!hasData && (
+        <EmptyState
+          icon={BarChart3}
+          title="No analytics data yet"
+          description="Import your royalty reports to start tracking your publishing performance. Your revenue, sales, and book analytics will appear here."
+          actionLabel="Import Royalty Data"
+          onAction={() => window.location.href = "/analytics/reports"}
+        />
+      )}
+
       {/* KPI Cards */}
-      <section role="region" aria-label="Key performance indicators">
-        <p id="kpi-desc" className="sr-only">
-          Summary cards showing key metrics including revenue, units sold, and percentage changes from the previous period.
-        </p>
-        <div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-          aria-describedby="kpi-desc"
-        >
-          {dashboard?.kpis.map((kpi, index) => (
-            <KPICard key={index} kpi={kpi} />
-          ))}
-        </div>
-      </section>
+      {hasData && (
+        <section role="region" aria-label="Key performance indicators">
+          <p id="kpi-desc" className="sr-only">
+            Summary cards showing key metrics including revenue, units sold, and percentage changes from the previous period.
+          </p>
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+            aria-describedby="kpi-desc"
+          >
+            {dashboard?.kpis && dashboard.kpis.length > 0 ? (
+              dashboard.kpis.map((kpi, index) => (
+                <KPICard key={index} kpi={kpi} />
+              ))
+            ) : (
+              <Card className="col-span-full">
+                <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                  No KPI data available
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Revenue Chart */}
-      <section role="region" aria-label="Revenue chart">
-        <p id="revenue-chart-desc" className="sr-only">
-          Bar chart displaying revenue and units sold over time. Each bar represents a time period with its corresponding revenue amount and unit count.
-        </p>
-        <div aria-describedby="revenue-chart-desc">
-          <RevenueChart data={dashboard?.revenue_chart || []} />
-        </div>
-      </section>
+      {hasData && (
+        <section role="region" aria-label="Revenue chart">
+          <p id="revenue-chart-desc" className="sr-only">
+            Bar chart displaying revenue and units sold over time. Each bar represents a time period with its corresponding revenue amount and unit count.
+          </p>
+          <div aria-describedby="revenue-chart-desc">
+            <RevenueChart data={dashboard?.revenue_chart || []} />
+          </div>
+        </section>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {hasData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Books */}
         <section role="region" aria-label="Top performing books">
           <p id="top-books-desc" className="sr-only">
@@ -165,7 +216,8 @@ export default function AnalyticsDashboardPage() {
             )}
           </div>
         </section>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

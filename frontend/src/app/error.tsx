@@ -33,7 +33,7 @@ export default function Error({
           </div>
           <CardTitle className="text-xl">Something went wrong</CardTitle>
         </CardHeader>
-        <CardContent className="text-center">
+        <CardContent className="text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             {error.message || "An unexpected error occurred. Please try again."}
           </p>
@@ -41,6 +41,16 @@ export default function Error({
             <p className="mt-2 text-xs text-muted-foreground">
               Error ID: {error.digest}
             </p>
+          )}
+          {IS_DEVELOPMENT && error.stack && (
+            <details className="mt-4 text-left">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                Error details (dev mode)
+              </summary>
+              <pre className="mt-2 overflow-auto rounded bg-muted p-2 text-xs max-h-48">
+                {error.stack}
+              </pre>
+            </details>
           )}
         </CardContent>
         <CardFooter className="flex justify-center gap-3">
