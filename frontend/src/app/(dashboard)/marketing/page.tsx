@@ -10,6 +10,7 @@ export const metadata: Metadata = createMetadata({
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "@/hooks/use-translations";
 import { useLaunchPlans, useEmailSequences, useSocialCalendar, useARCCampaigns, useRecentActivity } from "@/modules/marketing/hooks";
 import type { RecentActivityItem } from "@/modules/marketing/hooks";
 import { ARCTable } from "@/modules/marketing/components/ARCTable";
@@ -22,6 +23,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useTranslations } from "@/hooks/use-translations";
 
 type Tab = "overview" | "launch-plans" | "email" | "social" | "arc";
 
@@ -31,13 +33,7 @@ interface DeleteTarget {
   type: "launch-plan" | "email-sequence" | "arc-campaign";
 }
 
-const tabs: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "launch-plans", label: "Launch Plans" },
-  { id: "email", label: "Email Sequences" },
-  { id: "social", label: "Social Media" },
-  { id: "arc", label: "ARC Campaigns" },
-];
+// Tabs will be localized in the component
 
 const DELETE_CONFIG: Record<
   DeleteTarget["type"],
@@ -61,11 +57,20 @@ const DELETE_CONFIG: Record<
 };
 
 export default function MarketingDashboard() {
+  const t = useTranslations("marketing");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const queryClient = useQueryClient();
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "overview", label: t("tabs.overview") },
+    { id: "launch-plans", label: t("tabs.launchPlans") },
+    { id: "email", label: t("tabs.email") },
+    { id: "social", label: t("tabs.social") },
+    { id: "arc", label: t("tabs.arc") },
+  ];
 
   const { data: launchPlans, isLoading: plansLoading } = useLaunchPlans();
   const { data: emailSequences, isLoading: seqLoading } = useEmailSequences();
@@ -110,13 +115,13 @@ export default function MarketingDashboard() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={handleDeleteDialogChange}
-        title={`Delete ${deleteConfig?.label || "item"}?`}
+        title={t("delete.title", { type: deleteConfig?.label || "item" })}
         description={
           deleteTarget
             ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
             : ""
         }
-        confirmLabel="Delete"
+        confirmLabel={t("delete.confirm")}
         variant="destructive"
         onConfirm={handleDeleteConfirm}
         loading={isDeleting}
@@ -124,9 +129,9 @@ export default function MarketingDashboard() {
 
       {/* Page Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Marketing & Launch Command</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">{t("title")}</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Manage launch plans, email campaigns, social media, and ARC distribution.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -157,6 +162,7 @@ export default function MarketingDashboard() {
           socialPostsCount={socialCalendar?.posts.length || 0}
           arcCount={arcCampaigns?.total_count || 0}
           setActiveTab={setActiveTab}
+          t={t}
         />
       )}
 
@@ -201,7 +207,7 @@ const ACTIVITY_ICONS: Record<RecentActivityItem["type"], string> = {
   social_post: "bg-purple-100 text-purple-700",
 };
 
-function formatRelativeDate(dateStr: string): string {
+function formatRelativeDate(dateStr: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -209,10 +215,10 @@ function formatRelativeDate(dateStr: string): string {
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins < 1) return t("timeAgo.justNow"); // Note: Using exact match from timeAgo JSON
+  if (diffMins < 60) return t("timeAgo.minutesAgo", { count: diffMins });
+  if (diffHours < 24) return t("timeAgo.hoursAgo", { count: diffHours });
+  if (diffDays < 7) return t("timeAgo.daysAgo", { count: diffDays });
   return date.toLocaleDateString();
 }
 
@@ -229,13 +235,14 @@ function OverviewTab({
   arcCount: number;
   setActiveTab: (tab: Tab) => void;
 }) {
+  const t = useTranslations("marketing");
   const { items: recentActivity, isLoading: activityLoading } = useRecentActivity();
 
   const stats = [
-    { label: "Launch Plans", value: plansCount, color: "bg-blue-500" },
-    { label: "Email Sequences", value: sequencesCount, color: "bg-green-500" },
-    { label: "Social Posts", value: socialPostsCount, color: "bg-purple-500" },
-    { label: "ARC Campaigns", value: arcCount, color: "bg-orange-500" },
+    { label: t("overview.stats.launchPlans"), value: plansCount, color: "bg-blue-500" },
+    { label: t("overview.stats.emailSequences"), value: sequencesCount, color: "bg-green-500" },
+    { label: t("overview.stats.socialPosts"), value: socialPostsCount, color: "bg-purple-500" },
+    { label: t("overview.stats.arcCampaigns"), value: arcCount, color: "bg-orange-500" },
   ];
 
   return (
@@ -254,25 +261,25 @@ function OverviewTab({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-card rounded-lg border p-4 sm:p-6">
-          <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">Quick Actions</h3>
+          <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">{t("overview.quickActions.title")}</h3>
           <div className="space-y-2">
             <Link
               href="/marketing/launch/new"
               className="block p-2 sm:p-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs sm:text-sm"
             >
-              Generate a new launch plan with AI
+              {t("overview.quickActions.generateLaunchPlan")}
             </Link>
             <Link
               href="/marketing/email"
               className="block p-2 sm:p-3 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-xs sm:text-sm"
             >
-              Create an email sequence
+              {t("overview.quickActions.createEmailSequence")}
             </Link>
           </div>
         </div>
 
         <div className="bg-card rounded-lg border p-4 sm:p-6">
-          <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">Recent Activity</h3>
+          <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">{t("overview.recentActivity.title")}</h3>
           {activityLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -288,9 +295,9 @@ function OverviewTab({
           ) : recentActivity.length === 0 ? (
             <EmptyState
               icon={Activity}
-              title="No recent activity"
-              description="Activity will appear here as you create campaigns, send emails, and publish posts."
-              actionLabel="Create a launch plan"
+              title={t("overview.recentActivity.noActivity")}
+              description={t("overview.recentActivity.description")}
+              actionLabel={t("overview.recentActivity.action")}
               onAction={() => setActiveTab("launch-plans")}
             />
           ) : (
@@ -312,7 +319,7 @@ function OverviewTab({
                     <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{item.title}</p>
                   </div>
                   <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
-                    {formatRelativeDate(item.timestamp)}
+                    {formatRelativeDate(item.timestamp, t)}
                   </span>
                 </div>
               ))}
@@ -340,6 +347,7 @@ function LaunchPlansTab({
   isLoading: boolean;
   onDelete: (target: DeleteTarget) => void;
 }) {
+  const t = useTranslations("marketing");
   const router = useRouter();
 
   const formatDate = (dateStr?: string) => {
@@ -375,7 +383,7 @@ function LaunchPlansTab({
           href="/marketing/launch/new"
           className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm text-center"
         >
-          + Generate Launch Plan
+          + {t("launchPlans.generateNew")}
         </Link>
       </div>
 
@@ -383,9 +391,9 @@ function LaunchPlansTab({
         <div className="border rounded-lg">
           <EmptyState
             icon={Rocket}
-            title="No launch plans yet"
-            description="Generate your first AI-powered launch plan to coordinate your book launch."
-            actionLabel="Generate Launch Plan"
+            title={t("launchPlans.empty.title")}
+            description={t("launchPlans.empty.description")}
+            actionLabel={t("launchPlans.empty.action")}
             onAction={() => router.push("/marketing/launch/new")}
           />
         </div>
@@ -405,7 +413,7 @@ function LaunchPlansTab({
                     <h3 className="text-sm sm:text-base font-semibold truncate">{plan.title}</h3>
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-muted-foreground">
                       {plan.genre && <span>{plan.genre}</span>}
-                      <span>Launch: {formatDate(plan.launch_date)}</span>
+                      <span>{t("launchPlans.launch")}: {formatDate(plan.launch_date)}</span>
                     </div>
                   </div>
                   <span
@@ -492,9 +500,9 @@ function EmailTab({
         <div className="border rounded-lg">
           <EmptyState
             icon={Mail}
-            title="No email sequences yet"
-            description="Create your first email sequence to engage your readers and build your audience."
-            actionLabel="Create Sequence"
+            title={t("emailSequences.empty.title")}
+            description={t("emailSequences.empty.description")}
+            actionLabel={t("emailSequences.empty.action")}
             onAction={() => router.push("/marketing/email")}
           />
         </div>
@@ -513,7 +521,7 @@ function EmailTab({
                   <div>
                     <h3 className="font-semibold">{seq.name}</h3>
                     <div className="text-sm text-muted-foreground mt-1">
-                      {seq.sent_count} / {seq.recipient_count} sent
+                      {seq.sent_count} / {seq.recipient_count} {t("emailSequences.sent")}
                     </div>
                   </div>
                   <span

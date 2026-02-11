@@ -1,0 +1,67 @@
+{
+  "title": "Estudio de Escritura",
+  "subtitle": "Escriba, edite y pula sus manuscritos con asistencia impulsada por IA.",
+  "quickActions": {
+    "newManuscript": {
+      "title": "Nuevo Manuscrito",
+      "description": "Comience un nuevo libro desde cero o con un esquema generado por IA."
+    },
+    "aiOutline": {
+      "title": "Generador de Esquemas IA",
+      "description": "Genere un esquema completo del libro con resúmenes de capítulos."
+    },
+    "analytics": {
+      "title": "Análisis de Escritura",
+      "description": "Realice un seguimiento de sus sesiones de escritura, recuento de palabras y productividad."
+    }
+  },
+  "search": {
+    "placeholder": "Buscar manuscritos...",
+    "noResults": "No se encontraron manuscritos que coincidan con \"{query}\"."
+  },
+  "manuscripts": {
+    "title": "Sus Manuscritos",
+    "empty": {
+      "title": "Aún no hay manuscritos",
+      "description": "Comience su primer libro para comenzar a escribir. Puede crear un nuevo manuscrito desde cero o usar el Generador de Esquemas IA.",
+      "action": "Comience su primer libro"
+    }
+  },
+  "sessions": {
+    "title": "Sesiones de Escritura Recientes",
+    "empty": "Aún no se han registrado sesiones de escritura. ¡Abra un manuscrito y comience a escribir!",
+    "table": {
+      "book": "Libro",
+      "wordsWritten": "Palabras Escritas",
+      "duration": "Duración",
+      "date": "Fecha"
+    },
+    "minutes": "min"
+  },
+  "status": {
+    "draft": "Borrador",
+    "writing": "Escribiendo",
+    "editing": "Editando",
+    "formatting": "Formateando",
+    "published": "Publicado",
+    "archived": "Archivado"
+  },
+  "stats": {
+    "chapters": "capítulos",
+    "words": "palabras",
+    "unknownBook": "Libro Desconocido"
+  },
+  "timeAgo": {
+    "justNow": "Justo ahora",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} hora",
+    "hoursAgoPlural": "hace {count} horas",
+    "daysAgo": "hace {count} día",
+    "daysAgoPlural": "hace {count} días",
+    "today": "Hoy",
+    "yesterday": "Ayer"
+  },
+  "error": {
+    "title": "Algo salió mal"
+  }
+}

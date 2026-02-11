@@ -19,16 +19,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BarChart3, RefreshCw, AlertCircle, Upload } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/hooks/use-translations";
 
 export default function AnalyticsDashboardPage() {
+  const t = useTranslations("analytics");
   const { data: dashboard, isLoading, error, refetch } = useDashboard();
 
   if (isLoading) {
     return (
       <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0" aria-busy="true" aria-label="Loading analytics dashboard">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Analytics Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t("title")}</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" role="status">
-          <span className="sr-only">Loading key performance indicators...</span>
+          <span className="sr-only">{t("kpi.title")}...</span>
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="bg-card rounded-lg border p-4 sm:p-6">
               <Skeleton className="h-4 w-24 mb-2" />
@@ -36,7 +38,7 @@ export default function AnalyticsDashboardPage() {
             </div>
           ))}
         </div>
-        <Skeleton className="h-48 sm:h-64 w-full" aria-label="Loading revenue chart" />
+        <Skeleton className="h-48 sm:h-64 w-full" aria-label={t("revenueChart.title")} />
       </div>
     );
   }
@@ -44,7 +46,7 @@ export default function AnalyticsDashboardPage() {
   if (error) {
     return (
       <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Analytics Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t("title")}</h1>
         <Card className="border-destructive/50">
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
@@ -52,14 +54,14 @@ export default function AnalyticsDashboardPage() {
                 <AlertCircle className="h-8 w-8 text-destructive" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold">Failed to load analytics data</h3>
+                <h3 className="text-lg font-semibold">{t("error.title")}</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
                   {error instanceof Error ? error.message : "An unexpected error occurred. Please try again."}
                 </p>
               </div>
               <Button onClick={() => refetch()} variant="outline" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
-                Try again
+                {t("error.retry")}
               </Button>
             </div>
           </CardContent>
@@ -79,18 +81,18 @@ export default function AnalyticsDashboardPage() {
     <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Analytics Dashboard</h1>
-          <p className="text-muted-foreground">Track your revenue, sales, and book performance</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <nav aria-label="Analytics navigation" className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href="/analytics/revenue" aria-label="View detailed revenue analytics">
-              Revenue Details
+              {t("navigation.revenueDetails")}
             </Link>
           </Button>
           <Button size="sm" asChild>
             <Link href="/analytics/reports" aria-label="View and generate analytics reports">
-              Reports
+              {t("navigation.reports")}
             </Link>
           </Button>
         </nav>
@@ -100,18 +102,18 @@ export default function AnalyticsDashboardPage() {
       {!hasData && (
         <EmptyState
           icon={BarChart3}
-          title="No analytics data yet"
-          description="Import your royalty reports to start tracking your publishing performance. Your revenue, sales, and book analytics will appear here."
-          actionLabel="Import Royalty Data"
+          title={t("empty.title")}
+          description={t("empty.description")}
+          actionLabel={t("empty.action")}
           onAction={() => window.location.href = "/analytics/reports"}
         />
       )}
 
       {/* KPI Cards */}
       {hasData && (
-        <section role="region" aria-label="Key performance indicators">
+        <section role="region" aria-label={t("kpi.title")}>
           <p id="kpi-desc" className="sr-only">
-            Summary cards showing key metrics including revenue, units sold, and percentage changes from the previous period.
+            {t("kpi.description")}
           </p>
           <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
@@ -124,7 +126,7 @@ export default function AnalyticsDashboardPage() {
             ) : (
               <Card className="col-span-full">
                 <CardContent className="p-4 sm:p-6 text-center text-sm text-muted-foreground">
-                  No KPI data available
+                  {t("kpi.noData")}
                 </CardContent>
               </Card>
             )}
@@ -134,9 +136,9 @@ export default function AnalyticsDashboardPage() {
 
       {/* Revenue Chart */}
       {hasData && (
-        <section role="region" aria-label="Revenue chart">
+        <section role="region" aria-label={t("revenueChart.title")}>
           <p id="revenue-chart-desc" className="sr-only">
-            Bar chart displaying revenue and units sold over time. Each bar represents a time period with its corresponding revenue amount and unit count.
+            {t("revenueChart.description")}
           </p>
           <div aria-describedby="revenue-chart-desc" className="h-[200px] sm:h-[300px]">
             <RevenueChart data={dashboard?.revenue_chart || []} />
@@ -147,9 +149,9 @@ export default function AnalyticsDashboardPage() {
       {hasData && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Top Books */}
-        <section role="region" aria-label="Top performing books">
+        <section role="region" aria-label={t("topBooks.title")}>
           <p id="top-books-desc" className="sr-only">
-            Table listing your top performing books ranked by revenue, showing title, total revenue, units sold, and average revenue per unit.
+            {t("topBooks.description")}
           </p>
           <div aria-describedby="top-books-desc">
             <PortfolioTable
@@ -165,15 +167,15 @@ export default function AnalyticsDashboardPage() {
         </section>
 
         {/* Platform Breakdown */}
-        <section role="region" aria-label="Revenue by platform">
+        <section role="region" aria-label={t("platformBreakdown.label")}>
           <p id="platform-breakdown-desc" className="sr-only">
-            Visual breakdown of revenue distribution across publishing platforms, showing each platform&apos;s revenue amount and percentage of total revenue.
+            {t("platformBreakdown.description")}
           </p>
           <div
             className="bg-card rounded-lg border p-4 sm:p-6 shadow-sm"
             aria-describedby="platform-breakdown-desc"
           >
-            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Platform Breakdown</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">{t("platformBreakdown.title")}</h3>
             {dashboard?.platform_breakdown &&
             Object.keys(dashboard.platform_breakdown).length > 0 ? (
               <div className="space-y-2 sm:space-y-3" role="list" aria-label="Platform revenue distribution">
@@ -221,7 +223,7 @@ export default function AnalyticsDashboardPage() {
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">No platform data available</p>
+              <p className="text-muted-foreground text-center py-4">{t("platformBreakdown.noData")}</p>
             )}
           </div>
         </section>

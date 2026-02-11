@@ -1,0 +1,45 @@
+{
+  "title": "Publishing-Operationen",
+  "subtitle": "Verwalten Sie Ihre Publishing-Konten, exportieren Sie Manuskripte und verfolgen Sie Einträge.",
+  "newExport": "Neuer Export",
+  "quickActions": {
+    "exportManuscript": {
+      "title": "Manuskript exportieren",
+      "description": "Generieren Sie EPUB oder druckfertige PDF mit Formatierungsvorlagen"
+    },
+    "connectedAccounts": {
+      "title": "Verbundene Konten"
+    },
+    "activeListings": {
+      "title": "Aktive Einträge",
+      "failedToLoad": "Laden fehlgeschlagen"
+    }
+  },
+  "accounts": {
+    "title": "Publishing-Konten",
+    "connectAccount": "Konto verbinden",
+    "cancel": "Abbrechen",
+    "empty": {
+      "title": "Keine Konten verbunden",
+      "description": "Verbinden Sie Ihr erstes Publishing-Plattformkonto, um zu beginnen.",
+      "action": "Konto verbinden"
+    },
+    "connectForm": {
+      "title": "Neues Konto verbinden",
+      "platform": "Plattform",
+      "accountName": "Kontoname",
+      "accountNameRequired": "Kontoname *",
+      "email": "E-Mail",
+      "optional": "Optional",
+      "connect": "Verbinden",
+      "connecting": "Wird verbunden...",
+      "errors": {
+        "nameRequired": "Dieses Feld ist erforderlich",
+        "emailInvalid": "Ungültiges E-Mail-Format"
+      }
+    }
+  },
+  "listings": {
+    "title": "Einträge"
+  }
+}

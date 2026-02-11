@@ -1,0 +1,43 @@
+{
+  "title": "Panel de Control",
+  "welcomeMessage": "¡Bienvenido de nuevo! Aquí hay una descripción general de su actividad de publicación.",
+  "newProject": "Nuevo Proyecto",
+  "viewProjects": "Ver Proyectos",
+  "viewAnalytics": "Ver análisis",
+  "viewAll": "Ver todo",
+  "quickActions": {
+    "title": "Acciones Rápidas",
+    "subtitle": "Tareas comunes de un vistazo",
+    "newProject": "Nuevo Proyecto",
+    "viewProjects": "Ver Proyectos",
+    "aiAgents": "Agentes IA",
+    "analytics": "Análisis"
+  },
+  "recentActivity": {
+    "title": "Actividad Reciente",
+    "subtitle": "Su última actividad de regalías",
+    "noActivity": "No hay actividad reciente. Importe su primer informe de regalías para ver los datos aquí.",
+    "royalty": "Regalía"
+  },
+  "topBooks": {
+    "title": "Mejores Libros",
+    "subtitle": "Sus títulos de mejor rendimiento",
+    "noData": "Aún no hay datos de libros disponibles. Importe datos de regalías para ver sus mejores resultados."
+  },
+  "stats": {
+    "noKpiData": "Aún no hay datos de KPI disponibles. Importe datos de regalías para comenzar."
+  },
+  "error": {
+    "title": "Error al cargar los datos del panel",
+    "message": "No pudimos recuperar la información de su panel. Esto puede deberse a un problema de red o un error del servidor. Por favor, inténtelo de nuevo.",
+    "retry": "Intentar de nuevo"
+  },
+  "timeAgo": {
+    "justNow": "Justo ahora",
+    "minutesAgo": "hace {count}m",
+    "hoursAgo": "hace {count}h",
+    "daysAgo": "hace {count}d"
+  },
+  "units": "unidades",
+  "revenue": "ingresos"
+}

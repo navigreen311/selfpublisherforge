@@ -1,0 +1,37 @@
+{
+  "title": "Analytics Dashboard",
+  "subtitle": "Track your revenue, sales, and book performance",
+  "navigation": {
+    "revenueDetails": "Revenue Details",
+    "reports": "Reports"
+  },
+  "empty": {
+    "title": "No analytics data yet",
+    "description": "Import your royalty reports to start tracking your publishing performance. Your revenue, sales, and book analytics will appear here.",
+    "action": "Import Royalty Data"
+  },
+  "kpi": {
+    "title": "Key performance indicators",
+    "description": "Summary cards showing key metrics including revenue, units sold, and percentage changes from the previous period.",
+    "noData": "No KPI data available"
+  },
+  "revenueChart": {
+    "title": "Revenue chart",
+    "description": "Bar chart displaying revenue and units sold over time. Each bar represents a time period with its corresponding revenue amount and unit count."
+  },
+  "topBooks": {
+    "title": "Top performing books",
+    "description": "Table listing your top performing books ranked by revenue, showing title, total revenue, units sold, and average revenue per unit."
+  },
+  "platformBreakdown": {
+    "title": "Platform Breakdown",
+    "label": "Revenue by platform",
+    "description": "Visual breakdown of revenue distribution across publishing platforms, showing each platform's revenue amount and percentage of total revenue.",
+    "revenueShare": "{platform} revenue share: {percentage}%",
+    "noData": "No platform data available"
+  },
+  "error": {
+    "title": "Failed to load analytics data",
+    "retry": "Try again"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Dashboard",
+  "welcomeMessage": "Willkommen zurück! Hier ist eine Übersicht über Ihre Publishing-Aktivitäten.",
+  "newProject": "Neues Projekt",
+  "viewProjects": "Projekte anzeigen",
+  "viewAnalytics": "Analysen anzeigen",
+  "viewAll": "Alle anzeigen",
+  "quickActions": {
+    "title": "Schnellaktionen",
+    "subtitle": "Häufige Aufgaben auf einen Blick",
+    "newProject": "Neues Projekt",
+    "viewProjects": "Projekte anzeigen",
+    "aiAgents": "KI-Agenten",
+    "analytics": "Analysen"
+  },
+  "recentActivity": {
+    "title": "Letzte Aktivität",
+    "subtitle": "Ihre neuesten Tantiemen-Aktivitäten",
+    "noActivity": "Keine aktuelle Aktivität. Importieren Sie Ihren ersten Tantieme-Bericht, um hier Daten zu sehen.",
+    "royalty": "Tantieme"
+  },
+  "topBooks": {
+    "title": "Top-Bücher",
+    "subtitle": "Ihre leistungsstärksten Titel",
+    "noData": "Noch keine Buchdaten verfügbar. Importieren Sie Tantieme-Daten, um Ihre Top-Performer zu sehen."
+  },
+  "stats": {
+    "noKpiData": "Noch keine KPI-Daten verfügbar. Importieren Sie Tantieme-Daten, um loszulegen."
+  },
+  "error": {
+    "title": "Dashboard-Daten konnten nicht geladen werden",
+    "message": "Wir konnten Ihre Dashboard-Informationen nicht abrufen. Dies kann an einem Netzwerkproblem oder einem Serverfehler liegen. Bitte versuchen Sie es erneut.",
+    "retry": "Erneut versuchen"
+  },
+  "timeAgo": {
+    "justNow": "Gerade eben",
+    "minutesAgo": "vor {count}m",
+    "hoursAgo": "vor {count}h",
+    "daysAgo": "vor {count}d"
+  },
+  "units": "Einheiten",
+  "revenue": "Umsatz"
+}

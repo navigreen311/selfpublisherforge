@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "@/hooks/use-translations";
 import {
   Plus,
   Search,
@@ -80,6 +81,7 @@ function ProjectCardSkeleton() {
 }
 
 export default function ProjectsPage() {
+  const t = useTranslations("projects");
   const router = useRouter();
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("all");
@@ -146,14 +148,14 @@ export default function ProjectsPage() {
     <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Projects</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Manage all your publishing projects
+            {t("subtitle")}
           </p>
         </div>
         <Button asChild aria-label="Create a new project" className="w-full sm:w-auto">
           <Link href="/projects/new">
-            <Plus className="mr-2 h-4 w-4" /> New Project
+            <Plus className="mr-2 h-4 w-4" /> {t("newProject")}
           </Link>
         </Button>
       </div>
@@ -163,7 +165,7 @@ export default function ProjectsPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search projects..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -172,24 +174,24 @@ export default function ProjectsPage() {
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-full sm:w-[140px]" aria-label="Filter by project type">
-            <SelectValue placeholder="Type" />
+            <SelectValue placeholder={t("filters.type")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="book">Book</SelectItem>
-            <SelectItem value="series">Series</SelectItem>
-            <SelectItem value="course">Course</SelectItem>
+            <SelectItem value="all">{t("filters.allTypes")}</SelectItem>
+            <SelectItem value="book">{t("filters.book")}</SelectItem>
+            <SelectItem value="series">{t("filters.series")}</SelectItem>
+            <SelectItem value="course">{t("filters.course")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[140px]" aria-label="Filter by project status">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("filters.status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="archived">Archived</SelectItem>
+            <SelectItem value="all">{t("filters.allStatus")}</SelectItem>
+            <SelectItem value="draft">{t("filters.draft")}</SelectItem>
+            <SelectItem value="active">{t("filters.active")}</SelectItem>
+            <SelectItem value="archived">{t("filters.archived")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -201,10 +203,10 @@ export default function ProjectsPage() {
             <AlertCircle className="h-5 w-5 text-destructive" />
             <div>
               <p className="font-medium text-destructive">
-                Failed to load projects
+                {t("error.title")}
               </p>
               <p className="text-sm text-muted-foreground">
-                {error?.message || "An unexpected error occurred. Please try again."}
+                {error?.message || t("error.fallback")}
               </p>
             </div>
           </CardContent>
@@ -224,9 +226,9 @@ export default function ProjectsPage() {
       {!isLoading && !isError && filteredProjects.length === 0 && (
         <EmptyState
           icon={FolderOpen}
-          title="No projects found"
-          description="Try adjusting your search or filters, or create a new project to get started."
-          actionLabel="Create Project"
+          title={t("empty.title")}
+          description={t("empty.description")}
+          actionLabel={t("empty.action")}
           onAction={() => router.push("/projects/new")}
         />
       )}
@@ -272,7 +274,7 @@ export default function ProjectsPage() {
                           aria-label={`Open project ${project.title}`}
                         >
                           <FolderOpen className="mr-2 h-4 w-4" />
-                          Open
+                          {t("actions.open")}
                         </DropdownMenuItem>
                         {project.status !== "archived" && (
                           <>
@@ -282,7 +284,7 @@ export default function ProjectsPage() {
                               aria-label={`Archive project ${project.title}`}
                             >
                               <Archive className="mr-2 h-4 w-4" />
-                              Archive
+                              {t("actions.archive")}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -293,7 +295,7 @@ export default function ProjectsPage() {
                           aria-label={`Delete project ${project.title}`}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t("actions.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -312,10 +314,10 @@ export default function ProjectsPage() {
                   <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                     <span>
                       {project.books?.length ?? 0}{" "}
-                      {(project.books?.length ?? 0) === 1 ? "book" : "books"}
+                      {(project.books?.length ?? 0) === 1 ? t("stats.book") : t("stats.books")}
                     </span>
                     <span className="text-[10px] sm:text-xs">
-                      Updated{" "}
+                      {t("stats.updated")}{" "}
                       {new Date(project.updated_at).toLocaleDateString()}
                     </span>
                   </div>
@@ -333,14 +335,14 @@ export default function ProjectsPage() {
           if (!open) setDeleteTarget(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Delete Project"
+        title={t("deleteDialog.title")}
         description={
           deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone and all associated data will be permanently removed.`
+            ? t("deleteDialog.description", { title: deleteTarget.title })
             : ""
         }
-        confirmText="Delete Project"
-        cancelText="Cancel"
+        confirmText={t("deleteDialog.confirm")}
+        cancelText={t("deleteDialog.cancel")}
         variant="destructive"
         loading={isDeleting}
       />
@@ -352,14 +354,14 @@ export default function ProjectsPage() {
           if (!open) setArchiveTarget(null);
         }}
         onConfirm={handleArchiveConfirm}
-        title="Archive Project"
+        title={t("archiveDialog.title")}
         description={
           archiveTarget
-            ? `Are you sure you want to archive "${archiveTarget.title}"? Archived projects can be restored later from the archived filter.`
+            ? t("archiveDialog.description", { title: archiveTarget.title })
             : ""
         }
-        confirmText="Archive Project"
-        cancelText="Cancel"
+        confirmText={t("archiveDialog.confirm")}
+        cancelText={t("archiveDialog.cancel")}
         variant="default"
         loading={isArchiving}
       />

@@ -1,0 +1,45 @@
+{
+  "title": "Publishing Operations",
+  "subtitle": "Manage your publishing accounts, export manuscripts, and track listings.",
+  "newExport": "New Export",
+  "quickActions": {
+    "exportManuscript": {
+      "title": "Export Manuscript",
+      "description": "Generate EPUB or print-ready PDF with formatting templates"
+    },
+    "connectedAccounts": {
+      "title": "Connected Accounts"
+    },
+    "activeListings": {
+      "title": "Active Listings",
+      "failedToLoad": "Failed to load"
+    }
+  },
+  "accounts": {
+    "title": "Publishing Accounts",
+    "connectAccount": "Connect Account",
+    "cancel": "Cancel",
+    "empty": {
+      "title": "No accounts connected",
+      "description": "Connect your first publishing platform account to get started.",
+      "action": "Connect Account"
+    },
+    "connectForm": {
+      "title": "Connect New Account",
+      "platform": "Platform",
+      "accountName": "Account Name",
+      "accountNameRequired": "Account Name *",
+      "email": "Email",
+      "optional": "Optional",
+      "connect": "Connect",
+      "connecting": "Connecting...",
+      "errors": {
+        "nameRequired": "This field is required",
+        "emailInvalid": "Invalid email format"
+      }
+    }
+  },
+  "listings": {
+    "title": "Listings"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "title": "Comando de Marketing y Lanzamiento",
+  "subtitle": "Administre planes de lanzamiento, campañas de correo electrónico, redes sociales y distribución de ARC.",
+  "tabs": {
+    "overview": "Resumen",
+    "launchPlans": "Planes de Lanzamiento",
+    "email": "Secuencias de Correo",
+    "social": "Redes Sociales",
+    "arc": "Campañas ARC"
+  },
+  "overview": {
+    "stats": {
+      "launchPlans": "Planes de Lanzamiento",
+      "emailSequences": "Secuencias de Correo",
+      "socialPosts": "Publicaciones Sociales",
+      "arcCampaigns": "Campañas ARC"
+    },
+    "quickActions": {
+      "title": "Acciones Rápidas",
+      "generateLaunchPlan": "Genere un nuevo plan de lanzamiento con IA",
+      "createEmailSequence": "Cree una secuencia de correo electrónico"
+    },
+    "recentActivity": {
+      "title": "Actividad Reciente",
+      "noActivity": "No hay actividad reciente",
+      "description": "La actividad aparecerá aquí a medida que cree campañas, envíe correos electrónicos y publique publicaciones.",
+      "action": "Crear un plan de lanzamiento"
+    }
+  },
+  "launchPlans": {
+    "generateNew": "Generar Plan de Lanzamiento",
+    "empty": {
+      "title": "Aún no hay planes de lanzamiento",
+      "description": "Genere su primer plan de lanzamiento impulsado por IA para coordinar el lanzamiento de su libro.",
+      "action": "Generar Plan de Lanzamiento"
+    },
+    "launch": "Lanzamiento"
+  },
+  "emailSequences": {
+    "createNew": "Crear Secuencia",
+    "empty": {
+      "title": "Aún no hay secuencias de correo electrónico",
+      "description": "Cree su primera secuencia de correo electrónico para involucrar a sus lectores y construir su audiencia.",
+      "action": "Crear Secuencia"
+    },
+    "sent": "enviado"
+  },
+  "delete": {
+    "title": "¿Eliminar {type}?",
+    "description": "¿Está seguro de que desea eliminar \"{name}\"? Esta acción no se puede deshacer.",
+    "confirm": "Eliminar"
+  },
+  "timeAgo": {
+    "justNow": "Justo ahora",
+    "minutesAgo": "hace {count}m",
+    "hoursAgo": "hace {count}h",
+    "daysAgo": "hace {count}d"
+  }
+}

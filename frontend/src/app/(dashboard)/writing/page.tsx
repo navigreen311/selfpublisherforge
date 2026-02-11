@@ -11,6 +11,7 @@ export const metadata: Metadata = createMetadata({
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useTranslations } from "@/hooks/use-translations";
 import { useBooks, useWritingSessions } from "@/modules/writing/hooks";
 import type { BookEntry, WritingSessionEntry } from "@/modules/writing/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Helper: format a date string into a human-friendly relative label
 // ---------------------------------------------------------------------------
 
-function formatRelativeDate(dateStr: string | undefined): string {
+function formatRelativeDate(dateStr: string | undefined, t: (key: string, vars?: Record<string, string | number>) => string): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   const now = new Date();
@@ -36,22 +37,22 @@ function formatRelativeDate(dateStr: string | undefined): string {
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} min ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+  if (diffMins < 1) return t("timeAgo.justNow");
+  if (diffMins < 60) return t("timeAgo.minutesAgo", { count: diffMins });
+  if (diffHours < 24) return diffHours === 1 ? t("timeAgo.hoursAgo", { count: diffHours }) : t("timeAgo.hoursAgoPlural", { count: diffHours });
+  if (diffDays < 7) return diffDays === 1 ? t("timeAgo.daysAgo", { count: diffDays }) : t("timeAgo.daysAgoPlural", { count: diffDays });
   return date.toLocaleDateString();
 }
 
-function formatSessionDate(dateStr: string): string {
+function formatSessionDate(dateStr: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays === 0) return t("timeAgo.today");
+  if (diffDays === 1) return t("timeAgo.yesterday");
+  if (diffDays < 7) return t("timeAgo.daysAgoPlural", { count: diffDays });
   return date.toLocaleDateString();
 }
 
@@ -59,7 +60,7 @@ function formatSessionDate(dateStr: string): string {
 // StatusBadge
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
   const colors: Record<string, string> = {
     draft: "bg-gray-100 text-gray-700",
     writing: "bg-blue-100 text-blue-700",
@@ -74,7 +75,7 @@ function StatusBadge({ status }: { status: string }) {
         colors[status] || colors.draft
       }`}
     >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {t(`status.${status}`)}
     </span>
   );
 }
@@ -101,23 +102,24 @@ function BookCardSkeleton() {
   );
 }
 
-function SessionsTableSkeleton() {
+  const t = useTranslations("writing");
+function SessionsTableSkeleton({ t }: { t: (key: string) => string }) {
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-muted/30">
           <tr>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Book
+              {t("sessions.table.book")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Words Written
+              {t("sessions.table.wordsWritten")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Duration
+              {t("sessions.table.duration")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-              Date
+              {t("sessions.table.date")}
             </th>
           </tr>
         </thead>
@@ -148,10 +150,11 @@ function SessionsTableSkeleton() {
 // Error display
 // ---------------------------------------------------------------------------
 
-function ErrorBanner({ message }: { message: string }) {
+  const t = useTranslations("writing");
+function ErrorBanner({ message, t }: { message: string; t: (key: string) => string }) {
   return (
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-      <p className="font-medium">Something went wrong</p>
+      <p className="font-medium">{t("error.title")}</p>
       <p className="mt-1 text-red-600">{message}</p>
     </div>
   );
@@ -161,19 +164,20 @@ function ErrorBanner({ message }: { message: string }) {
 // Empty state
 // ---------------------------------------------------------------------------
 
-function EmptyBooksState() {
+function EmptyBooksState({ t }: { t: (key: string) => string }) {
+  const t = useTranslations("writing");
+
   return (
     <div className="text-center py-12 rounded-lg border border-dashed bg-card">
-      <h3 className="font-medium text-foreground">No manuscripts yet</h3>
+      <h3 className="font-medium text-foreground">{t("manuscripts.empty.title")}</h3>
       <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-        Start your first book to begin writing. You can create a new manuscript
-        from scratch or use the AI Outline Generator.
+        {t("manuscripts.empty.description")}
       </p>
       <Link
         href="/writing/new"
         className="inline-block mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
-        Start your first book
+        {t("manuscripts.empty.action")}
       </Link>
     </div>
   );
@@ -206,17 +210,17 @@ function WritingSessionsSection({
   }, [books]);
 
   if (error) {
-    return <ErrorBanner message={error.message} />;
+    return <ErrorBanner message={error.message} t={t} />;
   }
 
   if (isLoading) {
-    return <SessionsTableSkeleton />;
+    return <SessionsTableSkeleton t={t} />;
   }
 
   if (!sessions || sessions.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-8">
-        No writing sessions recorded yet. Open a manuscript and start writing!
+        {t("sessions.empty")}
       </p>
     );
   }
@@ -228,16 +232,16 @@ function WritingSessionsSection({
           <thead className="bg-muted/30">
             <tr>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Book
+                {t("sessions.table.book")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Words Written
+                {t("sessions.table.wordsWritten")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Duration
+                {t("sessions.table.duration")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
-                Date
+                {t("sessions.table.date")}
               </th>
             </tr>
           </thead>
@@ -247,14 +251,14 @@ function WritingSessionsSection({
                 <td className="px-2 sm:px-4 py-2">
                   {session.book_title ||
                     bookTitleMap[session.book_id] ||
-                    "Unknown Book"}
+                    t("stats.unknownBook")}
                 </td>
                 <td className="px-2 sm:px-4 py-2">
                   {session.words_written.toLocaleString()}
                 </td>
-                <td className="px-2 sm:px-4 py-2">{session.duration_minutes} min</td>
+                <td className="px-2 sm:px-4 py-2">{session.duration_minutes} {t("sessions.minutes")}</td>
                 <td className="px-2 sm:px-4 py-2 text-muted-foreground">
-                  {formatSessionDate(session.created_at)}
+                  {formatSessionDate(session.created_at, t)}
                 </td>
               </tr>
             ))}
@@ -270,6 +274,7 @@ function WritingSessionsSection({
 // ---------------------------------------------------------------------------
 
 export default function WritingStudioPage() {
+  const t = useTranslations("writing");
   const [searchQuery, setSearchQuery] = useState("");
 
   const {
@@ -296,9 +301,9 @@ export default function WritingStudioPage() {
     <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
       {/* Page header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Writing Studio</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t("title")}</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Write, edit, and polish your manuscripts with AI-powered assistance.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -308,21 +313,21 @@ export default function WritingStudioPage() {
           href="/writing/new"
           className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors"
         >
-          <h3 className="font-medium text-xs sm:text-sm">New Manuscript</h3>
+          <h3 className="font-medium text-xs sm:text-sm">{t("quickActions.newManuscript.title")}</h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-            Start a new book from scratch or with an AI-generated outline.
+            {t("quickActions.newManuscript.description")}
           </p>
         </Link>
         <Link href="/writing/outline" className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors">
-          <h3 className="font-medium text-xs sm:text-sm">AI Outline Generator</h3>
+          <h3 className="font-medium text-xs sm:text-sm">{t("quickActions.aiOutline.title")}</h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-            Generate a complete book outline with chapter summaries.
+            {t("quickActions.aiOutline.description")}
           </p>
         </Link>
         <div className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors">
-          <h3 className="font-medium text-xs sm:text-sm">Writing Analytics</h3>
+          <h3 className="font-medium text-xs sm:text-sm">{t("quickActions.analytics.title")}</h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-            Track your writing sessions, word counts, and productivity.
+            {t("quickActions.analytics.description")}
           </p>
         </div>
       </div>
@@ -331,8 +336,8 @@ export default function WritingStudioPage() {
       <div role="search">
         <input
           type="text"
-          placeholder="Search manuscripts..."
-          aria-label="Search manuscripts"
+          placeholder={t("search.placeholder")}
+          aria-label={t("search.placeholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full max-w-md rounded-md border px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -342,7 +347,7 @@ export default function WritingStudioPage() {
       {/* Book list */}
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3">
-          Your Manuscripts
+          {t("manuscripts.title")}
         </h2>
 
         {/* Error state */}
@@ -353,6 +358,7 @@ export default function WritingStudioPage() {
                 ? booksError.message
                 : "Failed to load manuscripts."
             }
+            t={t}
           />
         )}
 
@@ -367,7 +373,7 @@ export default function WritingStudioPage() {
 
         {/* Empty state -- no books at all */}
         {!booksLoading && !booksError && books && books.length === 0 && (
-          <EmptyBooksState />
+          <EmptyBooksState t={t} />
         )}
 
         {/* Loaded with results */}
@@ -386,21 +392,21 @@ export default function WritingStudioPage() {
                         {book.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-                        <StatusBadge status={book.status} />
+                        <StatusBadge status={book.status} t={t} />
                         {book.chapter_count !== undefined && (
                           <span className="text-[10px] sm:text-xs text-muted-foreground">
-                            {book.chapter_count} chapters
+                            {book.chapter_count} {t("stats.chapters")}
                           </span>
                         )}
                         {book.word_count !== undefined && (
                           <span className="text-[10px] sm:text-xs text-muted-foreground">
-                            {book.word_count.toLocaleString()} words
+                            {book.word_count.toLocaleString()} {t("stats.words")}
                           </span>
                         )}
                       </div>
                     </div>
                     <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
-                      {formatRelativeDate(book.updated_at)}
+                      {formatRelativeDate(book.updated_at, t)}
                     </span>
                   </div>
                 </Link>
@@ -409,7 +415,7 @@ export default function WritingStudioPage() {
 
             {filteredBooks.length === 0 && searchQuery && (
               <p className="text-sm text-muted-foreground text-center py-8">
-                No manuscripts found matching &quot;{searchQuery}&quot;.
+                {t("search.noResults", { query: searchQuery })}
               </p>
             )}
           </>
@@ -419,7 +425,7 @@ export default function WritingStudioPage() {
       {/* Recent sessions */}
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3">
-          Recent Writing Sessions
+          {t("sessions.title")}
         </h2>
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <WritingSessionsSection
@@ -427,6 +433,7 @@ export default function WritingStudioPage() {
             isLoading={sessionsLoading}
             error={sessionsError as Error | null}
             books={books}
+            t={t}
           />
         </div>
       </div>

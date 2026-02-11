@@ -1,0 +1,37 @@
+{
+  "title": "Analyse-Dashboard",
+  "subtitle": "Verfolgen Sie Ihre Umsätze, Verkäufe und Buchleistung",
+  "navigation": {
+    "revenueDetails": "Umsatzdetails",
+    "reports": "Berichte"
+  },
+  "empty": {
+    "title": "Noch keine Analysedaten",
+    "description": "Importieren Sie Ihre Tantiemeberichte, um die Leistung Ihrer Veröffentlichungen zu verfolgen. Ihre Umsatz-, Verkaufs- und Buchanalysen werden hier angezeigt.",
+    "action": "Tantiemedaten importieren"
+  },
+  "kpi": {
+    "title": "Wichtige Leistungsindikatoren",
+    "description": "Zusammenfassungskarten mit wichtigen Kennzahlen wie Umsatz, verkauften Einheiten und prozentualen Änderungen gegenüber dem vorherigen Zeitraum.",
+    "noData": "Keine KPI-Daten verfügbar"
+  },
+  "revenueChart": {
+    "title": "Umsatzdiagramm",
+    "description": "Balkendiagramm, das Umsatz und verkaufte Einheiten im Zeitverlauf anzeigt. Jeder Balken repräsentiert einen Zeitraum mit dem entsprechenden Umsatzbetrag und der Anzahl der Einheiten."
+  },
+  "topBooks": {
+    "title": "Top-leistende Bücher",
+    "description": "Tabelle mit Ihren leistungsstärksten Büchern nach Umsatz, einschließlich Titel, Gesamtumsatz, verkauften Einheiten und durchschnittlichem Umsatz pro Einheit."
+  },
+  "platformBreakdown": {
+    "title": "Plattform-Aufschlüsselung",
+    "label": "Umsatz nach Plattform",
+    "description": "Visuelle Aufschlüsselung der Umsatzverteilung über Publishing-Plattformen hinweg, mit Angabe des Umsatzbetrags jeder Plattform und des Prozentsatzes am Gesamtumsatz.",
+    "revenueShare": "{platform} Umsatzanteil: {percentage}%",
+    "noData": "Keine Plattformdaten verfügbar"
+  },
+  "error": {
+    "title": "Analysedaten konnten nicht geladen werden",
+    "retry": "Erneut versuchen"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "title": "Projekte",
+  "subtitle": "Verwalten Sie alle Ihre Publishing-Projekte",
+  "newProject": "Neues Projekt",
+  "searchPlaceholder": "Projekte durchsuchen...",
+  "filters": {
+    "type": "Typ",
+    "allTypes": "Alle Typen",
+    "book": "Buch",
+    "series": "Serie",
+    "course": "Kurs",
+    "status": "Status",
+    "allStatus": "Alle Status",
+    "draft": "Entwurf",
+    "active": "Aktiv",
+    "archived": "Archiviert"
+  },
+  "actions": {
+    "open": "Öffnen",
+    "archive": "Archivieren",
+    "delete": "Löschen"
+  },
+  "empty": {
+    "title": "Keine Projekte gefunden",
+    "description": "Versuchen Sie, Ihre Suche oder Filter anzupassen, oder erstellen Sie ein neues Projekt, um zu beginnen.",
+    "action": "Projekt erstellen"
+  },
+  "error": {
+    "title": "Projekte konnten nicht geladen werden",
+    "fallback": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "deleteDialog": {
+    "title": "Projekt löschen",
+    "description": "Sind Sie sicher, dass Sie \"{title}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden und alle zugehörigen Daten werden dauerhaft entfernt.",
+    "confirm": "Projekt löschen",
+    "cancel": "Abbrechen"
+  },
+  "archiveDialog": {
+    "title": "Projekt archivieren",
+    "description": "Sind Sie sicher, dass Sie \"{title}\" archivieren möchten? Archivierte Projekte können später über den Archiv-Filter wiederhergestellt werden.",
+    "confirm": "Projekt archivieren",
+    "cancel": "Abbrechen"
+  },
+  "stats": {
+    "books": "Bücher",
+    "book": "Buch",
+    "updated": "Aktualisiert"
+  }
+}
