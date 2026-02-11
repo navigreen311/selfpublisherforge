@@ -449,9 +449,10 @@ async def _anthropic_call(messages: list[dict[str, str]], model: str) -> str:
         model=model if model.startswith("claude") else settings.DEFAULT_LLM_MODEL,
         max_tokens=4096,
         system=system_content,
-        messages=user_messages,
+        messages=user_messages,  # type: ignore[arg-type]
     )
-    return response.content[0].text
+    content_block = response.content[0]
+    return content_block.text if hasattr(content_block, 'text') else str(content_block)
 
 
 # ---------------------------------------------------------------------------
