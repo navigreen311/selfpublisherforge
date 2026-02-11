@@ -18,13 +18,9 @@ import {
   useSummarizeEntry,
 } from "@/modules/knowledge/hooks";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useTranslations } from "@/hooks/use-translations";
 
-const sourceLabels: Record<string, string> = {
-  manual: "Manual entry",
-  url: "Imported from URL",
-  file: "Imported from file",
-  clip: "Web clip",
-};
+// Source labels will be translated inline using t() function
 
 const sourceIcons: Record<string, React.ReactNode> = {
   manual: <PenLine className="h-4 w-4" />,
@@ -36,6 +32,7 @@ const sourceIcons: Record<string, React.ReactNode> = {
 export default function KnowledgeEntryDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const t = useTranslations("knowledge");
   const rawId = params.id;
   const entryId =
     typeof rawId === "string"
@@ -70,12 +67,12 @@ export default function KnowledgeEntryDetailPage() {
   if (!entryId) {
     return (
       <div className="text-center py-24">
-        <h2 className="text-lg font-medium">Invalid entry ID</h2>
+        <h2 className="text-lg font-medium">{t("detail.invalidId")}</h2>
         <button
           onClick={() => router.push("/knowledge")}
           className="mt-4 text-sm text-primary hover:underline"
         >
-          Back to Knowledge Vault
+          {t("detail.backToVault")}
         </button>
       </div>
     );
@@ -92,16 +89,26 @@ export default function KnowledgeEntryDetailPage() {
   if (!entry) {
     return (
       <div className="text-center py-24">
-        <h2 className="text-lg font-medium">Entry not found</h2>
+        <h2 className="text-lg font-medium">{t("detail.notFound")}</h2>
         <button
           onClick={() => router.push("/knowledge")}
           className="mt-4 text-sm text-primary hover:underline"
         >
-          Back to Knowledge Vault
+          {t("detail.backToVault")}
         </button>
       </div>
     );
   }
+
+  const getSourceLabel = (sourceType: string) => {
+    const labels: Record<string, string> = {
+      manual: t("detail.sourceManual"),
+      url: t("detail.sourceUrl"),
+      file: t("detail.sourceFile"),
+      clip: t("detail.sourceClip"),
+    };
+    return labels[sourceType] || sourceType;
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -110,7 +117,7 @@ export default function KnowledgeEntryDetailPage() {
         onClick={() => router.push("/knowledge")}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to Knowledge Vault
+        <ArrowLeft className="h-4 w-4" /> {t("detail.backToVault")}
       </button>
 
       {/* Header */}
@@ -120,14 +127,14 @@ export default function KnowledgeEntryDetailPage() {
           <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               {sourceIcons[entry.source_type]}
-              {sourceLabels[entry.source_type] || entry.source_type}
+              {getSourceLabel(entry.source_type)}
             </span>
             {entry.created_at && (
-              <span>Created {new Date(entry.created_at).toLocaleDateString()}</span>
+              <span>{t("detail.created")} {new Date(entry.created_at).toLocaleDateString()}</span>
             )}
             {entry.credibility_score != null && (
               <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs">
-                {Math.round(entry.credibility_score * 100)}% credibility
+                {t("detail.credibility", { score: Math.round(entry.credibility_score * 100) })}
               </span>
             )}
           </div>
@@ -143,14 +150,14 @@ export default function KnowledgeEntryDetailPage() {
             ) : (
               <Sparkles className="h-4 w-4" />
             )}
-            AI Summary
+            {t("detail.aiSummary")}
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             disabled={deleteMutation.isPending}
             className="flex items-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
           >
-            <Trash2 className="h-4 w-4" /> Delete
+            <Trash2 className="h-4 w-4" /> {t("detail.delete")}
           </button>
         </div>
       </div>
@@ -185,13 +192,13 @@ export default function KnowledgeEntryDetailPage() {
       {summary && (
         <div className="border rounded-lg p-4 bg-primary/5">
           <h3 className="flex items-center gap-2 font-semibold text-sm mb-2">
-            <Sparkles className="h-4 w-4 text-primary" /> AI Summary
+            <Sparkles className="h-4 w-4 text-primary" /> {t("detail.aiSummary")}
           </h3>
           <p className="text-sm">{summary.summary}</p>
           {summary.key_points.length > 0 && (
             <div className="mt-3">
               <h4 className="text-xs font-medium text-muted-foreground mb-1">
-                Key Points
+                {t("detail.keyPoints")}
               </h4>
               <ul className="list-disc list-inside text-sm space-y-1">
                 {summary.key_points.map((point, i) => (
@@ -203,7 +210,7 @@ export default function KnowledgeEntryDetailPage() {
           {summary.suggested_tags.length > 0 && (
             <div className="mt-3">
               <h4 className="text-xs font-medium text-muted-foreground mb-1">
-                Suggested Tags
+                {t("detail.suggestedTags")}
               </h4>
               <div className="flex flex-wrap gap-1">
                 {summary.suggested_tags.map((tag) => (
@@ -230,7 +237,7 @@ export default function KnowledgeEntryDetailPage() {
       {/* Metadata */}
       {entry.metadata && Object.keys(entry.metadata).length > 0 && (
         <div className="border rounded-lg p-4">
-          <h3 className="text-sm font-semibold mb-2">Metadata</h3>
+          <h3 className="text-sm font-semibold mb-2">{t("detail.metadata")}</h3>
           <pre className="text-xs text-muted-foreground overflow-auto">
             {JSON.stringify(entry.metadata, null, 2)}
           </pre>
@@ -240,9 +247,9 @@ export default function KnowledgeEntryDetailPage() {
       <ConfirmDialog
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
-        title="Delete entry"
-        description="Are you sure you want to delete this entry? This action cannot be undone."
-        confirmText="Delete"
+        title={t("detail.deleteConfirmTitle")}
+        description={t("detail.deleteConfirmMessage")}
+        confirmText={t("detail.delete")}
         variant="destructive"
         loading={deleteMutation.isPending}
         onConfirm={handleDelete}

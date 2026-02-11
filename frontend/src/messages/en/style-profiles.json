@@ -8,5 +8,40 @@
   "deleteProfileConfirm": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
   "deleteButton": "Delete",
   "cancelButton": "Cancel",
-  "deleteProfileLabel": "Delete profile: {name}"
+  "deleteProfileLabel": "Delete profile: {name}",
+  "detail": {
+    "notFound": "Profile not found",
+    "backToProfiles": "Back to profiles",
+    "stats": {
+      "samples": "Samples",
+      "totalWords": "Total Words",
+      "confidence": "Confidence",
+      "genre": "Genre"
+    },
+    "addSamples": "Add Samples",
+    "generateSample": "Generate Sample",
+    "addSampleTexts": "Add Sample Texts",
+    "generateSampleText": "Generate Sample Text",
+    "prompt": "Prompt",
+    "promptPlaceholder": "E.g., Write a short passage about a rainy day",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "generatedText": "Generated Text"
+  },
+  "new": {
+    "title": "Create Style Profile",
+    "backToProfiles": "Back to profiles",
+    "basicInfo": "Basic Information",
+    "profileName": "Profile Name",
+    "profileNamePlaceholder": "E.g., Hemingway Style, Business Blog Voice",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the purpose or characteristics of this style profile...",
+    "genre": "Genre",
+    "genrePlaceholder": "E.g., Fiction, Non-fiction, Technical Writing",
+    "nextAddSamples": "Next: Add Samples",
+    "addSampleTexts": "Add Sample Texts",
+    "editInfo": "Edit Info",
+    "samplesDescription": "Add at least one sample text (minimum a few paragraphs) to analyze the writing style. More samples will improve accuracy.",
+    "errorMessage": "Failed to create profile. Please try again."
+  }
 }

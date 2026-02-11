@@ -3,5 +3,35 @@
   "generateNewCover": "Generate new cover",
   "generateCover": "Generate Cover",
   "description": "Create stunning book covers with AI-powered design. Generate custom covers based on genre, mood, and style preferences.",
-  "noCoverMessage": "No covers yet. Click 'Generate Cover' to create your first design."
+  "noCoverMessage": "No covers yet. Click 'Generate Cover' to create your first design.",
+  "detail": {
+    "notFound": "Cover not found",
+    "title": "Cover Details",
+    "subtitle": "View and manage your cover design",
+    "goBack": "Go back",
+    "generateVariations": "Generate Variations",
+    "delete": "Delete",
+    "deleteLabel": "Delete cover",
+    "deleteCover": "Delete cover",
+    "coverInfo": "Cover Information",
+    "status": "Status",
+    "created": "Created",
+    "lastUpdated": "Last Updated",
+    "metadata": "Metadata",
+    "deleteConfirmTitle": "Delete Cover",
+    "deleteConfirmMessage": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+    "cancel": "Cancel",
+    "closeDialog": "Close dialog",
+    "numberOfVariations": "Number of Variations",
+    "generate": "Generate",
+    "generating": "Generating..."
+  },
+  "new": {
+    "title": "Create New Cover",
+    "subtitle": "Generate a custom book cover with AI or browse templates",
+    "goBack": "Go back",
+    "aiGenerator": "AI Generator",
+    "templates": "Templates",
+    "templatesDescription": "Browse and select from our professionally designed templates. You can customize them after selection."
+  }
 }

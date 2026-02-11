@@ -3,5 +3,35 @@
   "generateNewCover": "Neues Cover erstellen",
   "generateCover": "Cover Erstellen",
   "description": "Erstellen Sie atemberaubende Buchcover mit KI-gestütztem Design. Generieren Sie individuelle Cover basierend auf Genre, Stimmung und Stilvorlieben.",
-  "noCoverMessage": "Noch keine Cover. Klicken Sie auf 'Cover Erstellen', um Ihr erstes Design zu erstellen."
+  "noCoverMessage": "Noch keine Cover. Klicken Sie auf 'Cover Erstellen', um Ihr erstes Design zu erstellen.",
+  "detail": {
+    "notFound": "Cover nicht gefunden",
+    "title": "Cover-Details",
+    "subtitle": "Cover-Design anzeigen und verwalten",
+    "goBack": "Zurück",
+    "generateVariations": "Variationen generieren",
+    "delete": "Löschen",
+    "deleteLabel": "Cover löschen",
+    "deleteCover": "Cover löschen",
+    "coverInfo": "Cover-Informationen",
+    "status": "Status",
+    "created": "Erstellt",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "metadata": "Metadaten",
+    "deleteConfirmTitle": "Cover löschen",
+    "deleteConfirmMessage": "Möchten Sie \"{title}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "cancel": "Abbrechen",
+    "closeDialog": "Dialog schließen",
+    "numberOfVariations": "Anzahl der Variationen",
+    "generate": "Generieren",
+    "generating": "Wird generiert..."
+  },
+  "new": {
+    "title": "Neues Cover erstellen",
+    "subtitle": "Generieren Sie ein individuelles Buchcover mit KI oder durchsuchen Sie Vorlagen",
+    "goBack": "Zurück",
+    "aiGenerator": "KI-Generator",
+    "templates": "Vorlagen",
+    "templatesDescription": "Durchsuchen und wählen Sie aus unseren professionell gestalteten Vorlagen. Sie können sie nach der Auswahl anpassen."
+  }
 }

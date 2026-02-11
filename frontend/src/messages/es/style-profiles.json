@@ -8,5 +8,40 @@
   "deleteProfileConfirm": "¿Estás seguro de que quieres eliminar \"{name}\"? Esta acción no se puede deshacer.",
   "deleteButton": "Eliminar",
   "cancelButton": "Cancelar",
-  "deleteProfileLabel": "Eliminar perfil: {name}"
+  "deleteProfileLabel": "Eliminar perfil: {name}",
+  "detail": {
+    "notFound": "Perfil no encontrado",
+    "backToProfiles": "Volver a perfiles",
+    "stats": {
+      "samples": "Muestras",
+      "totalWords": "Palabras Totales",
+      "confidence": "Confianza",
+      "genre": "Género"
+    },
+    "addSamples": "Agregar Muestras",
+    "generateSample": "Generar Muestra",
+    "addSampleTexts": "Agregar Textos de Muestra",
+    "generateSampleText": "Generar Texto de Muestra",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Ej., Escribe un pasaje corto sobre un día lluvioso",
+    "generate": "Generar",
+    "generating": "Generando...",
+    "generatedText": "Texto Generado"
+  },
+  "new": {
+    "title": "Crear Perfil de Estilo",
+    "backToProfiles": "Volver a perfiles",
+    "basicInfo": "Información Básica",
+    "profileName": "Nombre del Perfil",
+    "profileNamePlaceholder": "Ej., Estilo Hemingway, Voz de Blog Empresarial",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Describe el propósito o características de este perfil de estilo...",
+    "genre": "Género",
+    "genrePlaceholder": "Ej., Ficción, No ficción, Escritura Técnica",
+    "nextAddSamples": "Siguiente: Agregar Muestras",
+    "addSampleTexts": "Agregar Textos de Muestra",
+    "editInfo": "Editar Información",
+    "samplesDescription": "Agrega al menos un texto de muestra (mínimo unos pocos párrafos) para analizar el estilo de escritura. Más muestras mejorarán la precisión.",
+    "errorMessage": "Error al crear el perfil. Por favor, inténtalo de nuevo."
+  }
 }

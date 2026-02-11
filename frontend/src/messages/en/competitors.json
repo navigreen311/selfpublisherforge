@@ -1,3 +1,43 @@
 {
-  "title": "Competitor Analysis"
+  "title": "Competitor Analysis",
+  "detail": {
+    "notFound": "Competitor analysis not found",
+    "defaultTitle": "Competitor Analysis",
+    "by": "by",
+    "overview": "Overview",
+    "stats": {
+      "bsr": "BSR",
+      "price": "Price",
+      "rating": "Rating",
+      "reviews": "Reviews",
+      "overallScore": "Overall Score",
+      "sentiment": "Sentiment",
+      "weaknesses": "Weaknesses",
+      "strengths": "Strengths"
+    },
+    "reviewSummary": "Review Summary",
+    "weaknessesTitle": "Detected Weaknesses ({count})",
+    "analysisFailed": "Analysis Failed",
+    "actionable": "Actionable",
+    "frequency": "Frequency",
+    "confidence": "Confidence",
+    "suggestion": "Suggestion",
+    "evidence": "Evidence",
+    "rating": "Rating",
+    "foundHelpful": "found helpful",
+    "moreEvidence": "+{count} more evidence items",
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "category": {
+      "contentQuality": "Content",
+      "formatLayout": "Format",
+      "missingFeatures": "Features",
+      "pricing": "Pricing",
+      "coverageGaps": "Coverage"
+    }
+  }
 }

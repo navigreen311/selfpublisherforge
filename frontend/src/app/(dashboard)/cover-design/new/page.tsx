@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, Image as ImageIcon } from "lucide-react";
 import { CoverGenerator } from "@/modules/cover-design/components/CoverGenerator";
 import { TemplateSelector } from "@/modules/cover-design/components/TemplateSelector";
+import { useTranslations } from "@/hooks/use-translations";
 
 type TabType = "generate" | "templates";
 
 export default function NewCoverPage() {
   const router = useRouter();
+  const t = useTranslations("cover-design");
   const [activeTab, setActiveTab] = useState<TabType>("generate");
 
   const handleSuccess = (coverId: string) => {
@@ -22,15 +24,15 @@ export default function NewCoverPage() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
-          aria-label="Go back"
+          aria-label={t("new.goBack")}
           className="p-2 hover:bg-accent rounded-lg transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold">Create New Cover</h1>
+          <h1 className="text-2xl font-bold">{t("new.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Generate a custom book cover with AI or browse templates
+            {t("new.subtitle")}
           </p>
         </div>
       </div>
@@ -47,7 +49,7 @@ export default function NewCoverPage() {
             }`}
           >
             <Sparkles className="h-4 w-4" />
-            AI Generator
+            {t("new.aiGenerator")}
           </button>
           <button
             onClick={() => setActiveTab("templates")}
@@ -58,7 +60,7 @@ export default function NewCoverPage() {
             }`}
           >
             <ImageIcon className="h-4 w-4" />
-            Templates
+            {t("new.templates")}
           </button>
         </div>
       </div>
@@ -74,8 +76,7 @@ export default function NewCoverPage() {
           <div>
             <div className="mb-4">
               <p className="text-sm text-muted-foreground">
-                Browse and select from our professionally designed templates.
-                You can customize them after selection.
+                {t("new.templatesDescription")}
               </p>
             </div>
             <TemplateSelector

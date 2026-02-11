@@ -8,5 +8,40 @@
   "deleteProfileConfirm": "Sind Sie sicher, dass Sie \"{name}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
   "deleteButton": "Löschen",
   "cancelButton": "Abbrechen",
-  "deleteProfileLabel": "Profil löschen: {name}"
+  "deleteProfileLabel": "Profil löschen: {name}",
+  "detail": {
+    "notFound": "Profil nicht gefunden",
+    "backToProfiles": "Zurück zu Profilen",
+    "stats": {
+      "samples": "Beispiele",
+      "totalWords": "Gesamtwörter",
+      "confidence": "Vertrauen",
+      "genre": "Genre"
+    },
+    "addSamples": "Beispiele hinzufügen",
+    "generateSample": "Beispiel generieren",
+    "addSampleTexts": "Beispieltexte hinzufügen",
+    "generateSampleText": "Beispieltext generieren",
+    "prompt": "Eingabeaufforderung",
+    "promptPlaceholder": "Z.B. Schreiben Sie eine kurze Passage über einen regnerischen Tag",
+    "generate": "Generieren",
+    "generating": "Wird generiert...",
+    "generatedText": "Generierter Text"
+  },
+  "new": {
+    "title": "Stil-Profil Erstellen",
+    "backToProfiles": "Zurück zu Profilen",
+    "basicInfo": "Grundlegende Informationen",
+    "profileName": "Profilname",
+    "profileNamePlaceholder": "Z.B. Hemingway-Stil, Business-Blog-Stimme",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Beschreiben Sie den Zweck oder die Eigenschaften dieses Stil-Profils...",
+    "genre": "Genre",
+    "genrePlaceholder": "Z.B. Fiktion, Sachbuch, Technisches Schreiben",
+    "nextAddSamples": "Weiter: Beispiele hinzufügen",
+    "addSampleTexts": "Beispieltexte hinzufügen",
+    "editInfo": "Info bearbeiten",
+    "samplesDescription": "Fügen Sie mindestens einen Beispieltext (mindestens ein paar Absätze) hinzu, um den Schreibstil zu analysieren. Mehr Beispiele verbessern die Genauigkeit.",
+    "errorMessage": "Profil konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+  }
 }
