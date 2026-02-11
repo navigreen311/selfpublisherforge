@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Eye, EyeOff, Check } from "lucide-react";
+import { useTranslations } from "@/hooks/use-translations";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,6 +20,7 @@ import { api } from "@/lib/api";
 import { getPasswordChecks, PASSWORD_CHECK_LABELS, validatePassword } from "@/lib/validation";
 
 function ResetPasswordForm() {
+  const t = useTranslations("auth.resetPassword");
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -40,17 +42,17 @@ function ResetPasswordForm() {
     setError("");
 
     if (!isPasswordValid) {
-      setError("Please meet all password requirements.");
+      setError(t("passwordRequirements"));
       return;
     }
 
     if (!passwordsMatch) {
-      setError("Passwords do not match.");
+      setError(t("passwordsDoNotMatch"));
       return;
     }
 
     if (!token) {
-      setError("Invalid or missing reset token. Please request a new reset link.");
+      setError(t("invalidToken"));
       return;
     }
 
@@ -68,7 +70,7 @@ function ResetPasswordForm() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("Failed to reset password. The link may have expired. Please request a new one.");
+        setError(t("resetFailed"));
       }
     } finally {
       setLoading(false);
@@ -79,19 +81,19 @@ function ResetPasswordForm() {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Invalid reset link</CardTitle>
+          <CardTitle className="text-2xl">{t("invalidLink")}</CardTitle>
           <CardDescription>
-            This password reset link is invalid or has expired. Please request a new one.
+            {t("invalidLinkDescription")}
           </CardDescription>
         </CardHeader>
         <CardFooter className="flex flex-col gap-4">
           <Button asChild className="w-full">
-            <Link href="/forgot-password">Request new reset link</Link>
+            <Link href="/forgot-password">{t("requestNewLink")}</Link>
           </Button>
           <p className="text-sm text-muted-foreground text-center">
-            Remember your password?{" "}
+            {t("rememberPassword")}{" "}
             <Link href="/login" className="text-primary hover:underline">
-              Sign in
+              {t("signIn")}
             </Link>
           </p>
         </CardFooter>
@@ -103,15 +105,14 @@ function ResetPasswordForm() {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Password reset successful</CardTitle>
+          <CardTitle className="text-2xl">{t("successTitle")}</CardTitle>
           <CardDescription>
-            Your password has been reset successfully. You will be redirected to the sign in page
-            shortly.
+            {t("successDescription")}
           </CardDescription>
         </CardHeader>
         <CardFooter className="flex flex-col gap-4">
           <Button asChild className="w-full">
-            <Link href="/login">Sign in now</Link>
+            <Link href="/login">{t("signInNow")}</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -121,8 +122,8 @@ function ResetPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Reset your password</CardTitle>
-        <CardDescription>Enter your new password below.</CardDescription>
+        <CardTitle className="text-2xl">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -133,11 +134,11 @@ function ResetPasswordForm() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">New Password</label>
+            <label className="text-sm font-medium">{t("newPassword")}</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your new password"
+                placeholder={t("newPasswordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -147,7 +148,7 @@ function ResetPasswordForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? (
@@ -178,11 +179,11 @@ function ResetPasswordForm() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Confirm Password</label>
+            <label className="text-sm font-medium">{t("confirmPassword")}</label>
             <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm your new password"
+                placeholder={t("confirmPasswordPlaceholder")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -195,7 +196,7 @@ function ResetPasswordForm() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showConfirmPassword ? (
@@ -206,7 +207,7 @@ function ResetPasswordForm() {
               </button>
             </div>
             {confirmPassword && !passwordsMatch && (
-              <p className="text-sm text-destructive">Passwords do not match.</p>
+              <p className="text-sm text-destructive">{t("passwordsDoNotMatch")}</p>
             )}
           </div>
         </CardContent>
@@ -216,12 +217,12 @@ function ResetPasswordForm() {
             className="w-full"
             disabled={loading || !isPasswordValid || !passwordsMatch}
           >
-            {loading ? "Resetting password..." : "Reset password"}
+            {loading ? t("submitting") : t("submit")}
           </Button>
           <p className="text-sm text-muted-foreground text-center">
-            Remember your password?{" "}
+            {t("rememberPassword")}{" "}
             <Link href="/login" className="text-primary hover:underline">
-              Sign in
+              {t("signIn")}
             </Link>
           </p>
         </CardFooter>
@@ -231,13 +232,15 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
+  const t = useTranslations("auth.resetPassword");
+
   return (
     <React.Suspense
       fallback={
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Reset your password</CardTitle>
-            <CardDescription>Loading...</CardDescription>
+            <CardTitle className="text-2xl">{t("title")}</CardTitle>
+            <CardDescription>{t("loading")}</CardDescription>
           </CardHeader>
         </Card>
       }
