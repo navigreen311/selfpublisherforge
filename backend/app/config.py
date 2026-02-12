@@ -42,11 +42,6 @@ class Settings(BaseSettings):
     DEFAULT_LLM_MODEL: str = "claude-sonnet-4-5-20250929"
     AI_WORD_COUNT_MULTIPLIER: float = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
 
-    # VoiceForge TTS
-    ELEVENLABS_API_KEY: str = ""
-    COQUI_XTTS_ENDPOINT: str = "http://localhost:8321"
-    PIPER_ENDPOINT: str = "http://localhost:8322"
-
     # Stripe
     STRIPE_SECRET_KEY: str = "YOUR_STRIPE_SECRET_KEY_HERE"
     STRIPE_WEBHOOK_SECRET: str = "YOUR_STRIPE_WEBHOOK_SECRET_HERE"
@@ -103,31 +98,14 @@ class Settings(BaseSettings):
     # Chrome Extension
     CHROME_EXTENSION_ID: str = os.environ.get("CHROME_EXTENSION_ID", "")
 
-    # VoiceForge — TTS Providers
-    COQUI_XTTS_ENDPOINT: str = "http://localhost:8501"
-    COQUI_XTTS_MODEL: str = "xtts_v2"
-    PIPER_ENDPOINT: str = "http://localhost:8502"
-    ELEVENLABS_API_KEY: str = ""
-    ELEVENLABS_DEFAULT_MODEL: str = "eleven_multilingual_v2"
-
-    # VoiceForge — ASR Providers
-    FASTER_WHISPER_ENDPOINT: str = "http://localhost:8503"
-    FASTER_WHISPER_MODEL: str = "large-v3"
-    FASTER_WHISPER_DEVICE: str = "cuda"
+    # VoiceForge ASR
+    FASTER_WHISPER_ENDPOINT: str = os.environ.get(
+        "FASTER_WHISPER_ENDPOINT", "http://localhost:8787"
+    )
+    FASTER_WHISPER_MODEL: str = os.environ.get(
+        "FASTER_WHISPER_MODEL", "large-v3"
+    )
     DEEPGRAM_API_KEY: str = ""
-
-    # VoiceForge — Audio Processing
-    FFMPEG_PATH: str = "/usr/bin/ffmpeg"
-    AUDIO_TEMP_DIR: str = "/tmp/voiceforge/audio"
-    AUDIO_STORAGE_BUCKET: str = "selfpublisherforge-audio"
-
-    # VoiceForge — Limits
-    TTS_MAX_CONCURRENT_JOBS: int = 10
-    TTS_MAX_CHAPTER_LENGTH_WORDS: int = 25000
-    ASR_MAX_SESSION_DURATION_MINUTES: int = 120
-    VOICE_CLONE_MAX_SAMPLES: int = 10
-    VOICE_CLONE_MIN_AUDIO_SECONDS: int = 180
-    VOICE_CLONE_MAX_AUDIO_SECONDS: int = 600
 
     # Market intelligence scoring midpoints (sigmoid scaling)
     MI_DEMAND_MIDPOINT: int = int(os.environ.get("MI_DEMAND_MIDPOINT", "5000"))
@@ -162,7 +140,9 @@ class Settings(BaseSettings):
             return self
 
         missing: list[str] = [
-            name for name, placeholder in self._PLACEHOLDER_SECRETS.items() if getattr(self, name) == placeholder
+            name
+            for name, placeholder in self._PLACEHOLDER_SECRETS.items()
+            if getattr(self, name) == placeholder
         ]
         if missing:
             raise ValueError(
@@ -207,20 +187,24 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT != "production":
             return self
 
-        empty: list[str] = [name for name in self._OPTIONAL_RECOMMENDED_FIELDS if not getattr(self, name, "")]
+        empty: list[str] = [
+            name
+            for name in self._OPTIONAL_RECOMMENDED_FIELDS
+            if not getattr(self, name, "")
+        ]
         if empty:
             warnings.warn(
                 "Production mode: the following optional integration credentials are "
                 "empty. Related features (OAuth login, Stripe billing tiers, "
                 "Amazon Ads, Facebook Ads, Amazon PA-API) will be unavailable "
-                "until configured:\n  - " + "\n  - ".join(empty),
+                "until configured:\n  - "
+                + "\n  - ".join(empty),
                 UserWarning,
                 stacklevel=2,
             )
         return self
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
-
 
 @lru_cache
 def get_settings() -> Settings:
