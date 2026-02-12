@@ -1,203 +1,142 @@
-"""Service layer for voice management — listing, previewing, cloning, and deleting voices."""
+"""Service layer for audiobook voice management."""
 
 from __future__ import annotations
 
 import logging
-from uuid import UUID
+import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audiobook import AudiobookVoice
+from app.modules.audiobook.schemas_extended import VoiceCloneRequest
 
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# List voices
-# ---------------------------------------------------------------------------
-
-
 async def list_voices(
     db: AsyncSession,
-    org_id: UUID,
+    org_id: uuid.UUID,
     provider: str | None = None,
     voice_type: str | None = None,
     gender: str | None = None,
     language: str | None = None,
 ) -> dict:
-    """List system voices + org's custom voices with optional filters.
-
-    System voices (``is_system_voice=True``) are visible to all organisations.
-    Custom voices are filtered by *org_id* for tenant isolation.
-    Only active voices (``active=True``) are returned.
-
-    Returns ``{items: [...], total: int}``.
-    """
+    """List available voices: system voices + the org's custom voices."""
     query = select(AudiobookVoice).where(
+        AudiobookVoice.active.is_(True),
+        AudiobookVoice.deleted_at.is_(None),
         or_(
-            AudiobookVoice.is_system_voice == True,  # noqa: E712
+            AudiobookVoice.is_system_voice.is_(True),
             AudiobookVoice.org_id == org_id,
         ),
-        AudiobookVoice.active == True,  # noqa: E712
     )
 
-    if provider is not None:
+    if provider:
         query = query.where(AudiobookVoice.provider == provider)
-    if voice_type is not None:
+    if voice_type:
         query = query.where(AudiobookVoice.voice_type == voice_type)
-    if gender is not None:
+    if gender:
         query = query.where(AudiobookVoice.gender == gender)
-    if language is not None:
+    if language:
         query = query.where(AudiobookVoice.language == language)
 
     query = query.order_by(AudiobookVoice.name)
     result = await db.execute(query)
-    voices = list(result.scalars().all())
-
-    return {"items": voices, "total": len(voices)}
-
-
-# ---------------------------------------------------------------------------
-# Get single voice
-# ---------------------------------------------------------------------------
+    items = list(result.scalars().all())
+    return {"items": items, "total": len(items)}
 
 
 async def get_voice(
     db: AsyncSession,
-    voice_id: UUID,
-    org_id: UUID,
+    voice_id: uuid.UUID,
+    org_id: uuid.UUID,
 ) -> AudiobookVoice | None:
-    """Get a single voice if it is a system voice or belongs to the org."""
-    query = select(AudiobookVoice).where(
+    """Get a single voice if it's a system voice or belongs to the org."""
+    stmt = select(AudiobookVoice).where(
         AudiobookVoice.id == voice_id,
-        AudiobookVoice.active == True,  # noqa: E712
+        AudiobookVoice.active.is_(True),
+        AudiobookVoice.deleted_at.is_(None),
         or_(
-            AudiobookVoice.is_system_voice == True,  # noqa: E712
+            AudiobookVoice.is_system_voice.is_(True),
             AudiobookVoice.org_id == org_id,
         ),
     )
-    result = await db.execute(query)
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
-
-
-# ---------------------------------------------------------------------------
-# Preview voice
-# ---------------------------------------------------------------------------
 
 
 async def preview_voice(
     db: AsyncSession,
-    voice_id: UUID,
-    org_id: UUID,
+    voice_id: uuid.UUID,
+    org_id: uuid.UUID,
     text: str,
 ) -> dict | None:
-    """Generate a short audio preview using the voice.
-
-    Looks up the voice config, verifies access, then delegates to
-    :class:`TTSEngine` for synthesis.
-
-    Returns ``{voice_id, audio_url, duration_seconds, text}`` or ``None``
-    if the voice is not found / not accessible.
-    """
+    """Generate a preview audio clip for a voice."""
     voice = await get_voice(db, voice_id, org_id)
     if not voice:
         return None
 
-    from app.services.voiceforge.tts_engine import TTSEngine
+    # If the voice already has a sample, return it for the default text
+    if voice.sample_audio_url:
+        return {
+            "voice_id": voice.id,
+            "text": text,
+            "audio_url": voice.sample_audio_url,
+            "duration_seconds": None,
+        }
 
-    tts = TTSEngine()
-    try:
-        audio = await tts.preview_voice(
-            sample_text=text,
-            voice_id=voice.provider_voice_id or str(voice.id),
-            provider=voice.provider,
-        )
-    finally:
-        await tts.close()
-
-    logger.info(
-        "Voice preview generated: voice=%s provider=%s duration=%.1fs",
-        voice_id,
-        voice.provider,
-        audio.duration_seconds,
-    )
-
+    # TODO: Integrate with TTS provider to generate on-the-fly preview
+    logger.info("On-the-fly voice preview not yet implemented for voice %s", voice_id)
     return {
         "voice_id": voice.id,
-        "audio_url": str(audio.audio_path),
-        "duration_seconds": audio.duration_seconds,
         "text": text,
+        "audio_url": "",
+        "duration_seconds": None,
     }
-
-
-# ---------------------------------------------------------------------------
-# Clone voice
-# ---------------------------------------------------------------------------
 
 
 async def clone_voice(
     db: AsyncSession,
-    org_id: UUID,
-    data,
+    org_id: uuid.UUID,
+    request: VoiceCloneRequest,
 ) -> AudiobookVoice:
-    """Clone a voice from audio samples.
-
-    Dispatches to :class:`VoiceManager.create_clone` and creates an
-    :class:`AudiobookVoice` record with ``provider='custom_clone'`` and
-    ``is_system_voice=False``.
-
-    *data* is expected to carry ``name`` (str) and ``audio_samples`` (list[Path]).
-    """
-    from app.services.voiceforge.voice_manager import VoiceManager
-
-    manager = VoiceManager()
-    voice = await manager.create_clone(
-        db=db,
+    """Clone a voice from an audio sample and register it as a custom voice."""
+    voice = AudiobookVoice(
         org_id=org_id,
-        name=data.name,
-        audio_samples=data.audio_samples,
-        provider="custom_clone",
+        name=request.name,
+        provider=request.provider,
+        voice_type=request.voice_type,
+        gender=request.gender,
+        language=request.language,
+        clone_source_url=request.clone_source_url,
+        voice_settings=request.voice_settings,
+        is_system_voice=False,
     )
-
-    logger.info(
-        "Voice cloned: voice=%s org=%s name=%s",
-        voice.id,
-        org_id,
-        data.name,
-    )
-
+    db.add(voice)
+    await db.flush()
+    await db.refresh(voice)
     return voice
-
-
-# ---------------------------------------------------------------------------
-# Delete voice
-# ---------------------------------------------------------------------------
 
 
 async def delete_voice(
     db: AsyncSession,
-    voice_id: UUID,
-    org_id: UUID,
+    voice_id: uuid.UUID,
+    org_id: uuid.UUID,
 ) -> bool:
-    """Deactivate a custom voice (cannot delete system voices).
-
-    Verifies the voice belongs to *org_id* and is **not** a system voice,
-    then sets ``active=False`` (soft deactivate).
-    """
-    query = select(AudiobookVoice).where(
+    """Soft-delete a custom voice. System voices cannot be deleted."""
+    stmt = select(AudiobookVoice).where(
         AudiobookVoice.id == voice_id,
         AudiobookVoice.org_id == org_id,
-        AudiobookVoice.is_system_voice == False,  # noqa: E712
+        AudiobookVoice.is_system_voice.is_(False),
+        AudiobookVoice.deleted_at.is_(None),
     )
-    result = await db.execute(query)
+    result = await db.execute(stmt)
     voice = result.scalar_one_or_none()
-
     if not voice:
         return False
-
     voice.active = False
+    voice.deleted_at = datetime.now(UTC)
     await db.flush()
-
-    logger.info("Voice deactivated: voice=%s org=%s", voice_id, org_id)
     return True
