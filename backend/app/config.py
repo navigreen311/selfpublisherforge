@@ -98,6 +98,32 @@ class Settings(BaseSettings):
     # Chrome Extension
     CHROME_EXTENSION_ID: str = os.environ.get("CHROME_EXTENSION_ID", "")
 
+    # VoiceForge — TTS Providers
+    COQUI_XTTS_ENDPOINT: str = "http://localhost:8501"
+    COQUI_XTTS_MODEL: str = "xtts_v2"
+    PIPER_ENDPOINT: str = "http://localhost:8502"
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_DEFAULT_MODEL: str = "eleven_multilingual_v2"
+
+    # VoiceForge — ASR Providers
+    FASTER_WHISPER_ENDPOINT: str = "http://localhost:8503"
+    FASTER_WHISPER_MODEL: str = "large-v3"
+    FASTER_WHISPER_DEVICE: str = "cuda"
+    DEEPGRAM_API_KEY: str = ""
+
+    # VoiceForge — Audio Processing
+    FFMPEG_PATH: str = "/usr/bin/ffmpeg"
+    AUDIO_TEMP_DIR: str = "/tmp/voiceforge/audio"
+    AUDIO_STORAGE_BUCKET: str = "selfpublisherforge-audio"
+
+    # VoiceForge — Limits
+    TTS_MAX_CONCURRENT_JOBS: int = 10
+    TTS_MAX_CHAPTER_LENGTH_WORDS: int = 25000
+    ASR_MAX_SESSION_DURATION_MINUTES: int = 120
+    VOICE_CLONE_MAX_SAMPLES: int = 10
+    VOICE_CLONE_MIN_AUDIO_SECONDS: int = 180
+    VOICE_CLONE_MAX_AUDIO_SECONDS: int = 600
+
     # Market intelligence scoring midpoints (sigmoid scaling)
     MI_DEMAND_MIDPOINT: int = int(os.environ.get("MI_DEMAND_MIDPOINT", "5000"))
     MI_COMPETITION_MIDPOINT: int = int(os.environ.get("MI_COMPETITION_MIDPOINT", "50000"))
