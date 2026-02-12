@@ -171,6 +171,9 @@ def _register_routers(app: FastAPI):
     from app.modules.kdp_validation.router import router as kdp_router
     app.include_router(kdp_router, prefix=prefix, tags=["kdp-validation"])
 
+    from app.modules.audiobook.router import router as audiobook_router
+    app.include_router(audiobook_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
+
     # Tier 4: Optimization
     from app.modules.product_page_lab.router import router as product_page_router
     app.include_router(product_page_router, prefix=f"{prefix}/product-page", tags=["product-page"])
