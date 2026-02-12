@@ -1,4 +1,5 @@
 """Celery application factory with enhanced routing, queues, and scheduling."""
+
 from celery import Celery
 
 from app.config import get_settings
@@ -27,6 +28,7 @@ celery_app = Celery(
         "app.tasks.publishing_ops",
         "app.tasks.review_intelligence",
         "app.tasks.style_cloning",
+        "app.tasks.audiobook_tasks",
     ],
 )
 
