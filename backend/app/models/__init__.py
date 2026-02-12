@@ -7,15 +7,8 @@ from app.models.agent import AgentTask as DomainAgentTask
 from app.models.agent import AgentWorkflow as DomainAgentWorkflow
 from app.models.agent import AuditTrail as DomainAuditTrail
 from app.models.analytics import ABTestStatus, PortfolioMetric, ReportStatus
-from app.models.audiobook import (
-    AudiobookChapter,
-    AudiobookGenerationJob,
-    AudiobookProject,
-    AudiobookPronunciation,
-    AudiobookVoice,
-)
+from app.models.audiobook import AudiobookChapter, AudiobookProject, AudiobookPronunciation
 from app.models.content import Chapter, ContentAsset, Manuscript, StyleProfile, WritingSession
-from app.models.dictation import DictationCommand, DictationSession
 from app.models.market import CompetitorBook, CompetitorReview, MarketCategory, MarketKeyword, MarketSnapshot
 from app.models.marketing import (
     ARCCampaign,
@@ -59,16 +52,12 @@ __all__ = [
     "Organization", "User", "ApiKey", "UserSession", "OAuthAccount",
     "Project", "Book", "Series", "PenName", "BookVersion",
     "Manuscript", "Chapter", "StyleProfile", "WritingSession", "ContentAsset",
-    "DictationSession", "DictationCommand",
     "MarketCategory", "MarketKeyword", "CompetitorBook", "CompetitorReview", "MarketSnapshot",
     "PublishingAccount", "Listing", "UploadValidation", "ComplianceScan", "PublishingPricingRule",
     "LaunchPlan", "LaunchPhase", "PhaseTask", "EmailSequence", "EmailTemplate",
     "SocialPost", "ARCCampaign", "ARCRecipient",
     "DomainAgent", "DomainAgentTask", "DomainAgentWorkflow", "DomainAgentBudget", "DomainAuditTrail",
     "PortfolioMetric", "ABTestStatus", "ReportStatus",
-    # Audiobook models
-    "AudiobookVoice", "AudiobookProject", "AudiobookChapter",
-    "AudiobookPronunciation", "AudiobookGenerationJob",
     # Module models
     "Notification", "NotificationPreference",
     "KnowledgeEntry",
@@ -82,4 +71,6 @@ __all__ = [
     "BookReview", "ReviewAlert", "ReviewVelocitySnapshot", "ReputationScore",
     "CompetitorAnalysis", "WeaknessSignal", "OpportunityBlueprint", "GapAnalysisResult", "CompetitorAlert",
     "ExportJob", "FormattingTemplateModel",
+    # Audiobook models
+    "AudiobookProject", "AudiobookChapter", "AudiobookPronunciation",
 ]

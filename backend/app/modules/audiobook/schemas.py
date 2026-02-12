@@ -1,111 +1,92 @@
-"""Pydantic request/response schemas for the audiobook mastering & export module."""
+"""Pydantic schemas for the Audiobook module — SSML & Pronunciation."""
+
+from __future__ import annotations
 
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-# ---------------------------------------------------------------------------
-# Requests
-# ---------------------------------------------------------------------------
-
-class MasterAudiobookRequest(BaseModel):
-    """Request to start mastering an audiobook."""
-    normalize_loudness: bool = Field(default=True, description="Apply LUFS normalization")
-    target_lufs: float = Field(default=-20.0, ge=-30.0, le=-10.0)
-    noise_reduction: bool = Field(default=True)
-    compress_dynamics: bool = Field(default=True)
-    crossfade_ms: int = Field(default=500, ge=0, le=5000, description="Crossfade between chapters in ms")
+# ── SSML Schemas ───────────────────────────────────────────────────────────
 
 
-class ExportAudiobookRequest(BaseModel):
-    """Request to export an audiobook for a specific platform."""
-    format: str = Field(default="mp3", pattern="^(mp3|m4b|flac|wav)$")
-    target_platform: str = Field(default="generic", pattern="^(acx|findaway|authors_republic|generic)$")
-    bitrate_kbps: int = Field(default=192, ge=64, le=320)
-    sample_rate_hz: int = Field(default=44100, ge=22050, le=96000)
-    include_metadata: bool = Field(default=True)
+class DialogueSegment(BaseModel):
+    """A detected dialogue segment with character attribution."""
+
+    character: str
+    text: str
+    emotion: str | None = None
+    start_index: int = 0
+    end_index: int = 0
 
 
-# ---------------------------------------------------------------------------
-# Responses
-# ---------------------------------------------------------------------------
+class EmotionSegment(BaseModel):
+    """A text passage with detected emotional tone."""
 
-class MasteringJobResponse(BaseModel):
-    """Response for a mastering job."""
+    text: str
+    emotion: str
+    intensity: float = Field(0.5, ge=0.0, le=1.0)
+    start_index: int = 0
+    end_index: int = 0
+
+
+class SSMLGenerateRequest(BaseModel):
+    """Request body for generating SSML from chapter text."""
+
+    options: dict | None = Field(
+        default=None,
+        description="Generation options: emphasis_level, pause_duration, etc.",
+    )
+
+
+class SSMLUpdateRequest(BaseModel):
+    """Request body for updating SSML text (manual edits)."""
+
+    ssml_text: str = Field(..., min_length=1)
+
+
+class SSMLResponse(BaseModel):
+    """Response containing generated/updated SSML for a chapter."""
+
+    chapter_id: UUID
+    original_text: str
+    ssml_text: str
+    dialogue_segments: list[DialogueSegment] = Field(default_factory=list)
+    emotion_segments: list[EmotionSegment] = Field(default_factory=list)
+
+
+# ── Pronunciation Schemas ──────────────────────────────────────────────────
+
+
+class PronunciationCreate(BaseModel):
+    """Request body for adding a pronunciation entry."""
+
+    word: str = Field(..., min_length=1, max_length=255)
+    phonetic: str = Field(..., min_length=1, max_length=500)
+    ssml_phoneme: str | None = Field(None, max_length=500)
+    context: str | None = None
+    audiobook_project_id: UUID | None = None
+
+
+class PronunciationResponse(BaseModel):
+    """A pronunciation dictionary entry."""
+
     id: UUID
-    audiobook_id: UUID
-    status: str
-    celery_task_id: str | None
-    output_file_url: str | None
-    processing_settings: dict | None
-    error_message: str | None
-    duration_seconds: float | None
+    org_id: UUID
+    audiobook_project_id: UUID | None = None
+    word: str
+    phonetic: str
+    ssml_phoneme: str | None = None
+    audio_sample_url: str | None = None
+    context: str | None = None
+    active: bool = True
     created_at: datetime
-    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-class ExportResponse(BaseModel):
-    """Response for an audiobook export."""
-    id: UUID
-    audiobook_id: UUID
-    format: str
-    target_platform: str
-    status: str
-    file_url: str | None
-    file_size_bytes: int | None
-    celery_task_id: str | None
-    error_message: str | None
-    created_at: datetime
-    updated_at: datetime
+class PronunciationListResponse(BaseModel):
+    """List of pronunciation entries."""
 
-
-class DownloadResponse(BaseModel):
-    """Response with a pre-signed download URL."""
-    export_id: UUID
-    download_url: str
-    expires_in_seconds: int
-    file_size_bytes: int | None
-    format: str
-    filename: str
-
-
-class ValidationResultItem(BaseModel):
-    """Validation result for a single chapter."""
-    chapter_number: int
-    chapter_title: str
-    passed: bool
-    errors: list[str]
-    warnings: list[str]
-    details: dict | None = None
-
-
-class ValidationResponse(BaseModel):
-    """Aggregate validation response for the audiobook."""
-    audiobook_id: UUID
-    overall_passed: bool
-    total_chapters: int
-    chapters_passed: int
-    chapters_failed: int
-    results: list[ValidationResultItem]
-    validated_at: datetime
-
-
-class ChapterCostItem(BaseModel):
-    """Cost breakdown for a single chapter."""
-    chapter_number: int
-    chapter_title: str
-    provider: str | None
-    duration_seconds: float | None
-    generation_cost_usd: float | None
-
-
-class CostBreakdownResponse(BaseModel):
-    """Detailed cost breakdown for the audiobook project."""
-    audiobook_id: UUID
-    title: str
-    total_cost_usd: float
-    total_chapters: int
-    total_duration_seconds: float
-    chapters: list[ChapterCostItem]
-    cost_by_provider: dict[str, float]
+    items: list[PronunciationResponse]
+    total: int

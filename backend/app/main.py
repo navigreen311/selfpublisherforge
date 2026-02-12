@@ -215,4 +215,8 @@ def _register_routers(app: FastAPI):
     from app.modules.chrome_extension.router import router as extension_router
     app.include_router(extension_router, prefix=prefix, tags=["chrome-extension"])
 
+    # VoiceForge Integration
+    from app.modules.audiobook.router import router as audiobook_router
+    app.include_router(audiobook_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
+
 app = create_app()
