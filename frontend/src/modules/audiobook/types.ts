@@ -56,3 +56,116 @@ export interface AudiobookChapter {
   sentence_timings?: SentenceTiming[];
   cost_usd: number;
 }
+
+export type AudiobookProjectStatus =
+  | "draft"
+  | "recording"
+  | "reviewing"
+  | "mastering"
+  | "mastered"
+  | "exporting"
+  | "completed"
+  | "archived";
+
+export interface AudiobookProject {
+  id: string;
+  org_id: string;
+  project_id: string;
+  title: string;
+  author?: string;
+  narrator?: string;
+  status: AudiobookProjectStatus;
+  voice_id?: string;
+  total_chapters: number;
+  total_duration_seconds: number;
+  total_cost_usd: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Voice {
+  id: string;
+  name: string;
+  provider: string;
+  gender: string;
+  language: string;
+  preview_url?: string;
+  cost_per_minute?: number;
+}
+
+export interface GenerationJob {
+  id: string;
+  audiobook_project_id: string;
+  chapter_id?: string;
+  job_type: string;
+  status: string;
+  priority: number;
+  provider?: string;
+  input_params: Record<string, unknown>;
+  output: Record<string, unknown>;
+  error_message?: string;
+  retry_count: number;
+  max_retries: number;
+  started_at?: string;
+  completed_at?: string;
+  cost_usd: number;
+  celery_task_id?: string;
+  created_at: string;
+}
+
+export interface CostBreakdown {
+  total_cost_usd: number;
+  per_chapter: { chapter_id: string; cost_usd: number }[];
+  provider: string;
+  estimated_duration_minutes: number;
+}
+
+export interface ACXValidationResult {
+  valid: boolean;
+  errors: { field: string; message: string }[];
+  warnings: { field: string; message: string }[];
+}
+
+export interface PronunciationEntry {
+  id: string;
+  org_id: string;
+  audiobook_project_id?: string;
+  word: string;
+  phonetic: string;
+  ssml_phoneme?: string;
+  audio_sample_url?: string;
+  context?: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface AudiobookWSEvent {
+  type: string;
+  chapter_id: string;
+  percent: number;
+  stage: string;
+  [key: string]: unknown;
+}
+
+export interface CreateAudiobookProjectPayload {
+  title: string;
+  project_id: string;
+  voice_id?: string;
+  author?: string;
+  narrator?: string;
+}
+
+export interface UpdateAudiobookProjectPayload {
+  title?: string;
+  voice_id?: string;
+  author?: string;
+  narrator?: string;
+  status?: AudiobookProjectStatus;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+}
