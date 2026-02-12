@@ -14,5 +14,9 @@ export { SentenceHighlighter } from "./SentenceHighlighter";
 export { ACXValidator } from "./ACXValidator";
 export { AudiobookExport } from "./AudiobookExport";
 export { SSMLEditor } from "./SSMLEditor";
-export { GenerationQueuePanel } from "./GenerationQueuePanel";
-export type { GenerationQueuePanelProps } from "./GenerationQueuePanel";
+export {
+  AudiobookStudioSkeleton,
+  ProjectListSkeleton,
+  ChapterListSkeleton,
+} from "./AudiobookSkeleton";
+export { AudiobookErrorBoundary } from "./AudiobookErrorBoundary";
