@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     DEFAULT_LLM_MODEL: str = "claude-sonnet-4-5-20250929"
     AI_WORD_COUNT_MULTIPLIER: float = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
 
+    # VoiceForge TTS
+    ELEVENLABS_API_KEY: str = ""
+    COQUI_XTTS_ENDPOINT: str = "http://localhost:8321"
+    PIPER_ENDPOINT: str = "http://localhost:8322"
+
     # Stripe
     STRIPE_SECRET_KEY: str = "YOUR_STRIPE_SECRET_KEY_HERE"
     STRIPE_WEBHOOK_SECRET: str = "YOUR_STRIPE_WEBHOOK_SECRET_HERE"
@@ -157,9 +162,7 @@ class Settings(BaseSettings):
             return self
 
         missing: list[str] = [
-            name
-            for name, placeholder in self._PLACEHOLDER_SECRETS.items()
-            if getattr(self, name) == placeholder
+            name for name, placeholder in self._PLACEHOLDER_SECRETS.items() if getattr(self, name) == placeholder
         ]
         if missing:
             raise ValueError(
@@ -204,24 +207,20 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT != "production":
             return self
 
-        empty: list[str] = [
-            name
-            for name in self._OPTIONAL_RECOMMENDED_FIELDS
-            if not getattr(self, name, "")
-        ]
+        empty: list[str] = [name for name in self._OPTIONAL_RECOMMENDED_FIELDS if not getattr(self, name, "")]
         if empty:
             warnings.warn(
                 "Production mode: the following optional integration credentials are "
                 "empty. Related features (OAuth login, Stripe billing tiers, "
                 "Amazon Ads, Facebook Ads, Amazon PA-API) will be unavailable "
-                "until configured:\n  - "
-                + "\n  - ".join(empty),
+                "until configured:\n  - " + "\n  - ".join(empty),
                 UserWarning,
                 stacklevel=2,
             )
         return self
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
 
 @lru_cache
 def get_settings() -> Settings:
