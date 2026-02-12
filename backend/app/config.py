@@ -98,6 +98,15 @@ class Settings(BaseSettings):
     # Chrome Extension
     CHROME_EXTENSION_ID: str = os.environ.get("CHROME_EXTENSION_ID", "")
 
+    # VoiceForge ASR
+    FASTER_WHISPER_ENDPOINT: str = os.environ.get(
+        "FASTER_WHISPER_ENDPOINT", "http://localhost:8787"
+    )
+    FASTER_WHISPER_MODEL: str = os.environ.get(
+        "FASTER_WHISPER_MODEL", "large-v3"
+    )
+    DEEPGRAM_API_KEY: str = ""
+
     # Market intelligence scoring midpoints (sigmoid scaling)
     MI_DEMAND_MIDPOINT: int = int(os.environ.get("MI_DEMAND_MIDPOINT", "5000"))
     MI_COMPETITION_MIDPOINT: int = int(os.environ.get("MI_COMPETITION_MIDPOINT", "50000"))
