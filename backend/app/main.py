@@ -216,6 +216,18 @@ def _register_routers(app: FastAPI):
     from app.modules.audiobook.router_generation import router as audiobook_gen_router
     app.include_router(audiobook_gen_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
 
+    from app.modules.audiobook.router_crud import router as audiobook_crud_router
+    app.include_router(audiobook_crud_router, prefix=f"{prefix}/audiobooks/projects", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_voices import router as audiobook_voices_router
+    app.include_router(audiobook_voices_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_mastering import router as audiobook_mastering_router
+    app.include_router(audiobook_mastering_router, prefix=f"{prefix}/audiobooks/projects", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_export import router as audiobook_export_router
+    app.include_router(audiobook_export_router, prefix=f"{prefix}/audiobooks/projects", tags=["audiobooks"])
+
     from app.modules.audiobook.websocket import router as audiobook_ws_router
     app.include_router(audiobook_ws_router, prefix=f"{prefix}", tags=["audiobooks-ws"])
 

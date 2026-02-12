@@ -48,7 +48,7 @@ export function useAudiobookProjects(page = 1, pageSize = 20) {
   return useQuery<PaginatedResponse<AudiobookProject>>({
     queryKey: audiobookKeys.projects(page, pageSize),
     queryFn: async () => {
-      const { data } = await api.get("/api/v1/audiobook/projects", {
+      const { data } = await api.get("/api/v1/audiobooks/projects", {
         params: { page, page_size: pageSize },
       });
       return data;
@@ -60,7 +60,7 @@ export function useAudiobookProject(id: string) {
   return useQuery<AudiobookProject & { chapters: AudiobookChapter[] }>({
     queryKey: audiobookKeys.project(id),
     queryFn: async () => {
-      const { data } = await api.get(`/api/v1/audiobook/projects/${id}`);
+      const { data } = await api.get(`/api/v1/audiobooks/projects/${id}`);
       return data;
     },
     enabled: !!id,
@@ -71,7 +71,7 @@ export function useCreateAudiobookProject() {
   const queryClient = useQueryClient();
   return useMutation<AudiobookProject, Error, CreateAudiobookProjectPayload>({
     mutationFn: async (payload) => {
-      const { data } = await api.post("/api/v1/audiobook/projects", payload);
+      const { data } = await api.post("/api/v1/audiobooks/projects", payload);
       return data;
     },
     onSuccess: () => {
@@ -88,7 +88,7 @@ export function useUpdateAudiobookProject(id: string) {
   return useMutation<AudiobookProject, Error, UpdateAudiobookProjectPayload>({
     mutationFn: async (payload) => {
       const { data } = await api.patch(
-        `/api/v1/audiobook/projects/${id}`,
+        `/api/v1/audiobooks/projects/${id}`,
         payload,
       );
       return data;
@@ -107,7 +107,7 @@ export function useDeleteAudiobookProject() {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (projectId) => {
-      await api.delete(`/api/v1/audiobook/projects/${projectId}`);
+      await api.delete(`/api/v1/audiobooks/projects/${projectId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: audiobookKeys.projects() });
@@ -126,7 +126,7 @@ export function useVoices() {
   return useQuery<Voice[]>({
     queryKey: audiobookKeys.voices(),
     queryFn: async () => {
-      const { data } = await api.get("/api/v1/audiobook/voices");
+      const { data } = await api.get("/api/v1/audiobooks/voices");
       return data;
     },
   });
@@ -135,7 +135,7 @@ export function useVoices() {
 export function useVoicePreview() {
   return useMutation<{ audio_url: string }, Error, { voice_id: string; text: string }>({
     mutationFn: async (payload) => {
-      const { data } = await api.post("/api/v1/audiobook/voices/preview", payload);
+      const { data } = await api.post("/api/v1/audiobooks/voices/preview", payload);
       return data;
     },
     onError: (error) => {
@@ -153,7 +153,7 @@ export function useGenerateChapter(projectId: string) {
   return useMutation<GenerationJob, Error, { chapter_id: string }>({
     mutationFn: async (payload) => {
       const { data } = await api.post(
-        `/api/v1/audiobook/projects/${projectId}/chapters/${payload.chapter_id}/generate`,
+        `/api/v1/audiobooks/projects/${projectId}/chapters/${payload.chapter_id}/generate`,
       );
       return data;
     },
@@ -171,7 +171,7 @@ export function useGenerateAllChapters(projectId: string) {
   return useMutation<GenerationJob[], Error, void>({
     mutationFn: async () => {
       const { data } = await api.post(
-        `/api/v1/audiobook/projects/${projectId}/generate-all`,
+        `/api/v1/audiobooks/projects/${projectId}/generate-all`,
       );
       return data;
     },
@@ -189,7 +189,7 @@ export function useApproveChapter(projectId: string) {
   return useMutation<AudiobookChapter, Error, { chapter_id: string; review_notes?: string }>({
     mutationFn: async ({ chapter_id, review_notes }) => {
       const { data } = await api.post(
-        `/api/v1/audiobook/projects/${projectId}/chapters/${chapter_id}/approve`,
+        `/api/v1/audiobooks/projects/${projectId}/chapters/${chapter_id}/approve`,
         { review_notes },
       );
       return data;
@@ -212,7 +212,7 @@ export function useMasterAudiobook(projectId: string) {
   return useMutation<GenerationJob, Error, void>({
     mutationFn: async () => {
       const { data } = await api.post(
-        `/api/v1/audiobook/projects/${projectId}/master`,
+        `/api/v1/audiobooks/projects/${projectId}/master`,
       );
       return data;
     },
@@ -229,7 +229,7 @@ export function useExportAudiobook(projectId: string) {
   return useMutation<{ download_url: string }, Error, { format?: string }>({
     mutationFn: async (payload) => {
       const { data } = await api.post(
-        `/api/v1/audiobook/projects/${projectId}/export`,
+        `/api/v1/audiobooks/projects/${projectId}/export`,
         payload,
       );
       return data;
@@ -248,7 +248,7 @@ export function useValidateAudiobook(projectId: string) {
   return useMutation<ACXValidationResult, Error, void>({
     mutationFn: async () => {
       const { data } = await api.post(
-        `/api/v1/audiobook/projects/${projectId}/validate`,
+        `/api/v1/audiobooks/projects/${projectId}/validate`,
       );
       return data;
     },
@@ -267,7 +267,7 @@ export function usePronunciationDict(projectId?: string) {
     queryKey: audiobookKeys.pronunciation(projectId),
     queryFn: async () => {
       const params = projectId ? { project_id: projectId } : {};
-      const { data } = await api.get("/api/v1/audiobook/pronunciation", {
+      const { data } = await api.get("/api/v1/audiobooks/pronunciation", {
         params,
       });
       return data;
@@ -283,7 +283,7 @@ export function useAddPronunciation() {
     Omit<PronunciationEntry, "id">
   >({
     mutationFn: async (payload) => {
-      const { data } = await api.post("/api/v1/audiobook/pronunciation", payload);
+      const { data } = await api.post("/api/v1/audiobooks/pronunciation", payload);
       return data;
     },
     onSuccess: (_data, variables) => {
@@ -306,7 +306,7 @@ export function useCostEstimate(projectId: string) {
     queryKey: audiobookKeys.costEstimate(projectId),
     queryFn: async () => {
       const { data } = await api.get(
-        `/api/v1/audiobook/projects/${projectId}/cost-estimate`,
+        `/api/v1/audiobooks/projects/${projectId}/cost-estimate`,
       );
       return data;
     },
