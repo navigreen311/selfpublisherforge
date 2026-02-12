@@ -1,333 +1,427 @@
-"""Celery tasks for audiobook mastering and export.
+"""Celery tasks for audiobook mastering, export, and voice cloning.
 
-Async tasks for:
-- Mastering: merge chapters, apply processing chain, upload master file
-- Exporting: convert to target format, package for platform delivery
+Handles:
+- Full mastering chain (normalize, noise gate, compression, EQ, room tone)
+- Chapter merging and retail sample generation
+- ACX / platform validation
+- Voice cloning requests
 
 Time limit strategy
 -------------------
-- Mastering is a long-running operation:  soft=1800, hard=3600
-- Exporting is also long-running:         soft=1800, hard=3600
+Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
+(in seconds) based on expected workload:
+  - Quick   (notifications, status updates):   soft=60,   hard=120
+  - Medium  (API calls, data sync):            soft=300,  hard=600
+  - Long    (bulk imports, report generation):  soft=1800, hard=3600
+  - V. Long (full analytics aggregation):       soft=3300, hard=3600
+Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
 
 from __future__ import annotations
 
-import asyncio
+import json
 import logging
-import uuid
-from datetime import UTC, datetime
+from pathlib import Path
 
-import boto3
-from botocore.config import Config as BotoConfig
-from botocore.exceptions import ClientError
 from celery.exceptions import SoftTimeLimitExceeded
 
-from app.config import get_settings
 from app.tasks import celery_app
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# S3 helpers
+# Helpers
 # ---------------------------------------------------------------------------
 
-def _upload_to_s3(
-    file_bytes: bytes,
-    s3_key: str,
-    content_type: str,
-) -> str:
-    """Upload bytes to S3 and return the object URL."""
+
+def _publish_event(project_id: str, event_type: str, data: dict) -> None:
+    """Publish a real-time event via Redis pub/sub for WebSocket consumers."""
+    import redis
+
+    from app.config import get_settings
+
     settings = get_settings()
-    s3_client = boto3.client(
-        "s3",
-        region_name=settings.S3_REGION,
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        config=BotoConfig(signature_version="s3v4"),
-    )
-
-    s3_client.put_object(
-        Bucket=settings.S3_BUCKET,
-        Key=s3_key,
-        Body=file_bytes,
-        ContentType=content_type,
-    )
-
-    file_url = f"https://{settings.S3_BUCKET}.s3.{settings.S3_REGION}.amazonaws.com/{s3_key}"
-    logger.info("Uploaded %d bytes to s3://%s/%s", len(file_bytes), settings.S3_BUCKET, s3_key)
-    return file_url
+    r = redis.from_url(settings.REDIS_URL)
+    channel = f"audiobook:{project_id}:events"
+    message = json.dumps({"type": event_type, **data})
+    r.publish(channel, message)
+    r.close()
 
 
 # ---------------------------------------------------------------------------
-# Mastering task
+# Master audiobook
 # ---------------------------------------------------------------------------
+
 
 @celery_app.task(
-    name="audiobook.master",
+    name="mastering.master_audiobook",
     bind=True,
-    max_retries=3,
+    max_retries=2,
     default_retry_delay=60,
     acks_late=True,
     soft_time_limit=1800,
     time_limit=3600,
 )
-def master_audiobook_task(
-    self,
-    mastering_job_id: str,
-    audiobook_id: str,
-    org_id: str,
-    chapter_urls: list[str],
-    processing_settings: dict | None = None,
-) -> dict:
-    """Master an audiobook by merging chapters and applying processing chain.
+def master_audiobook_task(self, job_id: str, project_id: str) -> dict:
+    """Merge all approved chapters into a final audiobook and apply mastering chain.
 
-    Steps:
-    1. Download all chapter audio files
-    2. Apply processing (normalization, noise reduction, dynamics)
-    3. Merge chapters with crossfades
-    4. Upload master file to S3
-    5. Update mastering job record
+    Parameters
+    ----------
+    job_id : str
+        UUID of the ``AudiobookGenerationJob`` tracking this mastering run.
+    project_id : str
+        UUID of the ``AudiobookProject`` to master.
+
+    Returns
+    -------
+    dict
+        ``{"status": "completed", "master_url": ..., "duration": ...}`` on
+        success, or ``{"status": "failed", "error": ...}`` on failure.
     """
+    import asyncio
+
     from sqlalchemy import select
 
     from app.database import async_session
-    from app.modules.audiobook.models import (
-        Audiobook,
-        MasteringJob,
-        MasteringStatus,
+    from app.models.audiobook import (
+        AudiobookChapter,
+        AudiobookGenerationJob,
+        AudiobookProject,
     )
+    from app.services.voiceforge.audio_processor import AudioProcessor
 
-    async def _do_mastering():
+    async def _process():
         async with async_session() as db:
-            # Fetch mastering job
-            stmt = select(MasteringJob).where(
-                MasteringJob.id == uuid.UUID(mastering_job_id),
-                MasteringJob.deleted_at.is_(None),
+            job = (
+                await db.execute(select(AudiobookGenerationJob).where(AudiobookGenerationJob.id == job_id))
+            ).scalar_one()
+            project = (await db.execute(select(AudiobookProject).where(AudiobookProject.id == project_id))).scalar_one()
+            chapters = (
+                (
+                    await db.execute(
+                        select(AudiobookChapter)
+                        .where(
+                            AudiobookChapter.audiobook_project_id == project_id,
+                            AudiobookChapter.status == "approved",
+                        )
+                        .order_by(AudiobookChapter.chapter_number)
+                    )
+                )
+                .scalars()
+                .all()
             )
-            result = await db.execute(stmt)
-            job = result.scalar_one_or_none()
 
-            if job is None:
-                logger.warning("MasteringJob %s not found", mastering_job_id)
-                return {
-                    "mastering_job_id": mastering_job_id,
-                    "status": "not_found",
-                    "message": f"MasteringJob {mastering_job_id} not found",
-                }
-
-            job.status = MasteringStatus.PROCESSING
+            job.status = "processing"
             await db.commit()
 
-            try:
-                # ASSUMPTION: Audio processing is handled by external tools
-                # (ffmpeg, pydub, etc.) that would be integrated here.
-                # For now, we create a placeholder master that represents
-                # the merged and processed output.
-                settings = processing_settings or {}
-                logger.info(
-                    "Mastering audiobook %s: %d chapters, settings=%s",
-                    audiobook_id, len(chapter_urls), settings,
+            _publish_event(
+                str(project_id),
+                "mastering_progress",
+                {"percent": 10, "stage": "loading_chapters"},
+            )
+
+            processor = AudioProcessor()
+            chapter_paths = [
+                Path(ch.audio_url.replace("s3://", "/tmp/"))  # noqa: S108 — TODO: download from S3
+                for ch in chapters
+            ]
+
+            # Apply mastering chain to each chapter
+            params = job.input_params or {}
+            mastered_paths: list[Path] = []
+
+            for i, path in enumerate(chapter_paths):
+                percent = 10 + int(70 * (i / len(chapter_paths)))
+                _publish_event(
+                    str(project_id),
+                    "mastering_progress",
+                    {"percent": percent, "stage": f"mastering_chapter_{i + 1}"},
                 )
 
-                # Placeholder: In production, this would:
-                # 1. Download each chapter from S3
-                # 2. Apply normalization (LUFS target)
-                # 3. Apply noise reduction
-                # 4. Apply dynamic compression
-                # 5. Merge with crossfades
-                # 6. Export as high-quality intermediate
-                master_bytes = b"MASTERED_AUDIO_PLACEHOLDER"
-                s3_key = f"audiobooks/{org_id}/{audiobook_id}/master/master.wav"
-                file_url = _upload_to_s3(master_bytes, s3_key, content_type="audio/wav")
+                if params.get("normalize", True):
+                    result = processor.normalize(path, target_rms=params.get("target_rms_db", -20.0))
+                    path = result.audio_path
+                if params.get("noise_gate", True):
+                    result = processor.apply_noise_gate(path)
+                    path = result.audio_path
+                if params.get("compression", True):
+                    result = processor.apply_compression(path)
+                    path = result.audio_path
+                if params.get("eq", True):
+                    result = processor.apply_eq(path)
+                    path = result.audio_path
+                if params.get("room_tone", True):
+                    result = processor.add_room_tone(path)
+                    path = result.audio_path
 
-                # Update mastering job
-                job.status = MasteringStatus.COMPLETED
-                job.output_file_url = file_url
+                # Convert to target format
+                result = processor.convert_format(path, target_format=project.output_format or "mp3")
+                mastered_paths.append(result.audio_path)
 
-                # Update audiobook with master URL
-                ab_stmt = select(Audiobook).where(Audiobook.id == uuid.UUID(audiobook_id))
-                ab_result = await db.execute(ab_stmt)
-                audiobook = ab_result.scalar_one_or_none()
-                if audiobook:
-                    audiobook.master_file_url = file_url
-                    audiobook.status = "mastered"
+            # Merge chapters
+            _publish_event(
+                str(project_id),
+                "mastering_progress",
+                {"percent": 85, "stage": "merging"},
+            )
+            merged = processor.merge_chapters(mastered_paths, output_format=project.output_format or "mp3")
 
-                await db.commit()
+            # Generate retail sample
+            sample = processor.generate_retail_sample(merged.audio_path, duration_seconds=300)
 
-                logger.info(
-                    "Mastering completed for audiobook %s, job %s, url=%s",
-                    audiobook_id, mastering_job_id, file_url,
-                )
+            # Embed metadata
+            metadata = project.metadata_ or {}
+            metadata.update({"title": project.title, "genre": "Audiobook"})
+            processor.embed_metadata(merged.audio_path, metadata)
 
-                return {
-                    "mastering_job_id": mastering_job_id,
-                    "audiobook_id": audiobook_id,
-                    "status": "completed",
-                    "file_url": file_url,
-                    "completed_at": datetime.now(UTC).isoformat(),
-                }
+            # Upload to S3
+            _publish_event(
+                str(project_id),
+                "mastering_progress",
+                {"percent": 95, "stage": "uploading"},
+            )
+            master_url = f"s3://{merged.audio_path}"  # TODO: actual S3 upload
+            sample_url = f"s3://{sample.audio_path}"
 
-            except Exception as exc:
-                job.status = MasteringStatus.FAILED
-                job.error_message = str(exc)
-                await db.commit()
-                raise
+            # Update records
+            project.status = "complete"
+            project.master_audio_url = master_url
+            project.cover_audio_url = sample_url
+            project.total_duration_seconds = int(merged.duration_seconds)
 
+            job.status = "completed"
+            job.output = {
+                "master_url": master_url,
+                "sample_url": sample_url,
+                "duration": merged.duration_seconds,
+            }
+            await db.commit()
+
+            _publish_event(
+                str(project_id),
+                "mastering_complete",
+                {
+                    "master_url": master_url,
+                    "total_duration": merged.duration_seconds,
+                    "total_cost": float(project.actual_cost or 0),
+                },
+            )
+
+            return {
+                "status": "completed",
+                "master_url": master_url,
+                "sample_url": sample_url,
+                "duration": merged.duration_seconds,
+            }
+
+    loop = asyncio.new_event_loop()
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                result = pool.submit(asyncio.run, _do_mastering()).result()
-        else:
-            result = loop.run_until_complete(_do_mastering())
-    except RuntimeError:
-        result = asyncio.run(_do_mastering())
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
-        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
-    except ClientError as exc:
-        logger.error("S3 error in mastering task %s: %s", mastering_job_id, exc, exc_info=True)
-        raise self.retry(exc=exc) from exc
     except Exception as exc:
-        logger.error("Mastering failed for job %s: %s", mastering_job_id, exc, exc_info=True)
+        logger.error("Mastering failed for project %s: %s", project_id, exc, exc_info=True)
+        # Best-effort: mark the job as failed
+        try:
+            _mark_job_failed(job_id, str(exc))
+        except Exception:
+            logger.warning("Could not mark job %s as failed", job_id, exc_info=True)
         raise self.retry(exc=exc) from exc
+    finally:
+        loop.close()
 
-    return result
+
+def _mark_job_failed(job_id: str, error_message: str) -> None:
+    """Synchronously mark a generation job as failed (best-effort)."""
+    import asyncio
+
+    from sqlalchemy import select
+
+    from app.database import async_session
+    from app.models.audiobook import AudiobookGenerationJob
+
+    async def _update():
+        async with async_session() as db:
+            job = (
+                await db.execute(select(AudiobookGenerationJob).where(AudiobookGenerationJob.id == job_id))
+            ).scalar_one_or_none()
+            if job:
+                job.status = "failed"
+                job.error_message = error_message
+                await db.commit()
+
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_update())
+    finally:
+        loop.close()
 
 
-# ── Export task ────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Validate audiobook (ACX compliance)
+# ---------------------------------------------------------------------------
+
 
 @celery_app.task(
-    name="audiobook.export",
+    name="mastering.validate_audiobook",
     bind=True,
-    max_retries=3,
-    default_retry_delay=60,
+    max_retries=1,
+    default_retry_delay=30,
     acks_late=True,
     soft_time_limit=1800,
     time_limit=3600,
 )
-def export_audiobook_task(
-    self,
-    export_id: str,
-    audiobook_id: str,
-    org_id: str,
-    master_file_url: str,
-    format: str = "mp3",
-    target_platform: str = "generic",
-    bitrate_kbps: int = 192,
-    sample_rate_hz: int = 44100,
-    include_metadata: bool = True,
-) -> dict:
-    """Export audiobook in the target format for platform delivery.
+def validate_audiobook_task(self, project_id: str) -> dict:
+    """Run ACX / platform validation on all chapter audio files.
 
-    Steps:
-    1. Download the master file
-    2. Convert to target format with specified parameters
-    3. Apply platform-specific formatting
-    4. Package as ZIP with chapter files + metadata
-    5. Upload to S3
-    6. Update export record
+    Parameters
+    ----------
+    project_id : str
+        UUID of the ``AudiobookProject`` whose chapters should be validated.
+
+    Returns
+    -------
+    dict
+        ``{"overall_pass": bool, "chapters": [...]}``
     """
+    import asyncio
+
     from sqlalchemy import select
 
     from app.database import async_session
-    from app.modules.audiobook.models import AudiobookExport, ExportStatus
+    from app.models.audiobook import AudiobookChapter
+    from app.services.voiceforge.audio_processor import AudioProcessor
 
-    async def _do_export():
+    async def _process():
         async with async_session() as db:
-            stmt = select(AudiobookExport).where(
-                AudiobookExport.id == uuid.UUID(export_id),
-                AudiobookExport.deleted_at.is_(None),
+            chapters = (
+                (
+                    await db.execute(
+                        select(AudiobookChapter)
+                        .where(AudiobookChapter.audiobook_project_id == project_id)
+                        .order_by(AudiobookChapter.chapter_number)
+                    )
+                )
+                .scalars()
+                .all()
             )
-            result = await db.execute(stmt)
-            export_record = result.scalar_one_or_none()
 
-            if export_record is None:
-                logger.warning("AudiobookExport %s not found", export_id)
-                return {
-                    "export_id": export_id,
-                    "status": "not_found",
-                    "message": f"Export {export_id} not found",
-                }
+            processor = AudioProcessor()
+            all_results = []
 
-            export_record.status = ExportStatus.PROCESSING
-            await db.commit()
-
-            try:
-                logger.info(
-                    "Exporting audiobook %s: format=%s, platform=%s, bitrate=%d",
-                    audiobook_id, format, target_platform, bitrate_kbps,
+            for ch in chapters:
+                if not ch.audio_url:
+                    continue
+                result = processor.validate_acx(
+                    Path(ch.audio_url.replace("s3://", "/tmp/"))  # noqa: S108
+                )
+                all_results.append(
+                    {
+                        "chapter": ch.chapter_number,
+                        "title": ch.chapter_title,
+                        "result": result,
+                    }
                 )
 
-                # ASSUMPTION: Format conversion uses external tools (ffmpeg).
-                # In production, this would:
-                # 1. Download master from S3
-                # 2. Convert to target format (MP3, M4B, FLAC, WAV)
-                # 3. Split into chapters if needed
-                # 4. Apply platform-specific requirements
-                # 5. Package as ZIP
-                export_bytes = b"EXPORTED_AUDIO_PLACEHOLDER"
-                ext = format
-                s3_key = (
-                    f"audiobooks/{org_id}/{audiobook_id}"
-                    f"/exports/{export_id}.{ext}"
-                )
-                content_type = {
-                    "mp3": "audio/mpeg",
-                    "m4b": "audio/mp4",
-                    "flac": "audio/flac",
-                    "wav": "audio/wav",
-                }.get(format, "application/octet-stream")
+            overall_pass = all(r["result"].overall_pass for r in all_results)
 
-                file_url = _upload_to_s3(export_bytes, s3_key, content_type=content_type)
+            _publish_event(
+                project_id,
+                "validation_complete",
+                {
+                    "results": {
+                        "overall_pass": overall_pass,
+                        "chapters": [
+                            {
+                                "chapter": r["chapter"],
+                                "score": r["result"].score,
+                                "passed": r["result"].overall_pass,
+                            }
+                            for r in all_results
+                        ],
+                    }
+                },
+            )
 
-                export_record.status = ExportStatus.COMPLETED
-                export_record.file_url = file_url
-                export_record.file_size_bytes = len(export_bytes)
-                await db.commit()
+            return {
+                "overall_pass": overall_pass,
+                "chapters": [
+                    {
+                        "chapter": r["chapter"],
+                        "title": r["title"],
+                        "score": r["result"].score,
+                        "passed": r["result"].overall_pass,
+                    }
+                    for r in all_results
+                ],
+            }
 
-                logger.info(
-                    "Export completed: export_id=%s, audiobook=%s, format=%s, url=%s",
-                    export_id, audiobook_id, format, file_url,
-                )
-
-                return {
-                    "export_id": export_id,
-                    "audiobook_id": audiobook_id,
-                    "status": "completed",
-                    "file_url": file_url,
-                    "file_size_bytes": len(export_bytes),
-                    "format": format,
-                    "target_platform": target_platform,
-                    "completed_at": datetime.now(UTC).isoformat(),
-                }
-
-            except Exception as exc:
-                export_record.status = ExportStatus.FAILED
-                export_record.error_message = str(exc)
-                await db.commit()
-                raise
-
+    loop = asyncio.new_event_loop()
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                result = pool.submit(asyncio.run, _do_export()).result()
-        else:
-            result = loop.run_until_complete(_do_export())
-    except RuntimeError:
-        result = asyncio.run(_do_export())
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
-        logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
-    except ClientError as exc:
-        logger.error("S3 error in export task %s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc) from exc
     except Exception as exc:
-        logger.error("Export failed for %s: %s", export_id, exc, exc_info=True)
+        logger.error("Validation failed for project %s: %s", project_id, exc, exc_info=True)
         raise self.retry(exc=exc) from exc
+    finally:
+        loop.close()
 
-    return result
+
+# ---------------------------------------------------------------------------
+# Clone voice
+# ---------------------------------------------------------------------------
+
+
+@celery_app.task(
+    name="mastering.clone_voice",
+    bind=True,
+    max_retries=1,
+    default_retry_delay=30,
+    acks_late=True,
+    soft_time_limit=300,
+    time_limit=600,
+)
+def clone_voice_task(self, org_id: str, name: str, audio_paths: list[str], provider: str) -> dict:
+    """Process a voice cloning request.
+
+    Parameters
+    ----------
+    org_id : str
+        Organisation UUID that owns the cloned voice.
+    name : str
+        Display name for the cloned voice.
+    audio_paths : list[str]
+        Paths / URLs to the reference audio samples.
+    provider : str
+        TTS provider to use for cloning (e.g. ``"elevenlabs"``).
+
+    Returns
+    -------
+    dict
+        ``{"status": "completed", "voice_name": ...}`` on success.
+    """
+    import asyncio
+
+    from app.database import async_session
+    from app.services.voiceforge.voice_manager import VoiceManager
+
+    async def _process():
+        async with async_session() as db:
+            manager = VoiceManager()
+            paths = [Path(p) for p in audio_paths]
+            voice = await manager.create_clone(db, org_id, name, paths, provider)
+            await db.commit()
+            return {"status": "completed", "voice_name": name, "voice_id": str(voice.id)}
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_process())
+    except SoftTimeLimitExceeded:
+        raise
+    except Exception as exc:
+        logger.error("Voice cloning failed for org %s: %s", org_id, exc, exc_info=True)
+        raise self.retry(exc=exc) from exc
+    finally:
+        loop.close()
