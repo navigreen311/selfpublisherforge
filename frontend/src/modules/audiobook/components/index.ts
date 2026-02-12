@@ -14,3 +14,5 @@ export { SentenceHighlighter } from "./SentenceHighlighter";
 export { ACXValidator } from "./ACXValidator";
 export { AudiobookExport } from "./AudiobookExport";
 export { SSMLEditor } from "./SSMLEditor";
+export { AudiobookProjectList } from "./AudiobookProjectList";
+export type { AudiobookProjectListProps } from "./AudiobookProjectList";
