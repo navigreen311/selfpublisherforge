@@ -209,4 +209,7 @@ def _register_routers(app: FastAPI):
     from app.modules.chrome_extension.router import router as extension_router
     app.include_router(extension_router, prefix=prefix, tags=["chrome-extension"])
 
+    from app.modules.dictation.router import router as dictation_router
+    app.include_router(dictation_router, prefix=f"{prefix}/dictation", tags=["dictation"])
+
 app = create_app()
