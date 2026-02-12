@@ -14,5 +14,5 @@ export { SentenceHighlighter } from "./SentenceHighlighter";
 export { ACXValidator } from "./ACXValidator";
 export { AudiobookExport } from "./AudiobookExport";
 export { SSMLEditor } from "./SSMLEditor";
-export { NewProjectDialog } from "./NewProjectDialog";
-export type { NewProjectDialogProps } from "./NewProjectDialog";
+export { GenerationQueuePanel } from "./GenerationQueuePanel";
+export type { GenerationQueuePanelProps } from "./GenerationQueuePanel";
