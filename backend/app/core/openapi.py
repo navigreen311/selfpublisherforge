@@ -50,6 +50,8 @@ testing, dynamic pricing, competitor tracking |
 ad management, review monitoring, revenue analytics |
 | **6-8 -- Intelligence & Scale** | agents, portfolio, audience, seasonal, covers, chrome-extension | \
 Autonomous agents, portfolio economics, audience building, seasonal planning, cover design, browser extension |
+| **VoiceForge** | audiobooks, dictation | \
+AI audiobook production with multi-provider TTS, voice dictation with ASR |
 
 ## Authentication
 
@@ -217,6 +219,30 @@ TAGS_METADATA: list[dict[str, Any]] = [
     {
         "name": "chrome-extension",
         "description": "Chrome Extension -- browser-extension API for on-page market research and data capture.",
+    },
+    # VoiceForge Integration
+    {
+        "name": "audiobooks",
+        "description": (
+            "AI Audiobook Production Studio -- full audiobook creation pipeline with "
+            "multi-provider TTS, SSML generation, ACX validation, chapter generation, "
+            "voice cloning, and mastering/export."
+        ),
+    },
+    {
+        "name": "audiobooks-ws",
+        "description": "Audiobook WebSocket -- real-time progress streaming for audiobook generation and mastering.",
+    },
+    {
+        "name": "dictation",
+        "description": (
+            "Voice-Driven Writing (Dictation) -- real-time speech-to-text dictation "
+            "with automatic punctuation, filler removal, and style refinement."
+        ),
+    },
+    {
+        "name": "dictation-ws",
+        "description": "Dictation WebSocket -- real-time audio streaming and transcription for voice dictation.",
     },
 ]
 

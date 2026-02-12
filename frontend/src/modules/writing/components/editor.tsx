@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EditorProps {
@@ -36,6 +37,7 @@ export function ManuscriptEditor({
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [dictationActive, setDictationActive] = useState(false);
 
   // Update word/char counts
   useEffect(() => {
@@ -87,6 +89,26 @@ export function ManuscriptEditor({
         <span className="text-xs text-muted-foreground">
           {wordCount} words | {charCount} characters
         </span>
+        {/* Dictation toggle */}
+        <button
+          type="button"
+          onClick={() => setDictationActive((prev) => !prev)}
+          aria-label={dictationActive ? "Stop dictation" : "Start dictation"}
+          aria-pressed={dictationActive}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors",
+            dictationActive
+              ? "bg-red-100 text-red-700 hover:bg-red-200"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          {dictationActive ? (
+            <MicOff className="h-3.5 w-3.5" aria-hidden="true" />
+          ) : (
+            <Mic className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          {dictationActive ? "Stop Dictation" : "Dictate"}
+        </button>
         <div className="flex-1" />
         {aiSuggestion && (
           <div className="flex items-center gap-2">
