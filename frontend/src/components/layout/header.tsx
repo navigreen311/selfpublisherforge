@@ -37,6 +37,7 @@ const pageLabels: Record<string, string> = {
   advertising: "Advertising",
   analytics: "Analytics",
   agents: "AI Agents",
+  "audiobook-studio": "Audiobook Studio",
   settings: "Settings",
   onboarding: "Onboarding",
 };

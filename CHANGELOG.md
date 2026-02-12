@@ -5,6 +5,24 @@ All notable changes to SelfPublisherForge will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-12
+
+VoiceForge integration delivering AI audiobook production and voice-driven writing capabilities.
+
+### Added
+
+- AI Audiobook Production Studio with multi-provider TTS (Coqui XTTS, ElevenLabs, Piper)
+- Voice-Driven Writing with real-time ASR dictation in Writing Studio
+- SSML generator for natural narration with dialogue detection and emotion tagging
+- ACX technical validation and auto-fix pipeline
+- Custom voice cloning (ElevenLabs and Coqui XTTS)
+- Pronunciation dictionary for custom word handling
+- Audiobook mastering pipeline with normalization, noise gate, and format conversion
+- Cost estimator with provider comparison
+- Real-time generation progress via WebSocket
+- Voice command system for hands-free dictation control
+- Dictation refinement pipeline with style matching
+
 ## [1.1.0] - 2026-02-10
 
 Comprehensive feature expansion sprint delivering 10 new frontend modules, enhanced AI capabilities,

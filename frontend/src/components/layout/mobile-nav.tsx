@@ -26,6 +26,7 @@ import {
   PieChart,
   CheckCircle,
   Settings2,
+  Headphones,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ const navItems: NavItem[] = [
   { label: "Review Intelligence", href: "/reviews", icon: Star },
   { label: "Writing Studio", href: "/writing", icon: PenTool },
   { label: "Cover Design Studio", href: "/cover-design", icon: Palette },
+  { label: "Audiobook Studio", href: "/audiobook-studio", icon: Headphones },
   { label: "Style Profiles", href: "/style-profiles", icon: Fingerprint },
   { label: "Knowledge Vault", href: "/knowledge", icon: LibraryBig },
   { label: "Publishing", href: "/publishing", icon: BookOpen },

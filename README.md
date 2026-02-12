@@ -1,6 +1,6 @@
 # SelfPublisherForge
 
-AI-powered, end-to-end self-publishing platform for independent authors, small publishers, and publishing agencies. From manuscript to market, SelfPublisherForge provides 33 integrated modules covering writing, publishing, marketing, analytics, and AI automation.
+AI-powered, end-to-end self-publishing platform for independent authors, small publishers, and publishing agencies. From manuscript to market, SelfPublisherForge provides 35 integrated modules covering writing, publishing, marketing, analytics, AI automation, and voice/audio production.
 
 ## Features
 
@@ -43,6 +43,10 @@ AI-powered, end-to-end self-publishing platform for independent authors, small p
 - **Notification Center** -- Real-time notification system with WebSocket updates, in-app notifications, and full-featured frontend center
 - **Background Task Processing** -- Celery workers with Redis broker for long-running operations, dead letter handling, and scheduled task beats
 
+### Voice & Audio
+- **AI Audiobook Production Studio** -- Full audiobook creation pipeline with multi-provider TTS (Coqui XTTS, ElevenLabs), SSML generation, ACX validation, chapter-by-chapter generation with real-time progress, voice cloning, and mastering/export for ACX, Findaway Voices, and more
+- **Voice-Driven Writing** -- Real-time speech-to-text dictation in the Writing Studio using Faster-Whisper ASR, with automatic punctuation restoration, filler removal, and style refinement via the Style Cloning Engine
+
 ### Chrome Extension
 - **Amazon Research Assistant** -- Browser extension (Manifest V3) for extracting Amazon product data, tracking BSR, researching niches, and saving clips to your SelfPublisherForge account. Supports 10 Amazon marketplaces with sidebar panel and popup interface. Enhanced with deeper metadata extraction.
 
@@ -84,6 +88,9 @@ cd selfpublisherforge
 
 # Start all services
 docker compose up --build -d
+
+# To include VoiceForge TTS/ASR services (Coqui XTTS, Faster-Whisper)
+docker compose --profile voiceforge up --build -d
 ```
 
 Services will be available at:
@@ -99,6 +106,7 @@ Services will be available at:
 | Frontend - Portfolio Economics | http://localhost:3000/portfolio-economics |
 | Frontend - Notifications | http://localhost:3000/notifications |
 | Frontend - KDP Validation | http://localhost:3000/kdp-validation |
+| Frontend - Audiobook Studio | http://localhost:3000/audiobook-studio |
 | Frontend - Admin Panel | http://localhost:3000/admin (Enterprise) |
 | API | http://localhost:8000 |
 | API Docs (Swagger) | http://localhost:8000/docs |
@@ -161,6 +169,9 @@ npm run dev
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key for S3 | -- |
 | `S3_BUCKET` | S3 bucket name | `selfpublisherforge-assets` |
 | `CELERY_BROKER_URL` | Celery broker (Redis) | `redis://localhost:6379/1` |
+| `ELEVENLABS_API_KEY` | ElevenLabs TTS API key (VoiceForge) | -- |
+| `COQUI_MODEL_PATH` | Path to Coqui XTTS model directory (VoiceForge) | `models/xtts` |
+| `WHISPER_MODEL_SIZE` | Faster-Whisper ASR model size (VoiceForge) | `base` |
 
 See `backend/.env.example` for the complete list.
 
@@ -225,9 +236,10 @@ selfpublisherforge/
 │   │   ├── api/v1/           # API route handlers (versioned)
 │   │   ├── core/             # Security, middleware, rate limiting, logging, pagination
 │   │   ├── models/           # SQLAlchemy ORM models (user, org, project, content, etc.)
-│   │   ├── modules/          # 33 feature modules (business logic + routes + schemas)
+│   │   ├── modules/          # 35 feature modules (business logic + routes + schemas)
 │   │   │   ├── advertising/       # AMS + Facebook ad campaigns
 │   │   │   ├── agent_system/      # Agent framework, governance, workflow engine
+│   │   │   ├── audiobook/         # AI audiobook production, TTS, SSML, mastering
 │   │   │   ├── ai_writing/        # Manuscript generation, readability analysis
 │   │   │   ├── analytics/         # Revenue dashboards, royalty import, reports
 │   │   │   ├── auth/              # JWT auth, MFA, password reset
@@ -235,6 +247,7 @@ selfpublisherforge/
 │   │   │   ├── chrome_extension/  # Extension API endpoints
 │   │   │   ├── competitor_finder/ # Competitive gap detection, opportunity scoring
 │   │   │   ├── cover_design/      # AI cover generation, templates
+│   │   │   ├── dictation/         # Voice dictation, ASR, style refinement
 │   │   │   ├── kdp_validation/    # Print, ebook, cover, compliance validation
 │   │   │   ├── knowledge_vault/   # Research management, ES search, AI import
 │   │   │   ├── llm_orchestration/ # Multi-provider LLM routing, caching, cost tracking
@@ -300,7 +313,7 @@ selfpublisherforge/
 
 ## Module Registry
 
-The platform consists of 33 modules across 5 subscription tiers. Higher tiers include all modules from lower tiers.
+The platform consists of 35 modules across 5 subscription tiers. Higher tiers include all modules from lower tiers.
 
 | # | Module | Tier | API Prefix | Description |
 |---|---|---|---|---|
@@ -337,6 +350,8 @@ The platform consists of 33 modules across 5 subscription tiers. Higher tiers in
 | 31 | competitor-finder | Starter | `/competitors` | Competitor gap detection and opportunities |
 | 32 | pricing-automation | Starter | `/pricing` | Dynamic pricing strategies and optimization |
 | 33 | portfolio-economics | Pro | `/portfolio` | Multi-book portfolio analysis and ROI tracking |
+| 34 | audiobook | Pro | `/audiobooks` | AI audiobook production with TTS |
+| 35 | dictation | Starter | `/dictation` | Voice dictation for writing |
 
 ## Architecture
 
