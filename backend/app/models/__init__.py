@@ -7,7 +7,6 @@ from app.models.agent import AgentTask as DomainAgentTask
 from app.models.agent import AgentWorkflow as DomainAgentWorkflow
 from app.models.agent import AuditTrail as DomainAuditTrail
 from app.models.analytics import ABTestStatus, PortfolioMetric, ReportStatus
-from app.models.audiobook import AudiobookChapter, AudiobookProject, AudiobookPronunciation
 from app.models.content import Chapter, ContentAsset, Manuscript, StyleProfile, WritingSession
 from app.models.market import CompetitorBook, CompetitorReview, MarketCategory, MarketKeyword, MarketSnapshot
 from app.models.marketing import (
@@ -37,6 +36,7 @@ from app.modules.competitor_finder.models import (
     WeaknessSignal,
 )
 from app.modules.cover_design.models import Cover, ExtractedProduct, KnowledgeClip
+from app.modules.dictation.models import DictationCommand, DictationSession, DictationSettings
 from app.modules.knowledge_vault.models import KnowledgeEntry
 
 # Module-specific models
@@ -71,6 +71,5 @@ __all__ = [
     "BookReview", "ReviewAlert", "ReviewVelocitySnapshot", "ReputationScore",
     "CompetitorAnalysis", "WeaknessSignal", "OpportunityBlueprint", "GapAnalysisResult", "CompetitorAlert",
     "ExportJob", "FormattingTemplateModel",
-    # Audiobook models
-    "AudiobookProject", "AudiobookChapter", "AudiobookPronunciation",
+    "DictationSession", "DictationCommand", "DictationSettings",
 ]

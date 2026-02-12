@@ -51,9 +51,6 @@ def _log_startup_config_warnings() -> None:
         "Amazon Ads": bool(s.AMAZON_ADS_CLIENT_ID and s.AMAZON_ADS_CLIENT_SECRET),
         "Anthropic LLM": s.ANTHROPIC_API_KEY != "YOUR_ANTHROPIC_API_KEY_HERE",
         "OpenAI LLM": s.OPENAI_API_KEY != "YOUR_OPENAI_API_KEY_HERE",
-        "VoiceForge TTS (Coqui)": bool(s.COQUI_XTTS_ENDPOINT),
-        "VoiceForge TTS (ElevenLabs)": bool(s.ELEVENLABS_API_KEY),
-        "VoiceForge ASR (Whisper)": bool(s.FASTER_WHISPER_ENDPOINT),
     }
 
     configured = [name for name, ready in integrations.items() if ready]
@@ -174,9 +171,6 @@ def _register_routers(app: FastAPI):
     from app.modules.kdp_validation.router import router as kdp_router
     app.include_router(kdp_router, prefix=prefix, tags=["kdp-validation"])
 
-    from app.modules.audiobook.router import router as audiobook_router
-    app.include_router(audiobook_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
-
     # Tier 4: Optimization
     from app.modules.product_page_lab.router import router as product_page_router
     app.include_router(product_page_router, prefix=f"{prefix}/product-page", tags=["product-page"])
@@ -215,8 +209,7 @@ def _register_routers(app: FastAPI):
     from app.modules.chrome_extension.router import router as extension_router
     app.include_router(extension_router, prefix=prefix, tags=["chrome-extension"])
 
-    # VoiceForge Integration
-    from app.modules.audiobook.router import router as audiobook_router
-    app.include_router(audiobook_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
+    from app.modules.dictation.router import router as dictation_router
+    app.include_router(dictation_router, prefix=f"{prefix}/dictation", tags=["dictation"])
 
 app = create_app()
