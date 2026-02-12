@@ -1,4 +1,4 @@
-"""Pydantic schemas for the Audiobook module — Voice management."""
+"""Extended Pydantic schemas for audiobook export & download."""
 
 from __future__ import annotations
 
@@ -7,57 +7,58 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# ── Voice Schemas ─────────────────────────────────────────────────────────
+
+class ExportRequest(BaseModel):
+    """Request body for starting an audiobook export."""
+
+    format: str = Field(
+        ...,
+        description="Output audio format.",
+        pattern="^(mp3|m4b|flac|wav)$",
+    )
+    include_chapters: bool = Field(
+        True,
+        description="Include chapter markers in the exported file.",
+    )
+    include_cover: bool = Field(
+        True,
+        description="Embed cover art in the exported file.",
+    )
+    platform: str = Field(
+        "generic",
+        description="Target distribution platform.",
+        pattern="^(acx|findaway|authors_republic|generic)$",
+    )
 
 
-class VoiceResponse(BaseModel):
-    """A TTS voice configuration."""
+class ExportJobResponse(BaseModel):
+    """Response for a single export job."""
 
     id: UUID
-    org_id: UUID | None = None
-    name: str
-    provider: str
-    provider_voice_id: str | None = None
-    voice_type: str
-    gender: str | None = None
-    age_range: str | None = None
-    accent: str | None = None
-    language: str = "en"
-    sample_audio_url: str | None = None
-    clone_source_url: str | None = None
-    voice_settings: dict | None = None
-    quality_score: float | None = None
-    cost_per_minute: float | None = None
-    is_system_voice: bool = False
-    active: bool = True
+    audiobook_id: UUID
+    format: str
+    target_platform: str
+    status: str
+    file_url: str | None = None
+    file_size_bytes: int | None = None
+    error_message: str | None = None
     created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class VoiceListResponse(BaseModel):
-    """List of voice configurations."""
+class ExportListResponse(BaseModel):
+    """List of export jobs."""
 
-    items: list[VoiceResponse]
+    items: list[ExportJobResponse]
     total: int
 
 
-class VoiceCloneRequest(BaseModel):
-    """Request body for cloning a voice from audio samples."""
+class DownloadResponse(BaseModel):
+    """Pre-signed download URL response."""
 
-    name: str = Field(..., min_length=1, max_length=255)
-    provider: str = Field(default="custom_clone", max_length=50)
-    clone_source_url: str = Field(..., description="URL of the audio sample to clone from")
-    voice_type: str = Field(default="custom", max_length=50)
-    gender: str | None = Field(None, max_length=20)
-    language: str = Field(default="en", max_length=10)
-    voice_settings: dict | None = None
-
-
-class VoicePreviewResponse(BaseModel):
-    """Response containing a voice preview audio URL."""
-
-    voice_id: UUID
-    text: str
-    audio_url: str
-    duration_seconds: float | None = None
+    download_url: str
+    expires_at: datetime
+    filename: str
+    file_size_bytes: int
