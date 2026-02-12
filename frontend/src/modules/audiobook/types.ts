@@ -57,119 +57,115 @@ export interface AudiobookChapter {
   cost_usd: number;
 }
 
-// Project-level types
-export type ProjectStatus =
+export type AudiobookProjectStatus =
   | "draft"
-  | "configuring"
-  | "generating"
+  | "recording"
   | "reviewing"
   | "mastering"
-  | "complete"
-  | "published";
+  | "mastered"
+  | "exporting"
+  | "completed"
+  | "archived";
 
 export interface AudiobookProject {
   id: string;
+  org_id: string;
+  project_id: string;
   title: string;
-  status: ProjectStatus;
-  target_platform: string;
+  author?: string;
+  narrator?: string;
+  status: AudiobookProjectStatus;
+  voice_id?: string;
   total_chapters: number;
-  completed_chapters: number;
   total_duration_seconds: number;
-  estimated_cost_usd: number;
-  actual_cost_usd: number;
-  narrator_voice_id?: string;
-  output_format: string;
-  sample_rate: number;
+  total_cost_usd: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface CreateAudiobookProjectPayload {
-  title: string;
-  target_platform?: string;
-  narrator_voice_id?: string;
-  output_format?: string;
-  sample_rate?: number;
-}
-
-export interface UpdateAudiobookProjectPayload {
-  title?: string;
-  target_platform?: string;
-  narrator_voice_id?: string;
-  output_format?: string;
-  sample_rate?: number;
-  status?: ProjectStatus;
-}
-
-// Voice types
 export interface Voice {
   id: string;
   name: string;
   provider: string;
-  language: string;
-  accent?: string;
   gender: string;
+  language: string;
   preview_url?: string;
-  styles?: string[];
+  cost_per_minute?: number;
 }
 
-// Generation types
 export interface GenerationJob {
   id: string;
-  status: "queued" | "processing" | "complete" | "failed";
+  audiobook_project_id: string;
   chapter_id?: string;
-  progress: number;
-  stage?: string;
-  error?: string;
+  job_type: string;
+  status: string;
+  priority: number;
+  provider?: string;
+  input_params: Record<string, unknown>;
+  output: Record<string, unknown>;
+  error_message?: string;
+  retry_count: number;
+  max_retries: number;
+  started_at?: string;
+  completed_at?: string;
+  cost_usd: number;
+  celery_task_id?: string;
   created_at: string;
 }
 
-// Cost estimation
 export interface CostBreakdown {
-  total_usd: number;
+  total_cost_usd: number;
   per_chapter: { chapter_id: string; cost_usd: number }[];
   provider: string;
-  estimated_duration_seconds: number;
+  estimated_duration_minutes: number;
 }
 
-// ACX validation
 export interface ACXValidationResult {
   valid: boolean;
-  checks: {
-    name: string;
-    passed: boolean;
-    message: string;
-    value?: number;
-    threshold?: number;
-  }[];
+  errors: { field: string; message: string }[];
+  warnings: { field: string; message: string }[];
 }
 
-// Pronunciation
 export interface PronunciationEntry {
   id: string;
+  org_id: string;
+  audiobook_project_id?: string;
   word: string;
   phonetic: string;
-  audiobook_project_id?: string;
+  ssml_phoneme?: string;
+  audio_sample_url?: string;
+  context?: string;
+  active: boolean;
+  created_at: string;
 }
 
-// WebSocket events
 export interface AudiobookWSEvent {
-  type:
-    | "chapter_generation_progress"
-    | "chapter_generation_complete"
-    | "chapter_generation_failed"
-    | "mastering_progress"
-    | "mastering_complete";
+  type: string;
   chapter_id: string;
   percent: number;
   stage: string;
-  error?: string;
+  [key: string]: unknown;
 }
 
-// Pagination
+export interface CreateAudiobookProjectPayload {
+  title: string;
+  project_id: string;
+  voice_id?: string;
+  author?: string;
+  narrator?: string;
+}
+
+export interface UpdateAudiobookProjectPayload {
+  title?: string;
+  voice_id?: string;
+  author?: string;
+  narrator?: string;
+  status?: AudiobookProjectStatus;
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
-  next_cursor: string | null;
-  has_more: boolean;
-  total_count: number | null;
+  total: number;
+  page: number;
+  page_size: number;
 }

@@ -30,54 +30,55 @@ export interface VoiceCommandEvent {
   action: string;
 }
 
-// ── Session Types ────────────────────────────────────────────────────────
-
-export type DictationSessionStatus =
-  | "active"
-  | "paused"
-  | "completed"
-  | "cancelled";
+export type DictationStatus = "active" | "paused" | "ended";
 
 export interface DictationSession {
   id: string;
-  org_id: string;
   user_id: string;
-  manuscript_id: string | null;
-  chapter_id: string | null;
-  status: DictationSessionStatus;
+  org_id: string;
+  title?: string;
+  project_id?: string;
   language: string;
-  raw_transcript: string;
-  refined_transcript: string | null;
+  status: DictationStatus;
+  raw_transcript?: string;
+  refined_text?: string;
+  refinement_applied: boolean;
   word_count: number;
+  words_after_refinement?: number;
   duration_seconds: number;
-  words_dictated: number;
-  accuracy: number | null;
-  settings: DictationSettings;
   created_at: string;
   updated_at: string;
 }
 
+export interface SessionListItem {
+  id: string;
+  title?: string;
+  status: string;
+  word_count: number;
+  duration_seconds: number;
+  refinement_applied: boolean;
+  created_at: string;
+}
+
+export interface SessionListResponse {
+  sessions: SessionListItem[];
+  total: number;
+}
+
 export interface CreateSessionRequest {
-  manuscript_id?: string;
-  chapter_id?: string;
+  title?: string;
+  project_id?: string;
   language?: string;
-  settings?: Partial<DictationSettings>;
 }
 
 export interface UpdateSessionRequest {
-  status?: DictationSessionStatus;
+  action: "pause" | "resume" | "end";
   raw_transcript?: string;
-  refined_transcript?: string;
-  word_count?: number;
+  duration_seconds?: number;
 }
 
 export interface RefineSessionRequest {
   style_profile_id?: string;
-  options?: {
-    restore_punctuation?: boolean;
-    remove_fillers?: boolean;
-    match_style?: boolean;
-  };
 }
 
 export interface RefineTextRequest {
@@ -86,52 +87,24 @@ export interface RefineTextRequest {
 }
 
 export interface RefineTextResponse {
-  original_text: string;
   refined_text: string;
-  diff: DiffSegment[];
-  style_match_score: number;
+  original_length: number;
+  refined_length: number;
+  style_profile_id?: string;
 }
 
 export interface CreateCommandRequest {
-  phrase: string;
+  trigger_phrase: string;
   action: string;
   description?: string;
 }
 
-// ── WebSocket Types ──────────────────────────────────────────────────────
-
-export interface DictationServerMessage {
-  type:
-    | "partial_transcript"
-    | "final_transcript"
-    | "voice_command"
-    | "error"
-    | "session_metrics"
-    | "session_paused"
-    | "session_resumed"
-    | "pong";
-  text: string;
-  confidence?: number;
-  words?: Array<{
-    word: string;
-    start_ms: number;
-    end_ms: number;
-    confidence: number;
-  }>;
-  command: string;
-  action: string;
-  message: string;
-  recoverable?: boolean;
-  wpm: number;
-  accuracy: number;
-  duration: number;
-}
-
-// ── Pagination ───────────────────────────────────────────────────────────
-
-export interface SessionListResponse {
-  items: DictationSession[];
-  total: number;
-  page?: number;
-  per_page?: number;
-}
+export type DictationServerMessage =
+  | { type: "partial_transcript"; text: string }
+  | { type: "final_transcript"; text: string }
+  | { type: "voice_command"; command: string; action: string }
+  | { type: "session_metrics"; wpm: number; accuracy: number; duration: number }
+  | { type: "error"; message: string }
+  | { type: "session_paused" }
+  | { type: "session_resumed" }
+  | { type: "pong" };
