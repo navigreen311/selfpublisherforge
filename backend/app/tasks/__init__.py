@@ -29,6 +29,7 @@ celery_app = Celery(
         "app.tasks.review_intelligence",
         "app.tasks.style_cloning",
         "app.tasks.audiobook_tasks",
+        "app.tasks.mastering_tasks",
     ],
 )
 
