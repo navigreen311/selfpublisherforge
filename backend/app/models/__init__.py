@@ -15,6 +15,7 @@ from app.models.audiobook import (
     AudiobookVoice,
 )
 from app.models.content import Chapter, ContentAsset, Manuscript, StyleProfile, WritingSession
+from app.models.dictation import DictationCommand, DictationSession
 from app.models.market import CompetitorBook, CompetitorReview, MarketCategory, MarketKeyword, MarketSnapshot
 from app.models.marketing import (
     ARCCampaign,
@@ -58,6 +59,7 @@ __all__ = [
     "Organization", "User", "ApiKey", "UserSession", "OAuthAccount",
     "Project", "Book", "Series", "PenName", "BookVersion",
     "Manuscript", "Chapter", "StyleProfile", "WritingSession", "ContentAsset",
+    "DictationSession", "DictationCommand",
     "MarketCategory", "MarketKeyword", "CompetitorBook", "CompetitorReview", "MarketSnapshot",
     "PublishingAccount", "Listing", "UploadValidation", "ComplianceScan", "PublishingPricingRule",
     "LaunchPlan", "LaunchPhase", "PhaseTask", "EmailSequence", "EmailTemplate",
