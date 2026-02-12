@@ -1,23 +1,8 @@
-"""API router for the Audiobook Production Studio module.
-
-Endpoints:
-  POST   /                   -- Create audiobook project from book
-  GET    /                   -- List audiobook projects (filtered by org)
-  GET    /{project_id}       -- Get audiobook project details with chapters
-  PATCH  /{project_id}       -- Update project settings
-  DELETE /{project_id}       -- Delete audiobook project
-
-  GET    /voices             -- List available voices (system + custom)
-  POST   /voices             -- Create custom voice (upload for cloning)
-  GET    /voices/{voice_id}/preview -- Generate voice preview audio
-  DELETE /voices/{voice_id}  -- Delete custom voice
-"""
-
-from __future__ import annotations
+"""FastAPI router for audiobook mastering & export endpoints (/api/v1/audiobooks/...)."""
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
@@ -27,157 +12,101 @@ from app.modules.audiobook import schemas, service
 router = APIRouter()
 
 
-# ---------------------------------------------------------------------------
-# Voices — registered BEFORE parameterised /{project_id} to avoid conflicts
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/voices",
-    response_model=list[schemas.AudiobookVoiceResponse],
-    summary="List available voices",
-    description="List all available voices including system voices and the organization's custom voices.",
-)
-async def list_voices(
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """List available voices (system + custom for the org)."""
-    return await service.list_voices(db, current_user["org_id"])
+# ── Master ────────────────────────────────────────────────────────────────
 
 
 @router.post(
-    "/voices",
-    response_model=schemas.AudiobookVoiceResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create custom voice",
-    description="Create a custom voice profile for cloning. Actual TTS cloning is processed asynchronously.",
+    "/{audiobook_id}/master",
+    response_model=schemas.MasteringJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Master audiobook",
+    description="Merge all chapters, apply mastering processing chain, and produce a master file.",
 )
-async def create_voice(
-    request: schemas.AudiobookVoiceCreate,
-    current_user: dict = Depends(get_current_user),
+async def master_audiobook(
+    audiobook_id: UUID,
+    body: schemas.MasterAudiobookRequest,
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a custom voice for audiobook narration."""
-    return await service.create_voice_clone(db, current_user["org_id"], request)
+    """Queue a mastering job for the audiobook. All chapters must be approved."""
+    org_id = current_user["org_id"]
+    return await service.master_audiobook(db, audiobook_id, org_id, body)
 
 
-@router.get(
-    "/voices/{voice_id}/preview",
-    response_model=schemas.VoicePreviewResponse,
-    summary="Preview voice",
-    description="Generate or retrieve a voice preview audio sample.",
-)
-async def preview_voice(
-    voice_id: UUID,
-    sample_text: str | None = Query(default=None, max_length=500),
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Generate a voice preview audio sample."""
-    return await service.preview_voice(db, voice_id, sample_text)
+# ── Export ────────────────────────────────────────────────────────────────
 
-
-@router.delete(
-    "/voices/{voice_id}",
-    response_model=schemas.DeleteResponse,
-    summary="Delete custom voice",
-    description="Delete a custom voice profile. System voices cannot be deleted.",
-)
-async def delete_voice(
-    voice_id: UUID,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Delete a custom voice."""
-    await service.delete_voice(db, voice_id, current_user["org_id"])
-    return schemas.DeleteResponse()
-
-
-# ---------------------------------------------------------------------------
-# Audiobook Project CRUD
-# ---------------------------------------------------------------------------
 
 @router.post(
-    "",
-    response_model=schemas.AudiobookProjectResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create audiobook project",
-    description="Create a new audiobook project from an existing book. Chapters are auto-imported from the manuscript.",
+    "/{audiobook_id}/export",
+    response_model=schemas.ExportResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Export audiobook",
+    description="Export the mastered audiobook in a target format for a specific platform.",
 )
-async def create_audiobook_project(
-    request: schemas.AudiobookProjectCreate,
-    current_user: dict = Depends(get_current_user),
+async def export_audiobook(
+    audiobook_id: UUID,
+    body: schemas.ExportAudiobookRequest,
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new audiobook project from an existing book."""
-    return await service.create_project(
-        db, current_user["org_id"], current_user["user_id"], request,
-    )
+    """Export audiobook in target format for a specific platform."""
+    org_id = current_user["org_id"]
+    return await service.export_audiobook(db, audiobook_id, org_id, body)
+
+
+# ── Download ──────────────────────────────────────────────────────────────
 
 
 @router.get(
-    "",
-    response_model=schemas.AudiobookProjectListResponse,
-    summary="List audiobook projects",
-    description="List audiobook projects for the current organization with pagination and optional status filter.",
+    "/{audiobook_id}/export/{export_id}/download",
+    response_model=schemas.DownloadResponse,
+    summary="Download exported audiobook",
+    description="Get a pre-signed download URL for a completed export. Link expires in 1 hour.",
 )
-async def list_audiobook_projects(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    status_filter: str | None = None,
-    current_user: dict = Depends(get_current_user),
+async def download_export(
+    audiobook_id: UUID,
+    export_id: UUID,
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List audiobook projects for the current organization."""
-    return await service.list_projects(
-        db, current_user["org_id"], page, page_size, status_filter,
-    )
+    """Get download URL for an exported audiobook file."""
+    org_id = current_user["org_id"]
+    return await service.download_export(db, audiobook_id, export_id, org_id)
+
+
+# ── Validate ──────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/{audiobook_id}/validate",
+    response_model=schemas.ValidationResponse,
+    summary="Validate audiobook",
+    description="Validate all chapter audio files against platform specifications (ACX).",
+)
+async def validate_audiobook(
+    audiobook_id: UUID,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run platform validation on all chapter audio files."""
+    org_id = current_user["org_id"]
+    return await service.validate_audiobook(db, audiobook_id, org_id)
+
+
+# ── Cost breakdown ────────────────────────────────────────────────────────
 
 
 @router.get(
-    "/{project_id}",
-    response_model=schemas.AudiobookProjectResponse,
-    summary="Get audiobook project",
-    description="Get an audiobook project's details including all chapters.",
+    "/{audiobook_id}/cost",
+    response_model=schemas.CostBreakdownResponse,
+    summary="Get cost breakdown",
+    description="Get detailed cost breakdown for the audiobook project by chapter and provider.",
 )
-async def get_audiobook_project(
-    project_id: UUID,
-    current_user: dict = Depends(get_current_user),
+async def get_cost_breakdown(
+    audiobook_id: UUID,
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get audiobook project details with chapters."""
-    return await service.get_project(db, project_id, current_user["org_id"])
-
-
-@router.patch(
-    "/{project_id}",
-    response_model=schemas.AudiobookProjectResponse,
-    summary="Update audiobook project",
-    description="Update an audiobook project's title, status, voice, or settings.",
-)
-async def update_audiobook_project(
-    project_id: UUID,
-    request: schemas.AudiobookProjectUpdate,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Update an audiobook project."""
-    return await service.update_project(
-        db, project_id, current_user["org_id"], request,
-    )
-
-
-@router.delete(
-    "/{project_id}",
-    response_model=schemas.DeleteResponse,
-    summary="Delete audiobook project",
-    description="Soft-delete an audiobook project and its associated chapters.",
-)
-async def delete_audiobook_project(
-    project_id: UUID,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Delete an audiobook project."""
-    await service.delete_project(db, project_id, current_user["org_id"])
-    return schemas.DeleteResponse()
+    """Get detailed cost breakdown for the audiobook project."""
+    org_id = current_user["org_id"]
+    return await service.get_cost_breakdown(db, audiobook_id, org_id)
