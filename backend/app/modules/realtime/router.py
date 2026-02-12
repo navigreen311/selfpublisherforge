@@ -79,7 +79,7 @@ async def _ws_handler(
     room_id: str,
     token: str | None,
 ) -> None:
-    """Shared logic for all four WebSocket endpoints."""
+    """Shared logic for all WebSocket endpoints."""
     # Authenticate
     try:
         user = _authenticate_ws(token)
@@ -162,3 +162,17 @@ async def ws_publishing(
 ) -> None:
     """Publishing pipeline status: validation_progress, upload_progress, listing_synced."""
     await _ws_handler(websocket, WSChannel.PUBLISHING, book_id, token)
+
+
+@router.websocket("/api/v1/ws/audiobook/{project_id}")
+async def ws_audiobook(
+    websocket: WebSocket,
+    project_id: str,
+    token: str | None = Query(default=None),
+) -> None:
+    """Audiobook generation progress.
+
+    Events: chapter_generation_started/progress/complete/failed,
+    mastering_progress/complete, validation_complete, cost_update.
+    """
+    await _ws_handler(websocket, WSChannel.AUDIOBOOK, project_id, token)
