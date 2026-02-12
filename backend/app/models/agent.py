@@ -8,6 +8,13 @@ registering duplicate classes in SQLAlchemy's declarative base.
 import enum
 
 # ── Re-exports from the canonical module ──────────────────────────────
+from app.modules.agent_system.models import (  # noqa: F401
+    Agent,
+    AgentBudget,
+    AgentTask,
+    AgentWorkflow,
+    AuditTrail,
+)
 
 # ── Enums unique to the central models layer ──────────────────────────
 # These are NOT defined in the module file but are referenced by existing
