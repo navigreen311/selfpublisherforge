@@ -7,6 +7,7 @@ from app.models.agent import AgentTask as DomainAgentTask
 from app.models.agent import AgentWorkflow as DomainAgentWorkflow
 from app.models.agent import AuditTrail as DomainAuditTrail
 from app.models.analytics import ABTestStatus, PortfolioMetric, ReportStatus
+from app.models.audiobook import AudiobookChapter, AudiobookProject, AudiobookPronunciation
 from app.models.content import Chapter, ContentAsset, Manuscript, StyleProfile, WritingSession
 from app.models.market import CompetitorBook, CompetitorReview, MarketCategory, MarketKeyword, MarketSnapshot
 from app.models.marketing import (
@@ -70,4 +71,6 @@ __all__ = [
     "BookReview", "ReviewAlert", "ReviewVelocitySnapshot", "ReputationScore",
     "CompetitorAnalysis", "WeaknessSignal", "OpportunityBlueprint", "GapAnalysisResult", "CompetitorAlert",
     "ExportJob", "FormattingTemplateModel",
+    # Audiobook models
+    "AudiobookProject", "AudiobookChapter", "AudiobookPronunciation",
 ]
