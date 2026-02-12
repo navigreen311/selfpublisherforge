@@ -318,12 +318,58 @@ services:
     networks:
       - spf-network
 
+  # ---------------------------------------------------------------------------
+  # VoiceForge Services (opt-in via --profile voiceforge)
+  # ---------------------------------------------------------------------------
+  coqui-xtts:
+    image: ghcr.io/coqui-ai/xtts-streaming-server:latest
+    ports:
+      - "8501:8501"
+    volumes:
+      - xtts-models:/app/models
+      - xtts-speakers:/app/speakers
+    environment:
+      - COQUI_TOS_AGREED=1
+    restart: unless-stopped
+    networks:
+      - spf-network
+    profiles:
+      - voiceforge
+
+  piper-tts:
+    image: rhasspy/piper:latest
+    ports:
+      - "8502:8502"
+    volumes:
+      - piper-voices:/app/voices
+    restart: unless-stopped
+    networks:
+      - spf-network
+    profiles:
+      - voiceforge
+
+  faster-whisper:
+    image: fedirz/faster-whisper-server:latest
+    ports:
+      - "8503:8000"
+    environment:
+      - WHISPER__MODEL=large-v3
+      - WHISPER__DEVICE=cuda
+    restart: unless-stopped
+    networks:
+      - spf-network
+    profiles:
+      - voiceforge
+
 volumes:
   pgdata:
   redisdata:
   esdata:
   prometheusdata:
   grafana_data:
+  xtts-models:
+  xtts-speakers:
+  piper-voices:
 
 networks:
   spf-network:

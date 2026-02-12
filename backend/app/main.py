@@ -51,6 +51,9 @@ def _log_startup_config_warnings() -> None:
         "Amazon Ads": bool(s.AMAZON_ADS_CLIENT_ID and s.AMAZON_ADS_CLIENT_SECRET),
         "Anthropic LLM": s.ANTHROPIC_API_KEY != "YOUR_ANTHROPIC_API_KEY_HERE",
         "OpenAI LLM": s.OPENAI_API_KEY != "YOUR_OPENAI_API_KEY_HERE",
+        "VoiceForge TTS (Coqui)": bool(s.COQUI_XTTS_ENDPOINT),
+        "VoiceForge TTS (ElevenLabs)": bool(s.ELEVENLABS_API_KEY),
+        "VoiceForge ASR (Whisper)": bool(s.FASTER_WHISPER_ENDPOINT),
     }
 
     configured = [name for name, ready in integrations.items() if ready]
