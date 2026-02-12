@@ -145,6 +145,8 @@ class RealtimeEventPublisher:
             channel = WSChannel.ANALYTICS
         elif event_type_value.startswith("publishing."):
             channel = WSChannel.PUBLISHING
+        elif event_type_value.startswith("audiobook."):
+            channel = WSChannel.AUDIOBOOK
 
         if channel is None:
             return

@@ -15,6 +15,7 @@ class WSChannel(str, Enum):
     AGENTS = "agents"
     ANALYTICS = "analytics"
     PUBLISHING = "publishing"
+    AUDIOBOOK = "audiobook"
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +141,59 @@ class ListingSyncedData(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Audiobook channel events
+# ---------------------------------------------------------------------------
+
+
+class ChapterGenerationStartedData(BaseModel):
+    chapter_id: str
+    chapter_number: int
+
+
+class ChapterGenerationProgressData(BaseModel):
+    chapter_id: str
+    percent: float = Field(ge=0, le=100)
+    stage: str = ""
+    eta_seconds: float | None = None
+
+
+class ChapterGenerationCompleteData(BaseModel):
+    chapter_id: str
+    audio_url: str
+    duration_seconds: float
+    cost_usd: float
+    quality_metrics: dict[str, Any] = {}
+
+
+class ChapterGenerationFailedData(BaseModel):
+    chapter_id: str
+    error: str
+    retry_available: bool = False
+
+
+class MasteringProgressData(BaseModel):
+    percent: float = Field(ge=0, le=100)
+    stage: str = ""
+
+
+class MasteringCompleteData(BaseModel):
+    master_url: str
+    total_duration: float
+    total_cost: float
+
+
+class ValidationCompleteData(BaseModel):
+    results: dict[str, Any] = {}
+
+
+class CostUpdateData(BaseModel):
+    chapter_id: str
+    cost_usd: float
+    total_cost: float
+    budget_remaining: float
+
+
+# ---------------------------------------------------------------------------
 # Mapping of event type strings to their data schemas
 # ---------------------------------------------------------------------------
 
@@ -170,9 +224,21 @@ PUBLISHING_EVENT_TYPES = {
     "listing_synced": ListingSyncedData,
 }
 
+AUDIOBOOK_EVENT_TYPES = {
+    "chapter_generation_started": ChapterGenerationStartedData,
+    "chapter_generation_progress": ChapterGenerationProgressData,
+    "chapter_generation_complete": ChapterGenerationCompleteData,
+    "chapter_generation_failed": ChapterGenerationFailedData,
+    "mastering_progress": MasteringProgressData,
+    "mastering_complete": MasteringCompleteData,
+    "validation_complete": ValidationCompleteData,
+    "cost_update": CostUpdateData,
+}
+
 CHANNEL_EVENT_TYPES = {
     WSChannel.WRITING: WRITING_EVENT_TYPES,
     WSChannel.AGENTS: AGENT_EVENT_TYPES,
     WSChannel.ANALYTICS: ANALYTICS_EVENT_TYPES,
     WSChannel.PUBLISHING: PUBLISHING_EVENT_TYPES,
+    WSChannel.AUDIOBOOK: AUDIOBOOK_EVENT_TYPES,
 }
