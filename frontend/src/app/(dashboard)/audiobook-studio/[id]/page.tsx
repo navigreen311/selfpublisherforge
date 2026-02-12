@@ -1,49 +1,45 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Headphones } from "lucide-react";
+import { useParams } from "next/navigation";
+import { AudiobookStudio } from "@/modules/audiobook/components/AudiobookStudio";
+import { useAudiobookProject } from "@/modules/audiobook/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-// ASSUMPTION: AudiobookStudio component will be provided by the audiobook
-// frontend module (VF24). This dynamic route page will render the full studio
-// interface for a specific audiobook project once the module lands.
-
-export default function AudiobookProjectPage() {
-  const router = useRouter();
+export default function AudiobookStudioDetailPage() {
   const params = useParams();
-  const projectId = params?.id as string;
+  const projectId = params.id as string;
+  const { data: project, isLoading, error } = useAudiobookProject(projectId);
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => router.push("/audiobook-studio")}
-          aria-label="Back to Audiobook Studio"
-          className="p-2 hover:bg-accent rounded-lg transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex items-center gap-3">
-          <Headphones className="h-6 w-6 text-primary" aria-hidden="true" />
-          <div>
-            <h1 className="text-2xl font-bold">Audiobook Project</h1>
-            <p className="text-sm text-muted-foreground">Project {projectId}</p>
-          </div>
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-4 gap-4">
+          <Skeleton className="h-[600px] col-span-1" />
+          <Skeleton className="h-[600px] col-span-2" />
+          <Skeleton className="h-[600px] col-span-1" />
         </div>
       </div>
+    );
+  }
 
-      {/* Placeholder – will be replaced by AudiobookStudio component */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Skeleton className="h-64 w-full rounded-lg" />
-          <Skeleton className="h-32 w-full rounded-lg" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-48 w-full rounded-lg" />
-          <Skeleton className="h-48 w-full rounded-lg" />
-        </div>
+  if (error || !project) {
+    return (
+      <div className="container mx-auto py-12 flex flex-col items-center gap-4 text-center">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h2 className="text-xl font-semibold">Project not found</h2>
+        <p className="text-muted-foreground">
+          The audiobook project could not be loaded. It may have been deleted.
+        </p>
+        <Button asChild variant="outline">
+          <Link href="/audiobook-studio">Back to Studio</Link>
+        </Button>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <AudiobookStudio projectId={projectId} />;
 }
