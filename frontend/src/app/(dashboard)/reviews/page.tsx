@@ -1,183 +1,453 @@
 "use client";
 
 import { useState } from "react";
-import { useAlerts, useReviews } from "@/modules/reviews/hooks";
-import { AlertsPanel } from "@/modules/reviews/components/AlertsPanel";
-import { ReviewList } from "@/modules/reviews/components/ReviewList";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SentimentLabel } from "@/modules/reviews/types";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { useTranslations } from "@/hooks/use-translations";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useReviewStats,
+  useSentimentTrend,
+  useBookReviewSummaries,
+  useReviews,
+  useReviewInsights,
+  useRefreshInsights,
+  useAlerts,
+  useAlertNotifications,
+  useMarkReviewRead,
+  useFlagReview,
+  useDeleteReviewAlert,
+} from "@/modules/reviews/hooks";
+import type { ReviewListParams, SentimentLabel } from "@/modules/reviews/hooks";
+import { SentimentTrendChart } from "@/components/review-intelligence/SentimentTrendChart";
+import { RatingDistribution } from "@/components/review-intelligence/RatingDistribution";
+import { BookReviewCards } from "@/components/review-intelligence/BookReviewCards";
+import { ReviewFeed } from "@/components/review-intelligence/ReviewFeed";
+import { ReviewInsights } from "@/components/review-intelligence/ReviewInsights";
+import { ReviewAcquisition } from "@/components/review-intelligence/ReviewAcquisition";
+import { ReviewAlertsTab } from "@/components/review-intelligence/ReviewAlertsTab";
+import {
+  Star,
+  TrendingUp,
+  TrendingDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 
-export default function ReviewsPage() {
-  const t = useTranslations("reviews");
-  const [selectedSentiment, setSelectedSentiment] = useState<SentimentLabel | "all">("all");
+// ---------------------------------------------------------------------------
+// Tab definitions
+// ---------------------------------------------------------------------------
 
-  const {
-    data: alertsData,
-    isLoading: alertsLoading,
-  } = useAlerts({ is_acknowledged: false });
+type TabKey = "books" | "feed" | "insights" | "acquisition" | "alerts";
 
-  const {
-    data: reviewsData,
-    isLoading: reviewsLoading,
-    error: reviewsError,
-  } = useReviews({
-    sentiment: selectedSentiment === "all" ? undefined : selectedSentiment,
-    limit: 20,
-  });
+const TABS: { key: TabKey; labelKey: string }[] = [
+  { key: "books", labelKey: "reviews.tabs.books" },
+  { key: "feed", labelKey: "reviews.tabs.feed" },
+  { key: "insights", labelKey: "reviews.tabs.insights" },
+  { key: "acquisition", labelKey: "reviews.tabs.acquisition" },
+  { key: "alerts", labelKey: "reviews.tabs.alerts" },
+];
 
-  if (reviewsError) {
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getSentimentColor(score: number): string {
+  if (score >= 70) return "text-green-600";
+  if (score >= 40) return "text-yellow-600";
+  return "text-red-600";
+}
+
+function renderStars(rating: number) {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.25;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {[...Array(fullStars)].map((_, i) => (
+        <Star key={`f-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+      ))}
+      {hasHalfStar && (
+        <Star className="h-4 w-4 fill-yellow-400/50 text-yellow-400" />
+      )}
+      {[...Array(emptyStars)].map((_, i) => (
+        <Star key={`e-${i}`} className="h-4 w-4 text-gray-300" />
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stat Card Shell
+// ---------------------------------------------------------------------------
+
+function StatCard({
+  children,
+  isLoading,
+}: {
+  children: React.ReactNode;
+  isLoading?: boolean;
+}) {
+  if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4" role="alert">
-          <p className="text-red-800">{t("failedToLoad")}</p>
-        </div>
+      <div className="rounded-lg border bg-card p-5 shadow-sm space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-20 mt-1" />
+        <Skeleton className="h-3 w-32 mt-1" />
       </div>
     );
   }
 
   return (
+    <div className="rounded-lg border bg-card p-5 shadow-sm">{children}</div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Page
+// ---------------------------------------------------------------------------
+
+export default function ReviewsPage() {
+  const t = useTranslations("reviews");
+  const [activeTab, setActiveTab] = useState<TabKey>("books");
+
+  // Feed tab state
+  const [feedBookFilter, setFeedBookFilter] = useState("all");
+  const [feedRatingFilter, setFeedRatingFilter] = useState<number | null>(null);
+  const [feedSentimentFilter, setFeedSentimentFilter] = useState<string | null>(null);
+  const [feedSortBy, setFeedSortBy] = useState("newest");
+  const [feedCursor, setFeedCursor] = useState<string | undefined>(undefined);
+
+  // Chart state
+  const [trendPeriod, setTrendPeriod] = useState("6m");
+  const [trendBookFilter, setTrendBookFilter] = useState("all");
+
+  // Build review list params from feed state
+  const reviewListParams: ReviewListParams = {
+    limit: 20,
+    cursor: feedCursor,
+    sentiment: feedSentimentFilter ? (feedSentimentFilter as SentimentLabel) : undefined,
+    min_rating: feedRatingFilter ?? undefined,
+    book_id: feedBookFilter === "all" ? undefined : feedBookFilter,
+    sort_by: feedSortBy === "highest" || feedSortBy === "lowest" ? "star_rating" : "review_date",
+    sort_dir: feedSortBy === "oldest" || feedSortBy === "highest" ? "asc" : "desc",
+  };
+
+  // ---- Data hooks ----
+  const { data: stats, isLoading: statsLoading } = useReviewStats();
+  const { data: sentimentTrend, isLoading: trendLoading } = useSentimentTrend(
+    trendBookFilter === "all" ? undefined : trendBookFilter,
+    trendPeriod,
+  );
+  const { data: bookSummaries, isLoading: booksLoading } = useBookReviewSummaries();
+  const { data: reviewsData, isLoading: reviewsLoading } = useReviews(reviewListParams);
+  const { data: insightsData, isLoading: insightsLoading } = useReviewInsights();
+  const refreshInsights = useRefreshInsights();
+  const { data: alertsData, isLoading: alertsLoading } = useAlerts();
+  const { data: alertNotifications } = useAlertNotifications();
+  const markReadMutation = useMarkReviewRead();
+  const flagMutation = useFlagReview();
+  const deleteAlertMutation = useDeleteReviewAlert();
+
+  // ---- Stat values (safe defaults) ----
+  const total = stats?.total ?? 0;
+  const avgRating = stats?.avg_rating ?? 0;
+  const thisMonth = stats?.this_month ?? 0;
+  const thisMonthChangePct = stats?.this_month_change_pct ?? 0;
+  const sentimentScore = stats?.sentiment_score ?? 0;
+  const velocity = stats?.velocity ?? 0;
+  const genreAvgVelocity = stats?.genre_avg_velocity ?? 0;
+  const needsAttention = stats?.needs_attention ?? 0;
+  const bookCount = stats?.book_count ?? 0;
+  const ratingDistribution = stats?.rating_distribution ?? {};
+
+  // ---- Render active tab content ----
+  function renderTabContent() {
+    switch (activeTab) {
+      case "books":
+        return (
+          <BookReviewCards
+            books={bookSummaries ?? []}
+            isLoading={booksLoading}
+            onViewReviews={(bookId) => {
+              setFeedBookFilter(bookId);
+              setActiveTab("feed");
+            }}
+            onRunAnalysis={() => {}}
+            onAcquisition={() => {
+              setActiveTab("acquisition");
+            }}
+          />
+        );
+
+      case "feed":
+        return (
+          <ReviewFeed
+            reviews={reviewsData?.items ?? []}
+            total={reviewsData?.total_count ?? 0}
+            hasMore={reviewsData?.has_more ?? false}
+            onLoadMore={() => {
+              if (reviewsData?.next_cursor) {
+                setFeedCursor(reviewsData.next_cursor);
+              }
+            }}
+            onMarkRead={(reviewId, read) => markReadMutation.mutate({ reviewId, read })}
+            onFlag={(reviewId, flagged) => flagMutation.mutate({ reviewId, flagged })}
+            bookFilter={feedBookFilter}
+            onBookFilterChange={setFeedBookFilter}
+            ratingFilter={feedRatingFilter}
+            onRatingFilterChange={setFeedRatingFilter}
+            sentimentFilter={feedSentimentFilter}
+            onSentimentFilterChange={setFeedSentimentFilter}
+            sortBy={feedSortBy}
+            onSortChange={setFeedSortBy}
+            isLoading={reviewsLoading}
+          />
+        );
+
+      case "insights":
+        return (
+          <ReviewInsights
+            insights={insightsData}
+            isLoading={insightsLoading}
+            onRefresh={() => refreshInsights.mutate({})}
+            onExport={() => {}}
+            isRefreshing={refreshInsights.isPending}
+          />
+        );
+
+      case "acquisition":
+        return <ReviewAcquisition />;
+
+      case "alerts":
+        return (
+          <ReviewAlertsTab
+            alerts={alertsData?.items ?? []}
+            notifications={alertNotifications ?? []}
+            onCreateAlert={() => {}}
+            onEditAlert={() => {}}
+            onDeleteAlert={(alertId) => deleteAlertMutation.mutate(alertId)}
+            onAcknowledge={() => {}}
+            isLoading={alertsLoading}
+          />
+        );
+
+      default:
+        return null;
+    }
+  }
+
+  return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-        <div className="flex gap-2">
-          <Link
-            href="/reviews/analytics"
-            className="px-4 py-2 text-sm font-medium text-foreground bg-card border rounded-md hover:bg-muted"
-          >
-            {t("analytics")}
-          </Link>
-        </div>
-      </div>
-
-      {/* Overview KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{t("totalReviews")}</p>
-          {reviewsLoading ? (
-            <Skeleton className="h-8 w-24 mt-2" />
-          ) : (
-            <>
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {reviewsData?.total_count?.toLocaleString() || "0"}
-              </p>
-              <p className="mt-1 text-xs text-gray-500">{t("acrossAllBooks")}</p>
-            </>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{t("activeAlerts")}</p>
-          {alertsLoading ? (
-            <Skeleton className="h-8 w-24 mt-2" />
-          ) : (
-            <>
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {alertsData?.items.length || "0"}
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                {alertsData?.items.filter((a) => a.severity === "critical" || a.severity === "high")
-                  .length || 0}{" "}
-                {t("criticalHigh")}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{t("positiveReviews")}</p>
-          {reviewsLoading ? (
-            <Skeleton className="h-8 w-24 mt-2" />
-          ) : (
-            <>
-              <p className="mt-2 text-3xl font-bold text-green-600">
-                {reviewsData?.items.filter((r) => r.sentiment === SentimentLabel.POSITIVE).length ||
-                  "0"}
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                {reviewsData?.total_count
-                  ? (
-                      (reviewsData.items.filter((r) => r.sentiment === SentimentLabel.POSITIVE)
-                        .length /
-                        reviewsData.total_count) *
-                      100
-                    ).toFixed(0)
-                  : "0"}
-                {t("ofTotal")}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">{t("negativeReviews")}</p>
-          {reviewsLoading ? (
-            <Skeleton className="h-8 w-24 mt-2" />
-          ) : (
-            <>
-              <p className="mt-2 text-3xl font-bold text-red-600">
-                {reviewsData?.items.filter((r) => r.sentiment === SentimentLabel.NEGATIVE).length ||
-                  "0"}
-              </p>
-              <p className="mt-1 text-xs text-gray-500">{t("requiresAttention")}</p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Alerts Panel */}
-      {!alertsLoading && alertsData && alertsData.items.length > 0 && (
-        <AlertsPanel alerts={alertsData.items} />
-      )}
-
-      {/* Quick Book Links */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t("reviewByBook")}</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          {t("reviewByBookDescription")}
+      {/* ------------------------------------------------------------------ */}
+      {/* Page Header                                                         */}
+      {/* ------------------------------------------------------------------ */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">
+          {t("reviews.title")}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t("reviews.subtitle")}
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* In production, this would be a list of books from an API */}
-          <Link
-            href="/reviews/book-id-1"
-            className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Row 1: Stat Cards                                                   */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {/* Total Reviews */}
+        <StatCard isLoading={statsLoading}>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("reviews.stats.totalReviews")}
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {total.toLocaleString()}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {bookCount} {bookCount === 1 ? "book" : "books"}
+          </p>
+        </StatCard>
+
+        {/* Avg Rating */}
+        <StatCard isLoading={statsLoading}>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("reviews.stats.avgRating")}
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {avgRating.toFixed(1)}
+          </p>
+          <div className="mt-0.5">{renderStars(avgRating)}</div>
+        </StatCard>
+
+        {/* This Month */}
+        <StatCard isLoading={statsLoading}>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("reviews.stats.thisMonth")}
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {thisMonth.toLocaleString()}
+          </p>
+          <div className="mt-0.5 flex items-center gap-1 text-xs">
+            {thisMonthChangePct >= 0 ? (
+              <ArrowUp className="h-3 w-3 text-green-600" />
+            ) : (
+              <ArrowDown className="h-3 w-3 text-red-600" />
+            )}
+            <span
+              className={
+                thisMonthChangePct >= 0 ? "text-green-600" : "text-red-600"
+              }
+            >
+              {Math.abs(thisMonthChangePct).toFixed(1)}%
+            </span>
+            <span className="text-muted-foreground">
+              {t("reviews.stats.vsLastMonth")}
+            </span>
+          </div>
+        </StatCard>
+
+        {/* Sentiment Score */}
+        <StatCard isLoading={statsLoading}>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("reviews.stats.sentimentScore")}
+          </p>
+          <p
+            className={cn(
+              "mt-1 text-2xl font-bold",
+              getSentimentColor(sentimentScore),
+            )}
           >
-            <p className="font-medium text-gray-900">{t("bookTitle1")}</p>
-            <p className="text-xs text-gray-500 mt-1">{t("clickToViewDetails")}</p>
-          </Link>
-          <Link
-            href="/reviews/book-id-2"
-            className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+            {sentimentScore}
+          </p>
+          <div className="mt-0.5 flex items-center gap-1">
+            <div
+              className={cn(
+                "h-2 w-2 rounded-full",
+                sentimentScore >= 70
+                  ? "bg-green-500"
+                  : sentimentScore >= 40
+                    ? "bg-yellow-500"
+                    : "bg-red-500",
+              )}
+            />
+            <span
+              className={cn("text-xs font-medium", getSentimentColor(sentimentScore))}
+            >
+              {sentimentScore >= 70
+                ? t("reviews.stats.sentimentGood")
+                : sentimentScore >= 40
+                  ? t("reviews.stats.sentimentFair")
+                  : t("reviews.stats.sentimentPoor")}
+            </span>
+          </div>
+        </StatCard>
+
+        {/* Review Velocity */}
+        <StatCard isLoading={statsLoading}>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("reviews.stats.velocity")}
+          </p>
+          <p className="mt-1 text-2xl font-bold text-foreground">
+            {velocity.toFixed(1)}
+          </p>
+          <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            {velocity >= genreAvgVelocity ? (
+              <TrendingUp className="h-3 w-3 text-green-600" />
+            ) : (
+              <TrendingDown className="h-3 w-3 text-red-600" />
+            )}
+            <span>
+              {t("reviews.stats.perWeek")} &middot;{" "}
+              {t("reviews.stats.genreAvg")} {genreAvgVelocity.toFixed(1)}
+            </span>
+          </div>
+        </StatCard>
+
+        {/* Needs Attention */}
+        <StatCard isLoading={statsLoading}>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("reviews.stats.needsAttention")}
+          </p>
+          <p
+            className={cn(
+              "mt-1 text-2xl font-bold",
+              needsAttention > 0 ? "text-red-600" : "text-foreground",
+            )}
           >
-            <p className="font-medium text-gray-900">{t("bookTitle2")}</p>
-            <p className="text-xs text-gray-500 mt-1">{t("clickToViewDetails")}</p>
-          </Link>
+            {needsAttention}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t("reviews.stats.lowRatingReviews")}
+          </p>
+        </StatCard>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Row 2: Charts                                                       */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Sentiment Trend Chart - 60% (3 of 5 cols) */}
+        <div className="lg:col-span-3">
+          {trendLoading ? (
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <Skeleton className="h-5 w-40 mb-4" />
+              <Skeleton className="h-[300px] w-full" />
+            </div>
+          ) : (
+            <SentimentTrendChart
+              data={sentimentTrend?.data}
+              bookFilter={trendBookFilter}
+              onBookFilterChange={setTrendBookFilter}
+              period={trendPeriod}
+              onPeriodChange={setTrendPeriod}
+            />
+          )}
+        </div>
+
+        {/* Rating Distribution - 40% (2 of 5 cols) */}
+        <div className="lg:col-span-2">
+          {statsLoading ? (
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <Skeleton className="h-5 w-40 mb-4" />
+              <div className="space-y-3">
+                {[5, 4, 3, 2, 1].map((i) => (
+                  <Skeleton key={i} className="h-5 w-full" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <RatingDistribution
+              distribution={ratingDistribution}
+              total={total}
+            />
+          )}
         </div>
       </div>
 
-      {/* Recent Reviews */}
-      {!reviewsLoading && reviewsData && (
-        <ReviewList
-          reviews={reviewsData.items}
-          hasMore={reviewsData.has_more}
-          nextCursor={reviewsData.next_cursor}
-          onLoadMore={() => {
-          }}
-          onSentimentFilter={setSelectedSentiment}
-          selectedSentiment={selectedSentiment}
-        />
-      )}
+      {/* ------------------------------------------------------------------ */}
+      {/* Tab Bar                                                             */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex border-b gap-6">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "pb-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              activeTab === tab.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t(tab.labelKey)}
+          </button>
+        ))}
+      </div>
 
-      {reviewsLoading && (
-        <div className="space-y-4">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      )}
+      {/* ------------------------------------------------------------------ */}
+      {/* Tab Content                                                         */}
+      {/* ------------------------------------------------------------------ */}
+      <div>{renderTabContent()}</div>
     </div>
   );
 }

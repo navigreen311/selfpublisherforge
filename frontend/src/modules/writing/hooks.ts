@@ -19,6 +19,12 @@ import type {
   BookEntry,
   WritingSessionEntry,
   SaveStatus,
+  EnhancedOutlineRequest,
+  EnhancedOutlineResponse,
+  WritingAnalyticsData,
+  ChapterVersion,
+  StyleProfile,
+  AIWriteRequest,
 } from "./types";
 
 export type * from "./types";
@@ -35,7 +41,6 @@ export function useSSEGeneration() {
   const abortRef = useRef<AbortController | null>(null);
 
   const startGeneration = useCallback(async (request: GenerateRequest) => {
-    // Abort any ongoing stream
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -229,6 +234,21 @@ export function useUpdateChapter(bookId: string, chapterId: string) {
   });
 }
 
+export function useDeleteChapter(bookId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (chapterId: string) => {
+      await api.delete(
+        `/api/v1/books/${bookId}/manuscript/chapters/${chapterId}`
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["chapters", bookId] });
+      qc.invalidateQueries({ queryKey: ["manuscript", bookId] });
+    },
+  });
+}
+
 export function useReorderChapters(bookId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -258,6 +278,17 @@ export function useReadabilityScore(bookId: string) {
       return data;
     },
     enabled: !!bookId,
+  });
+}
+
+export function useChapterReadability(chapterId: string) {
+  return useQuery<ReadabilityScore>({
+    queryKey: ["chapter-readability", chapterId],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/writing/readability/${chapterId}`);
+      return data;
+    },
+    enabled: !!chapterId,
   });
 }
 
@@ -301,10 +332,131 @@ export function useGenerateStandaloneOutline() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Enhanced Outline Generator
+// ---------------------------------------------------------------------------
+
+export function useGenerateEnhancedOutline() {
+  return useMutation<EnhancedOutlineResponse, Error, EnhancedOutlineRequest>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/writing/generate-outline", payload);
+      return data;
+    },
+  });
+}
+
+export function useCreateFromOutline() {
+  const qc = useQueryClient();
+  return useMutation<ManuscriptResponse, Error, { project_id?: string; outline: EnhancedOutlineResponse; title: string }>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/writing/create-from-outline", payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["books"] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// AI Writing Generation
+// ---------------------------------------------------------------------------
+
+export function useAIWrite() {
+  return useMutation<{ content: string }, Error, AIWriteRequest>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/writing/generate", payload);
+      return data;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Writing Sessions
+// ---------------------------------------------------------------------------
+
 export function useRecordWritingSession() {
   return useMutation({
     mutationFn: async (payload: WritingSessionCreate) => {
       const { data } = await api.post("/api/v1/writing-sessions", payload);
+      return data;
+    },
+  });
+}
+
+export function useStartWritingSession() {
+  return useMutation<{ session_id: string }, Error, { manuscript_id: string; chapter_id?: string }>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/writing/sessions/start", payload);
+      return data;
+    },
+  });
+}
+
+export function useEndWritingSession() {
+  return useMutation<void, Error, { sessionId: string; words_written: number; duration_seconds: number }>({
+    mutationFn: async ({ sessionId, ...body }) => {
+      await api.patch(`/api/v1/writing/sessions/${sessionId}/end`, body);
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Writing Analytics
+// ---------------------------------------------------------------------------
+
+export function useWritingAnalytics(period = "30d") {
+  return useQuery<WritingAnalyticsData>({
+    queryKey: ["writing-analytics", period],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/writing/analytics", { params: { period } });
+      return data;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Chapter Version History
+// ---------------------------------------------------------------------------
+
+export function useChapterVersions(bookId: string, chapterId: string) {
+  return useQuery<ChapterVersion[]>({
+    queryKey: ["chapter-versions", bookId, chapterId],
+    queryFn: async () => {
+      const { data } = await api.get(
+        `/api/v1/manuscripts/${bookId}/chapters/${chapterId}/versions`
+      );
+      return data;
+    },
+    enabled: !!bookId && !!chapterId,
+  });
+}
+
+export function useRestoreChapterVersion(bookId: string, chapterId: string) {
+  const qc = useQueryClient();
+  return useMutation<ChapterContent, Error, string>({
+    mutationFn: async (versionId) => {
+      const { data } = await api.post(
+        `/api/v1/manuscripts/${bookId}/chapters/${chapterId}/versions/${versionId}/restore`
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["chapter", bookId, chapterId] });
+      qc.invalidateQueries({ queryKey: ["chapters", bookId] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Style Profiles
+// ---------------------------------------------------------------------------
+
+export function useStyleProfiles() {
+  return useQuery<StyleProfile[]>({
+    queryKey: ["style-profiles"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/style-profiles");
       return data;
     },
   });
@@ -372,7 +524,6 @@ export function useAutoSave(
       lastSavedRef.current = content;
       qc.invalidateQueries({ queryKey: ["chapters", bookId] });
       qc.invalidateQueries({ queryKey: ["manuscript", bookId] });
-      // Reset to idle after 2 seconds
       setTimeout(() => {
         setSaveStatus((prev) => (prev === "saved" ? "idle" : prev));
       }, 2000);
@@ -383,12 +534,9 @@ export function useAutoSave(
   });
 
   useEffect(() => {
-    // Do not auto-save when there is no active chapter or content is empty
     if (!chapterId || !bookId) return;
-    // Do not save if content has not changed from last save
     if (content === lastSavedRef.current) return;
 
-    // Clear existing debounce timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
@@ -406,7 +554,6 @@ export function useAutoSave(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, chapterId, bookId, delay]);
 
-  // Expose an imperative save for the manual "Save" button
   const saveNow = useCallback(() => {
     if (!chapterId || !bookId) return;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -415,7 +562,6 @@ export function useAutoSave(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterId, bookId, content]);
 
-  // Reset when chapter changes
   useEffect(() => {
     lastSavedRef.current = content;
     setSaveStatus("idle");
