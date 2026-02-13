@@ -1,4 +1,4 @@
-"""Manuscript, Chapter, StyleProfile, WritingSession, and ContentAsset models."""
+"""Manuscript, Chapter, ChapterVersion, StyleProfile, WritingSession, and ContentAsset models."""
 import enum
 import uuid
 
@@ -101,6 +101,7 @@ class Chapter(BaseModel):
     # Relationships
     manuscript = relationship("Manuscript", back_populates="chapters")
     writing_sessions = relationship("WritingSession", back_populates="chapter", lazy="selectin")
+    versions = relationship("ChapterVersion", back_populates="chapter", lazy="selectin")
 
     __table_args__ = (
         Index("ix_chapters_status", "status"),
@@ -113,6 +114,33 @@ class Chapter(BaseModel):
             postgresql_ops={"content": "gin_trgm_ops"},
         ),
         Index("ix_chapters_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
+    )
+
+
+class ChapterVersion(BaseModel):
+    """Snapshot of chapter content at a point in time for version history."""
+    __tablename__ = "chapter_versions"
+
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    content: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    snapshot_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+    )
+
+    # Relationships
+    chapter = relationship("Chapter", back_populates="versions")
+
+    __table_args__ = (
+        Index("ix_chapter_versions_chapter_id", "chapter_id"),
+        Index("ix_chapter_versions_created_at", "created_at"),
+        Index("ix_chapter_versions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 
