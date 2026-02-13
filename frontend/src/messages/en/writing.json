@@ -21,17 +21,37 @@
   },
   "manuscripts": {
     "title": "Your Manuscripts",
+    "count": "({count})",
     "empty": {
       "title": "No manuscripts yet",
       "description": "Start your first book to begin writing. You can create a new manuscript from scratch or use the AI Outline Generator.",
-      "action": "Start your first book"
-    }
+      "action": "Start your first book",
+      "generateOutline": "Generate AI Outline"
+    },
+    "sort": {
+      "recent": "Sort: Recent",
+      "title": "Sort: Title",
+      "progress": "Sort: Progress"
+    },
+    "openEditor": "Open Editor",
+    "menu": {
+      "rename": "Rename",
+      "duplicate": "Duplicate",
+      "exportDocx": "Export DOCX",
+      "exportEpub": "Export EPUB",
+      "exportPdf": "Export PDF",
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "progress": "{pct}%",
+    "lastEdited": "Last edited {time}"
   },
   "sessions": {
     "title": "Recent Writing Sessions",
     "empty": "No writing sessions recorded yet. Open a manuscript and start writing!",
     "table": {
       "book": "Book",
+      "chapter": "Chapter",
       "wordsWritten": "Words Written",
       "duration": "Duration",
       "date": "Date"
@@ -49,7 +69,10 @@
   "stats": {
     "chapters": "chapters",
     "words": "words",
-    "unknownBook": "Unknown Book"
+    "unknownBook": "Unknown Book",
+    "target": "Target: {count}",
+    "readingTime": "Reading time",
+    "minRead": "{count} min read"
   },
   "timeAgo": {
     "justNow": "Just now",
@@ -65,16 +88,40 @@
     "title": "Something went wrong"
   },
   "editor": {
+    "backToStudio": "Back to Studio",
     "invalidBookId": "Invalid book ID",
     "selectChapter": "Select a chapter",
     "readingLevel": "Reading Level",
     "save": "Save",
+    "saved": "Auto-saved",
+    "export": "Export",
+    "versionHistory": "Version History",
+    "distractionFree": "Distraction Free",
     "hideAI": "Hide AI",
     "showAI": "Show AI",
     "loading": "Loading...",
     "emptyState": "No chapter selected. Create a chapter to start writing.",
     "createFirstChapter": "Create First Chapter",
     "chapter": "Chapter {number}",
+    "words": "Words",
+    "readingTimeLabel": "Reading time: {count} min",
+    "sessionWords": "Session: {count} words in {duration}",
+    "wordsPerMin": "{count} wpm",
+    "frontMatter": "Front Matter",
+    "backMatter": "Back Matter",
+    "addChapter": "+ Chapter",
+    "totalWords": "{count} words total",
+    "chapters": "Chapters",
+    "noChapters": "No chapters yet. Create your first chapter to begin writing.",
+    "chapterMenu": {
+      "rename": "Rename",
+      "delete": "Delete",
+      "duplicate": "Duplicate",
+      "moveUp": "Move Up",
+      "moveDown": "Move Down"
+    },
+    "renamePrompt": "Enter new chapter title:",
+    "deleteConfirm": "Are you sure you want to delete this chapter?",
     "saveStatus": {
       "saving": "Saving...",
       "saved": "Saved",
@@ -84,28 +131,68 @@
       "fkGrade": "FK Grade",
       "fog": "FOG",
       "smog": "SMOG",
-      "total": "Total"
+      "total": "Total",
+      "gradeLevel": "Grade {level}",
+      "fleschScore": "Flesch: {score}",
+      "passiveVoice": "Passive: {pct}%",
+      "avgSentence": "Avg sentence: {count} words"
+    },
+    "toolbar": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "strikethrough": "Strikethrough",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "heading3": "Heading 3",
+      "blockquote": "Blockquote",
+      "bulletList": "Bullet List",
+      "numberedList": "Numbered List",
+      "link": "Link",
+      "image": "Image",
+      "horizontalRule": "Horizontal Rule",
+      "undo": "Undo",
+      "redo": "Redo"
     }
   },
-  "newManuscript": {
-    "backToStudio": "Back to Writing Studio",
-    "title": "Create New Manuscript",
-    "subtitle": "Start a new book project with AI assistance",
-    "success": "Manuscript created successfully",
-    "error": "Failed to create manuscript. Please try again.",
-    "form": {
-      "title": "Manuscript Details",
-      "description": "Fill in the basic information about your manuscript",
-      "titleLabel": "Book Title",
-      "titlePlaceholder": "Enter your book title",
-      "genreLabel": "Genre",
-      "genrePlaceholder": "Select a genre",
-      "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Describe your book's premise, themes, or plot...",
-      "cancel": "Cancel",
-      "create": "Create Manuscript",
-      "creating": "Creating..."
-    }
+  "ai": {
+    "title": "AI Writing Assistant",
+    "write": "Write",
+    "rewrite": "Rewrite",
+    "expand": "Expand",
+    "shorten": "Shorten",
+    "continue": "Continue",
+    "brainstorm": "Brainstorm",
+    "quickActions": "Quick Actions",
+    "instruction": "Tell AI what to write...",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "insertAtCursor": "Insert at Cursor",
+    "replaceSelection": "Replace Selection",
+    "regenerate": "Regenerate",
+    "editRetry": "Edit & Retry",
+    "stopGeneration": "Stop Generation",
+    "generatedContent": "Generated Content",
+    "waitingForAI": "Waiting for AI...",
+    "settings": "Settings",
+    "styleProfile": "Style Profile",
+    "noProfile": "No profile",
+    "tone": "Tone",
+    "toneMatchProfile": "Match Profile",
+    "toneFormal": "More Formal",
+    "toneCasual": "More Casual",
+    "toneAuthoritative": "More Authoritative",
+    "toneConversational": "More Conversational",
+    "length": "Length",
+    "lengthShort": "Short (1 para)",
+    "lengthMedium": "Medium (2-3 paras)",
+    "lengthLong": "Long (4-6 paras)",
+    "startDictation": "Start Dictation",
+    "stopDictation": "Stop Dictation",
+    "autoRefine": "Auto-refine with style profile",
+    "chapterStats": "Chapter Stats",
+    "wordProgress": "{current} / {target}",
+    "selectedText": "Selected Text"
   },
   "outline": {
     "backToStudio": "Back",
@@ -126,9 +213,19 @@
       "bookTitleError": "Please enter a book title",
       "genre": "Genre",
       "tone": "Tone",
+      "type": "Book Type",
+      "typeNonfiction": "Nonfiction",
+      "typeFiction": "Fiction",
+      "typeSelfHelp": "Self-Help",
+      "typeHowTo": "How-To",
       "targetAudience": "Target Audience",
       "targetAudiencePlaceholder": "e.g. Young adults, business professionals",
+      "uniqueAngle": "Unique Angle / Key Differentiator",
+      "uniqueAnglePlaceholder": "What makes your book different?",
       "numChapters": "Number of Chapters",
+      "suggestedChapters": "suggested: {min}-{max} for {type}",
+      "wordCountTarget": "Word Count Target",
+      "styleProfile": "Style Profile (optional)",
       "premise": "Premise / Description",
       "premisePlaceholder": "Describe your book's premise, main themes, or key plot points...",
       "generate": "Generate Outline",
@@ -145,7 +242,13 @@
       "chapter": "Chapter",
       "estimatedWords": "words",
       "moveUp": "Move chapter {number} up",
-      "moveDown": "Move chapter {number} down"
+      "moveDown": "Move chapter {number} down",
+      "createManuscript": "Create Manuscript from This Outline",
+      "addChapter": "Add Chapter",
+      "removeChapter": "Remove Chapter",
+      "regenerate": "Regenerate",
+      "targetWords": "Target words",
+      "keyPoints": "Key points"
     },
     "errors": {
       "titleRequired": "Please enter a book title",
@@ -155,5 +258,55 @@
     },
     "saveSuccess": "Outline saved to \"{title}\" successfully",
     "copySuccess": "Outline copied to clipboard as Markdown"
+  },
+  "analytics": {
+    "title": "Writing Analytics",
+    "period": "Period",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "last3Months": "Last 3 Months",
+    "allTime": "All Time",
+    "totalWords": "Total Words",
+    "totalWordsSub": "this period",
+    "sessionsCount": "Sessions",
+    "sessionsCountSub": "this period",
+    "avgWpm": "Avg WPM",
+    "avgWpmSub": "words/min",
+    "streak": "Streak",
+    "streakDays": "{count} days",
+    "dailyWordCount": "Daily Word Count",
+    "dailyGoal": "Daily Goal: {count}",
+    "byManuscript": "By Manuscript",
+    "wordsCount": "{count} words",
+    "pctOfTotal": "({pct}%)",
+    "sessionLog": "Session Log",
+    "sessionLogHeaders": {
+      "date": "Date",
+      "manuscript": "Manuscript",
+      "chapter": "Chapter",
+      "words": "Words",
+      "duration": "Duration"
+    },
+    "noData": "No writing data yet. Start a writing session to see your analytics."
+  },
+  "newManuscript": {
+    "backToStudio": "Back to Writing Studio",
+    "title": "Create New Manuscript",
+    "subtitle": "Start a new book project with AI assistance",
+    "success": "Manuscript created successfully",
+    "error": "Failed to create manuscript. Please try again.",
+    "form": {
+      "title": "Manuscript Details",
+      "description": "Fill in the basic information about your manuscript",
+      "titleLabel": "Book Title",
+      "titlePlaceholder": "Enter your book title",
+      "genreLabel": "Genre",
+      "genrePlaceholder": "Select a genre",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe your book's premise, themes, or plot...",
+      "cancel": "Cancel",
+      "create": "Create Manuscript",
+      "creating": "Creating..."
+    }
   }
 }

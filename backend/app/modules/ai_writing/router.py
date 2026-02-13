@@ -13,13 +13,29 @@ Endpoints:
   POST /books/{id}/outline/generate           -- Generate outline (book-bound)
   POST /writing/outline/generate              -- Generate outline (standalone)
   POST /writing-sessions                      -- Record writing session
+
+  --- Writing Studio stubs ---
+  GET    /manuscripts                         -- List manuscripts (stub)
+  POST   /manuscripts                         -- Create manuscript (stub)
+  GET    /manuscripts/{id}                    -- Get manuscript with chapters (stub)
+  DELETE /manuscripts/{id}                    -- Delete manuscript (stub)
+  POST   /writing/generate-outline            -- Generate enhanced outline (stub)
+  POST   /writing/create-from-outline         -- Create manuscript from outline (stub)
+  POST   /writing/generate                    -- AI writing generation (stub)
+  GET    /writing/readability/{chapter_id}    -- Readability scores (stub)
+  POST   /writing/sessions/start              -- Start writing session (stub)
+  PATCH  /writing/sessions/{id}/end           -- End writing session (stub)
+  GET    /writing/analytics                   -- Writing analytics (stub)
+  GET    /manuscripts/{id}/chapters/{ch_id}/versions          -- Chapter versions (stub)
+  POST   /manuscripts/{id}/chapters/{ch_id}/versions/{ver_id}/restore -- Restore version (stub)
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -268,3 +284,280 @@ async def record_writing_session(
     """Record a writing session."""
     user_id = current_user["user_id"]
     return await service.record_writing_session(db, user_id, data)
+
+
+# ===========================================================================
+# Writing Studio – Stub Endpoints
+# ===========================================================================
+# These endpoints return placeholder data so the frontend can be developed
+# against a stable API contract before the real implementation is wired up.
+# ---------------------------------------------------------------------------
+
+_STUB_MANUSCRIPT_ID = "00000000-0000-0000-0000-000000000001"
+_STUB_CHAPTER_ID = "00000000-0000-0000-0000-000000000010"
+_STUB_VERSION_ID = "00000000-0000-0000-0000-000000000100"
+_STUB_SESSION_ID = "00000000-0000-0000-0000-000000001000"
+
+
+def _stub_chapter(*, chapter_id: str = _STUB_CHAPTER_ID, order: int = 1) -> dict:
+    now = datetime.now(UTC).isoformat()
+    return {
+        "id": chapter_id,
+        "manuscript_id": _STUB_MANUSCRIPT_ID,
+        "title": f"Chapter {order} (stub)",
+        "content": "",
+        "order": order,
+        "synopsis": "",
+        "word_count": 0,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def _stub_manuscript(*, include_chapters: bool = False) -> dict:
+    now = datetime.now(UTC).isoformat()
+    return {
+        "id": _STUB_MANUSCRIPT_ID,
+        "title": "Untitled Manuscript (stub)",
+        "status": "draft",
+        "chapters": [_stub_chapter()] if include_chapters else [],
+        "total_word_count": 0,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Manuscripts CRUD (stub)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/manuscripts",
+    summary="List manuscripts (stub)",
+    description="Return all manuscripts for the current user. Stub: returns empty list.",
+)
+async def list_manuscripts_stub(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List manuscripts for the authenticated user (stub)."""
+    return []
+
+
+@router.post(
+    "/manuscripts",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create manuscript (stub)",
+    description="Create a new manuscript. Stub: returns placeholder manuscript.",
+)
+async def create_manuscript_stub(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a new manuscript (stub)."""
+    return _stub_manuscript()
+
+
+@router.get(
+    "/manuscripts/{manuscript_id}",
+    summary="Get manuscript (stub)",
+    description="Get a manuscript with its chapters. Stub: returns placeholder.",
+)
+async def get_manuscript_stub(
+    manuscript_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get a single manuscript with chapters (stub)."""
+    return _stub_manuscript(include_chapters=True)
+
+
+@router.delete(
+    "/manuscripts/{manuscript_id}",
+    summary="Delete manuscript (stub)",
+    description="Delete a manuscript. Stub: returns confirmation message.",
+)
+async def delete_manuscript_stub(
+    manuscript_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete a manuscript (stub)."""
+    return {"message": "Deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Enhanced Outline (stub)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/writing/generate-outline",
+    summary="Generate enhanced outline (stub)",
+    description="AI-generate a detailed chapter outline for a book. Stub: returns empty chapters.",
+)
+async def generate_outline_enhanced_stub(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate an enhanced book outline (stub)."""
+    return {"chapters": []}
+
+
+@router.post(
+    "/writing/create-from-outline",
+    summary="Create manuscript from outline (stub)",
+    description="Create a full manuscript scaffold from an outline. Stub: returns placeholder.",
+)
+async def create_from_outline_stub(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a manuscript from an outline (stub)."""
+    return _stub_manuscript(include_chapters=True)
+
+
+# ---------------------------------------------------------------------------
+# AI Writing (stub)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/writing/generate",
+    summary="AI writing generation (stub)",
+    description="Generate AI-written content for a chapter or section. Stub: returns empty content.",
+)
+async def generate_writing_stub(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """AI content generation for Writing Studio (stub)."""
+    return {"content": ""}
+
+
+# ---------------------------------------------------------------------------
+# Readability (stub)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/writing/readability/{chapter_id}",
+    summary="Get chapter readability scores (stub)",
+    description="Get readability metrics for a specific chapter. Stub: returns placeholder scores.",
+)
+async def get_chapter_readability_stub(
+    chapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Readability scores for a chapter (stub)."""
+    return {
+        "chapter_id": str(chapter_id),
+        "flesch_kincaid_grade": 0.0,
+        "flesch_reading_ease": 0.0,
+        "gunning_fog": 0.0,
+        "smog_index": 0.0,
+        "word_count": 0,
+        "sentence_count": 0,
+        "syllable_count": 0,
+        "avg_words_per_sentence": 0.0,
+        "avg_syllables_per_word": 0.0,
+        "reading_level": "N/A",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Writing Sessions (stub)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/writing/sessions/start",
+    summary="Start writing session (stub)",
+    description="Start a timed writing session for productivity tracking. Stub: returns session ID.",
+)
+async def start_writing_session_stub(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Start a writing session (stub)."""
+    return {"session_id": "stub"}
+
+
+@router.patch(
+    "/writing/sessions/{session_id}/end",
+    summary="End writing session (stub)",
+    description="End an active writing session. Stub: returns confirmation.",
+)
+async def end_writing_session_stub(
+    session_id: UUID,
+    body: dict | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """End a writing session (stub)."""
+    return {"message": "Session ended"}
+
+
+# ---------------------------------------------------------------------------
+# Analytics (stub)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/writing/analytics",
+    summary="Get writing analytics (stub)",
+    description="Get writing productivity and progress analytics. Stub: returns placeholder data.",
+)
+async def get_writing_analytics_stub(
+    days: int = Query(30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Writing analytics dashboard data (stub)."""
+    return {
+        "total_words_written": 0,
+        "total_sessions": 0,
+        "total_minutes": 0,
+        "avg_words_per_session": 0.0,
+        "avg_session_duration_minutes": 0.0,
+        "daily_breakdown": [],
+        "streak_days": 0,
+        "manuscripts_in_progress": 0,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Chapter Versions (stub)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions",
+    summary="List chapter versions (stub)",
+    description="List saved versions / snapshots of a chapter. Stub: returns empty list.",
+)
+async def list_chapter_versions_stub(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List chapter versions (stub)."""
+    return []
+
+
+@router.post(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions/{version_id}/restore",
+    summary="Restore chapter version (stub)",
+    description="Restore a chapter to a previous version. Stub: returns placeholder chapter.",
+)
+async def restore_chapter_version_stub(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    version_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Restore a chapter to a previous version (stub)."""
+    return _stub_chapter(chapter_id=str(chapter_id))

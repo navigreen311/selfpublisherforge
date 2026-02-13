@@ -193,6 +193,46 @@ async def list_alerts_endpoint(
     )
 
 
+@router.get("/alerts/history")
+async def get_alert_history(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get alert notification history."""
+    return []
+
+
+@router.post("/alerts")
+async def create_review_alert(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new review alert."""
+    return {"id": "stub", **body, "active": True, "created_at": "2026-01-01T00:00:00Z"}
+
+
+@router.patch("/alerts/{alert_id}")
+async def update_review_alert(
+    alert_id: str,
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a review alert."""
+    return {"id": alert_id, **body}
+
+
+@router.delete("/alerts/{alert_id}")
+async def delete_review_alert(
+    alert_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a review alert."""
+    return {"message": "Deleted"}
+
+
 @router.patch(
     "/alerts/{alert_id}/acknowledge",
     response_model=ReviewAlertRead,
@@ -260,3 +300,114 @@ async def get_acquisition_tips_endpoint(
 ):
     """Get AI-generated tips for improving review acquisition."""
     return await generate_acquisition_tips(body)
+
+
+# --- New stub endpoints for enhanced Review Intelligence ---
+
+
+@router.get("/stats")
+async def get_review_stats(
+    book_id: str | None = Query(None),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get aggregate review statistics."""
+    return {
+        "total": 0, "avg_rating": 0.0, "this_month": 0,
+        "this_month_change_pct": 0.0, "sentiment_score": 0.0,
+        "velocity": 0.0, "genre_avg_velocity": 0.0,
+        "needs_attention": 0, "book_count": 0,
+        "rating_distribution": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+    }
+
+
+@router.get("/sentiment-trend")
+async def get_sentiment_trend(
+    book_id: str | None = Query(None),
+    period: str = Query("6m"),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get sentiment trend over time."""
+    return {"data": []}
+
+
+@router.get("/insights")
+async def get_review_insights(
+    book_id: str | None = Query(None),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get AI review insights."""
+    return {
+        "positive_themes": [], "negative_themes": [],
+        "keyword_cloud": [], "ai_summary": "",
+        "action_items": [], "velocity_data": [],
+        "computed_at": None,
+    }
+
+
+@router.get("/book-summaries")
+async def get_book_review_summaries(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get review summaries for all published books."""
+    return []
+
+
+@router.post("/optimize-back-matter")
+async def optimize_back_matter(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """AI optimize back-of-book review request text."""
+    return {"score": 75, "improved_text": "", "tips": []}
+
+
+@router.get("/arc-campaigns")
+async def list_arc_campaigns(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List ARC campaigns."""
+    return []
+
+
+@router.post("/arc-campaigns")
+async def create_arc_campaign(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create new ARC campaign."""
+    return {"id": "stub", "name": body.get("name", ""), "status": "draft", "copies_sent": 0, "reviews_received": 0}
+
+
+@router.post("/arc-campaigns/{campaign_id}/send-reminder")
+async def send_arc_reminder(
+    campaign_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Send reminder to ARC recipients."""
+    return {"message": "Reminder sent"}
+
+
+@router.post("/email-sequences/generate")
+async def generate_email_sequence(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate email sequence for review acquisition."""
+    return {"emails": []}
+
+
+@router.patch("/{review_id}")
+async def update_review(
+    review_id: str,
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update review (mark read, flag, etc.)."""
+    return {"id": review_id, **body}

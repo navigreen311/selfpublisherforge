@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -7,14 +6,35 @@ import { useTranslations } from "@/hooks/use-translations";
 import { useBooks, useWritingSessions } from "@/modules/writing/hooks";
 import type { BookEntry, WritingSessionEntry } from "@/modules/writing/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WritingAnalytics } from "@/components/writing-studio/WritingAnalytics";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Writing Studio landing page.
  *
- * Displays project selector, book list, and recent writing sessions.
- * Users select a book to enter the manuscript editor.
- * Data is fetched from the API via React Query hooks.
+ * Displays quick-action cards, a searchable/sortable manuscript list with
+ * progress bars, status badges, and row-level action menus, plus a recent
+ * writing sessions table and an analytics dialog.
  */
+
+// ---------------------------------------------------------------------------
+// Sort options
+// ---------------------------------------------------------------------------
+
+type SortOption = "recent" | "title" | "progress";
 
 // ---------------------------------------------------------------------------
 // Helper: format a date string into a human-friendly relative label
@@ -76,19 +96,27 @@ function StatusBadge({ status, t }: { status: string; t: (key: string) => string
 // Skeleton loaders
 // ---------------------------------------------------------------------------
 
-function BookCardSkeleton() {
+function BookRowSkeleton() {
   return (
     <div className="rounded-lg border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-48" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-5 w-48" />
+          </div>
           <div className="flex items-center gap-3">
-            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-4 w-16 rounded-full" />
             <Skeleton className="h-3 w-20" />
             <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-3 w-20" />
           </div>
+          <Skeleton className="h-2 w-full max-w-xs rounded-full" />
         </div>
-        <Skeleton className="h-3 w-20" />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Skeleton className="h-8 w-24 rounded-md" />
+          <Skeleton className="h-8 w-8 rounded-md" />
+        </div>
       </div>
     </div>
   );
@@ -155,19 +183,134 @@ function ErrorBanner({ message, t }: { message: string; t: (key: string) => stri
 // ---------------------------------------------------------------------------
 
 function EmptyBooksState({ t }: { t: (key: string) => string }) {
-
   return (
     <div className="text-center py-12 rounded-lg border border-dashed bg-card">
+      <div className="text-4xl mb-3">&#128214;</div>
       <h3 className="font-medium text-foreground">{t("manuscripts.empty.title")}</h3>
-      <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+      <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
         {t("manuscripts.empty.description")}
       </p>
-      <Link
-        href="/writing/new"
-        className="inline-block mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        {t("manuscripts.empty.action")}
-      </Link>
+      <div className="flex items-center justify-center gap-3 mt-5">
+        <Link
+          href="/writing/new"
+          className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          {t("manuscripts.empty.action")}
+        </Link>
+        <Link
+          href="/writing/outline"
+          className="inline-block rounded-md border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          {t("manuscripts.empty.aiOutline")}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Manuscript row action menu
+// ---------------------------------------------------------------------------
+
+function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) => string }) {
+  const handleAction = (action: string) => {
+    // Placeholder actions -- show alert for now
+    switch (action) {
+      case "rename":
+        alert(`${t("actions.rename")}: ${book.title}`);
+        break;
+      case "duplicate":
+        alert(`${t("actions.duplicate")}: ${book.title}`);
+        break;
+      case "export-docx":
+        alert(`${t("actions.exportDocx")}: ${book.title}`);
+        break;
+      case "export-epub":
+        alert(`${t("actions.exportEpub")}: ${book.title}`);
+        break;
+      case "export-pdf":
+        alert(`${t("actions.exportPdf")}: ${book.title}`);
+        break;
+      case "archive":
+        alert(`${t("actions.archive")}: ${book.title}`);
+        break;
+      case "delete":
+        alert(`${t("actions.delete")}: ${book.title}`);
+        break;
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="h-8 w-8 flex items-center justify-center rounded-md border text-muted-foreground hover:bg-muted transition-colors"
+          aria-label={t("actions.menu")}
+        >
+          &#8230;
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => handleAction("rename")}>
+          {t("actions.rename")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("duplicate")}>
+          {t("actions.duplicate")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => handleAction("export-docx")}>
+          {t("actions.exportDocx")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-epub")}>
+          {t("actions.exportEpub")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-pdf")}>
+          {t("actions.exportPdf")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => handleAction("archive")}>
+          {t("actions.archive")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-red-600 focus:text-red-600"
+          onSelect={() => handleAction("delete")}
+        >
+          {t("actions.delete")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Progress bar for manuscript
+// ---------------------------------------------------------------------------
+
+function ManuscriptProgress({ book, t }: { book: BookEntry; t: (key: string) => string }) {
+  const wordCount = book.word_count ?? 0;
+  const target = book.target_word_count;
+
+  if (!target) {
+    return (
+      <span className="text-[10px] sm:text-xs text-muted-foreground">
+        {wordCount.toLocaleString()} {t("stats.words")}
+      </span>
+    );
+  }
+
+  const pct = Math.min(Math.round((wordCount / target) * 100), 100);
+
+  return (
+    <div className="flex items-center gap-2 w-full max-w-xs">
+      <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+        <div
+          className="h-full bg-primary rounded-full transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
+        {pct}%
+      </span>
     </div>
   );
 }
@@ -267,6 +410,8 @@ function WritingSessionsSection({
 export default function WritingStudioPage() {
   const t = useTranslations("writing");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
   const {
     data: books,
@@ -280,13 +425,43 @@ export default function WritingStudioPage() {
     error: sessionsError,
   } = useWritingSessions();
 
+  // Filter and sort manuscripts
   const filteredBooks = useMemo(() => {
     if (!books) return [];
-    if (!searchQuery) return books;
-    return books.filter((book) =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [books, searchQuery]);
+
+    let result = [...books];
+
+    // Filter by search
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((book) =>
+        book.title.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    switch (sortBy) {
+      case "recent":
+        result.sort((a, b) => {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case "title":
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "progress":
+        result.sort((a, b) => {
+          const pctA = a.target_word_count ? (a.word_count ?? 0) / a.target_word_count : 0;
+          const pctB = b.target_word_count ? (b.word_count ?? 0) / b.target_word_count : 0;
+          return pctB - pctA;
+        });
+        break;
+    }
+
+    return result;
+  }, [books, searchQuery, sortBy]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
@@ -309,33 +484,63 @@ export default function WritingStudioPage() {
             {t("quickActions.newManuscript.description")}
           </p>
         </Link>
-        <Link href="/writing/outline" className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors">
+        <Link
+          href="/writing/outline"
+          className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors"
+        >
           <h3 className="font-medium text-xs sm:text-sm">{t("quickActions.aiOutline.title")}</h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             {t("quickActions.aiOutline.description")}
           </p>
         </Link>
-        <div className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors">
+        <button
+          type="button"
+          onClick={() => setAnalyticsOpen(true)}
+          className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors text-left"
+        >
           <h3 className="font-medium text-xs sm:text-sm">{t("quickActions.analytics.title")}</h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             {t("quickActions.analytics.description")}
           </p>
-        </div>
+        </button>
       </div>
 
-      {/* Search */}
-      <div role="search">
+      {/* Analytics dialog */}
+      <Dialog open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("quickActions.analytics.title")}</DialogTitle>
+            <DialogDescription>
+              {t("quickActions.analytics.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <WritingAnalytics />
+        </DialogContent>
+      </Dialog>
+
+      {/* Search + Sort */}
+      <div role="search" className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <input
           type="text"
           placeholder={t("search.placeholder")}
           aria-label={t("search.placeholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full max-w-md rounded-md border px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full sm:max-w-md rounded-md border px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
         />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          aria-label={t("sort.label")}
+          className="rounded-md border px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          <option value="recent">{t("sort.recent")}</option>
+          <option value="title">{t("sort.title")}</option>
+          <option value="progress">{t("sort.progress")}</option>
+        </select>
       </div>
 
-      {/* Book list */}
+      {/* Manuscript list */}
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3">
           {t("manuscripts.title")}
@@ -356,9 +561,9 @@ export default function WritingStudioPage() {
         {/* Loading state */}
         {booksLoading && (
           <div className="space-y-3">
-            <BookCardSkeleton />
-            <BookCardSkeleton />
-            <BookCardSkeleton />
+            <BookRowSkeleton />
+            <BookRowSkeleton />
+            <BookRowSkeleton />
           </div>
         )}
 
@@ -372,17 +577,25 @@ export default function WritingStudioPage() {
           <>
             <div className="space-y-2 sm:space-y-3">
               {filteredBooks.map((book) => (
-                <Link
+                <div
                   key={book.id}
-                  href={`/writing/${book.id}`}
-                  className="block rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 hover:shadow-sm transition-all"
+                  className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 hover:shadow-sm transition-all"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-sm sm:text-base text-foreground truncate">
-                        {book.title}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+                  <div className="flex items-start sm:items-center justify-between gap-3">
+                    {/* Left side: info */}
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      {/* Title row */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-base flex-shrink-0" aria-hidden="true">
+                          &#128214;
+                        </span>
+                        <h3 className="font-medium text-sm sm:text-base text-foreground truncate">
+                          {book.title}
+                        </h3>
+                      </div>
+
+                      {/* Meta row */}
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <StatusBadge status={book.status} t={t} />
                         {book.chapter_count !== undefined && (
                           <span className="text-[10px] sm:text-xs text-muted-foreground">
@@ -394,13 +607,27 @@ export default function WritingStudioPage() {
                             {book.word_count.toLocaleString()} {t("stats.words")}
                           </span>
                         )}
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">
+                          {formatRelativeDate(book.updated_at, t)}
+                        </span>
                       </div>
+
+                      {/* Progress bar */}
+                      <ManuscriptProgress book={book} t={t} />
                     </div>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
-                      {formatRelativeDate(book.updated_at, t)}
-                    </span>
+
+                    {/* Right side: actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Link
+                        href={`/writing/${book.id}`}
+                        className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs sm:text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        {t("actions.openEditor")}
+                      </Link>
+                      <ManuscriptActionMenu book={book} t={t} />
+                    </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
 
@@ -413,7 +640,7 @@ export default function WritingStudioPage() {
         )}
       </div>
 
-      {/* Recent sessions */}
+      {/* Recent writing sessions */}
       <div>
         <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3">
           {t("sessions.title")}

@@ -8,6 +8,9 @@ export interface ChapterContent {
   word_count: number;
   created_at: string;
   updated_at: string;
+  /** Status for chapter sidebar: complete, editing, not_started */
+  status?: "complete" | "editing" | "not_started";
+  target_word_count?: number;
 }
 
 export interface ManuscriptResponse {
@@ -15,6 +18,7 @@ export interface ManuscriptResponse {
   title: string;
   chapters: ChapterContent[];
   total_word_count: number;
+  target_word_count?: number;
 }
 
 export interface ReadabilityScore {
@@ -28,6 +32,8 @@ export interface ReadabilityScore {
   avg_words_per_sentence: number;
   avg_syllables_per_word: number;
   reading_level: string;
+  passive_voice_pct?: number;
+  suggestions?: string[];
 }
 
 export interface ManuscriptAnalysis {
@@ -117,6 +123,8 @@ export interface BookEntry {
   /** Populated by the backend join or computed field */
   chapter_count?: number;
   word_count?: number;
+  target_word_count?: number;
+  cover_url?: string;
 }
 
 export interface WritingSessionEntry {
@@ -126,6 +134,7 @@ export interface WritingSessionEntry {
   words_written: number;
   duration_minutes: number;
   chapter_id?: string | null;
+  chapter_title?: string;
   notes?: string;
   created_at: string;
   /** Populated via join or separate lookup */
@@ -133,3 +142,83 @@ export interface WritingSessionEntry {
 }
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+// ---------------------------------------------------------------------------
+// Enhanced AI Writing types
+// ---------------------------------------------------------------------------
+
+export type AIAction = "write" | "rewrite" | "expand" | "shorten" | "continue" | "brainstorm";
+
+export interface AIWriteRequest {
+  manuscript_id: string;
+  chapter_id: string;
+  action: AIAction;
+  instruction?: string;
+  selected_text?: string;
+  cursor_position?: number;
+  style_profile_id?: string;
+  tone?: string;
+  length?: "short" | "medium" | "long";
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced Outline Generator types
+// ---------------------------------------------------------------------------
+
+export interface EnhancedOutlineRequest {
+  title: string;
+  genre: string;
+  type: "nonfiction" | "fiction" | "self-help" | "how-to";
+  target_audience: string;
+  unique_angle?: string;
+  chapter_count: number;
+  word_count_target: number;
+  style_profile_id?: string;
+}
+
+export interface EnhancedOutlineChapter {
+  title: string;
+  summary: string;
+  target_words: number;
+  key_points: string[];
+}
+
+export interface EnhancedOutlineResponse {
+  chapters: EnhancedOutlineChapter[];
+}
+
+// ---------------------------------------------------------------------------
+// Writing Analytics types
+// ---------------------------------------------------------------------------
+
+export interface WritingAnalyticsData {
+  total_words: number;
+  sessions_count: number;
+  avg_wpm: number;
+  streak: number;
+  daily_data: { date: string; words: number }[];
+  by_manuscript: { manuscript_id: string; title: string; words: number; pct: number }[];
+  session_log: WritingSessionEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Chapter version history
+// ---------------------------------------------------------------------------
+
+export interface ChapterVersion {
+  id: string;
+  chapter_id: string;
+  content: string;
+  word_count: number;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Style profiles (minimal reference type)
+// ---------------------------------------------------------------------------
+
+export interface StyleProfile {
+  id: string;
+  name: string;
+  description?: string;
+}

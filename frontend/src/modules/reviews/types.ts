@@ -15,6 +15,12 @@ export enum AlertType {
   VELOCITY_DROP = "velocity_drop",
   RATING_DECLINE = "rating_decline",
   COMPETITOR_SURGE = "competitor_surge",
+  NEW_REVIEW = "new_review",
+  NEGATIVE_REVIEW = "negative_review",
+  RATING_DROP = "rating_drop",
+  VELOCITY_CHANGE = "velocity_change",
+  FAKE_REVIEW = "fake_review",
+  WEEKLY_SUMMARY = "weekly_summary",
 }
 
 export enum AlertSeverity {
@@ -67,6 +73,14 @@ export interface Review {
   analyzed_at: string | null;
   created_at: string;
   updated_at: string;
+  // Enhanced fields
+  read?: boolean;
+  flagged?: boolean;
+  flag_notes?: string;
+  is_suspicious?: boolean;
+  actionable_suggestion?: string;
+  extracted_themes?: string[];
+  book_title?: string;
 }
 
 export interface ThemeItem {
@@ -125,6 +139,11 @@ export interface ReviewAlert {
   acknowledged_by: string | null;
   created_at: string;
   updated_at: string;
+  // Enhanced
+  active?: boolean;
+  config?: Record<string, unknown>;
+  delivery_channels?: string[];
+  last_triggered_at?: string;
 }
 
 export interface ReputationHealthMetrics {
@@ -155,6 +174,7 @@ export interface ReviewListParams {
   max_rating?: number;
   sort_by?: string;
   sort_dir?: string;
+  book_id?: string;
 }
 
 export interface AlertListParams {
@@ -164,4 +184,138 @@ export interface AlertListParams {
   severity?: AlertSeverity;
   is_acknowledged?: boolean;
   book_id?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced Stats
+// ---------------------------------------------------------------------------
+
+export interface ReviewStats {
+  total: number;
+  avg_rating: number;
+  this_month: number;
+  this_month_change_pct: number;
+  sentiment_score: number;
+  velocity: number;
+  genre_avg_velocity: number;
+  needs_attention: number;
+  book_count: number;
+  rating_distribution: Record<number, number>;
+}
+
+// ---------------------------------------------------------------------------
+// Sentiment Trend
+// ---------------------------------------------------------------------------
+
+export interface SentimentTrendPoint {
+  date: string;
+  sentiment_score: number;
+  genre_avg: number;
+}
+
+export interface SentimentTrendResponse {
+  data: SentimentTrendPoint[];
+}
+
+// ---------------------------------------------------------------------------
+// Insights
+// ---------------------------------------------------------------------------
+
+export interface InsightTheme {
+  theme: string;
+  count: number;
+  sentiment: "positive" | "negative" | "neutral";
+}
+
+export interface KeywordCloudItem {
+  text: string;
+  value: number;
+  sentiment: "positive" | "negative" | "neutral";
+}
+
+export interface ReviewInsightsResponse {
+  positive_themes: InsightTheme[];
+  negative_themes: InsightTheme[];
+  keyword_cloud: KeywordCloudItem[];
+  ai_summary: string;
+  action_items: string[];
+  velocity_data: { week: string; yours: number; genre_avg: number }[];
+  computed_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Acquisition
+// ---------------------------------------------------------------------------
+
+export interface BackMatterOptimizeResponse {
+  score: number;
+  improved_text: string;
+  tips: string[];
+}
+
+export interface ARCCampaign {
+  id: string;
+  book_id: string;
+  name: string;
+  status: "draft" | "active" | "completed";
+  copies_sent: number;
+  reviews_received: number;
+  deadline: string | null;
+  recipients: { email: string; name: string; sent_at: string; reviewed: boolean }[];
+  created_at: string;
+}
+
+export interface EmailSequenceEmail {
+  subject: string;
+  body: string;
+  send_day: number;
+}
+
+export interface EmailSequenceResponse {
+  emails: EmailSequenceEmail[];
+}
+
+// ---------------------------------------------------------------------------
+// Book with review summary (for Your Books tab)
+// ---------------------------------------------------------------------------
+
+export interface BookReviewSummary {
+  book_id: string;
+  title: string;
+  cover_url?: string;
+  rating: number;
+  review_count: number;
+  publish_date?: string;
+  sentiment_score: number;
+  velocity: number;
+  this_month: number;
+  positive_themes: string[];
+  negative_themes: string[];
+  positive_pct: number;
+}
+
+// ---------------------------------------------------------------------------
+// Alert notification event
+// ---------------------------------------------------------------------------
+
+export interface AlertNotification {
+  id: string;
+  alert_type: string;
+  message: string;
+  book_title?: string;
+  severity: string;
+  read: boolean;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Create/Update Alert
+// ---------------------------------------------------------------------------
+
+export interface CreateReviewAlertRequest {
+  alert_type: string;
+  book_id?: string;
+  config: Record<string, unknown>;
+  delivery_channels?: string[];
+  active?: boolean;
 }
