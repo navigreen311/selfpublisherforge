@@ -519,6 +519,11 @@
     "removeFile": "Remove file"
   },
   "versionHistory": {
+    "emptyState": "No version history yet. Versions are created automatically as you write.",
+    "confirmTitle": "Restore this version?",
+    "confirmDescription": "This will create a new version from your current content and replace it with the selected version. Continue?",
+    "cancel": "Cancel",
+    "restoreSelected": "Restore Selected",
     "title": "Version History",
     "current": "current",
     "restore": "Restore",

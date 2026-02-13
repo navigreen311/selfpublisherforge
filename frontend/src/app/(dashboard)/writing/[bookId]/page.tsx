@@ -775,10 +775,11 @@ export default function ManuscriptEditorPage() {
       {/* Version History Modal */}
       {versionHistoryOpen && (
         <VersionHistoryModal
+          isOpen={versionHistoryOpen}
+          onClose={() => setVersionHistoryOpen(false)}
           bookId={bookId}
           chapterId={activeChapterId || ""}
-          open={versionHistoryOpen}
-          onOpenChange={setVersionHistoryOpen}
+          chapterTitle={activeChapter?.title || ""}
           onRestore={(content) => {
             setEditorContent(content);
           }}
