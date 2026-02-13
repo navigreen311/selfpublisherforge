@@ -36,8 +36,18 @@ class ModelPreference(str, Enum):
     gemini = "gemini"
 
 
+class WritingAction(str, Enum):
+    """The 6 AI writing actions supported by the Writing Studio."""
+    write = "write"
+    rewrite = "rewrite"
+    expand = "expand"
+    shorten = "shorten"
+    continue_ = "continue"
+    ideas = "ideas"
+
+
 # ---------------------------------------------------------------------------
-# Generation
+# Generation (legacy unified endpoint)
 # ---------------------------------------------------------------------------
 
 class GenerateRequest(BaseModel):
@@ -51,6 +61,82 @@ class GenerateRequest(BaseModel):
     model_preference: ModelPreference = ModelPreference.auto
     stream: bool = True
     quality_checks: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Action-based Generation (6-action Writing Studio)
+# ---------------------------------------------------------------------------
+
+class ActionGenerateRequest(BaseModel):
+    """Request schema for the 6-action AI writing generation endpoint.
+
+    Actions:
+      - write: Generate new content based on instruction and context
+      - rewrite: Improve/rewrite selected text
+      - expand: Add detail and elaboration to selected text
+      - shorten: Condense selected text while preserving key information
+      - continue: Continue writing from cursor position
+      - ideas: Brainstorm 5 directions for the next section
+    """
+    model_config = ConfigDict(protected_namespaces=())
+
+    action: WritingAction = Field(..., description="The writing action to perform")
+    project_id: UUID = Field(..., description="ID of the project/book")
+    chapter_id: UUID | None = Field(None, description="ID of the current chapter")
+    instruction: str = Field(
+        "", max_length=10000,
+        description="User instruction for what to write/do",
+    )
+    selected_text: str = Field(
+        "", max_length=50000,
+        description="Text selected by the user (for rewrite/expand/shorten)",
+    )
+    context_before: str = Field(
+        "", max_length=50000,
+        description="Text before cursor position (~500 words for continue action)",
+    )
+    context_after: str = Field(
+        "", max_length=50000,
+        description="Text after cursor position",
+    )
+    chapter_outline: str = Field(
+        "", max_length=10000,
+        description="Current chapter outline/synopsis for context",
+    )
+    previous_content: str = Field(
+        "", max_length=50000,
+        description="Previous chapter content for continuity",
+    )
+    style_profile: str = Field(
+        "", max_length=5000,
+        description="Voice/style characteristics (e.g., 'formal, lyrical, sparse')",
+    )
+    tone: str = Field(
+        "", max_length=200,
+        description="Tone modifier (e.g., 'suspenseful', 'humorous', 'melancholic')",
+    )
+    length: str = Field(
+        "medium", max_length=50,
+        description="Target length: 'short' (~100 words), 'medium' (~300 words), 'long' (~800 words)",
+    )
+    genre: str = Field("", max_length=200, description="Genre of the work")
+    model_preference: ModelPreference = ModelPreference.auto
+    stream: bool = True
+    quality_checks: list[str] = Field(default_factory=list)
+
+
+class ActionGenerateResponse(BaseModel):
+    """Response for non-streaming action generation."""
+    model_config = ConfigDict(protected_namespaces=())
+
+    request_id: UUID
+    action: WritingAction
+    content: str
+    word_count: int = 0
+    tokens_used: int = 0
+    quality_results: dict[str, Any] = Field(default_factory=dict)
+    model_used: str = ""
+    created_at: datetime = Field(default_factory=_utcnow)
 
 
 class GenerateResponse(BaseModel):

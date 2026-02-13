@@ -2,6 +2,7 @@
 
 Endpoints:
   POST /generate                              -- Unified AI generation (SSE streaming)
+  POST /writing/action/generate               -- 6-action AI writing (SSE streaming)
   GET  /books/{id}/manuscript                 -- Get full manuscript
   GET  /books/{id}/manuscript/chapters        -- List chapters
   GET  /books/{id}/manuscript/chapters/{cid}  -- Get chapter
@@ -25,7 +26,7 @@ Endpoints:
   POST   /manuscripts/{id}/export             -- Export manuscript (stub)
   POST   /writing/generate-outline            -- Generate enhanced outline (stub)
   POST   /writing/create-from-outline         -- Create manuscript from outline (stub)
-  POST   /writing/generate                    -- AI writing generation (stub)
+  POST   /writing/generate                    -- AI writing generation (6-action, replaces stub)
   GET    /writing/readability/{chapter_id}    -- Readability scores (stub)
   POST   /writing/sessions/start              -- Start writing session (stub)
   PATCH  /writing/sessions/{id}/end           -- End writing session (stub)
@@ -46,7 +47,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.ai_writing import schemas, service
-from app.modules.ai_writing.generator import generate_stream, generate_sync
+from app.modules.ai_writing.generator import (
+    action_generate_stream,
+    action_generate_sync,
+    generate_stream,
+    generate_sync,
+)
 
 router = APIRouter()
 
@@ -85,6 +91,56 @@ async def generate(
             },
         )
     return await generate_sync(request)
+
+
+# ---------------------------------------------------------------------------
+# 6-Action AI Writing Generation Endpoint
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/writing/action/generate",
+    response_model=schemas.ActionGenerateResponse | None,
+    summary="AI writing action generation",
+    description=(
+        "6-action AI writing generation endpoint for the Writing Studio. "
+        "Supports SSE streaming and synchronous modes.\n\n"
+        "Actions:\n"
+        "- **write**: Generate new content from instruction and context\n"
+        "- **rewrite**: Improve/rewrite selected text for clarity and quality\n"
+        "- **expand**: Add detail and elaboration to selected text\n"
+        "- **shorten**: Condense selected text while preserving key information\n"
+        "- **continue**: Continue writing naturally from cursor position\n"
+        "- **ideas**: Brainstorm 5 bullet-point directions for next section\n\n"
+        "SSE streaming format:\n"
+        "```\n"
+        'data: {"type": "token", "content": "word "}\n'
+        'data: {"type": "complete", "content": "full text", "word_count": 123}\n'
+        "```"
+    ),
+)
+async def action_generate(
+    request: schemas.ActionGenerateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """6-action AI writing generation endpoint.
+
+    When `stream=true` (default), returns SSE events:
+      data: {"type": "token", "content": "..."}
+      data: {"type": "complete", "content": "full text", "word_count": N}
+
+    When `stream=false`, returns a complete ActionGenerateResponse JSON.
+    """
+    if request.stream:
+        return StreamingResponse(
+            action_generate_stream(request),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    return await action_generate_sync(request)
 
 
 # ---------------------------------------------------------------------------
@@ -555,20 +611,39 @@ async def create_from_outline_stub(
 
 
 # ---------------------------------------------------------------------------
-# AI Writing (stub)
+# AI Writing (legacy convenience endpoint — delegates to action generator)
 # ---------------------------------------------------------------------------
 
 @router.post(
     "/writing/generate",
-    summary="AI writing generation (stub)",
-    description="Generate AI-written content for a chapter or section. Stub: returns empty content.",
+    response_model=schemas.ActionGenerateResponse | None,
+    summary="AI writing generation",
+    description=(
+        "Convenience endpoint for AI writing generation. Accepts the same "
+        "ActionGenerateRequest body as /writing/action/generate. "
+        "Supports SSE streaming (stream=true) and synchronous (stream=false) modes."
+    ),
 )
-async def generate_writing_stub(
-    body: dict,
+async def generate_writing(
+    request: schemas.ActionGenerateRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """AI content generation for Writing Studio (stub)."""
-    return {"content": ""}
+    """AI content generation for Writing Studio.
+
+    This endpoint is a convenience alias for /writing/action/generate.
+    It accepts the same request body and returns the same response format.
+    """
+    if request.stream:
+        return StreamingResponse(
+            action_generate_stream(request),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    return await action_generate_sync(request)
 
 
 # ---------------------------------------------------------------------------
