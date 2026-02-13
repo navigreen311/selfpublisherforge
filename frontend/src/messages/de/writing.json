@@ -105,7 +105,13 @@
       "cancel": "Abbrechen",
       "create": "Manuskript erstellen",
       "creating": "Erstellt..."
-    }
+    },
+    "linkToProject": "Mit Projekt verknüpfen",
+    "noProject": "Keines (eigenständig)",
+    "selectProject": "Projekt auswählen (optional)",
+    "dropFileHere": "Datei hierher ziehen oder klicken",
+    "acceptedFormats": "Akzeptiert: DOCX, EPUB, TXT, MD",
+    "removeFile": "Datei entfernen"
   },
   "outline": {
     "backToStudio": "Zurück",

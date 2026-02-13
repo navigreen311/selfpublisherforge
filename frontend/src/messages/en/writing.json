@@ -74,7 +74,7 @@
       "date": "Date"
     },
     "minutes": "min",
-    "viewAll": "View All Sessions \u2192"
+    "viewAll": "View All Sessions →"
   },
   "status": {
     "draft": "Draft",
@@ -484,7 +484,7 @@
     "success": "Manuscript created successfully",
     "error": "Failed to create manuscript. Please try again.",
     "linkProject": "Link to Project (optional)",
-    "selectProject": "Select a project...",
+    "selectProject": "Select a project (optional)",
     "titleLabel": "Title",
     "titlePlaceholder": "Enter manuscript title",
     "titleRequired": "Title is required",
@@ -511,7 +511,12 @@
       "cancel": "Cancel",
       "create": "Create Manuscript",
       "creating": "Creating..."
-    }
+    },
+    "linkToProject": "Link to Project",
+    "noProject": "None (standalone)",
+    "dropFileHere": "Drop a file here or click to browse",
+    "acceptedFormats": "Accepts: DOCX, EPUB, TXT, MD",
+    "removeFile": "Remove file"
   },
   "versionHistory": {
     "title": "Version History",
