@@ -7,18 +7,22 @@ Endpoints:
   GET  /books/{id}/manuscript/chapters/{cid}  -- Get chapter
   POST /books/{id}/manuscript/chapters        -- Create chapter
   PUT  /books/{id}/manuscript/chapters/{cid}  -- Update chapter
+  DELETE /books/{id}/manuscript/chapters/{cid} -- Delete chapter (stub)
   PATCH /books/{id}/manuscript/chapters/reorder -- Reorder chapters
   POST /books/{id}/manuscript/analyze         -- Analyze manuscript
   GET  /books/{id}/manuscript/readability-score -- Readability metrics
   POST /books/{id}/outline/generate           -- Generate outline (book-bound)
   POST /writing/outline/generate              -- Generate outline (standalone)
+  POST /writing/readability                   -- Compute readability from raw text
   POST /writing-sessions                      -- Record writing session
 
   --- Writing Studio stubs ---
   GET    /manuscripts                         -- List manuscripts (stub)
   POST   /manuscripts                         -- Create manuscript (stub)
   GET    /manuscripts/{id}                    -- Get manuscript with chapters (stub)
+  PATCH  /manuscripts/{id}                    -- Update manuscript metadata (stub)
   DELETE /manuscripts/{id}                    -- Delete manuscript (stub)
+  POST   /manuscripts/{id}/export             -- Export manuscript (stub)
   POST   /writing/generate-outline            -- Generate enhanced outline (stub)
   POST   /writing/create-from-outline         -- Create manuscript from outline (stub)
   POST   /writing/generate                    -- AI writing generation (stub)
@@ -32,7 +36,7 @@ Endpoints:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -280,6 +284,7 @@ async def list_writing_sessions_stub(
     current_user: dict = Depends(get_current_user),
 ):
     """List writing sessions (stub with sample data)."""
+    now = datetime.now(UTC)
     return [
         {
             "id": "session-001",
@@ -288,7 +293,7 @@ async def list_writing_sessions_stub(
             "chapter_title": "Chapter 3: Marketing",
             "words_written": 1250,
             "duration_minutes": 45,
-            "created_at": datetime.now(UTC).isoformat(),
+            "created_at": (now - timedelta(hours=2)).isoformat(),
         },
         {
             "id": "session-002",
@@ -297,7 +302,7 @@ async def list_writing_sessions_stub(
             "chapter_title": "Chapter 1: Prologue",
             "words_written": 800,
             "duration_minutes": 30,
-            "created_at": datetime.now(UTC).isoformat(),
+            "created_at": (now - timedelta(days=1)).isoformat(),
         },
     ]
 
@@ -374,6 +379,7 @@ async def list_books_stub(
     current_user: dict = Depends(get_current_user),
 ):
     """List books for the authenticated user (stub)."""
+    now = datetime.now(UTC)
     return [
         {
             "id": "book-001",
@@ -384,8 +390,8 @@ async def list_books_stub(
             "target_word_count": 60000,
             "genre": "Non-Fiction",
             "cover_url": None,
-            "updated_at": datetime.now(UTC).isoformat(),
-            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": (now - timedelta(hours=2)).isoformat(),
+            "created_at": now.isoformat(),
         },
         {
             "id": "book-002",
@@ -396,8 +402,8 @@ async def list_books_stub(
             "target_word_count": 80000,
             "genre": "Fiction",
             "cover_url": None,
-            "updated_at": datetime.now(UTC).isoformat(),
-            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": (now - timedelta(days=1)).isoformat(),
+            "created_at": now.isoformat(),
         },
         {
             "id": "book-003",
@@ -408,8 +414,8 @@ async def list_books_stub(
             "target_word_count": 50000,
             "genre": "Self-Help",
             "cover_url": None,
-            "updated_at": datetime.now(UTC).isoformat(),
-            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": (now - timedelta(days=5)).isoformat(),
+            "created_at": now.isoformat(),
         },
     ]
 
@@ -470,6 +476,50 @@ async def delete_manuscript_stub(
 ):
     """Delete a manuscript (stub)."""
     return {"message": "Deleted"}
+
+
+@router.post(
+    "/manuscripts/{manuscript_id}/export",
+    summary="Export manuscript (stub)",
+    description="Export a manuscript to the specified format. Stub: returns a download URL.",
+)
+async def export_manuscript_stub(
+    manuscript_id: UUID,
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Export manuscript (stub)."""
+    fmt = body.get("format", "docx")
+    return {"download_url": f"/exports/manuscript-{manuscript_id}.{fmt}", "format": fmt}
+
+
+@router.patch(
+    "/manuscripts/{manuscript_id}",
+    summary="Update manuscript metadata (stub)",
+    description="Update manuscript metadata such as title or status. Stub: echoes back the update.",
+)
+async def update_manuscript_stub(
+    manuscript_id: UUID,
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Update manuscript metadata (stub)."""
+    return {"id": str(manuscript_id), **body}
+
+
+@router.delete(
+    "/books/{book_id}/manuscript/chapters/{chapter_id}",
+    summary="Delete chapter (stub)",
+    description="Delete a chapter from a book's manuscript. Stub: returns confirmation.",
+)
+async def delete_chapter_stub(
+    book_id: UUID,
+    chapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete a chapter (stub)."""
+    return {"message": "Chapter deleted", "chapter_id": str(chapter_id)}
 
 
 # ---------------------------------------------------------------------------
@@ -548,6 +598,85 @@ async def get_chapter_readability_stub(
         "avg_words_per_sentence": 0.0,
         "avg_syllables_per_word": 0.0,
         "reading_level": "N/A",
+    }
+
+
+@router.post(
+    "/writing/readability",
+    summary="Compute readability metrics",
+    description="Compute readability metrics for arbitrary text using textstat.",
+)
+async def compute_readability(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Compute readability metrics for arbitrary text."""
+    import re
+
+    import textstat
+
+    text = body.get("text", "")
+    if not text.strip():
+        return {
+            "grade_level": 0,
+            "flesch_ease": 0,
+            "flesch_label": "N/A",
+            "passive_voice_pct": 0,
+            "avg_sentence_length": 0,
+            "word_count": 0,
+            "suggestions": [],
+        }
+
+    words = text.split()
+    word_count = len(words)
+    sentences = [s.strip() for s in text.replace("!", ".").replace("?", ".").split(".") if s.strip()]
+    sentence_count = max(len(sentences), 1)
+    avg_sentence_length = round(word_count / sentence_count, 1)
+
+    grade = round(textstat.flesch_kincaid_grade(text), 1)
+    flesch = round(textstat.flesch_reading_ease(text), 1)
+
+    # Flesch label
+    if flesch >= 90:
+        flesch_label = "Very Easy"
+    elif flesch >= 80:
+        flesch_label = "Easy"
+    elif flesch >= 70:
+        flesch_label = "Fairly Easy"
+    elif flesch >= 60:
+        flesch_label = "Standard"
+    elif flesch >= 50:
+        flesch_label = "Fairly Difficult"
+    elif flesch >= 30:
+        flesch_label = "Difficult"
+    else:
+        flesch_label = "Very Confusing"
+
+    # Passive voice detection (simple heuristic)
+    passive_patterns = re.findall(
+        r"\b(was|were|been|being|is|are|am)\b\s+\w+ed\b", text, re.IGNORECASE
+    )
+    passive_pct = round(len(passive_patterns) / max(sentence_count, 1) * 100, 1)
+
+    # Suggestions
+    suggestions: list[str] = []
+    if grade > 12:
+        suggestions.append("Consider simplifying sentences for a broader audience.")
+    if avg_sentence_length > 25:
+        suggestions.append("Try breaking up longer sentences.")
+    if passive_pct > 15:
+        suggestions.append("Reduce passive voice for more engaging writing.")
+    if flesch < 50:
+        suggestions.append("The text may be difficult to read. Consider using simpler words.")
+
+    return {
+        "grade_level": grade,
+        "flesch_ease": flesch,
+        "flesch_label": flesch_label,
+        "passive_voice_pct": passive_pct,
+        "avg_sentence_length": avg_sentence_length,
+        "word_count": word_count,
+        "suggestions": suggestions,
     }
 
 

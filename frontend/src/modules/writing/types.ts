@@ -222,3 +222,32 @@ export interface StyleProfile {
   name: string;
   description?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Create / Export / Readability POST types
+// ---------------------------------------------------------------------------
+
+export interface CreateManuscriptRequest {
+  title: string;
+  project_id?: string;
+  type?: "book" | "series" | "short_story";
+}
+
+export interface ReadabilityPostResponse {
+  grade_level: number;
+  flesch_ease: number;
+  flesch_label: string;
+  passive_voice_pct: number;
+  avg_sentence_length: number;
+  word_count: number;
+  suggestions: string[];
+}
+
+export interface ExportRequest {
+  format: "docx" | "epub" | "pdf" | "txt" | "markdown";
+}
+
+export interface ExportResponse {
+  download_url: string;
+  format: string;
+}

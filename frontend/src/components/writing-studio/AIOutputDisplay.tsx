@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "@/hooks/use-translations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,13 @@ export function AIOutputDisplay({
   onEditRetry,
 }: AIOutputDisplayProps) {
   const t = useTranslations("writing");
+  const [insertedMsg, setInsertedMsg] = useState(false);
+
+  const handleInsertWithConfirm = () => {
+    onInsert();
+    setInsertedMsg(true);
+    setTimeout(() => setInsertedMsg(false), 2000);
+  };
 
   if (error) {
     return (
@@ -71,23 +79,33 @@ export function AIOutputDisplay({
       )}
 
       {/* Generated content */}
-      <div
-        className={cn(
-          "rounded-md border bg-muted/30 p-3 text-sm font-serif whitespace-pre-wrap max-h-64 overflow-y-auto",
-          isStreaming && "border-green-300"
-        )}
-      >
-        {content || (
-          <span className="text-muted-foreground">
-            {t("ai.output.waiting")}
-          </span>
-        )}
-      </div>
+      {content ? (
+        <div
+          className={cn(
+            "rounded-md border bg-muted/30 p-3 text-sm font-serif max-h-64 overflow-y-auto prose prose-sm",
+            isStreaming && "border-green-300"
+          )}
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
+      ) : (
+        isStreaming && (
+          <div
+            className={cn(
+              "rounded-md border bg-muted/30 p-3 text-sm font-serif max-h-64 overflow-y-auto",
+              "border-green-300"
+            )}
+          >
+            <span className="text-muted-foreground">
+              {t("ai.output.waiting")}
+            </span>
+          </div>
+        )
+      )}
 
       {/* Action buttons (shown when generation is complete) */}
       {!isStreaming && content && (
-        <div className="flex flex-wrap gap-2">
-          <Button variant="default" size="sm" onClick={onInsert}>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button variant="default" size="sm" onClick={handleInsertWithConfirm}>
             {t("ai.output.insertAtCursor")}
           </Button>
           {hasSelection && (
@@ -101,6 +119,11 @@ export function AIOutputDisplay({
           <Button variant="ghost" size="sm" onClick={onEditRetry}>
             {t("ai.output.editRetry")}
           </Button>
+          {insertedMsg && (
+            <div className="text-xs text-green-600 font-medium flex items-center gap-1">
+              <span>{"\u2713"}</span> Inserted!
+            </div>
+          )}
         </div>
       )}
     </div>

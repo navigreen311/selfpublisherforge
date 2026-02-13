@@ -46,8 +46,19 @@
       "exportDocx": "Export DOCX",
       "exportEpub": "Export EPUB",
       "exportPdf": "Export PDF",
+      "exportTxt": "Export TXT",
+      "exportMarkdown": "Export Markdown",
+      "viewAnalytics": "View Analytics",
+      "moveToProject": "Move to Project",
       "archive": "Archive",
       "delete": "Delete"
+    },
+    "statusFilter": {
+      "all": "All",
+      "writing": "Writing",
+      "draft": "Draft",
+      "editing": "Editing",
+      "complete": "Complete"
     },
     "progress": "{pct}%",
     "lastEdited": "Last edited {time}"
@@ -62,7 +73,8 @@
       "duration": "Duration",
       "date": "Date"
     },
-    "minutes": "min"
+    "minutes": "min",
+    "viewAll": "View All Sessions \u2192"
   },
   "status": {
     "draft": "Draft",
@@ -146,6 +158,65 @@
     "characters": "characters",
     "editing": "Editing",
     "readOnly": "Read only",
+    "titleEditable": "Click to edit title",
+    "exportMenu": {
+      "docx": "DOCX (Word)",
+      "epub": "EPUB (eBook)",
+      "pdf": "PDF",
+      "txt": "Plain Text",
+      "markdown": "Markdown"
+    },
+    "overflowMenu": {
+      "versionHistory": "Version History",
+      "wordCountGoals": "Word Count Goals",
+      "printPreview": "Print Preview",
+      "distractionFree": "Distraction Free Mode",
+      "keyboardShortcuts": "Keyboard Shortcuts",
+      "settings": "Settings"
+    },
+    "focusMode": "Focus Mode",
+    "chapterSidebar": {
+      "manuscriptTitle": "Manuscript",
+      "frontMatter": "Front Matter",
+      "titlePage": "Title Page",
+      "copyright": "Copyright",
+      "dedication": "Dedication",
+      "backMatter": "Back Matter",
+      "aboutAuthor": "About the Author",
+      "alsoBy": "Also By",
+      "reviewRequest": "Review Request",
+      "collapse": "Collapse sidebar",
+      "expand": "Expand sidebar",
+      "insertBelow": "Insert Chapter Below",
+      "markComplete": "Mark as Complete",
+      "markDraft": "Mark as Draft",
+      "wordsOf": "{current} / {target} words",
+      "progressPct": "{pct}% complete"
+    },
+    "themes": {
+      "light": "Light",
+      "sepia": "Sepia",
+      "dark": "Dark"
+    },
+    "fonts": {
+      "georgia": "Georgia",
+      "merriweather": "Merriweather",
+      "lora": "Lora",
+      "sourceSerif": "Source Serif Pro",
+      "systemSans": "System Sans"
+    },
+    "findReplace": {
+      "find": "Find...",
+      "replace": "Replace...",
+      "replaceBtn": "Replace",
+      "replaceAll": "Replace All",
+      "caseSensitive": "Case sensitive",
+      "noResults": "No results",
+      "matchCount": "{current} of {total}"
+    },
+    "savedAt": "Saved at {time}",
+    "unsavedChanges": "Unsaved changes",
+    "wpm": "{count} wpm",
     "readability": {
       "fkGrade": "FK Grade",
       "fog": "FOG",
@@ -187,6 +258,14 @@
     "shorten": "Shorten",
     "continue": "Continue",
     "brainstorm": "Brainstorm",
+    "actions": {
+      "write": "Write",
+      "rewrite": "Rewrite",
+      "expand": "Expand",
+      "shorten": "Shorten",
+      "continue": "Continue",
+      "brainstorm": "Ideas"
+    },
     "quickActions": "Quick Actions",
     "instruction": "Tell AI what to write...",
     "generate": "Generate",
@@ -201,16 +280,26 @@
     "settings": "Settings",
     "styleProfile": "Style Profile",
     "noProfile": "No profile",
-    "tone": "Tone",
     "toneMatchProfile": "Match Profile",
     "toneFormal": "More Formal",
     "toneCasual": "More Casual",
     "toneAuthoritative": "More Authoritative",
     "toneConversational": "More Conversational",
-    "length": "Length",
     "lengthShort": "Short (1 para)",
     "lengthMedium": "Medium (2-3 paras)",
     "lengthLong": "Long (4-6 paras)",
+    "tone": {
+      "matchProfile": "Match Profile",
+      "moreFormal": "More Formal",
+      "moreCasual": "More Casual",
+      "moreAuthoritative": "Authoritative",
+      "moreConversational": "Conversational"
+    },
+    "length": {
+      "short": "Short (1 para)",
+      "medium": "Medium (2-3 paras)",
+      "long": "Long (4-6 paras)"
+    },
     "startDictation": "Start Dictation",
     "stopDictation": "Stop Dictation",
     "autoRefine": "Auto-refine with style profile",
@@ -390,9 +479,26 @@
   "newManuscript": {
     "backToStudio": "Back to Writing Studio",
     "title": "Create New Manuscript",
+    "modalTitle": "Create New Manuscript",
     "subtitle": "Start a new book project with AI assistance",
     "success": "Manuscript created successfully",
     "error": "Failed to create manuscript. Please try again.",
+    "linkProject": "Link to Project (optional)",
+    "selectProject": "Select a project...",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Enter manuscript title",
+    "titleRequired": "Title is required",
+    "bookType": "Type",
+    "typeBook": "Book",
+    "typeSeries": "Series",
+    "typeShortStory": "Short Story",
+    "startingContent": "Starting Content",
+    "blankManuscript": "Blank manuscript",
+    "importFile": "Import existing file (DOCX, EPUB, TXT, MD)",
+    "fromOutline": "Start from AI-generated outline",
+    "cancel": "Cancel",
+    "createButton": "Create Manuscript",
+    "creating": "Creating...",
     "form": {
       "title": "Manuscript Details",
       "description": "Fill in the basic information about your manuscript",
@@ -406,5 +512,40 @@
       "create": "Create Manuscript",
       "creating": "Creating..."
     }
+  },
+  "versionHistory": {
+    "title": "Version History",
+    "current": "current",
+    "restore": "Restore",
+    "restoring": "Restoring...",
+    "restored": "Version restored",
+    "preview": "Click any version to preview. Click Restore to revert.",
+    "close": "Close",
+    "words": "{count} words"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "close": "Close",
+    "formatting": "Formatting",
+    "bold": "Bold",
+    "italic": "Italic",
+    "underline": "Underline",
+    "insertLink": "Insert link",
+    "heading1": "Heading 1",
+    "heading2": "Heading 2",
+    "heading3": "Heading 3",
+    "bulletList": "Bullet list",
+    "numberedList": "Numbered list",
+    "editor": "Editor",
+    "undo": "Undo",
+    "redo": "Redo",
+    "save": "Force save",
+    "find": "Find",
+    "findReplace": "Find and Replace",
+    "panels": "Panels",
+    "toggleAI": "Toggle AI panel",
+    "toggleChapters": "Toggle Chapter panel",
+    "focusMode": "Focus Mode",
+    "aiContinue": "AI Continue"
   }
 }
