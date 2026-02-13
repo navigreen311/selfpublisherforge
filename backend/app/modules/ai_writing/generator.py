@@ -1,7 +1,20 @@
 """AI content generation engine.
 
 Handles prompt construction, SSE streaming, and quality post-checks
-for the unified /generate endpoint.
+for the unified /generate endpoint AND the 6-action Writing Studio
+generation endpoint.
+
+Supported actions (ActionGenerateRequest):
+  - write:    Generate new content from instruction + context
+  - rewrite:  Improve selected text (clarity, quality)
+  - expand:   Add detail and elaboration to selection
+  - shorten:  Condense selection preserving key information
+  - continue: Continue writing from cursor position
+  - ideas:    Brainstorm 5 bullet-point directions
+
+SSE streaming format:
+  data: {"type": "token", "content": "word "}
+  data: {"type": "complete", "content": "full text", "word_count": 123}
 """
 
 from __future__ import annotations
@@ -15,9 +28,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.config import get_settings
-from app.modules.ai_writing.prompts import get_prompt
+from app.modules.ai_writing.prompts import get_action_prompt, get_prompt
 from app.modules.ai_writing.readability import analyze_readability
-from app.modules.ai_writing.schemas import GenerateRequest, GenerateResponse
+from app.modules.ai_writing.schemas import (
+    ActionGenerateRequest,
+    ActionGenerateResponse,
+    GenerateRequest,
+    GenerateResponse,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -397,6 +415,177 @@ async def generate_sync(request: GenerateRequest) -> GenerateResponse:
         model_used=model,
         created_at=datetime.now(UTC),
     )
+
+
+# ===========================================================================
+# Action-based generation (6-action Writing Studio)
+# ===========================================================================
+
+
+def build_action_messages(request: ActionGenerateRequest) -> list[dict[str, str]]:
+    """Build LLM message list from an ActionGenerateRequest.
+
+    Extracts all relevant fields from the request and passes them as
+    a context dict to the action-specific prompt builder.
+    """
+    # Map the WritingAction enum value to its string key.
+    # WritingAction.continue_ has value "continue", which is what
+    # the ACTION_PROMPT_REGISTRY expects.
+    action_key = request.action.value
+
+    context = {
+        "instruction": request.instruction,
+        "selected_text": request.selected_text,
+        "context_before": request.context_before,
+        "context_after": request.context_after,
+        "chapter_outline": request.chapter_outline,
+        "previous_content": request.previous_content,
+        "style_profile": request.style_profile,
+        "tone": request.tone,
+        "length": request.length,
+        "genre": request.genre,
+    }
+
+    system_msg, user_msg = get_action_prompt(action_key, context)
+    return [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Action-based SSE streaming
+# ---------------------------------------------------------------------------
+
+async def action_generate_stream(
+    request: ActionGenerateRequest,
+) -> AsyncGenerator[str, None]:
+    """Yield SSE-formatted events for a 6-action writing generation request.
+
+    Emits events in the format expected by the Writing Studio frontend:
+      data: {"type": "token", "content": "word "}
+      data: {"type": "complete", "content": "full text", "word_count": 123}
+
+    Also emits quality and error events when applicable.
+    """
+    request_id = uuid.uuid4()
+    messages = build_action_messages(request)
+    model = resolve_model(request.model_preference.value)
+    collected_content = ""
+    tokens_used = 0
+
+    logger.info(
+        "Action stream started: action=%s project=%s model=%s",
+        request.action.value,
+        request.project_id,
+        model,
+    )
+
+    # Stream tokens from the LLM
+    try:
+        async for chunk in _call_llm_stream(messages, model):
+            collected_content += chunk
+            tokens_used += 1  # approximate token count by chunk count
+            # Emit token event in the specified SSE format
+            yield _sse_data({"type": "token", "content": chunk})
+    except (ConnectionError, TimeoutError, ValueError) as exc:
+        logger.error(
+            "Action stream generation failed: action=%s error=%s",
+            request.action.value,
+            exc,
+            exc_info=True,
+        )
+        yield _sse_data({"type": "error", "error": str(exc)})
+        return
+
+    word_count = len(collected_content.split())
+
+    # Optional quality checks
+    quality_results: dict[str, Any] = {}
+    if request.quality_checks:
+        quality_results = _run_quality_checks(collected_content, request.quality_checks)
+        yield _sse_data({"type": "quality", **quality_results})
+
+    # Complete event with full content and metadata
+    complete_payload = {
+        "type": "complete",
+        "content": collected_content,
+        "word_count": word_count,
+        "request_id": str(request_id),
+        "action": request.action.value,
+        "tokens_used": tokens_used,
+        "model_used": model,
+        "quality_results": quality_results,
+        "created_at": datetime.now(UTC).isoformat(),
+    }
+    yield _sse_data(complete_payload)
+
+    logger.info(
+        "Action stream complete: action=%s words=%d tokens=%d",
+        request.action.value,
+        word_count,
+        tokens_used,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Action-based non-streaming generation
+# ---------------------------------------------------------------------------
+
+async def action_generate_sync(
+    request: ActionGenerateRequest,
+) -> ActionGenerateResponse:
+    """Generate content for a writing action without streaming.
+
+    Returns a complete ActionGenerateResponse.
+    """
+    request_id = uuid.uuid4()
+    messages = build_action_messages(request)
+    model = resolve_model(request.model_preference.value)
+
+    logger.info(
+        "Action sync started: action=%s project=%s model=%s",
+        request.action.value,
+        request.project_id,
+        model,
+    )
+
+    content = await _call_llm(messages, model)
+    word_count = len(content.split())
+    quality_results = (
+        _run_quality_checks(content, request.quality_checks)
+        if request.quality_checks
+        else {}
+    )
+
+    logger.info(
+        "Action sync complete: action=%s words=%d",
+        request.action.value,
+        word_count,
+    )
+
+    return ActionGenerateResponse(
+        request_id=request_id,
+        action=request.action,
+        content=content,
+        word_count=word_count,
+        tokens_used=word_count,  # approximate
+        quality_results=quality_results,
+        model_used=model,
+        created_at=datetime.now(UTC),
+    )
+
+
+# ---------------------------------------------------------------------------
+# SSE formatting helper
+# ---------------------------------------------------------------------------
+
+def _sse_data(payload: dict[str, Any]) -> str:
+    """Format a payload dict as an SSE data line.
+
+    Returns: 'data: {"type": "token", "content": "..."}\n\n'
+    """
+    return f"data: {json.dumps(payload)}\n\n"
 
 
 # ---------------------------------------------------------------------------
