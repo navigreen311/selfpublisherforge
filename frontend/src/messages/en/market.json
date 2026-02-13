@@ -1,14 +1,170 @@
 {
-  "title": "Market Intelligence",
-  "subtitle": "Analyze niches, explore categories, and discover market opportunities",
+  "title": "Market Research",
+  "subtitle": "Analyze market trends, competitors, and find profitable niches.",
+
+  "tabs": {
+    "nicheAnalyzer": "Niche Analyzer",
+    "keywordResearch": "Keyword Research",
+    "categoryExplorer": "Category Explorer",
+    "trends": "Trends"
+  },
+
   "nicheSearchLabel": "Enter a niche to analyze",
-  "nicheSearchPlaceholder": "Enter a niche to analyze (e.g., 'self-help for millennials')...",
+  "nicheSearchPlaceholder": "Enter a niche topic or keyword (e.g., 'keto diet for beginners')",
   "nicheSearchHint": "Type a niche keyword and press Enter or click Analyze Niche to get market analysis",
   "analyzeNiche": "Analyze Niche",
   "analyzing": "Analyzing...",
   "analyzingLabel": "Analyzing niche, please wait",
   "analyzeLabel": "Analyze niche",
   "nicheAnalysisError": "Failed to analyze niche. Please try again.",
+  "selectCategoryMessage": "Select a category to view its metrics and top books.",
+  "trySuggestions": "Or try:",
+  "searchHistory": "Recent Searches",
+  "analyzed": "Analyzed {count} competing titles",
+  "lastUpdated": "Last updated: {time}",
+
+  "filters": {
+    "marketplace": "Marketplace",
+    "format": "Format",
+    "dateRange": "Date Range",
+    "allFormats": "All",
+    "kindle": "Kindle",
+    "paperback": "Paperback",
+    "hardcover": "Hardcover",
+    "audiobook": "Audiobook",
+    "last30d": "Last 30 days",
+    "last60d": "Last 60 days",
+    "last90d": "Last 90 days",
+    "last180d": "Last 180 days",
+    "last365d": "Last 365 days",
+    "allTime": "All Time"
+  },
+
+  "marketplaces": {
+    "amazon_com": "Amazon.com",
+    "amazon_co_uk": "Amazon.co.uk",
+    "amazon_de": "Amazon.de",
+    "amazon_ca": "Amazon.ca"
+  },
+
+  "scores": {
+    "opportunity": "Opportunity",
+    "demand": "Demand",
+    "supply": "Supply",
+    "avgRevenue": "Avg Revenue",
+    "perTitle": "per title",
+    "topAvg": "Top 20 avg",
+    "veryGood": "Very Good",
+    "good": "Good",
+    "moderate": "Moderate",
+    "low": "Low",
+    "high": "High",
+    "veryHigh": "Very High",
+    "verdict": "Verdict"
+  },
+
+  "results": {
+    "topBooks": "Top Competing Books",
+    "found": "{count} found",
+    "sort": "Sort",
+    "filter": "Filter",
+    "track": "Track",
+    "trackSelected": "Track Selected",
+    "analyze": "Analyze",
+    "estRevenue": "Est Revenue",
+    "perMonth": "/month",
+    "exportPdf": "Export PDF",
+    "save": "Save Analysis",
+    "exportToProject": "Export to Project",
+    "startWriting": "Start Writing",
+    "showing": "Showing {from}-{to} of {total}",
+    "previous": "Previous",
+    "next": "Next",
+    "expandRow": "Show details",
+    "collapseRow": "Hide details",
+    "rank": "#",
+    "bookTitle": "Title",
+    "bsr": "BSR",
+    "reviewCount": "Reviews",
+    "price": "Price",
+    "estRev": "Est Rev"
+  },
+
+  "charts": {
+    "bsrDistribution": "BSR Distribution",
+    "priceDistribution": "Price Distribution",
+    "reviewBarrier": "Review Barrier",
+    "bsrDesc": "Most books BSR under {value}",
+    "priceDesc": "Sweet spot: {range}",
+    "reviewDesc": "Avg reviews needed to rank: ~{count}"
+  },
+
+  "keywords": {
+    "title": "Keyword Research",
+    "seedPlaceholder": "Enter seed keyword...",
+    "research": "Research",
+    "researching": "Researching...",
+    "searchVolume": "Search Vol",
+    "competition": "Competition",
+    "opportunityScore": "Opportunity",
+    "cpc": "CPC",
+    "exportCsv": "Export CSV",
+    "addToProject": "Add to Project",
+    "kdpSuggestion": "Suggested 7-keyword combo for KDP backend:",
+    "copyToClipboard": "Copy to Clipboard",
+    "copied": "Copied!",
+    "saveToProject": "Save to Project",
+    "showing": "Showing {from}-{to} of {total} keywords",
+    "noResults": "No keywords found. Try a different seed keyword.",
+    "competitionHigh": "High",
+    "competitionMedium": "Medium",
+    "competitionLow": "Low"
+  },
+
+  "categories": {
+    "title": "Category Explorer",
+    "searchPlaceholder": "Search categories...",
+    "totalBooks": "Total Books",
+    "avgBsr": "Avg BSR (Top 20)",
+    "avgPrice": "Avg Price",
+    "avgReviews": "Avg Reviews",
+    "topBsr": "#1 BSR",
+    "newBooks30d": "New Books (30d)",
+    "avgPubDate": "Avg Pub Date",
+    "competition": "Competition",
+    "saturation": "Saturation",
+    "opportunity": "Opportunity",
+    "analyzeCategory": "Analyze This Category",
+    "viewTopBooks": "View Top 50 Books",
+    "noSelection": "Select a category from the tree to view its metrics."
+  },
+
+  "trends": {
+    "title": "Market Trends",
+    "trendingUp": "Trending Up",
+    "trendingDown": "Trending Down",
+    "seasonalInsights": "Seasonal Insights",
+    "addKeyword": "+ Add",
+    "timeRange": "Time Range",
+    "chartTitle": "Search interest over time",
+    "range3m": "3 months",
+    "range6m": "6 months",
+    "range12m": "12 months",
+    "range2y": "2 years",
+    "noTrends": "No trend data available yet."
+  },
+
+  "ai": {
+    "title": "AI Market Analysis",
+    "regenerate": "Regenerate",
+    "regenerating": "Regenerating...",
+    "marketOverview": "Market Overview",
+    "contentGaps": "Content Gaps Identified",
+    "positioning": "Recommended Positioning",
+    "saveAnalysis": "Save Analysis",
+    "loading": "Generating AI analysis..."
+  },
+
   "categoryBrowser": "Category browser",
   "loadingCategories": "Loading categories",
   "categoryAnalysisDetails": "Category analysis details",
@@ -26,7 +182,6 @@
   "topBooksDesc": "List of top-performing books showing title, BSR rank, and price",
   "bsr": "BSR: {value}",
   "price": "${value}",
-  "selectCategoryMessage": "Select a category from the tree to view analysis",
   "marketTrends": "Market Trends",
   "marketSnapshots": "Market snapshots",
   "loadingSnapshots": "Loading snapshots",
@@ -74,5 +229,17 @@
   "genreInputAriaLabel": "Enter a genre to get AI keyword suggestions",
   "getSuggestions": "Get Suggestions",
   "aiKeywordSuggestions": "AI keyword suggestions results",
-  "keywordResearchResults": "Keyword research results"
+  "keywordResearchResults": "Keyword research results",
+
+  "suggestedSearch1": "intermittent fasting",
+  "suggestedSearch2": "romance werewolf",
+  "suggestedSearch3": "python programming",
+  "suggestedSearch4": "toddler activities",
+  "suggestedSearch5": "cozy mystery",
+  "suggestedSearch6": "personal finance",
+
+  "error": {
+    "title": "Error",
+    "generic": "Something went wrong. Please try again."
+  }
 }

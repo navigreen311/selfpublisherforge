@@ -10,7 +10,7 @@ Endpoints:
 """
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -200,3 +200,126 @@ async def get_alerts(
         limit=limit,
     )
     return alerts
+
+
+# ------------------------------------------------------------------
+# Enhanced Competitor CRUD Endpoints
+# ------------------------------------------------------------------
+
+
+@router.post("", status_code=201)
+async def add_competitor(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add competitor by ASIN/URL/title."""
+    return {
+        "id": str(uuid4()),
+        "asin": body.get("identifier", ""),
+        "title": "Pending lookup",
+        "author": "",
+        "tracked": True,
+    }
+
+
+@router.get("")
+async def list_tracked(
+    project_id: str = Query(None),
+    sort: str = Query("bsr"),
+    page: int = Query(1),
+    limit: int = Query(20),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List tracked competitors."""
+    return {"competitors": [], "total": 0}
+
+
+@router.delete("/{competitor_id}")
+async def remove_competitor(
+    competitor_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove competitor from tracking."""
+    return {"status": "removed"}
+
+
+@router.get("/{competitor_id}/bsr-history")
+async def bsr_history(
+    competitor_id: UUID,
+    period: str = Query("90d"),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get BSR history."""
+    return {"data": []}
+
+
+@router.get("/{competitor_id}/reviews")
+async def competitor_reviews(
+    competitor_id: UUID,
+    sort: str = Query("recent"),
+    page: int = Query(1),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get competitor reviews."""
+    return {"reviews": [], "total": 0}
+
+
+@router.post("/compare")
+async def compare_books(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Compare books side by side."""
+    return {"books": [], "feature_list": []}
+
+
+# ------------------------------------------------------------------
+# Alert CRUD Endpoints
+# ------------------------------------------------------------------
+
+
+@router.post("/alerts", status_code=201)
+async def create_alert(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create alert."""
+    return {"id": str(uuid4()), **body, "active": True, "created_at": "now"}
+
+
+@router.patch("/alerts/{alert_id}")
+async def update_alert(
+    alert_id: UUID,
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update alert."""
+    return {"id": str(alert_id), **body}
+
+
+@router.delete("/alerts/{alert_id}")
+async def delete_alert(
+    alert_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete alert."""
+    return {"status": "deleted"}
+
+
+@router.get("/alerts/history")
+async def alert_history(
+    page: int = Query(1),
+    limit: int = Query(20),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Alert event history."""
+    return {"events": []}

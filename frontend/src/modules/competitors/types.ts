@@ -12,13 +12,29 @@ export type WeaknessCategory =
   | "format_layout"
   | "missing_features"
   | "pricing"
-  | "coverage_gaps";
+  | "coverage_gaps"
+  | "content_depth"
+  | "missing_deliverables"
+  | "practical_gaps"
+  | "production_quality"
+  | "voice_mismatch"
+  | "currency_gaps"
+  | "value_perception"
+  | "promise_delivery";
 
 export type Severity = "low" | "medium" | "high" | "critical";
 
 export type AnalysisStatus = "pending" | "processing" | "completed" | "failed";
 
-export type AlertType = "price_change" | "bsr_shift" | "new_book" | "review_spike";
+export type AlertType =
+  | "price_change"
+  | "bsr_shift"
+  | "new_book"
+  | "review_spike"
+  | "bsr_drop"
+  | "new_negative_theme"
+  | "rank_change"
+  | "new_book_by_author";
 
 export type AlertSeverity = "info" | "warning" | "critical";
 
@@ -44,6 +60,7 @@ export interface WeaknessSignal {
   confidence: number;
   actionable: boolean;
   suggestion?: string;
+  book_sources?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -78,6 +95,8 @@ export interface OpportunityBlueprint {
   differentiators?: string[];
   target_audience?: string;
   estimated_opportunity_score?: number;
+  action_items?: string[];
+  differentiation_score?: number;
   full_blueprint?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -97,6 +116,15 @@ export interface CompetitorBookBrief {
   rating?: number;
   review_count?: number;
   category?: string;
+  image_url?: string;
+  estimated_monthly_revenue?: number;
+  bsr_change?: number;
+  publish_date?: string;
+  page_count?: number;
+  description?: string;
+  keywords_extracted?: string[];
+  tracked?: boolean;
+  project_id?: string;
 }
 
 export interface CompetitorAnalysis {
@@ -157,11 +185,23 @@ export interface GapAnalysis {
   cover_gaps?: CoverGap[];
   title_gaps?: TitleGap[];
   content_gaps?: ContentGap[];
+  weakness_signals?: WeaknessSignalGroup[];
+  opportunity_blueprint?: OpportunityBlueprint;
+  differentiation_score?: number;
+  total_signals?: number;
   summary?: string;
   recommendations?: string[];
   status: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface WeaknessSignalGroup {
+  category: string;
+  label: string;
+  count: number;
+  signals: string[];
+  book_sources: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -175,12 +215,64 @@ export interface CompetitorAlert {
   alert_type: AlertType;
   severity: AlertSeverity;
   title: string;
+  name?: string;
   description?: string;
+  config?: Record<string, unknown>;
+  delivery_channels?: string[];
+  check_frequency?: string;
+  active?: boolean;
   data?: Record<string, unknown>;
   read: boolean;
   dismissed: boolean;
+  last_checked_at?: string;
+  last_triggered_at?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface AlertEvent {
+  id: string;
+  alert_id: string;
+  event_data: Record<string, unknown>;
+  read: boolean;
+  delivered_channels: string[];
+  created_at: string;
+  message?: string;
+}
+
+export interface CreateAlertRequest {
+  alert_type: AlertType;
+  name: string;
+  config: Record<string, unknown>;
+  delivery_channels: string[];
+  check_frequency?: string;
+  active?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Compare
+// ---------------------------------------------------------------------------
+
+export interface ComparisonBook {
+  id?: string;
+  title: string;
+  author?: string;
+  bsr?: number;
+  price?: number;
+  pages?: number;
+  reviews_count?: number;
+  rating?: number;
+  publish_date?: string;
+  features?: Record<string, boolean>;
+  strengths?: string[];
+  weaknesses?: string[];
+  is_user_book?: boolean;
+}
+
+export interface ComparisonResult {
+  books: ComparisonBook[];
+  feature_list: string[];
+  strategy?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -211,4 +303,12 @@ export interface GapAnalysisRequest {
   category?: string;
   book_ids?: string[];
   max_books?: number;
+  competitor_ids?: string[];
+  project_id?: string;
+}
+
+export interface AddCompetitorRequest {
+  identifier: string;
+  type: "asin" | "url" | "title";
+  project_id?: string;
 }
