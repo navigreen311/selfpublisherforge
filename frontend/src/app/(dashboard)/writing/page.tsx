@@ -9,6 +9,7 @@ import type { BookEntry, WritingSessionEntry } from "@/modules/writing/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WritingAnalytics } from "@/components/writing-studio/WritingAnalytics";
 import { NewManuscriptModal } from "@/components/writing-studio/NewManuscriptModal";
+import { ManuscriptCardMenu } from "@/components/writing-studio/ManuscriptCardMenu";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -17,14 +18,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+
 
 /**
  * Writing Studio landing page.
@@ -212,108 +206,6 @@ function EmptyBooksState({ t }: { t: (key: string) => string }) {
         </Link>
       </div>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Manuscript row action menu
-// ---------------------------------------------------------------------------
-
-function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) => string }) {
-  const handleAction = (action: string) => {
-    // Placeholder actions -- show alert for now
-    switch (action) {
-      case "rename":
-        alert(`${t("manuscripts.menu.rename")}: ${book.title}`);
-        break;
-      case "duplicate":
-        alert(`${t("manuscripts.menu.duplicate")}: ${book.title}`);
-        break;
-      case "export-docx":
-        alert(`${t("manuscripts.menu.exportDocx")}: ${book.title}`);
-        break;
-      case "export-epub":
-        alert(`${t("manuscripts.menu.exportEpub")}: ${book.title}`);
-        break;
-      case "export-pdf":
-        alert(`${t("manuscripts.menu.exportPdf")}: ${book.title}`);
-        break;
-      case "export-txt":
-        alert(`${t("manuscripts.menu.exportTxt")}: ${book.title}`);
-        break;
-      case "export-md":
-        alert(`${t("manuscripts.menu.exportMd")}: ${book.title}`);
-        break;
-      case "analytics":
-        alert(`${t("manuscripts.menu.viewAnalytics")}: ${book.title}`);
-        break;
-      case "move-to-project":
-        alert(`${t("manuscripts.menu.moveToProject")}: ${book.title}`);
-        break;
-      case "archive":
-        alert(`${t("manuscripts.menu.archive")}: ${book.title}`);
-        break;
-      case "delete":
-        alert(`${t("manuscripts.menu.delete")}: ${book.title}`);
-        break;
-    }
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          className="h-8 w-8 flex items-center justify-center rounded-md border text-muted-foreground hover:bg-muted transition-colors"
-          aria-label={t("manuscripts.menu.rename")}
-        >
-          &#8230;
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => handleAction("rename")}>
-          {t("manuscripts.menu.rename")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleAction("duplicate")}>
-          {t("manuscripts.menu.duplicate")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => handleAction("analytics")}>
-          {t("manuscripts.menu.viewAnalytics")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleAction("move-to-project")}>
-          {t("manuscripts.menu.moveToProject")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          {t("manuscripts.menu.exportLabel")}
-        </DropdownMenuLabel>
-        <DropdownMenuItem onSelect={() => handleAction("export-docx")}>
-          {t("manuscripts.menu.exportDocx")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleAction("export-epub")}>
-          {t("manuscripts.menu.exportEpub")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleAction("export-pdf")}>
-          {t("manuscripts.menu.exportPdf")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleAction("export-txt")}>
-          {t("manuscripts.menu.exportTxt")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleAction("export-md")}>
-          {t("manuscripts.menu.exportMd")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => handleAction("archive")}>
-          {t("manuscripts.menu.archive")}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-red-600 focus:text-red-600"
-          onSelect={() => handleAction("delete")}
-        >
-          {t("manuscripts.menu.delete")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
@@ -710,7 +602,7 @@ export default function WritingStudioPage() {
                       >
                         {t("manuscripts.openEditor")}
                       </Link>
-                      <ManuscriptActionMenu book={book} t={t} />
+                      <ManuscriptCardMenu manuscript={book} />
                     </div>
                   </div>
                 </div>
