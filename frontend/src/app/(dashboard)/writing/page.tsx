@@ -201,7 +201,7 @@ function EmptyBooksState({ t }: { t: (key: string) => string }) {
           href="/writing/outline"
           className="inline-block rounded-md border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
-          {t("manuscripts.empty.aiOutline")}
+          {t("manuscripts.empty.generateOutline")}
         </Link>
       </div>
     </div>
@@ -217,25 +217,25 @@ function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) =
     // Placeholder actions -- show alert for now
     switch (action) {
       case "rename":
-        alert(`${t("actions.rename")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.rename")}: ${book.title}`);
         break;
       case "duplicate":
-        alert(`${t("actions.duplicate")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.duplicate")}: ${book.title}`);
         break;
       case "export-docx":
-        alert(`${t("actions.exportDocx")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.exportDocx")}: ${book.title}`);
         break;
       case "export-epub":
-        alert(`${t("actions.exportEpub")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.exportEpub")}: ${book.title}`);
         break;
       case "export-pdf":
-        alert(`${t("actions.exportPdf")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.exportPdf")}: ${book.title}`);
         break;
       case "archive":
-        alert(`${t("actions.archive")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.archive")}: ${book.title}`);
         break;
       case "delete":
-        alert(`${t("actions.delete")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.delete")}: ${book.title}`);
         break;
     }
   };
@@ -245,37 +245,37 @@ function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) =
       <DropdownMenuTrigger asChild>
         <button
           className="h-8 w-8 flex items-center justify-center rounded-md border text-muted-foreground hover:bg-muted transition-colors"
-          aria-label={t("actions.menu")}
+          aria-label={t("manuscripts.menu.rename")}
         >
           &#8230;
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => handleAction("rename")}>
-          {t("actions.rename")}
+          {t("manuscripts.menu.rename")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleAction("duplicate")}>
-          {t("actions.duplicate")}
+          {t("manuscripts.menu.duplicate")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => handleAction("export-docx")}>
-          {t("actions.exportDocx")}
+          {t("manuscripts.menu.exportDocx")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleAction("export-epub")}>
-          {t("actions.exportEpub")}
+          {t("manuscripts.menu.exportEpub")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleAction("export-pdf")}>
-          {t("actions.exportPdf")}
+          {t("manuscripts.menu.exportPdf")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => handleAction("archive")}>
-          {t("actions.archive")}
+          {t("manuscripts.menu.archive")}
         </DropdownMenuItem>
         <DropdownMenuItem
           className="text-red-600 focus:text-red-600"
           onSelect={() => handleAction("delete")}
         >
-          {t("actions.delete")}
+          {t("manuscripts.menu.delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -622,7 +622,7 @@ export default function WritingStudioPage() {
                         href={`/writing/${book.id}`}
                         className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs sm:text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                       >
-                        {t("actions.openEditor")}
+                        {t("manuscripts.openEditor")}
                       </Link>
                       <ManuscriptActionMenu book={book} t={t} />
                     </div>

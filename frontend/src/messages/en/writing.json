@@ -15,6 +15,12 @@
       "description": "Track your writing sessions, word counts, and productivity."
     }
   },
+  "sort": {
+    "label": "Sort manuscripts",
+    "recent": "Sort: Recent",
+    "title": "Sort: Title",
+    "progress": "Sort: Progress"
+  },
   "search": {
     "placeholder": "Search manuscripts...",
     "noResults": "No manuscripts found matching \"{query}\"."
@@ -70,9 +76,11 @@
     "chapters": "chapters",
     "words": "words",
     "unknownBook": "Unknown Book",
-    "target": "Target: {count}",
+    "target": "target",
     "readingTime": "Reading time",
-    "minRead": "{count} min read"
+    "minRead": "{count} min read",
+    "minutes": "min",
+    "total": "Total"
   },
   "timeAgo": {
     "justNow": "Just now",
@@ -122,11 +130,22 @@
     },
     "renamePrompt": "Enter new chapter title:",
     "deleteConfirm": "Are you sure you want to delete this chapter?",
+    "untitled": "Untitled Manuscript",
+    "moreActions": "More Actions",
+    "minRead": "min read",
+    "session": "Session",
+    "autoSaving": "Auto-saving...",
+    "autoSaved": "Auto-saved",
+    "saveFailed": "Save failed",
+    "aiPanel": "AI Panel",
     "saveStatus": {
       "saving": "Saving...",
       "saved": "Saved",
       "error": "Error saving"
     },
+    "characters": "characters",
+    "editing": "Editing",
+    "readOnly": "Read only",
     "readability": {
       "fkGrade": "FK Grade",
       "fog": "FOG",
@@ -135,7 +154,12 @@
       "gradeLevel": "Grade {level}",
       "fleschScore": "Flesch: {score}",
       "passiveVoice": "Passive: {pct}%",
-      "avgSentence": "Avg sentence: {count} words"
+      "avgSentence": "Avg sentence: {count} words",
+      "avgSentenceLength": "Avg sentence length",
+      "fleschEase": "Flesch Reading Ease",
+      "gunningFog": "Gunning Fog Index",
+      "readingLevel": "Reading Level",
+      "smogIndex": "SMOG Index"
     },
     "toolbar": {
       "bold": "Bold",
@@ -190,9 +214,41 @@
     "startDictation": "Start Dictation",
     "stopDictation": "Stop Dictation",
     "autoRefine": "Auto-refine with style profile",
+    "instructionPlaceholder": "Tell AI what to write...",
+    "lengthLabel": "Length",
+    "toneLabel": "Tone",
+    "styleProfileDefault": "Default",
+    "styleProfilePlaceholder": "Select a style profile",
     "chapterStats": "Chapter Stats",
     "wordProgress": "{current} / {target}",
-    "selectedText": "Selected Text"
+    "selectedText": "Selected Text",
+    "output": {
+      "editRetry": "Edit & Retry",
+      "error": "Generation failed",
+      "generating": "Generating...",
+      "insertAtCursor": "Insert at Cursor",
+      "regenerate": "Regenerate",
+      "replaceSelection": "Replace Selection",
+      "waiting": "Waiting for AI..."
+    },
+    "stats": {
+      "avgSentenceLength": "Avg sentence: {count} words",
+      "fleschScore": "Flesch: {score}",
+      "gradeLevel": "Grade {level}",
+      "noData": "No readability data available",
+      "passiveVoice": "Passive voice: {pct}%",
+      "wordCount": "Word Count",
+      "words": "words"
+    },
+    "chapterStatsSection": {
+      "loading": "Loading stats...",
+      "readingTime": "Reading time",
+      "suggestions": "Suggestions",
+      "target": "Target",
+      "title": "Chapter Stats",
+      "wordCount": "Word Count",
+      "words": "words"
+    }
   },
   "outline": {
     "backToStudio": "Back",
@@ -257,7 +313,39 @@
       "saveFailed": "Failed to save outline to project. Please try again."
     },
     "saveSuccess": "Outline saved to \"{title}\" successfully",
-    "copySuccess": "Outline copied to clipboard as Markdown"
+    "copySuccess": "Outline copied to clipboard as Markdown",
+    "formTitle": "Book Details",
+    "bookTitle": "Book Title",
+    "bookTitlePlaceholder": "Enter your book title",
+    "genre": "Genre",
+    "genrePlaceholder": "Select a genre",
+    "bookType": "Book Type",
+    "targetAudience": "Target Audience",
+    "targetAudiencePlaceholder": "e.g. Young adults, business professionals",
+    "uniqueAngle": "Unique Angle / Key Differentiator",
+    "uniqueAnglePlaceholder": "What makes your book different?",
+    "chapterCount": "Number of Chapters",
+    "chapterCountHint": "Recommended: 8-15 for most books",
+    "wordCountTarget": "Word Count Target",
+    "styleProfile": "Style Profile (optional)",
+    "styleProfilePlaceholder": "Select a style profile",
+    "styleProfileNone": "None",
+    "generateButton": "Generate Outline",
+    "generateError": "Failed to generate outline. Please try again.",
+    "resultTitle": "Generated Outline",
+    "addChapter": "Add Chapter",
+    "regenerate": "Regenerate",
+    "confirmEdit": "Confirm edit",
+    "editTitle": "Edit title",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeChapter": "Remove Chapter",
+    "targetWords": "Target words",
+    "chaptersTotal": "chapters",
+    "wordsTotal": "words total",
+    "createManuscript": "Create Manuscript from This Outline",
+    "createError": "Failed to create manuscript. Please try again.",
+    "description": "Generate a complete book outline with chapter summaries"
   },
   "analytics": {
     "title": "Writing Analytics",
@@ -287,7 +375,17 @@
       "words": "Words",
       "duration": "Duration"
     },
-    "noData": "No writing data yet. Start a writing session to see your analytics."
+    "noData": "No writing data yet. Start a writing session to see your analytics.",
+    "chapter": "Chapter",
+    "date": "Date",
+    "days": "days",
+    "duration": "Duration",
+    "empty": "No analytics data available for this period.",
+    "error": "Failed to load analytics data.",
+    "manuscript": "Manuscript",
+    "selectPeriod": "Select period",
+    "sessions": "Sessions",
+    "words": "Words"
   },
   "newManuscript": {
     "backToStudio": "Back to Writing Studio",

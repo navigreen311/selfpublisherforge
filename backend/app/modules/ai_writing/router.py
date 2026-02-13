@@ -269,6 +269,39 @@ async def generate_outline_standalone(
 # Writing Sessions
 # ---------------------------------------------------------------------------
 
+@router.get(
+    "/writing-sessions",
+    summary="List writing sessions (stub)",
+    description="Return recent writing sessions. Stub: returns sample data.",
+)
+async def list_writing_sessions_stub(
+    book_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List writing sessions (stub with sample data)."""
+    return [
+        {
+            "id": "session-001",
+            "book_id": "book-001",
+            "book_title": "The Art of Self-Publishing",
+            "chapter_title": "Chapter 3: Marketing",
+            "words_written": 1250,
+            "duration_minutes": 45,
+            "created_at": datetime.now(UTC).isoformat(),
+        },
+        {
+            "id": "session-002",
+            "book_id": "book-002",
+            "book_title": "Midnight in the Garden of Words",
+            "chapter_title": "Chapter 1: Prologue",
+            "words_written": 800,
+            "duration_minutes": 30,
+            "created_at": datetime.now(UTC).isoformat(),
+        },
+    ]
+
+
 @router.post(
     "/writing-sessions",
     response_model=schemas.WritingSessionRecord,
@@ -330,6 +363,56 @@ def _stub_manuscript(*, include_chapters: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 # Manuscripts CRUD (stub)
 # ---------------------------------------------------------------------------
+
+@router.get(
+    "/books",
+    summary="List books (stub)",
+    description="Return all books for the current user. Stub: returns sample data.",
+)
+async def list_books_stub(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List books for the authenticated user (stub)."""
+    return [
+        {
+            "id": "book-001",
+            "title": "The Art of Self-Publishing",
+            "status": "writing",
+            "chapter_count": 12,
+            "word_count": 34500,
+            "target_word_count": 60000,
+            "genre": "Non-Fiction",
+            "cover_url": None,
+            "updated_at": datetime.now(UTC).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+        },
+        {
+            "id": "book-002",
+            "title": "Midnight in the Garden of Words",
+            "status": "draft",
+            "chapter_count": 5,
+            "word_count": 8200,
+            "target_word_count": 80000,
+            "genre": "Fiction",
+            "cover_url": None,
+            "updated_at": datetime.now(UTC).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+        },
+        {
+            "id": "book-003",
+            "title": "Marketing for Authors",
+            "status": "editing",
+            "chapter_count": 10,
+            "word_count": 45000,
+            "target_word_count": 50000,
+            "genre": "Self-Help",
+            "cover_url": None,
+            "updated_at": datetime.now(UTC).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+        },
+    ]
+
 
 @router.get(
     "/manuscripts",
