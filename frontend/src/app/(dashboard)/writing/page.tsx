@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatDistanceToNow, differenceInDays, format } from "date-fns";
+import { differenceInMinutes, differenceInHours, differenceInDays, format } from "date-fns";
 import { useTranslations } from "@/hooks/use-translations";
 import { useBooks, useWritingSessions } from "@/modules/writing/hooks";
 import type { BookEntry, WritingSessionEntry } from "@/modules/writing/hooks";
@@ -47,9 +47,17 @@ type SortOption = "recent" | "title" | "progress";
 function formatRelativeDate(dateStr: string | undefined): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
-  const daysDiff = differenceInDays(new Date(), date);
-  if (daysDiff >= 7) return format(date, "MMM d, yyyy");
-  return formatDistanceToNow(date, { addSuffix: true });
+  const now = new Date();
+  const minutesDiff = differenceInMinutes(now, date);
+  const hoursDiff = differenceInHours(now, date);
+  const daysDiff = differenceInDays(now, date);
+
+  if (minutesDiff < 1) return "Just now";
+  if (minutesDiff < 60) return `${minutesDiff} minutes ago`;
+  if (hoursDiff < 24) return hoursDiff === 1 ? "1 hour ago" : `${hoursDiff} hours ago`;
+  if (daysDiff === 1) return "Yesterday";
+  if (daysDiff < 7) return `${daysDiff} days ago`;
+  return format(date, "MMM d, yyyy");
 }
 
 function formatSessionDate(dateStr: string): string {
@@ -417,8 +425,12 @@ function WritingSessionsSection({
                     bookTitleMap[session.book_id] ||
                     t("stats.unknownBook")}
                 </td>
-                <td className="px-2 sm:px-4 py-2 text-muted-foreground">
-                  {session.chapter_title || "\u2014"}
+                <td className="px-2 sm:px-4 py-2 text-muted-foreground truncate max-w-[150px]" title={session.chapter_title || undefined}>
+                  {session.chapter_title
+                    ? session.chapter_title.length > 25
+                      ? session.chapter_title.slice(0, 25) + "\u2026"
+                      : session.chapter_title
+                    : "\u2014"}
                 </td>
                 <td className="px-2 sm:px-4 py-2">
                   {session.words_written.toLocaleString()}
@@ -729,13 +741,12 @@ export default function WritingStudioPage() {
           />
         </div>
         <div className="mt-2 text-right">
-          <button
-            type="button"
-            onClick={() => setAnalyticsOpen(true)}
+          <Link
+            href="/analytics"
             className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
           >
             {t("sessions.viewAll")}
-          </button>
+          </Link>
         </div>
       </div>
 
