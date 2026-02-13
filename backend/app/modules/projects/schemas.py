@@ -1,6 +1,6 @@
 """Pydantic request/response schemas for the projects module."""
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -15,13 +15,40 @@ class ProjectCreateRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     description: str | None = None
     project_type: str = Field(default="book", pattern="^(book|series|course)$")
+    genre: str | None = None
+    subgenre: str | None = None
+    pen_name: str | None = None
+    target_audience: str | None = None
+    keywords: list[str] | None = Field(None, max_length=20)
+    target_word_count: int | None = Field(None, ge=1000, le=500000)
+    target_date: date | None = None
+    marketplace: str | None = Field(None, pattern="^(kdp|ingram_spark|d2d|acx|multiple)$")
+    template: str | None = None
+    cover_image_url: str | None = None
+    language: str | None = Field(None, max_length=10)
+    content_rating: str | None = Field(None, pattern="^(general|mature)$")
+    has_ai_content: bool = False
+    is_public_domain: bool = False
 
 
 class ProjectUpdateRequest(BaseModel):
     """Request to update project details."""
     title: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = None
-    status: str | None = Field(None, pattern="^(planning|in_progress|completed|archived)$")
+    status: str | None = Field(None, pattern="^(planning|in_progress|completed|archived|draft|active)$")
+    genre: str | None = None
+    subgenre: str | None = None
+    target_audience: str | None = None
+    keywords: list[str] | None = None
+    target_word_count: int | None = Field(None, ge=1000, le=500000)
+    target_date: date | None = None
+    marketplace: str | None = None
+    template: str | None = None
+    cover_image_url: str | None = None
+    language: str | None = None
+    content_rating: str | None = None
+    has_ai_content: bool | None = None
+    is_public_domain: bool | None = None
 
 
 class ProjectListRequest(BaseModel):
@@ -44,6 +71,19 @@ class ProjectResponse(BaseModel):
     project_type: str
     status: str
     organization_id: UUID
+    genre: str | None = None
+    subgenre: str | None = None
+    target_audience: str | None = None
+    keywords: list[str] | None = None
+    target_word_count: int | None = None
+    target_date: date | None = None
+    marketplace: str | None = None
+    template: str | None = None
+    cover_image_url: str | None = None
+    language: str | None = None
+    content_rating: str | None = None
+    has_ai_content: bool = False
+    is_public_domain: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -54,7 +94,11 @@ class ProjectListItem(BaseModel):
     title: str
     project_type: str
     status: str
+    genre: str | None = None
+    target_date: date | None = None
+    target_word_count: int | None = None
     created_at: datetime
+    updated_at: datetime
 
 
 class ProjectListResponse(BaseModel):

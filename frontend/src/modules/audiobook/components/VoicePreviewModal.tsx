@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useVoices, useVoicePreview } from "../hooks";
-import type { Voice } from "./VoicePicker";
+import type { Voice } from "../types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -271,7 +271,7 @@ export function VoicePreviewModal({
     (v: Voice) => {
       if (compareVoices.length >= MAX_COMPARE_VOICES) return;
       if (compareVoices.some((cv) => cv.voice.id === v.id)) return;
-      setCompareVoices((prev) => [...prev, { voice: v, audioUrl: v.sample_url }]);
+      setCompareVoices((prev) => [...prev, { voice: v, audioUrl: v.sample_url ?? null }]);
     },
     [compareVoices],
   );
@@ -383,7 +383,7 @@ export function VoicePreviewModal({
               <div className="flex items-center gap-1">
                 <DollarSign className="h-3.5 w-3.5 text-green-600" />
                 <span className="text-sm font-semibold">
-                  {COST_PER_MINUTE[voice.cost_tier] ?? voice.cost_tier}
+                  {(voice.cost_tier && COST_PER_MINUTE[voice.cost_tier]) ?? voice.cost_tier ?? "N/A"}
                 </span>
                 <span className="text-xs text-muted-foreground">/min</span>
               </div>

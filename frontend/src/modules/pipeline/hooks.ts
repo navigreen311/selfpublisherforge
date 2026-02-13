@@ -16,6 +16,8 @@ import type {
   PipelineTemplate,
 } from "./types";
 
+export type * from "./types";
+
 // ── Query keys ───────────────────────────────────────────────────────────
 
 export const pipelineKeys = {

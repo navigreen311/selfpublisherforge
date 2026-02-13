@@ -1,15 +1,7 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Dashboard",
-  description: "View your publishing activity, track book performance, and monitor royalties in one place.",
-  noindex: true,
-});
 
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useTranslations } from "@/hooks/use-translations";
 import {
   BookOpen,
@@ -21,6 +13,8 @@ import {
   Bot,
   RefreshCw,
   AlertCircle,
+  Search,
+  Pencil,
 } from "lucide-react";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
@@ -37,12 +31,13 @@ import Link from "next/link";
 import { useDashboard } from "@/modules/analytics/hooks";
 import type { KPICard as KPICardType, RoyaltyRecord } from "@/modules/analytics/hooks";
 import { type LucideIcon } from "lucide-react";
-import { lazyLoad } from "@/lib/lazy";
 
-// ── Lazy-loaded components ──────────────────────────────────────────────
-// Example: Heavy chart components can be lazy-loaded to improve initial page load
-// const RevenueChart = lazyLoad(() => import("@/components/charts/revenue-chart"));
-// const PerformanceChart = lazyLoad(() => import("@/components/charts/performance-chart"));
+// Dashboard widgets
+import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
+import { WritingProgress } from "@/components/dashboard/WritingProgress";
+import { PublishingPipeline } from "@/components/dashboard/PublishingPipeline";
+import { UpcomingDeadlines } from "@/components/dashboard/UpcomingDeadlines";
+import { AgentActivityFeed } from "@/components/dashboard/AgentActivityFeed";
 
 // ── Icon mapping for KPI labels ─────────────────────────────────────────
 
@@ -58,6 +53,8 @@ const KPI_ICON_MAP: Record<string, LucideIcon> = {
   "net profit": DollarSign,
   "avg revenue": BarChart3,
   "average revenue": BarChart3,
+  "active projects": Pencil,
+  "words today": Pencil,
 };
 
 function getIconForKPI(label: string): LucideIcon {
@@ -68,13 +65,15 @@ function getIconForKPI(label: string): LucideIcon {
   return BarChart3;
 }
 
-// ── Quick Actions (static — kept as-is per prompt instructions) ─────────
+// ── Quick Actions ────────────────────────────────────────────────────────
 
 const quickActions = [
-  { label: "New Project", href: "/projects/new", icon: Plus },
-  { label: "View Projects", href: "/projects", icon: ArrowRight },
-  { label: "AI Agents", href: "/agents", icon: Bot },
-  { label: "Analytics", href: "/analytics", icon: ArrowRight },
+  { labelKey: "quickActions.newProject", href: "/projects/new", icon: Plus },
+  { labelKey: "quickActions.viewProjects", href: "/projects", icon: ArrowRight },
+  { labelKey: "quickActions.aiAgents", href: "/agents", icon: Bot },
+  { labelKey: "quickActions.analytics", href: "/analytics", icon: BarChart3 },
+  { labelKey: "quickActions.marketResearch", href: "/market", icon: Search },
+  { labelKey: "quickActions.writingStudio", href: "/writing", icon: Pencil },
 ];
 
 // ── Helper: format relative time ────────────────────────────────────────
@@ -113,48 +112,6 @@ function StatCardSkeleton() {
   );
 }
 
-function ActivitySkeleton() {
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          className="flex items-start gap-3 pb-4 last:pb-0 border-b last:border-0"
-        >
-          <Skeleton className="mt-1 h-2 w-2 rounded-full shrink-0" />
-          <div className="flex-1 min-w-0 space-y-1">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-3 w-64" />
-          </div>
-          <Skeleton className="h-3 w-16" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ProjectsSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="flex items-center justify-between py-2 border-b last:border-0"
-        >
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-4 w-4" />
-            <div className="space-y-1">
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-3 w-20" />
-            </div>
-          </div>
-          <Skeleton className="h-5 w-16 rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function DashboardSkeleton() {
   const t = useTranslations("dashboard");
 
@@ -163,9 +120,7 @@ function DashboardSkeleton() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {t("welcomeMessage")}
-          </p>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button asChild className="w-full sm:w-auto">
           <Link href="/projects/new">
@@ -173,70 +128,16 @@ function DashboardSkeleton() {
           </Link>
         </Button>
       </div>
-
-      {/* Stats Grid Skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {[1, 2, 3, 4].map((i) => (
           <StatCardSkeleton key={i} />
         ))}
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Recent Activity Skeleton */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Recent Activity</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Your latest publishing activity</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ActivitySkeleton />
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions (rendered normally even while loading) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Common tasks at a glance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {quickActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Button
-                    key={action.label}
-                    variant="outline"
-                    className="h-auto py-3 sm:py-4 flex-col gap-1 sm:gap-2"
-                    asChild
-                  >
-                    <Link href={action.href}>
-                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="text-[10px] sm:text-xs">{action.label}</span>
-                    </Link>
-                  </Button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+        <Card className="lg:col-span-3"><CardContent className="p-6"><Skeleton className="h-40" /></CardContent></Card>
+        <Card className="lg:col-span-2"><CardContent className="p-6"><Skeleton className="h-40" /></CardContent></Card>
       </div>
-
-      {/* Recent Projects Skeleton */}
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <CardTitle className="text-base sm:text-lg">Recent Projects</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Your latest projects</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
-            <Link href="/projects">View all</Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <ProjectsSkeleton />
-        </CardContent>
-      </Card>
+      <Card><CardContent className="p-6"><Skeleton className="h-24" /></CardContent></Card>
     </div>
   );
 }
@@ -245,18 +146,14 @@ function DashboardSkeleton() {
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   const t = useTranslations("dashboard");
-
   return (
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {t("welcomeMessage")}
-          </p>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("subtitle")}</p>
         </div>
       </div>
-
       <Card className="border-destructive/50">
         <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
@@ -265,9 +162,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-semibold">{t("error.title")}</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                {t("error.message")}
-              </p>
+              <p className="text-sm text-muted-foreground max-w-md">{t("error.message")}</p>
             </div>
             <Button onClick={onRetry} variant="outline" className="gap-2">
               <RefreshCw className="h-4 w-4" />
@@ -301,6 +196,15 @@ const badgeVariant = (status: string) => {
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const { data: dashboard, isLoading, error, refetch } = useDashboard();
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("spf-onboarding-dismissed") !== "true";
+  });
+
+  const handleDismissOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    localStorage.setItem("spf-onboarding-dismissed", "true");
+  }, []);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -335,7 +239,7 @@ export default function DashboardPage() {
       type: royalty.net_revenue > 0 ? ("success" as const) : ("info" as const),
     }));
 
-  // Map top_books from API to recent projects display
+  // Map top_books from API
   const recentProjects = (dashboard?.top_books ?? []).slice(0, 5).map((book, index) => ({
     id: String(book.id || index),
     title: String(book.title || "Untitled"),
@@ -345,14 +249,15 @@ export default function DashboardPage() {
     units: Number(book.units || 0),
   }));
 
+  const hasProjects = recentProjects.length > 0 || (kpiStats.length > 0);
+
   return (
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {t("welcomeMessage")}
-          </p>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button asChild className="w-full sm:w-auto">
           <Link href="/projects/new">
@@ -361,25 +266,66 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Stats Grid — real KPI data from API */}
-      <Suspense fallback={<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">{[1, 2, 3, 4].map((i) => <StatCardSkeleton key={i} />)}</div>}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {kpiStats.length > 0 ? (
-            kpiStats.map((stat) => (
-              <StatCard key={stat.label} {...stat} />
-            ))
-          ) : (
-            <Card className="col-span-full">
-              <CardContent className="p-6 text-center text-muted-foreground">
-                {t("stats.noKpiData")}
+      {/* ROW 1: Onboarding Checklist (new users only) */}
+      {showOnboarding && !hasProjects && (
+        <OnboardingChecklist
+          hasProjects={hasProjects}
+          onDismiss={handleDismissOnboarding}
+        />
+      )}
+
+      {/* ROW 2: Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {kpiStats.length > 0 ? (
+          kpiStats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))
+        ) : (
+          <>
+            <Card className="hover:border-primary/30 transition-colors">
+              <CardContent className="p-4 sm:p-6">
+                <p className="text-xs text-muted-foreground">{t("stats.activeProjects")}</p>
+                <p className="text-2xl font-bold text-muted-foreground/50 mt-1">0</p>
               </CardContent>
             </Card>
-          )}
-        </div>
-      </Suspense>
+            <Card className="hover:border-primary/30 transition-colors">
+              <CardContent className="p-4 sm:p-6">
+                <p className="text-xs text-muted-foreground">{t("stats.wordsWrittenToday")}</p>
+                <p className="text-2xl font-bold text-muted-foreground/50 mt-1">0</p>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-primary/30 transition-colors">
+              <CardContent className="p-4 sm:p-6">
+                <p className="text-xs text-muted-foreground">{t("stats.booksPublished")}</p>
+                <p className="text-2xl font-bold text-muted-foreground/50 mt-1">0</p>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-primary/30 transition-colors">
+              <CardContent className="p-4 sm:p-6">
+                <p className="text-xs text-muted-foreground">{t("stats.totalRevenue")}</p>
+                <p className="text-2xl font-bold text-muted-foreground/50 mt-1">$0</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Recent Activity — from recent_royalties */}
+      {/* ROW 3: Writing Progress (60%) + Upcoming Deadlines (40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div className="lg:col-span-3">
+          <WritingProgress />
+        </div>
+        <div className="lg:col-span-2">
+          <UpcomingDeadlines />
+        </div>
+      </div>
+
+      {/* ROW 4: Publishing Pipeline (full width) */}
+      <PublishingPipeline />
+
+      {/* ROW 5: Recent Activity (50%) + Quick Actions (25%) + Agent Activity (25%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Recent Activity */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">{t("recentActivity.title")}</CardTitle>
@@ -395,9 +341,7 @@ export default function DashboardPage() {
                   >
                     <div
                       className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
-                        activity.type === "success"
-                          ? "bg-green-500"
-                          : "bg-blue-500"
+                        activity.type === "success" ? "bg-green-500" : "bg-blue-500"
                       }`}
                     />
                     <div className="flex-1 min-w-0">
@@ -413,14 +357,17 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                {t("recentActivity.noActivity")}
-              </p>
+              <div className="text-center py-6">
+                <p className="text-sm text-muted-foreground">{t("recentActivity.noActivity")}</p>
+                <Button variant="outline" size="sm" className="mt-3" asChild>
+                  <Link href="/analytics">Import Royalty Data</Link>
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Quick Actions — kept as-is */}
+        {/* Quick Actions */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">{t("quickActions.title")}</CardTitle>
@@ -432,14 +379,14 @@ export default function DashboardPage() {
                 const Icon = action.icon;
                 return (
                   <Button
-                    key={action.label}
+                    key={action.labelKey}
                     variant="outline"
                     className="h-auto py-3 sm:py-4 flex-col gap-1 sm:gap-2"
                     asChild
                   >
                     <Link href={action.href}>
                       <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="text-[10px] sm:text-xs">{action.label}</span>
+                      <span className="text-[10px] sm:text-xs">{t(action.labelKey)}</span>
                     </Link>
                   </Button>
                 );
@@ -447,9 +394,12 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Agent Activity */}
+        <AgentActivityFeed />
       </div>
 
-      {/* Recent Projects — from top_books API data */}
+      {/* ROW 6: Top Books (full width) */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
@@ -473,7 +423,7 @@ export default function DashboardPage() {
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm font-medium truncate">{project.title}</p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        {project.units} units &middot; $
+                        {project.units} {t("units")} &middot; $
                         {project.revenue.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -488,9 +438,13 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              {t("topBooks.noData")}
-            </p>
+            <div className="text-center py-6">
+              <BookOpen className="h-8 w-8 mx-auto text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground mt-2">{t("topBooks.noBooks")}</p>
+              <Button variant="outline" size="sm" className="mt-3" asChild>
+                <Link href="/projects/new">Create Your First Project</Link>
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

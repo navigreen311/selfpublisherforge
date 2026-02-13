@@ -1,4 +1,9 @@
-"""Audiobook mastering, export, and chapter models."""
+"""Audiobook mastering, export, and legacy audiobook models.
+
+Canonical audiobook models (AudiobookProject, AudiobookChapter, AudiobookVoice,
+AudiobookPronunciation, AudiobookGenerationJob) live in ``app.models.audiobook``.
+This module defines supplementary models for the mastering/export pipeline.
+"""
 import enum
 import uuid
 
@@ -19,23 +24,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
 
-
-class AudiobookStatus(str, enum.Enum):
-    DRAFT = "draft"
-    RECORDING = "recording"
-    REVIEWING = "reviewing"
-    MASTERING = "mastering"
-    MASTERED = "mastered"
-    EXPORTING = "exporting"
-    COMPLETED = "completed"
-    ARCHIVED = "archived"
-
-
-class ChapterStatus(str, enum.Enum):
-    PENDING = "pending"
-    GENERATED = "generated"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+# Re-export canonical enums/models so existing imports keep working
+from app.models.audiobook import AudiobookStatus  # noqa: F401
+from app.models.audiobook import ChapterAudioStatus as ChapterStatus  # noqa: F401
 
 
 class MasteringStatus(str, enum.Enum):
@@ -88,7 +79,6 @@ class Audiobook(TenantModel):
 
     # Relationships
     project = relationship("Project", foreign_keys=[project_id])
-    chapters = relationship("AudiobookChapter", back_populates="audiobook", lazy="selectin")
     mastering_jobs = relationship("MasteringJob", back_populates="audiobook", lazy="selectin")
     exports = relationship("AudiobookExport", back_populates="audiobook", lazy="selectin")
 
@@ -97,38 +87,6 @@ class Audiobook(TenantModel):
         Index("ix_audiobooks_org_status", "org_id", "status"),
         Index("ix_audiobooks_project_id", "project_id"),
         Index("ix_audiobooks_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
-    )
-
-
-class AudiobookChapter(BaseModel):
-    __tablename__ = "audiobook_chapters"
-
-    audiobook_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("audiobooks.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    title: Mapped[str] = mapped_column(String(500), nullable=False)
-    audio_file_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
-    duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
-    file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
-    status: Mapped[ChapterStatus] = mapped_column(
-        SAEnum(ChapterStatus, name="chapter_audio_status", create_constraint=True),
-        default=ChapterStatus.PENDING,
-        server_default="pending",
-    )
-    validation_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
-    generation_cost_usd: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
-    provider: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
-
-    # Relationships
-    audiobook = relationship("Audiobook", back_populates="chapters")
-
-    __table_args__ = (
-        Index("ix_audiobook_chapters_status", "status"),
-        Index("ix_audiobook_chapters_audiobook_id", "audiobook_id"),
-        Index("ix_audiobook_chapters_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 

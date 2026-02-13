@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Advertising",
-  description: "Manage advertising campaigns across Amazon Ads, Facebook Ads, and BookBub to promote your books.",
-  noindex: true,
-});
 
 "use client";
 

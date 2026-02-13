@@ -77,8 +77,10 @@ export interface AudiobookProject {
   status: AudiobookProjectStatus;
   voice_id?: string;
   total_chapters: number;
+  completed_chapters: number;
   total_duration_seconds: number;
   total_cost_usd: number;
+  target_platform: string;
   created_at: string;
   updated_at: string;
 }
@@ -90,6 +92,9 @@ export interface Voice {
   gender: string;
   language: string;
   preview_url?: string;
+  sample_url?: string | null;
+  accent?: string;
+  cost_tier?: string;
   cost_per_minute?: number;
 }
 
@@ -148,11 +153,24 @@ export interface AudiobookWSEvent {
 }
 
 export interface CreateAudiobookProjectPayload {
-  title: string;
-  project_id: string;
+  title?: string;
+  project_id?: string;
+  book_id?: string;
   voice_id?: string;
   author?: string;
   narrator?: string;
+  target_platform?: string;
+  output_format?: string;
+  sample_rate?: number;
+  bit_rate?: number;
+  channels?: number;
+}
+
+export interface NarrationStyle {
+  pacing?: number;
+  paragraph_pause?: number;
+  chapter_pause?: number;
+  emphasis?: string;
 }
 
 export interface UpdateAudiobookProjectPayload {
@@ -161,6 +179,12 @@ export interface UpdateAudiobookProjectPayload {
   author?: string;
   narrator?: string;
   status?: AudiobookProjectStatus;
+  output_format?: string;
+  sample_rate?: number;
+  bit_rate?: number;
+  channels?: number;
+  target_platform?: string;
+  narration_style?: NarrationStyle;
 }
 
 export interface PaginatedResponse<T> {

@@ -14,6 +14,8 @@ import type {
   RuleStatus,
 } from "./types";
 
+export type * from "./types";
+
 const API_PREFIX = "/api/v1/pricing";
 
 // ---------- Query Keys ----------

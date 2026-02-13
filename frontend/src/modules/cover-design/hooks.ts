@@ -12,6 +12,8 @@ import type {
   CoverGenre,
 } from "./types";
 
+export type * from "./types";
+
 // ── Query keys ──────────────────────────────────────────────────
 
 const KEYS = {

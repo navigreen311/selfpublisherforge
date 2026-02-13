@@ -42,8 +42,8 @@ export function useAuth() {
           password: credentials.password,
           mfa_code: credentials.mfaCode,
         });
-        const { access_token, refresh_token, user: userData } = response.data;
-        setTokens(access_token, refresh_token);
+        const { tokens, user: userData } = response.data;
+        setTokens(tokens.access_token, tokens.refresh_token);
         setUser(userData as User);
         router.push("/dashboard");
       } catch (error) {
@@ -66,8 +66,8 @@ export function useAuth() {
           org_name: data.orgName,
           plan_tier: data.planTier,
         });
-        const { access_token, refresh_token, user: userData } = response.data;
-        setTokens(access_token, refresh_token);
+        const { tokens, user: userData } = response.data;
+        setTokens(tokens.access_token, tokens.refresh_token);
         setUser(userData as User);
         router.push("/onboarding");
       } catch (error) {
@@ -101,8 +101,8 @@ export function useAuth() {
         const response = await api.post(`/api/v1/auth/oauth/${provider}/callback`, {
           code,
         });
-        const { access_token, refresh_token, user: userData } = response.data;
-        setTokens(access_token, refresh_token);
+        const { tokens, user: userData } = response.data;
+        setTokens(tokens.access_token, tokens.refresh_token);
         setUser(userData as User);
         router.push("/dashboard");
       } catch (error) {

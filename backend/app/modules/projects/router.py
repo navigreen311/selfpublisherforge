@@ -37,6 +37,19 @@ async def create_project(
         title=body.title,
         description=body.description,
         project_type=body.project_type,
+        genre=body.genre,
+        subgenre=body.subgenre,
+        target_audience=body.target_audience,
+        keywords=body.keywords,
+        target_word_count=body.target_word_count,
+        target_date=body.target_date,
+        marketplace=body.marketplace,
+        template=body.template,
+        cover_image_url=body.cover_image_url,
+        language=body.language,
+        content_rating=body.content_rating,
+        has_ai_content=body.has_ai_content,
+        is_public_domain=body.is_public_domain,
     )
 
 
@@ -113,6 +126,19 @@ async def update_project(
         title=body.title,
         description=body.description,
         status=body.status,
+        genre=body.genre,
+        subgenre=body.subgenre,
+        target_audience=body.target_audience,
+        keywords=body.keywords,
+        target_word_count=body.target_word_count,
+        target_date=body.target_date,
+        marketplace=body.marketplace,
+        template=body.template,
+        cover_image_url=body.cover_image_url,
+        language=body.language,
+        content_rating=body.content_rating,
+        has_ai_content=body.has_ai_content,
+        is_public_domain=body.is_public_domain,
     )
 
 

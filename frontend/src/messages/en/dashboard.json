@@ -1,43 +1,138 @@
 {
   "title": "Dashboard",
+  "subtitle": "Welcome back! Here is an overview of your publishing activity.",
   "welcomeMessage": "Welcome back! Here is an overview of your publishing activity.",
-  "newProject": "New Project",
+  "newProject": "+ New Project",
   "viewProjects": "View Projects",
   "viewAnalytics": "View analytics",
   "viewAll": "View all",
+
+  "stats": {
+    "totalRevenue": "Total Revenue",
+    "unitsSold": "Units Sold",
+    "avgRevenuePerUnit": "Avg Revenue/Unit",
+    "royaltyRecords": "Royalty Records",
+    "activeProjects": "Active Projects",
+    "wordsWrittenToday": "Words Today",
+    "booksPublished": "Books Published",
+    "aiCreditsUsed": "AI Credits Used",
+    "noKpiData": "No KPI data available yet. Import royalty data to get started."
+  },
+
+  "recentActivity": {
+    "title": "Recent Activity",
+    "subtitle": "Your latest actions across all projects",
+    "noActivity": "No recent activity yet. Create your first project to get started!",
+    "viewAll": "View All Activity",
+    "royalty": "Royalty"
+  },
+
   "quickActions": {
     "title": "Quick Actions",
-    "subtitle": "Common tasks at a glance",
+    "subtitle": "Jump into common tasks",
     "newProject": "New Project",
     "viewProjects": "View Projects",
     "aiAgents": "AI Agents",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "marketResearch": "Market Research",
+    "writingStudio": "Writing Studio"
   },
-  "recentActivity": {
-    "title": "Recent Activity",
-    "subtitle": "Your latest royalty activity",
-    "noActivity": "No recent activity. Import your first royalty report to see data here.",
-    "royalty": "Royalty"
-  },
+
   "topBooks": {
-    "title": "Top Books",
-    "subtitle": "Your best-performing titles",
-    "noData": "No book data available yet. Import royalty data to see your top performers."
+    "title": "Top Performing Books",
+    "subtitle": "Your best sellers by revenue",
+    "viewAnalytics": "View analytics",
+    "noBooks": "No published books yet. Your top performers will appear here.",
+    "noData": "No book data available yet. Import royalty data to see your top performers.",
+    "revenue": "Revenue",
+    "unitsSold": "Units Sold",
+    "rating": "Rating",
+    "bsr": "BSR"
   },
-  "stats": {
-    "noKpiData": "No KPI data available yet. Import royalty data to get started."
+
+  "writingProgress": {
+    "title": "Writing Progress",
+    "subtitle": "Track your daily writing goals",
+    "dailyGoal": "Daily Goal",
+    "wordsToday": "Words Today",
+    "streak": "Day Streak",
+    "weeklyTotal": "This Week",
+    "setGoal": "Set Goal",
+    "noGoal": "Set a daily word count goal to track your progress.",
+    "words": "words",
+    "goalModal": {
+      "title": "Set Daily Word Goal",
+      "description": "Choose a daily writing target to track your progress.",
+      "custom": "Custom",
+      "save": "Save Goal",
+      "cancel": "Cancel"
+    }
   },
+
+  "upcomingDeadlines": {
+    "title": "Upcoming Deadlines",
+    "subtitle": "Projects with approaching due dates",
+    "noDeadlines": "No upcoming deadlines. Add target dates to your projects.",
+    "daysLeft": "days left",
+    "overdue": "Overdue",
+    "dueToday": "Due Today",
+    "viewCalendar": "View Calendar"
+  },
+
+  "publishingPipeline": {
+    "title": "Publishing Pipeline",
+    "subtitle": "Books in progress across all stages",
+    "drafting": "Drafting",
+    "editing": "Editing",
+    "formatting": "Formatting",
+    "publishing": "Publishing",
+    "published": "Published",
+    "noProjects": "Start a project to see your publishing pipeline.",
+    "viewAll": "View All Projects"
+  },
+
+  "agentActivity": {
+    "title": "AI Agent Activity",
+    "subtitle": "Recent AI-assisted tasks",
+    "noActivity": "No agent activity yet. Use AI agents to automate research, writing, and marketing tasks.",
+    "viewAll": "View All Tasks",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+
+  "onboarding": {
+    "title": "Getting Started",
+    "subtitle": "Complete these steps to set up your publishing workspace",
+    "step1Title": "Create Your Account",
+    "step1Description": "You're already here! Your account is set up and ready.",
+    "step2Title": "Create Your First Project",
+    "step2Description": "Set up a book project with your title, genre, and target audience.",
+    "step3Title": "Research Your Market",
+    "step3Description": "Use Market Research to find profitable niches and keywords.",
+    "step4Title": "Write with AI Assistance",
+    "step4Description": "Open the Writing Studio and generate your first chapter outline.",
+    "step5Title": "Set Up Your Style Profile",
+    "step5Description": "Upload writing samples so AI matches your unique voice.",
+    "dismiss": "Dismiss",
+    "complete": "Complete",
+    "start": "Start",
+    "stepsComplete": "{completed} of {total} complete"
+  },
+
   "error": {
     "title": "Failed to load dashboard data",
     "message": "We could not retrieve your dashboard information. This may be due to a network issue or a server error. Please try again.",
     "retry": "Try again"
   },
+
   "timeAgo": {
     "justNow": "Just now",
     "minutesAgo": "{count}m ago",
     "hoursAgo": "{count}h ago",
     "daysAgo": "{count}d ago"
   },
+
   "units": "units",
   "revenue": "revenue"
 }

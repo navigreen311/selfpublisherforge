@@ -18,6 +18,8 @@ import type {
   UpdateAudiobookProjectPayload,
   PaginatedResponse,
 } from "./types";
+
+export type * from "./types";
 import { useAudiobookStudioStore } from "./store";
 
 // ---------------------------------------------------------------------------

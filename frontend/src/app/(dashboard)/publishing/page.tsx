@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Publishing",
-  description: "Connect and manage your publishing accounts across Amazon KDP, IngramSpark, Draft2Digital, and more platforms.",
-  noindex: true,
-});
 
 "use client";
 

@@ -17,6 +17,8 @@ import type {
   CreateCommandRequest,
 } from "./types";
 
+export type * from "./types";
+
 const API_PREFIX = "/api/v1/dictation";
 
 // ── Query Keys ──────────────────────────────────────────────────

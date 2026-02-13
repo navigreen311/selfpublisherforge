@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Market Intelligence",
-  description: "Research Amazon categories, analyze niches, track market trends, and discover profitable opportunities.",
-  noindex: true,
-});
 
 "use client";
 

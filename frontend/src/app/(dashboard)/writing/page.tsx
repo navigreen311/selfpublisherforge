@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Writing Studio",
-  description: "Manage your manuscripts, track writing sessions, and organize your books with AI-powered writing tools.",
-  noindex: true,
-});
 
 "use client";
 
@@ -102,7 +94,6 @@ function BookCardSkeleton() {
   );
 }
 
-  const t = useTranslations("writing");
 function SessionsTableSkeleton({ t }: { t: (key: string) => string }) {
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
@@ -150,7 +141,6 @@ function SessionsTableSkeleton({ t }: { t: (key: string) => string }) {
 // Error display
 // ---------------------------------------------------------------------------
 
-  const t = useTranslations("writing");
 function ErrorBanner({ message, t }: { message: string; t: (key: string) => string }) {
   return (
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -165,7 +155,6 @@ function ErrorBanner({ message, t }: { message: string; t: (key: string) => stri
 // ---------------------------------------------------------------------------
 
 function EmptyBooksState({ t }: { t: (key: string) => string }) {
-  const t = useTranslations("writing");
 
   return (
     <div className="text-center py-12 rounded-lg border border-dashed bg-card">
@@ -192,11 +181,13 @@ function WritingSessionsSection({
   isLoading,
   error,
   books,
+  t,
 }: {
   sessions: WritingSessionEntry[] | undefined;
   isLoading: boolean;
   error: Error | null;
   books: BookEntry[] | undefined;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   // Build a book title lookup map
   const bookTitleMap = useMemo(() => {

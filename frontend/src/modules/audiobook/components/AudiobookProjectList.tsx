@@ -241,17 +241,17 @@ export function AudiobookProjectList({ onCreateNew }: AudiobookProjectListProps)
     if (!data?.items) return [];
 
     // Normalize API response to our local shape
-    return data.items.map((item: Record<string, unknown>) => ({
-      id: (item.id as string) ?? "",
-      title: (item.title as string) ?? "Untitled",
-      status: ((item.status as ProjectStatus) ?? "draft") as ProjectStatus,
-      total_duration: (item.total_duration as number) ?? (item.totalDuration as number) ?? 0,
-      estimated_cost: (item.estimated_cost as number) ?? (item.estimatedCost as number) ?? 0,
-      actual_cost: (item.actual_cost as number) ?? (item.actualCost as number) ?? 0,
-      chapter_count: (item.chapter_count as number) ?? (item.chapters as unknown[] | undefined)?.length ?? 0,
-      completed_chapters: (item.completed_chapters as number) ?? 0,
-      created_at: (item.created_at as string) ?? "",
-      updated_at: (item.updated_at as string) ?? "",
+    return data.items.map((item) => ({
+      id: item.id ?? "",
+      title: item.title ?? "Untitled",
+      status: (item.status ?? "draft") as ProjectStatus,
+      total_duration: item.total_duration_seconds ?? 0,
+      estimated_cost: item.total_cost_usd ?? 0,
+      actual_cost: item.total_cost_usd ?? 0,
+      chapter_count: item.total_chapters ?? 0,
+      completed_chapters: item.completed_chapters ?? 0,
+      created_at: item.created_at ?? "",
+      updated_at: item.updated_at ?? "",
     }));
   }, [data]);
 

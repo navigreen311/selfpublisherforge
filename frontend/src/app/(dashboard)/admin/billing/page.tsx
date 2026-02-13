@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Admin - Billing",
-  description: "Platform revenue metrics, subscription analytics, and billing management.",
-  noindex: true,
-});
 
 "use client";
 

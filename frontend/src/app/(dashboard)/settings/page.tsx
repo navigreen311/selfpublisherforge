@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Settings",
-  description: "Manage your account profile, security settings, notifications, API keys, and billing preferences.",
-  noindex: true,
-});
 
 "use client";
 

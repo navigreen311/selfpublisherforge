@@ -25,6 +25,8 @@ import type {
   NicheSeasonality,
 } from "./types";
 
+export type * from "./types";
+
 const API_PREFIX = "/api/v1/analytics";
 
 // ---------- Query Keys ----------

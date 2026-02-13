@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Production Pipeline",
-  description: "Manage book production workflows from draft to publication with automated AI-powered pipelines.",
-  noindex: true,
-});
 
 "use client";
 
@@ -72,7 +64,7 @@ export default function PipelineDashboardPage() {
 
   // Form is valid when there are no errors (checked ignoring touched state)
   const isFormValid =
-    !getPipelineNameError(newName, true) && !getBookIdError(newBookId, true);
+    !getPipelineNameError(newName, true, t) && !getBookIdError(newBookId, true, t);
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
