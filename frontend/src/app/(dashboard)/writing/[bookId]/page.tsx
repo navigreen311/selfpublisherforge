@@ -7,17 +7,24 @@ import {
   ArrowLeft,
   Download,
   MoreHorizontal,
-  Eye,
-  Maximize,
-  Minimize,
 } from "lucide-react";
 import { useTranslations } from "@/hooks/use-translations";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 // New writing-studio components
 import { ChapterSidebar } from "@/components/writing-studio/ChapterSidebar";
 import { ManuscriptEditor } from "@/components/writing-studio/ManuscriptEditor";
 import { AIAssistantPanel } from "@/components/writing-studio/AIAssistantPanel";
+import { StatusBar } from "@/components/writing-studio/StatusBar";
+import { VersionHistoryModal } from "@/components/writing-studio/VersionHistoryModal";
+import { KeyboardShortcutsModal } from "@/components/writing-studio/KeyboardShortcutsModal";
 
 // Data hooks
 import {
@@ -61,6 +68,17 @@ export default function ManuscriptEditorPage() {
   const [showAIPanel, setShowAIPanel] = useState(true);
   const [distractionFree, setDistractionFree] = useState(false);
 
+  // Inline editable title
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState("");
+
+  // Modal state
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  // Chapter panel toggle
+  const [showChapterPanel, setShowChapterPanel] = useState(true);
+
   // Track session start time and starting word count for session stats
   const sessionStartRef = useRef(Date.now());
   const sessionStartWordsRef = useRef(0);
@@ -88,6 +106,11 @@ export default function ManuscriptEditorPage() {
     1500
   );
 
+  // ---- Sync title from manuscript ------------------------------------------
+  useEffect(() => {
+    if (manuscript?.title) setTitleValue(manuscript.title);
+  }, [manuscript?.title]);
+
   // ---- Computed values -----------------------------------------------------
   const activeChapter = chapters.find((c) => c.id === activeChapterId);
   const isLoading = manuscriptLoading || chaptersLoading;
@@ -113,28 +136,6 @@ export default function ManuscriptEditorPage() {
   // Total manuscript word count
   const totalWordCount = manuscript?.total_word_count ?? 0;
   const targetWordCount = manuscript?.target_word_count ?? 0;
-
-  // Save status display
-  const saveStatusLabel: Record<SaveStatus, string> = {
-    idle: "",
-    saving: t("editor.saveStatus.saving"),
-    saved: t("editor.saveStatus.saved"),
-    error: t("editor.saveStatus.error"),
-  };
-
-  const saveStatusColor: Record<SaveStatus, string> = {
-    idle: "text-muted-foreground",
-    saving: "text-yellow-600",
-    saved: "text-green-600",
-    error: "text-red-600",
-  };
-
-  const saveStatusDot: Record<SaveStatus, string> = {
-    idle: "",
-    saving: "bg-yellow-500 animate-pulse",
-    saved: "bg-green-500",
-    error: "bg-red-500",
-  };
 
   // ---- Handlers ------------------------------------------------------------
 
@@ -244,6 +245,17 @@ export default function ManuscriptEditorPage() {
     setShowAIPanel((prev) => !prev);
   }, []);
 
+  /** Toggle chapter panel. */
+  const toggleChapterPanel = useCallback(() => {
+    setShowChapterPanel((prev) => !prev);
+  }, []);
+
+  /** Export handler (stub). */
+  const handleExport = useCallback((format: string) => {
+    // Stub - would call export API
+    console.log(`Exporting as ${format}`);
+  }, []);
+
   // ---- Keyboard shortcuts --------------------------------------------------
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -256,6 +268,11 @@ export default function ManuscriptEditorPage() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
         e.preventDefault();
         setShowAIPanel((prev) => !prev);
+      }
+      // Ctrl+Shift+C: toggle chapter panel
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "C") {
+        e.preventDefault();
+        setShowChapterPanel((prev) => !prev);
       }
       // F11: toggle distraction-free mode
       if (e.key === "F11") {
@@ -284,7 +301,7 @@ export default function ManuscriptEditorPage() {
       {/* TOP BAR                                                           */}
       {/* ================================================================= */}
       <div className="flex items-center justify-between border-b bg-card px-4 py-2 flex-shrink-0">
-        {/* Left: Back link + title */}
+        {/* Left: Back link + inline editable title */}
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/writing"
@@ -294,31 +311,40 @@ export default function ManuscriptEditorPage() {
             {t("editor.backToStudio")}
           </Link>
           <span className="text-border">|</span>
-          <h1 className="text-sm font-semibold text-foreground truncate max-w-md">
-            {manuscript?.title || t("editor.untitled")}
-          </h1>
+          {editingTitle ? (
+            <input
+              type="text"
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
+              onBlur={() => {
+                setEditingTitle(false);
+                // Save title change
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setEditingTitle(false);
+                }
+                if (e.key === "Escape") {
+                  setTitleValue(manuscript?.title || "");
+                  setEditingTitle(false);
+                }
+              }}
+              className="text-sm font-semibold bg-transparent border-b border-primary outline-none max-w-md"
+              autoFocus
+            />
+          ) : (
+            <h1
+              className="text-sm font-semibold text-foreground truncate max-w-md cursor-pointer hover:text-primary transition-colors"
+              onClick={() => setEditingTitle(true)}
+              title={t("editor.titleEditable")}
+            >
+              {manuscript?.title || t("editor.untitled")}
+            </h1>
+          )}
         </div>
 
         {/* Right: Save status + action buttons */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Save status indicator */}
-          {saveStatus !== "idle" && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 text-xs font-medium",
-                saveStatusColor[saveStatus]
-              )}
-            >
-              <span
-                className={cn(
-                  "inline-block h-2 w-2 rounded-full",
-                  saveStatusDot[saveStatus]
-                )}
-              />
-              {saveStatusLabel[saveStatus]}
-            </span>
-          )}
-
           {/* Save button */}
           <button
             onClick={handleSave}
@@ -328,22 +354,43 @@ export default function ManuscriptEditorPage() {
             {t("editor.save")}
           </button>
 
-          {/* Export button */}
-          <button
-            className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded border hover:bg-accent transition-colors"
-            title={t("editor.export")}
-          >
-            <Download className="h-3.5 w-3.5" />
-            {t("editor.export")}
-          </button>
+          {/* Export dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded border hover:bg-accent transition-colors">
+                <Download className="h-3.5 w-3.5" />
+                {t("editor.export")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {["docx", "epub", "pdf", "txt", "markdown"].map((fmt) => (
+                <DropdownMenuItem key={fmt} onSelect={() => handleExport(fmt)}>
+                  {t(`editor.exportMenu.${fmt}`)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* More actions menu */}
-          <button
-            className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-accent transition-colors"
-            title={t("editor.moreActions")}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
+          {/* More actions overflow menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center justify-center h-8 w-8 rounded border hover:bg-accent transition-colors">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onSelect={() => setVersionHistoryOpen(true)}>
+                {t("editor.overflowMenu.versionHistory")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setShortcutsOpen(true)}>
+                {t("editor.overflowMenu.keyboardShortcuts")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={toggleDistractionFree}>
+                {t("editor.overflowMenu.distractionFree")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -354,7 +401,7 @@ export default function ManuscriptEditorPage() {
         {/* -------------------------------------------------------------- */}
         {/* LEFT PANEL: Chapter Sidebar                                     */}
         {/* -------------------------------------------------------------- */}
-        {!distractionFree && (
+        {showChapterPanel && !distractionFree && (
           <ChapterSidebar
             chapters={chapters}
             activeChapterId={activeChapterId}
@@ -428,100 +475,42 @@ export default function ManuscriptEditorPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* BOTTOM BAR                                                        */}
+      {/* BOTTOM BAR (StatusBar component)                                  */}
       {/* ================================================================= */}
-      <div className="flex items-center justify-between border-t bg-card px-4 py-1.5 flex-shrink-0 text-xs text-muted-foreground">
-        {/* Left: word count, target, reading time */}
-        <div className="flex items-center gap-4">
-          <span>
-            {currentWordCount.toLocaleString()} {t("stats.words")}
-            {targetWordCount > 0 && (
-              <span className="ml-1">
-                / {targetWordCount.toLocaleString()} {t("stats.target")}
-              </span>
-            )}
-          </span>
-          <span className="text-border">|</span>
-          <span>
-            ~{readingTime} {t("editor.minRead")}
-          </span>
-        </div>
+      <StatusBar
+        wordCount={currentWordCount}
+        readingTime={readingTime}
+        saveStatus={saveStatus}
+        sessionWords={sessionWordsWritten}
+        sessionMinutes={sessionMinutes}
+        totalWordCount={totalWordCount}
+        targetWordCount={targetWordCount}
+        showAIPanel={showAIPanel}
+        distractionFree={distractionFree}
+        onToggleAIPanel={toggleAIPanel}
+        onToggleDistractionFree={toggleDistractionFree}
+      />
 
-        {/* Center: session stats */}
-        <div className="flex items-center gap-4">
-          <span>
-            {t("editor.session")}: {sessionWordsWritten.toLocaleString()}{" "}
-            {t("stats.words")} / {sessionMinutes} {t("stats.minutes")}
-          </span>
-          <span className="text-border">|</span>
-          <span>
-            {t("stats.total")}: {totalWordCount.toLocaleString()}{" "}
-            {t("stats.words")}
-          </span>
-        </div>
+      {/* Version History Modal */}
+      {versionHistoryOpen && (
+        <VersionHistoryModal
+          bookId={bookId}
+          chapterId={activeChapterId || ""}
+          open={versionHistoryOpen}
+          onOpenChange={setVersionHistoryOpen}
+          onRestore={(content) => {
+            setEditorContent(content);
+          }}
+        />
+      )}
 
-        {/* Right: auto-save indicator + distraction-free toggle */}
-        <div className="flex items-center gap-3">
-          {/* Auto-save indicator */}
-          <span
-            className={cn(
-              "inline-flex items-center gap-1",
-              saveStatusColor[saveStatus]
-            )}
-          >
-            {saveStatus === "saving" && (
-              <>
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                {t("editor.autoSaving")}
-              </>
-            )}
-            {saveStatus === "saved" && (
-              <>
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-                {t("editor.autoSaved")}
-              </>
-            )}
-            {saveStatus === "error" && (
-              <>
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-                {t("editor.saveFailed")}
-              </>
-            )}
-          </span>
-
-          {/* AI panel toggle */}
-          <button
-            onClick={toggleAIPanel}
-            className={cn(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded transition-colors",
-              "hover:bg-accent",
-              showAIPanel && "text-primary"
-            )}
-            title={`${showAIPanel ? t("editor.hideAI") : t("editor.showAI")} (Ctrl+Shift+A)`}
-          >
-            <Eye className="h-3 w-3" />
-            {t("editor.aiPanel")}
-          </button>
-
-          {/* Distraction-free toggle */}
-          <button
-            onClick={toggleDistractionFree}
-            className={cn(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded transition-colors",
-              "hover:bg-accent",
-              distractionFree && "text-primary"
-            )}
-            title={`${t("editor.distractionFree")} (F11)`}
-          >
-            {distractionFree ? (
-              <Minimize className="h-3 w-3" />
-            ) : (
-              <Maximize className="h-3 w-3" />
-            )}
-            {t("editor.distractionFree")}
-          </button>
-        </div>
-      </div>
+      {/* Keyboard Shortcuts Modal */}
+      {shortcutsOpen && (
+        <KeyboardShortcutsModal
+          open={shortcutsOpen}
+          onOpenChange={setShortcutsOpen}
+        />
+      )}
     </div>
   );
 }

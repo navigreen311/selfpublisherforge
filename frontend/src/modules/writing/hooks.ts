@@ -25,6 +25,9 @@ import type {
   ChapterVersion,
   StyleProfile,
   AIWriteRequest,
+  CreateManuscriptRequest,
+  ReadabilityPostResponse,
+  ExportResponse,
 } from "./types";
 
 export type * from "./types";
@@ -569,4 +572,80 @@ export function useAutoSave(
   }, [chapterId]);
 
   return { saveStatus, saveNow };
+}
+
+// ---------------------------------------------------------------------------
+// Create manuscript
+// ---------------------------------------------------------------------------
+
+export function useCreateManuscript() {
+  const qc = useQueryClient();
+  return useMutation<BookEntry, Error, CreateManuscriptRequest>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/manuscripts", payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["books"] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Delete manuscript
+// ---------------------------------------------------------------------------
+
+export function useDeleteManuscript() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (manuscriptId) => {
+      await api.delete(`/api/v1/manuscripts/${manuscriptId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["books"] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Update manuscript metadata
+// ---------------------------------------------------------------------------
+
+export function useUpdateManuscript() {
+  const qc = useQueryClient();
+  return useMutation<BookEntry, Error, { id: string; data: Partial<BookEntry> }>({
+    mutationFn: async ({ id, data: payload }) => {
+      const { data } = await api.patch(`/api/v1/manuscripts/${id}`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["books"] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Export manuscript
+// ---------------------------------------------------------------------------
+
+export function useExportManuscript() {
+  return useMutation<ExportResponse, Error, { manuscriptId: string; format: string }>({
+    mutationFn: async ({ manuscriptId, format }) => {
+      const { data } = await api.post(`/api/v1/manuscripts/${manuscriptId}/export`, { format });
+      return data;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Post readability analysis (stateless)
+// ---------------------------------------------------------------------------
+
+export function useReadabilityPost() {
+  return useMutation<ReadabilityPostResponse, Error, string>({
+    mutationFn: async (text) => {
+      const { data } = await api.post("/api/v1/writing/readability", { text });
+      return data;
+    },
+  });
 }

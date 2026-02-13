@@ -42,6 +42,8 @@ interface ChapterSidebarProps {
   onDeleteChapter?: (chapterId: string) => void;
   onRenameChapter?: (chapterId: string, title: string) => void;
   totalWordCount?: number;
+  manuscriptTitle?: string;
+  targetWordCount?: number;
   className?: string;
 }
 
@@ -80,9 +82,11 @@ function StatusIcon({ status }: { status: ChapterStatus }) {
 interface ChapterMenuProps {
   isFirst: boolean;
   isLast: boolean;
+  status: ChapterStatus;
   onRename: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onInsertBelow: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   t: ReturnType<typeof useTranslations>;
@@ -91,9 +95,11 @@ interface ChapterMenuProps {
 function ChapterMenu({
   isFirst,
   isLast,
+  status,
   onRename,
   onDelete,
   onDuplicate,
+  onInsertBelow,
   onMoveUp,
   onMoveDown,
   t,
@@ -132,6 +138,25 @@ function ChapterMenu({
         >
           <Copy className="mr-2 h-4 w-4" />
           {t("editor.chapterMenu.duplicate")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onInsertBelow();
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          {t("editor.chapterSidebar.insertBelow")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            // Toggle between complete and draft - for now just log
+          }}
+        >
+          <Check className="mr-2 h-4 w-4" />
+          {status === "complete" ? t("editor.chapterSidebar.markDraft") : t("editor.chapterSidebar.markComplete")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -240,9 +265,11 @@ interface ContextMenuState {
 interface FloatingContextMenuProps {
   menu: ContextMenuState;
   sortedChapters: ChapterContent[];
+  activeChapterId: string | null;
   onRename: (id: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: () => void;
+  onInsertBelow: () => void;
   onMoveUp: (id: string) => void;
   onMoveDown: (id: string) => void;
   onClose: () => void;
@@ -252,9 +279,11 @@ interface FloatingContextMenuProps {
 function FloatingContextMenu({
   menu,
   sortedChapters,
+  activeChapterId,
   onRename,
   onDelete,
   onDuplicate,
+  onInsertBelow,
   onMoveUp,
   onMoveDown,
   onClose,
@@ -264,6 +293,8 @@ function FloatingContextMenu({
   const idx = sortedChapters.findIndex((c) => c.id === menu.chapterId);
   const isFirst = idx === 0;
   const isLast = idx === sortedChapters.length - 1;
+  const chapter = sortedChapters[idx];
+  const status = chapter ? getChapterStatus(chapter, activeChapterId) : "not_started";
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -312,6 +343,29 @@ function FloatingContextMenu({
       >
         <Copy className="mr-2 h-4 w-4" />
         {t("editor.chapterMenu.duplicate")}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onInsertBelow();
+          onClose();
+        }}
+        className={itemClass}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        {t("editor.chapterSidebar.insertBelow")}
+      </button>
+      <div className="-mx-1 my-1 h-px bg-muted" />
+      <button
+        type="button"
+        onClick={() => {
+          // Toggle between complete and draft - for now just log
+          onClose();
+        }}
+        className={itemClass}
+      >
+        <Check className="mr-2 h-4 w-4" />
+        {status === "complete" ? t("editor.chapterSidebar.markDraft") : t("editor.chapterSidebar.markComplete")}
       </button>
       <div className="-mx-1 my-1 h-px bg-muted" />
       <button
@@ -381,6 +435,8 @@ export function ChapterSidebar({
   onDeleteChapter,
   onRenameChapter,
   totalWordCount,
+  manuscriptTitle,
+  targetWordCount,
   className,
 }: ChapterSidebarProps) {
   const t = useTranslations("writing");
@@ -391,6 +447,8 @@ export function ChapterSidebar({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(
     null
   );
+  const [frontMatterOpen, setFrontMatterOpen] = useState(true);
+  const [backMatterOpen, setBackMatterOpen] = useState(true);
 
   // ---- Drag and drop handlers ----
 
@@ -537,9 +595,10 @@ export function ChapterSidebar({
     <div className={cn("flex flex-col h-full border-r bg-card", className)}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h3 className="text-sm font-semibold text-foreground">
-          {t("editor.chapters")}
-        </h3>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground truncate">{manuscriptTitle || t("editor.chapterSidebar.manuscriptTitle")}</p>
+          <h3 className="text-sm font-semibold text-foreground">{t("editor.chapters")}</h3>
+        </div>
       </div>
 
       {/* Chapter list */}
@@ -551,11 +610,25 @@ export function ChapterSidebar({
         ) : (
           <>
             {/* Front Matter section label */}
-            <div className="px-4 pt-3 pb-1">
+            <button
+              type="button"
+              onClick={() => setFrontMatterOpen(prev => !prev)}
+              className="w-full flex items-center gap-1 px-4 pt-3 pb-1 text-left"
+            >
+              <ChevronDown className={cn("h-3 w-3 text-muted-foreground/70 transition-transform", !frontMatterOpen && "-rotate-90")} />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {t("editor.frontMatter")}
+                {t("editor.chapterSidebar.frontMatter")}
               </span>
-            </div>
+            </button>
+            {frontMatterOpen && (
+              <ul className="py-1 pl-6">
+                {["titlePage", "copyright", "dedication"].map((item) => (
+                  <li key={item} className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 cursor-pointer rounded">
+                    {t(`editor.chapterSidebar.${item}`)}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <ul className="py-1">
               {sortedChapters.map((chapter, idx) => {
@@ -628,9 +701,11 @@ export function ChapterSidebar({
                       <ChapterMenu
                         isFirst={isFirst}
                         isLast={isLast}
+                        status={status}
                         onRename={() => setRenamingId(chapter.id)}
                         onDelete={() => handleDelete(chapter.id)}
                         onDuplicate={() => onCreateChapter()}
+                        onInsertBelow={() => onCreateChapter()}
                         onMoveUp={() => handleMoveUp(chapter.id)}
                         onMoveDown={() => handleMoveDown(chapter.id)}
                         t={t}
@@ -642,11 +717,25 @@ export function ChapterSidebar({
             </ul>
 
             {/* Back Matter section label */}
-            <div className="px-4 pt-3 pb-1">
+            <button
+              type="button"
+              onClick={() => setBackMatterOpen(prev => !prev)}
+              className="w-full flex items-center gap-1 px-4 pt-3 pb-1 text-left"
+            >
+              <ChevronDown className={cn("h-3 w-3 text-muted-foreground/70 transition-transform", !backMatterOpen && "-rotate-90")} />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {t("editor.backMatter")}
+                {t("editor.chapterSidebar.backMatter")}
               </span>
-            </div>
+            </button>
+            {backMatterOpen && (
+              <ul className="py-1 pl-6">
+                {["aboutAuthor", "alsoBy", "reviewRequest"].map((item) => (
+                  <li key={item} className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 cursor-pointer rounded">
+                    {t(`editor.chapterSidebar.${item}`)}
+                  </li>
+                ))}
+              </ul>
+            )}
           </>
         )}
       </div>
@@ -664,12 +753,21 @@ export function ChapterSidebar({
           <Plus className="h-4 w-4" />
           {t("editor.addChapter")}
         </button>
-        <div className="px-4 py-2 bg-muted/30 border-t">
-          <p className="text-xs text-muted-foreground">
-            {t("editor.totalWords", {
-              count: computedTotalWords.toLocaleString(),
-            })}
-          </p>
+        <div className="px-4 py-3 bg-muted/30 border-t space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">
+              {computedTotalWords.toLocaleString()} / {(targetWordCount || 60000).toLocaleString()} {t("stats.words")}
+            </span>
+            <span className="text-muted-foreground font-medium">
+              {Math.min(Math.round((computedTotalWords / (targetWordCount || 60000)) * 100), 100)}%
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-secondary overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all"
+              style={{ width: `${Math.min(Math.round((computedTotalWords / (targetWordCount || 60000)) * 100), 100)}%` }}
+            />
+          </div>
         </div>
       </div>
 
@@ -678,9 +776,11 @@ export function ChapterSidebar({
         <FloatingContextMenu
           menu={contextMenu}
           sortedChapters={sortedChapters}
+          activeChapterId={activeChapterId}
           onRename={(id) => setRenamingId(id)}
           onDelete={handleDelete}
           onDuplicate={onCreateChapter}
+          onInsertBelow={onCreateChapter}
           onMoveUp={handleMoveUp}
           onMoveDown={handleMoveDown}
           onClose={closeContextMenu}

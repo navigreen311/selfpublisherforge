@@ -1,277 +1,207 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "@/hooks/use-translations";
-import { Skeleton } from "@/components/ui/skeleton";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 interface ReadabilityData {
-  flesch_kincaid_grade: number;
-  flesch_reading_ease: number;
-  gunning_fog: number;
-  smog_index: number;
-  passive_voice_pct?: number;
-  avg_words_per_sentence?: number;
-  reading_level?: string;
-  suggestions?: string[];
+  grade_level: number;
+  flesch_ease: number;
+  flesch_label: string;
+  passive_voice_pct: number;
+  avg_sentence_length: number;
+  word_count: number;
+  suggestions: string[];
 }
 
 interface ChapterStatsProps {
-  readability?: ReadabilityData;
   wordCount: number;
   targetWordCount?: number;
-  isLoading?: boolean;
+  content?: string; // Raw text content for readability analysis
+  className?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Return Tailwind color classes for grade level indicator. */
-function gradeColor(grade: number): string {
-  if (grade <= 9) return "text-green-600 dark:text-green-400";
-  if (grade <= 12) return "text-yellow-600 dark:text-yellow-400";
-  return "text-red-600 dark:text-red-400";
+function getGradeColor(grade: number): { text: string; bg: string; emoji: string } {
+  if (grade <= 9) return { text: "text-green-600", bg: "bg-green-500", emoji: "\u{1F7E2}" };
+  if (grade <= 12) return { text: "text-yellow-600", bg: "bg-yellow-500", emoji: "\u{1F7E1}" };
+  return { text: "text-red-600", bg: "bg-red-500", emoji: "\u{1F534}" };
 }
 
-/** Return Tailwind bg classes for grade level dot indicator. */
-function gradeDotColor(grade: number): string {
-  if (grade <= 9) return "bg-green-500";
-  if (grade <= 12) return "bg-yellow-500";
-  return "bg-red-500";
+function getPassiveColor(pct: number): { text: string; bg: string; emoji: string } {
+  if (pct < 10) return { text: "text-green-600", bg: "bg-green-500", emoji: "\u{1F7E2}" };
+  if (pct <= 15) return { text: "text-yellow-600", bg: "bg-yellow-500", emoji: "\u{1F7E1}" };
+  return { text: "text-red-600", bg: "bg-red-500", emoji: "\u{1F534}" };
 }
-
-/** Return Tailwind color classes for passive voice percentage. */
-function passiveVoiceColor(pct: number): string {
-  if (pct < 15) return "text-green-600 dark:text-green-400";
-  if (pct <= 25) return "text-yellow-600 dark:text-yellow-400";
-  return "text-red-600 dark:text-red-400";
-}
-
-/** Return Tailwind bg classes for passive voice dot indicator. */
-function passiveVoiceDotColor(pct: number): string {
-  if (pct < 15) return "bg-green-500";
-  if (pct <= 25) return "bg-yellow-500";
-  return "bg-red-500";
-}
-
-/** Calculate reading time in minutes (rounded up, minimum 1). */
-function readingTime(wordCount: number): number {
-  return Math.max(1, Math.ceil(wordCount / 250));
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function StatRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{children}</span>
-    </div>
-  );
-}
-
-function ColoredStatRow({
-  label,
-  value,
-  colorClass,
-  dotColorClass,
-}: {
-  label: string;
-  value: string;
-  colorClass: string;
-  dotColorClass: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={cn("flex items-center gap-1.5 font-medium", colorClass)}>
-        <span
-          className={cn("inline-block h-2 w-2 rounded-full", dotColorClass)}
-          aria-hidden="true"
-        />
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="flex items-center justify-between">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-16" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main Component
-// ---------------------------------------------------------------------------
 
 export function ChapterStats({
-  readability,
   wordCount,
-  targetWordCount,
-  isLoading = false,
+  targetWordCount = 0,
+  content,
+  className,
 }: ChapterStatsProps) {
   const t = useTranslations("writing");
+  const [readability, setReadability] = useState<ReadabilityData | null>(null);
+  const [tooltipMetric, setTooltipMetric] = useState<string | null>(null);
 
-  // ---- Loading state ----
-  if (isLoading) {
-    return (
-      <div className="space-y-1" role="status" aria-busy="true">
-        <h4 className="text-sm font-semibold mb-3">
-          {t("ai.chapterStats.title")}
-        </h4>
-        <LoadingSkeleton />
-        <span className="sr-only">{t("ai.chapterStats.loading")}</span>
-      </div>
-    );
-  }
+  // Debounced readability analysis
+  const analyzeReadability = useCallback(async (text: string) => {
+    if (!text || text.trim().length < 50) {
+      setReadability(null);
+      return;
+    }
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${baseURL}/api/v1/writing/readability`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ text }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReadability(data);
+      }
+    } catch {
+      // Silently fail
+    }
+  }, []);
 
-  const minutes = readingTime(wordCount);
-  const wordProgress =
-    targetWordCount && targetWordCount > 0
-      ? Math.min(Math.round((wordCount / targetWordCount) * 100), 100)
-      : null;
+  // Debounce the readability analysis (every 5 seconds)
+  useEffect(() => {
+    if (!content) return;
+    const timer = setTimeout(() => {
+      // Strip HTML tags to get plain text
+      const plainText = content.replace(/<[^>]*>/g, " ").trim();
+      analyzeReadability(plainText);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [content, analyzeReadability]);
+
+  const wordProgress = targetWordCount > 0
+    ? Math.min(Math.round((wordCount / targetWordCount) * 100), 100)
+    : 0;
+
+  const gradeStyle = readability ? getGradeColor(readability.grade_level) : null;
+  const passiveStyle = readability ? getPassiveColor(readability.passive_voice_pct) : null;
+
+  const tooltips: Record<string, string> = {
+    grade: "Flesch-Kincaid Grade Level measures text complexity. Grade 6-9 is ideal for most books.",
+    flesch: "Flesch Reading Ease: 90-100 (Very Easy), 60-70 (Standard), 0-30 (Very Difficult).",
+    passive: "Passive voice percentage. Under 10% is ideal. Over 15% can make writing feel flat.",
+    avgSentence: "Average words per sentence. 15-20 is ideal for readability.",
+  };
 
   return (
-    <div className="space-y-1">
-      <h4 className="text-sm font-semibold mb-3">
-        {t("ai.chapterStats.title")}
-      </h4>
-
-      {/* Word Count */}
-      <StatRow label={t("ai.chapterStats.wordCount")}>
-        {wordCount.toLocaleString()}
-      </StatRow>
-
-      {/* Word count progress bar toward target */}
-      {targetWordCount != null && targetWordCount > 0 && (
-        <div className="pb-1">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span>
-              {t("ai.chapterStats.target")}: {targetWordCount.toLocaleString()}
-            </span>
-            <span>{wordProgress}%</span>
-          </div>
-          <div
-            className="h-1.5 w-full rounded-full bg-muted"
-            role="progressbar"
-            aria-valuenow={wordCount}
-            aria-valuemin={0}
-            aria-valuemax={targetWordCount}
-          >
-            <div
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                wordProgress != null && wordProgress >= 100
-                  ? "bg-green-500"
-                  : "bg-primary"
-              )}
-              style={{ width: `${wordProgress}%` }}
-            />
-          </div>
+    <div className={cn("space-y-4", className)}>
+      {/* Word count progress */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-foreground">
+            {t("ai.chapterStatsSection.wordCount")}
+          </span>
+          <span className="text-muted-foreground">
+            {wordCount.toLocaleString()}
+            {targetWordCount > 0 && (
+              <span> / {targetWordCount.toLocaleString()} ({wordProgress}%)</span>
+            )}
+          </span>
         </div>
-      )}
+        {targetWordCount > 0 && (
+          <Progress value={wordProgress} className="h-2" />
+        )}
+      </div>
 
-      {/* Reading Time */}
-      <StatRow label={t("ai.chapterStats.readingTime")}>
-        {t("ai.chapterStats.minutes", { count: minutes })}
-      </StatRow>
+      {/* Readability metrics */}
+      {readability ? (
+        <div className="space-y-2.5">
+          {/* Grade level */}
+          <div
+            className="flex items-center justify-between text-xs cursor-help relative"
+            onMouseEnter={() => setTooltipMetric("grade")}
+            onMouseLeave={() => setTooltipMetric(null)}
+          >
+            <span className="text-muted-foreground">Readability</span>
+            <span className={cn("flex items-center gap-1.5 font-medium", gradeStyle?.text)}>
+              {gradeStyle?.emoji} Grade {readability.grade_level.toFixed(1)}
+            </span>
+            {tooltipMetric === "grade" && (
+              <div className="absolute right-0 top-5 z-10 w-52 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md">
+                {tooltips.grade}
+              </div>
+            )}
+          </div>
 
-      {/* Divider before readability stats */}
-      {readability && (
-        <>
-          <div className="my-2 h-px bg-border" />
+          {/* Flesch ease */}
+          <div
+            className="flex items-center justify-between text-xs cursor-help relative"
+            onMouseEnter={() => setTooltipMetric("flesch")}
+            onMouseLeave={() => setTooltipMetric(null)}
+          >
+            <span className="text-muted-foreground">Flesch</span>
+            <span className="font-medium">
+              {readability.flesch_ease.toFixed(0)} ({readability.flesch_label})
+            </span>
+            {tooltipMetric === "flesch" && (
+              <div className="absolute right-0 top-5 z-10 w-52 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md">
+                {tooltips.flesch}
+              </div>
+            )}
+          </div>
 
-          {/* Readability Grade Level */}
-          <ColoredStatRow
-            label={t("editor.readability.gradeLevel")}
-            value={readability.flesch_kincaid_grade.toFixed(1)}
-            colorClass={gradeColor(readability.flesch_kincaid_grade)}
-            dotColorClass={gradeDotColor(readability.flesch_kincaid_grade)}
-          />
+          {/* Passive voice */}
+          <div
+            className="flex items-center justify-between text-xs cursor-help relative"
+            onMouseEnter={() => setTooltipMetric("passive")}
+            onMouseLeave={() => setTooltipMetric(null)}
+          >
+            <span className="text-muted-foreground">Passive voice</span>
+            <span className={cn("flex items-center gap-1.5 font-medium", passiveStyle?.text)}>
+              {passiveStyle?.emoji} {readability.passive_voice_pct.toFixed(1)}%
+            </span>
+            {tooltipMetric === "passive" && (
+              <div className="absolute right-0 top-5 z-10 w-52 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md">
+                {tooltips.passive}
+              </div>
+            )}
+          </div>
 
-          {/* Reading Level label (if provided) */}
-          {readability.reading_level && (
-            <StatRow label={t("editor.readability.readingLevel")}>
-              {readability.reading_level}
-            </StatRow>
-          )}
-
-          {/* Flesch Reading Ease */}
-          <StatRow label={t("editor.readability.fleschEase")}>
-            {readability.flesch_reading_ease.toFixed(1)}
-          </StatRow>
-
-          {/* Gunning Fog Index */}
-          <StatRow label={t("editor.readability.gunningFog")}>
-            {readability.gunning_fog.toFixed(1)}
-          </StatRow>
-
-          {/* SMOG Index */}
-          <StatRow label={t("editor.readability.smogIndex")}>
-            {readability.smog_index.toFixed(1)}
-          </StatRow>
-
-          {/* Passive Voice Percentage */}
-          {readability.passive_voice_pct != null && (
-            <ColoredStatRow
-              label={t("editor.readability.passiveVoice")}
-              value={`${readability.passive_voice_pct.toFixed(1)}%`}
-              colorClass={passiveVoiceColor(readability.passive_voice_pct)}
-              dotColorClass={passiveVoiceDotColor(readability.passive_voice_pct)}
-            />
-          )}
-
-          {/* Average Sentence Length */}
-          {readability.avg_words_per_sentence != null && (
-            <StatRow label={t("editor.readability.avgSentenceLength")}>
-              {readability.avg_words_per_sentence.toFixed(1)} {t("ai.chapterStats.words")}
-            </StatRow>
-          )}
+          {/* Average sentence length */}
+          <div
+            className="flex items-center justify-between text-xs cursor-help relative"
+            onMouseEnter={() => setTooltipMetric("avgSentence")}
+            onMouseLeave={() => setTooltipMetric(null)}
+          >
+            <span className="text-muted-foreground">Avg sentence</span>
+            <span className="font-medium">{readability.avg_sentence_length.toFixed(0)} words</span>
+            {tooltipMetric === "avgSentence" && (
+              <div className="absolute right-0 top-5 z-10 w-52 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md">
+                {tooltips.avgSentence}
+              </div>
+            )}
+          </div>
 
           {/* Suggestions */}
-          {readability.suggestions && readability.suggestions.length > 0 && (
-            <div className="mt-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                {t("ai.chapterStats.suggestions")}
-              </p>
-              <ul className="space-y-1">
-                {readability.suggestions.map((suggestion, idx) => (
-                  <li
-                    key={idx}
-                    className="flex items-start gap-1.5 text-xs text-muted-foreground"
-                  >
-                    <span
-                      className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    {suggestion}
-                  </li>
-                ))}
-              </ul>
+          {readability.suggestions.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {readability.suggestions.map((suggestion, i) => (
+                <p key={i} className="text-[10px] text-amber-600">
+                  {"\u{1F4A1}"} {suggestion}
+                </p>
+              ))}
             </div>
           )}
-        </>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {content && content.length > 0 ? t("ai.chapterStatsSection.loading") : t("ai.stats.noData")}
+        </p>
       )}
     </div>
   );
 }
+
+export default ChapterStats;

@@ -46,10 +46,10 @@ const FORMATS = [
 ];
 
 const DATE_RANGES = [
-  { value: "30d", labelKey: "filters.last30Days" },
-  { value: "90d", labelKey: "filters.last90Days" },
-  { value: "6m", labelKey: "filters.last6Months" },
-  { value: "1y", labelKey: "filters.last1Year" },
+  { value: "30d", labelKey: "filters.last30d" },
+  { value: "90d", labelKey: "filters.last90d" },
+  { value: "6m", labelKey: "filters.last180d" },
+  { value: "1y", labelKey: "filters.last365d" },
   { value: "all", labelKey: "filters.allTime" },
 ];
 

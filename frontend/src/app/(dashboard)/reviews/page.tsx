@@ -40,11 +40,11 @@ import {
 type TabKey = "books" | "feed" | "insights" | "acquisition" | "alerts";
 
 const TABS: { key: TabKey; labelKey: string }[] = [
-  { key: "books", labelKey: "reviews.tabs.books" },
-  { key: "feed", labelKey: "reviews.tabs.feed" },
-  { key: "insights", labelKey: "reviews.tabs.insights" },
-  { key: "acquisition", labelKey: "reviews.tabs.acquisition" },
-  { key: "alerts", labelKey: "reviews.tabs.alerts" },
+  { key: "books", labelKey: "tabs.yourBooks" },
+  { key: "feed", labelKey: "tabs.reviewFeed" },
+  { key: "insights", labelKey: "tabs.insights" },
+  { key: "acquisition", labelKey: "tabs.acquisition" },
+  { key: "alerts", labelKey: "tabs.alerts" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -244,10 +244,10 @@ export default function ReviewsPage() {
       {/* ------------------------------------------------------------------ */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">
-          {t("reviews.title")}
+          {t("title")}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {t("reviews.subtitle")}
+          {t("subtitle")}
         </p>
       </div>
 
@@ -258,7 +258,7 @@ export default function ReviewsPage() {
         {/* Total Reviews */}
         <StatCard isLoading={statsLoading}>
           <p className="text-sm font-medium text-muted-foreground">
-            {t("reviews.stats.totalReviews")}
+            {t("stats.totalReviews")}
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
             {total.toLocaleString()}
@@ -271,7 +271,7 @@ export default function ReviewsPage() {
         {/* Avg Rating */}
         <StatCard isLoading={statsLoading}>
           <p className="text-sm font-medium text-muted-foreground">
-            {t("reviews.stats.avgRating")}
+            {t("stats.avgRating")}
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
             {avgRating.toFixed(1)}
@@ -282,7 +282,7 @@ export default function ReviewsPage() {
         {/* This Month */}
         <StatCard isLoading={statsLoading}>
           <p className="text-sm font-medium text-muted-foreground">
-            {t("reviews.stats.thisMonth")}
+            {t("stats.thisMonth")}
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
             {thisMonth.toLocaleString()}
@@ -301,7 +301,7 @@ export default function ReviewsPage() {
               {Math.abs(thisMonthChangePct).toFixed(1)}%
             </span>
             <span className="text-muted-foreground">
-              {t("reviews.stats.vsLastMonth")}
+              {t("stats.vsLastMonth", { pct: Math.abs(thisMonthChangePct).toFixed(1) })}
             </span>
           </div>
         </StatCard>
@@ -309,7 +309,7 @@ export default function ReviewsPage() {
         {/* Sentiment Score */}
         <StatCard isLoading={statsLoading}>
           <p className="text-sm font-medium text-muted-foreground">
-            {t("reviews.stats.sentimentScore")}
+            {t("stats.sentimentScore")}
           </p>
           <p
             className={cn(
@@ -334,10 +334,10 @@ export default function ReviewsPage() {
               className={cn("text-xs font-medium", getSentimentColor(sentimentScore))}
             >
               {sentimentScore >= 70
-                ? t("reviews.stats.sentimentGood")
+                ? t("stats.good")
                 : sentimentScore >= 40
-                  ? t("reviews.stats.sentimentFair")
-                  : t("reviews.stats.sentimentPoor")}
+                  ? t("stats.fair")
+                  : t("stats.poor")}
             </span>
           </div>
         </StatCard>
@@ -345,7 +345,7 @@ export default function ReviewsPage() {
         {/* Review Velocity */}
         <StatCard isLoading={statsLoading}>
           <p className="text-sm font-medium text-muted-foreground">
-            {t("reviews.stats.velocity")}
+            {t("stats.reviewVelocity")}
           </p>
           <p className="mt-1 text-2xl font-bold text-foreground">
             {velocity.toFixed(1)}
@@ -357,8 +357,8 @@ export default function ReviewsPage() {
               <TrendingDown className="h-3 w-3 text-red-600" />
             )}
             <span>
-              {t("reviews.stats.perWeek")} &middot;{" "}
-              {t("reviews.stats.genreAvg")} {genreAvgVelocity.toFixed(1)}
+              {t("stats.perWeek")} &middot;{" "}
+              {t("stats.vsGenreAvg", { value: genreAvgVelocity.toFixed(1) })}
             </span>
           </div>
         </StatCard>
@@ -366,7 +366,7 @@ export default function ReviewsPage() {
         {/* Needs Attention */}
         <StatCard isLoading={statsLoading}>
           <p className="text-sm font-medium text-muted-foreground">
-            {t("reviews.stats.needsAttention")}
+            {t("stats.needsAttention")}
           </p>
           <p
             className={cn(
@@ -377,7 +377,7 @@ export default function ReviewsPage() {
             {needsAttention}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {t("reviews.stats.lowRatingReviews")}
+            {t("stats.lowRatedReviews")}
           </p>
         </StatCard>
       </div>

@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { formatDistanceToNow, differenceInDays, format } from "date-fns";
 import { useTranslations } from "@/hooks/use-translations";
 import { useBooks, useWritingSessions } from "@/modules/writing/hooks";
 import type { BookEntry, WritingSessionEntry } from "@/modules/writing/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WritingAnalytics } from "@/components/writing-studio/WritingAnalytics";
+import { NewManuscriptModal } from "@/components/writing-studio/NewManuscriptModal";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 
 /**
@@ -40,32 +44,21 @@ type SortOption = "recent" | "title" | "progress";
 // Helper: format a date string into a human-friendly relative label
 // ---------------------------------------------------------------------------
 
-function formatRelativeDate(dateStr: string | undefined, t: (key: string, vars?: Record<string, string | number>) => string): string {
+function formatRelativeDate(dateStr: string | undefined): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMs / 3_600_000);
-  const diffDays = Math.floor(diffMs / 86_400_000);
-
-  if (diffMins < 1) return t("timeAgo.justNow");
-  if (diffMins < 60) return t("timeAgo.minutesAgo", { count: diffMins });
-  if (diffHours < 24) return diffHours === 1 ? t("timeAgo.hoursAgo", { count: diffHours }) : t("timeAgo.hoursAgoPlural", { count: diffHours });
-  if (diffDays < 7) return diffDays === 1 ? t("timeAgo.daysAgo", { count: diffDays }) : t("timeAgo.daysAgoPlural", { count: diffDays });
-  return date.toLocaleDateString();
+  const daysDiff = differenceInDays(new Date(), date);
+  if (daysDiff >= 7) return format(date, "MMM d, yyyy");
+  return formatDistanceToNow(date, { addSuffix: true });
 }
 
-function formatSessionDate(dateStr: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
+function formatSessionDate(dateStr: string): string {
   const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / 86_400_000);
-
-  if (diffDays === 0) return t("timeAgo.today");
-  if (diffDays === 1) return t("timeAgo.yesterday");
-  if (diffDays < 7) return t("timeAgo.daysAgoPlural", { count: diffDays });
-  return date.toLocaleDateString();
+  const daysDiff = differenceInDays(new Date(), date);
+  if (daysDiff === 0) return "Today";
+  if (daysDiff === 1) return "Yesterday";
+  if (daysDiff < 7) return `${daysDiff} days ago`;
+  return format(date, "MMM d, yyyy");
 }
 
 // ---------------------------------------------------------------------------
@@ -132,6 +125,9 @@ function SessionsTableSkeleton({ t }: { t: (key: string) => string }) {
               {t("sessions.table.book")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
+              {t("sessions.table.chapter")}
+            </th>
+            <th className="text-left px-4 py-2 font-medium text-muted-foreground">
               {t("sessions.table.wordsWritten")}
             </th>
             <th className="text-left px-4 py-2 font-medium text-muted-foreground">
@@ -147,6 +143,9 @@ function SessionsTableSkeleton({ t }: { t: (key: string) => string }) {
             <tr key={i} className="border-t">
               <td className="px-4 py-2">
                 <Skeleton className="h-4 w-36" />
+              </td>
+              <td className="px-4 py-2">
+                <Skeleton className="h-4 w-24" />
               </td>
               <td className="px-4 py-2">
                 <Skeleton className="h-4 w-16" />
@@ -201,7 +200,7 @@ function EmptyBooksState({ t }: { t: (key: string) => string }) {
           href="/writing/outline"
           className="inline-block rounded-md border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
-          {t("manuscripts.empty.aiOutline")}
+          {t("manuscripts.empty.generateOutline")}
         </Link>
       </div>
     </div>
@@ -217,25 +216,37 @@ function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) =
     // Placeholder actions -- show alert for now
     switch (action) {
       case "rename":
-        alert(`${t("actions.rename")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.rename")}: ${book.title}`);
         break;
       case "duplicate":
-        alert(`${t("actions.duplicate")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.duplicate")}: ${book.title}`);
         break;
       case "export-docx":
-        alert(`${t("actions.exportDocx")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.exportDocx")}: ${book.title}`);
         break;
       case "export-epub":
-        alert(`${t("actions.exportEpub")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.exportEpub")}: ${book.title}`);
         break;
       case "export-pdf":
-        alert(`${t("actions.exportPdf")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.exportPdf")}: ${book.title}`);
+        break;
+      case "export-txt":
+        alert(`${t("manuscripts.menu.exportTxt")}: ${book.title}`);
+        break;
+      case "export-md":
+        alert(`${t("manuscripts.menu.exportMd")}: ${book.title}`);
+        break;
+      case "analytics":
+        alert(`${t("manuscripts.menu.viewAnalytics")}: ${book.title}`);
+        break;
+      case "move-to-project":
+        alert(`${t("manuscripts.menu.moveToProject")}: ${book.title}`);
         break;
       case "archive":
-        alert(`${t("actions.archive")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.archive")}: ${book.title}`);
         break;
       case "delete":
-        alert(`${t("actions.delete")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.delete")}: ${book.title}`);
         break;
     }
   };
@@ -245,37 +256,53 @@ function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) =
       <DropdownMenuTrigger asChild>
         <button
           className="h-8 w-8 flex items-center justify-center rounded-md border text-muted-foreground hover:bg-muted transition-colors"
-          aria-label={t("actions.menu")}
+          aria-label={t("manuscripts.menu.rename")}
         >
           &#8230;
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => handleAction("rename")}>
-          {t("actions.rename")}
+          {t("manuscripts.menu.rename")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleAction("duplicate")}>
-          {t("actions.duplicate")}
+          {t("manuscripts.menu.duplicate")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => handleAction("analytics")}>
+          {t("manuscripts.menu.viewAnalytics")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("move-to-project")}>
+          {t("manuscripts.menu.moveToProject")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          {t("manuscripts.menu.exportLabel")}
+        </DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => handleAction("export-docx")}>
-          {t("actions.exportDocx")}
+          {t("manuscripts.menu.exportDocx")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleAction("export-epub")}>
-          {t("actions.exportEpub")}
+          {t("manuscripts.menu.exportEpub")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleAction("export-pdf")}>
-          {t("actions.exportPdf")}
+          {t("manuscripts.menu.exportPdf")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-txt")}>
+          {t("manuscripts.menu.exportTxt")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-md")}>
+          {t("manuscripts.menu.exportMd")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => handleAction("archive")}>
-          {t("actions.archive")}
+          {t("manuscripts.menu.archive")}
         </DropdownMenuItem>
         <DropdownMenuItem
           className="text-red-600 focus:text-red-600"
           onSelect={() => handleAction("delete")}
         >
-          {t("actions.delete")}
+          {t("manuscripts.menu.delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -369,6 +396,9 @@ function WritingSessionsSection({
                 {t("sessions.table.book")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
+                {t("sessions.table.chapter")}
+              </th>
+              <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
                 {t("sessions.table.wordsWritten")}
               </th>
               <th className="text-left px-2 sm:px-4 py-2 font-medium text-muted-foreground">
@@ -387,12 +417,15 @@ function WritingSessionsSection({
                     bookTitleMap[session.book_id] ||
                     t("stats.unknownBook")}
                 </td>
+                <td className="px-2 sm:px-4 py-2 text-muted-foreground">
+                  {session.chapter_title || "\u2014"}
+                </td>
                 <td className="px-2 sm:px-4 py-2">
                   {session.words_written.toLocaleString()}
                 </td>
                 <td className="px-2 sm:px-4 py-2">{session.duration_minutes} {t("sessions.minutes")}</td>
                 <td className="px-2 sm:px-4 py-2 text-muted-foreground">
-                  {formatSessionDate(session.created_at, t)}
+                  {formatSessionDate(session.created_at)}
                 </td>
               </tr>
             ))}
@@ -412,6 +445,8 @@ export default function WritingStudioPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [newManuscriptOpen, setNewManuscriptOpen] = useState(false);
 
   const {
     data: books,
@@ -439,6 +474,15 @@ export default function WritingStudioPage() {
       );
     }
 
+    // Filter by status
+    if (statusFilter !== "all") {
+      if (statusFilter === "complete") {
+        result = result.filter(b => b.status === "published" || b.status === "formatting");
+      } else {
+        result = result.filter(b => b.status === statusFilter);
+      }
+    }
+
     // Sort
     switch (sortBy) {
       case "recent":
@@ -461,7 +505,7 @@ export default function WritingStudioPage() {
     }
 
     return result;
-  }, [books, searchQuery, sortBy]);
+  }, [books, searchQuery, sortBy, statusFilter]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
@@ -475,15 +519,16 @@ export default function WritingStudioPage() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <Link
-          href="/writing/new"
-          className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors"
+        <button
+          type="button"
+          onClick={() => setNewManuscriptOpen(true)}
+          className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors text-left w-full"
         >
           <h3 className="font-medium text-xs sm:text-sm">{t("quickActions.newManuscript.title")}</h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             {t("quickActions.newManuscript.description")}
           </p>
-        </Link>
+        </button>
         <Link
           href="/writing/outline"
           className="rounded-lg border bg-card p-3 sm:p-4 hover:border-primary/50 transition-colors"
@@ -539,6 +584,35 @@ export default function WritingStudioPage() {
           <option value="progress">{t("sort.progress")}</option>
         </select>
       </div>
+
+      {/* Status filter pills */}
+      {books && books.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {["all", "writing", "draft", "editing", "complete"].map((status) => {
+            const count = status === "all"
+              ? books.length
+              : books.filter(b => {
+                  if (status === "complete") return b.status === "published" || b.status === "formatting";
+                  return b.status === status;
+                }).length;
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={cn(
+                  "px-3 py-1 text-xs font-medium rounded-full border transition-colors",
+                  statusFilter === status
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:bg-accent"
+                )}
+              >
+                {t(`manuscripts.statusFilter.${status}`)} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Manuscript list */}
       <div>
@@ -608,7 +682,7 @@ export default function WritingStudioPage() {
                           </span>
                         )}
                         <span className="text-[10px] sm:text-xs text-muted-foreground">
-                          {formatRelativeDate(book.updated_at, t)}
+                          {formatRelativeDate(book.updated_at)}
                         </span>
                       </div>
 
@@ -622,7 +696,7 @@ export default function WritingStudioPage() {
                         href={`/writing/${book.id}`}
                         className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs sm:text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                       >
-                        {t("actions.openEditor")}
+                        {t("manuscripts.openEditor")}
                       </Link>
                       <ManuscriptActionMenu book={book} t={t} />
                     </div>
@@ -654,7 +728,19 @@ export default function WritingStudioPage() {
             t={t}
           />
         </div>
+        <div className="mt-2 text-right">
+          <button
+            type="button"
+            onClick={() => setAnalyticsOpen(true)}
+            className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            {t("sessions.viewAll")}
+          </button>
+        </div>
       </div>
+
+      {/* New manuscript modal */}
+      <NewManuscriptModal open={newManuscriptOpen} onOpenChange={setNewManuscriptOpen} />
     </div>
   );
 }

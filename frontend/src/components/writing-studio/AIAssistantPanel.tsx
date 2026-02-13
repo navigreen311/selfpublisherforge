@@ -45,13 +45,13 @@ interface AIAssistantPanelProps {
 // Quick action definitions
 // ---------------------------------------------------------------------------
 
-const QUICK_ACTIONS: { action: AIAction; labelKey: string }[] = [
-  { action: "write", labelKey: "ai.actions.write" },
-  { action: "rewrite", labelKey: "ai.actions.rewrite" },
-  { action: "expand", labelKey: "ai.actions.expand" },
-  { action: "shorten", labelKey: "ai.actions.shorten" },
-  { action: "continue", labelKey: "ai.actions.continue" },
-  { action: "brainstorm", labelKey: "ai.actions.brainstorm" },
+const QUICK_ACTIONS: { action: AIAction; labelKey: string; icon: string }[] = [
+  { action: "write", labelKey: "ai.write", icon: "\u270d\ufe0f" },
+  { action: "rewrite", labelKey: "ai.rewrite", icon: "\ud83d\udd04" },
+  { action: "expand", labelKey: "ai.expand", icon: "\ud83d\udcdd" },
+  { action: "shorten", labelKey: "ai.shorten", icon: "\u2702\ufe0f" },
+  { action: "continue", labelKey: "ai.continue", icon: "\u27a1\ufe0f" },
+  { action: "brainstorm", labelKey: "ai.brainstorm", icon: "\ud83d\udca1" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -59,17 +59,17 @@ const QUICK_ACTIONS: { action: AIAction; labelKey: string }[] = [
 // ---------------------------------------------------------------------------
 
 const TONE_OPTIONS = [
-  { value: "match_profile", labelKey: "ai.tone.matchProfile" },
-  { value: "more_formal", labelKey: "ai.tone.moreFormal" },
-  { value: "more_casual", labelKey: "ai.tone.moreCasual" },
-  { value: "more_authoritative", labelKey: "ai.tone.moreAuthoritative" },
-  { value: "more_conversational", labelKey: "ai.tone.moreConversational" },
+  { value: "match_profile", labelKey: "ai.toneMatchProfile" },
+  { value: "more_formal", labelKey: "ai.toneFormal" },
+  { value: "more_casual", labelKey: "ai.toneCasual" },
+  { value: "more_authoritative", labelKey: "ai.toneAuthoritative" },
+  { value: "more_conversational", labelKey: "ai.toneConversational" },
 ];
 
 const LENGTH_OPTIONS = [
-  { value: "short", labelKey: "ai.length.short" },
-  { value: "medium", labelKey: "ai.length.medium" },
-  { value: "long", labelKey: "ai.length.long" },
+  { value: "short", labelKey: "ai.lengthShort" },
+  { value: "medium", labelKey: "ai.lengthMedium" },
+  { value: "long", labelKey: "ai.lengthLong" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -94,6 +94,9 @@ export function AIAssistantPanel({
   const [tone, setTone] = useState("match_profile");
   const [length, setLength] = useState<"short" | "medium" | "long">("medium");
   const [styleProfile, setStyleProfile] = useState("default");
+  const [selectionWarning, setSelectionWarning] = useState("");
+  const [instructionHistory, setInstructionHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   const {
     content: generatedContent,
@@ -109,6 +112,13 @@ export function AIAssistantPanel({
 
   const handleQuickAction = useCallback(
     (action: AIAction) => {
+      // Warn if rewrite/shorten but no text selected
+      if ((action === "rewrite" || action === "shorten") && !selectedText) {
+        setSelectionWarning("Select text in the editor first");
+        setTimeout(() => setSelectionWarning(""), 3000);
+        return;
+      }
+
       const request: GenerateRequest = {
         generation_type: action,
         project_id: projectId,
@@ -141,6 +151,13 @@ export function AIAssistantPanel({
 
   const handleCustomGenerate = useCallback(() => {
     if (!customInstruction.trim()) return;
+
+    // Save instruction to history
+    if (customInstruction.trim()) {
+      setInstructionHistory(prev => [customInstruction, ...prev.slice(0, 9)]);
+      setHistoryIndex(-1);
+    }
+
     const request: GenerateRequest = {
       generation_type: "write",
       project_id: projectId,
@@ -193,8 +210,12 @@ export function AIAssistantPanel({
   // -----------------------------------------------------------------------
 
   const gradeLevel = readabilityScore?.flesch_kincaid_grade ?? 0;
-  const gradeIndicatorColor = gradeLevel <= 12 ? "text-green-600" : "text-yellow-600";
-  const gradeIndicatorBg = gradeLevel <= 12 ? "bg-green-500" : "bg-yellow-500";
+  const gradeColor = gradeLevel <= 9 ? "text-green-600" : gradeLevel <= 12 ? "text-yellow-600" : "text-red-600";
+  const gradeBg = gradeLevel <= 9 ? "bg-green-500" : gradeLevel <= 12 ? "bg-yellow-500" : "bg-red-500";
+
+  const passivePct = readabilityScore?.passive_voice_pct ?? 0;
+  const passiveColor = passivePct < 10 ? "text-green-600" : passivePct <= 15 ? "text-yellow-600" : "text-red-600";
+  const passiveBg = passivePct < 10 ? "bg-green-500" : passivePct <= 15 ? "bg-yellow-500" : "bg-red-500";
 
   const wordProgress =
     targetWordCount > 0 ? Math.min(Math.round((wordCount / targetWordCount) * 100), 100) : 0;
@@ -211,7 +232,7 @@ export function AIAssistantPanel({
       )}
     >
       {/* ---- Header ---- */}
-      <div className="px-4 py-3 border-b">
+      <div className="px-4 py-3 border-b flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
           {t("ai.title")}
         </h3>
@@ -223,19 +244,23 @@ export function AIAssistantPanel({
           {t("ai.quickActions")}
         </p>
         <div className="grid grid-cols-3 gap-2">
-          {QUICK_ACTIONS.map(({ action, labelKey }) => (
+          {QUICK_ACTIONS.map(({ action, labelKey, icon }) => (
             <Button
               key={action}
               variant="outline"
               size="sm"
               disabled={isStreaming}
               onClick={() => handleQuickAction(action)}
-              className="text-xs"
+              className="text-xs gap-1"
             >
+              <span>{icon}</span>
               {t(labelKey)}
             </Button>
           ))}
         </div>
+        {selectionWarning && (
+          <p className="text-xs text-amber-600 mt-1">{selectionWarning}</p>
+        )}
         {isStreaming && (
           <Button
             variant="destructive"
@@ -250,12 +275,52 @@ export function AIAssistantPanel({
 
       {/* ---- Custom Instruction ---- */}
       <div className="px-4 py-3 border-b space-y-2">
-        <Textarea
-          value={customInstruction}
-          onChange={(e) => setCustomInstruction(e.target.value)}
-          placeholder={t("ai.instructionPlaceholder")}
-          className="min-h-[60px] text-sm resize-none"
-        />
+        <div className="relative">
+          <Textarea
+            value={customInstruction}
+            onChange={(e) => {
+              setCustomInstruction(e.target.value);
+              setHistoryIndex(-1);
+            }}
+            onKeyDown={(e) => {
+              // Enter to generate (without Shift)
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleCustomGenerate();
+              }
+              // Up arrow for history
+              if (e.key === "ArrowUp" && instructionHistory.length > 0) {
+                e.preventDefault();
+                const newIdx = Math.min(historyIndex + 1, instructionHistory.length - 1);
+                setHistoryIndex(newIdx);
+                setCustomInstruction(instructionHistory[newIdx]);
+              }
+              // Down arrow for history
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const newIdx = historyIndex - 1;
+                if (newIdx < 0) {
+                  setHistoryIndex(-1);
+                  setCustomInstruction("");
+                } else {
+                  setHistoryIndex(newIdx);
+                  setCustomInstruction(instructionHistory[newIdx]);
+                }
+              }
+            }}
+            placeholder={t("ai.instructionPlaceholder")}
+            className="min-h-[60px] text-sm resize-none"
+          />
+          {customInstruction && (
+            <button
+              type="button"
+              onClick={() => setCustomInstruction("")}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground text-xs"
+            >
+              {"\u2715"}
+            </button>
+          )}
+        </div>
         <Button
           size="sm"
           className="w-full text-xs"
@@ -366,11 +431,11 @@ export function AIAssistantPanel({
               <span className="text-muted-foreground">
                 {t("ai.stats.gradeLevel")}
               </span>
-              <span className={cn("flex items-center gap-1.5 font-medium", gradeIndicatorColor)}>
+              <span className={cn("flex items-center gap-1.5 font-medium", gradeColor)}>
                 <span
-                  className={cn("inline-block h-2 w-2 rounded-full", gradeIndicatorBg)}
+                  className={cn("inline-block h-2 w-2 rounded-full", gradeBg)}
                 />
-                {readabilityScore.flesch_kincaid_grade.toFixed(1)}
+                Grade {readabilityScore.flesch_kincaid_grade.toFixed(1)}
               </span>
             </div>
 
@@ -390,7 +455,10 @@ export function AIAssistantPanel({
                 <span className="text-muted-foreground">
                   {t("ai.stats.passiveVoice")}
                 </span>
-                <span className="font-medium">
+                <span className={cn("flex items-center gap-1.5 font-medium", passiveColor)}>
+                  <span
+                    className={cn("inline-block h-2 w-2 rounded-full", passiveBg)}
+                  />
                   {readabilityScore.passive_voice_pct.toFixed(1)}%
                 </span>
               </div>
