@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -36,25 +36,18 @@ class ModelPreference(str, Enum):
     gemini = "gemini"
 
 
-class ChapterType(str, Enum):
-    front_matter = "front_matter"
-    chapter = "chapter"
-    back_matter = "back_matter"
-
-
-class ManuscriptStatus(str, Enum):
+class ManuscriptStatusEnum(str, Enum):
     draft = "draft"
-    writing = "writing"
-    editing = "editing"
-    review = "review"
-    complete = "complete"
-
-
-class ChapterStatus(str, Enum):
-    draft = "draft"
-    writing = "writing"
     revision = "revision"
-    complete = "complete"
+    final = "final"
+    archived = "archived"
+
+
+class ManuscriptTypeEnum(str, Enum):
+    fiction = "fiction"
+    nonfiction = "nonfiction"
+    poetry = "poetry"
+    screenplay = "screenplay"
 
 
 # ---------------------------------------------------------------------------
@@ -88,112 +81,40 @@ class GenerateResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Manuscripts
-# ---------------------------------------------------------------------------
-
-class ManuscriptCreate(BaseModel):
-    """Create a new manuscript, optionally linked to a project."""
-    project_id: UUID | None = None
-    title: str = Field(..., min_length=1, max_length=500)
-    type: str = Field(default="book", description="Manuscript type: book, novella, short_story, etc.")
-
-
-class ManuscriptUpdate(BaseModel):
-    """Update manuscript metadata. All fields optional."""
-    title: str | None = Field(default=None, min_length=1, max_length=500)
-    status: str | None = None
-    target_word_count: int | None = Field(default=None, ge=0)
-
-
-class ManuscriptResponse(BaseModel):
-    book_id: UUID
-    title: str = ""
-    chapters: list["ChapterContent"] = []
-    total_word_count: int = 0
-
-
-class ManuscriptDetailResponse(BaseModel):
-    """Full manuscript with metadata and chapters."""
-    id: UUID
-    project_id: UUID | None = None
-    title: str
-    type: str = "book"
-    status: str = "draft"
-    target_word_count: int | None = None
-    total_word_count: int = 0
-    chapter_count: int = 0
-    chapters: list["ChapterContent"] = []
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class ManuscriptListItem(BaseModel):
-    """Lightweight manuscript item for list views."""
-    id: UUID
-    project_id: UUID | None = None
-    title: str
-    type: str = "book"
-    status: str = "draft"
-    target_word_count: int | None = None
-    total_word_count: int = 0
-    chapter_count: int = 0
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class ManuscriptListResponse(BaseModel):
-    """Paginated list of manuscripts."""
-    manuscripts: list[ManuscriptListItem] = []
-    total: int = 0
-
-
-# ---------------------------------------------------------------------------
 # Chapters / Manuscript
 # ---------------------------------------------------------------------------
 
 class ChapterCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
-    content: str | dict[str, Any] = ""
+    content: str = ""
     order: int = 0
-    order_index: int | None = Field(default=None, description="Alias for order; takes precedence if set.")
     synopsis: str = ""
-    chapter_type: ChapterType = ChapterType.chapter
 
 
 class ChapterUpdate(BaseModel):
     title: str | None = None
-    content: str | dict[str, Any] | None = None
+    content: str | None = None
     order: int | None = None
     synopsis: str | None = None
-    status: str | None = None
-    target_word_count: int | None = Field(default=None, ge=0)
-
-
-class ChapterContentSave(BaseModel):
-    """Lightweight schema for editor auto-save. Accepts TipTap JSON content."""
-    content: dict[str, Any] = Field(..., description="TipTap JSON document content")
-    word_count: int = Field(..., ge=0, description="Current word count of the chapter")
 
 
 class ChapterContent(BaseModel):
     id: UUID
     book_id: UUID
     title: str
-    content: str | dict[str, Any]
+    content: str
     order: int
     synopsis: str = ""
     word_count: int = 0
-    status: str = "draft"
-    chapter_type: str = "chapter"
-    target_word_count: int | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ChapterContentUpdate(BaseModel):
+    """Lightweight body for auto-save of chapter content."""
+    content: str
 
 
 class ChapterReorderItem(BaseModel):
@@ -202,82 +123,91 @@ class ChapterReorderItem(BaseModel):
 
 
 class ChapterReorderRequest(BaseModel):
-    """Reorder chapters. Supports both the legacy format (list of {chapter_id, order})
-    and a simplified format (flat list of chapter UUIDs in desired order)."""
-    chapters: list[ChapterReorderItem] = Field(default_factory=list)
-    chapter_ids: list[UUID] = Field(
-        default_factory=list,
-        description="Simplified reorder: list of chapter UUIDs in desired order.",
-    )
+    chapters: list[ChapterReorderItem]
+
+
+class ManuscriptResponse(BaseModel):
+    book_id: UUID
+    title: str = ""
+    chapters: list[ChapterContent] = []
+    total_word_count: int = 0
 
 
 # ---------------------------------------------------------------------------
-# Chapter Version History
+# Manuscript CRUD (Writing Studio)
 # ---------------------------------------------------------------------------
 
-class ChapterVersionResponse(BaseModel):
-    """Summary of a chapter version (without full content)."""
+class ManuscriptCreateRequest(BaseModel):
+    """Body for POST /manuscripts."""
+    project_id: UUID | None = None
+    title: str = Field("Untitled Manuscript", min_length=1, max_length=500)
+    type: ManuscriptTypeEnum = ManuscriptTypeEnum.fiction
+
+
+class ManuscriptUpdateRequest(BaseModel):
+    """Body for PATCH /manuscripts/{id}."""
+    title: str | None = None
+    status: ManuscriptStatusEnum | None = None
+    target_word_count: int | None = None
+
+
+class ManuscriptDetail(BaseModel):
+    """Full manuscript representation returned by the API."""
     id: UUID
-    chapter_id: UUID | None = None
+    book_id: UUID | None = None
+    title: str = ""
+    status: str = "draft"
+    content_type: str = "fiction"
     word_count: int = 0
+    target_word_count: int = 0
+    chapter_count: int = 0
+    chapters: list[ChapterContent] = []
     created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class ChapterVersionDetailResponse(ChapterVersionResponse):
-    """Full chapter version including content."""
-    content: dict[str, Any] = Field(default_factory=dict)
+class ManuscriptListItem(BaseModel):
+    """Summary representation for list endpoint."""
+    id: UUID
+    book_id: UUID | None = None
+    title: str = ""
+    status: str = "draft"
+    content_type: str = "fiction"
+    word_count: int = 0
+    target_word_count: int = 0
+    chapter_count: int = 0
+    created_at: datetime
+    updated_at: datetime
 
-
-class ChapterVersionListResponse(BaseModel):
-    """List of chapter versions."""
-    versions: list[ChapterVersionResponse] = []
+    model_config = {"from_attributes": True}
 
 
 # ---------------------------------------------------------------------------
-# AI Writing (enhanced)
+# Chapter Versions
 # ---------------------------------------------------------------------------
 
-class AIWriteRequest(BaseModel):
-    """Request schema for AI writing actions within the Writing Studio."""
-    model_config = ConfigDict(protected_namespaces=())
-
-    manuscript_id: UUID
+class ChapterVersionSummary(BaseModel):
+    """Summary of a chapter version in a list."""
+    id: UUID
     chapter_id: UUID
-    action: Literal["write", "rewrite", "expand", "shorten", "continue", "ideas"] = Field(
-        ..., description="The type of AI writing action to perform."
-    )
-    instruction: str | None = Field(
-        default=None,
-        max_length=5000,
-        description="Additional instructions for the AI.",
-    )
-    selected_text: str | None = Field(
-        default=None,
-        description="Text selected by the user for rewrite/expand/shorten actions.",
-    )
-    context_before: str | None = Field(
-        default=None,
-        description="Text preceding the cursor or selection for context.",
-    )
-    style_profile_id: UUID | None = None
-    tone: str | None = Field(
-        default=None,
-        description="Desired tone: formal, casual, literary, commercial, etc.",
-    )
-    length: Literal["short", "medium", "long"] | None = Field(
-        default=None,
-        description="Desired output length.",
-    )
+    version_number: int
+    word_count: int = 0
+    created_at: datetime
+    snapshot_reason: str = ""
 
 
-class AIWriteResponse(BaseModel):
-    """Response schema for AI writing actions."""
-    content: str = ""
-    tokens_used: int = 0
-    action: str = ""
-    model_used: str = ""
+class ChapterVersionDetail(BaseModel):
+    """Full chapter version with content."""
+    id: UUID
+    chapter_id: UUID
+    version_number: int
+    title: str
+    content: str
+    word_count: int = 0
+    created_at: datetime
+    snapshot_reason: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -298,19 +228,8 @@ class ReadabilityScore(BaseModel):
 
 
 class ReadabilityRequest(BaseModel):
-    """Request to compute readability metrics on raw text."""
-    text: str = Field(..., min_length=1, description="The text to analyze for readability.")
-
-
-class ReadabilityResponse(BaseModel):
-    """Enhanced readability response with actionable suggestions."""
-    grade_level: float = 0.0
-    flesch_ease: float = 0.0
-    flesch_label: str = "N/A"
-    passive_voice_pct: float = 0.0
-    avg_sentence_length: float = 0.0
-    word_count: int = 0
-    suggestions: list[str] = Field(default_factory=list)
+    """Body for POST /writing/readability."""
+    text: str = Field(..., min_length=1)
 
 
 class ManuscriptAnalysis(BaseModel):
@@ -402,33 +321,49 @@ class WritingSessionRecord(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class WritingSessionStart(BaseModel):
-    """Start a new timed writing session."""
-    manuscript_id: UUID
+class WritingSessionStartRequest(BaseModel):
+    """Body for POST /writing/sessions/start."""
+    manuscript_id: UUID | None = None
     chapter_id: UUID | None = None
 
 
-class WritingSessionHeartbeat(BaseModel):
-    """Periodic heartbeat during a writing session to track progress."""
-    words_written: int = Field(..., ge=0)
+class WritingSessionStartResponse(BaseModel):
+    """Response for starting a writing session."""
+    session_id: UUID
+    started_at: datetime
 
 
-class WritingSessionEnd(BaseModel):
-    """End an active writing session with final stats."""
-    words_written: int = Field(..., ge=0)
-    duration_seconds: int = Field(..., ge=0)
-
-
-class WritingSessionResponse(BaseModel):
-    """Unified writing session response for list/detail views."""
-    id: UUID
-    manuscript_title: str = ""
-    chapter_title: str | None = None
+class WritingSessionHeartbeatRequest(BaseModel):
+    """Body for POST /writing/sessions/{id}/heartbeat."""
     words_written: int = 0
-    duration: int = Field(default=0, description="Duration in seconds")
-    date: datetime = Field(default_factory=_utcnow)
+    current_chapter_id: UUID | None = None
 
-    model_config = {"from_attributes": True}
+
+class WritingSessionEndRequest(BaseModel):
+    """Body for POST /writing/sessions/{id}/end."""
+    words_written: int = 0
+    notes: str = ""
+
+
+class WritingSessionEndResponse(BaseModel):
+    """Response for ending a writing session."""
+    session_id: UUID
+    duration_seconds: int
+    words_written: int
+    ended_at: datetime
+
+
+class WritingSessionListItem(BaseModel):
+    """Session summary for list endpoint."""
+    id: UUID
+    user_id: UUID
+    manuscript_id: UUID | None = None
+    chapter_id: UUID | None = None
+    words_written: int = 0
+    duration_seconds: int = 0
+    started_at: datetime
+    ended_at: datetime | None = None
+    notes: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -436,53 +371,24 @@ class WritingSessionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class ExportRequest(BaseModel):
-    """Request to export a manuscript in a specific format."""
-    format: Literal["docx", "epub", "pdf", "txt", "markdown"] = Field(
-        ..., description="The output format for export."
-    )
+    """Body for POST /manuscripts/{id}/export."""
+    format: str = Field("docx", pattern="^(docx|pdf|epub|markdown|txt)$")
+    include_toc: bool = True
+    include_metadata: bool = True
 
 
 class ExportResponse(BaseModel):
-    """Response with download URL for an exported manuscript."""
+    """Response with download information."""
     download_url: str
-    format: str = ""
+    format: str
+    manuscript_id: UUID
+    exported_at: datetime = Field(default_factory=_utcnow)
 
 
-# ---------------------------------------------------------------------------
-# Editor Settings
-# ---------------------------------------------------------------------------
-
-class EditorSettingsResponse(BaseModel):
-    """Current editor settings for the user."""
-    font_family: str = "Georgia"
-    font_size: int = 16
-    line_height: float = 1.8
-    paragraph_spacing: float = 1.5
-    page_width: str = "narrow"
-    theme: str = "light"
-    show_word_count: bool = True
-    show_paragraph_count: bool = False
-    show_reading_time: bool = True
-    autosave_interval_seconds: int = 30
-    spell_check: bool = True
-    focus_mode: bool = False
-    typewriter_mode: bool = False
-
-    model_config = {"from_attributes": True}
-
-
-class EditorSettingsUpdate(BaseModel):
-    """Update editor settings. All fields optional."""
-    font_family: str | None = None
-    font_size: int | None = Field(default=None, ge=8, le=72)
-    line_height: float | None = Field(default=None, ge=1.0, le=3.0)
-    paragraph_spacing: float | None = Field(default=None, ge=0.0, le=5.0)
-    page_width: str | None = None
-    theme: str | None = None
-    show_word_count: bool | None = None
-    show_paragraph_count: bool | None = None
-    show_reading_time: bool | None = None
-    autosave_interval_seconds: int | None = Field(default=None, ge=5, le=300)
-    spell_check: bool | None = None
-    focus_mode: bool | None = None
-    typewriter_mode: bool | None = None
+class ImportResponse(BaseModel):
+    """Response after importing a manuscript."""
+    manuscript_id: UUID
+    title: str
+    chapter_count: int
+    word_count: int
+    imported_at: datetime = Field(default_factory=_utcnow)
