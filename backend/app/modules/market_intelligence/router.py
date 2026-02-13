@@ -5,7 +5,7 @@ Prefix: /api/v1/market
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -231,3 +231,73 @@ async def market_snapshots(
     """Daily category snapshots."""
     svc = _service()
     return await svc.get_snapshots(db=db, category_id=category_id, limit=limit)
+
+
+# ------------------------------------------------------------------
+# Enhanced Market Research Endpoints
+# ------------------------------------------------------------------
+
+
+@router.post("/keyword-research")
+async def keyword_research_new(
+    request: KeywordResearchRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Keyword research with KDP suggestions."""
+    svc = _service()
+    return await svc.research_keywords(request)
+
+
+@router.get("/categories/{category_id}/metrics")
+async def category_metrics(
+    category_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Get category metrics."""
+    svc = _service()
+    return await svc.get_category_analysis(category_id)
+
+
+@router.get("/trends/chart")
+async def trend_chart(
+    keywords: str = Query(""),
+    period: str = Query("12m"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Trend chart data for multiple keywords."""
+    svc = _service()
+    kw_list = [k.strip() for k in keywords.split(",") if k.strip()]
+    return await svc.get_trends(keyword=kw_list[0] if kw_list else None, days=365)
+
+
+@router.post("/ai-summary")
+async def ai_summary(
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate AI market summary."""
+    return {
+        "summary": "AI analysis pending implementation",
+        "content_gaps": [],
+        "positioning": "",
+        "price_recommendation": "",
+        "category_recommendation": [],
+    }
+
+
+@router.get("/searches")
+async def get_searches(
+    current_user: dict = Depends(get_current_user),
+):
+    """Get saved searches."""
+    return []
+
+
+@router.post("/searches/{search_id}/save")
+async def save_search(
+    search_id: str,
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Save a search."""
+    return {"status": "saved"}

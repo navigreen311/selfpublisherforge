@@ -21,6 +21,8 @@ import type {
   SaveStatus,
 } from "./types";
 
+export type * from "./types";
+
 export function useSSEGeneration() {
   const [state, setState] = useState<SSEStreamState>({
     content: "",

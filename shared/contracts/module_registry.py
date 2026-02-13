@@ -1,4 +1,4 @@
-"""Registry of all 33 platform modules with metadata.
+"""Registry of all 35 platform modules with metadata.
 
 Each entry captures:
 * **name** -- human-readable module name
@@ -361,6 +361,25 @@ MODULE_REGISTRY: tuple[ModuleInfo, ...] = (
         tier=PlanTier.PRO,
         api_prefix="/portfolio",
         dependencies=("auth", "org", "books", "sales-analytics"),
+    ),
+    # VoiceForge Integration
+    ModuleInfo(
+        id=34,
+        slug="audiobook",
+        name="AI Audiobook Production Studio",
+        description="Full audiobook creation pipeline with multi-provider TTS, SSML generation, ACX validation, and mastering.",
+        tier=PlanTier.PRO,
+        api_prefix="/audiobooks",
+        dependencies=("auth", "org", "books"),
+    ),
+    ModuleInfo(
+        id=35,
+        slug="dictation",
+        name="Voice-Driven Writing (Dictation)",
+        description="Real-time speech-to-text dictation with punctuation restoration, filler removal, and style refinement.",
+        tier=PlanTier.STARTER,
+        api_prefix="/dictation",
+        dependencies=("auth", "org", "style-profiles"),
     ),
 )
 

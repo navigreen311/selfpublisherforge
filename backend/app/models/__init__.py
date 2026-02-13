@@ -36,6 +36,14 @@ from app.modules.competitor_finder.models import (
     WeaknessSignal,
 )
 from app.modules.cover_design.models import Cover, ExtractedProduct, KnowledgeClip
+from app.modules.dictation.models import DictationCommand, DictationSession, DictationSettings
+from app.models.audiobook import (
+    AudiobookChapter,
+    AudiobookGenerationJob,
+    AudiobookPronunciation,
+    AudiobookProject,
+    AudiobookVoice,
+)
 from app.modules.knowledge_vault.models import KnowledgeEntry
 
 # Module-specific models
@@ -70,4 +78,8 @@ __all__ = [
     "BookReview", "ReviewAlert", "ReviewVelocitySnapshot", "ReputationScore",
     "CompetitorAnalysis", "WeaknessSignal", "OpportunityBlueprint", "GapAnalysisResult", "CompetitorAlert",
     "ExportJob", "FormattingTemplateModel",
+    "DictationSession", "DictationCommand", "DictationSettings",
+    # Audiobook models
+    "AudiobookVoice", "AudiobookProject", "AudiobookChapter",
+    "AudiobookPronunciation", "AudiobookGenerationJob",
 ]

@@ -17,6 +17,8 @@ import type {
   PaginatedResponse,
 } from "./types";
 
+export type * from "./types";
+
 const QUERY_KEYS = {
   campaigns: ["ads", "campaigns"] as const,
   campaign: (id: string) => ["ads", "campaigns", id] as const,

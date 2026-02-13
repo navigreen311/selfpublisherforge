@@ -209,4 +209,32 @@ def _register_routers(app: FastAPI):
     from app.modules.chrome_extension.router import router as extension_router
     app.include_router(extension_router, prefix=prefix, tags=["chrome-extension"])
 
+    # VoiceForge Integration
+    from app.modules.audiobook.router import router as audiobook_router
+    app.include_router(audiobook_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_generation import router as audiobook_gen_router
+    app.include_router(audiobook_gen_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_crud import router as audiobook_crud_router
+    app.include_router(audiobook_crud_router, prefix=f"{prefix}/audiobooks/projects", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_voices import router as audiobook_voices_router
+    app.include_router(audiobook_voices_router, prefix=f"{prefix}/audiobooks", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_mastering import router as audiobook_mastering_router
+    app.include_router(audiobook_mastering_router, prefix=f"{prefix}/audiobooks/projects", tags=["audiobooks"])
+
+    from app.modules.audiobook.router_export import router as audiobook_export_router
+    app.include_router(audiobook_export_router, prefix=f"{prefix}/audiobooks/projects", tags=["audiobooks"])
+
+    from app.modules.audiobook.websocket import router as audiobook_ws_router
+    app.include_router(audiobook_ws_router, prefix=f"{prefix}", tags=["audiobooks-ws"])
+
+    from app.modules.dictation.router import router as dictation_router
+    app.include_router(dictation_router, prefix=f"{prefix}/dictation", tags=["dictation"])
+
+    from app.modules.dictation.websocket import router as dictation_ws_router
+    app.include_router(dictation_ws_router, prefix=f"{prefix}", tags=["dictation-ws"])
+
 app = create_app()

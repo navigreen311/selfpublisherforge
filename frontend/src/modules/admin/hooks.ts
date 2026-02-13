@@ -13,6 +13,8 @@ import type {
   PaginatedResponse,
 } from "./types";
 
+export type * from "./types";
+
 // ─── Query Keys ──────────────────────────────────────────────────────────────
 
 export const adminKeys = {

@@ -28,6 +28,8 @@ import type {
   RecentActivityItem,
 } from "./types";
 
+export type * from "./types";
+
 const MARKETING_KEYS = {
   launchPlans: ["marketing", "launch-plans"] as const,
   launchPlan: (id: string) => ["marketing", "launch-plans", id] as const,

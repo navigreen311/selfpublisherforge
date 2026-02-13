@@ -1,9 +1,11 @@
 """Project, Book, Series, PenName, and BookVersion models."""
+import datetime
 import enum
 import uuid
 
 from sqlalchemy import (
     Boolean,
+    Date,
     ForeignKey,
     Index,
     Integer,
@@ -75,6 +77,19 @@ class Project(TenantModel):
         default=None,
         index=True,
     )
+    target_audience: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    keywords: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
+    target_word_count: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    target_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True, default=None)
+    marketplace: Mapped[str | None] = mapped_column(String(50), nullable=True, default="kdp")
+    template: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    cover_image_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True, default="en")
+    content_rating: Mapped[str | None] = mapped_column(String(20), nullable=True, default="general")
+    has_ai_content: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_public_domain: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    subgenre: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    genre: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
 
     # Relationships
     organization = relationship(

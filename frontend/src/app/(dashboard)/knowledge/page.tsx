@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Knowledge Base",
-  description: "Store and organize your research, character profiles, world-building notes, and publishing knowledge.",
-  noindex: true,
-});
 
 "use client";
 

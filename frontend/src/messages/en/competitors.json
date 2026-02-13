@@ -1,10 +1,69 @@
 {
   "title": "Competitor Analysis",
+  "subtitle": "Track competitors, discover gaps, and find opportunities.",
+
+  "addPlaceholder": "Add competitor by ASIN, title, or Amazon URL...",
+  "add": "Add",
+  "adding": "Adding...",
+  "importFromProject": "Import from Project",
+  "tracking": "Tracking {count} competitors across {projects} projects",
+  "noTracking": "No competitors tracked yet",
+
+  "tabs": {
+    "analyses": "Tracked Books",
+    "gapAnalysis": "Gap Analysis",
+    "compare": "Compare",
+    "alerts": "Alerts"
+  },
+
+  "tracked": {
+    "title": "Tracked Competitors",
+    "count": "{count} tracked",
+    "viewGrid": "Grid",
+    "viewTable": "Table",
+    "sort": "Sort",
+    "filter": "Filter",
+    "sortBsr": "BSR",
+    "sortReviews": "Reviews",
+    "sortPrice": "Price",
+    "sortRevenue": "Revenue",
+    "sortDateAdded": "Date Added",
+    "sortRecentlyUpdated": "Recently Updated",
+    "noCompetitors": "No competitors tracked yet. Add a competitor above to get started.",
+    "filterByProject": "Filter by Project",
+    "filterByCategory": "Filter by Category",
+    "allProjects": "All Projects",
+    "allCategories": "All Categories"
+  },
+
+  "card": {
+    "bsr": "BSR",
+    "bsrChange": "{direction} ({change})",
+    "reviews": "Reviews",
+    "price": "Price",
+    "estRevenue": "Est Revenue",
+    "perMonth": "/mo",
+    "published": "Published",
+    "viewDetails": "View Details",
+    "remove": "Remove",
+    "removing": "Removing...",
+    "confirmRemove": "Remove this competitor from tracking?",
+    "by": "by"
+  },
+
   "detail": {
     "notFound": "Competitor analysis not found",
     "defaultTitle": "Competitor Analysis",
     "by": "by",
     "overview": "Overview",
+    "bsrHistory": "BSR History (90 days)",
+    "reviewVelocity": "Review Velocity",
+    "priceHistory": "Price History",
+    "fullDescription": "Full Description",
+    "amazonCategories": "Amazon Categories",
+    "estimatedKeywords": "Estimated Keywords",
+    "reviewSentiment": "Review Sentiment",
+    "weaknessSignals": "Weakness Signals",
     "stats": {
       "bsr": "BSR",
       "price": "Price",
@@ -13,7 +72,10 @@
       "overallScore": "Overall Score",
       "sentiment": "Sentiment",
       "weaknesses": "Weaknesses",
-      "strengths": "Strengths"
+      "strengths": "Strengths",
+      "pages": "Pages",
+      "published": "Published",
+      "estRevenue": "Est Revenue"
     },
     "reviewSummary": "Review Summary",
     "weaknessesTitle": "Detected Weaknesses ({count})",
@@ -33,11 +95,128 @@
       "critical": "Critical"
     },
     "category": {
-      "contentQuality": "Content",
-      "formatLayout": "Format",
-      "missingFeatures": "Features",
+      "contentQuality": "Content Quality",
+      "formatLayout": "Format/Layout",
+      "missingFeatures": "Missing Features",
       "pricing": "Pricing",
-      "coverageGaps": "Coverage"
+      "coverageGaps": "Coverage Gaps"
     }
+  },
+
+  "gap": {
+    "title": "Gap Analysis",
+    "description": "AI analyzes competitor reviews to find content gaps and opportunities.",
+    "runAnalysis": "Run Analysis",
+    "running": "Analyzing...",
+    "selectCompetitors": "Select competitors to analyze:",
+    "allTracked": "All Tracked",
+    "selectSpecific": "or select specific books",
+    "weaknessSignals": "Weakness Signals Found",
+    "signals": "signals",
+    "from": "from",
+    "books": "books",
+    "foundIn": "Found in:",
+    "contentDepthGaps": "Content Depth Gaps",
+    "missingDeliverables": "Missing Deliverables",
+    "practicalGaps": "Practical Application Gaps",
+    "productionQuality": "Production Quality Issues",
+    "voiceMismatch": "Voice/Tone Mismatches",
+    "currencyGaps": "Currency Gaps",
+    "valuePerception": "Value Perception Gaps",
+    "promiseDelivery": "Promise-Delivery Mismatches",
+    "opportunityBlueprint": "Your Opportunity Blueprint",
+    "blueprintIntro": "Based on the gaps found, here's how to position your book:",
+    "differentiationScore": "Differentiation Score",
+    "differentiationDesc": "implementing all items would address {score}% of competitor weaknesses identified.",
+    "exportBlueprint": "Export Blueprint",
+    "addToProjectBrief": "Add to Project Brief",
+    "startWriting": "Start Writing",
+    "noResults": "No gap analysis results yet. Select competitors and run the analysis.",
+    "error": "Failed to run gap analysis. Please try again."
+  },
+
+  "compare": {
+    "title": "Compare Books",
+    "description": "Select 2-4 books to compare side-by-side.",
+    "addToCompare": "+ Add to Compare",
+    "yourBook": "YOUR BOOK",
+    "competitor": "Competitor {num}",
+    "selectYourBook": "Select your book from projects",
+    "selectCompetitor": "Select a competitor",
+    "metrics": "METRICS",
+    "content": "CONTENT",
+    "strengths": "Strengths",
+    "weaknesses": "Weaknesses",
+    "advantage": "Advantage",
+    "disadvantage": "Disadvantage",
+    "exportComparison": "Export Comparison",
+    "generateStrategy": "Generate Differentiation Strategy",
+    "generatingStrategy": "Generating...",
+    "noBooks": "Select at least 2 books to compare.",
+    "mealPlans": "Meal Plans",
+    "shoppingLists": "Shopping Lists",
+    "trackers": "Trackers/Worksheets",
+    "advancedContent": "Advanced Content",
+    "videoLinks": "Video/QR Links"
+  },
+
+  "alerts": {
+    "title": "Alerts",
+    "subtitle": "Get notified when competitors make changes.",
+    "createAlert": "+ Create Alert",
+    "activeAlerts": "Active Alerts",
+    "activeCount": "{count} active",
+    "alertHistory": "Recent Alert History",
+    "noAlerts": "No alerts configured yet. Create an alert to start monitoring.",
+    "noHistory": "No alert events yet.",
+    "bsrDrop": "BSR Drop Alert",
+    "priceChange": "Price Change Alert",
+    "newCompetitor": "New Competitor Alert",
+    "reviewSpike": "Review Velocity Spike",
+    "newNegativeTheme": "New Negative Review Theme",
+    "rankChange": "Rank Change Alert",
+    "newBookByAuthor": "New Book by Author",
+    "active": "Active",
+    "paused": "Paused",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "triggers": "Triggers",
+    "checks": "Checks",
+    "delivery": {
+      "email": "Email",
+      "inApp": "In-app",
+      "emailAndInApp": "Email + In-app"
+    },
+    "frequency": {
+      "instant": "Instant",
+      "daily": "Daily",
+      "weekly": "Weekly"
+    },
+    "modal": {
+      "title": "Create Alert",
+      "editTitle": "Edit Alert",
+      "alertType": "Alert Type",
+      "alertName": "Alert Name",
+      "namePlaceholder": "Enter alert name...",
+      "configuration": "Configuration",
+      "threshold": "Threshold",
+      "percentChange": "Percent Change",
+      "deliveryChannels": "Delivery Channels",
+      "checkFrequency": "Check Frequency"
+    },
+    "timeAgo": {
+      "hoursAgo": "{count} hours ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{count} days ago"
+    }
+  },
+
+  "error": {
+    "title": "Error",
+    "generic": "Something went wrong. Please try again.",
+    "addFailed": "Failed to add competitor. Please check the input and try again.",
+    "removeFailed": "Failed to remove competitor."
   }
 }

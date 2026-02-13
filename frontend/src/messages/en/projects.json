@@ -1,51 +1,89 @@
 {
   "title": "Projects",
-  "subtitle": "Manage all your publishing projects",
-  "newProject": "New Project",
+  "subtitle": "Manage all your book projects",
+  "newProject": "+ New Project",
+  "noProjects": "No projects yet. Create your first project to get started!",
   "searchPlaceholder": "Search projects...",
+
   "filters": {
     "type": "Type",
     "allTypes": "All Types",
-    "book": "Book",
+    "all": "All",
+    "active": "Active",
+    "published": "Published",
+    "archived": "Archived",
+    "book": "Books",
     "series": "Series",
-    "course": "Course",
+    "course": "Courses",
     "status": "Status",
     "allStatus": "All Status",
-    "draft": "Draft",
-    "active": "Active",
-    "archived": "Archived"
+    "draft": "Draft"
   },
+
   "actions": {
     "open": "Open",
     "archive": "Archive",
     "delete": "Delete"
   },
+
+  "card": {
+    "words": "words",
+    "chapters": "chapters",
+    "lastEdited": "Last edited",
+    "created": "Created",
+    "status": "Status",
+    "genre": "Genre",
+    "penName": "Pen Name",
+    "targetDate": "Target Date",
+    "progress": "Progress"
+  },
+
+  "status": {
+    "draft": "Draft",
+    "writing": "Writing",
+    "editing": "Editing",
+    "formatting": "Formatting",
+    "reviewing": "Reviewing",
+    "publishing": "Publishing",
+    "published": "Published",
+    "archived": "Archived",
+    "active": "Active",
+    "completed": "Completed",
+    "planning": "Planning",
+    "in_progress": "In Progress"
+  },
+
   "empty": {
     "title": "No projects found",
     "description": "Try adjusting your search or filters, or create a new project to get started.",
     "action": "Create Project"
   },
+
   "error": {
     "title": "Failed to load projects",
     "fallback": "An unexpected error occurred. Please try again."
   },
+
   "deleteDialog": {
     "title": "Delete Project",
     "description": "Are you sure you want to delete \"{title}\"? This action cannot be undone and all associated data will be permanently removed.",
     "confirm": "Delete Project",
     "cancel": "Cancel"
   },
+
   "archiveDialog": {
     "title": "Archive Project",
     "description": "Are you sure you want to archive \"{title}\"? Archived projects can be restored later from the archived filter.",
     "confirm": "Archive Project",
     "cancel": "Cancel"
   },
+
   "stats": {
     "books": "books",
     "book": "book",
     "updated": "Updated"
   },
+
   "detail": {
     "backToProjects": "Back to projects",
     "title": "Project Details",
@@ -54,6 +92,12 @@
     "backToList": "Back to Projects",
     "edit": "Edit",
     "delete": "Delete",
+    "overview": "Overview",
+    "chapters": "Chapters",
+    "settings": "Settings",
+    "analytics": "Analytics",
+    "timeline": "Timeline",
+    "notes": "Notes",
     "details": {
       "title": "Project Details",
       "description": "Overview of your project settings and metadata",
@@ -83,31 +127,154 @@
       "deleteError": "Failed to delete project. Please try again."
     }
   },
+
   "new": {
     "backToProjects": "Back to projects",
-    "title": "Create New Project",
-    "subtitle": "Set up a new publishing project",
+    "title": "New Project",
+    "subtitle": "Create a new book, series, or course project",
+
     "form": {
       "title": "Project Details",
-      "description": "Fill in the basic information about your project",
+      "description": "Fill in the details below to set up your new project. You can always change these later.",
+
+      "basicInfo": "Basic Information",
+      "aboutBook": "About Your Book",
+      "goalsTimeline": "Goals & Timeline",
+      "coverTemplate": "Cover & Template",
+
       "projectTitle": "Project Title",
-      "projectTitlePlaceholder": "Enter your project title",
+      "projectTitlePlaceholder": "Enter your book title",
+      "projectTitleHelp": "This can be a working title — you can change it anytime.",
+
       "projectType": "Project Type",
       "projectTypePlaceholder": "Select project type",
+      "projectTypeHelp": "Choose the type of content you're creating.",
+      "typeBook": "Book",
+      "typeSeries": "Series",
+      "typeCourse": "Course",
+
       "genre": "Genre",
       "genrePlaceholder": "Select genre",
+      "genreHelp": "Primary genre helps AI tailor research and writing assistance.",
+
+      "subgenre": "Subgenre",
+      "subgenrePlaceholder": "Select subgenre (optional)",
+
       "penName": "Pen Name",
-      "penNamePlaceholder": "Author pen name (optional)",
-      "penNameHelp": "Leave blank to use your account name",
+      "penNamePlaceholder": "Author name for this project",
+      "penNameHelp": "Leave blank to use your account name. Useful for multiple pen names.",
+
       "description": "Description",
-      "descriptionPlaceholder": "Brief description of your project...",
+      "descriptionPlaceholder": "Brief description of your book (what it's about, who it's for, what makes it unique)",
+      "descriptionHelp": "This helps AI understand your project. Not published anywhere.",
+
+      "targetAudience": "Target Audience",
+      "targetAudiencePlaceholder": "Describe your ideal reader (e.g., 'beginner entrepreneurs aged 25-40 looking for practical startup advice')",
+      "targetAudienceHelp": "The more specific, the better AI can help with writing tone and marketing.",
+
+      "keywords": "Keywords / Tags",
+      "keywordsPlaceholder": "Add keywords (press Enter after each)",
+      "keywordsHelp": "Keywords help with market research and Amazon category targeting.",
+
+      "targetWordCount": "Target Word Count",
+      "targetWordCountPlaceholder": "e.g., 50000",
+      "targetWordCountHelp": "Typical ranges: Short book 15K-30K, Standard 40K-60K, Long 70K-100K+",
+
+      "targetDate": "Target Completion Date",
+      "targetDatePlaceholder": "Select date",
+      "targetDateHelp": "Set a deadline to stay on track. We'll remind you as it approaches.",
+
+      "marketplace": "Target Marketplace",
+      "marketplacePlaceholder": "Select primary marketplace",
+      "marketplaceHelp": "Where do you plan to publish? This affects formatting and metadata.",
+      "marketplaceKDP": "Amazon KDP",
+      "marketplaceIngramSpark": "IngramSpark",
+      "marketplaceD2D": "Draft2Digital",
+      "marketplaceACX": "ACX (Audiobook)",
+      "marketplaceMultiple": "Multiple Platforms",
+
+      "series": "Series",
+      "seriesPlaceholder": "Select or create a series",
+      "seriesHelp": "Link this book to a series for read-through tracking.",
+      "seriesNew": "Create New Series",
+      "seriesBookNumber": "Book Number in Series",
+
+      "coverImage": "Cover Image",
+      "coverImageUpload": "Upload cover image",
+      "coverImageHelp": "Upload a draft cover or placeholder. You can design one in Cover Design Studio later.",
+      "coverImageDragDrop": "Drag and drop an image, or click to browse",
+      "coverImageFormats": "PNG, JPG, or TIFF. Recommended: 2560 x 1600px for ebook.",
+
+      "template": "Start From Template",
+      "templateNone": "Blank Project",
+      "templateNonfiction": "Nonfiction Book",
+      "templateNovel": "Novel / Fiction",
+      "templateSelfHelp": "Self-Help / How-To",
+      "templateMemoir": "Memoir",
+      "templateChildrens": "Children's Book",
+      "templateHelp": "Templates include pre-built outlines and chapter structures.",
+
+      "advancedSettings": "Advanced Settings",
+      "language": "Language",
+      "languagePlaceholder": "Select language",
+      "contentRating": "Content Rating",
+      "contentRatingPlaceholder": "Select content rating",
+      "contentRatingGeneral": "General Audience",
+      "contentRatingMature": "Mature (18+)",
+      "isPublicDomain": "Based on public domain work",
+      "hasAIContent": "Will use AI-generated content",
+      "aiContentHelp": "KDP requires disclosure of AI-generated content. We'll help you manage this.",
+
       "cancel": "Cancel",
       "create": "Create Project",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "createSuccess": "Project created successfully!",
+      "createError": "Failed to create project. Please try again.",
+
+      "validation": {
+        "titleRequired": "Project title is required",
+        "titleMaxLength": "Title must be less than 255 characters",
+        "typeRequired": "Project type is required",
+        "typeInvalid": "Type must be book, series, or course",
+        "genreRequired": "Genre is required",
+        "descriptionMaxLength": "Description must be less than 2000 characters",
+        "wordCountMin": "Word count must be at least 1,000",
+        "wordCountMax": "Word count must be less than 500,000",
+        "dateInPast": "Target date must be in the future",
+        "keywordsMax": "Maximum 20 keywords allowed"
+      }
     },
+
     "messages": {
       "success": "Project created successfully",
       "error": "Failed to create project. Please try again."
     }
+  },
+
+  "genres": {
+    "nonfiction": "Nonfiction",
+    "selfHelp": "Self-Help",
+    "business": "Business & Money",
+    "health": "Health & Wellness",
+    "biography": "Biography & Memoir",
+    "history": "History",
+    "science": "Science & Technology",
+    "cooking": "Cooking & Food",
+    "travel": "Travel",
+    "parenting": "Parenting & Family",
+    "education": "Education & Teaching",
+    "religion": "Religion & Spirituality",
+    "fiction": "Fiction",
+    "romance": "Romance",
+    "mystery": "Mystery & Thriller",
+    "sciFi": "Science Fiction",
+    "fantasy": "Fantasy",
+    "horror": "Horror",
+    "literaryFiction": "Literary Fiction",
+    "historicalFiction": "Historical Fiction",
+    "youngAdult": "Young Adult",
+    "childrens": "Children's Books",
+    "poetry": "Poetry",
+    "other": "Other"
   }
 }

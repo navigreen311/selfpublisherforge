@@ -18,8 +18,8 @@ const nextConfig = {
   },
   // Enable experimental optimizations
   experimental: {
-    // Optimize CSS if available
-    optimizeCss: true,
+    // optimizeCss requires 'critters' package — disabled for local dev
+    optimizeCss: false,
   },
   // Compiler optimizations
   compiler: {

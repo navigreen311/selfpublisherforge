@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Admin - Users",
-  description: "Manage user accounts, roles, and access permissions.",
-  noindex: true,
-});
 
 "use client";
 

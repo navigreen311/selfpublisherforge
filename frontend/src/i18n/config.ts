@@ -93,7 +93,7 @@ export function deepMerge<T extends Record<string, any>>(
       ) {
         result[key] = deepMerge(targetValue, sourceValue);
       } else if (sourceValue !== undefined) {
-        result[key] = sourceValue;
+        result[key] = sourceValue as T[Extract<keyof T, string>];
       }
     }
   }

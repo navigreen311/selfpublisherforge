@@ -19,119 +19,119 @@ def upgrade() -> None:
     # ── Enums ──────────────────────────────────────────────────────────
     plan_tier = postgresql.ENUM(
         "free", "starter", "pro", "business", "enterprise",
-        name="plan_tier", create_type=True,
+        name="plan_tier", create_type=False,
     )
     subscription_status = postgresql.ENUM(
         "active", "trialing", "past_due", "canceled", "unpaid",
-        name="subscription_status", create_type=True,
+        name="subscription_status", create_type=False,
     )
     user_role = postgresql.ENUM(
         "owner", "admin", "editor", "writer", "viewer",
-        name="user_role", create_type=True,
+        name="user_role", create_type=False,
     )
     project_type = postgresql.ENUM(
         "book", "series", "course",
-        name="project_type", create_type=True,
+        name="project_type", create_type=False,
     )
     project_status = postgresql.ENUM(
         "draft", "active", "archived", "completed",
-        name="project_status", create_type=True,
+        name="project_status", create_type=False,
     )
     book_format = postgresql.ENUM(
         "ebook", "print", "audio",
-        name="book_format", create_type=True,
+        name="book_format", create_type=False,
     )
     book_status = postgresql.ENUM(
         "draft", "writing", "editing", "formatting", "published", "archived",
-        name="book_status", create_type=True,
+        name="book_status", create_type=False,
     )
     series_status = postgresql.ENUM(
         "planned", "active", "completed", "abandoned",
-        name="series_status", create_type=True,
+        name="series_status", create_type=False,
     )
     content_type = postgresql.ENUM(
         "fiction", "nonfiction", "poetry", "screenplay",
-        name="content_type", create_type=True,
+        name="content_type", create_type=False,
     )
     manuscript_status = postgresql.ENUM(
         "draft", "revision", "final", "archived",
-        name="manuscript_status", create_type=True,
+        name="manuscript_status", create_type=False,
     )
     chapter_status = postgresql.ENUM(
         "outline", "draft", "revision", "final",
-        name="chapter_status", create_type=True,
+        name="chapter_status", create_type=False,
     )
     asset_type_enum = postgresql.ENUM(
         "cover", "image", "document", "audio", "video",
-        name="asset_type", create_type=True,
+        name="asset_type", create_type=False,
     )
     publishing_platform = postgresql.ENUM(
         "kdp", "ingramspark", "d2d", "acx",
-        name="publishing_platform", create_type=True,
+        name="publishing_platform", create_type=False,
     )
     publishing_account_status = postgresql.ENUM(
         "active", "inactive", "error", "pending",
-        name="publishing_account_status", create_type=True,
+        name="publishing_account_status", create_type=False,
     )
     listing_status = postgresql.ENUM(
         "draft", "pending", "live", "suppressed", "removed",
-        name="listing_status", create_type=True,
+        name="listing_status", create_type=False,
     )
     validation_type = postgresql.ENUM(
         "format", "content", "metadata", "cover",
-        name="validation_type", create_type=True,
+        name="validation_type", create_type=False,
     )
     scan_type_enum = postgresql.ENUM(
         "copyright", "trademark", "content_policy", "ai_disclosure",
-        name="scan_type", create_type=True,
+        name="scan_type", create_type=False,
     )
     risk_level = postgresql.ENUM(
         "green", "yellow", "red",
-        name="risk_level", create_type=True,
+        name="risk_level", create_type=False,
     )
     campaign_platform = postgresql.ENUM(
         "amazon_ads", "facebook", "bookbub", "google", "tiktok",
-        name="campaign_platform", create_type=True,
+        name="campaign_platform", create_type=False,
     )
     campaign_status = postgresql.ENUM(
         "draft", "active", "paused", "completed", "archived",
-        name="campaign_status", create_type=True,
+        name="campaign_status", create_type=False,
     )
     ad_creative_type = postgresql.ENUM(
         "image", "video", "text", "carousel",
-        name="ad_creative_type", create_type=True,
+        name="ad_creative_type", create_type=False,
     )
     launch_plan_status = postgresql.ENUM(
         "planning", "active", "completed", "canceled",
-        name="launch_plan_status", create_type=True,
+        name="launch_plan_status", create_type=False,
     )
     agent_type_enum = postgresql.ENUM(
         "research", "writing", "editing", "marketing", "analytics", "publishing",
-        name="agent_type", create_type=True,
+        name="agent_type", create_type=False,
     )
     permission_level = postgresql.ENUM(
         "read_only", "suggest", "execute", "autonomous",
-        name="permission_level", create_type=True,
+        name="permission_level", create_type=False,
     )
     agent_task_status = postgresql.ENUM(
         "pending", "running", "completed", "failed", "canceled",
-        name="agent_task_status", create_type=True,
+        name="agent_task_status", create_type=False,
     )
     budget_type_enum = postgresql.ENUM(
         "daily", "weekly", "monthly", "per_task",
-        name="budget_type", create_type=True,
+        name="budget_type", create_type=False,
     )
     actor_type_enum = postgresql.ENUM(
         "user", "agent", "system",
-        name="actor_type", create_type=True,
+        name="actor_type", create_type=False,
     )
     ab_test_status = postgresql.ENUM(
         "draft", "running", "completed", "canceled",
-        name="ab_test_status", create_type=True,
+        name="ab_test_status", create_type=False,
     )
     report_status = postgresql.ENUM(
         "pending", "generating", "completed", "failed",
-        name="report_status", create_type=True,
+        name="report_status", create_type=False,
     )
 
     # Create all enums

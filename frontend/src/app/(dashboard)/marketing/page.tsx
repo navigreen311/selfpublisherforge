@@ -1,11 +1,3 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/metadata";
-
-export const metadata: Metadata = createMetadata({
-  title: "Marketing",
-  description: "Plan book launches, manage email sequences, schedule social media, and run ARC campaigns.",
-  noindex: true,
-});
 
 "use client";
 
@@ -23,7 +15,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useTranslations } from "@/hooks/use-translations";
 
 type Tab = "overview" | "launch-plans" | "email" | "social" | "arc";
 
@@ -162,7 +153,6 @@ export default function MarketingDashboard() {
           socialPostsCount={socialCalendar?.posts.length || 0}
           arcCount={arcCampaigns?.total_count || 0}
           setActiveTab={setActiveTab}
-          t={t}
         />
       )}
 
@@ -466,6 +456,7 @@ function EmailTab({
   onDelete: (target: DeleteTarget) => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("marketing");
 
   const statusColors: Record<string, string> = {
     draft: "bg-muted text-foreground",

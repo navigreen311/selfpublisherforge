@@ -1,13 +1,28 @@
+import enum
 import logging
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, func, text
+from sqlalchemy import DateTime, Enum as _SAEnum, func, text
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.config import get_settings
+
+# ---------------------------------------------------------------------------
+# Patch: force SQLAlchemy Enum to use .value (lowercase) instead of .name
+# (uppercase) for PEP-435 enums.  The Alembic migrations create PostgreSQL
+# ENUM types with lowercase values, so the ORM must match.
+# ---------------------------------------------------------------------------
+_orig_enum_init = _SAEnum.__init__
+
+def _patched_enum_init(self, *enums, **kw):
+    if enums and len(enums) == 1 and isinstance(enums[0], type) and issubclass(enums[0], enum.Enum):
+        kw.setdefault("values_callable", lambda cls: [e.value for e in cls])
+    _orig_enum_init(self, *enums, **kw)
+
+_SAEnum.__init__ = _patched_enum_init
 
 logger = logging.getLogger(__name__)
 
@@ -78,5 +93,10 @@ async def get_db():
             await session.close()
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Verify database connectivity.
+
+    Schema creation is handled by Alembic migrations, so we only test
+    the connection here rather than calling ``Base.metadata.create_all``.
+    """
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
