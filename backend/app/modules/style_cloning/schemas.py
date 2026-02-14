@@ -167,3 +167,18 @@ class ProfileListResponse(BaseModel):
 class FingerprintResponse(BaseModel):
     profile_id: uuid.UUID
     fingerprint: VoiceFingerprint
+
+
+class SampleResponse(BaseModel):
+    id: uuid.UUID
+    profile_id: uuid.UUID
+    org_id: uuid.UUID
+    text: str
+    label: str | None = None
+    source_type: str | None = None
+    source_reference: str | None = None
+    word_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

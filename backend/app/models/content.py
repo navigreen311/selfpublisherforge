@@ -126,12 +126,16 @@ class StyleProfile(TenantModel):
     sample_sources: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
     description: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    preset: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    voice_description: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", server_default="pending")
     word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     sample_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    total_sample_words: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     confidence: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
     style_card: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     sample_texts: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
+    tuning_adjustments: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
     organization = relationship(
@@ -139,6 +143,7 @@ class StyleProfile(TenantModel):
         primaryjoin="StyleProfile.org_id == Organization.id",
         foreign_keys="[StyleProfile.org_id]",
     )
+    samples = relationship("StyleProfileSample", back_populates="profile", lazy="selectin")
 
     __table_args__ = (
         Index("ix_style_profiles_voice_fingerprint_gin", "voice_fingerprint", postgresql_using="gin"),
@@ -147,6 +152,35 @@ class StyleProfile(TenantModel):
         Index("ix_style_profiles_sample_sources_gin", "sample_sources", postgresql_using="gin"),
         Index("ix_style_profiles_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
         Index("ix_style_profiles_org_id_created_at", "org_id", "created_at"),
+    )
+
+
+class StyleProfileSample(TenantModel):
+    __tablename__ = "style_profile_samples"
+
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("style_profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    source_type: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    source_reference: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
+    word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+    # Relationships
+    profile = relationship("StyleProfile", back_populates="samples")
+    organization = relationship(
+        "Organization",
+        primaryjoin="StyleProfileSample.org_id == Organization.id",
+        foreign_keys="[StyleProfileSample.org_id]",
+    )
+
+    __table_args__ = (
+        Index("ix_style_profile_samples_profile_id", "profile_id"),
+        Index("ix_style_profile_samples_org_id", "org_id"),
+        Index("ix_style_profile_samples_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 

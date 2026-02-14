@@ -6,12 +6,12 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-from app.models.content import StyleProfile
+from app.models.content import StyleProfile, StyleProfileSample
 from app.modules.style_cloning.analyzers import (
     RhythmAnalyzer,
     SyntaxAnalyzer,
@@ -37,6 +37,7 @@ from app.modules.style_cloning.schemas import (
     ProfileListResponse,
     ProfileResponse,
     ProfileStatus,
+    SampleResponse,
     StyleCard,
     VoiceFingerprint,
 )
@@ -304,3 +305,205 @@ async def conformity_check(
     # Reconstruct VoiceFingerprint from the stored dict
     fingerprint = VoiceFingerprint(**profile.voice_fingerprint)
     return check_conformity(fingerprint, text)
+
+
+# ---------------------------------------------------------------------------
+# Sample management
+# ---------------------------------------------------------------------------
+
+def _count_words(text: str) -> int:
+    """Count words in a text string."""
+    return len(text.split())
+
+
+async def _recalculate_total_sample_words(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+) -> int:
+    """Sum word counts from all non-deleted samples and update the profile."""
+    stmt = (
+        select(sa_func.coalesce(sa_func.sum(StyleProfileSample.word_count), 0))
+        .where(StyleProfileSample.profile_id == profile_id)
+        .where(StyleProfileSample.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    total: int = result.scalar_one()
+    return total
+
+
+async def add_sample(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+    org_id: uuid.UUID,
+    text: str,
+    label: str | None = None,
+    source_type: str | None = None,
+    source_reference: str | None = None,
+) -> SampleResponse | None:
+    """Insert a new sample into style_profile_samples and update total_sample_words."""
+    # Verify profile exists and belongs to org
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
+        return None
+
+    word_count = _count_words(text)
+
+    sample = StyleProfileSample(
+        profile_id=profile_id,
+        org_id=org_id,
+        text=text,
+        label=label,
+        source_type=source_type,
+        source_reference=source_reference,
+        word_count=word_count,
+    )
+    db.add(sample)
+    await db.flush()
+
+    # Update total_sample_words on profile
+    total = await _recalculate_total_sample_words(db, profile_id)
+    profile.total_sample_words = total
+    profile.updated_at = datetime.now(UTC)
+    await db.flush()
+    await db.refresh(sample)
+
+    return SampleResponse.model_validate(sample)
+
+
+async def list_samples(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> list[SampleResponse]:
+    """Return list of SampleResponse for a profile scoped by org_id."""
+    # Verify profile exists and belongs to org
+    profile_stmt = (
+        select(StyleProfile.id)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    profile_result = await db.execute(profile_stmt)
+    if profile_result.scalar_one_or_none() is None:
+        return []
+
+    stmt = (
+        select(StyleProfileSample)
+        .where(StyleProfileSample.profile_id == profile_id)
+        .where(StyleProfileSample.org_id == org_id)
+        .where(StyleProfileSample.deleted_at == None)  # noqa: E711
+        .order_by(StyleProfileSample.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    samples = result.scalars().all()
+    return [SampleResponse.model_validate(s) for s in samples]
+
+
+async def delete_sample(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+    sample_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> bool:
+    """Soft-delete a sample and update the profile word count."""
+    stmt = (
+        select(StyleProfileSample)
+        .where(StyleProfileSample.id == sample_id)
+        .where(StyleProfileSample.profile_id == profile_id)
+        .where(StyleProfileSample.org_id == org_id)
+        .where(StyleProfileSample.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    sample = result.scalar_one_or_none()
+    if sample is None:
+        return False
+
+    now = datetime.now(UTC)
+    sample.deleted_at = now
+    sample.updated_at = now
+
+    # Recalculate total_sample_words on the parent profile
+    profile_stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    profile_result = await db.execute(profile_stmt)
+    profile = profile_result.scalar_one_or_none()
+    if profile is not None:
+        total = await _recalculate_total_sample_words(db, profile_id)
+        profile.total_sample_words = total
+        profile.updated_at = now
+
+    await db.flush()
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Profile tuning & updates
+# ---------------------------------------------------------------------------
+
+async def tune_profile(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+    org_id: uuid.UUID,
+    adjustments: dict,
+) -> ProfileResponse | None:
+    """Update tuning_adjustments JSONB on the profile."""
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
+        return None
+
+    # Merge new adjustments into existing ones
+    existing = profile.tuning_adjustments or {}
+    existing.update(adjustments)
+    profile.tuning_adjustments = existing
+    profile.updated_at = datetime.now(UTC)
+
+    await db.flush()
+    await db.refresh(profile)
+    return _to_response(profile)
+
+
+async def update_profile(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+    org_id: uuid.UUID,
+    updates: dict,
+) -> ProfileResponse | None:
+    """Update name, description, genre, preset, voice_description on a profile."""
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
+        return None
+
+    allowed_fields = {"name", "description", "genre", "preset", "voice_description"}
+    for field, value in updates.items():
+        if field in allowed_fields and value is not None:
+            setattr(profile, field, value)
+
+    profile.updated_at = datetime.now(UTC)
+    await db.flush()
+    await db.refresh(profile)
+    return _to_response(profile)
