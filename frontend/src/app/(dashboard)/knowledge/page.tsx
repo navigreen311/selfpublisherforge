@@ -1,16 +1,15 @@
-
 "use client";
 
-import { useState, useCallback } from "react";
-import { Plus, BookOpen, Trash2 } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { Plus, BookOpen, Trash2, Upload } from "lucide-react";
 import { SearchBar } from "@/modules/knowledge/components/SearchBar";
-import { TagFilter } from "@/modules/knowledge/components/TagFilter";
+import { CategoryFilter } from "@/modules/knowledge/components/CategoryFilter";
+import type { CategoryItem } from "@/modules/knowledge/components/CategoryFilter";
 import { EntryCard } from "@/modules/knowledge/components/EntryCard";
 import { ImportModal } from "@/modules/knowledge/components/ImportModal";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   useKnowledgeEntries,
-  useKnowledgeTags,
   useKnowledgeSearch,
   useCreateEntry,
   useDeleteEntry,
@@ -21,7 +20,7 @@ import { useTranslations } from "@/hooks/use-translations";
 
 export default function KnowledgeVaultPage() {
   const t = useTranslations("knowledge");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchHit[] | null>(null);
@@ -30,29 +29,48 @@ export default function KnowledgeVaultPage() {
   const [deleteTarget, setDeleteTarget] = useState<KnowledgeEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: entries, isPending: entriesPending } = useKnowledgeEntries({
-    tag: selectedTags.length > 0 ? selectedTags : undefined,
-  });
-  const { data: tagData } = useKnowledgeTags();
+  const { data: entries, isPending: entriesPending } = useKnowledgeEntries();
   const searchMutation = useKnowledgeSearch();
   const createMutation = useCreateEntry();
   const deleteMutation = useDeleteEntry();
 
+  // Derive categories from entries by metadata.category or source_type
+  const categories: CategoryItem[] = useMemo(() => {
+    if (!entries?.items) return [];
+    const counts: Record<string, number> = {};
+    for (const entry of entries.items) {
+      const category =
+        (typeof entry.metadata?.category === "string" && entry.metadata.category) ||
+        entry.source_type;
+      counts[category] = (counts[category] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [entries]);
+
+  // Filter entries by selected category
+  const filteredEntries = useMemo(() => {
+    if (!entries?.items) return [];
+    if (!selectedCategory) return entries.items;
+    return entries.items.filter((entry) => {
+      const category =
+        (typeof entry.metadata?.category === "string" && entry.metadata.category) ||
+        entry.source_type;
+      return category === selectedCategory;
+    });
+  }, [entries, selectedCategory]);
+
   const handleSearch = useCallback(
     async (query: string) => {
-      const result = await searchMutation.mutateAsync({
-        query,
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
-      });
+      const result = await searchMutation.mutateAsync({ query });
       setSearchResults(result.hits);
     },
-    [searchMutation, selectedTags]
+    [searchMutation]
   );
 
-  const handleToggleTag = useCallback((tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+  const handleSelectCategory = useCallback((category: string | null) => {
+    setSelectedCategory(category);
     setSearchResults(null);
   }, []);
 
@@ -120,13 +138,12 @@ export default function KnowledgeVaultPage() {
       {/* Search */}
       <SearchBar onSearch={handleSearch} isLoading={searchMutation.isPending} />
 
-      {/* Tag filters */}
-      {tagData && (
-        <TagFilter
-          tags={tagData.tags}
-          counts={tagData.counts}
-          selectedTags={selectedTags}
-          onToggleTag={handleToggleTag}
+      {/* Category filters */}
+      {categories.length > 0 && (
+        <CategoryFilter
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={handleSelectCategory}
         />
       )}
 
@@ -218,10 +235,10 @@ export default function KnowledgeVaultPage() {
                 <Skeleton key={i} className="h-28 sm:h-32" />
               ))}
             </div>
-          ) : entries && entries.items.length > 0 ? (
+          ) : filteredEntries.length > 0 ? (
             <>
               <p id="entries-count" className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
-                {entries.total_count} {t("entries")}
+                {filteredEntries.length} {t("entries")}
               </p>
               <div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
@@ -229,7 +246,7 @@ export default function KnowledgeVaultPage() {
                 aria-describedby="entries-count"
                 aria-label="Knowledge entries"
               >
-                {entries.items.map((entry) => (
+                {filteredEntries.map((entry) => (
                   <div key={entry.id} className="relative group" role="listitem">
                     <EntryCard entry={entry} />
                     <button
@@ -248,12 +265,30 @@ export default function KnowledgeVaultPage() {
               </div>
             </>
           ) : (
-            <div className="text-center py-8 sm:py-12">
-              <BookOpen className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30" aria-hidden="true" />
-              <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-medium">{t("noEntriesTitle")}</h3>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                {t("noEntriesMessage")}
+            <div className="text-center py-12 sm:py-16">
+              <BookOpen className="mx-auto h-12 w-12 sm:h-14 sm:w-14 text-muted-foreground/30" aria-hidden="true" />
+              <h3 className="mt-4 sm:mt-5 text-base sm:text-lg font-semibold">
+                Your Knowledge Vault is empty
+              </h3>
+              <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground max-w-sm mx-auto">
+                Start building your research library.
               </p>
+              <div className="mt-5 sm:mt-6 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => setCreateOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Create First Entry
+                </button>
+                <button
+                  onClick={() => setImportOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm border rounded-lg hover:bg-accent transition-colors"
+                >
+                  <Upload className="h-4 w-4" aria-hidden="true" />
+                  Import Files
+                </button>
+              </div>
             </div>
           )}
         </div>
