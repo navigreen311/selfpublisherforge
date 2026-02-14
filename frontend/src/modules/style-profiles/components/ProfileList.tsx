@@ -1,5 +1,6 @@
 "use client";
 
+import { FileText } from "lucide-react";
 import { ProfileCard } from "./ProfileCard";
 import type { ProfileResponse } from "../types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +50,3 @@ export function ProfileList({ profiles, isLoading }: ProfileListProps) {
     </div>
   );
 }
-
-// Import for the empty state icon
-import { FileText } from "lucide-react";
