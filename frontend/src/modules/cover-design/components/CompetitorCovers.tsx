@@ -20,8 +20,8 @@ export function CompetitorCovers({ genre }: CompetitorCoversProps) {
     if (!keywords.trim()) return;
 
     analyzeCompetitors({
-      keywords: keywords.split(",").map(k => k.trim()).filter(Boolean),
-      genre: selectedGenre,
+      niche_keywords: keywords.split(",").map(k => k.trim()).filter(Boolean),
+      genre: selectedGenre!,
       max_results: 12,
     });
   };
@@ -79,21 +79,25 @@ export function CompetitorCovers({ genre }: CompetitorCoversProps) {
       {!isPending && analysis && (
         <div className="space-y-6">
           {/* Summary insights */}
-          {analysis.summary && (
+          {analysis.recommendations && analysis.recommendations.length > 0 && (
             <div className="p-4 border rounded-lg bg-muted/50">
               <h3 className="font-semibold mb-2">Key Insights</h3>
-              <p className="text-sm text-muted-foreground">{analysis.summary}</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {analysis.recommendations.map((rec, i) => (
+                  <li key={i}>{rec}</li>
+                ))}
+              </ul>
             </div>
           )}
 
           {/* Competitor covers grid */}
-          {analysis.covers && analysis.covers.length > 0 ? (
+          {analysis.analyses && analysis.analyses.length > 0 ? (
             <>
               <p className="text-sm text-muted-foreground">
-                {analysis.covers.length} competitor cover{analysis.covers.length !== 1 ? "s" : ""} analyzed
+                {analysis.analyses.length} competitor cover{analysis.analyses.length !== 1 ? "s" : ""} analyzed
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {analysis.covers.map((cover, index) => (
+                {analysis.analyses.map((cover, index) => (
                   <div key={index} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                     {/* Cover image */}
                     <div className="aspect-[2/3] bg-muted relative overflow-hidden">

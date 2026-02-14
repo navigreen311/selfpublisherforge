@@ -1,203 +1,98 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "@/hooks/use-translations";
-import {
-  useCompetitorAlerts,
-  useAlertHistory,
-  useDeleteAlert,
-  useUpdateAlert,
-} from "@/modules/competitors/hooks";
-import type { CompetitorAlert } from "@/modules/competitors/hooks";
-import { CreateAlertModal } from "./CreateAlertModal";
-import { AlertHistory } from "./AlertHistory";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, Plus, Pencil, X } from "lucide-react";
+import { ThumbsUp, Loader2, CheckCircle2 } from "lucide-react";
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+interface CoverOption {
+  id: string;
+  imageUrl: string;
+  label: string;
+}
 
-export function AlertsPanel() {
-  const t = useTranslations("competitors");
+interface ABTestVotePageProps {
+  testName: string;
+  covers: CoverOption[];
+  onVote: (coverId: string) => Promise<void>;
+  hasVoted?: boolean;
+  votedCoverId?: string;
+}
 
-  // ---- data hooks ----
-  const { data: alerts = [], isLoading: alertsLoading } = useCompetitorAlerts();
-  const { data: historyData, isLoading: historyLoading } = useAlertHistory();
-  const deleteMutation = useDeleteAlert();
-  const updateMutation = useUpdateAlert();
+export function ABTestVotePageComponent({
+  testName,
+  covers,
+  onVote,
+  hasVoted = false,
+  votedCoverId,
+}: ABTestVotePageProps) {
+  const [voting, setVoting] = useState<string | null>(null);
 
-  // ---- local state ----
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingAlert, setEditingAlert] = useState<CompetitorAlert | null>(null);
-
-  // ---- handlers ----
-  function handleEdit(alert: CompetitorAlert) {
-    setEditingAlert(alert);
-    setShowCreateModal(true);
-  }
-
-  function handleDelete(alertId: string) {
-    deleteMutation.mutate(alertId);
-  }
-
-  function handleToggleActive(alert: CompetitorAlert) {
-    updateMutation.mutate({
-      id: alert.id,
-      updates: { active: !alert.active },
-    });
-  }
-
-  function handleCloseModal() {
-    setShowCreateModal(false);
-    setEditingAlert(null);
-  }
-
-  const activeAlerts = alerts.filter((a) => a.active !== false);
-  const historyEvents = historyData?.events ?? [];
+  const handleVote = async (coverId: string) => {
+    if (hasVoted) return;
+    setVoting(coverId);
+    try {
+      await onVote(coverId);
+    } finally {
+      setVoting(null);
+    }
+  };
 
   return (
-    <div className="space-y-8">
-      {/* ---- Header ---- */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">{t("alerts.title")}</h2>
-          <p className="text-sm text-muted-foreground">{t("alerts.subtitle")}</p>
+    <div className="min-h-screen bg-background flex flex-col items-center py-12 px-4">
+      <div className="max-w-4xl w-full space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold">Which cover do you prefer?</h1>
+          <p className="text-muted-foreground">{testName}</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t("alerts.createAlert")}
-        </Button>
-      </div>
 
-      {/* ---- Active Alerts ---- */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold">
-          {t("alerts.activeAlerts")}
-          {alerts.length > 0 && (
-            <span className="ml-2 text-muted-foreground font-normal">
-              {t("alerts.activeCount", { count: activeAlerts.length, total: alerts.length })}
-            </span>
-          )}
-        </h3>
-
-        {alertsLoading ? (
-          <div className="space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-20" />
-            ))}
-          </div>
-        ) : alerts.length === 0 ? (
-          <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
-            {t("alerts.noAlerts")}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {alerts.map((alert) => (
-              <div
-                key={alert.id}
-                className="rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50"
-              >
-                {/* Row 1: icon + name + status badge + actions */}
-                <div className="flex items-center gap-3">
-                  <Bell className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-
-                  <span className="font-medium text-sm truncate">
-                    {alert.name ?? alert.title}
-                  </span>
-
-                  <Badge
-                    variant="outline"
-                    className={
-                      alert.active !== false
-                        ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                    }
-                    onClick={() => handleToggleActive(alert)}
-                    role="button"
-                  >
-                    {alert.active !== false
-                      ? t("alerts.active")
-                      : t("alerts.paused")}
-                  </Badge>
-
-                  <div className="ml-auto flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(alert)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      <span className="sr-only">{t("alerts.edit")}</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(alert.id)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      <span className="sr-only">{t("alerts.delete")}</span>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Row 2: description */}
-                {alert.description && (
-                  <p className="mt-1.5 text-sm text-muted-foreground pl-7">
-                    {alert.description}
-                  </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {covers.map((cover) => (
+            <div
+              key={cover.id}
+              className={`rounded-lg border-2 overflow-hidden transition-all ${
+                votedCoverId === cover.id
+                  ? "border-primary ring-2 ring-primary/20"
+                  : "border-transparent hover:border-primary/50"
+              }`}
+            >
+              <div className="aspect-[2/3] bg-muted flex items-center justify-center">
+                {cover.imageUrl ? (
+                  <img
+                    src={cover.imageUrl}
+                    alt={cover.label}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-muted-foreground text-sm">{cover.label}</span>
                 )}
-
-                {/* Row 3: delivery channels + frequency */}
-                <div className="mt-2 flex flex-wrap items-center gap-2 pl-7">
-                  {alert.delivery_channels?.map((channel) => (
-                    <Badge key={channel} variant="secondary" className="text-xs capitalize">
-                      {channel}
-                    </Badge>
-                  ))}
-
-                  {alert.check_frequency && (
-                    <span className="text-xs text-muted-foreground">
-                      {t("alerts.checks")}: {alert.check_frequency}
-                    </span>
-                  )}
-
-                  {alert.last_triggered_at && (
-                    <span className="text-xs text-muted-foreground">
-                      {t("alerts.triggers")}:{" "}
-                      {new Date(alert.last_triggered_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+              <div className="p-3">
+                <Button
+                  className="w-full"
+                  variant={votedCoverId === cover.id ? "default" : "outline"}
+                  disabled={hasVoted || voting !== null}
+                  onClick={() => handleVote(cover.id)}
+                >
+                  {voting === cover.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : votedCoverId === cover.id ? (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  ) : (
+                    <ThumbsUp className="h-4 w-4 mr-2" />
+                  )}
+                  {votedCoverId === cover.id ? "Voted!" : "Vote"}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
 
-      {/* ---- Alert History ---- */}
-      <section className="space-y-3">
-        {historyLoading ? (
-          <div className="space-y-2">
-            {[...Array(2)].map((_, i) => (
-              <Skeleton key={i} className="h-14" />
-            ))}
-          </div>
-        ) : (
-          <AlertHistory events={historyEvents} />
+        {hasVoted && (
+          <p className="text-center text-sm text-muted-foreground">
+            Thanks for voting! Your feedback helps choose the best cover.
+          </p>
         )}
-      </section>
-
-      {/* ---- Create / Edit Modal ---- */}
-      <CreateAlertModal
-        open={showCreateModal}
-        onClose={handleCloseModal}
-        editAlert={editingAlert}
-      />
+      </div>
     </div>
   );
 }

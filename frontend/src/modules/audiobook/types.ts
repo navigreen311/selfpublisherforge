@@ -193,6 +193,14 @@ export interface CreateAudiobookProjectPayload {
   sample_rate?: number;
   bit_rate?: number;
   channels?: number;
+  narration_style?: {
+    pacing?: number;
+    paragraph_pause?: number;
+    chapter_pause?: number;
+    emphasis?: string;
+  };
+  narration_speed?: number;
+  budget_limit?: number;
 }
 
 // Request payload for creating an audiobook from creation wizard

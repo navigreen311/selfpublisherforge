@@ -353,6 +353,9 @@ export function useExportAudiobook(projectId: string) {
     },
     onError: (error) => {
       toast.error(extractApiError(error));
+    },
+  });
+}
 
 // Export specifically for ACX platform
 export function useExportForACX(projectId: string) {
@@ -372,9 +375,6 @@ export function useExportForACX(projectId: string) {
     },
     onError: (error) => {
       toast.error(extractApiError(error));
-    },
-  });
-}
     },
   });
 }

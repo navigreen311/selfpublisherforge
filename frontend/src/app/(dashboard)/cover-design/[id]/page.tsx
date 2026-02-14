@@ -45,7 +45,7 @@ export default function CoverDetailPage() {
 
   const handleAddText = useCallback(() => {
     const newObject: EditorObject = {
-      id: \`text-\${Date.now()}\`,
+      id: `text-${Date.now()}`,
       type: "text",
       x: 100,
       y: 100,

@@ -1,1 +1,55 @@
-InVzZSBjbGllbnQiOwoKaW1wb3J0IHsgdXNlU3RhdGUgfSBmcm9tICJyZWFjdCI7CmltcG9ydCB7IEVkaXRvck9iamVjdCB9IGZyb20gIi4vQ292ZXJFZGl0b3IiOwppbXBvcnQgeyBFeWUsIEV5ZU9mZiwgTG9jaywgVW5sb2NrLCBUeXBlLCBJbWFnZSwgU3F1YXJlIH0gZnJvbSAibHVjaWRlLXJlYWN0IjsKCmludGVyZmFjZSBMYXllcnNQYW5lbFByb3BzIHsKICBvYmplY3RzOiBFZGl0b3JPYmplY3RbXTsKICBzZWxlY3RlZE9iamVjdElkOiBzdHJpbmcgfCBudWxsOwogIG9uU2VsZWN0PzogKG9iamVjdElkOiBzdHJpbmcgfCBudWxsKSA9PiB2b2lkOwogIG9uVXBkYXRlPzogKG9iamVjdElkOiBzdHJpbmcsIHByb3BlcnRpZXM6IFBhcnRpYWw8RWRpdG9yT2JqZWN0PikgPT4gdm9pZDsKfQoKZXhwb3J0IGZ1bmN0aW9uIExheWVyc1BhbmVsKHsgb2JqZWN0cywgc2VsZWN0ZWRPYmplY3RJZCwgb25TZWxlY3QsIG9uVXBkYXRlIH06IExheWVyc1BhbmVsUHJvcHMpIHsKICBjb25zdCBbc2hvd0xheWVycywgc2V0U2hvd0xheWVyc10gPSB1c2VTdGF0ZSh0cnVlKTsKCiAgcmV0dXJuICgKICAgIDxkaXYgY2xhc3NOYW1lPSJib3JkZXItdCBiZy1jYXJkIj4KICAgICAgPGRpdiBjbGFzc05hbWU9InAtMyBib3JkZXItYiI+CiAgICAgICAgPGJ1dHRvbiBvbkNsaWNrPXsoKSA9PiBzZXRTaG93TGF5ZXJzKCFzaG93TGF5ZXJzKX0gY2xhc3NOYW1lPSJ0ZXh0LXNtIGZvbnQtbWVkaXVtIj4KICAgICAgICAgIExheWVycyAoe29iamVjdHMubGVuZ3RofSkKICAgICAgICA8L2J1dHRvbj4KICAgICAgPC9kaXY+CiAgICAgIHtzaG93TGF5ZXJzICYmICgKICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ibWF4LWgtNjAgb3ZlcmZsb3cteS1hdXRvIj4KICAgICAgICAgIHtvYmplY3RzLmxlbmd0aCA9PT0gMCA/ICgKICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9InAtNiB0ZXh0LWNlbnRlciI+CiAgICAgICAgICAgICAgPHAgY2xhc3NOYW1lPSJ0ZXh0LXNtIHRleHQtbXV0ZWQtZm9yZWdyb3VuZCI+Tm8gbGF5ZXJzIHlldDwvcD4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICApIDogKAogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iZGl2aWRlLXkiPgogICAgICAgICAgICAgIHtvYmplY3RzLm1hcCgob2JqKSA9PiAoCiAgICAgICAgICAgICAgICA8ZGl2CiAgICAgICAgICAgICAgICAgIGtleT17b2JqLmlkfQogICAgICAgICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiBvblNlbGVjdD8uKG9iai5pZCl9CiAgICAgICAgICAgICAgICAgIGNsYXNzTmFtZT17YGZsZXggaXRlbXMtY2VudGVyIGdhcC0zIHB4LTMgcHktMiBjdXJzb3ItcG9pbnRlciBob3ZlcjpiZy1hY2NlbnQgJHsKICAgICAgICAgICAgICAgICAgICBvYmouaWQgPT09IHNlbGVjdGVkT2JqZWN0SWQgPyAiYmctcHJpbWFyeS8xMCIgOiAiIgogICAgICAgICAgICAgICAgICB9YH0KICAgICAgICAgICAgICAgID4KICAgICAgICAgICAgICAgICAgPHA gY2xhc3NOYW1lPSJ0ZXh0LXNtIGZsZXgtMSI+e29iai50eXBlfTwvcD4KICAgICAgICAgICAgICAgICAgPGJ1dHRvbgogICAgICAgICAgICAgICAgICAgIG9uQ2xpY2s9eyhlKSA9PiB7IGUuc3RvcFByb3BhZ2F0aW9uKCk7IG9uVXBkYXRlPy4ob2JqLmlkLCB7IHZpc2libGU6ICFvYmoudmlzaWJsZSB9KTsgfX0KICAgICAgICAgICAgICAgICAgICBjbGFzc05hbWU9InAtMSIKICAgICAgICAgICAgICAgICAgPgogICAgICAgICAgICAgICAgICAgIHtvYmoudmlzaWJsZSA/IDxFeWUgY2xhc3NOYW1lPSJoLTQgdy00IiAvPiA6IDxFeWVPZmYgY2xhc3NOYW1lPSJoLTQgdy00IiAvPn0KICAgICAgICAgICAgICAgICAgPC9idXR0b24+CiAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICApKX0KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICApfQogICAgICAgIDwvZGl2PgogICAgICApfQogICAgPC9kaXY+CiAgKTsKfQo=
+"use client";
+
+import { useState } from "react";
+import { EditorObject } from "./CoverEditor";
+import { Eye, EyeOff, Lock, Unlock, Type, Image, Square } from "lucide-react";
+
+interface LayersPanelProps {
+  objects: EditorObject[];
+  selectedObjectId: string | null;
+  onSelect?: (objectId: string | null) => void;
+  onUpdate?: (objectId: string, properties: Partial<EditorObject>) => void;
+}
+
+export function LayersPanel({ objects, selectedObjectId, onSelect, onUpdate }: LayersPanelProps) {
+  const [showLayers, setShowLayers] = useState(true);
+
+  return (
+    <div className="border-t bg-card">
+      <div className="p-3 border-b">
+        <button onClick={() => setShowLayers(!showLayers)} className="text-sm font-medium">
+          Layers ({objects.length})
+        </button>
+      </div>
+      {showLayers && (
+        <div className="max-h-60 overflow-y-auto">
+          {objects.length === 0 ? (
+            <div className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">No layers yet</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {objects.map((obj) => (
+                <div
+                  key={obj.id}
+                  onClick={() => onSelect?.(obj.id)}
+                  className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-accent ${
+                    obj.id === selectedObjectId ? "bg-primary/10" : ""
+                  }`}
+                >
+                  <p className="text-sm flex-1">{obj.type}</p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onUpdate?.(obj.id, { visible: !obj.visible }); }}
+                    className="p-1"
+                  >
+                    {obj.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

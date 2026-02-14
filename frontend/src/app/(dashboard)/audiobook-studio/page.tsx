@@ -63,7 +63,7 @@ export default function AudiobookStudioPage() {
 
     return {
       totalProjects: projects.length,
-      completedProjects: projects.filter((p) => p.status === "complete" || p.status === "published").length,
+      completedProjects: projects.filter((p) => p.status === "completed" || p.status === "mastered").length,
       totalDuration: projects.reduce((sum, p) => sum + (p.total_duration_seconds ?? 0), 0),
       totalCost: projects.reduce((sum, p) => sum + (p.total_cost_usd ?? 0), 0),
     };

@@ -10,7 +10,6 @@
  */
 
 import { useApiQuery } from "@/hooks/use-api";
-import { api } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,18 +79,14 @@ export function useAnalyzeCompetitors({
   subcategory,
   enabled = true,
 }: UseAnalyzeCompetitorsParams) {
+  const params: Record<string, unknown> = {};
+  if (genre) params.genre = genre;
+  if (subcategory) params.subcategory = subcategory;
+
   return useApiQuery<CompetitorCoversAnalysis>({
     queryKey: ["competitor-covers", genre, subcategory],
-    queryFn: async () => {
-      const params: Record<string, string> = {};
-      if (genre) params.genre = genre;
-      if (subcategory) params.subcategory = subcategory;
-
-      const response = await api.get("/api/v1/cover-design/analyze-competitors", {
-        params,
-      });
-      return response.data;
-    },
+    url: "/api/v1/cover-design/analyze-competitors",
+    params,
     enabled: enabled && !!genre,
   });
 }

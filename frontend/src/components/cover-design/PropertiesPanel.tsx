@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { fabric } from 'fabric';
+import { Canvas, FabricObject, Shadow } from 'fabric';
 
 interface PropertiesPanelProps {
-  canvas: fabric.Canvas | null;
-  selectedObject: fabric.Object | null;
+  canvas: Canvas | null;
+  selectedObject: FabricObject | null;
 }
 
 const BOOK_FONTS = [
@@ -73,7 +73,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ canvas, select
     const newShowShadow = !showShadow;
     setShowShadow(newShowShadow);
     if (newShowShadow) {
-      obj.set('shadow', new fabric.Shadow({
+      obj.set('shadow', new Shadow({
         color: properties.shadowColor || '#000000',
         offsetX: properties.shadowOffsetX || 5,
         offsetY: properties.shadowOffsetY || 5,
@@ -88,7 +88,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ canvas, select
   const updateShadow = (key: string, value: any) => {
     if (!selectedObject || !canvas) return;
     const obj = selectedObject as any;
-    const shadow = obj.shadow || new fabric.Shadow({ color: '#000000', offsetX: 0, offsetY: 0, blur: 0 });
+    const shadow = obj.shadow || new Shadow({ color: '#000000', offsetX: 0, offsetY: 0, blur: 0 });
     shadow[key] = value;
     obj.set('shadow', shadow);
     const propKey = 'shadow' + key.charAt(0).toUpperCase() + key.slice(1);

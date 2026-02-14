@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { fabric } from "fabric";
+import { Canvas, FabricObject } from "fabric";
 import {
   ArrowLeft,
   Save,
@@ -48,7 +48,7 @@ const AUTO_SAVE_DELAY = 5000;
 export function CoverEditor({ coverId }: CoverEditorProps) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const fabricCanvasRef = useRef<Canvas | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -58,10 +58,10 @@ export function CoverEditor({ coverId }: CoverEditorProps) {
   const [showBleedGuides, setShowBleedGuides] = useState(true);
   const [showSafeZone, setShowSafeZone] = useState(true);
   const [showLayers, setShowLayers] = useState(false);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
+  const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [layers, setLayers] = useState<fabric.Object[]>([]);
+  const [layers, setLayers] = useState<FabricObject[]>([]);
 
   if (isPending) {
     return (

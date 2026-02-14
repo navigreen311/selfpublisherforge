@@ -37,7 +37,7 @@ import {
 import { useAudiobookProjects } from "../hooks";
 
 // ---------------------------------------------------------------------------
-// Types (local — matches the shape returned by the API / useAudiobookProjects)
+// Types (local  matches the shape returned by the API / useAudiobookProjects)
 // ---------------------------------------------------------------------------
 
 type ProjectStatus = "configuring" | "generating" | "reviewing" | "mastering" | "complete";
@@ -440,7 +440,7 @@ export function AudiobookProjectList({ onCreateNew }: AudiobookProjectListProps)
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("date-newest");
 
-  // Fetch all projects (first page — large page size for client-side filtering)
+  // Fetch all projects (first page  large page size for client-side filtering)
   const { data, isLoading } = useAudiobookProjects(1, 100);
 
   const projects: AudiobookProjectItem[] = useMemo(() => {
@@ -453,12 +453,12 @@ export function AudiobookProjectList({ onCreateNew }: AudiobookProjectListProps)
       status: (item.status ?? "configuring") as ProjectStatus,
       total_duration: item.total_duration_seconds ?? 0,
       estimated_cost: item.total_cost_usd ?? 0,
-      actual_cost: item.actual_cost_usd ?? 0,
-      budget: item.budget_usd ?? 100,
+      actual_cost: item.total_cost_usd ?? 0,
+      budget: (item as unknown as Record<string, number>).budget_usd ?? 100,
       chapter_count: item.total_chapters ?? 0,
       completed_chapters: item.completed_chapters ?? 0,
-      narrator_name: item.narrator_name,
-      voice_name: item.voice_name,
+      narrator_name: item.narrator,
+      voice_name: item.voice_id,
       created_at: item.created_at ?? "",
       updated_at: item.updated_at ?? "",
     }));
@@ -511,7 +511,7 @@ export function AudiobookProjectList({ onCreateNew }: AudiobookProjectListProps)
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
-            placeholder="Search by title…"
+            placeholder="Search by title"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"

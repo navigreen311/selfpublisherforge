@@ -1,50 +1,63 @@
 "use client";
 
-import Link from "next/link";
-import { ImageIcon, Loader2 } from "lucide-react";
-import type { Cover } from "../types";
+import { Type, Image, Square, Minus, ZoomIn, ZoomOut, Undo2, Redo2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-interface CoverCardProps {
-  cover: Cover;
+interface EditorToolbarProps {
+  onAddText?: () => void;
+  onAddImage?: () => void;
+  onAddShape?: () => void;
+  onAddLine?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  hasSelection?: boolean;
 }
 
-const statusColors: Record<Cover["status"], string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  generating: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-};
-
-const statusLabels: Record<Cover["status"], string> = {
-  pending: "Pending",
-  generating: "Generating",
-  completed: "Ready",
-  failed: "Failed",
-};
-
-export function CoverCard({ cover }: CoverCardProps) {
-  const formattedDate = cover.created_at
-    ? new Date(cover.created_at).toLocaleDateString()
-    : "";
-
+export function EditorToolbar({
+  onAddText,
+  onAddImage,
+  onAddShape,
+  onAddLine,
+  onZoomIn,
+  onZoomOut,
+  onUndo,
+  onRedo,
+  hasSelection = false,
+}: EditorToolbarProps) {
   return (
-    <Link
-      href={`/cover-design/${cover.id}`}
-      className="block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-card"
-    >
-      {/* Cover image */}
-      <div className="aspect-[2/3] bg-muted relative overflow-hidden">
-        {cover.status === "generating" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        )}
-        {cover.thumbnail_url || cover.image_url ? (
-          <img
-            src={cover.thumbnail_url || cover.image_url || ""}
-            alt={cover.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <ImageIcon className="h-12 w-12" />
+    <div className="flex items-center gap-1 flex-wrap">
+      <div className="flex items-center gap-1 border-r pr-2 mr-2">
+        <Button variant="ghost" size="sm" onClick={onAddText} title="Add Text">
+          <Type className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onAddImage} title="Add Image">
+          <Image className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onAddShape} title="Add Shape">
+          <Square className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onAddLine} title="Add Line">
+          <Minus className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-1 border-r pr-2 mr-2">
+        <Button variant="ghost" size="sm" onClick={onZoomOut} title="Zoom Out">
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onZoomIn} title="Zoom In">
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={onUndo} title="Undo">
+          <Undo2 className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onRedo} title="Redo">
+          <Redo2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}

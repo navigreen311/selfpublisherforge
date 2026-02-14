@@ -1,1 +1,66 @@
-InVzZSBjbGllbnQiOwoKaW1wb3J0IHsgdXNlU3RhdGUsIHVzZUVmZmVjdCB9IGZyb20gInJlYWN0IjsKaW1wb3J0IHsgRWRpdG9yT2JqZWN0IH0gZnJvbSAiLi9Db3ZlckVkaXRvciI7CgppbnRlcmZhY2UgUHJvcGVydGllc1BhbmVsUHJvcHMgewogIHNlbGVjdGVkT2JqZWN0OiBFZGl0b3JPYmplY3QgfCBudWxsOwogIG9uVXBkYXRlPzogKG9iamVjdElkOiBzdHJpbmcsIHByb3BlcnRpZXM6IFBhcnRpYWw8RWRpdG9yT2JqZWN0PikgPT4gdm9pZDsKfQoKZXhwb3J0IGZ1bmN0aW9uIFByb3BlcnRpZXNQYW5lbCh7IHNlbGVjdGVkT2JqZWN0LCBvblVwZGF0ZSB9OiBQcm9wZXJ0aWVzUGFuZWxQcm9wcykgewogIGlmICghc2VsZWN0ZWRPYmplY3QpIHsKICAgIHJldHVybiAoCiAgICAgIDxkaXYgY2xhc3NOYW1lPSJ3LTgwIHAtNiBib3JkZXItbCBiZy1jYXJkIj4KICAgICAgICA8cCBjbGFzc05hbWU9InRleHQtc20gdGV4dC1tdXRlZC1mb3JlZ3JvdW5kIHRleHQtY2VudGVyIj4KICAgICAgICAgIFNlbGVjdCBhbiBvYmplY3QgdG8gdmlldyBwcm9wZXJ0aWVzCiAgICAgICAgPC9wPgogICAgICA8L2Rpdj4KICAgICk7CiAgfQoKICByZXR1cm4gKAogICAgPGRpdiBjbGFzc05hbWU9IncCW0MCBwLTYgYm9yZGVyLWwgYmctY2FyZCBvdmVyZmxvdy15LWF1dG8iPgogICAgICA8aDMgY2xhc3NOYW1lPSJ0ZXh0LWxnIGZvbnQtc2VtaWJvbGQgbWItNCI+UHJvcGVydGllczwvaDM+CiAgICAgIDxkaXYgY2xhc3NOYW1lPSJzcGFjZS15LTYiPgogICAgICAgIDxkaXY+CiAgICAgICAgICA8bGFiZWwgY2xhc3NOYW1lPSJ0ZXh0LXhzIGZvbnQtbWVkaXVtIHRleHQtbXV0ZWQtZm9yZWdyb3VuZCB1cHBlcmNhc2UiPlR5cGU8L2xhYmVsPgogICAgICAgICAgPHAgY2xhc3NOYW1lPSJ0ZXh0LXNtIGNhcGl0YWxpemUgbXQtMSI+e3NlbGVjdGVkT2JqZWN0LnR5cGV9PC9wPgogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXY+CiAgICAgICAgICA8bGFiZWwgY2xhc3NOYW1lPSJ0ZXh0LXNtIGZvbnQtbWVkaXVtIj5Qb3NpdGlvbjwvbGFiZWw+CiAgICAgICAgICA8cCBjbGFzc05hbWU9InRleHQteHMgdGV4dC1tdXRlZC1mb3JlZ3JvdW5kIG10LTEiPgogICAgICAgICAgICBYOiB7c2VsZWN0ZWRPYmplY3QueH0sIFk6IHtzZWxlY3RlZE9iamVjdC55fQogICAgICAgICAgPC9wPgogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXY+CiAgICAgICAgICA8bGFiZWwgY2xhc3NOYW1lPSJ0ZXh0LXNtIGZvbnQtbWVkaXVtIj5TaXplPC9sYWJlbD4KICAgICAgICAgIDxwIGNsYXNzTmFtZT0idGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQgbXQtMSI+CiAgICAgICAgICAgIFc6IHtzZWxlY3RlZE9iamVjdC53aWR0aH0sIEg6IHtzZWxlY3RlZE9iamVjdC5oZWlnaHR9CiAgICAgICAgICA8L3A+CiAgICAgICAgPC9kaXY+CiAgICAgIDwvZGl2PgogICAgPC9kaXY+CiAgKTsKfQo=
+"use client";
+
+import { EditorObject } from "./CoverEditor";
+
+interface PropertiesPanelProps {
+  selectedObject: EditorObject | null;
+  onUpdate?: (objectId: string, properties: Partial<EditorObject>) => void;
+}
+
+export function PropertiesPanel({ selectedObject, onUpdate }: PropertiesPanelProps) {
+  if (!selectedObject) {
+    return (
+      <div className="w-80 p-6 border-l bg-card">
+        <p className="text-sm text-muted-foreground text-center">
+          Select an object to view properties
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-80 p-6 border-l bg-card overflow-y-auto">
+      <h3 className="text-lg font-semibold mb-4">Properties</h3>
+      <div className="space-y-6">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase">Type</label>
+          <p className="text-sm capitalize mt-1">{selectedObject.type}</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Position</label>
+          <p className="text-xs text-muted-foreground mt-1">
+            X: {selectedObject.x}, Y: {selectedObject.y}
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Size</label>
+          <p className="text-xs text-muted-foreground mt-1">
+            W: {selectedObject.width}, H: {selectedObject.height}
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Opacity</label>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={selectedObject.opacity}
+            onChange={(e) => onUpdate?.(selectedObject.id, { opacity: parseFloat(e.target.value) })}
+            className="w-full mt-1"
+          />
+          <p className="text-xs text-muted-foreground">{Math.round(selectedObject.opacity * 100)}%</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Rotation</label>
+          <input
+            type="number"
+            value={selectedObject.rotation}
+            onChange={(e) => onUpdate?.(selectedObject.id, { rotation: parseInt(e.target.value) || 0 })}
+            className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

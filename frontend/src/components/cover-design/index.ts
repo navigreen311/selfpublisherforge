@@ -2,4 +2,4 @@
  * Cover Design components - centralized exports
  */
 
-export { CompetitorCovers } from "./CompetitorCovers";
+export { CompetitorCard } from "./CompetitorCovers";
