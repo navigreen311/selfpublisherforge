@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.contracts import PaginatedResponse, SuccessResponse
@@ -420,3 +421,144 @@ async def send_arc_copies(
             detail="ARC campaign not found",
         )
     return {"data": campaign}
+
+
+# ---------------------------------------------------------------------------
+# Enhanced Launch Plan endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/launch-plans/{plan_id}/tasks/{task_id}")
+async def toggle_launch_plan_task(
+    plan_id: uuid.UUID,
+    task_id: str,
+    done: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.marketing.launch_planner import toggle_plan_task
+
+    result = await toggle_plan_task(db, plan_id, current_user["org_id"], task_id, done)
+    if not result:
+        raise HTTPException(status_code=404, detail="Plan or task not found")
+    return {"data": result}
+
+
+# ---------------------------------------------------------------------------
+# Enhanced Email endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/email-sequences/{sequence_id}/emails/{email_id}")
+async def update_email(
+    sequence_id: uuid.UUID,
+    email_id: uuid.UUID,
+    subject: str | None = None,
+    body_html: str | None = None,
+    delay_days: int | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.marketing.email_builder import update_email_in_sequence
+
+    result = await update_email_in_sequence(
+        db, sequence_id, current_user["org_id"], email_id,
+        subject=subject, body_html=body_html, delay_days=delay_days,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Email not found")
+    return {"data": result}
+
+
+# ---------------------------------------------------------------------------
+# Enhanced Social endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/social/posts")
+async def list_social_posts(
+    platform: str | None = None,
+    status_filter: str | None = Query(None, alias="status"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.models.marketing import SocialPost
+
+    stmt = select(SocialPost).where(
+        SocialPost.org_id == current_user["org_id"],
+        SocialPost.deleted_at.is_(None),
+    )
+    if platform:
+        stmt = stmt.where(SocialPost.platform == platform)
+    if status_filter:
+        stmt = stmt.where(SocialPost.status == status_filter)
+    stmt = stmt.order_by(SocialPost.scheduled_at.desc().nullslast())
+    result = await db.execute(stmt)
+    posts = result.scalars().all()
+    return {
+        "data": [
+            {
+                "id": str(p.id),
+                "platform": str(p.platform),
+                "content": p.content,
+                "status": str(p.status),
+                "scheduled_at": p.scheduled_at.isoformat() if p.scheduled_at else None,
+                "hashtags": p.hashtags,
+            }
+            for p in posts
+        ]
+    }
+
+
+@router.patch("/social/posts/{post_id}")
+async def update_social_post(
+    post_id: uuid.UUID,
+    content: str | None = None,
+    hashtags: list[str] | None = None,
+    scheduled_at: datetime | None = None,
+    status_val: str | None = Query(None, alias="status"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.marketing.social_generator import update_social_post as do_update
+
+    result = await do_update(
+        db, post_id, current_user["org_id"],
+        content=content, hashtags=hashtags,
+        scheduled_at=scheduled_at, status=status_val,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return {"data": result}
+
+
+# ---------------------------------------------------------------------------
+# Enhanced ARC endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/arc-campaigns/{campaign_id}/recipients")
+async def add_arc_recipients(
+    campaign_id: uuid.UUID,
+    recipients: list[dict],
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.marketing.arc_manager import ARCManager
+
+    mgr = ARCManager(db)
+    result = await mgr.add_recipients(campaign_id, current_user["org_id"], recipients)
+    return {"data": [{"id": str(r.id), "name": r.name, "email": r.email} for r in result]}
+
+
+@router.post("/arc-campaigns/{campaign_id}/send-reminder")
+async def send_arc_reminder(
+    campaign_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.marketing.arc_manager import ARCManager
+
+    mgr = ARCManager(db)
+    pending = await mgr.get_pending_follow_ups(current_user["org_id"])
+    return {"data": {"campaign_id": str(campaign_id), "pending_follow_ups": len(pending)}}

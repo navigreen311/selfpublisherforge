@@ -1,144 +1,102 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { useTranslations } from "@/hooks/use-translations";
-import { useAnalyzeListing } from "@/modules/product-page/hooks";
-import { ListingScoreCard } from "@/modules/product-page/components/ListingScoreCard";
-import { MobilePreview } from "@/modules/product-page/components/MobilePreview";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ListingAnalysisForm } from "@/modules/product-page/components/ListingAnalysisForm";
+import { ListingAnalysisResults } from "@/modules/product-page/components/ListingAnalysisResults";
+import { MobileCheckForm, type MobileCheckFormData } from "@/modules/product-page/components/MobileCheckForm";
+import { MobileCheckResults } from "@/modules/product-page/components/MobileCheckResults";
+import { BlurbGeneratorTab } from "@/modules/product-page/components/BlurbGeneratorTab";
+import { KeywordOptimizerTab } from "@/modules/product-page/components/KeywordOptimizerTab";
+import { APlusContentTab } from "@/modules/product-page/components/APlusContentTab";
+import type { ListingAnalysisResult } from "@/modules/product-page/types";
+import type { MobileCheckResult } from "@/modules/product-page/types";
 
 export default function ProductPageLab() {
   const t = useTranslations("product-page");
-  const [asinInput, setAsinInput] = useState("");
-  const [urlInput, setUrlInput] = useState("");
-  const [activeTab, setActiveTab] = useState<"analyze" | "mobile">("analyze");
+  const [activeTab, setActiveTab] = useState("analyze");
 
-  const analyzeMutation = useAnalyzeListing();
+  // Listing analysis state
+  const [analysisResult, setAnalysisResult] = useState<ListingAnalysisResult | null>(null);
 
-  const handleAnalyze = () => {
-    const asinMatch = asinInput.match(/^[A-Z0-9]{10}$/i);
-    analyzeMutation.mutate({
-      asin: asinMatch ? asinInput.toUpperCase() : undefined,
-      url: !asinMatch && urlInput ? urlInput : undefined,
-    });
+  // Mobile check state
+  const [mobileResult, setMobileResult] = useState<MobileCheckResult | null>(null);
+  const [mobileFormData, setMobileFormData] = useState<{
+    title: string;
+    author: string;
+    price?: number;
+  }>({ title: "", author: "" });
+
+  const handleAnalysisComplete = (result: ListingAnalysisResult) => {
+    setAnalysisResult(result);
   };
 
-  const tabs = [
-    { key: "analyze" as const, label: t("tabs.analyze") },
-    { key: "mobile" as const, label: t("tabs.mobile") },
-  ];
+  const handleMobileCheckComplete = (result: MobileCheckResult) => {
+    setMobileResult(result);
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-muted-foreground mt-1">
-          {t("subtitle")}
-        </p>
+        <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
       </div>
 
-      {/* Tab navigation */}
-      <div className="border-b border">
-        <nav className="flex gap-4" role="tablist" aria-label="Product page tools">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              role="tab"
-              id={`tab-${tab.key}`}
-              aria-selected={activeTab === tab.key}
-              aria-controls={`tabpanel-${tab.key}`}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                "pb-2 text-sm font-medium border-b-2 -mb-px",
-                activeTab === tab.key
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="analyze">Listing Analysis</TabsTrigger>
+          <TabsTrigger value="mobile">Mobile Check</TabsTrigger>
+          <TabsTrigger value="blurb">Blurb Generator</TabsTrigger>
+          <TabsTrigger value="keywords">Keyword Optimizer</TabsTrigger>
+          <TabsTrigger value="aplus">A+ Content</TabsTrigger>
+        </TabsList>
 
-      {/* Listing analysis tab */}
-      {activeTab === "analyze" && (
-        <div
-          role="tabpanel"
-          id="tabpanel-analyze"
-          aria-labelledby="tab-analyze"
-          className="space-y-6"
-        >
-          {/* Input */}
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">{t("analyzeForm.title")}</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label htmlFor="asin-input" className="block text-sm font-medium text-foreground mb-1">
-                  {t("analyzeForm.asinLabel")}
-                </label>
-                <input
-                  id="asin-input"
-                  type="text"
-                  value={asinInput}
-                  onChange={(e) => setAsinInput(e.target.value)}
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  placeholder={t("analyzeForm.asinPlaceholder")}
-                  maxLength={10}
-                />
-              </div>
-              <div>
-                <label htmlFor="url-input" className="block text-sm font-medium text-foreground mb-1">
-                  {t("analyzeForm.urlLabel")}
-                </label>
-                <input
-                  id="url-input"
-                  type="text"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  placeholder={t("analyzeForm.urlPlaceholder")}
-                />
-              </div>
-            </div>
-            <button
-              onClick={handleAnalyze}
-              disabled={(!asinInput && !urlInput) || analyzeMutation.isPending}
-              aria-label={analyzeMutation.isPending ? t("analyzeForm.analyzingAriaLabel") : t("analyzeForm.analyzeAriaLabel")}
-              className={cn(
-                "mt-4 rounded-md px-4 py-2 text-sm font-medium text-white",
-                !asinInput && !urlInput
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              )}
-            >
-              {analyzeMutation.isPending ? t("analyzeForm.analyzingButton") : t("analyzeForm.analyzeButton")}
-            </button>
-          </div>
-
-          {/* Results */}
-          {analyzeMutation.data && (
-            <ListingScoreCard analysis={analyzeMutation.data} />
+        {/* Listing Analysis tab */}
+        <TabsContent value="analyze" className="space-y-6">
+          <ListingAnalysisForm onAnalysisComplete={handleAnalysisComplete} />
+          {analysisResult && (
+            <ListingAnalysisResults
+              result={analysisResult}
+              onSwitchToBlurb={() => setActiveTab("blurb")}
+              onSwitchToKeywords={() => setActiveTab("keywords")}
+            />
           )}
+        </TabsContent>
 
-          {analyzeMutation.isError && (
-            <div role="alert" className="rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-              {t("errors.analyzeFailed")}
-            </div>
+        {/* Mobile Check tab */}
+        <TabsContent value="mobile" className="space-y-6">
+          <MobileCheckForm
+            onCheckComplete={(result, formData) => {
+              handleMobileCheckComplete(result);
+              setMobileFormData(formData);
+            }}
+          />
+          {mobileResult && (
+            <MobileCheckResults
+              result={mobileResult}
+              title={mobileFormData.title}
+              author={mobileFormData.author}
+              price={mobileFormData.price}
+            />
           )}
-        </div>
-      )}
+        </TabsContent>
 
-      {/* Mobile check tab */}
-      {activeTab === "mobile" && (
-        <div
-          role="tabpanel"
-          id="tabpanel-mobile"
-          aria-labelledby="tab-mobile"
-        >
-          <MobilePreview />
-        </div>
-      )}
+        {/* Blurb Generator tab */}
+        <TabsContent value="blurb">
+          <BlurbGeneratorTab />
+        </TabsContent>
+
+        {/* Keyword Optimizer tab */}
+        <TabsContent value="keywords">
+          <KeywordOptimizerTab />
+        </TabsContent>
+
+        {/* A+ Content tab */}
+        <TabsContent value="aplus">
+          <APlusContentTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

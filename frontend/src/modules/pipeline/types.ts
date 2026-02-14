@@ -2,6 +2,20 @@ export type PipelineStatus = "draft" | "active" | "paused" | "completed" | "canc
 export type TaskType = "writing" | "editing" | "proofreading" | "formatting" | "review";
 export type TaskStatus = "pending" | "in_progress" | "blocked" | "completed" | "cancelled";
 
+export type TaskPriority = "high" | "medium" | "low";
+
+export interface ChecklistItem {
+  id: string;
+  label: string;
+  done: boolean;
+}
+
+export interface TaskLink {
+  label: string;
+  url: string;
+  type?: string;
+}
+
 export interface PipelineTask {
   id: string;
   pipeline_id: string;
@@ -15,6 +29,13 @@ export interface PipelineTask {
   depends_on: string[];
   completed_at?: string | null;
   position: number;
+  stage_id?: string | null;
+  priority?: TaskPriority | null;
+  checklist?: ChecklistItem[] | null;
+  links?: TaskLink[] | null;
+  blocked_by?: string[] | null;
+  metadata_json?: Record<string, unknown> | null;
+  order_index?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,3 +108,47 @@ export interface PipelineTemplate {
   created_at: string;
   updated_at: string;
 }
+
+// ── Stage-based pipeline ─────────────────────────────────────────────────
+
+export interface PipelineStage {
+  id: string;
+  pipeline_id: string;
+  org_id: string;
+  name: string;
+  order_index: number;
+  color?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  tasks: PipelineTask[];
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Activity & Automations ───────────────────────────────────────────────
+
+export interface ActivityEntry {
+  id: string;
+  pipeline_id: string;
+  task_id?: string | null;
+  action: string;
+  details?: Record<string, unknown> | null;
+  user_id?: string | null;
+  created_at: string;
+}
+
+export interface PipelineAutomation {
+  id: string;
+  pipeline_id: string;
+  trigger_type: string;
+  trigger_config: Record<string, unknown>;
+  action_type: string;
+  action_config: Record<string, unknown>;
+  enabled: boolean;
+  created_at: string;
+}
+
+// ── View helpers ─────────────────────────────────────────────────────────
+
+export type ViewMode = "board" | "list" | "timeline";
+export type PipelineTemplateName = "nonfiction" | "fiction" | "short_story" | "series_launch" | "blank";

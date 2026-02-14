@@ -7,6 +7,9 @@ import { useLaunchPlans, useEmailSequences, useSocialCalendar, useARCCampaigns, 
 import type { RecentActivityItem } from "@/modules/marketing/hooks";
 import { ARCTable } from "@/modules/marketing/components/ARCTable";
 import { SocialCalendar } from "@/modules/marketing/components/SocialCalendar";
+import { SocialPostGenerator } from "@/modules/marketing/components/SocialPostGenerator";
+import { SocialPostCard } from "@/modules/marketing/components/SocialPostCard";
+import { ARCCampaignWizard } from "@/modules/marketing/components/ARCCampaignWizard";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +55,7 @@ export default function MarketingDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [arcWizardOpen, setArcWizardOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -173,14 +177,33 @@ export default function MarketingDashboard() {
       )}
 
       {activeTab === "social" && (
-        <SocialCalendar calendar={socialCalendar} isLoading={socialLoading} />
+        <div className="space-y-6">
+          <SocialPostGenerator />
+          <SocialCalendar calendar={socialCalendar} isLoading={socialLoading} />
+          {/* Individual post cards for editing */}
+          {socialCalendar?.posts && socialCalendar.posts.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Post Details</h3>
+              {socialCalendar.posts.map((post) => (
+                <SocialPostCard key={post.id} post={post} />
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === "arc" && (
-        <ARCTable
-          campaigns={arcCampaigns?.items || []}
-          isLoading={arcLoading}
-        />
+        <>
+          <ARCCampaignWizard
+            open={arcWizardOpen}
+            onOpenChange={setArcWizardOpen}
+          />
+          <ARCTable
+            campaigns={arcCampaigns?.items || []}
+            isLoading={arcLoading}
+            onCreateCampaign={() => setArcWizardOpen(true)}
+          />
+        </>
       )}
     </div>
   );

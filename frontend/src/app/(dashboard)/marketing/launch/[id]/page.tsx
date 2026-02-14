@@ -1,76 +1,40 @@
 "use client";
 
 import { useCallback } from "react";
-import { useParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
 import { useLaunchPlan, useUpdateLaunchPlan } from "@/modules/marketing/hooks";
-import type { LaunchPlan, PhaseTask } from "@/modules/marketing/hooks";
-import { LaunchTimeline } from "@/modules/marketing/components/LaunchTimeline";
-import { api } from "@/lib/api";
-import { toast } from "sonner";
+import { LaunchPlanResults } from "@/modules/marketing/components/LaunchPlanResults";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "@/hooks/use-translations";
 
 export default function LaunchPlanDetailPage() {
   const t = useTranslations("marketing");
   const params = useParams();
+  const router = useRouter();
   const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
-  const queryClient = useQueryClient();
   const { data: plan, isLoading, error } = useLaunchPlan(id);
   const updateMutation = useUpdateLaunchPlan(id);
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "--";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const handleTaskStatusChange = useCallback(
-    async (taskId: string, newStatus: string) => {
-      const queryKey = ["marketing", "launch-plans", id];
-
-      // Snapshot the previous value for rollback on error
-      const previousPlan = queryClient.getQueryData<LaunchPlan>(queryKey);
-
-      // Optimistically update the local cache
-      queryClient.setQueryData<LaunchPlan>(queryKey, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          phases: old.phases.map((phase) => ({
-            ...phase,
-            tasks: phase.tasks.map((task) =>
-              task.id === taskId ? { ...task, status: newStatus as PhaseTask["status"] } : task
-            ),
-          })),
-        };
-      });
-
-      try {
-        await api.patch(
-          `/api/v1/marketing/launch-plans/${id}/tasks/${taskId}`,
-          { status: newStatus }
-        );
-        // Invalidate to refetch the latest server state
-        queryClient.invalidateQueries({ queryKey });
-      } catch (err) {
-        // Revert to the previous state on failure
-        if (previousPlan) {
-          queryClient.setQueryData<LaunchPlan>(queryKey, previousPlan);
-        }
-        toast.error(t("launchPlanDetail.updateTaskError"));
-      }
+  const handleStatusChange = useCallback(
+    (newStatus: "draft" | "active" | "completed" | "archived") => {
+      updateMutation.mutate({ status: newStatus });
     },
-    [id, queryClient]
+    [updateMutation]
   );
 
-  const handleStatusChange = (newStatus: "draft" | "active" | "completed" | "archived") => {
-    updateMutation.mutate({ status: newStatus });
-  };
+  const handleGenerateEmailSequence = useCallback(() => {
+    router.push("/marketing/email");
+  }, [router]);
+
+  const handleGenerateSocialPosts = useCallback(() => {
+    router.push("/marketing?tab=social");
+  }, [router]);
+
+  const handleCreateARCCampaign = useCallback(() => {
+    router.push("/marketing?tab=arc");
+  }, [router]);
 
   if (isLoading) {
     return (
@@ -99,22 +63,18 @@ export default function LaunchPlanDetailPage() {
     );
   }
 
-  const totalTasks = plan.phases.reduce((sum, p) => sum + p.tasks.length, 0);
-  const completedTasks = plan.phases.reduce(
-    (sum, p) => sum + p.tasks.filter((t) => t.status === "completed").length,
-    0
-  );
-  const completionPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  const statusColors: Record<string, string> = {
-    draft: "bg-gray-100 text-gray-700",
-    active: "bg-green-100 text-green-700",
-    completed: "bg-blue-100 text-blue-700",
-    archived: "bg-red-100 text-red-700",
-  };
-
   return (
     <div className="space-y-6">
+      {/* Back to Marketing link */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/marketing" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Marketing
+          </Link>
+        </Button>
+      </div>
+
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-500">
         <Link href="/marketing" className="hover:text-blue-600">
@@ -124,86 +84,36 @@ export default function LaunchPlanDetailPage() {
         <span className="text-gray-700">{t("launchPlanDetail.breadcrumb")}</span>
       </nav>
 
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{plan.title}</h1>
-            <span
-              className={`text-xs px-2 py-1 rounded-full font-medium ${
-                statusColors[plan.status] || ""
-              }`}
-            >
-              {plan.status}
-            </span>
-          </div>
-          {plan.description && (
-            <p className="text-gray-500 mt-2">{plan.description}</p>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          {plan.status === "draft" && (
-            <button
-              onClick={() => handleStatusChange("active")}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-              aria-label={t("launchPlanDetail.activatePlan")}
-            >
-              {t("launchPlanDetail.activatePlan")}
-            </button>
-          )}
-          {plan.status === "active" && (
-            <button
-              onClick={() => handleStatusChange("completed")}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-              aria-label={t("launchPlanDetail.markComplete")}
-            >
-              {t("launchPlanDetail.markComplete")}
-            </button>
-          )}
-        </div>
+      {/* Status Actions */}
+      <div className="flex justify-end gap-2">
+        {plan.status === "draft" && (
+          <Button
+            onClick={() => handleStatusChange("active")}
+            variant="default"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {t("launchPlanDetail.activatePlan")}
+          </Button>
+        )}
+        {plan.status === "active" && (
+          <Button
+            onClick={() => handleStatusChange("completed")}
+            variant="default"
+            size="sm"
+          >
+            {t("launchPlanDetail.markComplete")}
+          </Button>
+        )}
       </div>
 
-      {/* Plan Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">{t("launchPlanDetail.launchDate")}</div>
-          <div className="font-semibold mt-1">{formatDate(plan.launch_date)}</div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">{t("launchPlanDetail.genre")}</div>
-          <div className="font-semibold mt-1">{plan.genre || "--"}</div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">{t("launchPlanDetail.budget")}</div>
-          <div className="font-semibold mt-1">
-            {plan.budget ? `$${plan.budget.toLocaleString()}` : "--"}
-          </div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">{t("launchPlanDetail.totalTasks")}</div>
-          <div className="font-semibold mt-1">{totalTasks}</div>
-        </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm text-gray-500">{t("launchPlanDetail.completion")}</div>
-          <div className="font-semibold mt-1">{completionPercent}%</div>
-          <div className="w-full h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
-            <div
-              className="h-full bg-green-500 rounded-full transition-all"
-              style={{ width: `${completionPercent}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">{t("launchPlanDetail.launchTimeline")}</h2>
-        <LaunchTimeline
-          phases={plan.phases}
-          onTaskStatusChange={handleTaskStatusChange}
-        />
-      </div>
+      {/* Full LaunchPlanResults component */}
+      <LaunchPlanResults
+        plan={plan}
+        onGenerateEmailSequence={handleGenerateEmailSequence}
+        onGenerateSocialPosts={handleGenerateSocialPosts}
+        onCreateARCCampaign={handleCreateARCCampaign}
+      />
     </div>
   );
 }

@@ -10,8 +10,12 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from typing import Any
 from uuid import UUID
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.marketing import SocialPlatform
@@ -283,3 +287,69 @@ Respond ONLY with valid JSON:
             )
 
         return posts
+
+
+# ---------------------------------------------------------------------------
+# Enhanced helper functions
+# ---------------------------------------------------------------------------
+
+
+async def update_social_post(
+    db: AsyncSession,
+    post_id: uuid.UUID,
+    org_id: uuid.UUID,
+    content: str | None = None,
+    hashtags: list[str] | None = None,
+    scheduled_at=None,
+    status: str | None = None,
+) -> dict | None:
+    """Update a social media post."""
+    from app.models.marketing import SocialPost
+
+    stmt = select(SocialPost).where(
+        SocialPost.id == post_id,
+        SocialPost.org_id == org_id,
+        SocialPost.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    post = result.scalar_one_or_none()
+    if not post:
+        return None
+
+    if content is not None:
+        post.content = content
+    if hashtags is not None:
+        post.hashtags = hashtags
+    if scheduled_at is not None:
+        post.scheduled_at = scheduled_at
+    if status is not None:
+        post.status = status
+
+    await db.flush()
+    await db.refresh(post)
+    return {"id": str(post.id), "content": post.content, "status": str(post.status)}
+
+
+async def mark_post_as_posted(
+    db: AsyncSession,
+    post_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> dict | None:
+    """Mark a social post as published."""
+    from datetime import UTC, datetime as dt
+
+    from app.models.marketing import SocialPost, SocialPostStatus
+
+    stmt = select(SocialPost).where(
+        SocialPost.id == post_id,
+        SocialPost.org_id == org_id,
+    )
+    result = await db.execute(stmt)
+    post = result.scalar_one_or_none()
+    if not post:
+        return None
+
+    post.status = SocialPostStatus.PUBLISHED
+    post.published_at = dt.now(UTC)
+    await db.flush()
+    return {"id": str(post.id), "status": "published"}

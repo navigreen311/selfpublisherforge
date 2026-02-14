@@ -26,6 +26,8 @@ import type {
   GenerateLaunchPlanRequest,
   GenerateSocialContentRequest,
   RecentActivityItem,
+  SocialGenerateRequest,
+  ARCRecipientAdd,
 } from "./types";
 
 export type * from "./types";
@@ -36,6 +38,7 @@ const MARKETING_KEYS = {
   emailSequences: ["marketing", "email-sequences"] as const,
   emailSequence: (id: string) => ["marketing", "email-sequences", id] as const,
   socialCalendar: ["marketing", "social", "calendar"] as const,
+  socialPosts: ["marketing", "social", "posts"] as const,
   arcCampaigns: ["marketing", "arc"] as const,
   arcCampaign: (id: string) => ["marketing", "arc", id] as const,
 };
@@ -214,7 +217,7 @@ export function useCreateARCCampaign() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (campaign: Partial<ARCCampaign> & { book_id: string; recipients?: { name: string; email: string }[] }) => {
+    mutationFn: async (campaign: Omit<Partial<ARCCampaign>, "recipients"> & { book_id: string; recipients?: { name: string; email: string }[] }) => {
       const { data } = await api.post<SuccessResponse<ARCCampaign>>("/api/v1/marketing/arc", campaign);
       return data.data;
     },
@@ -237,6 +240,166 @@ export function useSendARCCopies(campaignId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaigns });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Task Toggle Hook
+// ---------------------------------------------------------------------------
+
+export function useTogglePlanTask(planId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+      const { data } = await api.patch(
+        `/api/v1/marketing/launch-plans/${planId}/tasks/${taskId}`,
+        { status }
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.launchPlan(planId) });
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.launchPlans });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Email Update Hook
+// ---------------------------------------------------------------------------
+
+export function useUpdateEmail(sequenceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ emailId, updates }: { emailId: string; updates: Partial<EmailTemplate> }) => {
+      const { data } = await api.patch<SuccessResponse<EmailTemplate>>(
+        `/api/v1/marketing/email-sequences/${sequenceId}/emails/${emailId}`,
+        updates
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequence(sequenceId) });
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.emailSequences });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Social Posts Hooks
+// ---------------------------------------------------------------------------
+
+export function useGenerateSocialPosts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (request: SocialGenerateRequest) => {
+      const { data } = await api.post<SuccessResponse<SocialPost[]>>("/api/v1/marketing/social/generate", request);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.socialCalendar });
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.socialPosts });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useSocialPosts(filters?: { platform?: string; status?: string }) {
+  return useQuery({
+    queryKey: [...MARKETING_KEYS.socialPosts, filters],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/marketing/social/posts", { params: filters });
+      return data as { items: SocialPost[]; total_count: number };
+    },
+  });
+}
+
+export function useUpdateSocialPost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<SocialPost> }) => {
+      const { data } = await api.patch<SuccessResponse<SocialPost>>(
+        `/api/v1/marketing/social/posts/${id}`,
+        updates
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.socialCalendar });
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.socialPosts });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// ARC Campaign Detail & Actions Hooks
+// ---------------------------------------------------------------------------
+
+export function useARCCampaignDetail(id: string) {
+  return useQuery({
+    queryKey: MARKETING_KEYS.arcCampaign(id),
+    queryFn: async () => {
+      const { data } = await api.get<SuccessResponse<ARCCampaign>>(`/api/v1/marketing/arc/${id}`);
+      return data.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useAddARCRecipients(campaignId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (recipients: ARCRecipientAdd[]) => {
+      const { data } = await api.post<SuccessResponse<ARCCampaign>>(
+        `/api/v1/marketing/arc/${campaignId}/recipients`,
+        { recipients }
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaign(campaignId) });
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaigns });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useSendARCReminder(campaignId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload?: { custom_message?: string }) => {
+      const { data } = await api.post<SuccessResponse<ARCCampaign>>(
+        `/api/v1/marketing/arc/${campaignId}/send-reminder`,
+        payload || {}
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MARKETING_KEYS.arcCampaign(campaignId) });
+      toast.success("Reminder sent successfully");
     },
     onError: (error) => {
       toast.error(extractApiError(error));

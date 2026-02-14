@@ -8,23 +8,38 @@ import {
   usePipeline,
   useTimeline,
   useAddTask,
-  useUpdateTask,
   useUpdatePipeline,
+  usePipelineStages,
 } from "@/modules/pipeline/hooks";
-import { TaskBoard } from "@/modules/pipeline/components/TaskBoard";
+import { BoardView } from "@/modules/pipeline/components/BoardView";
+import { ListView } from "@/modules/pipeline/components/ListView";
 import { TimelineView } from "@/modules/pipeline/components/TimelineView";
 import { TaskForm } from "@/modules/pipeline/components/TaskForm";
-import type { PipelineTask, PipelineStatus } from "@/modules/pipeline/hooks";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { PipelineStatus, ViewMode } from "@/modules/pipeline/hooks";
 import { useTranslations } from "@/hooks/use-translations";
+import {
+  LayoutGrid,
+  List,
+  GanttChart,
+  Plus,
+} from "lucide-react";
 
-type ViewMode = "kanban" | "timeline";
+const VIEW_MODES: { value: ViewMode; label: string; icon: React.ReactNode }[] = [
+  { value: "board", label: "Board", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+  { value: "list", label: "List", icon: <List className="h-3.5 w-3.5" /> },
+  { value: "timeline", label: "Timeline", icon: <GanttChart className="h-3.5 w-3.5" /> },
+];
 
 export default function PipelineDetailPage() {
   const t = useTranslations("pipeline");
   const params = useParams();
   const id = params.id as string;
 
-  const statusActions: Record<PipelineStatus, { label: string; target: PipelineStatus }[]> = {
+  const statusActions: Record<
+    PipelineStatus,
+    { label: string; target: PipelineStatus }[]
+  > = {
     draft: [{ label: t("detail.activate"), target: "active" }],
     active: [
       { label: t("detail.pause"), target: "paused" },
@@ -35,12 +50,12 @@ export default function PipelineDetailPage() {
     cancelled: [],
   };
 
-  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<PipelineTask | null>(null);
 
   const { data: pipeline, isPending, error } = usePipeline(id);
   const { data: timeline } = useTimeline(id);
+  const { data: stages } = usePipelineStages(id);
   const addTaskMutation = useAddTask(id);
   const updatePipelineMutation = useUpdatePipeline(id);
 
@@ -53,7 +68,7 @@ export default function PipelineDetailPage() {
     addTaskMutation.mutate(
       {
         title: data.title,
-        type: data.type as PipelineTask["type"],
+        type: data.type as "writing" | "editing" | "proofreading" | "formatting" | "review",
         description: data.description || undefined,
         due_date: data.due_date || undefined,
       },
@@ -69,8 +84,15 @@ export default function PipelineDetailPage() {
 
   if (isPending) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">{t("detail.loadingPipeline")}</p>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-6 w-96" />
+        <Skeleton className="h-3 w-full" />
+        <div className="flex gap-4 mt-6">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-64 w-72" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -84,7 +106,7 @@ export default function PipelineDetailPage() {
   }
 
   const completedCount = pipeline.tasks.filter(
-    (t) => t.status === "completed"
+    (task) => task.status === "completed"
   ).length;
   const progress =
     pipeline.tasks.length > 0
@@ -102,7 +124,7 @@ export default function PipelineDetailPage() {
               {pipeline.description}
             </p>
           )}
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
             <span
               className={cn(
                 "text-xs font-medium px-2 py-1 rounded-full",
@@ -122,13 +144,41 @@ export default function PipelineDetailPage() {
               </span>
             )}
             <span>
-              {t("detail.tasksCompleted", { completed: completedCount, total: pipeline.tasks.length, progress })}
+              {t("detail.tasksCompleted", {
+                completed: completedCount,
+                total: pipeline.tasks.length,
+                progress,
+              })}
             </span>
           </div>
+          {/* Stages summary */}
+          {stages && stages.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {stages
+                .sort((a, b) => a.order_index - b.order_index)
+                .map((stage) => (
+                  <span
+                    key={stage.id}
+                    className="text-[10px] font-medium px-2 py-0.5 rounded-full border"
+                    style={
+                      stage.color
+                        ? {
+                            backgroundColor: `${stage.color}20`,
+                            borderColor: stage.color,
+                            color: stage.color,
+                          }
+                        : undefined
+                    }
+                  >
+                    {stage.name} ({stage.tasks?.length ?? 0})
+                  </span>
+                ))}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {statusActions[pipeline.status]?.map((action) => (
             <button
               key={action.target}
@@ -141,8 +191,9 @@ export default function PipelineDetailPage() {
           ))}
           <button
             onClick={() => setShowTaskForm(!showTaskForm)}
-            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
+            <Plus className="h-3.5 w-3.5" />
             {t("detail.addTask")}
           </button>
         </div>
@@ -172,178 +223,40 @@ export default function PipelineDetailPage() {
         </div>
       )}
 
-      {/* View toggle */}
+      {/* View toggle: Board / List / Timeline */}
       <div className="flex gap-1 mb-4 p-1 bg-gray-100 rounded-md w-fit">
-        <button
-          onClick={() => setViewMode("kanban")}
-          className={cn(
-            "px-3 py-1.5 text-xs rounded-md transition-colors",
-            viewMode === "kanban"
-              ? "bg-white shadow-sm font-medium"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("detail.kanbanBoard")}
-        </button>
-        <button
-          onClick={() => setViewMode("timeline")}
-          className={cn(
-            "px-3 py-1.5 text-xs rounded-md transition-colors",
-            viewMode === "timeline"
-              ? "bg-white shadow-sm font-medium"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("detail.timeline")}
-        </button>
+        {VIEW_MODES.map((mode) => (
+          <button
+            key={mode.value}
+            onClick={() => setViewMode(mode.value)}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors",
+              viewMode === mode.value
+                ? "bg-white shadow-sm font-medium"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {mode.icon}
+            {mode.label}
+          </button>
+        ))}
       </div>
 
       {/* Views */}
-      {viewMode === "kanban" && (
-        <TaskBoard
-          tasks={pipeline.tasks}
-          onTaskClick={(task) => setSelectedTask(task)}
-        />
+      {viewMode === "board" && (
+        <BoardView pipelineId={id} tasks={pipeline.tasks} />
+      )}
+      {viewMode === "list" && (
+        <ListView pipelineId={id} tasks={pipeline.tasks} />
       )}
       {viewMode === "timeline" && timeline && (
         <TimelineView timeline={timeline} />
       )}
       {viewMode === "timeline" && !timeline && (
-        <p className="text-muted-foreground text-sm">{t("detail.loadingTimeline")}</p>
-      )}
-
-      {/* Selected task detail panel */}
-      {selectedTask && (
-        <TaskDetailPanel
-          task={selectedTask}
-          pipelineId={id}
-          onClose={() => setSelectedTask(null)}
-        />
+        <p className="text-muted-foreground text-sm">
+          {t("detail.loadingTimeline")}
+        </p>
       )}
     </div>
   );
-}
-
-// ── Task Detail Side Panel ───────────────────────────────────────────────
-
-interface TaskDetailPanelProps {
-  task: PipelineTask;
-  pipelineId: string;
-  onClose: () => void;
-}
-
-function TaskDetailPanel({ task, pipelineId, onClose }: TaskDetailPanelProps) {
-  const t = useTranslations("pipeline");
-  const updateTaskMutation = useUpdateTask(pipelineId, task.id);
-
-  const statusOptions = getNextStatuses(task.status);
-
-  function handleStatusChange(newStatus: string) {
-    updateTaskMutation.mutate({
-      status: newStatus as PipelineTask["status"],
-    });
-  }
-
-  return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-white border-l shadow-lg z-50 overflow-y-auto">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg">{t("detail.taskDetails")}</h3>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            {t("detail.close")}
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              {t("detail.title")}
-            </label>
-            <p className="text-sm font-medium">{task.title}</p>
-          </div>
-
-          {task.description && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                {t("detail.description")}
-              </label>
-              <p className="text-sm">{task.description}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                {t("detail.type")}
-              </label>
-              <p className="text-sm capitalize">{task.type}</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                {t("detail.status")}
-              </label>
-              <p className="text-sm capitalize">
-                {task.status.replace("_", " ")}
-              </p>
-            </div>
-          </div>
-
-          {task.due_date && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                {t("detail.dueDate")}
-              </label>
-              <p className="text-sm">
-                {format(new Date(task.due_date), "MMM d, yyyy")}
-              </p>
-            </div>
-          )}
-
-          {task.depends_on.length > 0 && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
-                {t("detail.dependencies")}
-              </label>
-              <p className="text-sm">{t("detail.dependenciesCount", { count: task.depends_on.length })}</p>
-            </div>
-          )}
-
-          {/* Status transition buttons */}
-          {statusOptions.length > 0 && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                {t("detail.changeStatus")}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {statusOptions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleStatusChange(s)}
-                    disabled={updateTaskMutation.isPending}
-                    className="px-3 py-1.5 text-xs border rounded-md hover:bg-gray-50 capitalize disabled:opacity-50"
-                  >
-                    {s.replace("_", " ")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function getNextStatuses(current: string): string[] {
-  const transitions: Record<string, string[]> = {
-    pending: ["in_progress", "blocked", "cancelled"],
-    blocked: ["pending", "in_progress", "cancelled"],
-    in_progress: ["completed", "blocked", "cancelled"],
-    completed: [],
-    cancelled: [],
-  };
-  return transitions[current] || [];
 }

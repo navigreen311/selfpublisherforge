@@ -10,8 +10,12 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from datetime import datetime, timedelta
 from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.marketing import LaunchPhaseType, PhaseTaskStatus
@@ -387,3 +391,58 @@ Respond ONLY with valid JSON in this format:
             goals={"user_goals": request.goals} if request.goals else None,
             phases=phases,
         )
+
+
+# ---------------------------------------------------------------------------
+# Enhanced helper functions
+# ---------------------------------------------------------------------------
+
+
+async def toggle_plan_task(
+    db: AsyncSession,
+    plan_id: uuid.UUID,
+    org_id: uuid.UUID,
+    task_id: str,
+    done: bool,
+) -> dict | None:
+    """Toggle a task's completion status within a launch plan's JSONB phases."""
+    from app.models.marketing import LaunchPlan
+
+    stmt = select(LaunchPlan).where(
+        LaunchPlan.id == plan_id,
+        LaunchPlan.org_id == org_id,
+        LaunchPlan.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    plan = result.scalar_one_or_none()
+    if not plan:
+        return None
+
+    # Update task in phases_json
+    phases = plan.phases_json or {}
+    for phase in phases.get("phases", []):
+        for week in phase.get("weeks", []):
+            for task in week.get("tasks", []):
+                if task.get("id") == task_id:
+                    task["done"] = done
+    plan.phases_json = phases
+    await db.flush()
+    return {"plan_id": str(plan_id), "task_id": task_id, "done": done}
+
+
+def get_plan_progress(plan) -> dict:
+    """Calculate progress percentage for a launch plan."""
+    phases = (plan.phases_json or {}).get("phases", [])
+    total = 0
+    done = 0
+    for phase in phases:
+        for week in phase.get("weeks", []):
+            for task in week.get("tasks", []):
+                total += 1
+                if task.get("done"):
+                    done += 1
+    return {
+        "total_tasks": total,
+        "completed_tasks": done,
+        "progress_pct": round((done / total * 100) if total > 0 else 0, 1),
+    }
