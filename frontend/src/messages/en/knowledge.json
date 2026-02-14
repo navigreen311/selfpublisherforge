@@ -1,9 +1,13 @@
 {
   "title": "Knowledge Vault",
+  "searchPlaceholder": "Search your knowledge vault...",
   "import": "Import",
   "importLabel": "Import knowledge entry from URL or file",
   "newEntry": "New Entry",
   "newEntryLabel": "Create new knowledge entry",
+  "noEntries": "No entries yet",
+  "createFirst": "Create your first research entry or import from a URL or file.",
+  "importFiles": "Import Files",
   "searchResults": "Search results ({count})",
   "clearSearch": "Clear search",
   "clearSearchLabel": "Clear search results",
@@ -25,6 +29,33 @@
   "deleteButton": "Delete",
   "cancelButton": "Cancel",
   "relevance": "Relevance: {score}",
+
+  "categories": {
+    "all": "All",
+    "notes": "Notes",
+    "research": "Research",
+    "characters": "Characters",
+    "worldBuilding": "World Building",
+    "references": "References",
+    "outlines": "Outlines"
+  },
+
+  "editor": {
+    "title": "Title",
+    "category": "Category",
+    "tags": "Tags",
+    "linkedProject": "Linked Project",
+    "attachments": "Attachments",
+    "addAttachment": "Add Attachment"
+  },
+
+  "importOptions": {
+    "uploadFiles": "Upload Files",
+    "fromUrl": "From URL",
+    "pasteClipboard": "Paste from Clipboard",
+    "fromManuscript": "From Manuscript"
+  },
+
   "detail": {
     "invalidId": "Invalid entry ID",
     "notFound": "Entry not found",
