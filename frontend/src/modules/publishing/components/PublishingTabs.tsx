@@ -1,73 +1,59 @@
 "use client";
 
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { lazyLoad } from "@/lib/lazy";
-
-const AccountsTab = lazyLoad(
-  () => import("@/modules/publishing/components/AccountsTab")
-);
-const ExportsTab = lazyLoad(
-  () => import("@/modules/publishing/components/ExportsTab")
-);
-const ListingsTab = lazyLoad(
-  () => import("@/modules/publishing/components/ListingsTab")
-);
-const ISBNsTab = lazyLoad(
-  () => import("@/modules/publishing/components/ISBNsTab")
-);
-const PricingTab = lazyLoad(
-  () => import("@/modules/publishing/components/PricingTab")
-);
-
-const TAB_VALUES = ["accounts", "exports", "listings", "isbns", "pricing"] as const;
-type TabValue = (typeof TAB_VALUES)[number];
+import { AccountCard } from "./AccountCard";
+import { ListingTable } from "./ListingTable";
+import type { PublishingAccount } from "../types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PublishingTabsProps {
-  defaultTab?: string;
+  accounts: PublishingAccount[];
+  accountsLoading: boolean;
 }
 
-export function PublishingTabs({ defaultTab = "accounts" }: PublishingTabsProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const currentTab = (searchParams.get("tab") as TabValue) || defaultTab;
-
-  const handleTabChange = useCallback(
-    (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", value);
-      router.replace(`${pathname}?${params.toString()}`);
-    },
-    [searchParams, router, pathname]
-  );
-
+export function PublishingTabs({ accounts, accountsLoading }: PublishingTabsProps) {
   return (
-    <Tabs value={currentTab} onValueChange={handleTabChange}>
+    <Tabs defaultValue="listings" className="w-full">
       <TabsList>
-        <TabsTrigger value="accounts">Accounts</TabsTrigger>
-        <TabsTrigger value="exports">Exports</TabsTrigger>
         <TabsTrigger value="listings">Listings</TabsTrigger>
-        <TabsTrigger value="isbns">ISBNs</TabsTrigger>
-        <TabsTrigger value="pricing">Pricing</TabsTrigger>
+        <TabsTrigger value="accounts">
+          Accounts{accounts.length > 0 && ` (${accounts.length})`}
+        </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="accounts">
-        <AccountsTab />
-      </TabsContent>
-      <TabsContent value="exports">
-        <ExportsTab />
-      </TabsContent>
       <TabsContent value="listings">
-        <ListingsTab />
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <ListingTable />
+        </div>
       </TabsContent>
-      <TabsContent value="isbns">
-        <ISBNsTab />
-      </TabsContent>
-      <TabsContent value="pricing">
-        <PricingTab />
+
+      <TabsContent value="accounts">
+        {accountsLoading ? (
+          <div
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            aria-busy="true"
+            aria-label="Loading publishing accounts"
+          >
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        ) : accounts.length === 0 ? (
+          <div className="rounded-lg border-2 border-dashed p-8 text-center">
+            <h3 className="text-base font-medium text-foreground">
+              No accounts connected
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Connect your first publishing platform account to get started.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {accounts.map((account) => (
+              <AccountCard key={account.id} account={account} />
+            ))}
+          </div>
+        )}
       </TabsContent>
     </Tabs>
   );
