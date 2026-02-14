@@ -244,3 +244,72 @@ class ListingSyncResponse(BaseModel):
     listing_id: uuid.UUID
     status: str = "sync_queued"
     message: str = "Listing sync has been queued"
+
+
+# ---------- ISBN Management ----------
+
+class CreateISBNRequest(BaseModel):
+    isbn: str = Field(..., min_length=10, max_length=17)
+    format: str | None = None
+    book_id: uuid.UUID | None = None
+
+
+class UpdateISBNRequest(BaseModel):
+    format: str | None = None
+    book_id: uuid.UUID | None = None
+    status: str | None = None
+
+
+class ISBNResponse(BaseModel):
+    id: uuid.UUID
+    isbn: str
+    format: str | None
+    book_id: uuid.UUID | None
+    status: str
+    barcode_url: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class GenerateBarcodeRequest(BaseModel):
+    price: float | None = None
+    format: str = "png"  # png or svg
+
+
+# ---------- Pricing ----------
+
+class UpdatePricingRequest(BaseModel):
+    kindle_price: float | None = None
+    paperback_price: float | None = None
+    hardcover_price: float | None = None
+    audiobook_price: float | None = None
+
+
+class PricingResponse(BaseModel):
+    id: uuid.UUID
+    book_id: uuid.UUID
+    kindle_price: float | None
+    paperback_price: float | None
+    hardcover_price: float | None
+    audiobook_price: float | None
+    currency: str
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------- Royalty Calculator ----------
+
+class RoyaltyCalcRequest(BaseModel):
+    price: float
+    format: str
+    platform: str
+    page_count: int | None = None
+    print_type: str | None = None
+
+
+class RoyaltyCalcResponse(BaseModel):
+    print_cost: float
+    royalty_rate: float
+    royalty_amount: float
