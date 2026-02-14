@@ -296,6 +296,88 @@ async def generate_export(
 
 
 # ---------------------------------------------------------------------------
+# Export History
+# ---------------------------------------------------------------------------
+
+async def list_exports(db: AsyncSession, org_id: uuid.UUID) -> list[ExportResponse]:
+    """Return all exports for an organisation, newest first."""
+    stmt = (
+        select(ExportJob)
+        .where(
+            ExportJob.org_id == org_id,
+            ExportJob.deleted_at.is_(None),
+        )
+        .order_by(ExportJob.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    return [
+        ExportResponse(
+            id=row.id,
+            book_id=row.book_id,
+            format=row.format,
+            status=row.status,
+            file_url=row.file_url,
+            file_size_bytes=row.file_size_bytes,
+            page_count=row.page_count,
+            created_at=row.created_at,
+            message=row.message or "",
+        )
+        for row in rows
+    ]
+
+
+async def get_export(
+    db: AsyncSession, export_id: uuid.UUID, org_id: uuid.UUID
+) -> ExportResponse | None:
+    """Return a single export job, or ``None`` if not found."""
+    stmt = (
+        select(ExportJob)
+        .where(
+            ExportJob.id == export_id,
+            ExportJob.org_id == org_id,
+            ExportJob.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    return ExportResponse(
+        id=row.id,
+        book_id=row.book_id,
+        format=row.format,
+        status=row.status,
+        file_url=row.file_url,
+        file_size_bytes=row.file_size_bytes,
+        page_count=row.page_count,
+        created_at=row.created_at,
+        message=row.message or "",
+    )
+
+
+async def get_export_download_url(
+    db: AsyncSession, export_id: uuid.UUID, org_id: uuid.UUID
+) -> str | None:
+    """Return the download URL for a completed export, or ``None``."""
+    stmt = (
+        select(ExportJob)
+        .where(
+            ExportJob.id == export_id,
+            ExportJob.org_id == org_id,
+            ExportJob.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    if row.status != "completed":
+        return None
+    return row.file_url
+
+
+# ---------------------------------------------------------------------------
 # Formatting Templates
 # ---------------------------------------------------------------------------
 
