@@ -134,3 +134,105 @@ export interface PaginatedResponse<T> {
   has_more: boolean;
   total_count?: number;
 }
+
+// --- New types for enhanced features ---
+
+export interface AdSearchTerm {
+  id: string;
+  campaign_id: string;
+  search_term: string;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  sales: number;
+  orders: number;
+  action_taken?: string;
+  recorded_at: string;
+}
+
+export interface AdDailyMetric {
+  date: string;
+  spend: number;
+  sales: number;
+  impressions: number;
+  clicks: number;
+  orders: number;
+}
+
+export interface AIInsight {
+  type: "budget" | "keyword" | "performance" | "warning" | "opportunity";
+  message: string;
+  campaign_id?: string;
+  action?: string;
+  severity: "info" | "warning" | "success";
+}
+
+export interface KeywordSuggestion {
+  keyword: string;
+  search_volume: number;
+  suggested_bid: number;
+  competition: "low" | "medium" | "high";
+}
+
+export interface BidRecommendation {
+  keyword: string;
+  current_bid: number;
+  suggested_bid: number;
+  reason: string;
+  expected_acos_impact: number;
+}
+
+export interface BidOptimizationRequest {
+  target_acos: number;
+  strategy: "maximize_sales" | "minimize_acos" | "maximize_impressions";
+}
+
+export interface BidOptimizationResponse {
+  recommendations: BidRecommendation[];
+  estimated_impact: {
+    current_acos: number;
+    projected_acos: number;
+    projected_sales_change: string;
+  };
+}
+
+export interface EnhancedDashboard {
+  stats: {
+    active_campaigns: number;
+    total_spend_today: number;
+    total_spend_period: number;
+    total_sales_period: number;
+    overall_acos: number;
+    overall_roas: number;
+    total_impressions: number;
+    total_clicks: number;
+  };
+  trend_data: AdDailyMetric[];
+  top_campaigns: Array<{
+    campaign_id: string;
+    name: string;
+    spend: number;
+    sales: number;
+    acos: number;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+  }>;
+  insights: AIInsight[];
+}
+
+export interface CampaignCreatePayload {
+  platform: "amazon" | "facebook" | "bookbub";
+  ad_type: string;
+  book_id?: string;
+  name: string;
+  targeting_type?: "automatic" | "manual" | "asin";
+  match_types?: string[];
+  daily_budget: number;
+  bidding_strategy?: string;
+  default_bid?: number;
+  keywords?: Array<{ keyword: string; match_type: string; bid: number }>;
+  negative_keywords?: string[];
+  schedule_start?: string;
+  schedule_end?: string;
+}

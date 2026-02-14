@@ -240,3 +240,88 @@ class TrendData(BaseModel):
     total: Decimal
     average: Decimal
     change_percent: float | None = None
+
+
+# ---------- Sales Data ----------
+
+class SalesDataResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    date: datetime
+    marketplace: str = "US"
+    format: str | None = None
+    units: int = 0
+    revenue: Decimal = Decimal("0.00")
+    royalties: Decimal = Decimal("0.00")
+    kenp_read: int = 0
+
+
+class DailySalesRow(BaseModel):
+    date: str
+    kindle_units: int = 0
+    print_units: int = 0
+    audio_units: int = 0
+    kenp_read: int = 0
+    revenue: Decimal = Decimal("0.00")
+    royalties: Decimal = Decimal("0.00")
+
+
+class SalesResponse(BaseModel):
+    daily_data: list[DailySalesRow]
+    totals: dict[str, Any]
+    by_marketplace: list[dict[str, Any]]
+
+
+# ---------- BSR Tracking ----------
+
+class BSRDataPoint(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    recorded_at: datetime
+    bsr: int | None = None
+    category_rank: int | None = None
+    category_name: str | None = None
+
+
+# ---------- Book Performance ----------
+
+class BookPerformanceResponse(BaseModel):
+    book_id: str
+    stats: dict[str, Any]
+    bsr_history: list[BSRDataPoint]
+    revenue_breakdown: list[dict[str, Any]]
+    review_trend: list[dict[str, Any]]
+
+
+# ---------- Enhanced Dashboard ----------
+
+class EnhancedDashboardResponse(BaseModel):
+    stats: list[dict[str, Any]]
+    trend_data: list[dict[str, Any]]
+    revenue_by_book: list[dict[str, Any]]
+    revenue_by_format: list[dict[str, Any]]
+    insights: list[dict[str, Any]]
+    period: str
+    compare_period: str | None = None
+
+
+# ---------- AI Insights ----------
+
+class AIAnalyticsInsight(BaseModel):
+    type: str
+    message: str
+    book_id: str | None = None
+    metric: str | None = None
+    severity: str = "info"
+
+
+# ---------- Enhanced Report Generation ----------
+
+class ReportGenerateRequest(BaseModel):
+    title: str = Field(..., max_length=500)
+    type: str
+    period_start: str | None = None
+    period_end: str | None = None
+    book_ids: list[str] | None = None
+    format: str = "pdf"
+    sections: list[str] | None = None

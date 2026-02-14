@@ -15,6 +15,13 @@ import type {
   GeneratedCreative,
   AdDashboard,
   PaginatedResponse,
+  EnhancedDashboard,
+  AIInsight,
+  KeywordSuggestion,
+  BidOptimizationRequest,
+  BidOptimizationResponse,
+  AdSearchTerm,
+  AdDailyMetric,
 } from "./types";
 
 export type * from "./types";
@@ -239,5 +246,145 @@ export function useAdDashboard() {
       const { data } = await api.get<AdDashboard>("/api/v1/ads/dashboard");
       return data;
     },
+  });
+}
+
+// ─── Enhanced Dashboard & AI Hooks ──────────────────────────────────────────
+
+export function useEnhancedDashboard(period: string = "30d") {
+  return useQuery({
+    queryKey: ["advertising", "dashboard", "enhanced", period],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/ads/dashboard/enhanced", { params: { period } });
+      return data.data as EnhancedDashboard;
+    },
+  });
+}
+
+export function useAIInsights() {
+  return useQuery({
+    queryKey: ["advertising", "ai", "insights"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/ads/ai/insights");
+      return data.data as AIInsight[];
+    },
+  });
+}
+
+export function useSuggestKeywords() {
+  return useMutation({
+    mutationFn: async (bookId: string) => {
+      const { data } = await api.post("/api/v1/ads/ai/suggest-keywords", { book_id: bookId });
+      return data.data as KeywordSuggestion[];
+    },
+    onError: (error: any) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useOptimizeBids(campaignId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (request: BidOptimizationRequest) => {
+      const { data } = await api.post(`/api/v1/ads/campaigns/${campaignId}/optimize-bids`, request);
+      return data.data as BidOptimizationResponse;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["advertising"] });
+    },
+    onError: (error: any) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ─── Search Terms Hooks ─────────────────────────────────────────────────────
+
+export function useSearchTerms(campaignId: string) {
+  return useQuery({
+    queryKey: ["advertising", "campaigns", campaignId, "search-terms"],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/ads/campaigns/${campaignId}/search-terms`);
+      return data.data as AdSearchTerm[];
+    },
+    enabled: !!campaignId,
+  });
+}
+
+export function useAddSearchTermAsKeyword(campaignId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (searchTermId: string) => {
+      const { data } = await api.post(`/api/v1/ads/campaigns/${campaignId}/search-terms/${searchTermId}/add-as-keyword`);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["advertising", "campaigns", campaignId] });
+      toast.success("Keyword added from search term");
+    },
+    onError: (error: any) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useNegateSearchTerm(campaignId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (searchTermId: string) => {
+      const { data } = await api.post(`/api/v1/ads/campaigns/${campaignId}/search-terms/${searchTermId}/negate`);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["advertising", "campaigns", campaignId] });
+      toast.success("Search term negated");
+    },
+    onError: (error: any) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ─── Campaign Daily Metrics & Controls ──────────────────────────────────────
+
+export function useCampaignDailyMetrics(campaignId: string, period: string = "30d") {
+  return useQuery({
+    queryKey: ["advertising", "campaigns", campaignId, "daily-metrics", period],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/ads/campaigns/${campaignId}/daily-metrics`, { params: { period } });
+      return data.data as AdDailyMetric[];
+    },
+    enabled: !!campaignId,
+  });
+}
+
+export function usePauseCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { data } = await api.post(`/api/v1/ads/campaigns/${campaignId}/pause`);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["advertising"] });
+      toast.success("Campaign paused");
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
+  });
+}
+
+export function useResumeCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { data } = await api.post(`/api/v1/ads/campaigns/${campaignId}/resume`);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["advertising"] });
+      toast.success("Campaign resumed");
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
   });
 }

@@ -2,3 +2,8 @@ export { PerformanceChart } from "./PerformanceChart";
 export { CampaignCard } from "./CampaignCard";
 export { BidManager } from "./BidManager";
 export { CreativeEditor } from "./CreativeEditor";
+export { KeywordsTab } from "./KeywordsTab";
+export { SearchTermsTab } from "./SearchTermsTab";
+export { NegativeKeywordsTab } from "./NegativeKeywordsTab";
+export { BidOptimizerDialog } from "./BidOptimizerDialog";
+export { CampaignWizard } from "./CampaignWizard";

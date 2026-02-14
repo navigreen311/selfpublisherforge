@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePricingRules } from "../hooks";
 import { PricingStrategyType, RuleStatus } from "../types";
+import { StrategySetupDialog } from "./StrategySetupDialog";
 
 const STRATEGY_INFO = {
   [PricingStrategyType.COMPETITIVE_MATCH]: {
@@ -41,6 +43,14 @@ const STRATEGY_INFO = {
 
 export function StrategyCards() {
   const { data: rulesData, isLoading } = usePricingRules({ status: RuleStatus.ACTIVE });
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  const [selectedStrategyType, setSelectedStrategyType] =
+    useState<PricingStrategyType>(PricingStrategyType.COMPETITIVE_MATCH);
+
+  function handleSetupStrategy(strategy: PricingStrategyType) {
+    setSelectedStrategyType(strategy);
+    setSetupDialogOpen(true);
+  }
 
   if (isLoading) {
     return (
@@ -82,6 +92,7 @@ export function StrategyCards() {
               info={info}
               isActive={isActive}
               activeRule={activeRule}
+              onSetup={() => handleSetupStrategy(strategy as PricingStrategyType)}
             />
           );
         })}
@@ -118,6 +129,12 @@ export function StrategyCards() {
           </div>
         </Card>
       )}
+
+      <StrategySetupDialog
+        open={setupDialogOpen}
+        onOpenChange={setSetupDialogOpen}
+        strategyType={selectedStrategyType}
+      />
     </div>
   );
 }
@@ -138,9 +155,10 @@ interface StrategyCardProps {
     max_price: number;
     target_price?: number;
   };
+  onSetup: () => void;
 }
 
-function StrategyCard({ info, isActive, activeRule }: StrategyCardProps) {
+function StrategyCard({ info, isActive, activeRule, onSetup }: StrategyCardProps) {
   return (
     <Card className={`p-6 ${isActive ? "ring-2 ring-primary" : ""}`}>
       <div className="flex items-start justify-between mb-3">
@@ -164,7 +182,7 @@ function StrategyCard({ info, isActive, activeRule }: StrategyCardProps) {
           )}
         </div>
       ) : (
-        <Button variant="outline" size="sm" className="w-full" disabled>
+        <Button variant="outline" size="sm" className="w-full" onClick={onSetup}>
           Set Up Strategy
         </Button>
       )}

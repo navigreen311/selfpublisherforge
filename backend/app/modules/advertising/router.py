@@ -13,11 +13,16 @@ from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
 from app.database import get_db
 from app.modules.advertising.facebook_ads import FacebookAdsError
+from app.core.contracts import SuccessResponse
 from app.modules.advertising.schemas import (
     AdCreativeResponse,
     AdDashboard,
     AdPerformance,
     AdPlatform,
+    AIInsight,
+    AIInsightsResponse,
+    BidOptimizationRequest,
+    BidOptimizationResponse,
     CampaignCreate,
     CampaignFilter,
     CampaignResponse,
@@ -27,6 +32,8 @@ from app.modules.advertising.schemas import (
     CampaignWithPerformance,
     CreativeGenerateRequest,
     CreativeGenerateResponse,
+    DailyMetricResponse,
+    EnhancedDashboardResponse,
     FacebookCampaignCreate,
     FacebookCampaignListResponse,
     FacebookCampaignMetrics,
@@ -34,9 +41,11 @@ from app.modules.advertising.schemas import (
     FacebookCampaignUpdate,
     KeywordBidBulkUpdate,
     KeywordBidResponse,
+    KeywordSuggestionsResponse,
     OptimizationRequest,
     OptimizationSuggestion,
     PerformanceQuery,
+    SearchTermResponse,
 )
 
 try:
@@ -627,3 +636,262 @@ async def create_facebook_audience(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         )
+
+
+# ─── Enhanced Dashboard Endpoint ────────────────────────────────────────────
+
+@router.get(
+    "/dashboard/enhanced",
+    response_model=SuccessResponse[EnhancedDashboardResponse],
+    summary="Get enhanced ad dashboard",
+    description="Get enhanced advertising dashboard with stats, trend data, top campaigns, and AI insights.",
+)
+async def get_enhanced_dashboard(
+    period: str = Query("30d", description="Period for data aggregation, e.g. 7d, 14d, 30d, 90d"),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get enhanced dashboard with stats, trends, and insights."""
+    from app.modules.advertising.dashboard_service import get_enhanced_dashboard as _get_dashboard
+    from app.modules.advertising.ai_service import get_ai_insights
+
+    dashboard_data = await _get_dashboard(db, org_id=current_user["org_id"], period=period)
+    insights_data = await get_ai_insights(db, org_id=current_user["org_id"])
+
+    result = EnhancedDashboardResponse(
+        stats=dashboard_data["stats"],
+        trend_data=dashboard_data["trend_data"],
+        top_campaigns=dashboard_data["top_campaigns"],
+        insights=[AIInsight(**i) for i in insights_data],
+    )
+    return SuccessResponse(data=result)
+
+
+# ─── AI Endpoints ───────────────────────────────────────────────────────────
+
+@router.get(
+    "/ai/insights",
+    response_model=SuccessResponse[AIInsightsResponse],
+    summary="Get AI-powered insights",
+    description="Get AI-generated actionable insights for your advertising campaigns.",
+)
+async def get_ai_insights_endpoint(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get AI-generated insights for campaigns."""
+    from app.modules.advertising.ai_service import get_ai_insights
+
+    insights = await get_ai_insights(db, org_id=current_user["org_id"])
+    return SuccessResponse(data=AIInsightsResponse(insights=[AIInsight(**i) for i in insights]))
+
+
+class _SuggestKeywordsBody(BaseModel):
+    book_id: str | None = None
+
+
+@router.post(
+    "/ai/suggest-keywords",
+    response_model=SuccessResponse[KeywordSuggestionsResponse],
+    summary="Get AI keyword suggestions",
+    description="Get AI-powered keyword suggestions for your advertising campaigns.",
+)
+async def suggest_keywords_endpoint(
+    body: _SuggestKeywordsBody,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get keyword suggestions based on book and campaign data."""
+    from app.modules.advertising.ai_service import suggest_keywords
+
+    book_id = body.book_id
+    keywords = await suggest_keywords(db, org_id=current_user["org_id"], book_id=book_id)
+
+    from app.modules.advertising.schemas import KeywordSuggestion
+    return SuccessResponse(
+        data=KeywordSuggestionsResponse(
+            keywords=[KeywordSuggestion(**kw) for kw in keywords]
+        )
+    )
+
+
+@router.post(
+    "/campaigns/{campaign_id}/optimize-bids",
+    response_model=SuccessResponse[BidOptimizationResponse],
+    summary="Optimize campaign bids",
+    description="Get AI-powered bid optimization recommendations for a campaign.",
+)
+async def optimize_bids_endpoint(
+    campaign_id: UUID,
+    body: BidOptimizationRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get bid optimization recommendations."""
+    from app.modules.advertising.ai_service import optimize_bids
+
+    result = await optimize_bids(
+        db,
+        org_id=current_user["org_id"],
+        campaign_id=campaign_id,
+        target_acos=body.target_acos,
+        strategy=body.strategy,
+    )
+
+    from app.modules.advertising.schemas import BidRecommendation
+    return SuccessResponse(
+        data=BidOptimizationResponse(
+            recommendations=[BidRecommendation(**r) for r in result["recommendations"]],
+            estimated_impact=result["estimated_impact"],
+        )
+    )
+
+
+# ─── Search Terms Endpoints ─────────────────────────────────────────────────
+
+@router.get(
+    "/campaigns/{campaign_id}/search-terms",
+    response_model=SuccessResponse[list[SearchTermResponse]],
+    summary="Get campaign search terms",
+    description="Get search term report data for a campaign.",
+)
+async def get_search_terms_endpoint(
+    campaign_id: UUID,
+    limit: int = Query(50, ge=1, le=200),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get search terms for a campaign."""
+    from app.modules.advertising.search_terms_service import get_search_terms
+
+    terms = await get_search_terms(db, campaign_id=campaign_id, limit=limit)
+    return SuccessResponse(data=[SearchTermResponse.model_validate(t) for t in terms])
+
+
+@router.post(
+    "/campaigns/{campaign_id}/search-terms/{search_term_id}/add-as-keyword",
+    response_model=SuccessResponse[dict],
+    summary="Add search term as keyword",
+    description="Promote a search term to a targeting keyword for the campaign.",
+)
+async def add_search_term_as_keyword_endpoint(
+    campaign_id: UUID,
+    search_term_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a search term as a keyword."""
+    from app.modules.advertising.search_terms_service import add_search_term_as_keyword
+
+    result = await add_search_term_as_keyword(db, campaign_id=campaign_id, search_term_id=search_term_id)
+    if not result["success"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+    return SuccessResponse(data=result)
+
+
+@router.post(
+    "/campaigns/{campaign_id}/search-terms/{search_term_id}/negate",
+    response_model=SuccessResponse[dict],
+    summary="Negate search term",
+    description="Add a search term as a negative keyword for the campaign.",
+)
+async def negate_search_term_endpoint(
+    campaign_id: UUID,
+    search_term_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Negate a search term."""
+    from app.modules.advertising.search_terms_service import negate_search_term
+
+    result = await negate_search_term(db, campaign_id=campaign_id, search_term_id=search_term_id)
+    if not result["success"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+    return SuccessResponse(data=result)
+
+
+# ─── Daily Metrics Endpoint ─────────────────────────────────────────────────
+
+@router.get(
+    "/campaigns/{campaign_id}/daily-metrics",
+    response_model=SuccessResponse[list[DailyMetricResponse]],
+    summary="Get campaign daily metrics",
+    description="Get daily aggregated metrics for a campaign.",
+)
+async def get_daily_metrics_endpoint(
+    campaign_id: UUID,
+    period: str = Query("30d", description="Period for metrics, e.g. 7d, 14d, 30d"),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get daily metrics for a campaign."""
+    from datetime import datetime, timedelta
+    from sqlalchemy import select, and_
+    from app.modules.advertising.models import AdDailyMetric
+
+    days = int(period.replace("d", "")) if period.endswith("d") else 30
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    result = await db.execute(
+        select(AdDailyMetric).where(
+            and_(
+                AdDailyMetric.campaign_id == campaign_id,
+                AdDailyMetric.date >= start_date,
+                AdDailyMetric.deleted_at.is_(None),
+            )
+        ).order_by(AdDailyMetric.date)
+    )
+    metrics = result.scalars().all()
+    return SuccessResponse(data=[DailyMetricResponse.model_validate(m) for m in metrics])
+
+
+# ─── Campaign Pause / Resume Endpoints ──────────────────────────────────────
+
+@router.post(
+    "/campaigns/{campaign_id}/pause",
+    response_model=SuccessResponse[CampaignResponse],
+    summary="Pause campaign",
+    description="Pause an active advertising campaign.",
+)
+async def pause_campaign(
+    campaign_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Pause an active campaign."""
+    campaign = await service.update_campaign(
+        org_id=current_user["org_id"],
+        campaign_id=campaign_id,
+        data=CampaignUpdate(status=CampaignStatus.PAUSED),
+    )
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found",
+        )
+    return SuccessResponse(data=campaign)
+
+
+@router.post(
+    "/campaigns/{campaign_id}/resume",
+    response_model=SuccessResponse[CampaignResponse],
+    summary="Resume campaign",
+    description="Resume a paused advertising campaign.",
+)
+async def resume_campaign(
+    campaign_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    service: AdvertisingService = Depends(_get_service),
+):
+    """Resume a paused campaign."""
+    campaign = await service.update_campaign(
+        org_id=current_user["org_id"],
+        campaign_id=campaign_id,
+        data=CampaignUpdate(status=CampaignStatus.ACTIVE),
+    )
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found",
+        )
+    return SuccessResponse(data=campaign)

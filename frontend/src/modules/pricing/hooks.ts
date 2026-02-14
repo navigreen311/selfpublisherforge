@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { extractApiError } from "@/hooks/use-api";
 import type {
   PriceSimulationRequest,
   PriceSimulationResponse,
@@ -12,6 +14,13 @@ import type {
   PaginatedResponse,
   BookFormat,
   RuleStatus,
+  PricingStrategy,
+  StrategyCreatePayload,
+  ScheduledPriceChange,
+  ScheduledChangePayload,
+  PriceHistoryEntry,
+  RoyaltyAnalysisResponse,
+  EnhancedSimulationResponse,
 } from "./types";
 
 export type * from "./types";
@@ -123,5 +132,133 @@ export function useDeletePricingRule() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: pricingKeys.all });
     },
+  });
+}
+
+// ---------- Strategy Hooks ----------
+
+export function usePricingStrategies(status?: string) {
+  return useQuery({
+    queryKey: [...pricingKeys.all, "strategies", status],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/pricing/strategies", { params: status ? { status } : {} });
+      return data.data as PricingStrategy[];
+    },
+  });
+}
+
+export function useCreateStrategy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: StrategyCreatePayload) => {
+      const { data } = await api.post("/api/v1/pricing/strategies", payload);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pricingKeys.all });
+      toast.success("Strategy created");
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
+  });
+}
+
+export function useUpdateStrategy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<StrategyCreatePayload>) => {
+      const { data } = await api.patch(`/api/v1/pricing/strategies/${id}`, updates);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pricingKeys.all });
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
+  });
+}
+
+export function useDeleteStrategy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/v1/pricing/strategies/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pricingKeys.all });
+      toast.success("Strategy deleted");
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
+  });
+}
+
+// ---------- Scheduled Changes Hooks ----------
+
+export function useScheduledChanges(bookId?: string) {
+  return useQuery({
+    queryKey: [...pricingKeys.all, "scheduled-changes", bookId],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/pricing/scheduled-changes", { params: bookId ? { book_id: bookId } : {} });
+      return data.data as ScheduledPriceChange[];
+    },
+  });
+}
+
+export function useCreateScheduledChange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: ScheduledChangePayload) => {
+      const { data } = await api.post("/api/v1/pricing/scheduled-changes", payload);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pricingKeys.all });
+      toast.success("Price change scheduled");
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
+  });
+}
+
+export function useCancelScheduledChange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/v1/pricing/scheduled-changes/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pricingKeys.all });
+      toast.success("Scheduled change cancelled");
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
+  });
+}
+
+// ---------- History & Analysis Hooks ----------
+
+export function usePriceHistory(bookId?: string, period: string = "90d") {
+  return useQuery({
+    queryKey: [...pricingKeys.all, "history", bookId, period],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/pricing/history", { params: { book_id: bookId, period } });
+      return data.data as PriceHistoryEntry[];
+    },
+  });
+}
+
+export function useRoyaltyAnalysis(period: string = "30d") {
+  return useQuery({
+    queryKey: [...pricingKeys.all, "royalty-analysis", period],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/pricing/royalty-analysis", { params: { period } });
+      return data.data as RoyaltyAnalysisResponse;
+    },
+  });
+}
+
+export function useEnhancedSimulation() {
+  return useMutation({
+    mutationFn: async (request: PriceSimulationRequest) => {
+      const { data } = await api.post("/api/v1/pricing/simulate/enhanced", request);
+      return data.data as EnhancedSimulationResponse;
+    },
+    onError: (error: any) => toast.error(extractApiError(error)),
   });
 }

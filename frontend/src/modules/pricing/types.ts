@@ -140,3 +140,99 @@ export interface PaginatedResponse<T> {
   total_count: number;
   has_more: boolean;
 }
+
+// --- New Pricing types ---
+
+export interface PricingStrategy {
+  id: string;
+  org_id: string;
+  type: PricingStrategyType;
+  name?: string;
+  book_ids: string[];
+  config: Record<string, unknown>;
+  status: "active" | "paused" | "draft";
+  last_run_at?: string;
+  next_run_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StrategyCreatePayload {
+  type: string;
+  name?: string;
+  book_ids: string[];
+  config: Record<string, unknown>;
+  auto_apply?: boolean;
+}
+
+export interface ScheduledPriceChange {
+  id: string;
+  org_id: string;
+  book_id: string;
+  current_price?: number;
+  new_price: number;
+  reason?: string;
+  execute_at: string;
+  revert_price?: number;
+  revert_at?: string;
+  status: "pending" | "executed" | "cancelled";
+  executed_at?: string;
+  created_at: string;
+}
+
+export interface ScheduledChangePayload {
+  book_id: string;
+  current_price?: number;
+  new_price: number;
+  reason?: string;
+  execute_at: string;
+  revert_price?: number;
+  revert_at?: string;
+}
+
+export interface PriceHistoryEntry {
+  id: string;
+  book_id: string;
+  old_price?: number;
+  new_price: number;
+  reason?: string;
+  source: string;
+  revenue_impact_pct?: number;
+  created_at: string;
+}
+
+export interface RoyaltyAnalysisRow {
+  book_id: string;
+  book_title: string;
+  price: number;
+  format: string;
+  royalty_rate: number;
+  units: number;
+  revenue: number;
+  royalty: number;
+}
+
+export interface RoyaltyAnalysisResponse {
+  rows: RoyaltyAnalysisRow[];
+  totals: { revenue: number; royalty: number };
+  effective_rate: number;
+  optimization_tips: string[];
+}
+
+export interface EnhancedSimulationResponse extends PriceSimulationResponse {
+  revenue_curve: Array<{
+    price: number;
+    daily_revenue: number;
+    daily_royalty: number;
+    monthly_royalty: number;
+  }>;
+  optimal_price: number;
+  recommendation: string;
+}
+
+export interface RevenueCurvePoint {
+  price: number;
+  daily_revenue: number;
+  daily_royalty: number;
+  monthly_royalty: number;
+}

@@ -229,3 +229,46 @@ class PricingABTest(TenantModel):
     pricing_rule: Mapped[PricingRule | None] = relationship(
         "PricingRule", back_populates="ab_tests"
     )
+
+
+class PricingStrategy(TenantModel):
+    """Configured pricing strategy with associated books."""
+
+    __tablename__ = "pricing_strategies"
+
+    type = mapped_column(String(50), nullable=False)
+    name = mapped_column(String(255), nullable=True)
+    book_ids = mapped_column(JSONB, nullable=False, default=list)
+    config = mapped_column(JSONB, nullable=False, default=dict)
+    status = mapped_column(String(50), nullable=False, default="active")
+    last_run_at = mapped_column(DateTime(timezone=True), nullable=True)
+    next_run_at = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ScheduledPriceChange(TenantModel):
+    """Scheduled future price change."""
+
+    __tablename__ = "scheduled_price_changes"
+
+    book_id = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    current_price = mapped_column(Float, nullable=True)
+    new_price = mapped_column(Float, nullable=False)
+    reason = mapped_column(String(255), nullable=True)
+    execute_at = mapped_column(DateTime(timezone=True), nullable=False)
+    revert_price = mapped_column(Float, nullable=True)
+    revert_at = mapped_column(DateTime(timezone=True), nullable=True)
+    status = mapped_column(String(50), nullable=False, default="pending")
+    executed_at = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PriceChangeHistory(TenantModel):
+    """Historical record of price changes."""
+
+    __tablename__ = "price_change_history"
+
+    book_id = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    old_price = mapped_column(Float, nullable=True)
+    new_price = mapped_column(Float, nullable=False)
+    reason = mapped_column(String(255), nullable=True)
+    source = mapped_column(String(50), nullable=False, default="manual")
+    revenue_impact_pct = mapped_column(Float, nullable=True)

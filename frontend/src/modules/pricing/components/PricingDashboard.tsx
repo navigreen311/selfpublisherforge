@@ -7,6 +7,26 @@ import { StrategyCards } from "./StrategyCards";
 import { PriceHistory } from "./PriceHistory";
 import { RoyaltyBreakdown } from "./RoyaltyBreakdown";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Dynamically import ScheduledPriceChanges - this component may not exist yet
+// (being created by another worker). Using dynamic import with ssr: false
+// prevents build failures if the module is missing.
+const ScheduledPriceChanges = dynamic(
+  () =>
+    import("@/modules/pricing/components/ScheduledPriceChanges").then(
+      (mod) => mod.ScheduledPriceChanges
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Scheduled Price Changes</h3>
+        <p className="text-sm text-muted-foreground">Loading scheduled changes...</p>
+      </Card>
+    ),
+  }
+);
 
 export function PricingDashboard() {
   return (
@@ -58,9 +78,6 @@ export function PricingDashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Strategies Overview */}
-          <StrategyCards />
-
           {/* Recent Activity */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">Recent Price Changes</h3>
@@ -81,6 +98,33 @@ export function PricingDashboard() {
                       {change.impact >= 0 ? "+" : ""}
                       {change.impact.toFixed(1)}% revenue
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Scheduled Price Changes */}
+          <ScheduledPriceChanges />
+
+          {/* Strategy Recommendations */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Strategy Recommendations</h3>
+            <div className="space-y-4">
+              {MOCK_RECOMMENDATIONS.map((rec, idx) => (
+                <div key={idx} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <div className="font-medium">{rec.title}</div>
+                      <div className="text-sm text-muted-foreground mt-1">{rec.description}</div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Apply
+                    </Button>
+                  </div>
+                  <div className="mt-2 text-sm">
+                    <span className="text-muted-foreground">Expected impact:</span>{" "}
+                    <span className="font-medium text-green-600">{rec.impact}</span>
                   </div>
                 </div>
               ))}

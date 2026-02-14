@@ -147,3 +147,44 @@ class Report(TenantModel):
         Index("ix_reports_org_type", "org_id", "report_type"),
         {"extend_existing": True},
     )
+
+
+class SalesData(TenantModel):
+    """Daily sales data per book/marketplace/format."""
+
+    __tablename__ = "sales_data"
+
+    book_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    marketplace: Mapped[str] = mapped_column(String(10), nullable=False, default="US")
+    format: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    units: Mapped[int] = mapped_column(nullable=False, default=0)
+    revenue: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    royalties: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    kenp_read: Mapped[int] = mapped_column(nullable=False, default=0)
+
+    __table_args__ = (
+        Index("ix_sales_data_org_date", "org_id", "date"),
+        Index("ix_sales_data_book_date", "book_id", "date"),
+        {"extend_existing": True},
+    )
+
+
+class BSRTracking(TenantModel):
+    """BSR rank tracking over time for books."""
+
+    __tablename__ = "bsr_tracking"
+
+    book_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    marketplace: Mapped[str] = mapped_column(String(10), nullable=False, default="US")
+    bsr: Mapped[int | None] = mapped_column(nullable=True)
+    category_rank: Mapped[int | None] = mapped_column(nullable=True)
+    category_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    __table_args__ = (
+        Index("ix_bsr_tracking_book_recorded", "book_id", "recorded_at"),
+        {"extend_existing": True},
+    )

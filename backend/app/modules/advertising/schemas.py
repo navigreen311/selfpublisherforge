@@ -353,3 +353,97 @@ class PerformanceQuery(BaseModel):
     date_from: datetime | None = None
     date_to: datetime | None = None
     granularity: str = Field("daily", pattern="^(daily|weekly|monthly)$")
+
+
+# ─── Enhanced Advertising Schemas ────────────────────────────────────────────
+
+class SearchTermResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    campaign_id: UUID
+    search_term: str
+    impressions: int = 0
+    clicks: int = 0
+    spend: float = 0.0
+    sales: float = 0.0
+    orders: int = 0
+    action_taken: str | None = None
+    recorded_at: datetime | None = None
+
+
+class DailyMetricResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID | None = None
+    campaign_id: UUID | None = None
+    date: datetime | str
+    spend: float = 0.0
+    sales: float = 0.0
+    impressions: int = 0
+    clicks: int = 0
+    orders: int = 0
+
+
+class AIInsight(BaseModel):
+    type: str
+    message: str
+    campaign_id: str | None = None
+    action: str | None = None
+    severity: str = "info"  # "info" | "warning" | "success"
+
+
+class AIInsightsResponse(BaseModel):
+    insights: list[AIInsight]
+
+
+class KeywordSuggestion(BaseModel):
+    keyword: str
+    search_volume: int
+    suggested_bid: float
+    competition: str = "medium"  # "low" | "medium" | "high"
+
+
+class KeywordSuggestionsResponse(BaseModel):
+    keywords: list[KeywordSuggestion]
+
+
+class BidRecommendation(BaseModel):
+    keyword: str
+    current_bid: float
+    suggested_bid: float
+    reason: str
+    expected_acos_impact: float = 0.0
+
+
+class BidOptimizationRequest(BaseModel):
+    target_acos: float = 30.0
+    strategy: str = "maximize_sales"  # "maximize_sales" | "minimize_acos" | "maximize_impressions"
+
+
+class BidOptimizationResponse(BaseModel):
+    recommendations: list[BidRecommendation]
+    estimated_impact: dict = {}
+
+
+class EnhancedDashboardResponse(BaseModel):
+    stats: dict
+    trend_data: list[DailyMetricResponse] = []
+    top_campaigns: list[dict] = []
+    insights: list[AIInsight] = []
+
+
+class CampaignCreateRequest(BaseModel):
+    platform: str
+    ad_type: str = "sponsored_products"
+    book_id: str | None = None
+    name: str
+    targeting_type: str | None = None
+    match_types: list[str] | None = None
+    daily_budget: float
+    bidding_strategy: str | None = None
+    default_bid: float | None = None
+    keywords: list[dict] | None = None
+    negative_keywords: list[str] | None = None
+    schedule_start: str | None = None
+    schedule_end: str | None = None
