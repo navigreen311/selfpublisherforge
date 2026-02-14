@@ -186,3 +186,163 @@ class CompetitorAnalysisResponse(BaseModel):
     analyses: list[CompetitorCoverAnalysis] = Field(default_factory=list)
     trends: dict[str, Any] = Field(default_factory=dict)
     recommendations: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Editor & Export schemas
+# ---------------------------------------------------------------------------
+
+
+class EditorState(BaseModel):
+    """Editor state for a cover design."""
+
+    layers: list[dict[str, Any]] = Field(default_factory=list)
+    canvas_dimensions: dict[str, int] | None = None
+    active_layer_id: str | None = None
+    zoom_level: float = 1.0
+    history: list[dict[str, Any]] = Field(default_factory=list)
+    custom_data: dict[str, Any] = Field(default_factory=dict)
+
+
+class UpdateEditorStateRequest(BaseModel):
+    """Request to update editor state."""
+
+    editor_state: EditorState
+
+
+class ExportFormat(str, Enum):
+    PNG = "png"
+    JPG = "jpg"
+    PDF = "pdf"
+    PSD = "psd"
+
+
+class ExportRequest(BaseModel):
+    """Request to export a cover design."""
+
+    format: ExportFormat = ExportFormat.PNG
+    dpi: int = Field(300, ge=72, le=600)
+    include_bleed: bool = False
+    color_profile: str | None = Field(None, description="e.g., 'sRGB', 'Adobe RGB'")
+
+
+class ExportResponse(BaseModel):
+    """Response containing export URL and metadata."""
+
+    export_url: str
+    format: ExportFormat
+    file_size_bytes: int
+    dimensions: CoverDimensions
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# AB Testing schemas
+# ---------------------------------------------------------------------------
+
+
+class ABTestStatus(str, Enum):
+    ACTIVE = "active"
+    ENDED = "ended"
+    DRAFT = "draft"
+
+
+class CreateABTestRequest(BaseModel):
+    """Request to create an A/B test."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    description: str | None = Field(None, max_length=1000)
+    cover_a_id: UUID
+    cover_b_id: UUID
+    target_audience: str | None = Field(None, max_length=500)
+    duration_days: int = Field(7, ge=1, le=90)
+    public_url_enabled: bool = True
+
+
+class ABTestResponse(BaseModel):
+    """Response for an A/B test."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    org_id: UUID
+    name: str
+    description: str | None
+    cover_a_id: UUID
+    cover_b_id: UUID
+    status: ABTestStatus
+    votes_a: int = 0
+    votes_b: int = 0
+    public_url: str | None
+    target_audience: str | None
+    duration_days: int
+    started_at: datetime | None
+    ended_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class VoteRequest(BaseModel):
+    """Request to vote on an A/B test."""
+
+    choice: str = Field(..., pattern="^(a|b)$", description="Must be 'a' or 'b'")
+    voter_fingerprint: str | None = Field(None, max_length=500, description="Optional fingerprint to prevent duplicate votes")
+
+
+class VoteResponse(BaseModel):
+    """Response after voting."""
+
+    success: bool
+    message: str
+    current_votes_a: int
+    current_votes_b: int
+
+
+class EndABTestRequest(BaseModel):
+    """Request to end an A/B test."""
+
+    winner: str | None = Field(None, pattern="^(a|b|tie)$", description="Declare winner: 'a', 'b', or 'tie'")
+    notes: str | None = Field(None, max_length=2000)
+
+
+# ---------------------------------------------------------------------------
+# List/Query schemas
+# ---------------------------------------------------------------------------
+
+
+class CoverListSortBy(str, Enum):
+    CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
+    TITLE = "title"
+    STATUS = "status"
+
+
+class CoverFormat(str, Enum):
+    ALL = "all"
+    EBOOK = "ebook"
+    PRINT = "print"
+    AUDIOBOOK = "audiobook"
+
+
+# ---------------------------------------------------------------------------
+# Generation Job schemas
+# ---------------------------------------------------------------------------
+
+
+class GenerationJobStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class GenerationJobResponse(BaseModel):
+    """Response for async cover generation job."""
+
+    job_id: str
+    status: GenerationJobStatus
+    progress: int = Field(0, ge=0, le=100)
+    cover_id: UUID | None = None
+    error_message: str | None = None
+    created_at: datetime
+    completed_at: datetime | None = None

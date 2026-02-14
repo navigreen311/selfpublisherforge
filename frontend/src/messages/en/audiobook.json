@@ -1,0 +1,45 @@
+{
+  "title": "Audiobooks",
+  "subtitle": "Create and manage audiobook productions",
+  "newAudiobook": "+ New Audiobook",
+  "createAudiobook": "Create Audiobook",
+  "noAudiobooks": "No audiobooks yet. Create your first audiobook to get started!",
+
+  "stats": {
+    "totalProjects": "Total Projects",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "totalDuration": "Total Duration"
+  },
+
+  "status": {
+    "configuring": "Configuring",
+    "generating": "Generating",
+    "reviewing": "Reviewing",
+    "mastering": "Mastering",
+    "complete": "Complete",
+    "validated": "Validated"
+  },
+
+  "wizard": {
+    "step1Title": "Select Manuscript",
+    "step2Title": "Voice & Characters",
+    "step3Title": "Review & Generate",
+    "selectManuscript": "Select Manuscript",
+    "estimatedDuration": "Estimated Duration",
+    "uploadManuscript": "Upload Manuscript",
+    "primaryVoice": "Primary Voice",
+    "tierStandard": "Standard",
+    "tierPremium": "Premium",
+    "previewVoice": "Preview Voice",
+    "characterVoiceTip": "Assign different voices to characters for immersive narration",
+    "outputSettings": "Output Settings",
+    "targetPlatform": "Target Platform",
+    "narrationSpeed": "Narration Speed",
+    "narrationStyle": "Narration Style",
+    "costEstimate": "Cost Estimate",
+    "budgetLimit": "Budget Limit",
+    "comparisonNote": "Compare costs with traditional narration",
+    "create": "Create Audiobook"
+  }
+}
