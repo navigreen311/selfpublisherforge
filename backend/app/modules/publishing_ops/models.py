@@ -2,14 +2,15 @@
 
 ExportJob — tracks EPUB/PDF export generation jobs.
 FormattingTemplateModel — stores custom formatting templates per org.
-ISBNRecord — tracks ISBN assignments per org.
+BookPricing — per-book pricing configuration (one row per book per org).
+PricingHistory — audit trail of pricing field changes.
 """
 
 from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -68,29 +69,51 @@ class FormattingTemplateModel(TenantModel):
     )
 
 
-class ISBNRecord(TenantModel):
-    """Tracks ISBN assignments for an organisation."""
+class BookPricing(TenantModel):
+    """Per-book pricing configuration (one row per book per org)."""
 
-    __tablename__ = "isbns"
+    __tablename__ = "book_pricing"
 
-    isbn: Mapped[str] = mapped_column(String(17), nullable=False, unique=True)
-    format: Mapped[str] = mapped_column(String(30), nullable=False)  # e.g. paperback, hardcover, ebook
-    book_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("books.id", ondelete="SET NULL"),
-        nullable=True,
+    book_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("books.id", ondelete="CASCADE"),
+        nullable=False,
         index=True,
     )
-    barcode_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", server_default="USD")
+    kindle_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    paperback_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hardcover_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    audiobook_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    print_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    # Relationships
-    book = relationship("Book", backref="isbns")
+    book = relationship("Book", backref="book_pricing")
 
     __table_args__ = (
-        Index("ix_isbns_org_id", "org_id"),
-        Index("ix_isbns_isbn", "isbn", unique=True),
+        Index("ix_book_pricing_book_org", "book_id", "org_id", unique=True),
         Index(
-            "ix_isbns_deleted_at_partial",
+            "ix_book_pricing_deleted_at_partial",
             "id",
             postgresql_where="deleted_at IS NULL",
         ),
+    )
+
+
+class PricingHistory(TenantModel):
+    """Audit trail of pricing field changes."""
+
+    __tablename__ = "pricing_history"
+
+    book_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("books.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    field_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    old_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    new_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    __table_args__ = (
+        Index("ix_pricing_history_book_org", "book_id", "org_id"),
+        Index("ix_pricing_history_created_at", "created_at"),
     )

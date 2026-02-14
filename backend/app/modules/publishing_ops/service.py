@@ -29,7 +29,7 @@ from app.models.publishing import (
     PublishingAccount as PublishingAccountModel,
 )
 from app.modules.publishing_ops.epub_generator import generate_epub
-from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel, ISBNRecord
+from app.modules.publishing_ops.models import BookPricing, ExportJob, FormattingTemplateModel, PricingHistory
 from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
@@ -39,10 +39,6 @@ from app.modules.publishing_ops.schemas import (
     ExportResponse,
     FormattingTemplate,
     FormattingTemplateCreate,
-    ISBNBarcodeResponse,
-    ISBNCreate,
-    ISBNDetail,
-    ISBNUpdate,
     ListingDetail,
     ListingSyncResponse,
     PlatformType,
@@ -597,189 +593,204 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
 
 
 # ---------------------------------------------------------------------------
-# ISBN Management
+# Pricing
 # ---------------------------------------------------------------------------
 
-import re
-
-_ISBN_10_RE = re.compile(r"^\d{9}[\dX]$")
-_ISBN_13_RE = re.compile(r"^\d{13}$")
-
-
-def _validate_isbn(isbn: str) -> str:
-    """Validate and normalise an ISBN-10 or ISBN-13 string.
-
-    Strips hyphens/spaces, then checks the format. Returns the cleaned
-    ISBN or raises ``ValueError`` on invalid input.
-    """
-    cleaned = isbn.replace("-", "").replace(" ", "").upper()
-    if _ISBN_10_RE.match(cleaned) or _ISBN_13_RE.match(cleaned):
-        return cleaned
-    raise ValueError(
-        f"Invalid ISBN format: '{isbn}'. Expected ISBN-10 (10 digits) "
-        "or ISBN-13 (13 digits)."
-    )
-
-
-async def list_isbns(db: AsyncSession, org_id: uuid.UUID) -> list[ISBNDetail]:
-    """Return all ISBNs belonging to an organisation."""
+async def get_pricing(
+    db: AsyncSession,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> dict | None:
+    """Return the book_pricing row for a given book and org, or None."""
     stmt = (
-        select(ISBNRecord)
+        select(BookPricing)
         .where(
-            ISBNRecord.org_id == org_id,
-            ISBNRecord.deleted_at.is_(None),
+            BookPricing.book_id == book_id,
+            BookPricing.org_id == org_id,
+            BookPricing.deleted_at.is_(None),
         )
-        .order_by(ISBNRecord.created_at.desc())
     )
     result = await db.execute(stmt)
-    rows = result.scalars().all()
-    return [
-        ISBNDetail(
-            id=row.id,
-            org_id=row.org_id,
-            isbn=row.isbn,
-            format=row.format,
-            book_id=row.book_id,
-            barcode_url=row.barcode_url,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
-        )
-        for row in rows
-    ]
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+
+    return {
+        "id": row.id,
+        "book_id": row.book_id,
+        "org_id": row.org_id,
+        "currency": row.currency,
+        "kindle_price": row.kindle_price,
+        "paperback_price": row.paperback_price,
+        "hardcover_price": row.hardcover_price,
+        "audiobook_price": row.audiobook_price,
+        "page_count": row.page_count,
+        "print_type": row.print_type,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
 
 
-async def create_isbn(
+async def update_pricing(
     db: AsyncSession,
+    book_id: uuid.UUID,
     org_id: uuid.UUID,
-    isbn: str,
+    updates: dict,
+) -> dict:
+    """Upsert book_pricing and record changed fields in pricing_history."""
+    stmt = (
+        select(BookPricing)
+        .where(
+            BookPricing.book_id == book_id,
+            BookPricing.org_id == org_id,
+            BookPricing.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+
+    tracked_fields = {
+        "currency", "kindle_price", "paperback_price",
+        "hardcover_price", "audiobook_price", "page_count", "print_type",
+    }
+
+    if row is None:
+        # INSERT — all provided fields are "new"
+        row = BookPricing(
+            book_id=book_id,
+            org_id=org_id,
+        )
+        for field, value in updates.items():
+            if field in tracked_fields:
+                setattr(row, field, value)
+                # Record history for the initial set
+                db.add(PricingHistory(
+                    book_id=book_id,
+                    org_id=org_id,
+                    field_name=field,
+                    old_value=None,
+                    new_value=str(value) if value is not None else None,
+                ))
+        db.add(row)
+    else:
+        # UPDATE — only record history for actually-changed fields
+        for field, value in updates.items():
+            if field not in tracked_fields:
+                continue
+            old_value = getattr(row, field, None)
+            if old_value != value:
+                db.add(PricingHistory(
+                    book_id=book_id,
+                    org_id=org_id,
+                    field_name=field,
+                    old_value=str(old_value) if old_value is not None else None,
+                    new_value=str(value) if value is not None else None,
+                ))
+                setattr(row, field, value)
+
+    await db.flush()
+    await db.refresh(row)
+
+    return {
+        "id": row.id,
+        "book_id": row.book_id,
+        "org_id": row.org_id,
+        "currency": row.currency,
+        "kindle_price": row.kindle_price,
+        "paperback_price": row.paperback_price,
+        "hardcover_price": row.hardcover_price,
+        "audiobook_price": row.audiobook_price,
+        "page_count": row.page_count,
+        "print_type": row.print_type,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
+
+
+def calculate_royalty(
+    price: float,
     format: str,
-    book_id: uuid.UUID | None = None,
-) -> ISBNDetail:
-    """Insert a new ISBN record after validating the ISBN format."""
-    cleaned = _validate_isbn(isbn)
+    platform: str,
+    page_count: int = 0,
+    print_type: str = "black_white",
+) -> dict:
+    """Pure function — compute estimated royalty for a given price/format/platform.
 
-    record = ISBNRecord(
-        org_id=org_id,
-        isbn=cleaned,
-        format=format,
-        book_id=book_id,
-    )
-    db.add(record)
-    await db.flush()
-    await db.refresh(record)
-
-    return ISBNDetail(
-        id=record.id,
-        org_id=record.org_id,
-        isbn=record.isbn,
-        format=record.format,
-        book_id=record.book_id,
-        barcode_url=record.barcode_url,
-        created_at=record.created_at,
-        updated_at=record.updated_at,
-    )
-
-
-async def update_isbn(
-    db: AsyncSession,
-    isbn_id: uuid.UUID,
-    org_id: uuid.UUID,
-    updates: ISBNUpdate,
-) -> ISBNDetail | None:
-    """Patch an existing ISBN record. Returns ``None`` if not found."""
-    stmt = (
-        select(ISBNRecord)
-        .where(
-            ISBNRecord.id == isbn_id,
-            ISBNRecord.org_id == org_id,
-            ISBNRecord.deleted_at.is_(None),
-        )
-    )
-    result = await db.execute(stmt)
-    record = result.scalar_one_or_none()
-    if record is None:
-        return None
-
-    update_dict = updates.model_dump(exclude_unset=True)
-    for key, value in update_dict.items():
-        if key == "format" and value is not None:
-            value = value.value if hasattr(value, "value") else str(value)
-        setattr(record, key, value)
-
-    await db.flush()
-    await db.refresh(record)
-
-    return ISBNDetail(
-        id=record.id,
-        org_id=record.org_id,
-        isbn=record.isbn,
-        format=record.format,
-        book_id=record.book_id,
-        barcode_url=record.barcode_url,
-        created_at=record.created_at,
-        updated_at=record.updated_at,
-    )
-
-
-async def delete_isbn(
-    db: AsyncSession,
-    isbn_id: uuid.UUID,
-    org_id: uuid.UUID,
-) -> bool:
-    """Soft-delete an ISBN record. Returns ``True`` if deleted, ``False`` if not found."""
-    stmt = (
-        select(ISBNRecord)
-        .where(
-            ISBNRecord.id == isbn_id,
-            ISBNRecord.org_id == org_id,
-            ISBNRecord.deleted_at.is_(None),
-        )
-    )
-    result = await db.execute(stmt)
-    record = result.scalar_one_or_none()
-    if record is None:
-        return False
-
-    record.deleted_at = _now()
-    await db.flush()
-    return True
-
-
-async def generate_barcode(
-    db: AsyncSession,
-    isbn_id: uuid.UUID,
-    org_id: uuid.UUID,
-    price: float | None = None,
-    format: str = "png",
-) -> ISBNBarcodeResponse | None:
-    """Generate a barcode for the given ISBN and return a placeholder URL.
-
-    In production this would call a barcode generation service. For now
-    it returns a deterministic placeholder URL and persists it on the record.
+    Supported platforms & formats:
+    - KDP Kindle: 70% royalty if price is $2.99–$9.99, else 35%.
+    - KDP Print:  60% of (price - printing_cost).
+                  printing_cost = page_count * 0.012 + 0.85
+    - IngramSpark: 40% wholesale discount.
+                   royalty = price * 0.55 - printing_cost
+                   printing_cost = page_count * 0.012 + 0.85
+    - ACX: 40% royalty-share, 25% exclusive.
     """
-    stmt = (
-        select(ISBNRecord)
-        .where(
-            ISBNRecord.id == isbn_id,
-            ISBNRecord.org_id == org_id,
-            ISBNRecord.deleted_at.is_(None),
-        )
-    )
-    result = await db.execute(stmt)
-    record = result.scalar_one_or_none()
-    if record is None:
-        return None
+    platform_lower = platform.lower()
+    format_lower = format.lower()
 
-    price_segment = f"_price-{price:.2f}" if price is not None else ""
-    barcode_url = (
-        f"/barcodes/{record.isbn}{price_segment}.{format}"
-    )
-    record.barcode_url = barcode_url
-    await db.flush()
-    await db.refresh(record)
+    printing_cost = page_count * 0.012 + 0.85
 
-    return ISBNBarcodeResponse(
-        isbn_id=record.id,
-        isbn=record.isbn,
-        barcode_url=barcode_url,
-    )
+    if platform_lower == "kdp" and format_lower == "kindle":
+        if 2.99 <= price <= 9.99:
+            rate = 0.70
+        else:
+            rate = 0.35
+        royalty = round(price * rate, 2)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": rate,
+            "royalty": royalty,
+            "printing_cost": 0.0,
+        }
+
+    if platform_lower == "kdp" and format_lower in ("print", "paperback", "hardcover"):
+        royalty = round(0.60 * (price - printing_cost), 2)
+        royalty = max(royalty, 0.0)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": 0.60,
+            "royalty": royalty,
+            "printing_cost": round(printing_cost, 2),
+        }
+
+    if platform_lower in ("ingram_spark", "ingramspark", "ingram"):
+        royalty = round(price * 0.55 - printing_cost, 2)
+        royalty = max(royalty, 0.0)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": 0.55,
+            "wholesale_discount": 0.40,
+            "royalty": royalty,
+            "printing_cost": round(printing_cost, 2),
+        }
+
+    if platform_lower == "acx":
+        royalty_share_rate = 0.40
+        exclusive_rate = 0.25
+        royalty = round(price * royalty_share_rate, 2)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": royalty_share_rate,
+            "exclusive_rate": exclusive_rate,
+            "royalty": royalty,
+            "printing_cost": 0.0,
+        }
+
+    # Fallback for unknown platforms
+    return {
+        "platform": platform,
+        "format": format,
+        "price": price,
+        "royalty_rate": 0.0,
+        "royalty": 0.0,
+        "printing_cost": 0.0,
+        "note": f"Unsupported platform/format combination: {platform}/{format}",
+    }
