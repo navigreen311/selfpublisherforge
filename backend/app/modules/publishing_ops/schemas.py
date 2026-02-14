@@ -244,3 +244,53 @@ class ListingSyncResponse(BaseModel):
     listing_id: uuid.UUID
     status: str = "sync_queued"
     message: str = "Listing sync has been queued"
+
+
+# ---------- Pricing ----------
+
+class BookFormat(str, Enum):
+    KINDLE = "kindle"
+    PAPERBACK = "paperback"
+    HARDCOVER = "hardcover"
+
+
+class UpdatePricingRequest(BaseModel):
+    currency: str = "USD"
+    kindle_price: float | None = Field(None, ge=0, description="Kindle ebook price")
+    paperback_price: float | None = Field(None, ge=0, description="Paperback print price")
+    hardcover_price: float | None = Field(None, ge=0, description="Hardcover print price")
+    sale_price: float | None = Field(None, ge=0, description="Optional sale/promo price")
+    is_enrolled_in_kdp_select: bool = False
+
+
+class PricingResponse(BaseModel):
+    book_id: uuid.UUID
+    currency: str = "USD"
+    kindle_price: float | None = None
+    paperback_price: float | None = None
+    hardcover_price: float | None = None
+    sale_price: float | None = None
+    is_enrolled_in_kdp_select: bool = False
+    estimated_royalties: dict[str, float] = Field(
+        default_factory=dict,
+        description="Estimated royalties keyed by format (kindle, paperback, hardcover)",
+    )
+    updated_at: datetime
+
+
+class RoyaltyCalcRequest(BaseModel):
+    price: float = Field(..., gt=0, description="List price for the book")
+    format: BookFormat = Field(..., description="Book format (kindle, paperback, hardcover)")
+    platform: PlatformType = PlatformType.KDP
+    page_count: int | None = Field(None, ge=1, description="Page count (required for print formats)")
+    currency: str = "USD"
+
+
+class RoyaltyCalcResponse(BaseModel):
+    price: float
+    format: BookFormat
+    platform: PlatformType
+    royalty_rate: float = Field(..., description="Royalty rate applied (e.g. 0.70 for 70%)")
+    printing_cost: float | None = Field(None, description="Printing cost for print formats")
+    estimated_royalty: float = Field(..., description="Estimated royalty per unit sold")
+    currency: str = "USD"

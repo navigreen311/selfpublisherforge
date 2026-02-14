@@ -11,6 +11,9 @@ GET    /templates             List formatting templates
 POST   /templates             Create custom template
 GET    /listings              List all listings across platforms
 POST   /listings/{id}/sync    Sync listing with platform
+GET    /pricing/{book_id}     Get pricing info for a book
+PATCH  /pricing/{book_id}     Update pricing info for a book
+POST   /pricing/calculate-royalty  Calculate royalty estimate
 
 Book metadata endpoints are on a separate router registered at "/api/v1":
 GET    /books/{id}/metadata   Get book metadata
@@ -36,8 +39,12 @@ from app.modules.publishing_ops.schemas import (
     FormattingTemplateCreate,
     ListingDetail,
     ListingSyncResponse,
+    PricingResponse,
     PublishingAccount,
     PublishingAccountCreate,
+    RoyaltyCalcRequest,
+    RoyaltyCalcResponse,
+    UpdatePricingRequest,
 )
 
 router = APIRouter(tags=["publishing"])
@@ -236,3 +243,58 @@ async def sync_listing(
 ):
     """Trigger a sync for a specific listing with its platform."""
     return await service.sync_listing(db, listing_id)
+
+
+# ---------- Pricing ----------
+
+@router.get(
+    "/pricing/{book_id}",
+    response_model=PricingResponse,
+    summary="Get book pricing",
+    description="Retrieve pricing information and estimated royalties for a book.",
+)
+async def get_pricing(
+    book_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Retrieve pricing info and estimated royalties for a book."""
+    pricing = await service.get_pricing(db, book_id)
+    if pricing is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return pricing
+
+
+@router.patch(
+    "/pricing/{book_id}",
+    response_model=PricingResponse,
+    summary="Update book pricing",
+    description="Update pricing fields (kindle, paperback, hardcover, sale price) for a book.",
+)
+async def update_pricing(
+    book_id: uuid.UUID,
+    body: UpdatePricingRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Update pricing info for a book."""
+    return await service.update_pricing(db, book_id, body)
+
+
+@router.post(
+    "/pricing/calculate-royalty",
+    response_model=RoyaltyCalcResponse,
+    summary="Calculate royalty estimate",
+    description=(
+        "Calculate estimated royalty for a given price/format/platform combination. "
+        "KDP Kindle: 70% if $2.99-$9.99, else 35%. "
+        "KDP Print: 60% of (price - printing_cost), where printing_cost = page_count * 0.012 + 0.85."
+    ),
+)
+async def calculate_royalty(
+    body: RoyaltyCalcRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Calculate royalty for a given price/format/platform combo."""
+    return service.calculate_royalty(body)
