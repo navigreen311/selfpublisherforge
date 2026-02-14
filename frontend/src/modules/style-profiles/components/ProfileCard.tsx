@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Calendar, TrendingUp } from "lucide-react";
+import { FileText, Calendar, TrendingUp, Trash2 } from "lucide-react";
 import type { ProfileResponse } from "../types";
 
 interface ProfileCardProps {
   profile: ProfileResponse;
+  onDelete?: (id: string) => void;
 }
 
-export function ProfileCard({ profile }: ProfileCardProps) {
+export function ProfileCard({ profile, onDelete }: ProfileCardProps) {
   const statusColors = {
     pending: "bg-gray-100 text-gray-700",
     analyzing: "bg-blue-100 text-blue-700",
@@ -70,11 +71,27 @@ export function ProfileCard({ profile }: ProfileCardProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-3 border-t">
-        <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-        <span>
-          Updated {new Date(profile.updated_at).toLocaleDateString()}
-        </span>
+      <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>
+            Updated {new Date(profile.updated_at).toLocaleDateString()}
+          </span>
+        </div>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete(profile.id);
+            }}
+            className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+            aria-label={`Delete ${profile.name}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
     </Link>
   );
