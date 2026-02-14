@@ -228,3 +228,56 @@ export interface FullValidationRequest {
     content_sample?: string;
   };
 }
+
+export interface ISBN {
+  id: string;
+  isbn: string;
+  format: string | null;
+  book_id: string | null;
+  book_title?: string;
+  status: "available" | "in_use" | "retired";
+  barcode_url: string | null;
+  created_at: string;
+}
+
+export interface BookPricing {
+  id: string;
+  book_id: string;
+  kindle_price: number | null;
+  paperback_price: number | null;
+  hardcover_price: number | null;
+  audiobook_price: number | null;
+  currency: string;
+  updated_at: string;
+}
+
+export interface PricingHistory {
+  id: string;
+  book_id: string;
+  format: string;
+  old_price: number;
+  new_price: number;
+  changed_at: string;
+}
+
+export interface RoyaltyCalculation {
+  print_cost: number;
+  royalty_rate: number;
+  royalty_amount: number;
+}
+
+export type ExportFormat = "epub" | "pdf" | "docx" | "kpf";
+
+export interface ExportConfig {
+  font_family?: string;
+  font_size?: number;
+  line_spacing?: number;
+  trim_size?: string;
+  chapter_breaks?: "page" | "section";
+  include_toc?: boolean;
+  include_cover?: boolean;
+  cover_image_url?: string;
+  isbn?: string;
+  include_front_matter?: boolean;
+  include_back_matter?: boolean;
+}
