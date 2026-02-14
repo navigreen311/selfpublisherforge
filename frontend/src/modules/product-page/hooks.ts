@@ -33,6 +33,11 @@ import type {
   CreateABTestRequest,
   LookInsideAnalyzeRequest,
   MobileCheckRequest,
+  ListingAnalysisResult,
+  BlurbVersion,
+  OptimizeKeywordsRequest,
+  OptimizeKeywordsResponse,
+  APlusPlanResponse,
 } from "./types";
 
 export type * from "./types";
@@ -118,5 +123,116 @@ export function useConversionScores(bookId: string | undefined) {
       return data.data;
     },
     enabled: !!bookId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Extended hooks for enhanced Product Page Lab
+// ---------------------------------------------------------------------------
+
+/** Analyze a listing (mutation alias with enhanced return type). */
+export function useAnalyzeListingMutation() {
+  return useMutation<ListingAnalysisResult, Error, AnalyzeListingRequest>({
+    mutationFn: async (req) => {
+      const { data } = await api.post<SuccessResponse<ListingAnalysisResult>>(`${BASE}/analyze`, req);
+      return data.data;
+    },
+  });
+}
+
+/** List past listing analyses. */
+export function useListingAnalyses() {
+  return useQuery<ListingAnalysisResult[]>({
+    queryKey: ["listing-analyses"],
+    queryFn: async () => {
+      const { data } = await api.get<SuccessResponse<ListingAnalysisResult[]>>(`${BASE}/analyses`);
+      return data.data;
+    },
+  });
+}
+
+/** Get a single listing analysis by ID. */
+export function useListingAnalysisDetail(id: string | undefined) {
+  return useQuery<ListingAnalysisResult>({
+    queryKey: ["listing-analysis", id],
+    queryFn: async () => {
+      const { data } = await api.get<SuccessResponse<ListingAnalysisResult>>(`${BASE}/analyses/${id}`);
+      return data.data;
+    },
+    enabled: !!id,
+  });
+}
+
+/** Mobile check mutation (enhanced). */
+export function useMobileCheckMutation() {
+  return useMutation<MobileCheckResult, Error, MobileCheckRequest>({
+    mutationFn: async (req) => {
+      const { data } = await api.post<SuccessResponse<MobileCheckResult>>(`${BASE}/mobile-check`, req);
+      return data.data;
+    },
+  });
+}
+
+/** Generate blurb with 3 style versions. */
+export function useGenerateBlurbMutation() {
+  return useMutation<BlurbVersion[], Error, GenerateBlurbRequest>({
+    mutationFn: async (req) => {
+      const { data } = await api.post<SuccessResponse<BlurbVersion[]>>(`${BASE}/blurb/generate`, req);
+      return data.data;
+    },
+  });
+}
+
+/** List previously generated blurbs. */
+export function useGeneratedBlurbs() {
+  return useQuery<BlurbVersion[]>({
+    queryKey: ["generated-blurbs"],
+    queryFn: async () => {
+      const { data } = await api.get<SuccessResponse<BlurbVersion[]>>(`${BASE}/blurbs`);
+      return data.data;
+    },
+  });
+}
+
+/** Optimize keywords for a book listing. */
+export function useOptimizeKeywordsMutation() {
+  return useMutation<OptimizeKeywordsResponse, Error, OptimizeKeywordsRequest>({
+    mutationFn: async (req) => {
+      const { data } = await api.post<SuccessResponse<OptimizeKeywordsResponse>>(`${BASE}/optimize-keywords`, req);
+      return data.data;
+    },
+  });
+}
+
+/** Generate an A+ content plan. */
+export function useGenerateAPlusPlan() {
+  return useMutation<APlusPlanResponse, Error, { book_id?: string; genre: string; title: string }>({
+    mutationFn: async (req) => {
+      const { data } = await api.post<SuccessResponse<APlusPlanResponse>>(`${BASE}/aplus-plan`, req);
+      return data.data;
+    },
+  });
+}
+
+/** List past A+ plans. */
+export function useAPlusPlans() {
+  return useQuery<APlusPlanResponse[]>({
+    queryKey: ["aplus-plans"],
+    queryFn: async () => {
+      const { data } = await api.get<SuccessResponse<APlusPlanResponse[]>>(`${BASE}/aplus-plans`);
+      return data.data;
+    },
+  });
+}
+
+/** Get a single A+ plan by ID. */
+export function useAPlusPlanDetail(id: string | undefined) {
+  return useQuery<APlusPlanResponse>({
+    queryKey: ["aplus-plan", id],
+    queryFn: async () => {
+      const { data } = await api.get<SuccessResponse<APlusPlanResponse>>(`${BASE}/aplus-plans/${id}`);
+      return data.data;
+    },
+    enabled: !!id,
   });
 }

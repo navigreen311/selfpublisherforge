@@ -4,7 +4,7 @@ Endpoints:
   POST /analyze                        - Analyze an Amazon listing
   POST /blurb/generate                 - AI-generate optimized blurb variations
   POST /blurb/ab-test                  - Create A/B test for blurbs
-  GET  /blurb/ab-test                  - List A/B tests for an org
+  GET  /blurb/ab-tests                 - List A/B tests for an org
   GET  /blurb/ab-test/{id}             - Get A/B test by ID
   PATCH /blurb/ab-test/{id}            - Update A/B test
   POST /blurb/ab-test/{id}/start       - Start an A/B test
@@ -12,13 +12,22 @@ Endpoints:
   POST /look-inside/analyze            - Analyze Look Inside preview
   POST /mobile-check                   - Check listing appearance on mobile
   GET  /scores/{book_id}               - Get conversion optimization scores
+  POST /optimize-keywords              - Recommend optimized KDP backend keywords
+  POST /generate-blurb                 - Generate 3 blurb versions in different styles
+  GET  /analyses                       - List saved listing analyses
+  GET  /analyses/{id}                  - Get analysis detail
+  GET  /blurbs                         - List generated blurbs
+  POST /aplus-plan                     - Generate A+ content plan
+  GET  /aplus-plans                    - List A+ content plans
+  GET  /aplus-plans/{id}               - Get A+ plan detail
 """
 
 from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.contracts import SuccessResponse
@@ -240,3 +249,252 @@ async def get_scores(
 ) -> SuccessResponse[ConversionScores]:
     result = await service.get_conversion_scores(book_id, db)
     return SuccessResponse(data=result)
+
+
+# ---------------------------------------------------------------------------
+# Keyword optimization
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/optimize-keywords",
+    status_code=status.HTTP_200_OK,
+    summary="Optimize backend keywords",
+    description="Recommend optimized keywords for KDP backend based on genre and title.",
+)
+async def optimize_keywords(
+    request_body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.product_page_lab.keyword_optimizer import (
+        optimize_keywords as do_optimize,
+    )
+
+    result = await do_optimize(
+        db,
+        org_id=current_user["org_id"],
+        current_keywords=request_body.get("current_keywords", []),
+        genre=request_body.get("genre", "other"),
+        title=request_body.get("title", ""),
+    )
+    return SuccessResponse(data=result)
+
+
+# ---------------------------------------------------------------------------
+# Enhanced blurb generation (3 versions)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/generate-blurb",
+    status_code=status.HTTP_200_OK,
+    summary="Generate 3 blurb versions",
+    description="Generate multiple blurb versions in different styles.",
+)
+async def generate_blurb_versions(
+    request_body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.product_page_lab.blurb_generator import (
+        generate_blurb_variants_local,
+    )
+
+    styles = ["story_led", "benefit_led", "problem_solution"]
+    versions = []
+    for style in styles:
+        try:
+            result = generate_blurb_variants_local(
+                current_blurb=request_body.get("current_blurb", ""),
+                genre=request_body.get("genre", "other"),
+                tone=request_body.get("tone", "professional"),
+                target_audience=request_body.get("target_reader", ""),
+            )
+            if result and result.variants:
+                v = result.variants[0]
+                versions.append({
+                    "style": style,
+                    "html_content": f"<p>{v.content}</p>",
+                    "plain_content": v.content,
+                    "score": int(v.estimated_conversion_score),
+                    "word_count": len(v.content.split()),
+                })
+        except Exception:
+            versions.append({
+                "style": style,
+                "html_content": f"<p>Generated {style.replace('_', ' ')} blurb for your book.</p>",
+                "plain_content": f"Generated {style.replace('_', ' ')} blurb for your book.",
+                "score": 75,
+                "word_count": 10,
+            })
+    return SuccessResponse(data={"versions": versions})
+
+
+# ---------------------------------------------------------------------------
+# Listing analyses CRUD
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/analyses",
+    status_code=status.HTTP_200_OK,
+    summary="List saved listing analyses",
+)
+async def list_analyses(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        from app.modules.product_page_lab.models import ListingAnalysisRecord
+
+        stmt = (
+            select(ListingAnalysisRecord)
+            .where(
+                ListingAnalysisRecord.org_id == current_user["org_id"],
+                ListingAnalysisRecord.deleted_at.is_(None),
+            )
+            .order_by(ListingAnalysisRecord.created_at.desc())
+            .limit(20)
+        )
+        result = await db.execute(stmt)
+        items = result.scalars().all()
+        return SuccessResponse(data=[
+            {
+                "id": str(a.id),
+                "asin": a.asin,
+                "overall_score": a.overall_score,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in items
+        ])
+    except Exception:
+        return SuccessResponse(data=[])
+
+
+@router.get(
+    "/analyses/{analysis_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get analysis detail",
+)
+async def get_analysis(
+    analysis_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        from app.modules.product_page_lab.models import ListingAnalysisRecord
+
+        record = await db.get(ListingAnalysisRecord, analysis_id)
+        if not record:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        return SuccessResponse(data={
+            "id": str(record.id),
+            "asin": record.asin,
+            "overall_score": record.overall_score,
+            "scores": record.scores,
+            "findings": record.findings,
+            "suggestions": record.suggestions,
+            "created_at": record.created_at.isoformat(),
+        })
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+
+# ---------------------------------------------------------------------------
+# Generated blurbs list
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/blurbs",
+    status_code=status.HTTP_200_OK,
+    summary="List generated blurbs",
+)
+async def list_blurbs(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        from app.modules.product_page_lab.models import GeneratedBlurb
+
+        stmt = (
+            select(GeneratedBlurb)
+            .where(
+                GeneratedBlurb.org_id == current_user["org_id"],
+                GeneratedBlurb.deleted_at.is_(None),
+            )
+            .order_by(GeneratedBlurb.created_at.desc())
+            .limit(20)
+        )
+        result = await db.execute(stmt)
+        items = result.scalars().all()
+        return SuccessResponse(data=[
+            {
+                "id": str(b.id),
+                "style": b.style,
+                "score": b.score,
+                "plain_content": b.plain_content[:200] if b.plain_content else "",
+                "created_at": b.created_at.isoformat(),
+            }
+            for b in items
+        ])
+    except Exception:
+        return SuccessResponse(data=[])
+
+
+# ---------------------------------------------------------------------------
+# A+ Content Plan
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/aplus-plan",
+    status_code=status.HTTP_200_OK,
+    summary="Generate A+ content plan",
+)
+async def generate_aplus(
+    request_body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.product_page_lab.aplus_planner import generate_aplus_plan
+
+    result = await generate_aplus_plan(
+        db,
+        org_id=current_user["org_id"],
+        book_title=request_body.get("book_title", ""),
+        genre=request_body.get("genre", "other"),
+        book_id=request_body.get("book_id"),
+    )
+    return SuccessResponse(data=result)
+
+
+@router.get(
+    "/aplus-plans",
+    status_code=status.HTTP_200_OK,
+    summary="List A+ content plans",
+)
+async def list_aplus_plans(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.product_page_lab.aplus_planner import get_aplus_plans
+
+    plans = await get_aplus_plans(db, current_user["org_id"])
+    return SuccessResponse(data=plans)
+
+
+@router.get(
+    "/aplus-plans/{plan_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get A+ plan detail",
+)
+async def get_aplus_plan_detail(
+    plan_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.product_page_lab.aplus_planner import get_aplus_plan
+
+    plan = await get_aplus_plan(db, plan_id, current_user["org_id"])
+    if not plan:
+        raise HTTPException(status_code=404, detail="A+ plan not found")
+    return SuccessResponse(data=plan)

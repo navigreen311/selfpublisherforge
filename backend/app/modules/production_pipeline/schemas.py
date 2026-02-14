@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -24,6 +24,13 @@ class TaskBase(BaseModel):
     due_date: datetime | None = None
     depends_on: list[str] | None = Field(default_factory=list)
     position: int = 0
+    stage_id: uuid.UUID | None = None
+    priority: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
+    checklist: list[dict] | None = Field(default_factory=list)
+    links: list[dict] | None = Field(default_factory=list)
+    blocked_by: list[uuid.UUID] | None = Field(default_factory=list)
+    metadata_json: dict | None = Field(default_factory=dict)
+    order_index: int = 0
 
 
 class CreateTask(TaskBase):
@@ -41,6 +48,13 @@ class UpdateTask(BaseModel):
     due_date: datetime | None = None
     depends_on: list[str] | None = None
     position: int | None = None
+    stage_id: uuid.UUID | None = None
+    priority: str | None = Field(None, pattern="^(low|medium|high|critical)$")
+    checklist: list[dict] | None = None
+    links: list[dict] | None = None
+    blocked_by: list[uuid.UUID] | None = None
+    metadata_json: dict | None = None
+    order_index: int | None = None
 
 
 class TaskResponse(TaskBase):
@@ -49,6 +63,13 @@ class TaskResponse(TaskBase):
     org_id: uuid.UUID
     status: TaskStatus
     completed_at: datetime | None = None
+    stage_id: uuid.UUID | None = None
+    priority: str | None = "medium"
+    checklist: list[dict] | None = []
+    links: list[dict] | None = []
+    blocked_by: list[uuid.UUID] | None = []
+    metadata_json: dict | None = {}
+    order_index: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -64,6 +85,8 @@ class PipelineBase(BaseModel):
     book_id: uuid.UUID
     deadline: datetime | None = None
     settings: dict | None = Field(default_factory=dict)
+    template: str | None = Field(None, max_length=100)
+    target_launch_date: date | None = None
 
 
 class CreatePipeline(PipelineBase):
@@ -80,12 +103,15 @@ class UpdatePipeline(BaseModel):
     status: PipelineStatus | None = None
     deadline: datetime | None = None
     settings: dict | None = None
+    template: str | None = Field(None, max_length=100)
+    target_launch_date: date | None = None
 
 
 class PipelineResponse(PipelineBase):
     id: uuid.UUID
     org_id: uuid.UUID
     status: PipelineStatus
+    progress_pct: int = 0
     tasks: list[TaskResponse] = []
     created_at: datetime
     updated_at: datetime
@@ -184,3 +210,150 @@ class PaginatedPipelines(BaseModel):
     page: int
     page_size: int
     pages: int
+
+
+# ── Stage Schemas ────────────────────────────────────────────────────────
+
+
+class StageCreate(BaseModel):
+    """Schema for creating a pipeline stage."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    order_index: int = 0
+    color: str | None = Field(None, max_length=20)
+    start_date: date | None = None
+    end_date: date | None = None
+
+
+class StageUpdate(BaseModel):
+    """Schema for updating a stage (partial)."""
+
+    name: str | None = Field(None, min_length=1, max_length=255)
+    order_index: int | None = None
+    color: str | None = Field(None, max_length=20)
+    start_date: date | None = None
+    end_date: date | None = None
+
+
+class StageResponse(BaseModel):
+    """Response schema for a pipeline stage."""
+
+    id: uuid.UUID
+    org_id: uuid.UUID
+    pipeline_id: uuid.UUID
+    name: str
+    order_index: int
+    color: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    tasks: list[TaskResponse] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StageReorderRequest(BaseModel):
+    """Request body for reordering stages."""
+
+    stage_ids: list[uuid.UUID] = Field(
+        ..., description="Ordered list of stage IDs in their new order"
+    )
+
+
+# ── Checklist Schemas ────────────────────────────────────────────────────
+
+
+class ChecklistItemCreate(BaseModel):
+    """Schema for creating a checklist item within a task."""
+
+    label: str = Field(..., min_length=1, max_length=500)
+    done: bool = False
+
+
+class ChecklistItem(BaseModel):
+    """A single checklist item."""
+
+    id: str | None = None
+    label: str
+    done: bool = False
+
+
+# ── Activity Schemas ─────────────────────────────────────────────────────
+
+
+class ActivityResponse(BaseModel):
+    """Response schema for a pipeline activity entry."""
+
+    id: uuid.UUID
+    pipeline_id: uuid.UUID
+    task_id: uuid.UUID | None = None
+    action: str
+    details: dict | None = None
+    user_id: uuid.UUID | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Automation Schemas ───────────────────────────────────────────────────
+
+
+class AutomationCreate(BaseModel):
+    """Schema for creating a pipeline automation."""
+
+    trigger_type: str = Field(..., max_length=50)
+    trigger_config: dict
+    action_type: str = Field(..., max_length=50)
+    action_config: dict
+    enabled: bool = True
+
+
+class AutomationUpdate(BaseModel):
+    """Schema for updating an automation (partial)."""
+
+    trigger_type: str | None = Field(None, max_length=50)
+    trigger_config: dict | None = None
+    action_type: str | None = Field(None, max_length=50)
+    action_config: dict | None = None
+    enabled: bool | None = None
+
+
+class AutomationResponse(BaseModel):
+    """Response schema for a pipeline automation."""
+
+    id: uuid.UUID
+    pipeline_id: uuid.UUID
+    trigger_type: str
+    trigger_config: dict
+    action_type: str
+    action_config: dict
+    enabled: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Pipeline Detail Schema ───────────────────────────────────────────────
+
+
+class PipelineDetail(BaseModel):
+    """Full pipeline detail including stages, tasks, and progress."""
+
+    id: uuid.UUID
+    org_id: uuid.UUID
+    book_id: uuid.UUID
+    name: str
+    description: str | None = None
+    status: PipelineStatus
+    template: str | None = None
+    target_launch_date: date | None = None
+    progress_pct: int = 0
+    deadline: datetime | None = None
+    settings: dict | None = None
+    stages: list[StageResponse] = []
+    tasks: list[TaskResponse] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

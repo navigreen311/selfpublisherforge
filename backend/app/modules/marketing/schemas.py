@@ -420,3 +420,55 @@ class SendARCRequest(BaseModel):
     """Request to send ARC copies to recipients."""
     recipient_ids: list[UUID] | None = None  # None means send to all pending
     custom_message: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Additional request/response schemas for enhanced features
+# ---------------------------------------------------------------------------
+
+class LaunchPlanTaskToggle(BaseModel):
+    """Toggle a task's completion status within a launch plan."""
+    done: bool
+
+
+class EmailSequenceGenerateRequest(BaseModel):
+    """Request to AI-generate an email sequence."""
+    book_id: UUID | None = None
+    sequence_type: str = Field(default="pre_launch", pattern=r"^(pre_launch|launch_week|post_purchase|nurture|re_engagement)$")
+    email_count: int = Field(default=5, ge=3, le=7)
+    book_title: str | None = None
+    author_name: str | None = None
+    launch_date: datetime | None = None
+
+
+class EmailUpdateRequest(BaseModel):
+    """Update a single email within a sequence."""
+    subject: str | None = Field(None, max_length=1000)
+    body_html: str | None = None
+    body_text: str | None = None
+    delay_days: int | None = Field(None, ge=0)
+
+
+class SocialGenerateRequest(BaseModel):
+    """Request to generate a batch of social media posts."""
+    book_id: UUID | None = None
+    platforms: list[str] = Field(default_factory=lambda: ["twitter", "facebook", "instagram"])
+    posts_per_week: int = Field(default=3, ge=1, le=7)
+    duration_weeks: int = Field(default=4, ge=1, le=8)
+    tone: str = Field(default="engaging", pattern=r"^(engaging|professional|casual|humorous)$")
+    book_title: str | None = None
+    launch_date: datetime | None = None
+
+
+class SocialPostUpdateRequest(BaseModel):
+    """Update a social media post."""
+    content: str | None = Field(None, max_length=5000)
+    hashtags: list[str] | None = None
+    scheduled_at: datetime | None = None
+    status: str | None = None
+
+
+class ARCRecipientAdd(BaseModel):
+    """Add a recipient to an ARC campaign."""
+    name: str = Field(..., min_length=1, max_length=300)
+    email: str = Field(..., min_length=3, max_length=500)

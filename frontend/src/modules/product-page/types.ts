@@ -200,3 +200,83 @@ export interface MobileCheckRequest {
   cover_image_url?: string;
   price?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Extended types for enhanced Product Page Lab
+// ---------------------------------------------------------------------------
+
+export interface ListingScore {
+  dimension: string;
+  score: number;
+  color: "green" | "yellow" | "red";
+}
+
+export interface ListingFinding {
+  type: "good" | "warning" | "problem";
+  message: string;
+}
+
+export interface ListingSuggestion {
+  dimension: string;
+  current: string;
+  suggested: string;
+}
+
+export interface ListingAnalysisResult {
+  id: string;
+  overall_score: number;
+  scores: Record<string, ListingScore>;
+  findings: Record<string, ListingFinding[]>;
+  suggestions: Record<string, ListingSuggestion>;
+  created_at: string;
+}
+
+export interface MobileIssue {
+  area: string;
+  severity: "critical" | "warning" | "info";
+  message: string;
+  suggestion: string;
+}
+
+export interface BlurbVersion {
+  style: string;
+  html_content: string;
+  plain_content: string;
+  score: number;
+}
+
+export type BlurbStyle = "story_led" | "benefit_led" | "problem_solution";
+
+export interface KeywordRecommendation {
+  keyword: string;
+  search_vol: number;
+  competition: "low" | "medium" | "high";
+  relevance: number;
+}
+
+export interface OptimizeKeywordsRequest {
+  book_id?: string;
+  current_keywords: string[];
+  genre: string;
+  title: string;
+}
+
+export interface OptimizeKeywordsResponse {
+  recommended: KeywordRecommendation[];
+  optimal_seven: string[];
+}
+
+export interface APlusModule {
+  type: string;
+  title: string;
+  content: string;
+  image_spec: { width: number; height: number };
+  ai_copy: string;
+}
+
+export interface APlusPlanResponse {
+  id: string;
+  modules: APlusModule[];
+  status: string;
+  created_at: string;
+}

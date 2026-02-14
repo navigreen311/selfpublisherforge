@@ -8,8 +8,12 @@ from __future__ import annotations
 
 import logging
 import re
+import uuid
 from datetime import datetime
 from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.marketing import EmailTemplateType
 from app.modules.marketing.schemas import (
@@ -309,3 +313,49 @@ class EmailBuilder:
             "body_html": result_html,
             "body_text": result_text,
         }
+
+
+# ---------------------------------------------------------------------------
+# Enhanced helper functions
+# ---------------------------------------------------------------------------
+
+
+async def update_email_in_sequence(
+    db: AsyncSession,
+    sequence_id: uuid.UUID,
+    org_id: uuid.UUID,
+    email_id: uuid.UUID,
+    subject: str | None = None,
+    body_html: str | None = None,
+    body_text: str | None = None,
+    delay_days: int | None = None,
+) -> dict | None:
+    """Update a single email within a sequence."""
+    from app.models.marketing import EmailSequence, EmailTemplate
+
+    stmt = select(EmailTemplate).where(
+        EmailTemplate.id == email_id,
+        EmailTemplate.sequence_id == sequence_id,
+    )
+    result = await db.execute(stmt)
+    template = result.scalar_one_or_none()
+    if not template:
+        return None
+
+    if subject is not None:
+        template.subject = subject
+    if body_html is not None:
+        template.body_html = body_html
+    if body_text is not None:
+        template.body_text = body_text
+    if delay_days is not None:
+        template.delay_days = delay_days
+
+    await db.flush()
+    await db.refresh(template)
+    return {
+        "id": str(template.id),
+        "subject": template.subject,
+        "body_html": template.body_html,
+        "delay_days": template.delay_days,
+    }

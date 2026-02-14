@@ -7,6 +7,7 @@ import type {
   PipelineStatus,
   TaskType,
   TaskStatus,
+  TaskPriority,
   PipelineTask,
   Pipeline,
   PipelineSummary,
@@ -14,6 +15,10 @@ import type {
   TimelineTask,
   TimelineView,
   PipelineTemplate,
+  PipelineStage,
+  ChecklistItem,
+  ActivityEntry,
+  PipelineAutomation,
 } from "./types";
 
 export type * from "./types";
@@ -29,6 +34,12 @@ export const pipelineKeys = {
   detail: (id: string) => [...pipelineKeys.details(), id] as const,
   timeline: (id: string) => [...pipelineKeys.all, "timeline", id] as const,
   templates: () => [...pipelineKeys.all, "templates"] as const,
+  stages: (pipelineId: string) =>
+    [...pipelineKeys.all, "stages", pipelineId] as const,
+  activity: (pipelineId: string) =>
+    [...pipelineKeys.all, "activity", pipelineId] as const,
+  automations: (pipelineId: string) =>
+    [...pipelineKeys.all, "automations", pipelineId] as const,
 };
 
 // ── Hooks ────────────────────────────────────────────────────────────────
@@ -164,6 +175,8 @@ export function useAddTask(pipelineId: string) {
       due_date?: string;
       depends_on?: string[];
       position?: number;
+      stage_id?: string;
+      priority?: TaskPriority;
     }) => {
       const { data } = await api.post(
         `/api/v1/pipelines/${pipelineId}/tasks`,
@@ -175,6 +188,9 @@ export function useAddTask(pipelineId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: pipelineKeys.detail(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
       });
     },
   });
@@ -194,6 +210,8 @@ export function useUpdateTask(pipelineId: string, taskId: string) {
       due_date?: string;
       depends_on?: string[];
       position?: number;
+      stage_id?: string;
+      priority?: TaskPriority;
     }) => {
       const { data } = await api.patch(
         `/api/v1/pipelines/${pipelineId}/tasks/${taskId}`,
@@ -239,6 +257,341 @@ export function useCreateTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: pipelineKeys.templates() });
+    },
+  });
+}
+
+// ── Stage hooks ──────────────────────────────────────────────────────────
+
+export function usePipelineStages(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  return useQuery<PipelineStage[]>({
+    queryKey: pipelineKeys.stages(pipelineId),
+    queryFn: async () => {
+      const { data } = await api.get(
+        `/api/v1/pipelines/${pipelineId}/stages`,
+        { params: { org_id: orgId } }
+      );
+      return data;
+    },
+    enabled: !!pipelineId && !!orgId,
+  });
+}
+
+export function useCreateStage(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      name: string;
+      order_index?: number;
+      color?: string;
+    }) => {
+      const { data } = await api.post(
+        `/api/v1/pipelines/${pipelineId}/stages`,
+        payload,
+        { params: { org_id: orgId } }
+      );
+      return data as PipelineStage;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.detail(pipelineId),
+      });
+    },
+  });
+}
+
+export function useUpdateStage(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      name?: string;
+      order_index?: number;
+      color?: string;
+      start_date?: string;
+      end_date?: string;
+    }) => {
+      const { id, ...body } = payload;
+      const { data } = await api.patch(
+        `/api/v1/pipelines/${pipelineId}/stages/${id}`,
+        body,
+        { params: { org_id: orgId } }
+      );
+      return data as PipelineStage;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.detail(pipelineId),
+      });
+    },
+  });
+}
+
+export function useDeleteStage(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (stageId: string) => {
+      await api.delete(
+        `/api/v1/pipelines/${pipelineId}/stages/${stageId}`,
+        { params: { org_id: orgId } }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.detail(pipelineId),
+      });
+    },
+  });
+}
+
+export function useReorderStages(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { stage_ids: string[] }) => {
+      const { data } = await api.post(
+        `/api/v1/pipelines/${pipelineId}/stages/reorder`,
+        payload,
+        { params: { org_id: orgId } }
+      );
+      return data as PipelineStage[];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+    },
+  });
+}
+
+// ── Task extended hooks ──────────────────────────────────────────────────
+
+export function useDeleteTask(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      await api.delete(
+        `/api/v1/pipelines/${pipelineId}/tasks/${taskId}`,
+        { params: { org_id: orgId } }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.detail(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.timeline(pipelineId),
+      });
+    },
+  });
+}
+
+export function useMoveTask(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { taskId: string; stage_id: string; order_index?: number }) => {
+      const { taskId, ...body } = payload;
+      const { data } = await api.patch(
+        `/api/v1/pipelines/${pipelineId}/tasks/${taskId}`,
+        body,
+        { params: { org_id: orgId } }
+      );
+      return data as PipelineTask;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.detail(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+    },
+  });
+}
+
+// ── Checklist hooks ──────────────────────────────────────────────────────
+
+export function useAddChecklistItem(pipelineId: string, taskId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { label: string }) => {
+      const { data } = await api.post(
+        `/api/v1/pipelines/${pipelineId}/tasks/${taskId}/checklist`,
+        payload,
+        { params: { org_id: orgId } }
+      );
+      return data as ChecklistItem;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.detail(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+    },
+  });
+}
+
+export function useToggleChecklistItem(pipelineId: string, taskId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { checklistItemId: string; done: boolean }) => {
+      const { checklistItemId, ...body } = payload;
+      const { data } = await api.patch(
+        `/api/v1/pipelines/${pipelineId}/tasks/${taskId}/checklist/${checklistItemId}`,
+        body,
+        { params: { org_id: orgId } }
+      );
+      return data as ChecklistItem;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.detail(pipelineId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.stages(pipelineId),
+      });
+    },
+  });
+}
+
+// ── Activity hooks ───────────────────────────────────────────────────────
+
+export function usePipelineActivity(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  return useQuery<ActivityEntry[]>({
+    queryKey: pipelineKeys.activity(pipelineId),
+    queryFn: async () => {
+      const { data } = await api.get(
+        `/api/v1/pipelines/${pipelineId}/activity`,
+        { params: { org_id: orgId } }
+      );
+      return data;
+    },
+    enabled: !!pipelineId && !!orgId,
+  });
+}
+
+// ── Automation hooks ─────────────────────────────────────────────────────
+
+export function usePipelineAutomations(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  return useQuery<PipelineAutomation[]>({
+    queryKey: pipelineKeys.automations(pipelineId),
+    queryFn: async () => {
+      const { data } = await api.get(
+        `/api/v1/pipelines/${pipelineId}/automations`,
+        { params: { org_id: orgId } }
+      );
+      return data;
+    },
+    enabled: !!pipelineId && !!orgId,
+  });
+}
+
+export function useCreateAutomation(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      trigger_type: string;
+      trigger_config: Record<string, unknown>;
+      action_type: string;
+      action_config: Record<string, unknown>;
+      enabled?: boolean;
+    }) => {
+      const { data } = await api.post(
+        `/api/v1/pipelines/${pipelineId}/automations`,
+        payload,
+        { params: { org_id: orgId } }
+      );
+      return data as PipelineAutomation;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.automations(pipelineId),
+      });
+    },
+  });
+}
+
+export function useUpdateAutomation(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      trigger_type?: string;
+      trigger_config?: Record<string, unknown>;
+      action_type?: string;
+      action_config?: Record<string, unknown>;
+      enabled?: boolean;
+    }) => {
+      const { id, ...body } = payload;
+      const { data } = await api.patch(
+        `/api/v1/pipelines/${pipelineId}/automations/${id}`,
+        body,
+        { params: { org_id: orgId } }
+      );
+      return data as PipelineAutomation;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.automations(pipelineId),
+      });
+    },
+  });
+}
+
+export function useDeleteAutomation(pipelineId: string) {
+  const { user } = useAuthStore();
+  const orgId = user?.org_id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (automationId: string) => {
+      await api.delete(
+        `/api/v1/pipelines/${pipelineId}/automations/${automationId}`,
+        { params: { org_id: orgId } }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: pipelineKeys.automations(pipelineId),
+      });
     },
   });
 }

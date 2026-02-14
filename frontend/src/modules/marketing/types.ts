@@ -160,3 +160,55 @@ export interface RecentActivityItem {
   title: string;
   timestamp: string;
 }
+
+// ---------------------------------------------------------------------------
+// Launch Plan Extended Types
+// ---------------------------------------------------------------------------
+
+export interface LaunchPlanWeek {
+  week_label: string;
+  tasks: LaunchPlanTask[];
+}
+
+export interface LaunchPlanTask {
+  id: string;
+  title: string;
+  done: boolean;
+  budget?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Email Sequence Generation Types
+// ---------------------------------------------------------------------------
+
+export interface EmailSequenceGenerateRequest {
+  book_id: string;
+  type: EmailSequenceType;
+  email_count?: number;
+}
+
+export type EmailSequenceType = "pre_launch" | "launch_week" | "post_purchase" | "nurture" | "re_engagement";
+
+// ---------------------------------------------------------------------------
+// Social Media Extended Types
+// ---------------------------------------------------------------------------
+
+export interface SocialGenerateRequest {
+  book_id: string;
+  platforms: SocialPlatform[];
+  posts_per_week: number;
+  duration_weeks: number;
+  tone: string;
+}
+
+export type SocialPlatform = "instagram" | "twitter" | "facebook" | "tiktok";
+export type SocialPostStatus = "draft" | "scheduled" | "posted";
+
+// ---------------------------------------------------------------------------
+// ARC Extended Types
+// ---------------------------------------------------------------------------
+
+export interface ARCRecipientAdd {
+  name: string;
+  email: string;
+}

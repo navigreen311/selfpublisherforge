@@ -240,3 +240,38 @@ class ARCManager:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def export_campaign_csv(
+        self, campaign_id: UUID, org_id: UUID,
+    ) -> str:
+        """Export campaign recipients as CSV string."""
+        import csv
+        import io
+
+        stmt = select(ARCCampaign).where(
+            ARCCampaign.id == campaign_id,
+            ARCCampaign.org_id == org_id,
+        )
+        result = await self.db.execute(stmt)
+        campaign = result.scalar_one_or_none()
+        if not campaign:
+            return ""
+
+        recipients_stmt = select(ARCRecipient).where(
+            ARCRecipient.campaign_id == campaign_id,
+        )
+        recipients_result = await self.db.execute(recipients_stmt)
+        recipients = list(recipients_result.scalars().all())
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Name", "Email", "Status", "Sent At", "Review URL"])
+        for r in recipients:
+            writer.writerow([
+                r.name,
+                r.email,
+                str(r.status),
+                r.sent_at.isoformat() if r.sent_at else "",
+                r.review_url or "",
+            ])
+        return output.getvalue()

@@ -312,3 +312,90 @@ class ConversionScores(BaseModel):
     overall_score: float = Field(..., ge=0, le=100)
     last_analyzed_at: datetime | None = None
     recommendations_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Additional schemas for keyword optimization and A+ content
+# ---------------------------------------------------------------------------
+
+class OptimizeKeywordsRequest(BaseModel):
+    """Request to optimize backend keywords."""
+    book_id: UUID | None = None
+    current_keywords: list[str] = Field(default_factory=list)
+    genre: str = Field(default="other", max_length=100)
+    title: str = Field(default="", max_length=500)
+
+
+class KeywordRecommendation(BaseModel):
+    """A single keyword recommendation."""
+    keyword: str
+    search_volume: int = 0
+    competition: str = "medium"  # low, medium, high
+    relevance: int = Field(default=3, ge=1, le=5)
+
+
+class OptimizeKeywordsResponse(BaseModel):
+    """Response with keyword recommendations."""
+    recommended: list[KeywordRecommendation] = Field(default_factory=list)
+    optimal_seven: list[str] = Field(default_factory=list)
+    analysis_notes: str = ""
+
+
+class APlusModuleSpec(BaseModel):
+    """A single A+ content module specification."""
+    module_type: str  # hero_banner, comparison_chart, feature_grid, author_story, social_proof
+    title: str
+    content: str = ""
+    image_spec: dict = Field(default_factory=dict)  # {width, height}
+    ai_copy: str = ""
+
+
+class APlusPlanRequest(BaseModel):
+    """Request to generate an A+ content plan."""
+    book_id: UUID | None = None
+    book_title: str = Field(default="", max_length=500)
+    genre: str = Field(default="other", max_length=100)
+
+
+class APlusPlanResponse(BaseModel):
+    """Response with A+ content plan."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID | None = None
+    modules: list[APlusModuleSpec] = Field(default_factory=list)
+    status: str = "draft"
+
+
+class ListingAnalysisListItem(BaseModel):
+    """Summary item for listing analysis list."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    asin: str | None = None
+    overall_score: int | None = None
+    created_at: datetime
+
+
+class GenerateBlurbEnhancedRequest(BaseModel):
+    """Enhanced blurb generation request with style options."""
+    book_id: UUID | None = None
+    title: str = Field(default="", max_length=500)
+    selling_points: str = Field(default="", max_length=2000)
+    target_reader: str = Field(default="", max_length=500)
+    tone: str = Field(default="professional", max_length=100)
+    style: str = Field(default="benefit_led", pattern=r"^(story_led|benefit_led|problem_solution)$")
+    current_blurb: str | None = Field(None, max_length=5000)
+
+
+class BlurbVersionResponse(BaseModel):
+    """A single generated blurb version."""
+    style: str
+    html_content: str
+    plain_content: str
+    score: int = Field(default=0, ge=0, le=100)
+    word_count: int = 0
+
+
+class GenerateBlurbEnhancedResponse(BaseModel):
+    """Response with multiple blurb versions."""
+    versions: list[BlurbVersionResponse] = Field(default_factory=list)
