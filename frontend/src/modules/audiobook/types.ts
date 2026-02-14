@@ -59,11 +59,14 @@ export interface AudiobookChapter {
 
 export type AudiobookProjectStatus =
   | "draft"
+  | "configuring"
+  | "generating"
   | "recording"
   | "reviewing"
   | "mastering"
   | "mastered"
   | "exporting"
+  | "complete"
   | "completed"
   | "archived";
 
@@ -85,6 +88,21 @@ export interface AudiobookProject {
   updated_at: string;
 }
 
+// List item for audiobook projects overview/dashboard
+export interface AudiobookProjectListItem {
+  id: string;
+  title: string;
+  chapter_count: number;
+  total_duration: number; // seconds
+  narrator_name?: string;
+  narrator_voice?: string;
+  status: AudiobookProjectStatus;
+  progress_percent: number; // 0-100
+  cost_spent: number; // USD
+  cost_budget?: number; // USD
+  created_at: string;
+}
+
 export interface Voice {
   id: string;
   name: string;
@@ -96,6 +114,17 @@ export interface Voice {
   accent?: string;
   cost_tier?: string;
   cost_per_minute?: number;
+}
+
+// Voice sample for voice selection UI
+export interface VoiceSample {
+  id: string;
+  name: string;
+  gender: string;
+  accent: string;
+  description?: string;
+  sample_url: string;
+  tier: string; // e.g., "standard", "premium", "ultra"
 }
 
 export interface GenerationJob {
@@ -164,6 +193,17 @@ export interface CreateAudiobookProjectPayload {
   sample_rate?: number;
   bit_rate?: number;
   channels?: number;
+}
+
+// Request payload for creating an audiobook from creation wizard
+export interface AudiobookCreateRequest {
+  manuscript_id: string;
+  voice_id: string;
+  tier: string; // e.g., "standard", "premium", "ultra"
+  target_platform?: string; // e.g., "ACX", "Findaway", "general"
+  narration_speed?: number; // 0.75 - 1.5
+  narration_style?: string; // e.g., "conversational", "dramatic", "neutral"
+  budget_limit?: number; // USD
 }
 
 export interface NarrationStyle {
