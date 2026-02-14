@@ -12,19 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field
 # ── Project schemas ──────────────────────────────────────────────────────
 
 
-
-class AudiobookCreateFromWizardRequest(BaseModel):
-    """Request body for creating an audiobook project via the wizard flow."""
-
-    manuscript_id: UUID = Field(..., description="ID of the manuscript to convert to audiobook.")
-    voice_id: str = Field(..., description="Selected voice ID for narration.")
-    tier: str = Field(..., description="Service tier.", pattern="^(standard|premium)$")
-    target_platform: str = Field(..., description="Target distribution platform.", pattern="^(acx|findaway|custom)$")
-    narration_speed: str = Field("normal", description="Narration speed.", pattern="^(slow|normal|fast)$")
-    narration_style: str | None = Field(None, description="Optional narration style description.")
-    budget_limit: float | None = Field(None, description="Optional budget limit for the project.", ge=0)
-
-
 class ProjectCreateRequest(BaseModel):
     """Request body for creating an audiobook project."""
 
@@ -120,36 +107,6 @@ class ProjectListResponse(BaseModel):
     per_page: int = 20
 
 
-
-# ── Statistics & List schemas ────────────────────────────────────────────
-
-
-class AudiobookStatsResponse(BaseModel):
-    """Statistics summary for audiobook projects."""
-
-    total_projects: int = Field(..., description="Total number of audiobook projects.")
-    in_progress: int = Field(..., description="Number of projects in progress.")
-    completed: int = Field(..., description="Number of completed projects.")
-    total_duration_seconds: int = Field(..., description="Total duration of all audiobooks in seconds.")
-
-
-class AudiobookProjectListItem(BaseModel):
-    """Compact audiobook project item for list views."""
-
-    id: UUID
-    title: str
-    chapter_count: int = 0
-    total_duration: int = 0
-    narrator: str | None = None
-    status: str = "draft"
-    progress_percent: float = Field(0.0, ge=0.0, le=100.0)
-    cost_spent: float = 0.0
-    cost_budget: float | None = None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 # ── Voice schemas ────────────────────────────────────────────────────────
 
 
@@ -193,37 +150,16 @@ class VoiceCloneRequest(BaseModel):
     voice_settings: dict[str, Any] | None = Field(None, description="Additional voice settings.")
 
 
-class VoiceSampleResponse(BaseModel):
-    """Response for a voice sample with pricing information."""
-
-    id: UUID
-    name: str
-    gender: str | None = None
-    accent: str | None = None
-    description: str | None = None
-    sample_url: str | None = None
-    tier: str = Field(..., description="Service tier.", pattern="^(standard|premium)$")
-    price_per_minute: float = Field(..., description="Price per minute of audio generation.", ge=0)
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class VoicePreviewRequest(BaseModel):
-    """Request body for generating a voice preview."""
-
-    voice_id: str = Field(..., description="Voice ID to preview.")
-    text: str = Field(..., min_length=1, max_length=500, description="Text to synthesize for preview.")
-    tier: str = Field(..., description="Service tier.", pattern="^(standard|premium)$")
-
-
-
 class VoicePreviewResponse(BaseModel):
     """Response for a voice preview."""
 
+    voice_id: UUID
+    text: str
     audio_url: str
-    duration_seconds: float = Field(..., description="Duration of the preview audio in seconds.")
+    duration_seconds: float | None = None
 
 
+# ── Mastering schemas ────────────────────────────────────────────────────
 
 
 class MasterRequest(BaseModel):
