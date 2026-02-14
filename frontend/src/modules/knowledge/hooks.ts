@@ -11,6 +11,8 @@ import type {
   TagList,
   ImportPayload,
   ImportResult,
+  CreateEntryPayload,
+  Attachment,
 } from "./types";
 
 export type * from "./types";
@@ -24,6 +26,7 @@ const KEYS = {
   search: (query: string) => ["knowledge", "search", query] as const,
   tags: () => ["knowledge", "tags"] as const,
   suggestions: () => ["knowledge", "suggestions"] as const,
+  attachments: (id: string) => ["knowledge", "attachments", id] as const,
 };
 
 // ── List entries ────────────────────────────────────────────────
@@ -175,5 +178,66 @@ export function useKnowledgeSuggestions() {
       return data;
     },
     enabled: false, // Only fetch on demand
+  });
+}
+
+// ── Create entry (full payload) ────────────────────────────────
+
+export function useCreateEntryFull() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateEntryPayload) => {
+      const { data } = await api.post<KnowledgeEntry>("/api/v1/knowledge", payload);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.all }),
+  });
+}
+
+// ── Attachments ────────────────────────────────────────────────
+
+export function useAttachments(entryId: string) {
+  return useQuery({
+    queryKey: KEYS.attachments(entryId),
+    queryFn: async () => {
+      const { data } = await api.get<Attachment[]>(
+        `/api/v1/knowledge/${entryId}/attachments`
+      );
+      return data;
+    },
+    enabled: !!entryId,
+  });
+}
+
+export function useUploadAttachment(entryId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (formData: FormData) => {
+      const { data } = await api.post<Attachment>(
+        `/api/v1/knowledge/${entryId}/attachments`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.attachments(entryId) });
+      qc.invalidateQueries({ queryKey: KEYS.detail(entryId) });
+    },
+  });
+}
+
+export function useDeleteAttachment(entryId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (attachmentId: string) => {
+      await api.delete(
+        `/api/v1/knowledge/${entryId}/attachments/${attachmentId}`
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.attachments(entryId) });
+      qc.invalidateQueries({ queryKey: KEYS.detail(entryId) });
+    },
   });
 }

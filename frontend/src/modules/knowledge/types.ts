@@ -73,6 +73,16 @@ export interface KnowledgeAttachment {
   created_at: string;
 }
 
+export interface Attachment {
+  id: string;
+  entry_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  url: string;
+  created_at: string | null;
+}
+
 export interface CreateEntryPayload {
   title: string;
   content: string;
