@@ -173,6 +173,67 @@ export interface FullValidationResponse {
   created_at: string;
 }
 
+export interface ISBN {
+  id: string;
+  isbn: string;
+  format?: string;
+  book_id?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateISBNPayload {
+  isbn: string;
+  format?: string;
+  book_id?: string;
+}
+
+export interface BarcodeResponse {
+  isbn_id: string;
+  barcode_url: string;
+  format: string;
+}
+
+export interface BookPricing {
+  book_id: string;
+  base_price: number;
+  currency: string;
+  royalty_rate: number;
+  territories: Record<string, number>;
+  updated_at: string;
+}
+
+export interface UpdatePricingPayload {
+  base_price?: number;
+  currency?: string;
+  royalty_rate?: number;
+  territories?: Record<string, number>;
+}
+
+export interface RoyaltyCalculation {
+  list_price: number;
+  royalty_rate: number;
+  estimated_royalty: number;
+  currency: string;
+}
+
+export interface CalculateRoyaltyPayload {
+  book_id: string;
+  list_price: number;
+  territory?: string;
+}
+
+export interface ExportHistoryEntry {
+  id: string;
+  book_id: string;
+  format: string;
+  status: string;
+  file_url: string | null;
+  file_size_bytes: number | null;
+  created_at: string;
+}
+
 export interface FullValidationRequest {
   print_validation?: {
     trim_size: string;

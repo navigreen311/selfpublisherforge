@@ -23,6 +23,14 @@ import type {
   ValidationResult,
   FullValidationResponse,
   FullValidationRequest,
+  ISBN,
+  CreateISBNPayload,
+  BarcodeResponse,
+  BookPricing,
+  UpdatePricingPayload,
+  RoyaltyCalculation,
+  CalculateRoyaltyPayload,
+  ExportHistoryEntry,
 } from "./types";
 
 export type * from "./types";
@@ -38,6 +46,9 @@ export const publishingKeys = {
   listings: () => [...publishingKeys.all, "listings"] as const,
   metadata: (bookId: string) => [...publishingKeys.all, "metadata", bookId] as const,
   validation: (validationId: string) => [...publishingKeys.all, "validation", validationId] as const,
+  isbns: () => [...publishingKeys.all, "isbns"] as const,
+  pricing: (bookId: string) => [...publishingKeys.all, "pricing", bookId] as const,
+  exports: () => [...publishingKeys.all, "exports"] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -228,5 +239,139 @@ export function useValidationResults(validationId: string) {
       return data;
     },
     enabled: !!validationId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// ISBNs
+// ---------------------------------------------------------------------------
+
+export function useISBNs() {
+  return useQuery<ISBN[]>({
+    queryKey: publishingKeys.isbns(),
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/publishing/isbns");
+      return data;
+    },
+  });
+}
+
+export function useCreateISBN() {
+  const queryClient = useQueryClient();
+  return useMutation<ISBN, Error, CreateISBNPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/publishing/isbns", payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: publishingKeys.isbns() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useUpdateISBN(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation<ISBN, Error, Partial<CreateISBNPayload>>({
+    mutationFn: async (payload) => {
+      const { data } = await api.patch(`/api/v1/publishing/isbns/${id}`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: publishingKeys.isbns() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useDeleteISBN() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      await api.delete(`/api/v1/publishing/isbns/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: publishingKeys.isbns() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useGenerateBarcode(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation<BarcodeResponse, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.post(`/api/v1/publishing/isbns/${id}/generate-barcode`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: publishingKeys.isbns() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Pricing
+// ---------------------------------------------------------------------------
+
+export function useBookPricing(bookId: string) {
+  return useQuery<BookPricing>({
+    queryKey: publishingKeys.pricing(bookId),
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/publishing/pricing/${bookId}`);
+      return data;
+    },
+    enabled: !!bookId,
+  });
+}
+
+export function useUpdatePricing(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<BookPricing, Error, UpdatePricingPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await api.patch(`/api/v1/publishing/pricing/${bookId}`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: publishingKeys.pricing(bookId) });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useCalculateRoyalty() {
+  return useMutation<RoyaltyCalculation, Error, CalculateRoyaltyPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post("/api/v1/publishing/pricing/calculate-royalty", payload);
+      return data;
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Export History
+// ---------------------------------------------------------------------------
+
+export function useExportHistory() {
+  return useQuery<ExportHistoryEntry[]>({
+    queryKey: publishingKeys.exports(),
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/publishing/exports");
+      return data;
+    },
   });
 }
