@@ -107,3 +107,33 @@ class KnowledgeClip(TenantModel):
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class CoverABTest(TenantModel):
+    """A/B test comparing two cover designs."""
+
+    __tablename__ = "cover_ab_tests"
+
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cover_a_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("covers.id", ondelete="CASCADE"), nullable=False
+    )
+    cover_b_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("covers.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="draft", server_default="draft", index=True
+    )
+    votes_a: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    votes_b: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    public_url: Mapped[str | None] = mapped_column(String(500), nullable=True, unique=True)
+    target_audience: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    duration_days: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    started_at: Mapped[Any | None] = mapped_column(nullable=True)
+    ended_at: Mapped[Any | None] = mapped_column(nullable=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True, default=dict)
+
+    # Relationships
+    cover_a: Mapped[Cover] = relationship("Cover", foreign_keys=[cover_a_id])
+    cover_b: Mapped[Cover] = relationship("Cover", foreign_keys=[cover_b_id])
