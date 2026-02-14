@@ -1,12 +1,19 @@
+const path = require("path");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
   images: {
-    // Image optimization configuration
-    domains: [
-      "selfpublisherforge-assets.s3.amazonaws.com",
-      "localhost",
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "selfpublisherforge-assets.s3.amazonaws.com",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
     ],
     formats: ["image/webp", "image/avif"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -15,6 +22,10 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+  // Turbopack root for worktree support
+  turbopack: {
+    root: path.resolve(__dirname),
   },
   // Enable experimental optimizations
   experimental: {
@@ -27,8 +38,6 @@ const nextConfig = {
       exclude: ["error", "warn"],
     } : false,
   },
-  // Production optimizations
-  swcMinify: true,
   async rewrites() {
     return [
       {
