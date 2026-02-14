@@ -17,7 +17,9 @@ export type CoverGenre =
   | "cookbook"
   | "other";
 
-export type CoverStatus = "pending" | "generating" | "completed" | "failed";
+export type CoverStatus = "pending" | "generating" | "completed" | "failed" | "draft" | "edited" | "exported" | "active";
+
+export type CoverFormat = "ebook" | "paperback" | "audiobook";
 
 export type CoverPlatform =
   | "amazon-kdp"
@@ -51,6 +53,9 @@ export interface Cover {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  format?: CoverFormat;
+  version_label?: string;
+  is_active?: boolean;
 }
 
 export interface CoverTemplate {
