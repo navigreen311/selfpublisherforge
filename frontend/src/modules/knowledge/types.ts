@@ -61,3 +61,32 @@ export interface ImportResult {
   source_type: string;
   status: string;
 }
+
+export type KnowledgeCategory = "notes" | "research" | "characters" | "world-building" | "references" | "outlines" | "custom";
+
+export interface KnowledgeAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_size: number;
+  mime_type: string;
+  created_at: string;
+}
+
+export interface CreateEntryPayload {
+  title: string;
+  content: string;
+  category?: KnowledgeCategory;
+  tags?: string[];
+  source_type?: string;
+  project_id?: string;
+  source_url?: string;
+}
+
+export interface UpdateEntryPayload {
+  title?: string;
+  content?: string;
+  category?: KnowledgeCategory;
+  tags?: string[];
+  project_id?: string;
+}
