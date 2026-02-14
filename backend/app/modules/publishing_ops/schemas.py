@@ -214,6 +214,46 @@ class BookMetadata(BookMetadataBase):
     model_config = {"from_attributes": True}
 
 
+# ---------- ISBN Management ----------
+
+
+class ISBNFormat(str, Enum):
+    PAPERBACK = "paperback"
+    HARDCOVER = "hardcover"
+    EBOOK = "ebook"
+    AUDIOBOOK = "audiobook"
+
+
+class ISBNCreate(BaseModel):
+    isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13")
+    format: ISBNFormat
+    book_id: uuid.UUID | None = None
+
+
+class ISBNUpdate(BaseModel):
+    format: ISBNFormat | None = None
+    book_id: uuid.UUID | None = None
+
+
+class ISBNDetail(BaseModel):
+    id: uuid.UUID
+    org_id: uuid.UUID
+    isbn: str
+    format: ISBNFormat
+    book_id: uuid.UUID | None = None
+    barcode_url: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ISBNBarcodeResponse(BaseModel):
+    isbn_id: uuid.UUID
+    isbn: str
+    barcode_url: str
+
+
 # ---------- Listings ----------
 
 class ListingBase(BaseModel):

@@ -29,7 +29,7 @@ from app.models.publishing import (
     PublishingAccount as PublishingAccountModel,
 )
 from app.modules.publishing_ops.epub_generator import generate_epub
-from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
+from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel, ISBNRecord
 from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
@@ -39,6 +39,10 @@ from app.modules.publishing_ops.schemas import (
     ExportResponse,
     FormattingTemplate,
     FormattingTemplateCreate,
+    ISBNBarcodeResponse,
+    ISBNCreate,
+    ISBNDetail,
+    ISBNUpdate,
     ListingDetail,
     ListingSyncResponse,
     PlatformType,
@@ -590,3 +594,192 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
             status="sync_queued",
             message="Listing sync completed inline (broker unavailable)",
         )
+
+
+# ---------------------------------------------------------------------------
+# ISBN Management
+# ---------------------------------------------------------------------------
+
+import re
+
+_ISBN_10_RE = re.compile(r"^\d{9}[\dX]$")
+_ISBN_13_RE = re.compile(r"^\d{13}$")
+
+
+def _validate_isbn(isbn: str) -> str:
+    """Validate and normalise an ISBN-10 or ISBN-13 string.
+
+    Strips hyphens/spaces, then checks the format. Returns the cleaned
+    ISBN or raises ``ValueError`` on invalid input.
+    """
+    cleaned = isbn.replace("-", "").replace(" ", "").upper()
+    if _ISBN_10_RE.match(cleaned) or _ISBN_13_RE.match(cleaned):
+        return cleaned
+    raise ValueError(
+        f"Invalid ISBN format: '{isbn}'. Expected ISBN-10 (10 digits) "
+        "or ISBN-13 (13 digits)."
+    )
+
+
+async def list_isbns(db: AsyncSession, org_id: uuid.UUID) -> list[ISBNDetail]:
+    """Return all ISBNs belonging to an organisation."""
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.org_id == org_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+        .order_by(ISBNRecord.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    return [
+        ISBNDetail(
+            id=row.id,
+            org_id=row.org_id,
+            isbn=row.isbn,
+            format=row.format,
+            book_id=row.book_id,
+            barcode_url=row.barcode_url,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+        for row in rows
+    ]
+
+
+async def create_isbn(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    isbn: str,
+    format: str,
+    book_id: uuid.UUID | None = None,
+) -> ISBNDetail:
+    """Insert a new ISBN record after validating the ISBN format."""
+    cleaned = _validate_isbn(isbn)
+
+    record = ISBNRecord(
+        org_id=org_id,
+        isbn=cleaned,
+        format=format,
+        book_id=book_id,
+    )
+    db.add(record)
+    await db.flush()
+    await db.refresh(record)
+
+    return ISBNDetail(
+        id=record.id,
+        org_id=record.org_id,
+        isbn=record.isbn,
+        format=record.format,
+        book_id=record.book_id,
+        barcode_url=record.barcode_url,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
+async def update_isbn(
+    db: AsyncSession,
+    isbn_id: uuid.UUID,
+    org_id: uuid.UUID,
+    updates: ISBNUpdate,
+) -> ISBNDetail | None:
+    """Patch an existing ISBN record. Returns ``None`` if not found."""
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.id == isbn_id,
+            ISBNRecord.org_id == org_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    record = result.scalar_one_or_none()
+    if record is None:
+        return None
+
+    update_dict = updates.model_dump(exclude_unset=True)
+    for key, value in update_dict.items():
+        if key == "format" and value is not None:
+            value = value.value if hasattr(value, "value") else str(value)
+        setattr(record, key, value)
+
+    await db.flush()
+    await db.refresh(record)
+
+    return ISBNDetail(
+        id=record.id,
+        org_id=record.org_id,
+        isbn=record.isbn,
+        format=record.format,
+        book_id=record.book_id,
+        barcode_url=record.barcode_url,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
+async def delete_isbn(
+    db: AsyncSession,
+    isbn_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> bool:
+    """Soft-delete an ISBN record. Returns ``True`` if deleted, ``False`` if not found."""
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.id == isbn_id,
+            ISBNRecord.org_id == org_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    record = result.scalar_one_or_none()
+    if record is None:
+        return False
+
+    record.deleted_at = _now()
+    await db.flush()
+    return True
+
+
+async def generate_barcode(
+    db: AsyncSession,
+    isbn_id: uuid.UUID,
+    org_id: uuid.UUID,
+    price: float | None = None,
+    format: str = "png",
+) -> ISBNBarcodeResponse | None:
+    """Generate a barcode for the given ISBN and return a placeholder URL.
+
+    In production this would call a barcode generation service. For now
+    it returns a deterministic placeholder URL and persists it on the record.
+    """
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.id == isbn_id,
+            ISBNRecord.org_id == org_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    record = result.scalar_one_or_none()
+    if record is None:
+        return None
+
+    price_segment = f"_price-{price:.2f}" if price is not None else ""
+    barcode_url = (
+        f"/barcodes/{record.isbn}{price_segment}.{format}"
+    )
+    record.barcode_url = barcode_url
+    await db.flush()
+    await db.refresh(record)
+
+    return ISBNBarcodeResponse(
+        isbn_id=record.id,
+        isbn=record.isbn,
+        barcode_url=barcode_url,
+    )
