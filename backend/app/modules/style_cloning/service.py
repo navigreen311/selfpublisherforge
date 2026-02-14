@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-from app.models.content import StyleProfile, StyleProfileSample
+from app.models.content import StyleProfile
 from app.modules.style_cloning.analyzers import (
     RhythmAnalyzer,
     SyntaxAnalyzer,
@@ -31,15 +31,15 @@ from app.modules.style_cloning.profile_generator import (
     generate_voice_fingerprint,
 )
 from app.modules.style_cloning.schemas import (
-    AddSampleRequest,
     ConformityCheckResult,
     CreateProfileRequest,
     FingerprintResponse,
     ProfileListResponse,
     ProfileResponse,
     ProfileStatus,
-    SampleResponse,
     StyleCard,
+    TuneRequest,
+    UpdateProfileRequest,
     VoiceFingerprint,
 )
 
@@ -308,21 +308,13 @@ async def conformity_check(
     return check_conformity(fingerprint, text)
 
 
-# ---------------------------------------------------------------------------
-# Sample CRUD
-# ---------------------------------------------------------------------------
-
-def _count_words(text: str) -> int:
-    """Count words in a text string."""
-    return len(text.split())
-
-
-async def _get_profile_for_org(
+async def tune_profile(
     db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
-) -> StyleProfile | None:
-    """Fetch a non-deleted profile belonging to an org."""
+    request: TuneRequest,
+) -> ProfileResponse | None:
+    """Update tuning adjustment parameters for a profile."""
     stmt = (
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
@@ -330,111 +322,41 @@ async def _get_profile_for_org(
         .where(StyleProfile.deleted_at == None)  # noqa: E711
     )
     result = await db.execute(stmt)
-    return result.scalar_one_or_none()
-
-
-async def add_sample(
-    db: AsyncSession,
-    profile_id: uuid.UUID,
-    org_id: uuid.UUID,
-    request: AddSampleRequest,
-) -> SampleResponse:
-    """Add a text sample to a style profile."""
-    profile = await _get_profile_for_org(db, profile_id, org_id)
+    profile = result.scalar_one_or_none()
     if profile is None:
-        raise ValueError("Profile not found")
+        return None
 
-    wc = _count_words(request.text)
-
-    sample = StyleProfileSample(
-        profile_id=profile_id,
-        text=request.text,
-        label=request.label,
-        source_type=request.source_type,
-        source_reference=request.source_reference,
-        word_count=wc,
-    )
-    db.add(sample)
-
-    # Update aggregate word count on the profile
-    profile.total_sample_words = (profile.total_sample_words or 0) + wc
+    profile.tuning_adjustments = request.model_dump()
     profile.updated_at = datetime.now(UTC)
 
     await db.flush()
-    await db.refresh(sample)
-
-    return SampleResponse(
-        id=sample.id,
-        profile_id=sample.profile_id,
-        label=sample.label,
-        source_type=sample.source_type,
-        word_count=sample.word_count,
-        file_name=sample.file_name,
-        created_at=sample.created_at,
-    )
+    await db.refresh(profile)
+    return _to_response(profile)
 
 
-async def list_samples(
+async def update_profile(
     db: AsyncSession,
     profile_id: uuid.UUID,
     org_id: uuid.UUID,
-) -> list[SampleResponse]:
-    """List all samples for a style profile."""
-    profile = await _get_profile_for_org(db, profile_id, org_id)
-    if profile is None:
-        raise ValueError("Profile not found")
-
+    request: UpdateProfileRequest,
+) -> ProfileResponse | None:
+    """Update basic profile info (name, description, genre)."""
     stmt = (
-        select(StyleProfileSample)
-        .where(StyleProfileSample.profile_id == profile_id)
-        .where(StyleProfileSample.deleted_at == None)  # noqa: E711
-        .order_by(StyleProfileSample.created_at.desc())
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
     )
     result = await db.execute(stmt)
-    rows = result.scalars().all()
-
-    return [
-        SampleResponse(
-            id=s.id,
-            profile_id=s.profile_id,
-            label=s.label,
-            source_type=s.source_type,
-            word_count=s.word_count,
-            file_name=s.file_name,
-            created_at=s.created_at,
-        )
-        for s in rows
-    ]
-
-
-async def delete_sample(
-    db: AsyncSession,
-    profile_id: uuid.UUID,
-    sample_id: uuid.UUID,
-    org_id: uuid.UUID,
-) -> bool:
-    """Delete a sample from a style profile."""
-    profile = await _get_profile_for_org(db, profile_id, org_id)
+    profile = result.scalar_one_or_none()
     if profile is None:
-        return False
+        return None
 
-    stmt = (
-        select(StyleProfileSample)
-        .where(StyleProfileSample.id == sample_id)
-        .where(StyleProfileSample.profile_id == profile_id)
-        .where(StyleProfileSample.deleted_at == None)  # noqa: E711
-    )
-    result = await db.execute(stmt)
-    sample = result.scalar_one_or_none()
-    if sample is None:
-        return False
-
-    now = datetime.now(UTC)
-    sample.deleted_at = now
-
-    # Decrement aggregate word count on the profile
-    profile.total_sample_words = max(0, (profile.total_sample_words or 0) - sample.word_count)
-    profile.updated_at = now
+    update_data = request.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(profile, field, value)
+    profile.updated_at = datetime.now(UTC)
 
     await db.flush()
-    return True
+    await db.refresh(profile)
+    return _to_response(profile)

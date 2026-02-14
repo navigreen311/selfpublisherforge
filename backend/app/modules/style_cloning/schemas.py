@@ -142,23 +142,19 @@ class ConformityCheckResult(BaseModel):
     feedback: list[str] = Field(default_factory=list, description="Actionable feedback items")
 
 
-class AddSampleRequest(BaseModel):
-    text: str = Field(..., min_length=1, description="Raw sample text to add")
-    label: str | None = Field(None, max_length=255, description="Optional label for the sample")
-    source_type: str = Field("paste", max_length=50, description="How the sample was provided")
-    source_reference: uuid.UUID | None = Field(None, description="Optional reference to a content asset")
+class TuneRequest(BaseModel):
+    """Adjust style tuning parameters for a profile."""
+    formality_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Formality adjustment (-1 to 1)")
+    warmth_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Warmth adjustment (-1 to 1)")
+    sentence_length_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Sentence length adjustment (-1 to 1)")
+    complexity_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Complexity adjustment (-1 to 1)")
 
 
-class SampleResponse(BaseModel):
-    id: uuid.UUID
-    profile_id: uuid.UUID
-    label: str | None = None
-    source_type: str
-    word_count: int
-    file_name: str | None = None
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
+class UpdateProfileRequest(BaseModel):
+    """Update basic profile info (all fields optional)."""
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=2000)
+    genre: str | None = Field(None, max_length=100)
 
 
 class ProfileResponse(BaseModel):
@@ -186,18 +182,3 @@ class ProfileListResponse(BaseModel):
 class FingerprintResponse(BaseModel):
     profile_id: uuid.UUID
     fingerprint: VoiceFingerprint
-
-
-class SampleResponse(BaseModel):
-    id: uuid.UUID
-    profile_id: uuid.UUID
-    org_id: uuid.UUID
-    text: str
-    label: str | None = None
-    source_type: str | None = None
-    source_reference: str | None = None
-    word_count: int = 0
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
