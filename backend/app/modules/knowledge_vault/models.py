@@ -1,10 +1,10 @@
 """Knowledge Vault database models."""
 
 
-from sqlalchemy import Column, Float, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy import BigInteger, Column, Float, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID as PG_UUID
 
-from app.database import TenantModel
+from app.database import BaseModel, TenantModel
 
 
 class KnowledgeEntry(TenantModel):
@@ -41,3 +41,24 @@ class KnowledgeEntry(TenantModel):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
         }
+
+
+class KnowledgeAttachment(BaseModel):
+    """A file attachment linked to a knowledge entry."""
+
+    __tablename__ = "knowledge_attachments"
+
+    entry_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("knowledge_entries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    file_name: str = Column(String(500), nullable=False)  # type: ignore[assignment]
+    file_url: str = Column(String(2048), nullable=False)  # type: ignore[assignment]
+    file_size: int = Column(BigInteger, nullable=False, default=0)  # type: ignore[assignment]
+    mime_type: str = Column(String(127), nullable=False, default="application/octet-stream")  # type: ignore[assignment]
+    s3_key: str = Column(String(1024), nullable=True)  # type: ignore[assignment]
+
+    def __repr__(self) -> str:
+        return f"<KnowledgeAttachment id={self.id} file_name={self.file_name!r}>"

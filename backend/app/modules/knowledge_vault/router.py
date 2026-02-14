@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import logging
+import uuid as _uuid
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import boto3
+from botocore.config import Config as BotoConfig
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
 from app.database import get_db
+from app.modules.knowledge_vault.models import KnowledgeAttachment
 from app.modules.knowledge_vault.schemas import (
+    AttachmentResponse,
     CreateEntryRequest,
     ImportRequest,
     ImportResponse,
@@ -23,6 +31,9 @@ from app.modules.knowledge_vault.schemas import (
     UpdateEntryRequest,
 )
 from app.modules.knowledge_vault.service import KnowledgeService
+
+logger = logging.getLogger(__name__)
+_settings = get_settings()
 
 router = APIRouter()
 
@@ -255,6 +266,173 @@ async def summarize_entry(
     if not result:
         raise HTTPException(status_code=404, detail="Knowledge entry not found")
     return result
+
+
+# ── Attachments ──────────────────────────────────────────────────
+
+
+def _get_s3_client():
+    return boto3.client(
+        "s3",
+        region_name=_settings.S3_REGION,
+        aws_access_key_id=_settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=_settings.AWS_SECRET_ACCESS_KEY,
+        config=BotoConfig(signature_version="s3v4"),
+    )
+
+
+@router.post(
+    "/{entry_id}/attachments",
+    response_model=AttachmentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload an attachment",
+    description="Upload a file attachment to a knowledge entry.",
+)
+async def upload_attachment(
+    entry_id: UUID,
+    file: UploadFile,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a file attachment to a knowledge entry."""
+    # Verify the parent entry exists and belongs to the user's org
+    service = KnowledgeService(db=db)
+    entry = await service.get_entry(_org_id(current_user), entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+
+    # Read the file content
+    content = await file.read()
+    file_size = len(content)
+    mime_type = file.content_type or "application/octet-stream"
+    file_name = file.filename or "untitled"
+
+    # Build S3 key and upload
+    attachment_id = _uuid.uuid4()
+    org_id = _org_id(current_user)
+    safe_name = file_name.replace(" ", "_")
+    s3_key = f"orgs/{org_id}/knowledge/{entry_id}/attachments/{attachment_id}/{safe_name}"
+
+    s3 = _get_s3_client()
+    try:
+        s3.put_object(
+            Bucket=_settings.S3_BUCKET,
+            Key=s3_key,
+            Body=content,
+            ContentType=mime_type,
+        )
+    except Exception:
+        logger.exception("Failed to upload attachment to S3")
+        raise HTTPException(status_code=502, detail="Failed to upload file to storage")
+
+    # Generate a presigned download URL
+    file_url = s3.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={"Bucket": _settings.S3_BUCKET, "Key": s3_key},
+        ExpiresIn=3600,
+    )
+
+    # Persist the attachment record
+    attachment = KnowledgeAttachment(
+        id=attachment_id,
+        entry_id=entry_id,
+        file_name=file_name,
+        file_url=file_url,
+        file_size=file_size,
+        mime_type=mime_type,
+        s3_key=s3_key,
+    )
+    db.add(attachment)
+    await db.flush()
+    await db.refresh(attachment)
+
+    return AttachmentResponse(
+        id=attachment.id,
+        entry_id=attachment.entry_id,
+        file_name=attachment.file_name,
+        file_url=attachment.file_url,
+        file_size=attachment.file_size,
+        mime_type=attachment.mime_type,
+        created_at=attachment.created_at,
+    )
+
+
+@router.get(
+    "/{entry_id}/attachments",
+    response_model=list[AttachmentResponse],
+    summary="List attachments",
+    description="List all file attachments for a knowledge entry.",
+)
+async def list_attachments(
+    entry_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all file attachments for a knowledge entry."""
+    # Verify the parent entry exists and belongs to the user's org
+    service = KnowledgeService(db=db)
+    entry = await service.get_entry(_org_id(current_user), entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+
+    result = await db.execute(
+        select(KnowledgeAttachment)
+        .where(
+            KnowledgeAttachment.entry_id == entry_id,
+            KnowledgeAttachment.deleted_at.is_(None),
+        )
+        .order_by(KnowledgeAttachment.created_at.desc())
+    )
+    attachments = result.scalars().all()
+
+    return [
+        AttachmentResponse(
+            id=a.id,
+            entry_id=a.entry_id,
+            file_name=a.file_name,
+            file_url=a.file_url,
+            file_size=a.file_size,
+            mime_type=a.mime_type,
+            created_at=a.created_at,
+        )
+        for a in attachments
+    ]
+
+
+@router.delete(
+    "/{entry_id}/attachments/{attachment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an attachment",
+    description="Soft-delete a file attachment from a knowledge entry.",
+)
+async def delete_attachment(
+    entry_id: UUID,
+    attachment_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete a file attachment from a knowledge entry."""
+    # Verify the parent entry exists and belongs to the user's org
+    service = KnowledgeService(db=db)
+    entry = await service.get_entry(_org_id(current_user), entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+
+    result = await db.execute(
+        select(KnowledgeAttachment).where(
+            KnowledgeAttachment.id == attachment_id,
+            KnowledgeAttachment.entry_id == entry_id,
+            KnowledgeAttachment.deleted_at.is_(None),
+        )
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    from datetime import UTC, datetime
+
+    attachment.deleted_at = datetime.now(UTC)
+    await db.flush()
 
 
 # ── Helpers ──────────────────────────────────────────────────────

@@ -114,3 +114,16 @@ class SuggestionEntry(BaseModel):
 
 class SuggestionsResponse(BaseModel):
     suggestions: list[SuggestionEntry]
+
+
+# ── Attachments ─────────────────────────────────────────────────
+class AttachmentResponse(BaseModel):
+    id: UUID
+    entry_id: UUID
+    file_name: str
+    file_url: str
+    file_size: int
+    mime_type: str
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
