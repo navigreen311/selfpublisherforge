@@ -5,8 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { TextIngestion } from "@/modules/style-profiles/components/TextIngestion";
+import { PresetPicker } from "@/modules/style-profiles/components/PresetPicker";
+import { StyleAnalysis } from "@/modules/style-profiles/components/StyleAnalysis";
 import { useCreateProfile } from "@/modules/style-profiles/hooks";
+import type { ProfileResponse } from "@/modules/style-profiles/types";
 import { useTranslations } from "@/hooks/use-translations";
+
+const STEP_LABELS = ["new.stepBasicInfo", "new.stepSamples", "new.stepAnalysis"] as const;
 
 export default function NewStyleProfilePage() {
   const router = useRouter();
@@ -17,6 +22,9 @@ export default function NewStyleProfilePage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [genre, setGenre] = useState("");
+  const [preset, setPreset] = useState<string | null>(null);
+  const [voiceDescription, setVoiceDescription] = useState("");
+  const [createdProfile, setCreatedProfile] = useState<ProfileResponse | null>(null);
 
   const handleBasicInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +41,8 @@ export default function NewStyleProfilePage() {
         genre: genre.trim() || undefined,
         sample_texts: texts,
       });
-      router.push(`/style-profiles/${profile.id}`);
+      setCreatedProfile(profile);
+      setStep(3);
     } catch (error) {
       console.error("Failed to create profile:", error);
     }
@@ -56,18 +65,41 @@ export default function NewStyleProfilePage() {
         </div>
       </div>
 
-      {/* Progress indicator */}
+      {/* Progress indicator — 3 steps */}
       <div className="flex items-center gap-2">
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-          1
-        </div>
-        <div className={`flex-1 h-1 ${step >= 2 ? "bg-primary" : "bg-muted"}`} />
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-          2
-        </div>
+        {STEP_LABELS.map((labelKey, idx) => {
+          const stepNum = idx + 1;
+          return (
+            <div key={labelKey} className="flex items-center gap-2 flex-1 last:flex-none">
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium shrink-0 ${
+                  step >= stepNum
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {stepNum}
+              </div>
+              <span
+                className={`text-xs hidden sm:inline ${
+                  step >= stepNum ? "text-foreground font-medium" : "text-muted-foreground"
+                }`}
+              >
+                {t(labelKey)}
+              </span>
+              {idx < STEP_LABELS.length - 1 && (
+                <div
+                  className={`flex-1 h-1 ${
+                    step > stepNum ? "bg-primary" : "bg-muted"
+                  }`}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Step 1: Basic Information */}
+      {/* Step 1: Basic Information + Quick Start */}
       {step === 1 && (
         <div className="border rounded-lg bg-card p-6">
           <h2 className="text-lg font-semibold mb-4">{t("new.basicInfo")}</h2>
@@ -115,6 +147,27 @@ export default function NewStyleProfilePage() {
               />
             </div>
 
+            {/* Quick Start: Preset Picker */}
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-semibold mb-3">{t("new.quickStart")}</h3>
+              <PresetPicker selected={preset} onSelect={setPreset} />
+            </div>
+
+            {/* Voice Description textarea */}
+            <div>
+              <label htmlFor="voice-description" className="block text-sm font-medium mb-2">
+                {t("new.voiceDescriptionLabel")}
+              </label>
+              <textarea
+                id="voice-description"
+                value={voiceDescription}
+                onChange={(e) => setVoiceDescription(e.target.value)}
+                placeholder={t("new.voiceDescriptionPlaceholder")}
+                rows={3}
+                className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+
             <div className="flex justify-end pt-4">
               <button
                 type="submit"
@@ -147,6 +200,40 @@ export default function NewStyleProfilePage() {
             onSubmit={handleTextSubmit}
             isSubmitting={createMutation.isPending}
           />
+        </div>
+      )}
+
+      {/* Step 3: Analysis Results */}
+      {step === 3 && createdProfile && (
+        <div className="space-y-6">
+          <div className="border rounded-lg bg-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">{t("new.stepAnalysis")}</h2>
+              <button
+                onClick={() => router.push(`/style-profiles/${createdProfile.id}`)}
+                className="px-4 py-2 text-sm border rounded-lg hover:bg-accent"
+              >
+                {t("new.editInfo")}
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              {t("new.analysisDescription")}
+            </p>
+          </div>
+
+          <StyleAnalysis
+            styleCard={createdProfile.style_card}
+            loading={createdProfile.status === "analyzing"}
+          />
+
+          <div className="flex justify-end">
+            <button
+              onClick={() => router.push(`/style-profiles/${createdProfile.id}`)}
+              className="px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {t("detail.backToProfiles")}
+            </button>
+          </div>
         </div>
       )}
 

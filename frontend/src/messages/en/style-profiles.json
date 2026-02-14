@@ -1,29 +1,14 @@
 {
   "title": "Style Profiles",
-  "subtitle": "Analyze, clone, and refine writing styles with AI-powered voice profiling.",
   "newProfile": "New Profile",
   "description": "Analyze and clone writing styles. Create profiles from sample texts to match specific voices and tones.",
-  "noProfiles": "No style profiles yet",
-  "noProfilesDescription": "Create your first style profile to start analyzing writing styles.",
-  "viewProfile": "View Profile",
-  "testStyle": "Test Style",
-  "activeIn": "Active in {count} projects",
-  "notInUse": "Not in use",
   "profile": "profile",
   "profiles": "profiles",
-  "samples": "Samples",
-  "wordsAnalyzed": "Words Analyzed",
   "deleteProfileConfirmTitle": "Delete Style Profile",
   "deleteProfileConfirm": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
   "deleteButton": "Delete",
   "cancelButton": "Cancel",
   "deleteProfileLabel": "Delete profile: {name}",
-  "status": {
-    "pending": "Pending",
-    "analyzing": "Analyzing",
-    "ready": "Ready",
-    "failed": "Failed"
-  },
   "detail": {
     "notFound": "Profile not found",
     "backToProfiles": "Back to profiles",
@@ -57,221 +42,16 @@
     "addSampleTexts": "Add Sample Texts",
     "editInfo": "Edit Info",
     "samplesDescription": "Add at least one sample text (minimum a few paragraphs) to analyze the writing style. More samples will improve accuracy.",
-    "errorMessage": "Failed to create profile. Please try again."
-  },
-  "wizard": {
-    "title": "Create Style Profile",
-    "steps": {
-      "basicInfo": "Basic Info",
-      "addSamples": "Add Samples",
-      "configure": "Configure",
-      "review": "Review"
-    },
-    "basicInfo": {
-      "title": "Basic Information",
-      "profileName": "Profile Name",
-      "profileNamePlaceholder": "E.g., Hemingway Style, Business Blog Voice",
-      "description": "Description",
-      "descriptionPlaceholder": "Describe the purpose or characteristics of this style profile...",
-      "genre": "Genre",
-      "genrePlaceholder": "E.g., Fiction, Non-fiction, Technical Writing",
-      "language": "Language",
-      "languagePlaceholder": "E.g., English, Spanish, French",
-      "tags": "Tags",
-      "tagsPlaceholder": "Add tags to categorize this profile..."
-    },
-    "samples": {
-      "title": "Add Sample Texts",
-      "description": "Add at least one sample text (minimum a few paragraphs) to analyze the writing style. More samples will improve accuracy.",
-      "addText": "Add Sample Text",
-      "pasteText": "Paste Text",
-      "uploadFile": "Upload File",
-      "uploadFileTypes": "Supported: TXT, MD, DOCX, EPUB, PDF",
-      "sampleLabel": "Sample {number}",
-      "wordCount": "{count} words",
-      "remove": "Remove",
-      "minSamplesWarning": "Add at least one sample with a few paragraphs for accurate analysis.",
-      "recommendedWords": "Recommended: 10,000+ words for high-confidence profiles"
-    },
-    "configure": {
-      "title": "Configure Analysis",
-      "analysisDepth": "Analysis Depth",
-      "depthBasic": "Basic",
-      "depthBasicDescription": "Fast analysis with core style metrics",
-      "depthStandard": "Standard",
-      "depthStandardDescription": "Balanced analysis with vocabulary and sentence patterns",
-      "depthDeep": "Deep",
-      "depthDeepDescription": "Comprehensive analysis with rhetorical and dialogue patterns",
-      "focusAreas": "Focus Areas",
-      "focusVocabulary": "Vocabulary",
-      "focusSentenceStructure": "Sentence Structure",
-      "focusParagraphPatterns": "Paragraph Patterns",
-      "focusRhetoricalDevices": "Rhetorical Devices",
-      "focusDialoguePatterns": "Dialogue Patterns",
-      "focusToneAndMood": "Tone & Mood"
-    },
-    "review": {
-      "title": "Review & Create",
-      "profileSummary": "Profile Summary",
-      "samplesCount": "{count} samples",
-      "totalWords": "{count} words total",
-      "analysisDepth": "Analysis Depth",
-      "focusAreas": "Focus Areas",
-      "createProfile": "Create Profile",
-      "creating": "Creating..."
-    },
-    "presets": {
-      "fiction": "Fiction",
-      "nonfiction": "Non-Fiction",
-      "academic": "Academic",
-      "business": "Business",
-      "journalistic": "Journalistic",
-      "creative": "Creative Writing",
-      "technical": "Technical Writing",
-      "blog": "Blog / Casual",
-      "custom": "Custom"
-    },
-    "navigation": {
-      "next": "Next",
-      "previous": "Previous",
-      "cancel": "Cancel",
-      "finish": "Create Profile",
-      "saveDraft": "Save Draft",
-      "step": "Step {current} of {total}"
-    }
-  },
-  "analysis": {
-    "title": "Style Analysis",
-    "analyzing": "Analyzing style...",
-    "notAvailable": "Style analysis not yet available. Add sample texts to generate an analysis.",
-    "summary": "Summary",
-    "styleDimensions": "Style Dimensions",
-    "styleScore": "Style Score",
-    "keyMetrics": "Key Metrics",
-    "vocabulary": {
-      "title": "Vocabulary Analysis",
-      "uniqueWords": "Unique Words",
-      "density": "Vocabulary Density",
-      "rareWordFrequency": "Rare Word Frequency",
-      "readingLevel": "Reading Level",
-      "avgWordLength": "Avg Word Length",
-      "topWords": "Top Words"
-    },
-    "sentence": {
-      "title": "Sentence Structure",
-      "avgLength": "Avg Length",
-      "lengthVariance": "Length Variance",
-      "simpleRatio": "Simple Sentences",
-      "compoundRatio": "Compound Sentences",
-      "complexRatio": "Complex Sentences"
-    },
-    "paragraph": {
-      "title": "Paragraph Patterns",
-      "avgLength": "Avg Length",
-      "transitionWords": "Transition Words",
-      "avgSentencesPerParagraph": "Avg Sentences per Paragraph"
-    },
-    "rhetorical": {
-      "title": "Rhetorical Devices",
-      "metaphorDensity": "Metaphor Density",
-      "humorMarkers": "Humor Markers",
-      "emotionalIntensity": "Emotional Intensity"
-    },
-    "dialogue": {
-      "title": "Dialogue Patterns",
-      "tagFrequency": "Tag Frequency",
-      "actionBeatRatio": "Action Beat Ratio",
-      "dialogueToNarrativeRatio": "Dialogue-to-Narrative Ratio"
-    },
-    "styleAttributes": {
-      "tone": "Tone",
-      "pacing": "Pacing",
-      "vocabularyLevel": "Vocabulary Level",
-      "sentenceStyle": "Sentence Style",
-      "paragraphStyle": "Paragraph Style",
-      "rhetoricalStyle": "Rhetorical Style",
-      "dialogueStyle": "Dialogue Style"
-    },
-    "examplePrompts": "Example Prompts",
-    "viewFullReport": "View Full Report",
-    "downloadReport": "Download Report",
-    "reanalyze": "Re-Analyze",
-    "reanalyzing": "Re-analyzing..."
-  },
-  "testRefine": {
-    "title": "Test & Refine",
-    "description": "Test and refine your style profile by generating sample text and checking conformity.",
-    "conformityChecker": {
-      "title": "Conformity Checker",
-      "description": "Check how well a text matches this style profile's voice.",
-      "textToCheck": "Text to Check",
-      "placeholder": "Paste text to check against this style profile...",
-      "checkButton": "Check Conformity",
-      "checking": "Checking...",
-      "overallScore": "Overall Match Score",
-      "excellentMatch": "Excellent Match",
-      "goodMatch": "Good Match",
-      "fairMatch": "Fair Match",
-      "poorMatch": "Poor Match",
-      "detailedBreakdown": "Detailed Breakdown",
-      "vocabulary": "Vocabulary",
-      "sentence": "Sentence",
-      "paragraph": "Paragraph",
-      "rhetorical": "Rhetorical",
-      "dialogue": "Dialogue",
-      "suggestions": "Suggestions for Improvement"
-    },
-    "sampleGenerator": {
-      "title": "Generate Sample Text",
-      "prompt": "Prompt",
-      "promptPlaceholder": "E.g., Write a short passage about a rainy day",
-      "maxWords": "Max Words",
-      "generate": "Generate",
-      "generating": "Generating...",
-      "generatedText": "Generated Text",
-      "copyText": "Copy Text",
-      "regenerate": "Regenerate",
-      "useAsInput": "Use as Conformity Input"
-    },
-    "sliders": {
-      "formality": "Formality",
-      "formalityLow": "Casual",
-      "formalityHigh": "Formal",
-      "complexity": "Complexity",
-      "complexityLow": "Simple",
-      "complexityHigh": "Complex",
-      "emotionalIntensity": "Emotional Intensity",
-      "emotionalLow": "Neutral",
-      "emotionalHigh": "Intense",
-      "pacing": "Pacing",
-      "pacingLow": "Slow",
-      "pacingHigh": "Fast",
-      "descriptiveness": "Descriptiveness",
-      "descriptivenessLow": "Sparse",
-      "descriptivenessHigh": "Rich"
-    },
-    "applyChanges": "Apply Changes",
-    "resetDefaults": "Reset to Defaults",
-    "saveRefinements": "Save Refinements",
-    "saving": "Saving...",
-    "saved": "Refinements saved"
-  },
-  "ingestion": {
-    "addSampleText": "Add Sample Text",
-    "placeholder": "Paste a writing sample here (at least a few paragraphs)...",
-    "addToSamples": "Add to Samples",
-    "uploadFile": "Upload File",
-    "sampleTexts": "Sample Texts ({count})",
-    "remove": "Remove",
-    "removeSample": "Remove sample {number}",
-    "analyzeSamples": "Analyze Samples",
-    "processing": "Processing..."
-  },
-  "card": {
-    "genre": "Genre",
-    "samples": "Samples",
-    "words": "Words",
-    "confidence": "Confidence",
-    "updated": "Updated {date}"
+    "errorMessage": "Failed to create profile. Please try again.",
+    "quickStart": "Quick Start",
+    "quickStartDescription": "Select a preset to start with recommended style parameters.",
+    "voiceDescriptionLabel": "Or describe your ideal voice",
+    "voiceDescriptionPlaceholder": "E.g., Warm and conversational, with a touch of humor. Short paragraphs, active voice...",
+    "stepBasicInfo": "Basic Info",
+    "stepSamples": "Samples",
+    "stepAnalysis": "Analysis Results",
+    "nextAnalyze": "Analyze Style",
+    "analyzingStyle": "Analyzing...",
+    "analysisDescription": "Review the analysis results of your writing style profile."
   }
 }

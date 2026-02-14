@@ -42,6 +42,16 @@
     "addSampleTexts": "Beispieltexte hinzufügen",
     "editInfo": "Info bearbeiten",
     "samplesDescription": "Fügen Sie mindestens einen Beispieltext (mindestens ein paar Absätze) hinzu, um den Schreibstil zu analysieren. Mehr Beispiele verbessern die Genauigkeit.",
-    "errorMessage": "Profil konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+    "errorMessage": "Profil konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+    "quickStart": "Schnellstart",
+    "quickStartDescription": "Wählen Sie eine Vorlage, um mit empfohlenen Stilparametern zu beginnen.",
+    "voiceDescriptionLabel": "Oder beschreiben Sie Ihre ideale Stimme",
+    "voiceDescriptionPlaceholder": "Z.B. Warm und gesprächig, mit einem Hauch von Humor. Kurze Absätze, aktive Stimme...",
+    "stepBasicInfo": "Grundinfo",
+    "stepSamples": "Beispiele",
+    "stepAnalysis": "Analyseergebnisse",
+    "nextAnalyze": "Stil analysieren",
+    "analyzingStyle": "Analysiert...",
+    "analysisDescription": "Überprüfen Sie die Analyseergebnisse Ihres Schreibstilprofils."
   }
 }

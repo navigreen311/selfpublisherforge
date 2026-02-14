@@ -42,6 +42,16 @@
     "addSampleTexts": "Agregar Textos de Muestra",
     "editInfo": "Editar Información",
     "samplesDescription": "Agrega al menos un texto de muestra (mínimo unos pocos párrafos) para analizar el estilo de escritura. Más muestras mejorarán la precisión.",
-    "errorMessage": "Error al crear el perfil. Por favor, inténtalo de nuevo."
+    "errorMessage": "Error al crear el perfil. Por favor, inténtalo de nuevo.",
+    "quickStart": "Inicio Rápido",
+    "quickStartDescription": "Selecciona un preset para comenzar con parámetros de estilo recomendados.",
+    "voiceDescriptionLabel": "O describe tu voz ideal",
+    "voiceDescriptionPlaceholder": "Ej., Cálido y conversacional, con un toque de humor. Párrafos cortos, voz activa...",
+    "stepBasicInfo": "Info Básica",
+    "stepSamples": "Muestras",
+    "stepAnalysis": "Resultados del Análisis",
+    "nextAnalyze": "Analizar Estilo",
+    "analyzingStyle": "Analizando...",
+    "analysisDescription": "Revisa los resultados del análisis de tu perfil de estilo de escritura."
   }
 }
