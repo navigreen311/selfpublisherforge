@@ -36,6 +36,20 @@ class ModelPreference(str, Enum):
     gemini = "gemini"
 
 
+class ManuscriptStatusEnum(str, Enum):
+    draft = "draft"
+    revision = "revision"
+    final = "final"
+    archived = "archived"
+
+
+class ManuscriptTypeEnum(str, Enum):
+    fiction = "fiction"
+    nonfiction = "nonfiction"
+    poetry = "poetry"
+    screenplay = "screenplay"
+
+
 # ---------------------------------------------------------------------------
 # Generation
 # ---------------------------------------------------------------------------
@@ -98,6 +112,11 @@ class ChapterContent(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ChapterContentUpdate(BaseModel):
+    """Lightweight body for auto-save of chapter content."""
+    content: str
+
+
 class ChapterReorderItem(BaseModel):
     chapter_id: UUID
     order: int
@@ -115,6 +134,83 @@ class ManuscriptResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Manuscript CRUD (Writing Studio)
+# ---------------------------------------------------------------------------
+
+class ManuscriptCreateRequest(BaseModel):
+    """Body for POST /manuscripts."""
+    project_id: UUID | None = None
+    title: str = Field("Untitled Manuscript", min_length=1, max_length=500)
+    type: ManuscriptTypeEnum = ManuscriptTypeEnum.fiction
+
+
+class ManuscriptUpdateRequest(BaseModel):
+    """Body for PATCH /manuscripts/{id}."""
+    title: str | None = None
+    status: ManuscriptStatusEnum | None = None
+    target_word_count: int | None = None
+
+
+class ManuscriptDetail(BaseModel):
+    """Full manuscript representation returned by the API."""
+    id: UUID
+    book_id: UUID | None = None
+    title: str = ""
+    status: str = "draft"
+    content_type: str = "fiction"
+    word_count: int = 0
+    target_word_count: int = 0
+    chapter_count: int = 0
+    chapters: list[ChapterContent] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ManuscriptListItem(BaseModel):
+    """Summary representation for list endpoint."""
+    id: UUID
+    book_id: UUID | None = None
+    title: str = ""
+    status: str = "draft"
+    content_type: str = "fiction"
+    word_count: int = 0
+    target_word_count: int = 0
+    chapter_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Chapter Versions
+# ---------------------------------------------------------------------------
+
+class ChapterVersionSummary(BaseModel):
+    """Summary of a chapter version in a list."""
+    id: UUID
+    chapter_id: UUID
+    version_number: int
+    word_count: int = 0
+    created_at: datetime
+    snapshot_reason: str = ""
+
+
+class ChapterVersionDetail(BaseModel):
+    """Full chapter version with content."""
+    id: UUID
+    chapter_id: UUID
+    version_number: int
+    title: str
+    content: str
+    word_count: int = 0
+    created_at: datetime
+    snapshot_reason: str = ""
+
+
+# ---------------------------------------------------------------------------
 # Readability
 # ---------------------------------------------------------------------------
 
@@ -129,6 +225,11 @@ class ReadabilityScore(BaseModel):
     avg_words_per_sentence: float
     avg_syllables_per_word: float
     reading_level: str
+
+
+class ReadabilityRequest(BaseModel):
+    """Body for POST /writing/readability."""
+    text: str = Field(..., min_length=1)
 
 
 class ManuscriptAnalysis(BaseModel):
@@ -218,3 +319,76 @@ class WritingSessionRecord(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class WritingSessionStartRequest(BaseModel):
+    """Body for POST /writing/sessions/start."""
+    manuscript_id: UUID | None = None
+    chapter_id: UUID | None = None
+
+
+class WritingSessionStartResponse(BaseModel):
+    """Response for starting a writing session."""
+    session_id: UUID
+    started_at: datetime
+
+
+class WritingSessionHeartbeatRequest(BaseModel):
+    """Body for POST /writing/sessions/{id}/heartbeat."""
+    words_written: int = 0
+    current_chapter_id: UUID | None = None
+
+
+class WritingSessionEndRequest(BaseModel):
+    """Body for POST /writing/sessions/{id}/end."""
+    words_written: int = 0
+    notes: str = ""
+
+
+class WritingSessionEndResponse(BaseModel):
+    """Response for ending a writing session."""
+    session_id: UUID
+    duration_seconds: int
+    words_written: int
+    ended_at: datetime
+
+
+class WritingSessionListItem(BaseModel):
+    """Session summary for list endpoint."""
+    id: UUID
+    user_id: UUID
+    manuscript_id: UUID | None = None
+    chapter_id: UUID | None = None
+    words_written: int = 0
+    duration_seconds: int = 0
+    started_at: datetime
+    ended_at: datetime | None = None
+    notes: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Export / Import
+# ---------------------------------------------------------------------------
+
+class ExportRequest(BaseModel):
+    """Body for POST /manuscripts/{id}/export."""
+    format: str = Field("docx", pattern="^(docx|pdf|epub|markdown|txt)$")
+    include_toc: bool = True
+    include_metadata: bool = True
+
+
+class ExportResponse(BaseModel):
+    """Response with download information."""
+    download_url: str
+    format: str
+    manuscript_id: UUID
+    exported_at: datetime = Field(default_factory=_utcnow)
+
+
+class ImportResponse(BaseModel):
+    """Response after importing a manuscript."""
+    manuscript_id: UUID
+    title: str
+    chapter_count: int
+    word_count: int
+    imported_at: datetime = Field(default_factory=_utcnow)

@@ -13,6 +13,7 @@ from app.modules.audiobook import service_voices
 from app.modules.audiobook.schemas_extended import (
     VoiceCloneRequest,
     VoiceListResponse,
+    VoicePreviewRequest,
     VoicePreviewResponse,
     VoiceResponse,
 )
@@ -120,3 +121,25 @@ async def delete_voice(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Voice not found or is a system voice.",
         )
+
+
+@router.post(
+    "/voices/preview",
+    response_model=VoicePreviewResponse,
+    summary="Generate voice preview",
+    description="Generate a preview audio clip for a voice with custom text.",
+)
+async def generate_voice_preview(
+    body: VoicePreviewRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await service_voices.preview_voice(
+        db, body.voice_id, current_user["org_id"], body.text
+    )
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Voice not found.",
+        )
+    return result

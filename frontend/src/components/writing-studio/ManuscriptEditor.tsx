@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -10,77 +16,148 @@ import LinkExtension from "@tiptap/extension-link";
 import ImageExtension from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
-import { useTranslations } from "@/hooks/use-translations";
+import Typography from "@tiptap/extension-typography";
 import { cn } from "@/lib/utils";
 import { EditorToolbar } from "./EditorToolbar";
 
-interface ManuscriptEditorProps {
-  content: string;
-  onChange: (html: string) => void;
-  onSelectionChange?: (text: string) => void;
-  onSave?: () => void;
-  placeholder?: string;
-  className?: string;
-  readOnly?: boolean;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface ManuscriptEditorProps {
+  /** TipTap JSON content */
+  content: any;
+  /** Chapter title displayed as editable H1 at top */
+  chapterTitle: string;
+  /** Callback when editor content changes (TipTap JSON) */
+  onContentChange: (content: any) => void;
+  /** Callback when the chapter title is edited */
+  onTitleChange: (title: string) => void;
+  /** Callback to report save status to parent */
+  onSaveStatusChange: (status: "saved" | "saving" | "unsaved") => void;
+  /** Callback to report live word count */
+  onWordCountChange: (count: number) => void;
+  /** Editor color theme */
   theme?: "light" | "sepia" | "dark";
+  /** Font family for the writing area */
   fontFamily?: string;
+  /** Font size in px for the writing area */
   fontSize?: number;
-  focusMode?: boolean;
+  /** Expose the TipTap editor instance for external tools (AI insert, find/replace) */
+  editorRef?: React.MutableRefObject<any>;
+  /** Additional selection change handler (for AI panel etc.) */
+  onSelectionChange?: (text: string) => void;
+  /** Manual save trigger */
+  onSave?: () => void;
+  /** Additional CSS class */
+  className?: string;
+  /** Read-only mode */
+  readOnly?: boolean;
 }
 
-const THEME_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  light: { bg: "bg-white", text: "text-gray-900", border: "border-gray-200" },
-  sepia: { bg: "bg-amber-50", text: "text-amber-950", border: "border-amber-200" },
-  dark: { bg: "bg-gray-900", text: "text-gray-100", border: "border-gray-700" },
-};
+// ---------------------------------------------------------------------------
+// Theme definitions
+// ---------------------------------------------------------------------------
 
-const FONT_FAMILIES: Record<string, string> = {
-  Georgia: "Georgia, 'Times New Roman', serif",
-  Merriweather: "'Merriweather', serif",
-  Lora: "'Lora', serif",
-  "Source Serif Pro": "'Source Serif Pro', serif",
-  "System Sans": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-};
+const THEME_STYLES = {
+  light: {
+    bg: "#ffffff",
+    text: "#1a1a1a",
+    titleText: "#111111",
+    border: "border-gray-200",
+  },
+  sepia: {
+    bg: "#f5f0e8",
+    text: "#5b4636",
+    titleText: "#3e2f23",
+    border: "border-amber-200",
+  },
+  dark: {
+    bg: "#1a1a2e",
+    text: "#e0e0e0",
+    titleText: "#f0f0f0",
+    border: "border-gray-700",
+  },
+} as const;
 
-const WORDS_PER_MINUTE = 250;
+const DEFAULT_FONT_FAMILY = "Georgia, 'Times New Roman', serif";
+
+// Auto-save debounce delay (ms)
+const AUTO_SAVE_DELAY = 2000;
+
+// Focus mode idle timeout (ms)
+const FOCUS_MODE_IDLE_TIMEOUT = 3000;
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function ManuscriptEditor({
   content,
-  onChange,
+  chapterTitle,
+  onContentChange,
+  onTitleChange,
+  onSaveStatusChange,
+  onWordCountChange,
+  theme = "light",
+  fontFamily = DEFAULT_FONT_FAMILY,
+  fontSize = 16,
+  editorRef,
   onSelectionChange,
   onSave,
-  placeholder = "Start writing, or press / for AI commands...",
   className,
   readOnly = false,
-  theme = "light",
-  fontFamily = "Georgia",
-  fontSize = 16,
-  focusMode = false,
 }: ManuscriptEditorProps) {
-  const t = useTranslations("writing");
+  // ---- Refs ----------------------------------------------------------------
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedJsonRef = useRef<string>("");
+  const titleInputRef = useRef<HTMLHeadingElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Find & Replace state
-  const [showFind, setShowFind] = useState(false);
-  const [showReplace, setShowReplace] = useState(false);
-  const [findQuery, setFindQuery] = useState("");
-  const [replaceQuery, setReplaceQuery] = useState("");
-  const [caseSensitive, setCaseSensitive] = useState(false);
+  // ---- Focus mode state ----------------------------------------------------
+  const [toolbarDimmed, setToolbarDimmed] = useState(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
 
+  // ---- Theme ---------------------------------------------------------------
   const currentTheme = THEME_STYLES[theme] || THEME_STYLES.light;
-  const currentFont = FONT_FAMILIES[fontFamily] || FONT_FAMILIES.Georgia;
 
+  // ---- Focus mode helpers (declared before editor so handleKeyDown works) --
+  const startFocusModeTimer = useCallback(() => {
+    setToolbarDimmed(true);
+
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
+
+    idleTimerRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+      // Toolbar stays dimmed until mouse movement
+    }, FOCUS_MODE_IDLE_TIMEOUT);
+  }, []);
+
+  // ---- TipTap extensions ---------------------------------------------------
   const extensions = useMemo(
     () => [
-      StarterKit,
+      StarterKit.configure({
+        dropcursor: {
+          color: theme === "dark" ? "#6366f1" : "#3b82f6",
+          width: 2,
+        },
+        
+      }),
       Placeholder.configure({
-        placeholder,
+        placeholder: "Start writing, or press / for AI commands...",
       }),
       CharacterCount,
       Underline,
+      Highlight.configure({
+        multicolor: true,
+      }),
       LinkExtension.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: "text-primary underline cursor-pointer",
+          class: "text-blue-600 underline cursor-pointer hover:text-blue-800",
         },
       }),
       ImageExtension.configure({
@@ -90,13 +167,35 @@ export function ManuscriptEditor({
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
-      Highlight.configure({
-        multicolor: true,
-      }),
+      Typography,
     ],
-    [placeholder]
+    [theme]
   );
 
+  // ---- Auto-save logic -----------------------------------------------------
+  const scheduleAutoSave = useCallback(
+    (json: any) => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+
+      autoSaveTimerRef.current = setTimeout(() => {
+        const jsonString = JSON.stringify(json);
+        if (jsonString !== lastSavedJsonRef.current) {
+          onSaveStatusChange("saving");
+          lastSavedJsonRef.current = jsonString;
+          // The parent is responsible for actual persistence via onContentChange.
+          // We signal "saving" then "saved" after a tick to complete the cycle.
+          requestAnimationFrame(() => {
+            onSaveStatusChange("saved");
+          });
+        }
+      }, AUTO_SAVE_DELAY);
+    },
+    [onSaveStatusChange]
+  );
+
+  // ---- TipTap editor -------------------------------------------------------
   const editor = useEditor({
     extensions,
     content,
@@ -106,14 +205,34 @@ export function ManuscriptEditor({
       attributes: {
         class: cn(
           "prose prose-lg max-w-none outline-none min-h-[300px] px-8 py-6",
-          "mx-auto",
-          currentTheme.text,
+          "mx-auto focus:outline-none",
         ),
-        style: `font-family: ${currentFont}; font-size: ${fontSize}px; line-height: 1.8; max-width: 720px;`,
+        style: [
+          "font-family: " + fontFamily,
+          "font-size: " + fontSize + "px",
+          "line-height: 1.8",
+          "max-width: 720px",
+          "color: " + currentTheme.text,
+        ].join("; "),
+      },
+      handleKeyDown: () => {
+        // Mark typing activity for focus mode
+        isTypingRef.current = true;
+        startFocusModeTimer();
+        return false; // Do not prevent default
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
-      onChange(currentEditor.getHTML());
+      const json = currentEditor.getJSON();
+      onContentChange(json);
+
+      // Report word count
+      const words = currentEditor.storage.characterCount?.words() ?? 0;
+      onWordCountChange(words);
+
+      // Mark as unsaved and schedule auto-save
+      onSaveStatusChange("unsaved");
+      scheduleAutoSave(json);
     },
     onSelectionUpdate: ({ editor: currentEditor }) => {
       if (onSelectionChange) {
@@ -124,145 +243,292 @@ export function ManuscriptEditor({
     },
   });
 
-  // Sync readOnly prop changes
+  // ---- Expose editor instance via ref --------------------------------------
+  useEffect(() => {
+    if (editorRef && editor) {
+      editorRef.current = editor;
+    }
+  }, [editor, editorRef]);
+
+  // ---- Sync readOnly prop --------------------------------------------------
   useEffect(() => {
     if (editor) {
       editor.setEditable(!readOnly);
     }
   }, [editor, readOnly]);
 
-  // Sync external content changes
+  // ---- Sync external content changes ---------------------------------------
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, { emitUpdate: false });
-    }
-  }, [editor, content]);
+    if (!editor) return;
 
-  // Keyboard shortcuts: Ctrl+S, Ctrl+F, Ctrl+H
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
+    const currentJson = JSON.stringify(editor.getJSON());
+    const incomingJson = JSON.stringify(content);
+
+    if (currentJson !== incomingJson && content) {
+      editor.commands.setContent(content, { emitUpdate: false });
+      // Update word count after content sync
+      const words = editor.storage.characterCount?.words() ?? 0;
+      onWordCountChange(words);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
+
+  // ---- Sync editor style when theme/font changes --------------------------
+  useEffect(() => {
+    if (!editor) return;
+
+    editor.setOptions({
+      editorProps: {
+        attributes: {
+          class: cn(
+            "prose prose-lg max-w-none outline-none min-h-[300px] px-8 py-6",
+            "mx-auto focus:outline-none",
+          ),
+          style: [
+            "font-family: " + fontFamily,
+            "font-size: " + fontSize + "px",
+            "line-height: 1.8",
+            "max-width: 720px",
+            "color: " + currentTheme.text,
+          ].join("; "),
+        },
+      },
+    });
+  }, [editor, fontFamily, fontSize, currentTheme.text]);
+
+  // ---- Save on blur --------------------------------------------------------
+  const handleBlur = useCallback(() => {
+    if (!editor) return;
+    const json = editor.getJSON();
+    const jsonString = JSON.stringify(json);
+    if (jsonString !== lastSavedJsonRef.current) {
+      onSaveStatusChange("saving");
+      onContentChange(json);
+      lastSavedJsonRef.current = jsonString;
+      requestAnimationFrame(() => {
+        onSaveStatusChange("saved");
+      });
+    }
+  }, [editor, onContentChange, onSaveStatusChange]);
+
+  // ---- Save on navigating away (beforeunload) ------------------------------
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!editor) return;
+      const json = editor.getJSON();
+      const jsonString = JSON.stringify(json);
+      if (jsonString !== lastSavedJsonRef.current) {
+        onContentChange(json);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [editor, onContentChange]);
+
+  // ---- Clean up auto-save timer on unmount ---------------------------------
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // ---- Focus mode: restore toolbar on mouse movement -----------------------
+  const handleMouseMove = useCallback(() => {
+    if (toolbarDimmed) {
+      setToolbarDimmed(false);
+    }
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+  }, [toolbarDimmed]);
+
+  // Clean up idle timer on unmount
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+    };
+  }, []);
+
+  // ---- Keyboard shortcuts: Ctrl+S ------------------------------------------
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "s") {
         event.preventDefault();
+        if (editor) {
+          const json = editor.getJSON();
+          onContentChange(json);
+          onSaveStatusChange("saving");
+          lastSavedJsonRef.current = JSON.stringify(json);
+          requestAnimationFrame(() => {
+            onSaveStatusChange("saved");
+          });
+        }
         onSave?.();
       }
-      if ((event.ctrlKey || event.metaKey) && event.key === "f") {
-        event.preventDefault();
-        setShowFind(true);
-        setShowReplace(false);
-      }
-      if ((event.ctrlKey || event.metaKey) && event.key === "h") {
-        event.preventDefault();
-        setShowFind(true);
-        setShowReplace(true);
-      }
-    },
-    [onSave]
-  );
+    };
 
-  useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleKeyDown]);
+  }, [editor, onContentChange, onSave, onSaveStatusChange]);
 
-  // Computed statistics
+  // ---- Title editing -------------------------------------------------------
+  const handleTitleInput = useCallback(
+    (e: React.FormEvent<HTMLHeadingElement>) => {
+      const newTitle = (e.currentTarget.textContent || "").trim();
+      onTitleChange(newTitle);
+    },
+    [onTitleChange]
+  );
+
+  const handleTitleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLHeadingElement>) => {
+      // Enter in title should move focus to editor body
+      if (e.key === "Enter") {
+        e.preventDefault();
+        editor?.commands.focus("start");
+      }
+    },
+    [editor]
+  );
+
+  // ---- Word count (for status display) -------------------------------------
   const wordCount = editor?.storage.characterCount?.words() ?? 0;
   const characterCount = editor?.storage.characterCount?.characters() ?? 0;
-  const readingTime = Math.max(1, Math.ceil(wordCount / WORDS_PER_MINUTE));
 
+  // ---- Render --------------------------------------------------------------
   return (
-    <div className={cn(
-      "flex flex-col rounded-md border",
-      currentTheme.bg,
-      currentTheme.border,
-      className
-    )}>
-      {/* Toolbar */}
+    <div
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      className={cn(
+        "flex flex-col rounded-md border overflow-hidden",
+        currentTheme.border,
+        className
+      )}
+      style={{ backgroundColor: currentTheme.bg }}
+    >
+      {/* Toolbar: dims during active typing (focus mode) */}
       {!readOnly && (
-        <div className={cn("transition-opacity duration-300", focusMode && "opacity-30 hover:opacity-100")}>
+        <div
+          className={cn(
+            "transition-opacity duration-500 ease-in-out",
+            toolbarDimmed ? "opacity-50" : "opacity-100"
+          )}
+          onMouseEnter={() => setToolbarDimmed(false)}
+        >
           <EditorToolbar editor={editor} />
         </div>
       )}
 
-      {/* Find & Replace bar */}
-      {showFind && (
-        <div className="border-b px-4 py-2 flex items-center gap-2 bg-muted/30">
-          <input
-            type="text"
-            value={findQuery}
-            onChange={(e) => setFindQuery(e.target.value)}
-            placeholder={t("editor.findReplace.find")}
-            className="rounded border px-2 py-1 text-sm bg-background w-48 focus:outline-none focus:ring-1 focus:ring-primary"
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={() => setCaseSensitive(prev => !prev)}
-            className={cn(
-              "text-xs px-2 py-1 rounded border transition-colors",
-              caseSensitive ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-            )}
-            title={t("editor.findReplace.caseSensitive")}
-          >
-            Aa
-          </button>
-          {showReplace && (
-            <>
-              <input
-                type="text"
-                value={replaceQuery}
-                onChange={(e) => setReplaceQuery(e.target.value)}
-                placeholder={t("editor.findReplace.replace")}
-                className="rounded border px-2 py-1 text-sm bg-background w-48 focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (editor && findQuery) {
-                    const html = editor.getHTML();
-                    const flags = caseSensitive ? "g" : "gi";
-                    const regex = new RegExp(findQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), flags);
-                    const updated = html.replace(regex, replaceQuery);
-                    editor.commands.setContent(updated);
-                    onChange(updated);
-                    setFindQuery("");
-                    setReplaceQuery("");
-                  }
-                }}
-                className="text-xs px-2 py-1 rounded border hover:bg-accent transition-colors"
-              >
-                {t("editor.findReplace.replaceAll")}
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setShowFind(false);
-              setShowReplace(false);
-              setFindQuery("");
-              setReplaceQuery("");
-            }}
-            className="text-xs px-2 py-1 rounded hover:bg-accent transition-colors ml-auto"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       {/* Editor content area */}
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{ backgroundColor: currentTheme.bg }}
+        onBlur={handleBlur}
+      >
+        {/* Chapter title: editable H1 */}
+        <div className="mx-auto" style={{ maxWidth: 720 }}>
+          <h1
+            ref={titleInputRef}
+            contentEditable={!readOnly}
+            suppressContentEditableWarning
+            onInput={handleTitleInput}
+            onKeyDown={handleTitleKeyDown}
+            className={cn(
+              "outline-none px-8 pt-8 pb-2 text-3xl font-bold leading-tight",
+              "border-none focus:outline-none",
+              !chapterTitle && "text-gray-400"
+            )}
+            style={{
+              fontFamily: fontFamily,
+              color: currentTheme.titleText,
+              maxWidth: 720,
+            }}
+            data-placeholder="Chapter title..."
+          >
+            {chapterTitle}
+          </h1>
+        </div>
+
+        {/* TipTap editor body */}
         <EditorContent editor={editor} />
       </div>
 
       {/* Minimal status bar */}
-      <div className={cn(
-        "flex items-center justify-end border-t px-4 py-1.5 text-xs text-muted-foreground transition-opacity duration-300",
-        focusMode && "opacity-30 hover:opacity-100"
-      )}>
-        {readOnly ? <span>{t("editor.readOnly")}</span> : <span>{t("editor.editing")}</span>}
+      <div
+        className={cn(
+          "flex items-center justify-between border-t px-4 py-1.5 text-xs transition-opacity duration-500",
+          toolbarDimmed ? "opacity-50" : "opacity-100"
+        )}
+        style={{
+          backgroundColor: currentTheme.bg,
+          color: theme === "dark" ? "#888" : "#999",
+          borderColor: theme === "dark" ? "#333" : undefined,
+        }}
+      >
+        <span>
+          {wordCount.toLocaleString()} words &middot;{" "}
+          {characterCount.toLocaleString()} characters
+        </span>
+        <span>
+          {readOnly ? "Read only" : "Editing"}
+        </span>
       </div>
+
+      {/* Paragraph spacing and theme styles for TipTap prose */}
+      <style jsx global>{`
+        .ProseMirror p {
+          margin-bottom: 1.5em;
+        }
+        .ProseMirror p.is-editor-empty:first-child::before {
+          color: ${theme === "dark" ? "#555" : "#adb5bd"};
+          content: attr(data-placeholder);
+          float: left;
+          height: 0;
+          pointer-events: none;
+        }
+        .ProseMirror:focus {
+          outline: none;
+        }
+        .ProseMirror img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 4px;
+        }
+        .ProseMirror blockquote {
+          border-left: 3px solid ${theme === "dark" ? "#444" : "#ddd"};
+          padding-left: 1em;
+          color: ${theme === "dark" ? "#aaa" : "#666"};
+        }
+        .ProseMirror mark {
+          background-color: ${theme === "dark" ? "#4a4a00" : "#fff3cd"};
+          color: inherit;
+          padding: 0.1em 0.2em;
+          border-radius: 2px;
+        }
+        .ProseMirror hr {
+          border: none;
+          border-top: 1px solid ${theme === "dark" ? "#444" : "#ddd"};
+          margin: 2em 0;
+        }
+        h1[data-placeholder]:empty::before {
+          content: attr(data-placeholder);
+          color: ${theme === "dark" ? "#555" : "#ccc"};
+          pointer-events: none;
+        }
+      `}</style>
     </div>
   );
 }
+
+export default ManuscriptEditor;

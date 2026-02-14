@@ -8,18 +8,26 @@ interface CoverCardProps {
   cover: Cover;
 }
 
-const statusColors: Record<Cover["status"], string> = {
+const statusColors: Partial<Record<Cover["status"], string>> = {
   pending: "bg-yellow-100 text-yellow-800",
   generating: "bg-blue-100 text-blue-800",
   completed: "bg-green-100 text-green-800",
   failed: "bg-red-100 text-red-800",
+  draft: "bg-gray-100 text-gray-800",
+  active: "bg-green-100 text-green-800",
+  edited: "bg-purple-100 text-purple-800",
+  exported: "bg-teal-100 text-teal-800",
 };
 
-const statusLabels: Record<Cover["status"], string> = {
+const statusLabels: Partial<Record<Cover["status"], string>> = {
   pending: "Pending",
   generating: "Generating",
   completed: "Ready",
   failed: "Failed",
+  draft: "Draft",
+  active: "Active",
+  edited: "Edited",
+  exported: "Exported",
 };
 
 export function CoverCard({ cover }: CoverCardProps) {

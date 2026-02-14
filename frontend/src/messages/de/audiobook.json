@@ -1,0 +1,45 @@
+{
+  "title": "Hörbücher",
+  "subtitle": "Hörbuchproduktionen erstellen und verwalten",
+  "newAudiobook": "+ Neues Hörbuch",
+  "createAudiobook": "Hörbuch erstellen",
+  "noAudiobooks": "Noch keine Hörbücher. Erstellen Sie Ihr erstes Hörbuch, um loszulegen!",
+
+  "stats": {
+    "totalProjects": "Gesamtprojekte",
+    "inProgress": "In Bearbeitung",
+    "completed": "Abgeschlossen",
+    "totalDuration": "Gesamtdauer"
+  },
+
+  "status": {
+    "configuring": "Konfigurieren",
+    "generating": "Generieren",
+    "reviewing": "Überprüfen",
+    "mastering": "Mastering",
+    "complete": "Fertig",
+    "validated": "Validiert"
+  },
+
+  "wizard": {
+    "step1Title": "Manuskript auswählen",
+    "step2Title": "Stimme & Charaktere",
+    "step3Title": "Prüfen & Generieren",
+    "selectManuscript": "Manuskript auswählen",
+    "estimatedDuration": "Geschätzte Dauer",
+    "uploadManuscript": "Manuskript hochladen",
+    "primaryVoice": "Hauptstimme",
+    "tierStandard": "Standard",
+    "tierPremium": "Premium",
+    "previewVoice": "Stimme vorhören",
+    "characterVoiceTip": "Weisen Sie Charakteren verschiedene Stimmen zu für eine immersive Erzählung",
+    "outputSettings": "Ausgabeeinstellungen",
+    "targetPlatform": "Zielplattform",
+    "narrationSpeed": "Erzählgeschwindigkeit",
+    "narrationStyle": "Erzählstil",
+    "costEstimate": "Kostenschätzung",
+    "budgetLimit": "Budgetgrenze",
+    "comparisonNote": "Kosten mit traditioneller Erzählung vergleichen",
+    "create": "Hörbuch erstellen"
+  }
+}

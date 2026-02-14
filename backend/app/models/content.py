@@ -1,8 +1,11 @@
-"""Manuscript, Chapter, StyleProfile, WritingSession, and ContentAsset models."""
+"""Manuscript, Chapter, ChapterVersion, StyleProfile, WritingSession, EditorSettings, and ContentAsset models."""
 import enum
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
+    DateTime,
     Enum as SAEnum,
 )
 from sqlalchemy import (
@@ -12,6 +15,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -89,30 +93,63 @@ class Chapter(BaseModel):
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    content: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    content: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    status: Mapped[ChapterStatus] = mapped_column(
-        SAEnum(ChapterStatus, name="chapter_status", create_constraint=True),
-        default=ChapterStatus.OUTLINE,
-        server_default="outline",
+    target_word_count: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    status: Mapped[str] = mapped_column(
+        String(50),
+        default="draft",
+        server_default="draft",
+    )
+    chapter_type: Mapped[str] = mapped_column(
+        String(50),
+        default="chapter",
+        server_default="chapter",
     )
     ai_metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
     manuscript = relationship("Manuscript", back_populates="chapters")
     writing_sessions = relationship("WritingSession", back_populates="chapter", lazy="selectin")
+    versions = relationship("ChapterVersion", back_populates="chapter", lazy="noload")
 
     __table_args__ = (
         Index("ix_chapters_status", "status"),
         Index("ix_chapters_order_index", "order_index"),
         Index("ix_chapters_ai_metrics_gin", "ai_metrics", postgresql_using="gin"),
-        Index(
-            "ix_chapters_content_fulltext",
-            "content",
-            postgresql_using="gin",
-            postgresql_ops={"content": "gin_trgm_ops"},
-        ),
+        Index("ix_chapters_content_gin", "content", postgresql_using="gin"),
         Index("ix_chapters_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
+    )
+
+
+class ChapterVersion(BaseModel):
+    """Immutable snapshot of a chapter's content at a point in time."""
+    __tablename__ = "chapter_versions"
+
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+    )
+
+    # Relationships
+    chapter = relationship("Chapter", back_populates="versions")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index(
+            "idx_chapter_versions_chapter",
+            "chapter_id",
+            "created_at",
+            postgresql_ops={"created_at": "DESC"},
+        ),
+        Index("ix_chapter_versions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 
@@ -154,8 +191,18 @@ class StyleProfile(TenantModel):
 class WritingSession(BaseModel):
     __tablename__ = "writing_sessions"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    manuscript_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("manuscripts.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -173,14 +220,79 @@ class WritingSession(BaseModel):
     words_written: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     duration_seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     ai_assists_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default="now()",
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None,
+    )
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     # Relationships
+    organization = relationship("Organization")
     user = relationship("User", back_populates="writing_sessions")
+    manuscript = relationship("Manuscript")
     book = relationship("Book", back_populates="writing_sessions")
     chapter = relationship("Chapter", back_populates="writing_sessions")
 
     __table_args__ = (
+        Index("idx_writing_sessions_user", "user_id"),
+        Index("idx_writing_sessions_manuscript", "manuscript_id"),
         Index("ix_writing_sessions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
+    )
+
+
+class EditorSettings(BaseModel):
+    """Per-user editor configuration for the Writing Studio."""
+    __tablename__ = "editor_settings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    font_family: Mapped[str] = mapped_column(
+        String(100), default="Georgia", server_default="Georgia",
+    )
+    font_size: Mapped[int] = mapped_column(
+        Integer, default=16, server_default="16",
+    )
+    theme: Mapped[str] = mapped_column(
+        String(20), default="light", server_default="light",
+    )
+    line_height: Mapped[float] = mapped_column(
+        Float, default=1.8, server_default="1.8",
+    )
+    show_ai_panel: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true",
+    )
+    show_chapter_panel: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true",
+    )
+    style_profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("style_profiles.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+    )
+    tone_preference: Mapped[str] = mapped_column(
+        String(50), default="match_profile", server_default="match_profile",
+    )
+    length_preference: Mapped[str] = mapped_column(
+        String(20), default="medium", server_default="medium",
+    )
+    auto_save_interval_seconds: Mapped[int] = mapped_column(
+        Integer, default=2, server_default="2",
+    )
+    daily_word_goal: Mapped[int] = mapped_column(
+        Integer, default=1000, server_default="1000",
+    )
+
+    # Relationships
+    user = relationship("User")
+    style_profile = relationship("StyleProfile")
+
+    __table_args__ = (
+        Index("ix_editor_settings_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 

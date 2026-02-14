@@ -1,11 +1,14 @@
 """Built-in cover templates organised by genre.
 
 Each template includes dimension specs, font recommendations, and layout guidance
-for common self-publishing platforms.
+for common self-publishing platforms. Templates now include Fabric.js editor_state
+for direct visual editing.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
+from uuid import UUID
 
 from app.modules.cover_design.schemas import CoverDimensions, CoverGenre, CoverPlatform
 
@@ -21,6 +24,37 @@ PLATFORM_DIMENSIONS: dict[CoverPlatform, CoverDimensions] = {
     CoverPlatform.GOOGLE_PLAY: CoverDimensions(width_px=1280, height_px=1920, dpi=300, bleed_px=0),
     CoverPlatform.CUSTOM: CoverDimensions(width_px=1600, height_px=2560, dpi=300, bleed_px=0),
 }
+
+# Format-specific dimension presets
+FORMAT_DIMENSIONS: dict[str, CoverDimensions] = {
+    "ebook": CoverDimensions(width_px=2560, height_px=1600, dpi=300, bleed_px=0),
+    "paperback_6x9": CoverDimensions(width_px=1800, height_px=2700, dpi=300, bleed_px=38),
+    "paperback_5x8": CoverDimensions(width_px=1500, height_px=2400, dpi=300, bleed_px=38),
+    "paperback_8x10": CoverDimensions(width_px=2400, height_px=3000, dpi=300, bleed_px=38),
+    "audiobook": CoverDimensions(width_px=3000, height_px=3000, dpi=300, bleed_px=0),
+    "hardcover_6x9": CoverDimensions(width_px=1800, height_px=2700, dpi=300, bleed_px=50),
+}
+
+# Font recommendations by genre
+GENRE_FONTS: dict[CoverGenre, list[str]] = {
+    CoverGenre.ROMANCE: ["Playfair Display", "Great Vibes", "Cormorant Garamond", "Libre Baskerville", "Dancing Script"],
+    CoverGenre.THRILLER: ["Oswald", "Anton", "Impact", "Bebas Neue", "Roboto Condensed"],
+    CoverGenre.MYSTERY: ["Quicksand", "Fredoka One", "Poppins", "Merriweather", "Lato"],
+    CoverGenre.SCI_FI: ["Orbitron", "Exo 2", "Rajdhani", "Share Tech Mono", "Audiowide"],
+    CoverGenre.FANTASY: ["Cinzel", "Uncial Antiqua", "MedievalSharp", "Cinzel Decorative", "Philosopher"],
+    CoverGenre.HORROR: ["Creepster", "Nosifer", "Eater", "Butcherman", "Special Elite"],
+    CoverGenre.LITERARY_FICTION: ["Libre Baskerville", "Crimson Text", "EB Garamond", "Spectral", "Lora"],
+    CoverGenre.NONFICTION: ["Roboto Slab", "Merriweather", "Source Sans Pro", "PT Serif", "Open Sans"],
+    CoverGenre.SELF_HELP: ["Lato", "Nunito", "Open Sans", "Raleway", "Poppins"],
+    CoverGenre.BUSINESS: ["Libre Baskerville", "Playfair Display", "EB Garamond", "Merriweather", "Roboto Slab"],
+    CoverGenre.CHILDRENS: ["Bubblegum Sans", "Comic Neue", "Baloo 2", "Fredoka One", "Schoolbell"],
+    CoverGenre.YOUNG_ADULT: ["Josefin Sans", "Raleway", "Nunito Sans", "Montserrat", "Questrial"],
+    CoverGenre.MEMOIR: ["Caveat", "Dancing Script", "Sorts Mill Goudy", "Crimson Text", "Libre Baskerville"],
+    CoverGenre.COOKBOOK: ["Josefin Slab", "Amatic SC", "Sacramento", "Pacifico", "Indie Flower"],
+    CoverGenre.OTHER: ["Roboto", "Open Sans", "Lato", "Merriweather", "Montserrat"],
+}
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +75,9 @@ class CoverTemplate:
     font_recommendations: list[str] = field(default_factory=list)
     layout_guidance: str = ""
     tags: list[str] = field(default_factory=list)
+    style: str = "modern"  # e.g., "classic", "modern", "minimalist", "bold"
+    editor_state: dict[str, Any] = field(default_factory=dict)  # Fabric.js state
+    created_from_cover_id: UUID | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -246,3 +283,111 @@ def get_all_templates() -> list[CoverTemplate]:
 
 def get_dimensions_for_platform(platform: CoverPlatform) -> CoverDimensions:
     return PLATFORM_DIMENSIONS.get(platform, PLATFORM_DIMENSIONS[CoverPlatform.AMAZON_KDP])
+
+
+# ---------------------------------------------------------------------------
+# Enhanced API functions
+# ---------------------------------------------------------------------------
+
+
+def list_templates(
+    genre: CoverGenre | None = None,
+    style: str | None = None,
+    format: str | None = None,
+) -> list[CoverTemplate]:
+    """Return filtered template catalog.
+
+    Args:
+        genre: Filter by genre
+        style: Filter by style (e.g., "modern", "classic", "minimalist")
+        format: Filter by format dimensions (e.g., "ebook", "paperback_6x9")
+
+    Returns:
+        List of matching templates
+    """
+    templates = TEMPLATES
+
+    if genre:
+        templates = [t for t in templates if t.genre == genre]
+
+    if style:
+        templates = [t for t in templates if hasattr(t, 'style') and t.style.lower() == style.lower()]
+
+    if format and format in FORMAT_DIMENSIONS:
+        target_dims = FORMAT_DIMENSIONS[format]
+        templates = [
+            t for t in templates
+            if t.dimensions.width_px == target_dims.width_px
+            and t.dimensions.height_px == target_dims.height_px
+        ]
+
+    return templates
+
+
+def get_template(template_id: str) -> CoverTemplate | None:
+    """Get a specific template by ID with full editor_state.
+
+    Args:
+        template_id: The template ID
+
+    Returns:
+        Template with Fabric.js editor_state, or None if not found
+    """
+    return _TEMPLATES_BY_ID.get(template_id)
+
+
+async def create_template_from_cover(
+    cover_id: UUID,
+    name: str,
+    genre: CoverGenre,
+    style: str,
+    description: str,
+    editor_state: dict[str, Any],
+    tags: list[str] | None = None,
+) -> CoverTemplate:
+    """Save a cover design as a reusable template.
+
+    Args:
+        cover_id: The source cover ID
+        name: Template name
+        genre: Template genre
+        style: Template style
+        description: Template description
+        editor_state: Fabric.js editor state from the cover
+        tags: Optional tags
+
+    Returns:
+        The newly created template
+    """
+    template_id = f"{genre.value}-{name.lower().replace(' ', '-')}"
+    font_recs = GENRE_FONTS.get(genre, GENRE_FONTS[CoverGenre.OTHER])
+
+    template = CoverTemplate(
+        id=template_id,
+        name=name,
+        genre=genre,
+        description=description,
+        dimensions=PLATFORM_DIMENSIONS[CoverPlatform.AMAZON_KDP],
+        font_recommendations=font_recs[:3],
+        layout_guidance=description,
+        tags=tags or [],
+        style=style,
+        editor_state=editor_state,
+        created_from_cover_id=cover_id,
+    )
+
+    TEMPLATES.append(template)
+    _TEMPLATES_BY_ID[template.id] = template
+    _TEMPLATES_BY_GENRE.setdefault(genre, []).append(template)
+
+    return template
+
+
+def get_dimensions_for_format(format: str) -> CoverDimensions | None:
+    """Get dimension specifications for a book format."""
+    return FORMAT_DIMENSIONS.get(format)
+
+
+def get_genre_fonts(genre: CoverGenre) -> list[str]:
+    """Get recommended fonts for a specific genre."""
+    return GENRE_FONTS.get(genre, GENRE_FONTS[CoverGenre.OTHER])

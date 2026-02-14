@@ -28,6 +28,9 @@ import type {
   CreateManuscriptRequest,
   ReadabilityPostResponse,
   ExportResponse,
+  EditorSettings,
+  WritingSessionActive,
+  SessionHeartbeat,
 } from "./types";
 
 export type * from "./types";
@@ -648,4 +651,67 @@ export function useReadabilityPost() {
       return data;
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Editor settings
+// ---------------------------------------------------------------------------
+
+export function useEditorSettings() {
+  const qc = useQueryClient();
+  const query = useQuery<EditorSettings>({
+    queryKey: ["editor-settings"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/writing/settings");
+      return data;
+    },
+  });
+
+  const mutation = useMutation<EditorSettings, Error, Partial<EditorSettings>>({
+    mutationFn: async (payload) => {
+      const { data } = await api.patch("/api/v1/writing/settings", payload);
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.setQueryData(["editor-settings"], data);
+    },
+  });
+
+  return {
+    settings: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    updateSettings: mutation.mutate,
+    updateSettingsAsync: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Session heartbeat
+// ---------------------------------------------------------------------------
+
+export function useSessionHeartbeat(sessionId: string | null, intervalMs = 30000) {
+  const mutation = useMutation<void, Error, SessionHeartbeat>({
+    mutationFn: async (payload) => {
+      if (!sessionId) return;
+      await api.post(`/api/v1/writing/sessions/${sessionId}/heartbeat`, payload);
+    },
+  });
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const timer = setInterval(() => {
+      mutation.mutate({ words_written: 0 });
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, intervalMs]);
+
+  return {
+    sendHeartbeat: mutation.mutate,
+    sendHeartbeatAsync: mutation.mutateAsync,
+  };
 }

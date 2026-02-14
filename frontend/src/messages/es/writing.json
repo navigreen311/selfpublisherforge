@@ -105,7 +105,13 @@
       "cancel": "Cancelar",
       "create": "Crear Manuscrito",
       "creating": "Creando..."
-    }
+    },
+    "linkToProject": "Vincular a Proyecto",
+    "noProject": "Ninguno (independiente)",
+    "selectProject": "Seleccionar proyecto (opcional)",
+    "dropFileHere": "Arrastra un archivo aquí o haz clic para buscar",
+    "acceptedFormats": "Acepta: DOCX, EPUB, TXT, MD",
+    "removeFile": "Eliminar archivo"
   },
   "outline": {
     "backToStudio": "Volver",

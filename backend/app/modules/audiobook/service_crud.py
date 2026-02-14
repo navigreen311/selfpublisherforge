@@ -267,3 +267,256 @@ async def delete_project(
     project.deleted_at = datetime.now(UTC)
     await db.commit()
     return True
+
+
+# Create from Wizard
+
+async def create_project_from_wizard(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    data: dict,
+) -> AudiobookProject:
+    manuscript_id = data["manuscript_id"]
+    voice_id = data["voice_id"]
+    tier = data["tier"]
+    platform = data.get("platform", "acx")
+    speed = data.get("speed", 1.0)
+    style = data.get("style", "neutral")
+    budget = data.get("budget")
+
+    manuscript_stmt = (
+        select(Manuscript)
+        .join(Book, Manuscript.book_id == Book.id)
+        .join(Project, Book.project_id == Project.id)
+        .where(
+            Manuscript.id == manuscript_id,
+            Project.org_id == org_id,
+            Manuscript.deleted_at.is_(None),
+            Book.deleted_at.is_(None),
+            Project.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(manuscript_stmt)
+    manuscript = result.scalar_one_or_none()
+    if not manuscript:
+        raise ValueError(
+            f"Manuscript {manuscript_id} not found or does not belong to this org"
+        )
+
+    book = manuscript.book
+
+    tier_settings = {
+        "free": {
+            "output_format": "mp3",
+            "sample_rate": 22050,
+            "bit_rate": 64,
+            "cost_multiplier": 1.0,
+        },
+        "standard": {
+            "output_format": "mp3",
+            "sample_rate": 44100,
+            "bit_rate": 128,
+            "cost_multiplier": 1.5,
+        },
+        "premium": {
+            "output_format": "m4b",
+            "sample_rate": 48000,
+            "bit_rate": 256,
+            "cost_multiplier": 2.5,
+        },
+    }
+    tier_config = tier_settings.get(tier, tier_settings["standard"])
+
+    project = AudiobookProject(
+        org_id=org_id,
+        book_id=book.id,
+        title=data.get("title") or book.title,
+        status="draft",
+        narrator_voice_id=voice_id,
+        narration_style={"style": style, "speed": speed},
+        output_format=tier_config["output_format"],
+        sample_rate=tier_config["sample_rate"],
+        bit_rate=tier_config["bit_rate"],
+        channels=1,
+        target_platform=platform,
+        settings={
+            **data.get("settings", {}),
+            "tier": tier,
+            "budget": budget,
+        },
+        created_by=data.get("created_by"),
+    )
+    db.add(project)
+    await db.flush()
+
+    chapter_stmt = (
+        select(Chapter)
+        .where(
+            Chapter.manuscript_id == manuscript_id,
+            Chapter.deleted_at.is_(None),
+        )
+        .order_by(Chapter.order_index)
+    )
+    ch_result = await db.execute(chapter_stmt)
+    chapters = list(ch_result.scalars().all())
+
+    total_word_count = 0
+    chapter_count = 0
+
+    for ch in chapters:
+        word_count = ch.word_count or (len(ch.content.split()) if ch.content else 0)
+        ab_chapter = AudiobookChapter(
+            audiobook_project_id=project.id,
+            chapter_id=ch.id,
+            chapter_number=ch.order_index + 1,
+            chapter_title=ch.title,
+            source_text=ch.content or "",
+            word_count=word_count,
+            status="pending",
+        )
+        db.add(ab_chapter)
+        total_word_count += word_count
+        chapter_count += 1
+
+    base_cost_per_1000_words = 0.10
+    estimated_cost = (
+        (total_word_count / 1000.0)
+        * base_cost_per_1000_words
+        * tier_config["cost_multiplier"]
+    )
+    if budget and estimated_cost > budget:
+        logger.warning(
+            "Estimated cost %.2f exceeds budget %.2f for project %s",
+            estimated_cost,
+            budget,
+            project.id,
+        )
+
+    project.total_chapters = chapter_count
+    project.estimated_cost = estimated_cost
+    project.metadata_ = {
+        **(project.metadata_ or {}),
+        "estimated_word_count": total_word_count,
+        "manuscript_id": str(manuscript_id),
+    }
+
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
+# Stats
+
+async def get_audiobook_stats(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+) -> dict:
+    total_stmt = select(func.count()).select_from(AudiobookProject).where(
+        AudiobookProject.org_id == org_id,
+        AudiobookProject.deleted_at.is_(None),
+    )
+    total_projects = (await db.execute(total_stmt)).scalar() or 0
+
+    in_progress_statuses = ["configuring", "generating", "reviewing", "mastering"]
+    in_progress_stmt = select(func.count()).select_from(AudiobookProject).where(
+        AudiobookProject.org_id == org_id,
+        AudiobookProject.status.in_(in_progress_statuses),
+        AudiobookProject.deleted_at.is_(None),
+    )
+    in_progress = (await db.execute(in_progress_stmt)).scalar() or 0
+
+    completed_statuses = ["complete", "published"]
+    completed_stmt = select(func.count()).select_from(AudiobookProject).where(
+        AudiobookProject.org_id == org_id,
+        AudiobookProject.status.in_(completed_statuses),
+        AudiobookProject.deleted_at.is_(None),
+    )
+    completed = (await db.execute(completed_stmt)).scalar() or 0
+
+    duration_stmt = select(func.sum(AudiobookProject.total_duration_seconds)).where(
+        AudiobookProject.org_id == org_id,
+        AudiobookProject.deleted_at.is_(None),
+    )
+    total_duration = (await db.execute(duration_stmt)).scalar() or 0.0
+
+    return {
+        "total_projects": total_projects,
+        "in_progress": in_progress,
+        "completed": completed,
+        "total_duration": float(total_duration),
+    }
+
+
+# Pause/Resume
+
+async def pause_project(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> dict | None:
+    stmt = select(AudiobookProject).where(
+        AudiobookProject.id == project_id,
+        AudiobookProject.org_id == org_id,
+        AudiobookProject.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    project = result.scalar_one_or_none()
+    if not project:
+        return None
+
+    if project.status not in ["generating", "configuring", "reviewing"]:
+        return {
+            "project_id": project.id,
+            "status": project.status,
+            "message": f"Project is not in a pausable state (current status: {project.status})",
+        }
+
+    project.metadata_ = {
+        **(project.metadata_ or {}),
+        "paused_from_status": project.status,
+    }
+    project.status = "draft"
+    await db.commit()
+
+    return {
+        "project_id": project.id,
+        "status": project.status,
+        "message": "Project generation paused successfully",
+    }
+
+
+async def resume_project(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> dict | None:
+    stmt = select(AudiobookProject).where(
+        AudiobookProject.id == project_id,
+        AudiobookProject.org_id == org_id,
+        AudiobookProject.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    project = result.scalar_one_or_none()
+    if not project:
+        return None
+
+    metadata = project.metadata_ or {}
+    paused_from = metadata.get("paused_from_status")
+
+    if not paused_from:
+        return {
+            "project_id": project.id,
+            "status": project.status,
+            "message": "Project was not paused or previous status not found",
+        }
+
+    project.status = paused_from
+    metadata.pop("paused_from_status", None)
+    project.metadata_ = metadata
+    await db.commit()
+
+    return {
+        "project_id": project.id,
+        "status": project.status,
+        "message": "Project generation resumed successfully",
+    }
