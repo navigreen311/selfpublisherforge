@@ -2,6 +2,19 @@
   "title": "Publishing Operations",
   "subtitle": "Manage your publishing accounts, export manuscripts, and track listings.",
   "newExport": "New Export",
+  "tabs": {
+    "accounts": "Accounts",
+    "exports": "Exports",
+    "listings": "Listings",
+    "isbns": "ISBNs",
+    "pricing": "Pricing"
+  },
+  "stats": {
+    "connectedAccounts": "Connected Accounts",
+    "activeListings": "Active Listings",
+    "pendingExports": "Pending Exports",
+    "totalRevenue": "Total Revenue"
+  },
   "quickActions": {
     "exportManuscript": {
       "title": "Export Manuscript",
@@ -19,6 +32,35 @@
     "title": "Publishing Accounts",
     "connectAccount": "Connect Account",
     "cancel": "Cancel",
+    "platform": "Platform",
+    "accountName": "Account Name",
+    "email": "Email",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "manage": "Manage",
+    "disconnecting": "Disconnecting...",
+    "active": "Active",
+    "inactive": "Inactive",
+    "lastSynced": "Last synced: {date}",
+    "neverSynced": "Never synced",
+    "disconnectTitle": "Disconnect Account",
+    "disconnectConfirm": "Are you sure you want to disconnect \"{name}\"? This will remove the account connection and stop syncing data from {platform}. You can reconnect it later.",
+    "toast": {
+      "connected": "Account connected",
+      "connectFailed": "Failed to connect account",
+      "disconnected": "Account disconnected",
+      "disconnectFailed": "Failed to disconnect account"
+    },
+    "platforms": {
+      "kdp": "Amazon KDP",
+      "ingramSpark": "IngramSpark",
+      "draft2digital": "Draft2Digital",
+      "smashwords": "Smashwords",
+      "appleBooks": "Apple Books",
+      "barnesNoble": "Barnes & Noble",
+      "kobo": "Kobo",
+      "googlePlay": "Google Play Books"
+    },
     "empty": {
       "title": "No accounts connected",
       "description": "Connect your first publishing platform account to get started.",
@@ -39,8 +81,234 @@
       }
     }
   },
+  "exports": {
+    "title": "Export Manuscript",
+    "selectBook": "Select a Book",
+    "formats": {
+      "epub": "EPUB",
+      "pdf": "PDF",
+      "mobi": "MOBI",
+      "docx": "DOCX",
+      "epubDescription": "For e-readers and digital distribution",
+      "pdfDescription": "Print-ready for KDP and IngramSpark",
+      "mobiDescription": "For Kindle devices",
+      "docxDescription": "For editing and review"
+    },
+    "configuration": {
+      "chooseFormat": "Choose Export Format",
+      "selectTemplate": "Select Formatting Template",
+      "exportOptions": "Export Options",
+      "includeToc": "Include Table of Contents",
+      "includeCover": "Include Cover Image",
+      "includeIsbnBarcode": "Include ISBN Barcode",
+      "trimSize": "Trim Size",
+      "isbn": "ISBN",
+      "isbnPlaceholder": "978-0-123456-47-2",
+      "isbnHint": "10 or 13 digits, with optional hyphens",
+      "isbnInvalid": "Invalid ISBN format. Must be a valid ISBN-10 or ISBN-13."
+    },
+    "preview": "Preview",
+    "export": "Export",
+    "generate": "Generate {format}",
+    "generating": "Generating...",
+    "reviewAndGenerate": "Review & Generate",
+    "history": "Export History",
+    "steps": {
+      "format": "Format",
+      "template": "Template",
+      "options": "Options",
+      "review": "Review"
+    },
+    "review": {
+      "format": "Format",
+      "chapters": "Chapters",
+      "tableOfContents": "Table of Contents",
+      "trimSize": "Trim Size",
+      "isbn": "ISBN",
+      "template": "Template",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "result": {
+      "title": "Export Complete",
+      "file": "File",
+      "size": "Size"
+    },
+    "toast": {
+      "exportCompleted": "{format} export completed!",
+      "exportFailed": "Failed to generate {format}",
+      "isbnInvalid": "Invalid ISBN format"
+    },
+    "back": "Back",
+    "next": "Next"
+  },
   "listings": {
-    "title": "Listings"
+    "title": "Listings",
+    "columns": {
+      "book": "Book",
+      "platform": "Platform",
+      "status": "Status",
+      "price": "Price",
+      "rank": "Rank",
+      "reviews": "Reviews",
+      "lastSynced": "Last Synced",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "draft": "Draft",
+      "pending": "Pending",
+      "review": "In Review",
+      "suspended": "Suspended",
+      "archived": "Archived"
+    },
+    "actions": {
+      "sync": "Sync",
+      "view": "View",
+      "edit": "Edit",
+      "unpublish": "Unpublish",
+      "republish": "Republish"
+    },
+    "untitled": "Untitled",
+    "never": "Never",
+    "noMatch": "No listings match your filters",
+    "loading": "Loading listings",
+    "empty": {
+      "title": "No listings yet",
+      "description": "Export your book and publish to a platform to see listings here."
+    },
+    "error": {
+      "failedToLoad": "Failed to load listings. Please try again."
+    },
+    "toast": {
+      "syncStarted": "Sync started",
+      "syncFailed": "Failed to start sync"
+    }
+  },
+  "isbns": {
+    "title": "ISBN Management",
+    "addIsbn": "Add ISBN",
+    "fields": {
+      "isbn": "ISBN",
+      "isbn10": "ISBN-10",
+      "isbn13": "ISBN-13",
+      "asin": "ASIN",
+      "format": "Format",
+      "assignedTo": "Assigned To",
+      "publisher": "Publisher",
+      "registrationDate": "Registration Date",
+      "status": "Status",
+      "notes": "Notes"
+    },
+    "status": {
+      "available": "Available",
+      "assigned": "Assigned",
+      "used": "Used",
+      "reserved": "Reserved",
+      "expired": "Expired"
+    },
+    "barcode": {
+      "title": "ISBN Barcode",
+      "generate": "Generate Barcode",
+      "download": "Download Barcode",
+      "preview": "Barcode Preview",
+      "format": "Barcode Format",
+      "ean13": "EAN-13",
+      "withPrice": "With Price Extension"
+    },
+    "validation": {
+      "invalidIsbn10": "Invalid ISBN-10 format",
+      "invalidIsbn13": "Invalid ISBN-13 format",
+      "invalidAsin": "Invalid ASIN format. Must be 10 alphanumeric characters.",
+      "isbnRequired": "ISBN is required",
+      "isbnHint": "10 or 13 digits, with optional hyphens",
+      "asinHint": "10 alphanumeric characters (e.g., B0XXXXXXXXX)"
+    },
+    "empty": {
+      "title": "No ISBNs registered",
+      "description": "Add your first ISBN to start managing your book identifiers."
+    },
+    "toast": {
+      "added": "ISBN added successfully",
+      "addFailed": "Failed to add ISBN",
+      "deleted": "ISBN removed",
+      "deleteFailed": "Failed to remove ISBN"
+    }
+  },
+  "pricing": {
+    "title": "Pricing",
+    "royaltyCalculator": "Royalty Calculator",
+    "fields": {
+      "currency": "Currency",
+      "listPrice": "List Price",
+      "salePrice": "Sale Price",
+      "salePricePlaceholder": "Optional",
+      "printCost": "Print Cost",
+      "deliveryCost": "Delivery Cost",
+      "royaltyRate": "Royalty Rate",
+      "estimatedRoyalty": "Estimated Royalty",
+      "netRevenue": "Net Revenue",
+      "pricePerPage": "Price per Page"
+    },
+    "currencies": {
+      "usd": "USD",
+      "eur": "EUR",
+      "gbp": "GBP",
+      "cad": "CAD",
+      "aud": "AUD"
+    },
+    "competitorComparison": "Competitor Comparison",
+    "competitorFields": {
+      "title": "Competitor Title",
+      "price": "Price",
+      "rating": "Rating",
+      "reviews": "Reviews",
+      "rank": "Rank"
+    },
+    "buttons": {
+      "calculate": "Calculate Royalty",
+      "recalculate": "Recalculate",
+      "comparePrice": "Compare Pricing",
+      "savePrice": "Save Price",
+      "resetPrice": "Reset"
+    },
+    "sections": {
+      "basicInfo": "Basic Information",
+      "discoverability": "Discoverability",
+      "identifiers": "Identifiers",
+      "series": "Series",
+      "pricing": "Pricing",
+      "additionalDetails": "Additional Details"
+    },
+    "metadata": {
+      "titleLabel": "Title",
+      "titleRequired": "Title *",
+      "subtitle": "Subtitle",
+      "description": "Description",
+      "authors": "Authors (comma-separated)",
+      "authorsPlaceholder": "Jane Doe, John Smith",
+      "language": "Language",
+      "publisher": "Publisher",
+      "keywords": "Keywords (comma-separated, max {max})",
+      "keywordsPlaceholder": "thriller, suspense, mystery, detective",
+      "categories": "Categories (comma-separated, max {max})",
+      "categoriesPlaceholder": "Fiction > Thriller, Fiction > Mystery",
+      "seriesName": "Series Name",
+      "bookNumber": "Book Number",
+      "pageCount": "Page Count",
+      "ageRange": "Age Range",
+      "ageRangePlaceholder": "e.g., 12-18"
+    },
+    "toast": {
+      "metadataSaved": "Metadata saved successfully",
+      "metadataFailed": "Failed to save metadata",
+      "priceSaved": "Price saved",
+      "priceFailed": "Failed to save price"
+    },
+    "loading": "Loading metadata...",
+    "saving": "Saving...",
+    "saveMetadata": "Save Metadata"
   },
   "export": {
     "breadcrumb": {
@@ -83,6 +351,30 @@
     "title": "KDP Validation",
     "subtitle": "Pre-flight validation for Amazon KDP print and ebook requirements",
     "selectBook": "Select Book to Validate",
+    "preFlightTitle": "KDP Pre-Flight Validation",
+    "preFlightDescription": "Check your manuscript against KDP requirements before publishing",
+    "runValidation": "Run Validation",
+    "running": "Running...",
+    "overallStatus": "Overall Status",
+    "lastChecked": "Last checked: {date}",
+    "readinessScore": "Readiness Score",
+    "errors": "Errors",
+    "warnings": "Warnings",
+    "status": {
+      "passed": "Passed",
+      "failed": "Failed",
+      "warnings": "Warnings",
+      "pending": "Pending"
+    },
+    "empty": {
+      "title": "No Validation Results",
+      "description": "Run a validation check to see if your book meets KDP requirements",
+      "action": "Run First Validation"
+    },
+    "loading": {
+      "title": "Running Validation...",
+      "description": "Checking print specs, ebook format, cover, and compliance"
+    },
     "toast": {
       "validationComplete": "Validation complete",
       "validationFailed": "Validation failed",
