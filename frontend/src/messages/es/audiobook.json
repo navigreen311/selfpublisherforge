@@ -1,0 +1,45 @@
+{
+  "title": "Audiolibros",
+  "subtitle": "Crear y gestionar producciones de audiolibros",
+  "newAudiobook": "+ Nuevo Audiolibro",
+  "createAudiobook": "Crear Audiolibro",
+  "noAudiobooks": "Aún no hay audiolibros. ¡Crea tu primer audiolibro para comenzar!",
+
+  "stats": {
+    "totalProjects": "Proyectos Totales",
+    "inProgress": "En Progreso",
+    "completed": "Completados",
+    "totalDuration": "Duración Total"
+  },
+
+  "status": {
+    "configuring": "Configurando",
+    "generating": "Generando",
+    "reviewing": "Revisando",
+    "mastering": "Masterización",
+    "complete": "Completo",
+    "validated": "Validado"
+  },
+
+  "wizard": {
+    "step1Title": "Seleccionar Manuscrito",
+    "step2Title": "Voz y Personajes",
+    "step3Title": "Revisar y Generar",
+    "selectManuscript": "Seleccionar Manuscrito",
+    "estimatedDuration": "Duración Estimada",
+    "uploadManuscript": "Subir Manuscrito",
+    "primaryVoice": "Voz Principal",
+    "tierStandard": "Estándar",
+    "tierPremium": "Premium",
+    "previewVoice": "Vista Previa de Voz",
+    "characterVoiceTip": "Asigna diferentes voces a los personajes para una narración inmersiva",
+    "outputSettings": "Configuración de Salida",
+    "targetPlatform": "Plataforma Objetivo",
+    "narrationSpeed": "Velocidad de Narración",
+    "narrationStyle": "Estilo de Narración",
+    "costEstimate": "Estimación de Costos",
+    "budgetLimit": "Límite de Presupuesto",
+    "comparisonNote": "Comparar costos con narración tradicional",
+    "create": "Crear Audiolibro"
+  }
+}
