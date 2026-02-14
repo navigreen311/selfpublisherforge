@@ -1,76 +1,17 @@
-
 "use client";
 
-import { useDashboard } from "@/modules/analytics/hooks";
-import { KPICard } from "@/modules/analytics/components/KPICard";
-import { RevenueChart } from "@/modules/analytics/components/RevenueChart";
-import { PortfolioTable } from "@/modules/analytics/components/PortfolioTable";
-import { EmptyState } from "@/components/shared/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
-import { BarChart3, RefreshCw, AlertCircle, Upload } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "@/hooks/use-translations";
+import { AnalyticsDashboard } from "@/modules/analytics/components/AnalyticsDashboard";
+import { FileText } from "lucide-react";
 
 export default function AnalyticsDashboardPage() {
   const t = useTranslations("analytics");
-  const { data: dashboard, isLoading, error, refetch } = useDashboard();
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0" aria-busy="true" aria-label="Loading analytics dashboard">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t("title")}</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" role="status">
-          <span className="sr-only">{t("kpi.title")}...</span>
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-card rounded-lg border p-4 sm:p-6">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-8 w-32" />
-            </div>
-          ))}
-        </div>
-        <Skeleton className="h-48 sm:h-64 w-full" aria-label={t("revenueChart.title")} />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t("title")}</h1>
-        <Card className="border-destructive/50">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
-              <div className="rounded-full bg-destructive/10 p-3">
-                <AlertCircle className="h-8 w-8 text-destructive" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold">{t("error.title")}</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  {error instanceof Error ? error.message : "An unexpected error occurred. Please try again."}
-                </p>
-              </div>
-              <Button onClick={() => refetch()} variant="outline" className="gap-2">
-                <RefreshCw className="h-4 w-4" />
-                {t("error.retry")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Check if we have any data at all
-  const hasData = dashboard && (
-    (dashboard.kpis && dashboard.kpis.length > 0) ||
-    (dashboard.revenue_chart && dashboard.revenue_chart.length > 0) ||
-    (dashboard.top_books && dashboard.top_books.length > 0)
-  );
 
   return (
     <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("title")}</h1>
@@ -82,145 +23,17 @@ export default function AnalyticsDashboardPage() {
               {t("navigation.revenueDetails")}
             </Link>
           </Button>
-          <Button size="sm" asChild>
-            <Link href="/analytics/reports" aria-label="View and generate analytics reports">
-              {t("navigation.reports")}
+          <Button size="sm" asChild className="gap-1.5">
+            <Link href="/analytics/reports" aria-label="Generate analytics reports">
+              <FileText className="h-4 w-4" />
+              Generate Report
             </Link>
           </Button>
         </nav>
       </div>
 
-      {/* Empty State - No Data */}
-      {!hasData && (
-        <EmptyState
-          icon={BarChart3}
-          title={t("empty.title")}
-          description={t("empty.description")}
-          actionLabel={t("empty.action")}
-          onAction={() => window.location.href = "/analytics/reports"}
-        />
-      )}
-
-      {/* KPI Cards */}
-      {hasData && (
-        <section role="region" aria-label={t("kpi.title")}>
-          <p id="kpi-desc" className="sr-only">
-            {t("kpi.description")}
-          </p>
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
-            aria-describedby="kpi-desc"
-          >
-            {dashboard?.kpis && dashboard.kpis.length > 0 ? (
-              dashboard.kpis.map((kpi, index) => (
-                <KPICard key={index} kpi={kpi} />
-              ))
-            ) : (
-              <Card className="col-span-full">
-                <CardContent className="p-4 sm:p-6 text-center text-sm text-muted-foreground">
-                  {t("kpi.noData")}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Revenue Chart */}
-      {hasData && (
-        <section role="region" aria-label={t("revenueChart.title")}>
-          <p id="revenue-chart-desc" className="sr-only">
-            {t("revenueChart.description")}
-          </p>
-          <div aria-describedby="revenue-chart-desc" className="h-[200px] sm:h-[300px]">
-            <RevenueChart data={dashboard?.revenue_chart || []} />
-          </div>
-        </section>
-      )}
-
-      {hasData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Top Books */}
-        <section role="region" aria-label={t("topBooks.title")}>
-          <p id="top-books-desc" className="sr-only">
-            {t("topBooks.description")}
-          </p>
-          <div aria-describedby="top-books-desc">
-            <PortfolioTable
-              books={
-                (dashboard?.top_books || []).map((b) => ({
-                  title: String(b.title || ""),
-                  revenue: Number(b.revenue || 0),
-                  units: Number(b.units || 0),
-                }))
-              }
-            />
-          </div>
-        </section>
-
-        {/* Platform Breakdown */}
-        <section role="region" aria-label={t("platformBreakdown.label")}>
-          <p id="platform-breakdown-desc" className="sr-only">
-            {t("platformBreakdown.description")}
-          </p>
-          <div
-            className="bg-card rounded-lg border p-4 sm:p-6 shadow-sm"
-            aria-describedby="platform-breakdown-desc"
-          >
-            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">{t("platformBreakdown.title")}</h3>
-            {dashboard?.platform_breakdown &&
-            Object.keys(dashboard.platform_breakdown).length > 0 ? (
-              <div className="space-y-2 sm:space-y-3" role="list" aria-label="Platform revenue distribution">
-                {Object.entries(dashboard.platform_breakdown).map(([platform, revenue]) => {
-                  const totalRevenue = Object.values(dashboard.platform_breakdown).reduce(
-                    (sum, val) => sum + Number(val),
-                    0
-                  );
-                  const percentage = totalRevenue > 0 ? (Number(revenue) / totalRevenue) * 100 : 0;
-                  const formattedRevenue = Number(revenue).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  });
-                  const platformName = platform.replace("_", " ");
-                  return (
-                    <div
-                      key={platform}
-                      role="listitem"
-                      aria-label={`${platformName}: $${formattedRevenue}, ${percentage.toFixed(1)}% of total revenue`}
-                    >
-                      <div className="flex justify-between text-xs sm:text-sm mb-1 gap-2">
-                        <span className="font-medium text-foreground capitalize truncate">
-                          {platformName}
-                        </span>
-                        <span className="text-muted-foreground whitespace-nowrap">
-                          ${formattedRevenue}{" "}
-                          ({percentage.toFixed(1)}%)
-                        </span>
-                      </div>
-                      <div
-                        className="w-full bg-muted rounded-full h-2"
-                        role="progressbar"
-                        aria-valuenow={Math.round(percentage)}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-label={`${platformName} revenue share: ${percentage.toFixed(1)}%`}
-                      >
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">{t("platformBreakdown.noData")}</p>
-            )}
-          </div>
-        </section>
-        </div>
-      )}
+      {/* Main Dashboard */}
+      <AnalyticsDashboard />
     </div>
   );
 }

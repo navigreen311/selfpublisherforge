@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -139,4 +139,50 @@ class AdCreative(TenantModel):
 
     __table_args__ = (
         Index("ix_ad_creatives_org_campaign", "org_id", "campaign_id"),
+    )
+
+
+class AdSearchTerm(BaseModel):
+    """Search term report data for a campaign."""
+    __tablename__ = "ad_search_terms"
+
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"),
+        nullable=False, index=True
+    )
+    search_term: Mapped[str] = mapped_column(String(500), nullable=False)
+    impressions: Mapped[int] = mapped_column(Integer, default=0)
+    clicks: Mapped[int] = mapped_column(Integer, default=0)
+    spend: Mapped[float] = mapped_column(Float, default=0.0)
+    sales: Mapped[float] = mapped_column(Float, default=0.0)
+    orders: Mapped[int] = mapped_column(Integer, default=0)
+    action_taken: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Relationships
+    campaign: Mapped["Campaign"] = relationship("Campaign")
+
+
+class AdDailyMetric(BaseModel):
+    """Aggregated daily metrics for a campaign."""
+    __tablename__ = "ad_daily_metrics"
+
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"),
+        nullable=False, index=True
+    )
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    spend: Mapped[float] = mapped_column(Float, default=0.0)
+    sales: Mapped[float] = mapped_column(Float, default=0.0)
+    impressions: Mapped[int] = mapped_column(Integer, default=0)
+    clicks: Mapped[int] = mapped_column(Integer, default=0)
+    orders: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Relationships
+    campaign: Mapped["Campaign"] = relationship("Campaign")
+
+    __table_args__ = (
+        Index("ix_daily_metrics_campaign_date", "campaign_id", "date", unique=True),
     )

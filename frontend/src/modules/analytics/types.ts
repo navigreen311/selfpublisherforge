@@ -275,3 +275,99 @@ export interface LaunchRecommendation {
   marketing_timeline: Array<{ date: string; action: string; channel: string }>;
   calculated_at: string;
 }
+
+// --- Enhanced Analytics types ---
+
+export interface DailySalesRow {
+  date: string;
+  kindle: number;
+  print: number;
+  audio: number;
+  kenp: number;
+  revenue: number;
+  royalties: number;
+}
+
+export interface SalesResponse {
+  daily_data: DailySalesRow[];
+  totals: {
+    units: number;
+    revenue: number;
+    royalties: number;
+  };
+  by_marketplace: Array<{
+    marketplace: string;
+    revenue: number;
+    units: number;
+    percentage?: number;
+  }>;
+}
+
+export interface BSRDataPoint {
+  recorded_at: string;
+  bsr: number;
+  category_rank?: number;
+  category_name?: string;
+}
+
+export interface BookPerformanceData {
+  book_id: string;
+  stats: {
+    bsr: number;
+    bsr_change: number;
+    monthly_revenue: number;
+    avg_daily_sales: number;
+    reviews: number;
+    avg_rating: number;
+    new_reviews_month: number;
+  };
+  bsr_history: BSRDataPoint[];
+  revenue_breakdown: Array<{
+    format: string;
+    revenue: number;
+    percentage: number;
+  }>;
+}
+
+export interface EnhancedDashboardData {
+  stats: Array<{
+    label: string;
+    value: string;
+    change_percent: number;
+    change_direction: "up" | "down" | "flat";
+  }>;
+  trend_data: Array<{
+    date: string;
+    revenue: number;
+    units: number;
+    royalties: number;
+    kenp: number;
+  }>;
+  revenue_by_book: Array<{
+    book_title: string;
+    revenue: number;
+    percentage: number;
+  }>;
+  revenue_by_format: Array<{
+    format: string;
+    revenue: number;
+    percentage: number;
+  }>;
+  insights: Array<{
+    type: string;
+    message: string;
+    book_id?: string;
+    severity: "info" | "warning" | "success";
+  }>;
+  period: string;
+}
+
+export interface EnhancedReportRequest {
+  title: string;
+  report_type: string;
+  period_start?: string;
+  period_end?: string;
+  book_ids?: string[];
+  format: "pdf" | "xlsx" | "csv";
+  sections?: string[];
+}

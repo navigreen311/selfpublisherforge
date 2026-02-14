@@ -1,7 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { extractApiError } from "@/hooks/use-api";
 import type {
   KPICard,
   RevenueDataPoint,
@@ -23,6 +25,10 @@ import type {
   AlsoBoughtIntelligence,
   SeasonalEvent,
   NicheSeasonality,
+  EnhancedDashboardData,
+  SalesResponse,
+  BookPerformanceData,
+  EnhancedReportRequest,
 } from "./types";
 
 export type * from "./types";
@@ -269,6 +275,56 @@ export function useNicheSeasonality(genre: string, year?: number) {
       if (year) params.set("year", year.toString());
       const { data } = await api.get(`/api/v1/seasonal/niche/${genre}?${params}`);
       return data.data;
+    },
+  });
+}
+
+// ---------- Enhanced Analytics Hooks ----------
+
+export function useEnhancedDashboard(period: string = "30d", compare: string = "previous") {
+  return useQuery({
+    queryKey: ["analytics", "dashboard", "enhanced", period, compare],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/analytics/dashboard/enhanced", { params: { period, compare } });
+      return data.data as EnhancedDashboardData;
+    },
+  });
+}
+
+export function useSalesData(params?: { period?: string; book_id?: string; marketplace?: string }) {
+  return useQuery({
+    queryKey: ["analytics", "sales", params],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/analytics/sales", { params });
+      return data.data as SalesResponse;
+    },
+  });
+}
+
+export function useBookPerformance(bookId: string, period: string = "90d") {
+  return useQuery({
+    queryKey: ["analytics", "books", bookId, "performance", period],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/analytics/books/${bookId}/performance`, { params: { period } });
+      return data.data as BookPerformanceData;
+    },
+    enabled: !!bookId,
+  });
+}
+
+export function useGenerateEnhancedReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (request: EnhancedReportRequest) => {
+      const { data } = await api.post("/api/v1/analytics/reports/generate", request);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["analytics", "reports"] });
+      toast.success("Report generation started");
+    },
+    onError: (error: any) => {
+      toast.error(extractApiError(error));
     },
   });
 }

@@ -341,3 +341,118 @@ class KUCalculatorResponse(BaseModel):
     difference_annual: float
     recommendation: str
     details: dict[str, Any]
+
+
+# ──────────────────── Strategy Schemas ────────────────────
+
+
+class StrategyCreateRequest(BaseModel):
+    type: str
+    name: str | None = None
+    book_ids: list[str] = Field(default_factory=list)
+    config: dict[str, Any] = Field(default_factory=dict)
+    auto_apply: bool = False
+
+
+class StrategyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    org_id: UUID
+    type: str
+    name: str | None
+    book_ids: list[str]
+    config: dict[str, Any]
+    status: str
+    last_run_at: datetime | None
+    next_run_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class StrategyUpdateRequest(BaseModel):
+    name: str | None = None
+    book_ids: list[str] | None = None
+    config: dict[str, Any] | None = None
+    status: str | None = None
+
+
+# ──────────────────── Scheduled Change Schemas ────────────────────
+
+
+class ScheduledChangeCreate(BaseModel):
+    book_id: str
+    current_price: float | None = None
+    new_price: float
+    reason: str | None = None
+    execute_at: str
+    revert_price: float | None = None
+    revert_at: str | None = None
+
+
+class ScheduledChangeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    org_id: UUID
+    book_id: UUID
+    current_price: float | None
+    new_price: float
+    reason: str | None
+    execute_at: datetime
+    revert_price: float | None
+    revert_at: datetime | None
+    status: str
+    executed_at: datetime | None
+    created_at: datetime
+
+
+# ──────────────────── Price History Schemas ────────────────────
+
+
+class PriceHistoryEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    book_id: UUID
+    old_price: float | None
+    new_price: float
+    reason: str | None
+    source: str
+    revenue_impact_pct: float | None
+    created_at: datetime
+
+
+class PriceHistoryResponse(BaseModel):
+    entries: list[PriceHistoryEntry]
+    book_filter: str | None = None
+
+
+# ──────────────────── Royalty Analysis Schemas ────────────────────
+
+
+class RoyaltyAnalysisRow(BaseModel):
+    book_id: str
+    book_title: str
+    price: float
+    format: str
+    royalty_rate: float
+    units: int
+    revenue: float
+    royalty: float
+
+
+class RoyaltyAnalysisResponse(BaseModel):
+    rows: list[RoyaltyAnalysisRow]
+    totals: dict[str, Any]
+    effective_rate: float
+    optimization_tips: list[str]
+
+
+# ──────────────────── Enhanced Simulation Schemas ────────────────────
+
+
+class EnhancedSimulationResponse(PriceSimulationResponse):
+    revenue_curve: list[dict[str, Any]]
+    optimal_price: float
+    recommendation: str

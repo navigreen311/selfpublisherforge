@@ -34,6 +34,7 @@ from app.modules.analytics.schemas import (
     DashboardData,
     Platform,
     PortfolioMetrics,
+    ReportGenerateRequest,
     ReportRequest,
     ReportResponse,
     RevenueQueryParams,
@@ -291,3 +292,134 @@ async def get_trends(
         period_start=period_start, period_end=period_end,
         aggregation=aggregation,
     )
+
+
+# ---------- Enhanced Dashboard ----------
+
+@router.get(
+    "/dashboard/enhanced",
+    summary="Get enhanced analytics dashboard",
+    description="Enhanced dashboard with KPI comparisons, trend data, revenue breakdowns, and AI insights.",
+    responses={
+        200: {"description": "Enhanced dashboard data"},
+        401: {"description": "Not authenticated"},
+    },
+)
+async def get_enhanced_dashboard(
+    period: str = Query(default="30d", description="Period length, e.g. 30d, 60d, 90d"),
+    compare: str = Query(default="previous", description="Comparison period: 'previous'"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Enhanced analytics dashboard with comparisons and AI insights."""
+    from app.modules.analytics.enhanced_dashboard_service import (
+        get_enhanced_dashboard as _get_enhanced,
+    )
+    from app.core.contracts import SuccessResponse
+
+    data = await _get_enhanced(db, current_user["org_id"], period=period, compare=compare)
+    return SuccessResponse(data=data)
+
+
+# ---------- Sales Data ----------
+
+@router.get(
+    "/sales",
+    summary="Get sales data",
+    description="Daily sales data with totals and marketplace breakdown.",
+    responses={
+        200: {"description": "Sales data with daily breakdown, totals, and marketplace split"},
+        401: {"description": "Not authenticated"},
+    },
+)
+async def get_sales(
+    period: str = Query(default="30d", description="Period length, e.g. 30d, 60d"),
+    book_id: UUID | None = Query(default=None, description="Filter by book ID"),
+    marketplace: str | None = Query(default=None, description="Filter by marketplace, e.g. US, UK"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Sales data with daily breakdown, totals, and marketplace split."""
+    from app.modules.analytics.sales_service import get_sales_data
+    from app.core.contracts import SuccessResponse
+
+    data = await get_sales_data(
+        db, current_user["org_id"], period=period, book_id=book_id, marketplace=marketplace,
+    )
+    return SuccessResponse(data=data)
+
+
+# ---------- Book Performance ----------
+
+@router.get(
+    "/books/{book_id}/performance",
+    summary="Get book performance",
+    description="Detailed book performance including BSR history, revenue breakdown, and review trends.",
+    responses={
+        200: {"description": "Book performance data"},
+        401: {"description": "Not authenticated"},
+    },
+)
+async def get_book_performance(
+    book_id: UUID,
+    period: str = Query(default="90d", description="Period length, e.g. 30d, 90d"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Detailed book performance with BSR history and revenue breakdown."""
+    from app.modules.analytics.book_performance_service import (
+        get_book_performance as _get_perf,
+    )
+    from app.core.contracts import SuccessResponse
+
+    data = await _get_perf(db, current_user["org_id"], book_id, period=period)
+    return SuccessResponse(data=data)
+
+
+# ---------- Enhanced Report Generation ----------
+
+@router.post(
+    "/reports/generate/enhanced",
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate enhanced report",
+    description="Generate an analytics report with custom sections, date ranges, and format options.",
+    responses={
+        201: {"description": "Report created successfully"},
+        401: {"description": "Not authenticated"},
+    },
+)
+async def generate_enhanced_report(
+    request: ReportGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate a report with enhanced options (sections, book filtering, etc.)."""
+    from app.modules.analytics.models import Report
+    from app.modules.analytics.schemas import ReportStatus
+    from app.core.contracts import SuccessResponse
+
+    report = Report(
+        org_id=current_user["org_id"],
+        title=request.title,
+        report_type=request.type,
+        output_format=request.format,
+        parameters={
+            "period_start": request.period_start,
+            "period_end": request.period_end,
+            "book_ids": request.book_ids,
+            "sections": request.sections,
+        },
+        status=ReportStatus.PENDING.value,
+        generated_by=current_user["user_id"],
+    )
+    db.add(report)
+    await db.flush()
+
+    return SuccessResponse(data={
+        "id": str(report.id),
+        "title": report.title,
+        "type": report.report_type,
+        "format": report.output_format,
+        "status": report.status,
+        "created_at": report.created_at.isoformat() if report.created_at else None,
+    })
