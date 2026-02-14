@@ -56,6 +56,7 @@ class CoverGenerateRequest(BaseModel):
     """Request body for generating an AI cover concept."""
 
     book_id: UUID | None = None
+    project_id: UUID | None = None
     title: str = Field(..., min_length=1, max_length=300)
     subtitle: str | None = Field(None, max_length=300)
     author_name: str = Field(..., min_length=1, max_length=200)
@@ -123,6 +124,8 @@ class CoverResponse(BaseModel):
     id: UUID
     org_id: UUID
     book_id: UUID | None = None
+    project_id: UUID | None = None
+    is_active: bool = False
     title: str
     subtitle: str | None = None
     author_name: str
@@ -186,3 +189,61 @@ class CompetitorAnalysisResponse(BaseModel):
     analyses: list[CompetitorCoverAnalysis] = Field(default_factory=list)
     trends: dict[str, Any] = Field(default_factory=dict)
     recommendations: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Additional Request/Response schemas
+# ---------------------------------------------------------------------------
+
+
+class CoverUpdateRequest(BaseModel):
+    """Request body for updating a cover."""
+
+    title: str | None = Field(None, min_length=1, max_length=300)
+    subtitle: str | None = Field(None, max_length=300)
+    author_name: str | None = Field(None, min_length=1, max_length=200)
+    genre: CoverGenre | None = None
+    platform: CoverPlatform | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class GenerationJobStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class GenerationJobResponse(BaseModel):
+    """Response for a generation job."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    org_id: UUID
+    user_id: UUID
+    status: GenerationJobStatus
+    request_data: dict[str, Any]
+    result_cover_ids: list[str] = Field(default_factory=list)
+    error_message: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None
+
+
+class ABTestResponse(BaseModel):
+    """Response for an A/B test."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    org_id: UUID
+    name: str
+    cover_ids: list[UUID]
+    share_token: str
+    status: str
+    winner_cover_id: UUID | None = None
+    vote_counts: dict[str, int] = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+    ended_at: datetime | None = None
