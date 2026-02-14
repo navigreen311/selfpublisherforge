@@ -29,7 +29,7 @@ from app.models.publishing import (
     PublishingAccount as PublishingAccountModel,
 )
 from app.modules.publishing_ops.epub_generator import generate_epub
-from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
+from app.modules.publishing_ops.models import BookPricing, ExportJob, FormattingTemplateModel, PricingHistory
 from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
@@ -590,3 +590,207 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
             status="sync_queued",
             message="Listing sync completed inline (broker unavailable)",
         )
+
+
+# ---------------------------------------------------------------------------
+# Pricing
+# ---------------------------------------------------------------------------
+
+async def get_pricing(
+    db: AsyncSession,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> dict | None:
+    """Return the book_pricing row for a given book and org, or None."""
+    stmt = (
+        select(BookPricing)
+        .where(
+            BookPricing.book_id == book_id,
+            BookPricing.org_id == org_id,
+            BookPricing.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+
+    return {
+        "id": row.id,
+        "book_id": row.book_id,
+        "org_id": row.org_id,
+        "currency": row.currency,
+        "kindle_price": row.kindle_price,
+        "paperback_price": row.paperback_price,
+        "hardcover_price": row.hardcover_price,
+        "audiobook_price": row.audiobook_price,
+        "page_count": row.page_count,
+        "print_type": row.print_type,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
+
+
+async def update_pricing(
+    db: AsyncSession,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
+    updates: dict,
+) -> dict:
+    """Upsert book_pricing and record changed fields in pricing_history."""
+    stmt = (
+        select(BookPricing)
+        .where(
+            BookPricing.book_id == book_id,
+            BookPricing.org_id == org_id,
+            BookPricing.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+
+    tracked_fields = {
+        "currency", "kindle_price", "paperback_price",
+        "hardcover_price", "audiobook_price", "page_count", "print_type",
+    }
+
+    if row is None:
+        # INSERT — all provided fields are "new"
+        row = BookPricing(
+            book_id=book_id,
+            org_id=org_id,
+        )
+        for field, value in updates.items():
+            if field in tracked_fields:
+                setattr(row, field, value)
+                # Record history for the initial set
+                db.add(PricingHistory(
+                    book_id=book_id,
+                    org_id=org_id,
+                    field_name=field,
+                    old_value=None,
+                    new_value=str(value) if value is not None else None,
+                ))
+        db.add(row)
+    else:
+        # UPDATE — only record history for actually-changed fields
+        for field, value in updates.items():
+            if field not in tracked_fields:
+                continue
+            old_value = getattr(row, field, None)
+            if old_value != value:
+                db.add(PricingHistory(
+                    book_id=book_id,
+                    org_id=org_id,
+                    field_name=field,
+                    old_value=str(old_value) if old_value is not None else None,
+                    new_value=str(value) if value is not None else None,
+                ))
+                setattr(row, field, value)
+
+    await db.flush()
+    await db.refresh(row)
+
+    return {
+        "id": row.id,
+        "book_id": row.book_id,
+        "org_id": row.org_id,
+        "currency": row.currency,
+        "kindle_price": row.kindle_price,
+        "paperback_price": row.paperback_price,
+        "hardcover_price": row.hardcover_price,
+        "audiobook_price": row.audiobook_price,
+        "page_count": row.page_count,
+        "print_type": row.print_type,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
+
+
+def calculate_royalty(
+    price: float,
+    format: str,
+    platform: str,
+    page_count: int = 0,
+    print_type: str = "black_white",
+) -> dict:
+    """Pure function — compute estimated royalty for a given price/format/platform.
+
+    Supported platforms & formats:
+    - KDP Kindle: 70% royalty if price is $2.99–$9.99, else 35%.
+    - KDP Print:  60% of (price - printing_cost).
+                  printing_cost = page_count * 0.012 + 0.85
+    - IngramSpark: 40% wholesale discount.
+                   royalty = price * 0.55 - printing_cost
+                   printing_cost = page_count * 0.012 + 0.85
+    - ACX: 40% royalty-share, 25% exclusive.
+    """
+    platform_lower = platform.lower()
+    format_lower = format.lower()
+
+    printing_cost = page_count * 0.012 + 0.85
+
+    if platform_lower == "kdp" and format_lower == "kindle":
+        if 2.99 <= price <= 9.99:
+            rate = 0.70
+        else:
+            rate = 0.35
+        royalty = round(price * rate, 2)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": rate,
+            "royalty": royalty,
+            "printing_cost": 0.0,
+        }
+
+    if platform_lower == "kdp" and format_lower in ("print", "paperback", "hardcover"):
+        royalty = round(0.60 * (price - printing_cost), 2)
+        royalty = max(royalty, 0.0)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": 0.60,
+            "royalty": royalty,
+            "printing_cost": round(printing_cost, 2),
+        }
+
+    if platform_lower in ("ingram_spark", "ingramspark", "ingram"):
+        royalty = round(price * 0.55 - printing_cost, 2)
+        royalty = max(royalty, 0.0)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": 0.55,
+            "wholesale_discount": 0.40,
+            "royalty": royalty,
+            "printing_cost": round(printing_cost, 2),
+        }
+
+    if platform_lower == "acx":
+        royalty_share_rate = 0.40
+        exclusive_rate = 0.25
+        royalty = round(price * royalty_share_rate, 2)
+        return {
+            "platform": platform,
+            "format": format,
+            "price": price,
+            "royalty_rate": royalty_share_rate,
+            "exclusive_rate": exclusive_rate,
+            "royalty": royalty,
+            "printing_cost": 0.0,
+        }
+
+    # Fallback for unknown platforms
+    return {
+        "platform": platform,
+        "format": format,
+        "price": price,
+        "royalty_rate": 0.0,
+        "royalty": 0.0,
+        "printing_cost": 0.0,
+        "note": f"Unsupported platform/format combination: {platform}/{format}",
+    }
