@@ -46,6 +46,37 @@ class ExportJob(TenantModel):
     )
 
 
+class ISBNRecord(TenantModel):
+    __tablename__ = "isbn_records"
+
+    isbn: Mapped[str] = mapped_column(String(17), nullable=False, unique=True)
+    format: Mapped[str] = mapped_column(String(20), nullable=False, default="isbn_13")
+    status: Mapped[str] = mapped_column(
+        String(20), default="available", server_default="available"
+    )
+    book_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("books.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    book = relationship("Book", backref="isbn_records")
+
+    __table_args__ = (
+        Index("ix_isbn_records_isbn", "isbn"),
+        Index("ix_isbn_records_org_id_created_at", "org_id", "created_at"),
+        Index("ix_isbn_records_status", "status"),
+        Index(
+            "ix_isbn_records_deleted_at_partial",
+            "id",
+            postgresql_where="deleted_at IS NULL",
+        ),
+    )
+
+
 class FormattingTemplateModel(TenantModel):
     __tablename__ = "formatting_templates"
 

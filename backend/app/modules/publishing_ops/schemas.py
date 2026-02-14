@@ -244,3 +244,55 @@ class ListingSyncResponse(BaseModel):
     listing_id: uuid.UUID
     status: str = "sync_queued"
     message: str = "Listing sync has been queued"
+
+
+# ---------- ISBNs ----------
+
+class ISBNStatus(str, Enum):
+    AVAILABLE = "available"
+    ASSIGNED = "assigned"
+    USED = "used"
+    RETIRED = "retired"
+
+
+class ISBNFormat(str, Enum):
+    ISBN_13 = "isbn_13"
+    ISBN_10 = "isbn_10"
+
+
+class CreateISBNRequest(BaseModel):
+    isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13 value")
+    format: ISBNFormat = ISBNFormat.ISBN_13
+    book_id: uuid.UUID | None = None
+    title: str | None = Field(None, max_length=500, description="Book title associated with this ISBN")
+    notes: str | None = None
+
+
+class UpdateISBNRequest(BaseModel):
+    isbn: str | None = Field(None, min_length=10, max_length=17)
+    format: ISBNFormat | None = None
+    status: ISBNStatus | None = None
+    book_id: uuid.UUID | None = None
+    title: str | None = Field(None, max_length=500)
+    notes: str | None = None
+
+
+class ISBNResponse(BaseModel):
+    id: uuid.UUID
+    org_id: uuid.UUID
+    isbn: str
+    format: ISBNFormat
+    status: ISBNStatus
+    book_id: uuid.UUID | None = None
+    title: str | None = None
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class GenerateBarcodeRequest(BaseModel):
+    width: int = Field(default=200, ge=50, le=1000, description="Barcode width in pixels")
+    height: int = Field(default=100, ge=25, le=500, description="Barcode height in pixels")
+    include_text: bool = Field(default=True, description="Whether to include human-readable text below the barcode")

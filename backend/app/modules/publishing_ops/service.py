@@ -29,16 +29,19 @@ from app.models.publishing import (
     PublishingAccount as PublishingAccountModel,
 )
 from app.modules.publishing_ops.epub_generator import generate_epub
-from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
+from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel, ISBNRecord
 from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
     BookMetadataUpdate,
+    CreateISBNRequest,
     ExportFormat,
     ExportRequest,
     ExportResponse,
     FormattingTemplate,
     FormattingTemplateCreate,
+    ISBNResponse,
+    ISBNStatus,
     ListingDetail,
     ListingSyncResponse,
     PlatformType,
@@ -48,6 +51,7 @@ from app.modules.publishing_ops.schemas import (
     TemplateGenre,
     TemplateStyleSettings,
     TrimSize,
+    UpdateISBNRequest,
 )
 from app.modules.publishing_ops.templates import get_all_templates
 from app.tasks.publishing_ops import (
@@ -590,3 +594,113 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
             status="sync_queued",
             message="Listing sync completed inline (broker unavailable)",
         )
+
+
+# ---------------------------------------------------------------------------
+# ISBNs
+# ---------------------------------------------------------------------------
+
+def _isbn_row_to_response(row: ISBNRecord) -> ISBNResponse:
+    """Map an ISBNRecord ORM instance to an ISBNResponse schema."""
+    return ISBNResponse(
+        id=row.id,
+        org_id=row.org_id,
+        isbn=row.isbn,
+        format=row.format,
+        status=row.status,
+        book_id=row.book_id,
+        title=row.title,
+        notes=row.notes,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+async def list_isbns(db: AsyncSession, org_id: uuid.UUID) -> list[ISBNResponse]:
+    """Return all ISBN records for an organisation."""
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.org_id == org_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+        .order_by(ISBNRecord.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    return [_isbn_row_to_response(row) for row in rows]
+
+
+async def create_isbn(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    data: CreateISBNRequest,
+) -> ISBNResponse:
+    """Register a new ISBN for the organisation."""
+    fmt_value = data.format.value if hasattr(data.format, "value") else str(data.format)
+    status = ISBNStatus.ASSIGNED.value if data.book_id else ISBNStatus.AVAILABLE.value
+
+    record = ISBNRecord(
+        org_id=org_id,
+        isbn=data.isbn,
+        format=fmt_value,
+        status=status,
+        book_id=data.book_id,
+        title=data.title,
+        notes=data.notes,
+    )
+    db.add(record)
+    await db.flush()
+    await db.refresh(record)
+    return _isbn_row_to_response(record)
+
+
+async def update_isbn(
+    db: AsyncSession,
+    isbn_id: uuid.UUID,
+    data: UpdateISBNRequest,
+) -> ISBNResponse | None:
+    """Update an existing ISBN record. Returns None if not found."""
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.id == isbn_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    record = result.scalar_one_or_none()
+    if record is None:
+        return None
+
+    update_dict = data.model_dump(exclude_unset=True)
+    for field, value in update_dict.items():
+        if field == "format" and value is not None:
+            value = value.value if hasattr(value, "value") else str(value)
+        elif field == "status" and value is not None:
+            value = value.value if hasattr(value, "value") else str(value)
+        setattr(record, field, value)
+
+    record.updated_at = _now()
+    await db.flush()
+    await db.refresh(record)
+    return _isbn_row_to_response(record)
+
+
+async def delete_isbn(db: AsyncSession, isbn_id: uuid.UUID) -> bool:
+    """Soft-delete an ISBN record."""
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.id == isbn_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    record = result.scalar_one_or_none()
+    if record is None:
+        return False
+
+    record.deleted_at = _now()
+    await db.flush()
+    return True
