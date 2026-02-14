@@ -42,6 +42,16 @@
     "addSampleTexts": "Add Sample Texts",
     "editInfo": "Edit Info",
     "samplesDescription": "Add at least one sample text (minimum a few paragraphs) to analyze the writing style. More samples will improve accuracy.",
-    "errorMessage": "Failed to create profile. Please try again."
+    "errorMessage": "Failed to create profile. Please try again.",
+    "quickStart": "Quick Start",
+    "quickStartDescription": "Select a preset to start with recommended style parameters.",
+    "voiceDescriptionLabel": "Or describe your ideal voice",
+    "voiceDescriptionPlaceholder": "E.g., Warm and conversational, with a touch of humor. Short paragraphs, active voice...",
+    "stepBasicInfo": "Basic Info",
+    "stepSamples": "Samples",
+    "stepAnalysis": "Analysis Results",
+    "nextAnalyze": "Analyze Style",
+    "analyzingStyle": "Analyzing...",
+    "analysisDescription": "Review the analysis results of your writing style profile."
   }
 }
