@@ -1,19 +1,21 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, FileText, Sparkles } from "lucide-react";
-import { StyleAnalysis } from "@/modules/style-profiles/components/StyleAnalysis";
-import { ConformityChecker } from "@/modules/style-profiles/components/ConformityChecker";
-import { TextIngestion } from "@/modules/style-profiles/components/TextIngestion";
+import { ArrowLeft, Sparkles } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { StyleMetrics } from "@/modules/style-profiles/components/StyleMetrics";
+import { VoiceCharacteristics } from "@/modules/style-profiles/components/VoiceCharacteristics";
+import { SampleComparison } from "@/modules/style-profiles/components/SampleComparison";
+import { TestRefine } from "@/modules/style-profiles/components/TestRefine";
 import {
   useStyleProfile,
+  useStyleFingerprint,
   useAnalyzeProfile,
   useConformityCheck,
   useGenerateSample,
 } from "@/modules/style-profiles/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
 import { useTranslations } from "@/hooks/use-translations";
 
 interface PageProps {
@@ -24,31 +26,26 @@ export default function StyleProfileDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const t = useTranslations("style-profiles");
   const { data: profile, isPending } = useStyleProfile(id);
+  const { data: fingerprintData, isPending: fingerprintPending } = useStyleFingerprint(id);
   const analyzeMutation = useAnalyzeProfile(id);
   const conformityMutation = useConformityCheck(id);
   const generateMutation = useGenerateSample(id);
 
-  const [showAddSamples, setShowAddSamples] = useState(false);
-  const [showGenerate, setShowGenerate] = useState(false);
-  const [generatePrompt, setGeneratePrompt] = useState("");
-  const [generatedText, setGeneratedText] = useState("");
+  const [activeTab, setActiveTab] = useState("overview");
 
   const handleAnalyze = async (texts: string[]) => {
     await analyzeMutation.mutateAsync({ sample_texts: texts });
-    setShowAddSamples(false);
   };
 
   const handleConformityCheck = async (text: string) => {
     return await conformityMutation.mutateAsync({ text });
   };
 
-  const handleGenerate = async () => {
-    if (!generatePrompt.trim()) return;
-    const result = await generateMutation.mutateAsync({
-      prompt: generatePrompt,
-      max_words: 300,
+  const handleGenerate = async (prompt: string, maxWords?: number) => {
+    return await generateMutation.mutateAsync({
+      prompt,
+      max_words: maxWords,
     });
-    setGeneratedText(result.generated_text);
   };
 
   if (isPending) {
@@ -125,84 +122,45 @@ export default function StyleProfileDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setShowAddSamples(!showAddSamples)}
-          className="flex items-center gap-2 px-4 py-2 text-sm border rounded-lg hover:bg-accent transition-colors"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          {t("detail.addSamples")}
-        </button>
-        <button
-          onClick={() => setShowGenerate(!showGenerate)}
-          disabled={profile.status !== "ready"}
-          className="flex items-center gap-2 px-4 py-2 text-sm border rounded-lg hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
-          {t("detail.generateSample")}
-        </button>
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="test">Test</TabsTrigger>
+          <TabsTrigger value="samples">Samples</TabsTrigger>
+        </TabsList>
 
-      {/* Add samples section */}
-      {showAddSamples && (
-        <div className="border rounded-lg bg-card p-6">
-          <h3 className="text-lg font-semibold mb-4">{t("detail.addSampleTexts")}</h3>
-          <TextIngestion
-            onSubmit={handleAnalyze}
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6 mt-4">
+          <VoiceCharacteristics
+            styleCard={profile.style_card}
+            loading={profile.status === "analyzing"}
+          />
+          <StyleMetrics
+            fingerprint={fingerprintData?.fingerprint}
+            loading={fingerprintPending && profile.status === "ready"}
+          />
+        </TabsContent>
+
+        {/* Test Tab */}
+        <TabsContent value="test" className="mt-4">
+          <TestRefine
+            onCheck={handleConformityCheck}
+            onGenerate={handleGenerate}
+            isChecking={conformityMutation.isPending}
+            isGenerating={generateMutation.isPending}
+            profileReady={profile.status === "ready"}
+          />
+        </TabsContent>
+
+        {/* Samples Tab */}
+        <TabsContent value="samples" className="mt-4">
+          <SampleComparison
+            onAddSamples={handleAnalyze}
             isSubmitting={analyzeMutation.isPending}
           />
-        </div>
-      )}
-
-      {/* Generate sample section */}
-      {showGenerate && (
-        <div className="border rounded-lg bg-card p-6">
-          <h3 className="text-lg font-semibold mb-4">{t("detail.generateSampleText")}</h3>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="generate-prompt" className="block text-sm font-medium mb-2">
-                {t("detail.prompt")}
-              </label>
-              <input
-                id="generate-prompt"
-                type="text"
-                value={generatePrompt}
-                onChange={(e) => setGeneratePrompt(e.target.value)}
-                placeholder={t("detail.promptPlaceholder")}
-                className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-            <button
-              onClick={handleGenerate}
-              disabled={!generatePrompt.trim() || generateMutation.isPending}
-              className="px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {generateMutation.isPending ? t("detail.generating") : t("detail.generate")}
-            </button>
-            {generatedText && (
-              <div className="border rounded-lg p-4 bg-muted/30">
-                <h4 className="text-sm font-medium mb-2">{t("detail.generatedText")}</h4>
-                <p className="text-sm whitespace-pre-wrap">{generatedText}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Style Analysis */}
-      <StyleAnalysis
-        styleCard={profile.style_card}
-        loading={profile.status === "analyzing"}
-      />
-
-      {/* Conformity Checker */}
-      {profile.status === "ready" && (
-        <ConformityChecker
-          onCheck={handleConformityCheck}
-          isChecking={conformityMutation.isPending}
-        />
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
