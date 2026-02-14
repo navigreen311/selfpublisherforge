@@ -2,25 +2,32 @@
 
 import { cn } from "@/lib/utils";
 
+export interface CategoryItem {
+  name: string;
+  count: number;
+}
+
 interface CategoryFilterProps {
-  categories: { name: string; count: number }[];
+  categories: CategoryItem[];
   selectedCategory: string | null;
-  onSelect: (category: string | null) => void;
+  onSelectCategory: (category: string | null) => void;
 }
 
 export function CategoryFilter({
   categories,
   selectedCategory,
-  onSelect,
+  onSelectCategory,
 }: CategoryFilterProps) {
-  const total = categories.reduce((sum, cat) => sum + cat.count, 0);
+  if (categories.length === 0) return null;
+
+  const total = categories.reduce((sum, c) => sum + c.count, 0);
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
       <button
-        onClick={() => onSelect(null)}
+        onClick={() => onSelectCategory(null)}
         className={cn(
-          "inline-flex items-center gap-1 whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0",
+          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
           selectedCategory === null
             ? "bg-primary text-primary-foreground"
             : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -29,7 +36,7 @@ export function CategoryFilter({
         All
         <span
           className={cn(
-            "ml-1 text-xs",
+            "text-[10px]",
             selectedCategory === null
               ? "text-primary-foreground/70"
               : "text-muted-foreground"
@@ -38,30 +45,29 @@ export function CategoryFilter({
           ({total})
         </span>
       </button>
-
-      {categories.map((category) => {
-        const isSelected = selectedCategory === category.name;
+      {categories.map((cat) => {
+        const isSelected = selectedCategory === cat.name;
         return (
           <button
-            key={category.name}
-            onClick={() => onSelect(category.name)}
+            key={cat.name}
+            onClick={() => onSelectCategory(isSelected ? null : cat.name)}
             className={cn(
-              "inline-flex items-center gap-1 whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0",
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize",
               isSelected
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
             )}
           >
-            {category.name}
+            {cat.name}
             <span
               className={cn(
-                "ml-1 text-xs",
+                "text-[10px]",
                 isSelected
                   ? "text-primary-foreground/70"
                   : "text-muted-foreground"
               )}
             >
-              ({category.count})
+              ({cat.count})
             </span>
           </button>
         );
