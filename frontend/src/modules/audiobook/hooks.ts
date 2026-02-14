@@ -16,6 +16,8 @@ import type {
   AudiobookWSEvent,
   CreateAudiobookProjectPayload,
   UpdateAudiobookProjectPayload,
+  VoiceSample,
+  AudiobookCreateRequest,
   PaginatedResponse,
 } from "./types";
 
@@ -34,15 +36,37 @@ export const audiobookKeys = {
   chapters: (projectId: string) =>
     [...audiobookKeys.all, "chapters", projectId] as const,
   voices: () => [...audiobookKeys.all, "voices"] as const,
+  voiceSamples: (tier?: string) =>
+    [...audiobookKeys.all, "voice-samples", { tier }] as const,
   costEstimate: (projectId: string) =>
     [...audiobookKeys.all, "cost-estimate", projectId] as const,
   pronunciation: (projectId?: string) =>
     [...audiobookKeys.all, "pronunciation", projectId] as const,
   validation: (projectId: string) =>
     [...audiobookKeys.all, "validation", projectId] as const,
+  stats: () => [...audiobookKeys.all, "stats"] as const,
 };
 
 // ---------------------------------------------------------------------------
+// Stats & Overview
+// ---------------------------------------------------------------------------
+
+export interface AudiobookStats {
+  total_projects: number;
+  projects_in_progress: number;
+  projects_completed: number;
+  total_duration_hours: number;
+}
+
+export function useAudiobookStats() {
+  return useQuery<AudiobookStats>({
+    queryKey: audiobookKeys.stats(),
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/audiobooks/stats");
+      return data;
+    },
+  });
+}
 // Projects
 // ---------------------------------------------------------------------------
 
@@ -78,6 +102,27 @@ export function useCreateAudiobookProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: audiobookKeys.projects() });
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.stats() });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// Create audiobook from wizard flow
+export function useCreateAudiobook() {
+  const queryClient = useQueryClient();
+  return useMutation<AudiobookProject, Error, AudiobookCreateRequest>({
+    mutationFn: async (request) => {
+      const { data } = await api.post("/api/v1/audiobooks/create", request);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.projects() });
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.stats() });
+      toast.success("Audiobook project created successfully");
     },
     onError: (error) => {
       toast.error(extractApiError(error));
@@ -98,6 +143,7 @@ export function useUpdateAudiobookProject(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: audiobookKeys.project(id) });
       queryClient.invalidateQueries({ queryKey: audiobookKeys.projects() });
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.stats() });
     },
     onError: (error) => {
       toast.error(extractApiError(error));
@@ -113,6 +159,7 @@ export function useDeleteAudiobookProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: audiobookKeys.projects() });
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.stats() });
     },
     onError: (error) => {
       toast.error(extractApiError(error));
@@ -138,6 +185,40 @@ export function useVoicePreview() {
   return useMutation<{ audio_url: string }, Error, { voice_id: string; text: string }>({
     mutationFn: async (payload) => {
       const { data } = await api.post("/api/v1/audiobooks/voices/preview", payload);
+      return data;
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// Get voice samples with optional tier filter
+export function useVoiceSamples(tier?: string) {
+  return useQuery<VoiceSample[]>({
+    queryKey: audiobookKeys.voiceSamples(tier),
+    queryFn: async () => {
+      const params = tier ? { tier } : {};
+      const { data } = await api.get("/api/v1/audiobooks/voices/samples", {
+        params,
+      });
+      return data;
+    },
+  });
+}
+
+// Preview a specific voice with text
+export function usePreviewVoice() {
+  return useMutation<
+    { audio_url: string },
+    Error,
+    { voiceId: string; text: string }
+  >({
+    mutationFn: async ({ voiceId, text }) => {
+      const { data } = await api.post("/api/v1/audiobooks/voices/preview", {
+        voice_id: voiceId,
+        text,
+      });
       return data;
     },
     onError: (error) => {
@@ -179,6 +260,40 @@ export function useGenerateAllChapters(projectId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: audiobookKeys.project(projectId) });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// Pause ongoing generation
+export function usePauseGeneration(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      await api.post(`/api/v1/audiobooks/projects/${projectId}/pause`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.project(projectId) });
+      toast.success("Generation paused");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// Resume paused generation
+export function useResumeGeneration(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      await api.post(`/api/v1/audiobooks/projects/${projectId}/resume`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: audiobookKeys.project(projectId) });
+      toast.success("Generation resumed");
     },
     onError: (error) => {
       toast.error(extractApiError(error));
@@ -238,6 +353,28 @@ export function useExportAudiobook(projectId: string) {
     },
     onError: (error) => {
       toast.error(extractApiError(error));
+
+// Export specifically for ACX platform
+export function useExportForACX(projectId: string) {
+  return useMutation<{ download_url: string; validation: ACXValidationResult }, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.post(
+        `/api/v1/audiobooks/projects/${projectId}/export-acx`,
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data.validation.valid) {
+        toast.success("ACX export ready for download");
+      } else {
+        toast.warning("Export complete but has validation warnings");
+      }
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
     },
   });
 }
