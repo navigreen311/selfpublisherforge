@@ -142,6 +142,21 @@ class ConformityCheckResult(BaseModel):
     feedback: list[str] = Field(default_factory=list, description="Actionable feedback items")
 
 
+class TuneRequest(BaseModel):
+    """Adjust style tuning parameters for a profile."""
+    formality_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Formality adjustment (-1 to 1)")
+    warmth_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Warmth adjustment (-1 to 1)")
+    sentence_length_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Sentence length adjustment (-1 to 1)")
+    complexity_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Complexity adjustment (-1 to 1)")
+
+
+class UpdateProfileRequest(BaseModel):
+    """Update basic profile info (all fields optional)."""
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=2000)
+    genre: str | None = Field(None, max_length=100)
+
+
 class ProfileResponse(BaseModel):
     id: uuid.UUID
     org_id: uuid.UUID

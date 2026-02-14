@@ -23,6 +23,8 @@ from app.modules.style_cloning.schemas import (
     GenerateSampleRequest,
     ProfileListResponse,
     ProfileResponse,
+    TuneRequest,
+    UpdateProfileRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,6 +103,46 @@ async def get_fingerprint(
             status_code=404,
             detail="Fingerprint not available — profile may not be analyzed yet",
         )
+    return result
+
+
+@router.patch(
+    "/{profile_id}",
+    response_model=ProfileResponse,
+    summary="Update profile basic info",
+    description="Update a style profile's name, description, or genre.",
+)
+async def update_profile(
+    profile_id: uuid.UUID,
+    body: UpdateProfileRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Update basic profile info (name, description, genre)."""
+    org_id = current_user["org_id"]
+    result = await service.update_profile(db, profile_id, org_id, body)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return result
+
+
+@router.patch(
+    "/{profile_id}/tune",
+    response_model=ProfileResponse,
+    summary="Adjust style tuning parameters",
+    description="Adjust style tuning parameters such as formality, warmth, sentence length, and complexity.",
+)
+async def tune_profile(
+    profile_id: uuid.UUID,
+    body: TuneRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Adjust style tuning parameters."""
+    org_id = current_user["org_id"]
+    result = await service.tune_profile(db, profile_id, org_id, body)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Profile not found")
     return result
 
 

@@ -38,6 +38,8 @@ from app.modules.style_cloning.schemas import (
     ProfileResponse,
     ProfileStatus,
     StyleCard,
+    TuneRequest,
+    UpdateProfileRequest,
     VoiceFingerprint,
 )
 
@@ -304,3 +306,57 @@ async def conformity_check(
     # Reconstruct VoiceFingerprint from the stored dict
     fingerprint = VoiceFingerprint(**profile.voice_fingerprint)
     return check_conformity(fingerprint, text)
+
+
+async def tune_profile(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+    org_id: uuid.UUID,
+    request: TuneRequest,
+) -> ProfileResponse | None:
+    """Update tuning adjustment parameters for a profile."""
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
+        return None
+
+    profile.tuning_adjustments = request.model_dump()
+    profile.updated_at = datetime.now(UTC)
+
+    await db.flush()
+    await db.refresh(profile)
+    return _to_response(profile)
+
+
+async def update_profile(
+    db: AsyncSession,
+    profile_id: uuid.UUID,
+    org_id: uuid.UUID,
+    request: UpdateProfileRequest,
+) -> ProfileResponse | None:
+    """Update basic profile info (name, description, genre)."""
+    stmt = (
+        select(StyleProfile)
+        .where(StyleProfile.id == profile_id)
+        .where(StyleProfile.org_id == org_id)
+        .where(StyleProfile.deleted_at == None)  # noqa: E711
+    )
+    result = await db.execute(stmt)
+    profile = result.scalar_one_or_none()
+    if profile is None:
+        return None
+
+    update_data = request.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(profile, field, value)
+    profile.updated_at = datetime.now(UTC)
+
+    await db.flush()
+    await db.refresh(profile)
+    return _to_response(profile)

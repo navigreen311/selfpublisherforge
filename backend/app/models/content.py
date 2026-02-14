@@ -132,6 +132,7 @@ class StyleProfile(TenantModel):
     confidence: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
     style_card: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     sample_texts: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
+    tuning_adjustments: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
     organization = relationship(
