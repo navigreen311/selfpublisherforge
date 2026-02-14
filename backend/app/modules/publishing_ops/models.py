@@ -2,6 +2,7 @@
 
 ExportJob — tracks EPUB/PDF export generation jobs.
 FormattingTemplateModel — stores custom formatting templates per org.
+ISBNRecord — tracks ISBN assignments per org.
 """
 
 from __future__ import annotations
@@ -61,6 +62,34 @@ class FormattingTemplateModel(TenantModel):
         Index("ix_formatting_templates_org_id_created_at", "org_id", "created_at"),
         Index(
             "ix_formatting_templates_deleted_at_partial",
+            "id",
+            postgresql_where="deleted_at IS NULL",
+        ),
+    )
+
+
+class ISBNRecord(TenantModel):
+    """Tracks ISBN assignments for an organisation."""
+
+    __tablename__ = "isbns"
+
+    isbn: Mapped[str] = mapped_column(String(17), nullable=False, unique=True)
+    format: Mapped[str] = mapped_column(String(30), nullable=False)  # e.g. paperback, hardcover, ebook
+    book_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("books.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    barcode_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # Relationships
+    book = relationship("Book", backref="isbns")
+
+    __table_args__ = (
+        Index("ix_isbns_org_id", "org_id"),
+        Index("ix_isbns_isbn", "isbn", unique=True),
+        Index(
+            "ix_isbns_deleted_at_partial",
             "id",
             postgresql_where="deleted_at IS NULL",
         ),
