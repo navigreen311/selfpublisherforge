@@ -1,99 +1,120 @@
 "use client";
 
-import type { VoiceFingerprint } from "../types";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import type { StyleCard } from "../types";
 
 interface VoiceCharacteristicsProps {
-  fingerprint: VoiceFingerprint;
+  styleCard: StyleCard | null | undefined;
+  loading?: boolean;
 }
 
-interface CharacteristicItem {
-  label: string;
-  value: number;
-  description: string;
-}
+const STYLE_ATTRIBUTES = [
+  { key: "tone", label: "Tone" },
+  { key: "pacing", label: "Pacing" },
+  { key: "vocabulary_level", label: "Vocabulary Level" },
+  { key: "sentence_style", label: "Sentence Style" },
+  { key: "paragraph_style", label: "Paragraph Style" },
+  { key: "rhetorical_style", label: "Rhetorical Style" },
+  { key: "dialogue_style", label: "Dialogue Style" },
+] as const;
 
-function intensityLabel(value: number): string {
-  if (value >= 0.7) return "High";
-  if (value >= 0.4) return "Moderate";
-  if (value >= 0.1) return "Low";
-  return "Minimal";
-}
-
-function intensityColor(value: number): string {
-  if (value >= 0.7) return "bg-green-500";
-  if (value >= 0.4) return "bg-yellow-500";
-  if (value >= 0.1) return "bg-orange-500";
-  return "bg-muted-foreground";
-}
-
-function CharacteristicRow({ label, value, description }: CharacteristicItem) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b last:border-b-0">
-      <div className="flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
+export function VoiceCharacteristics({ styleCard, loading = false }: VoiceCharacteristicsProps) {
+  if (loading) {
+    return (
+      <div className="border rounded-lg bg-card p-6">
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent mb-3" />
+          <p className="text-sm text-muted-foreground">Analyzing voice...</p>
+        </div>
       </div>
-      <div className="flex items-center gap-2 ml-4">
-        <div className={`h-2 w-2 rounded-full ${intensityColor(value)}`} />
-        <span className="text-sm font-medium w-20 text-right">
-          {intensityLabel(value)}
-        </span>
+    );
+  }
+
+  if (!styleCard) {
+    return (
+      <div className="border rounded-lg bg-card p-6">
+        <p className="text-sm text-muted-foreground text-center py-4">
+          Voice characteristics not yet available. Add sample texts to generate an analysis.
+        </p>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-export function VoiceCharacteristics({ fingerprint }: VoiceCharacteristicsProps) {
-  const { rhetorical, dialogue } = fingerprint;
-
-  const characteristics: CharacteristicItem[] = [
-    {
-      label: "Metaphor Usage",
-      value: rhetorical.metaphor_density,
-      description: "Frequency of metaphorical language",
-    },
-    {
-      label: "Simile Usage",
-      value: rhetorical.simile_density,
-      description: "Frequency of explicit comparisons",
-    },
-    {
-      label: "Humor Markers",
-      value: rhetorical.humor_marker_density,
-      description: "Presence of humor and wit",
-    },
-    {
-      label: "Emotional Intensity",
-      value: rhetorical.emotional_intensity,
-      description: "Strength of emotional expression",
-    },
-    {
-      label: "Alliteration",
-      value: rhetorical.alliteration_density,
-      description: "Use of repeated initial sounds",
-    },
-    {
-      label: "Rhetorical Questions",
-      value: rhetorical.rhetorical_question_density,
-      description: "Questions used for effect",
-    },
-    {
-      label: "Dialogue Presence",
-      value: dialogue.dialogue_ratio,
-      description: "Proportion of text that is dialogue",
-    },
-    {
-      label: "Dialogue-to-Narrative",
-      value: dialogue.dialogue_to_narrative_ratio,
-      description: "Balance between speech and narration",
-    },
-  ];
+  const radarData = Object.entries(styleCard.key_metrics || {}).map(([key, value]) => ({
+    metric: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+    value: value * 100,
+    fullMark: 100,
+  }));
 
   return (
-    <div className="space-y-1">
-      {characteristics.map((item) => (
-        <CharacteristicRow key={item.label} {...item} />
-      ))}
+    <div className="space-y-6">
+      <h3 className="text-lg font-semibold">Voice Characteristics</h3>
+
+      {/* Summary */}
+      {styleCard.summary && (
+        <div className="border rounded-lg bg-card p-4">
+          <h4 className="text-sm font-medium mb-2">Summary</h4>
+          <p className="text-sm text-muted-foreground">{styleCard.summary}</p>
+        </div>
+      )}
+
+      {/* Radar Chart */}
+      {radarData.length > 0 && (
+        <div className="border rounded-lg bg-card p-4">
+          <h4 className="text-sm font-medium mb-3">Style Dimensions</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <RadarChart data={radarData}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
+              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <Radar
+                name="Style Score"
+                dataKey="value"
+                stroke="#6366f1"
+                fill="#6366f1"
+                fillOpacity={0.3}
+              />
+              <Tooltip />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Style Attributes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {STYLE_ATTRIBUTES.map(({ key, label }) => {
+          const value = styleCard[key];
+          if (!value) return null;
+          return (
+            <div key={key} className="border rounded-lg bg-card p-4">
+              <h5 className="text-xs font-medium text-muted-foreground mb-1">{label}</h5>
+              <p className="text-sm">{value}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Example Prompts */}
+      {styleCard.example_prompts && styleCard.example_prompts.length > 0 && (
+        <div className="border rounded-lg bg-card p-4">
+          <h4 className="text-sm font-medium mb-2">Example Prompts</h4>
+          <ul className="space-y-1">
+            {styleCard.example_prompts.map((prompt, idx) => (
+              <li key={idx} className="text-sm text-muted-foreground">
+                • {prompt}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

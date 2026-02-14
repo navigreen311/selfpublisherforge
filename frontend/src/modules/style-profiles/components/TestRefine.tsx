@@ -1,311 +1,198 @@
 "use client";
 
 import { useState } from "react";
-import { RotateCw, SlidersHorizontal, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
-import { useGenerateSample, useConformityCheck } from "../hooks";
+import { Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import type { ConformityCheckResult } from "../types";
 
 interface TestRefineProps {
-  profileId: string;
+  onCheck: (text: string) => Promise<ConformityCheckResult>;
+  onGenerate: (prompt: string, maxWords?: number) => Promise<{ generated_text: string }>;
+  isChecking?: boolean;
+  isGenerating?: boolean;
+  profileReady?: boolean;
 }
 
-type LengthOption = "short" | "medium" | "long";
+function getScoreColor(score: number) {
+  if (score >= 80) return "text-green-600";
+  if (score >= 60) return "text-yellow-600";
+  return "text-red-600";
+}
 
-const LENGTH_WORDS: Record<LengthOption, number> = {
-  short: 100,
-  medium: 300,
-  long: 600,
-};
+function getScoreLabel(score: number) {
+  if (score >= 80) return "Excellent Match";
+  if (score >= 60) return "Good Match";
+  if (score >= 40) return "Fair Match";
+  return "Poor Match";
+}
 
-const LENGTH_LABELS: Record<LengthOption, string> = {
-  short: "Short (100 words)",
-  medium: "Medium (300 words)",
-  long: "Long (600 words)",
-};
-
-export function TestRefine({ profileId }: TestRefineProps) {
-  const [topic, setTopic] = useState("");
-  const [length, setLength] = useState<LengthOption>("medium");
+export function TestRefine({
+  onCheck,
+  onGenerate,
+  isChecking = false,
+  isGenerating = false,
+  profileReady = false,
+}: TestRefineProps) {
+  const [checkText, setCheckText] = useState("");
+  const [checkResult, setCheckResult] = useState<ConformityCheckResult | null>(null);
+  const [generatePrompt, setGeneratePrompt] = useState("");
   const [generatedText, setGeneratedText] = useState("");
-  const [conformityResult, setConformityResult] = useState<ConformityCheckResult | null>(null);
 
-  // Fine-tune sliders
-  const [formality, setFormality] = useState(50);
-  const [warmth, setWarmth] = useState(50);
-  const [sentenceLength, setSentenceLength] = useState(50);
-  const [complexity, setComplexity] = useState(50);
-
-  const generateSample = useGenerateSample(profileId);
-  const conformityCheck = useConformityCheck(profileId);
-
-  const isGenerating = generateSample.isPending;
-  const isChecking = conformityCheck.isPending;
-
-  const handleGenerate = () => {
-    if (!topic.trim()) return;
-
-    setConformityResult(null);
-    generateSample.mutate(
-      { prompt: topic, max_words: LENGTH_WORDS[length] },
-      {
-        onSuccess: (response) => {
-          setGeneratedText(response.generated_text);
-          // Auto-run conformity check on the generated text
-          conformityCheck.mutate(
-            { text: response.generated_text },
-            {
-              onSuccess: (result) => {
-                setConformityResult(result);
-              },
-            }
-          );
-        },
-      }
-    );
+  const handleCheck = async () => {
+    if (!checkText.trim()) return;
+    const result = await onCheck(checkText);
+    setCheckResult(result);
   };
 
-  const handleRegenerate = () => {
-    handleGenerate();
-  };
-
-  const handleApplyAdjustments = () => {
-    console.log("Fine-tune adjustments:", {
-      formality,
-      warmth,
-      sentenceLength,
-      complexity,
-    });
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 80) return "Excellent Match";
-    if (score >= 60) return "Good Match";
-    if (score >= 40) return "Fair Match";
-    return "Poor Match";
+  const handleGenerate = async () => {
+    if (!generatePrompt.trim()) return;
+    const result = await onGenerate(generatePrompt, 300);
+    setGeneratedText(result.generated_text);
   };
 
   return (
     <div className="space-y-6">
-      {/* Topic Input */}
-      <div className="border rounded-lg bg-card p-6">
-        <h3 className="text-lg font-semibold mb-2">Test Your Style Profile</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Give AI a topic and see how it writes in this style
-        </p>
+      <h3 className="text-lg font-semibold">Test & Refine</h3>
 
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="test-topic" className="block text-sm font-medium mb-2">
-              Topic
-            </label>
-            <textarea
-              id="test-topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. A rainy evening in a small coastal town..."
-              rows={3}
-              className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          {/* Length Toggle */}
-          <div>
-            <span className="block text-sm font-medium mb-2">Length</span>
-            <div className="flex gap-4">
-              {(Object.keys(LENGTH_LABELS) as LengthOption[]).map((option) => (
-                <label key={option} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="length"
-                    value={option}
-                    checked={length === option}
-                    onChange={() => setLength(option)}
-                    className="accent-primary"
-                  />
-                  <span className="text-sm">{LENGTH_LABELS[option]}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={handleGenerate}
-            disabled={!topic.trim() || isGenerating}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            {isGenerating ? "Generating..." : "Generate"}
-          </button>
+      {/* Conformity Checker */}
+      <div className="border rounded-lg bg-card p-6 space-y-4">
+        <div>
+          <h4 className="text-sm font-semibold mb-1">Conformity Checker</h4>
+          <p className="text-sm text-muted-foreground">
+            Check how well a text matches this style profile.
+          </p>
         </div>
-      </div>
 
-      {/* Generated Text Output */}
-      {generatedText && (
-        <div className="border rounded-lg bg-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Generated Text</h3>
-            {conformityResult && (
-              <div className="flex items-center gap-2">
-                {conformityResult.overall_score >= 70 ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600" aria-hidden="true" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-yellow-600" aria-hidden="true" />
-                )}
-                <span className="text-sm font-medium">Style Match:</span>
-                <span className={`text-lg font-bold ${getScoreColor(conformityResult.overall_score)}`}>
-                  {Math.round(conformityResult.overall_score)}%
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {getScoreLabel(conformityResult.overall_score)}
-                </span>
-              </div>
-            )}
-            {isChecking && (
-              <span className="text-sm text-muted-foreground">Scoring...</span>
-            )}
-          </div>
-
-          <div className="border rounded-lg p-4 bg-muted/30 text-sm leading-relaxed whitespace-pre-wrap mb-4">
-            {generatedText}
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleRegenerate}
-              disabled={isGenerating}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RotateCw className="h-4 w-4" aria-hidden="true" />
-              Regenerate
-            </button>
-            <button
-              onClick={() => {
-                const section = document.getElementById("fine-tune-section");
-                section?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted/50"
-            >
-              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-              Adjust Profile
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Fine-Tune Section */}
-      <div id="fine-tune-section" className="border rounded-lg bg-card p-6">
-        <h3 className="text-lg font-semibold mb-2">Fine-Tune Style</h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          Adjust style parameters to refine the generated output.
-        </p>
-
-        <div className="space-y-5">
-          {/* Formality Slider */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="slider-formality" className="text-sm font-medium">
-                Formality
-              </label>
-              <span className="text-sm text-muted-foreground">{formality}</span>
-            </div>
-            <input
-              id="slider-formality"
-              type="range"
-              min={0}
-              max={100}
-              value={formality}
-              onChange={(e) => setFormality(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>Casual</span>
-              <span>Formal</span>
-            </div>
-          </div>
-
-          {/* Warmth Slider */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="slider-warmth" className="text-sm font-medium">
-                Warmth
-              </label>
-              <span className="text-sm text-muted-foreground">{warmth}</span>
-            </div>
-            <input
-              id="slider-warmth"
-              type="range"
-              min={0}
-              max={100}
-              value={warmth}
-              onChange={(e) => setWarmth(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>Detached</span>
-              <span>Warm</span>
-            </div>
-          </div>
-
-          {/* Sentence Length Slider */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="slider-sentence-length" className="text-sm font-medium">
-                Sentence Length
-              </label>
-              <span className="text-sm text-muted-foreground">{sentenceLength}</span>
-            </div>
-            <input
-              id="slider-sentence-length"
-              type="range"
-              min={0}
-              max={100}
-              value={sentenceLength}
-              onChange={(e) => setSentenceLength(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>Short</span>
-              <span>Long</span>
-            </div>
-          </div>
-
-          {/* Complexity Slider */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="slider-complexity" className="text-sm font-medium">
-                Complexity
-              </label>
-              <span className="text-sm text-muted-foreground">{complexity}</span>
-            </div>
-            <input
-              id="slider-complexity"
-              type="range"
-              min={0}
-              max={100}
-              value={complexity}
-              onChange={(e) => setComplexity(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>Simple</span>
-              <span>Complex</span>
-            </div>
-          </div>
+        <div>
+          <label htmlFor="conformity-text" className="block text-sm font-medium mb-2">
+            Text to Check
+          </label>
+          <textarea
+            id="conformity-text"
+            value={checkText}
+            onChange={(e) => setCheckText(e.target.value)}
+            placeholder="Paste text to check against this style profile..."
+            rows={6}
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
         </div>
 
         <button
-          onClick={handleApplyAdjustments}
-          className="mt-6 inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={handleCheck}
+          disabled={!checkText.trim() || isChecking || !profileReady}
+          className="px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          Apply Adjustments
+          {isChecking ? "Checking..." : "Check Conformity"}
         </button>
+
+        {!profileReady && (
+          <p className="text-xs text-muted-foreground">
+            Profile must be in &ldquo;ready&rdquo; status to run conformity checks.
+          </p>
+        )}
+
+        {/* Results */}
+        {checkResult && (
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <h5 className="text-sm font-medium mb-1">Overall Match Score</h5>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-3xl font-bold ${getScoreColor(checkResult.overall_score)}`}>
+                    {Math.round(checkResult.overall_score)}%
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {getScoreLabel(checkResult.overall_score)}
+                  </span>
+                </div>
+              </div>
+              {checkResult.overall_score >= 70 ? (
+                <CheckCircle2 className="h-8 w-8 text-green-600" aria-hidden="true" />
+              ) : (
+                <AlertCircle className="h-8 w-8 text-yellow-600" aria-hidden="true" />
+              )}
+            </div>
+
+            <div className="border rounded-lg p-4 bg-muted/30">
+              <h5 className="text-sm font-medium mb-3">Detailed Breakdown</h5>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[
+                  { label: "Vocabulary", value: checkResult.vocabulary_score },
+                  { label: "Sentence", value: checkResult.sentence_score },
+                  { label: "Paragraph", value: checkResult.paragraph_score },
+                  { label: "Rhetorical", value: checkResult.rhetorical_score },
+                  { label: "Dialogue", value: checkResult.dialogue_score },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <div className="text-xs text-muted-foreground mb-1">{item.label}</div>
+                    <div className={`text-lg font-semibold ${getScoreColor(item.value)}`}>
+                      {Math.round(item.value)}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {checkResult.feedback && checkResult.feedback.length > 0 && (
+              <div className="border rounded-lg p-4">
+                <h5 className="text-sm font-medium mb-2">Suggestions for Improvement</h5>
+                <ul className="space-y-1">
+                  {checkResult.feedback.map((item, idx) => (
+                    <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Generate Sample */}
+      <div className="border rounded-lg bg-card p-6 space-y-4">
+        <div>
+          <h4 className="text-sm font-semibold mb-1">Generate Sample Text</h4>
+          <p className="text-sm text-muted-foreground">
+            Generate text that matches this style profile.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="generate-prompt" className="block text-sm font-medium mb-2">
+            Prompt
+          </label>
+          <input
+            id="generate-prompt"
+            type="text"
+            value={generatePrompt}
+            onChange={(e) => setGeneratePrompt(e.target.value)}
+            placeholder="Describe what you want generated in this style..."
+            className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+        </div>
+
+        <button
+          onClick={handleGenerate}
+          disabled={!generatePrompt.trim() || isGenerating || !profileReady}
+          className="flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          {isGenerating ? "Generating..." : "Generate"}
+        </button>
+
+        {!profileReady && (
+          <p className="text-xs text-muted-foreground">
+            Profile must be in &ldquo;ready&rdquo; status to generate samples.
+          </p>
+        )}
+
+        {generatedText && (
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <h5 className="text-sm font-medium mb-2">Generated Text</h5>
+            <p className="text-sm whitespace-pre-wrap">{generatedText}</p>
+          </div>
+        )}
       </div>
     </div>
   );

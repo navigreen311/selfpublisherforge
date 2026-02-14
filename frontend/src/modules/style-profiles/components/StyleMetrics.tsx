@@ -3,93 +3,128 @@
 import type { VoiceFingerprint } from "../types";
 
 interface StyleMetricsProps {
-  fingerprint: VoiceFingerprint;
+  fingerprint: VoiceFingerprint | null | undefined;
+  loading?: boolean;
 }
 
-interface MetricItem {
-  label: string;
-  value: number;
-  format: "percent" | "number" | "decimal";
-}
-
-function formatMetric(value: number, format: MetricItem["format"]): string {
-  switch (format) {
-    case "percent":
-      return `${(value * 100).toFixed(1)}%`;
-    case "number":
-      return value.toLocaleString();
-    case "decimal":
-      return value.toFixed(2);
-  }
-}
-
-function MetricBar({ label, value, format }: MetricItem) {
-  const displayValue = formatMetric(value, format);
-  const barWidth = format === "percent" ? value * 100 : Math.min(value / 10, 100);
+function MetricRow({ label, value, format = "number" }: { label: string; value: number; format?: "number" | "percent" | "ratio" }) {
+  const formatted =
+    format === "percent"
+      ? `${(value * 100).toFixed(1)}%`
+      : format === "ratio"
+        ? value.toFixed(3)
+        : typeof value === "number"
+          ? value.toFixed(1)
+          : String(value);
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium">{displayValue}</span>
-      </div>
-      <div className="h-2 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary transition-all"
-          style={{ width: `${Math.max(barWidth, 2)}%` }}
-        />
-      </div>
+    <div className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium tabular-nums">{formatted}</span>
     </div>
   );
 }
 
-export function StyleMetrics({ fingerprint }: StyleMetricsProps) {
-  const { vocabulary, sentence, paragraph } = fingerprint;
+function MetricSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="border rounded-lg bg-card p-4">
+      <h4 className="text-sm font-semibold mb-3">{title}</h4>
+      <div>{children}</div>
+    </div>
+  );
+}
 
-  const sections: { title: string; metrics: MetricItem[] }[] = [
-    {
-      title: "Vocabulary",
-      metrics: [
-        { label: "Lexical Density", value: vocabulary.lexical_density, format: "decimal" },
-        { label: "Type-Token Ratio", value: vocabulary.type_token_ratio, format: "decimal" },
-        { label: "Rare Word Frequency", value: vocabulary.rare_word_frequency, format: "percent" },
-        { label: "Reading Level", value: vocabulary.reading_level, format: "decimal" },
-        { label: "Avg Word Length", value: vocabulary.avg_word_length, format: "decimal" },
-      ],
-    },
-    {
-      title: "Sentences",
-      metrics: [
-        { label: "Avg Length", value: sentence.avg_length, format: "decimal" },
-        { label: "Simple", value: sentence.simple_ratio, format: "percent" },
-        { label: "Compound", value: sentence.compound_ratio, format: "percent" },
-        { label: "Complex", value: sentence.complex_ratio, format: "percent" },
-        { label: "Questions", value: sentence.question_ratio, format: "percent" },
-      ],
-    },
-    {
-      title: "Paragraphs",
-      metrics: [
-        { label: "Avg Length (words)", value: paragraph.avg_word_count, format: "number" },
-        { label: "Transition Word Density", value: paragraph.transition_word_density, format: "percent" },
-        { label: "Short Paragraph Ratio", value: paragraph.short_paragraph_ratio, format: "percent" },
-        { label: "Long Paragraph Ratio", value: paragraph.long_paragraph_ratio, format: "percent" },
-      ],
-    },
-  ];
+export function StyleMetrics({ fingerprint, loading = false }: StyleMetricsProps) {
+  if (loading) {
+    return (
+      <div className="border rounded-lg bg-card p-6">
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent mb-3" />
+          <p className="text-sm text-muted-foreground">Loading metrics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!fingerprint) {
+    return (
+      <div className="border rounded-lg bg-card p-6">
+        <p className="text-sm text-muted-foreground text-center py-4">
+          No fingerprint data available. Analyze sample texts first.
+        </p>
+      </div>
+    );
+  }
+
+  const { vocabulary, sentence, paragraph, rhetorical, dialogue } = fingerprint;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {sections.map((section) => (
-        <div key={section.title}>
-          <h4 className="text-sm font-medium mb-3">{section.title}</h4>
-          <div className="space-y-3">
-            {section.metrics.map((metric) => (
-              <MetricBar key={metric.label} {...metric} />
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Detailed Style Metrics</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <MetricSection title="Vocabulary">
+          <MetricRow label="Unique Words" value={vocabulary.unique_word_count} />
+          <MetricRow label="Total Words" value={vocabulary.total_word_count} />
+          <MetricRow label="Lexical Density" value={vocabulary.lexical_density} format="percent" />
+          <MetricRow label="Type-Token Ratio" value={vocabulary.type_token_ratio} format="ratio" />
+          <MetricRow label="Rare Word Frequency" value={vocabulary.rare_word_frequency} format="percent" />
+          <MetricRow label="Reading Level" value={vocabulary.reading_level} />
+          <MetricRow label="Avg Word Length" value={vocabulary.avg_word_length} />
+        </MetricSection>
+
+        <MetricSection title="Sentence Structure">
+          <MetricRow label="Avg Length" value={sentence.avg_length} />
+          <MetricRow label="Length Variance" value={sentence.length_variance} />
+          <MetricRow label="Min Length" value={sentence.min_length} />
+          <MetricRow label="Max Length" value={sentence.max_length} />
+          <MetricRow label="Simple Ratio" value={sentence.simple_ratio} format="percent" />
+          <MetricRow label="Compound Ratio" value={sentence.compound_ratio} format="percent" />
+          <MetricRow label="Complex Ratio" value={sentence.complex_ratio} format="percent" />
+        </MetricSection>
+
+        <MetricSection title="Paragraph Structure">
+          <MetricRow label="Avg Length" value={paragraph.avg_length} />
+          <MetricRow label="Avg Word Count" value={paragraph.avg_word_count} />
+          <MetricRow label="Transition Density" value={paragraph.transition_word_density} format="percent" />
+          <MetricRow label="Short Para Ratio" value={paragraph.short_paragraph_ratio} format="percent" />
+          <MetricRow label="Long Para Ratio" value={paragraph.long_paragraph_ratio} format="percent" />
+        </MetricSection>
+
+        <MetricSection title="Rhetorical Devices">
+          <MetricRow label="Metaphor Density" value={rhetorical.metaphor_density} format="percent" />
+          <MetricRow label="Simile Density" value={rhetorical.simile_density} format="percent" />
+          <MetricRow label="Humor Markers" value={rhetorical.humor_marker_density} format="percent" />
+          <MetricRow label="Emotional Intensity" value={rhetorical.emotional_intensity} format="percent" />
+          <MetricRow label="Alliteration" value={rhetorical.alliteration_density} format="percent" />
+          <MetricRow label="Rhetorical Questions" value={rhetorical.rhetorical_question_density} format="percent" />
+        </MetricSection>
+
+        <MetricSection title="Dialogue Patterns">
+          <MetricRow label="Dialogue Ratio" value={dialogue.dialogue_ratio} format="percent" />
+          <MetricRow label="Avg Dialogue Length" value={dialogue.avg_dialogue_length} />
+          <MetricRow label="Said Tag Ratio" value={dialogue.said_tag_ratio} format="percent" />
+          <MetricRow label="Action Beat Ratio" value={dialogue.action_beat_ratio} format="percent" />
+          <MetricRow label="Dialogue-to-Narrative" value={dialogue.dialogue_to_narrative_ratio} format="ratio" />
+        </MetricSection>
+      </div>
+
+      {/* Top Words */}
+      {vocabulary.top_words && vocabulary.top_words.length > 0 && (
+        <div className="border rounded-lg bg-card p-4">
+          <h4 className="text-sm font-semibold mb-3">Top Words</h4>
+          <div className="flex flex-wrap gap-2">
+            {vocabulary.top_words.map(([word, count]) => (
+              <span
+                key={word}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted text-sm"
+              >
+                {word}
+                <span className="text-xs text-muted-foreground">({count})</span>
+              </span>
             ))}
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
