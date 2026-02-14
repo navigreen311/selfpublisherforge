@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useRef, useEffect } from "react";
 import {
+  BookOpen,
   Check,
   Pencil,
   Circle,
@@ -10,9 +11,12 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   Copy,
   Trash2,
   Type,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/hooks/use-translations";
@@ -31,6 +35,19 @@ import {
 
 type ChapterStatus = "complete" | "editing" | "not_started";
 
+/** Well-known IDs for front/back matter virtual sections */
+const FRONT_MATTER_ITEMS = [
+  { key: "titlePage", id: "front:titlePage" },
+  { key: "copyright", id: "front:copyright" },
+  { key: "dedication", id: "front:dedication" },
+] as const;
+
+const BACK_MATTER_ITEMS = [
+  { key: "aboutAuthor", id: "back:aboutAuthor" },
+  { key: "alsoBy", id: "back:alsoBy" },
+  { key: "reviewRequest", id: "back:reviewRequest" },
+] as const;
+
 interface ChapterSidebarProps {
   chapters: ChapterContent[];
   activeChapterId: string | null;
@@ -41,9 +58,19 @@ interface ChapterSidebarProps {
   ) => void;
   onDeleteChapter?: (chapterId: string) => void;
   onRenameChapter?: (chapterId: string, title: string) => void;
+  /** Duplicate an existing chapter by its ID */
+  onDuplicateChapter?: (chapterId: string) => void;
+  /** Insert a new chapter below a given chapter ID */
+  onInsertChapterBelow?: (afterChapterId: string) => void;
+  /** Toggle between complete and draft status for a chapter */
+  onToggleChapterStatus?: (chapterId: string, newStatus: ChapterStatus) => void;
   totalWordCount?: number;
   manuscriptTitle?: string;
   targetWordCount?: number;
+  /** Whether the sidebar is collapsed */
+  collapsed?: boolean;
+  /** Called when the user toggles the collapse state */
+  onToggleCollapse?: () => void;
   className?: string;
 }
 
@@ -89,6 +116,7 @@ interface ChapterMenuProps {
   onInsertBelow: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onToggleStatus: () => void;
   t: ReturnType<typeof useTranslations>;
 }
 
@@ -102,6 +130,7 @@ function ChapterMenu({
   onInsertBelow,
   onMoveUp,
   onMoveDown,
+  onToggleStatus,
   t,
 }: ChapterMenuProps) {
   return (
@@ -133,6 +162,18 @@ function ChapterMenu({
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
+            onToggleStatus();
+          }}
+        >
+          <Check className="mr-2 h-4 w-4" />
+          {status === "complete"
+            ? t("editor.chapterSidebar.markDraft")
+            : t("editor.chapterSidebar.markComplete")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
             onDuplicate();
           }}
         >
@@ -147,16 +188,6 @@ function ChapterMenu({
         >
           <Plus className="mr-2 h-4 w-4" />
           {t("editor.chapterSidebar.insertBelow")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            // Toggle between complete and draft - for now just log
-          }}
-        >
-          <Check className="mr-2 h-4 w-4" />
-          {status === "complete" ? t("editor.chapterSidebar.markDraft") : t("editor.chapterSidebar.markComplete")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -268,10 +299,11 @@ interface FloatingContextMenuProps {
   activeChapterId: string | null;
   onRename: (id: string) => void;
   onDelete: (id: string) => void;
-  onDuplicate: () => void;
-  onInsertBelow: () => void;
+  onDuplicate: (id: string) => void;
+  onInsertBelow: (id: string) => void;
   onMoveUp: (id: string) => void;
   onMoveDown: (id: string) => void;
+  onToggleStatus: (id: string) => void;
   onClose: () => void;
   t: ReturnType<typeof useTranslations>;
 }
@@ -286,6 +318,7 @@ function FloatingContextMenu({
   onInsertBelow,
   onMoveUp,
   onMoveDown,
+  onToggleStatus,
   onClose,
   t,
 }: FloatingContextMenuProps) {
@@ -294,7 +327,9 @@ function FloatingContextMenu({
   const isFirst = idx === 0;
   const isLast = idx === sortedChapters.length - 1;
   const chapter = sortedChapters[idx];
-  const status = chapter ? getChapterStatus(chapter, activeChapterId) : "not_started";
+  const status = chapter
+    ? getChapterStatus(chapter, activeChapterId)
+    : "not_started";
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -336,7 +371,21 @@ function FloatingContextMenu({
       <button
         type="button"
         onClick={() => {
-          onDuplicate();
+          onToggleStatus(menu.chapterId);
+          onClose();
+        }}
+        className={itemClass}
+      >
+        <Check className="mr-2 h-4 w-4" />
+        {status === "complete"
+          ? t("editor.chapterSidebar.markDraft")
+          : t("editor.chapterSidebar.markComplete")}
+      </button>
+      <div className="-mx-1 my-1 h-px bg-muted" />
+      <button
+        type="button"
+        onClick={() => {
+          onDuplicate(menu.chapterId);
           onClose();
         }}
         className={itemClass}
@@ -347,25 +396,13 @@ function FloatingContextMenu({
       <button
         type="button"
         onClick={() => {
-          onInsertBelow();
+          onInsertBelow(menu.chapterId);
           onClose();
         }}
         className={itemClass}
       >
         <Plus className="mr-2 h-4 w-4" />
         {t("editor.chapterSidebar.insertBelow")}
-      </button>
-      <div className="-mx-1 my-1 h-px bg-muted" />
-      <button
-        type="button"
-        onClick={() => {
-          // Toggle between complete and draft - for now just log
-          onClose();
-        }}
-        className={itemClass}
-      >
-        <Check className="mr-2 h-4 w-4" />
-        {status === "complete" ? t("editor.chapterSidebar.markDraft") : t("editor.chapterSidebar.markComplete")}
       </button>
       <div className="-mx-1 my-1 h-px bg-muted" />
       <button
@@ -418,13 +455,89 @@ function FloatingContextMenu({
 }
 
 // ---------------------------------------------------------------------------
+// Collapsible section header
+// ---------------------------------------------------------------------------
+
+interface SectionHeaderProps {
+  label: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+function SectionHeader({ label, isOpen, onToggle }: SectionHeaderProps) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="w-full flex items-center gap-1.5 px-4 pt-3 pb-1 text-left group/section"
+    >
+      <ChevronRight
+        className={cn(
+          "h-3 w-3 text-muted-foreground/70 transition-transform duration-200",
+          isOpen && "rotate-90"
+        )}
+      />
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 group-hover/section:text-muted-foreground transition-colors">
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Matter item (front/back matter clickable entry with tree connector)
+// ---------------------------------------------------------------------------
+
+interface MatterItemProps {
+  label: string;
+  itemId: string;
+  isActive: boolean;
+  isLast: boolean;
+  onClick: (id: string) => void;
+}
+
+function MatterItem({ label, itemId, isActive, isLast, onClick }: MatterItemProps) {
+  return (
+    <li className="relative pl-4 ml-2">
+      {/* Vertical connector line */}
+      <span
+        className={cn(
+          "absolute left-0 top-0 w-px bg-border",
+          isLast ? "h-[50%]" : "h-full"
+        )}
+        aria-hidden="true"
+      />
+      {/* Horizontal connector branch */}
+      <span
+        className="absolute left-0 top-[50%] h-px w-3 bg-border"
+        aria-hidden="true"
+      />
+      <button
+        type="button"
+        onClick={() => onClick(itemId)}
+        className={cn(
+          "w-full text-left px-2 py-1 text-xs rounded transition-colors",
+          isActive
+            ? "bg-accent text-accent-foreground font-medium"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        )}
+      >
+        {label}
+      </button>
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
 /**
  * Enhanced chapter sidebar with drag-and-drop reorder, status icons,
  * section labels (Front / Back Matter), inline rename, three-dot menu,
- * right-click context menu, and total word count.
+ * right-click context menu, collapse toggle, and total word count progress.
+ *
+ * Fixed at 240px width. Scrollable chapter list with sticky header/footer.
  */
 export function ChapterSidebar({
   chapters,
@@ -434,9 +547,14 @@ export function ChapterSidebar({
   onReorderChapters,
   onDeleteChapter,
   onRenameChapter,
+  onDuplicateChapter,
+  onInsertChapterBelow,
+  onToggleChapterStatus,
   totalWordCount,
   manuscriptTitle,
   targetWordCount,
+  collapsed = false,
+  onToggleCollapse,
   className,
 }: ChapterSidebarProps) {
   const t = useTranslations("writing");
@@ -450,138 +568,171 @@ export function ChapterSidebar({
   const [frontMatterOpen, setFrontMatterOpen] = useState(true);
   const [backMatterOpen, setBackMatterOpen] = useState(true);
 
+  // ---- Collapsed state ----
+  // When collapsed, render only a thin rail with an expand button
+  if (collapsed) {
+    return (
+      <div
+        className={cn(
+          "flex flex-col items-center border-r bg-card py-3",
+          "w-10 flex-shrink-0",
+          className
+        )}
+      >
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={t("editor.chapterSidebar.expand")}
+          title={t("editor.chapterSidebar.expand")}
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
   // ---- Drag and drop handlers ----
 
-  const handleDragStart = useCallback(
-    (e: React.DragEvent, chapterId: string) => {
-      setDraggedId(chapterId);
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", chapterId);
-    },
-    []
-  );
+  const handleDragStart = (e: React.DragEvent, chapterId: string) => {
+    setDraggedId(chapterId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", chapterId);
+  };
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent, chapterId: string) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      setDragOverId(chapterId);
-    },
-    []
-  );
+  const handleDragOver = (e: React.DragEvent, chapterId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(chapterId);
+  };
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = () => {
     setDragOverId(null);
-  }, []);
+  };
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent, targetId: string) => {
-      e.preventDefault();
-      setDraggedId(null);
-      setDragOverId(null);
-
-      const sourceId = e.dataTransfer.getData("text/plain");
-      if (sourceId === targetId) return;
-
-      const sorted = [...chapters].sort((a, b) => a.order - b.order);
-      const sourceIdx = sorted.findIndex((c) => c.id === sourceId);
-      const targetIdx = sorted.findIndex((c) => c.id === targetId);
-      if (sourceIdx === -1 || targetIdx === -1) return;
-
-      const reordered = [...sorted];
-      const [moved] = reordered.splice(sourceIdx, 1);
-      reordered.splice(targetIdx, 0, moved);
-
-      const newOrder = reordered.map((ch, idx) => ({
-        chapter_id: ch.id,
-        order: idx + 1,
-      }));
-
-      onReorderChapters(newOrder);
-    },
-    [chapters, onReorderChapters]
-  );
-
-  const handleDragEnd = useCallback(() => {
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
     setDraggedId(null);
     setDragOverId(null);
-  }, []);
+
+    const sourceId = e.dataTransfer.getData("text/plain");
+    if (sourceId === targetId) return;
+
+    const sorted = [...chapters].sort((a, b) => a.order - b.order);
+    const sourceIdx = sorted.findIndex((c) => c.id === sourceId);
+    const targetIdx = sorted.findIndex((c) => c.id === targetId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(sourceIdx, 1);
+    reordered.splice(targetIdx, 0, moved);
+
+    const newOrder = reordered.map((ch, idx) => ({
+      chapter_id: ch.id,
+      order: idx + 1,
+    }));
+
+    onReorderChapters(newOrder);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
 
   // ---- Move up / down helpers ----
 
-  const handleMoveUp = useCallback(
-    (chapterId: string) => {
-      const sorted = [...chapters].sort((a, b) => a.order - b.order);
-      const idx = sorted.findIndex((c) => c.id === chapterId);
-      if (idx <= 0) return;
+  const handleMoveUp = (chapterId: string) => {
+    const sorted = [...chapters].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((c) => c.id === chapterId);
+    if (idx <= 0) return;
 
-      const reordered = [...sorted];
-      [reordered[idx - 1], reordered[idx]] = [
-        reordered[idx],
-        reordered[idx - 1],
-      ];
+    const reordered = [...sorted];
+    [reordered[idx - 1], reordered[idx]] = [
+      reordered[idx],
+      reordered[idx - 1],
+    ];
 
-      onReorderChapters(
-        reordered.map((ch, i) => ({ chapter_id: ch.id, order: i + 1 }))
-      );
-    },
-    [chapters, onReorderChapters]
-  );
+    onReorderChapters(
+      reordered.map((ch, i) => ({ chapter_id: ch.id, order: i + 1 }))
+    );
+  };
 
-  const handleMoveDown = useCallback(
-    (chapterId: string) => {
-      const sorted = [...chapters].sort((a, b) => a.order - b.order);
-      const idx = sorted.findIndex((c) => c.id === chapterId);
-      if (idx === -1 || idx >= sorted.length - 1) return;
+  const handleMoveDown = (chapterId: string) => {
+    const sorted = [...chapters].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((c) => c.id === chapterId);
+    if (idx === -1 || idx >= sorted.length - 1) return;
 
-      const reordered = [...sorted];
-      [reordered[idx], reordered[idx + 1]] = [
-        reordered[idx + 1],
-        reordered[idx],
-      ];
+    const reordered = [...sorted];
+    [reordered[idx], reordered[idx + 1]] = [
+      reordered[idx + 1],
+      reordered[idx],
+    ];
 
-      onReorderChapters(
-        reordered.map((ch, i) => ({ chapter_id: ch.id, order: i + 1 }))
-      );
-    },
-    [chapters, onReorderChapters]
-  );
+    onReorderChapters(
+      reordered.map((ch, i) => ({ chapter_id: ch.id, order: i + 1 }))
+    );
+  };
 
   // ---- Rename handler ----
 
-  const handleRenameConfirm = useCallback(
-    (chapterId: string, title: string) => {
-      onRenameChapter?.(chapterId, title);
-      setRenamingId(null);
-    },
-    [onRenameChapter]
-  );
+  const handleRenameConfirm = (chapterId: string, title: string) => {
+    onRenameChapter?.(chapterId, title);
+    setRenamingId(null);
+  };
 
-  // ---- Delete handler ----
+  // ---- Delete handler (with confirmation) ----
 
-  const handleDelete = useCallback(
-    (chapterId: string) => {
-      const confirmed = window.confirm(t("editor.deleteConfirm"));
-      if (confirmed) {
-        onDeleteChapter?.(chapterId);
-      }
-    },
-    [onDeleteChapter, t]
-  );
+  const handleDelete = (chapterId: string) => {
+    const confirmed = window.confirm(t("editor.deleteConfirm"));
+    if (confirmed) {
+      onDeleteChapter?.(chapterId);
+    }
+  };
+
+  // ---- Duplicate handler ----
+
+  const handleDuplicate = (chapterId: string) => {
+    if (onDuplicateChapter) {
+      onDuplicateChapter(chapterId);
+    } else {
+      // Fallback: just create a new chapter
+      onCreateChapter();
+    }
+  };
+
+  // ---- Insert below handler ----
+
+  const handleInsertBelow = (chapterId: string) => {
+    if (onInsertChapterBelow) {
+      onInsertChapterBelow(chapterId);
+    } else {
+      // Fallback: just create a new chapter
+      onCreateChapter();
+    }
+  };
+
+  // ---- Toggle status handler ----
+
+  const handleToggleStatus = (chapterId: string) => {
+    const chapter = chapters.find((c) => c.id === chapterId);
+    if (!chapter) return;
+    const currentStatus = getChapterStatus(chapter, activeChapterId);
+    const newStatus: ChapterStatus =
+      currentStatus === "complete" ? "not_started" : "complete";
+    onToggleChapterStatus?.(chapterId, newStatus);
+  };
 
   // ---- Right-click context menu ----
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, chapterId: string) => {
-      e.preventDefault();
-      setContextMenu({ chapterId, x: e.clientX, y: e.clientY });
-    },
-    []
-  );
+  const handleContextMenu = (e: React.MouseEvent, chapterId: string) => {
+    e.preventDefault();
+    setContextMenu({ chapterId, x: e.clientX, y: e.clientY });
+  };
 
-  const closeContextMenu = useCallback(() => {
+  const closeContextMenu = () => {
     setContextMenu(null);
-  }, []);
+  };
 
   // ---- Computed values ----
 
@@ -591,45 +742,88 @@ export function ChapterSidebar({
     totalWordCount ??
     chapters.reduce((sum, ch) => sum + ch.word_count, 0);
 
+  const effectiveTarget = targetWordCount || 60000;
+  const progressPct = Math.min(
+    Math.round((computedTotalWords / effectiveTarget) * 100),
+    100
+  );
+
   return (
-    <div className={cn("flex flex-col h-full border-r bg-card", className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground truncate">{manuscriptTitle || t("editor.chapterSidebar.manuscriptTitle")}</p>
-          <h3 className="text-sm font-semibold text-foreground">{t("editor.chapters")}</h3>
+    <div
+      className={cn(
+        "flex flex-col h-full border-r bg-card w-60 flex-shrink-0",
+        className
+      )}
+    >
+      {/* ------------------------------------------------------------------ */}
+      {/* Header: manuscript title + collapse button                         */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex items-center justify-between px-3 py-3 border-b gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <BookOpen className="h-4 w-4 text-primary flex-shrink-0" />
+          <div className="min-w-0">
+            <p
+              className="text-xs font-medium text-foreground truncate leading-tight"
+              title={manuscriptTitle || t("editor.chapterSidebar.manuscriptTitle")}
+            >
+              {manuscriptTitle || t("editor.chapterSidebar.manuscriptTitle")}
+            </p>
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              {t("editor.chapters")}
+            </p>
+          </div>
         </div>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            aria-label={t("editor.chapterSidebar.collapse")}
+            title={t("editor.chapterSidebar.collapse")}
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      {/* Chapter list */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Scrollable content                                                 */}
+      {/* ------------------------------------------------------------------ */}
       <div className="flex-1 overflow-y-auto">
-        {sortedChapters.length === 0 ? (
+        {sortedChapters.length === 0 && chapters.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             {t("editor.noChapters")}
           </div>
         ) : (
           <>
-            {/* Front Matter section label */}
-            <button
-              type="button"
-              onClick={() => setFrontMatterOpen(prev => !prev)}
-              className="w-full flex items-center gap-1 px-4 pt-3 pb-1 text-left"
-            >
-              <ChevronDown className={cn("h-3 w-3 text-muted-foreground/70 transition-transform", !frontMatterOpen && "-rotate-90")} />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {t("editor.chapterSidebar.frontMatter")}
-              </span>
-            </button>
+            {/* -------------------------------------------------------------- */}
+            {/* Front Matter section (collapsible)                              */}
+            {/* -------------------------------------------------------------- */}
+            <SectionHeader
+              label={t("editor.chapterSidebar.frontMatter")}
+              isOpen={frontMatterOpen}
+              onToggle={() => setFrontMatterOpen((prev) => !prev)}
+            />
             {frontMatterOpen && (
-              <ul className="py-1 pl-6">
-                {["titlePage", "copyright", "dedication"].map((item) => (
-                  <li key={item} className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 cursor-pointer rounded">
-                    {t(`editor.chapterSidebar.${item}`)}
-                  </li>
+              <ul className="py-1 pl-5 pr-2">
+                {FRONT_MATTER_ITEMS.map((item, i) => (
+                  <MatterItem
+                    key={item.key}
+                    label={t(`editor.chapterSidebar.${item.key}`)}
+                    itemId={item.id}
+                    isActive={activeChapterId === item.id}
+                    isLast={i === FRONT_MATTER_ITEMS.length - 1}
+                    onClick={onSelectChapter}
+                  />
                 ))}
               </ul>
             )}
 
+            <div className="mx-3 my-1 h-px bg-border" />
+
+            {/* -------------------------------------------------------------- */}
+            {/* Chapter list                                                    */}
+            {/* -------------------------------------------------------------- */}
             <ul className="py-1">
               {sortedChapters.map((chapter, idx) => {
                 const status = getChapterStatus(chapter, activeChapterId);
@@ -652,7 +846,7 @@ export function ChapterSidebar({
                     }}
                     onContextMenu={(e) => handleContextMenu(e, chapter.id)}
                     className={cn(
-                      "group relative px-3 py-2 cursor-pointer border-l-2 transition-colors",
+                      "group relative px-2 py-1.5 cursor-pointer border-l-2 transition-colors",
                       "hover:bg-accent/50",
                       isActive
                         ? "border-l-primary bg-accent"
@@ -663,17 +857,12 @@ export function ChapterSidebar({
                         "bg-blue-50 dark:bg-blue-950/30 border-l-blue-400"
                     )}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {/* Drag handle */}
-                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab" />
+                      <GripVertical className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab" />
 
                       {/* Status icon */}
                       <StatusIcon status={status} />
-
-                      {/* Order number */}
-                      <span className="text-xs text-muted-foreground font-mono flex-shrink-0">
-                        {chapter.order}.
-                      </span>
 
                       {/* Title or inline rename input */}
                       <div className="flex-1 min-w-0">
@@ -686,14 +875,22 @@ export function ChapterSidebar({
                             onCancel={() => setRenamingId(null)}
                           />
                         ) : (
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {chapter.title}
+                          <p
+                            className={cn(
+                              "text-xs font-medium truncate",
+                              isActive
+                                ? "text-foreground"
+                                : "text-foreground/80"
+                            )}
+                            title={`Ch ${chapter.order}: ${chapter.title}`}
+                          >
+                            Ch {chapter.order}: {chapter.title}
                           </p>
                         )}
                       </div>
 
-                      {/* Word count */}
-                      <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                      {/* Word count badge */}
+                      <span className="text-[9px] text-muted-foreground tabular-nums flex-shrink-0">
                         {chapter.word_count.toLocaleString()}
                       </span>
 
@@ -704,10 +901,11 @@ export function ChapterSidebar({
                         status={status}
                         onRename={() => setRenamingId(chapter.id)}
                         onDelete={() => handleDelete(chapter.id)}
-                        onDuplicate={() => onCreateChapter()}
-                        onInsertBelow={() => onCreateChapter()}
+                        onDuplicate={() => handleDuplicate(chapter.id)}
+                        onInsertBelow={() => handleInsertBelow(chapter.id)}
                         onMoveUp={() => handleMoveUp(chapter.id)}
                         onMoveDown={() => handleMoveDown(chapter.id)}
+                        onToggleStatus={() => handleToggleStatus(chapter.id)}
                         t={t}
                       />
                     </div>
@@ -716,23 +914,27 @@ export function ChapterSidebar({
               })}
             </ul>
 
-            {/* Back Matter section label */}
-            <button
-              type="button"
-              onClick={() => setBackMatterOpen(prev => !prev)}
-              className="w-full flex items-center gap-1 px-4 pt-3 pb-1 text-left"
-            >
-              <ChevronDown className={cn("h-3 w-3 text-muted-foreground/70 transition-transform", !backMatterOpen && "-rotate-90")} />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {t("editor.chapterSidebar.backMatter")}
-              </span>
-            </button>
+            <div className="mx-3 my-1 h-px bg-border" />
+
+            {/* -------------------------------------------------------------- */}
+            {/* Back Matter section (collapsible)                               */}
+            {/* -------------------------------------------------------------- */}
+            <SectionHeader
+              label={t("editor.chapterSidebar.backMatter")}
+              isOpen={backMatterOpen}
+              onToggle={() => setBackMatterOpen((prev) => !prev)}
+            />
             {backMatterOpen && (
-              <ul className="py-1 pl-6">
-                {["aboutAuthor", "alsoBy", "reviewRequest"].map((item) => (
-                  <li key={item} className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 cursor-pointer rounded">
-                    {t(`editor.chapterSidebar.${item}`)}
-                  </li>
+              <ul className="py-1 pl-5 pr-2">
+                {BACK_MATTER_ITEMS.map((item, i) => (
+                  <MatterItem
+                    key={item.key}
+                    label={t(`editor.chapterSidebar.${item.key}`)}
+                    itemId={item.id}
+                    isActive={activeChapterId === item.id}
+                    isLast={i === BACK_MATTER_ITEMS.length - 1}
+                    onClick={onSelectChapter}
+                  />
                 ))}
               </ul>
             )}
@@ -740,38 +942,53 @@ export function ChapterSidebar({
         )}
       </div>
 
-      {/* Footer: + Chapter button and total word count */}
-      <div className="border-t">
+      {/* ------------------------------------------------------------------ */}
+      {/* Footer: + Add Chapter button and total word count progress         */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="border-t flex-shrink-0">
         <button
           type="button"
           onClick={onCreateChapter}
           className={cn(
-            "flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium",
+            "flex w-full items-center gap-2 px-4 py-2 text-sm font-medium",
             "text-primary hover:bg-accent/50 transition-colors"
           )}
         >
           <Plus className="h-4 w-4" />
           {t("editor.addChapter")}
         </button>
-        <div className="px-4 py-3 bg-muted/30 border-t space-y-2">
-          <div className="flex items-center justify-between text-xs">
+
+        <div className="px-3 py-2.5 bg-muted/30 border-t space-y-1.5">
+          <div className="flex items-center justify-between text-[10px]">
             <span className="text-muted-foreground">
-              {computedTotalWords.toLocaleString()} / {(targetWordCount || 60000).toLocaleString()} {t("stats.words")}
+              {computedTotalWords.toLocaleString()} /{" "}
+              {effectiveTarget.toLocaleString()} {t("stats.words")}
             </span>
             <span className="text-muted-foreground font-medium">
-              {Math.min(Math.round((computedTotalWords / (targetWordCount || 60000)) * 100), 100)}%
+              {progressPct}%
             </span>
           </div>
-          <div className="h-2 rounded-full bg-secondary overflow-hidden">
+          <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
             <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${Math.min(Math.round((computedTotalWords / (targetWordCount || 60000)) * 100), 100)}%` }}
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                progressPct >= 100
+                  ? "bg-green-500"
+                  : progressPct >= 75
+                    ? "bg-primary"
+                    : progressPct >= 50
+                      ? "bg-amber-500"
+                      : "bg-primary/60"
+              )}
+              style={{ width: `${progressPct}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* Floating right-click context menu */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Floating right-click context menu                                  */}
+      {/* ------------------------------------------------------------------ */}
       {contextMenu && (
         <FloatingContextMenu
           menu={contextMenu}
@@ -779,10 +996,11 @@ export function ChapterSidebar({
           activeChapterId={activeChapterId}
           onRename={(id) => setRenamingId(id)}
           onDelete={handleDelete}
-          onDuplicate={onCreateChapter}
-          onInsertBelow={onCreateChapter}
+          onDuplicate={handleDuplicate}
+          onInsertBelow={handleInsertBelow}
           onMoveUp={handleMoveUp}
           onMoveDown={handleMoveDown}
+          onToggleStatus={handleToggleStatus}
           onClose={closeContextMenu}
           t={t}
         />

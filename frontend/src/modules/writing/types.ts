@@ -141,7 +141,7 @@ export interface WritingSessionEntry {
   book_title?: string;
 }
 
-export type SaveStatus = "idle" | "saving" | "saved" | "error";
+export type SaveStatus = "idle" | "saving" | "saved" | "unsaved" | "error";
 
 // ---------------------------------------------------------------------------
 // Enhanced AI Writing types
@@ -208,7 +208,7 @@ export interface WritingAnalyticsData {
 export interface ChapterVersion {
   id: string;
   chapter_id: string;
-  content: string;
+  content?: any; // TipTap JSON, only populated in detail view
   word_count: number;
   created_at: string;
 }
@@ -250,4 +250,39 @@ export interface ExportRequest {
 export interface ExportResponse {
   download_url: string;
   format: string;
+}
+
+// ---------------------------------------------------------------------------
+// Editor settings
+// ---------------------------------------------------------------------------
+
+export interface EditorSettings {
+  font_family: string;
+  font_size: number;
+  theme: 'light' | 'sepia' | 'dark';
+  line_height: number;
+  show_ai_panel: boolean;
+  show_chapter_panel: boolean;
+  style_profile_id?: string;
+  tone_preference: string;
+  length_preference: string;
+  auto_save_interval_seconds: number;
+  daily_word_goal: number;
+}
+
+// ---------------------------------------------------------------------------
+// Writing session management (active sessions)
+// ---------------------------------------------------------------------------
+
+export interface WritingSessionActive {
+  session_id: string;
+  manuscript_id: string;
+  chapter_id?: string;
+  started_at: string;
+  last_heartbeat?: string;
+}
+
+export interface SessionHeartbeat {
+  words_written: number;
+  current_position?: number;
 }

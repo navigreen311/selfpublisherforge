@@ -7,7 +7,7 @@ Endpoints:
   GET  /books/{id}/manuscript/chapters/{cid}  -- Get chapter
   POST /books/{id}/manuscript/chapters        -- Create chapter
   PUT  /books/{id}/manuscript/chapters/{cid}  -- Update chapter
-  DELETE /books/{id}/manuscript/chapters/{cid} -- Delete chapter (stub)
+  DELETE /books/{id}/manuscript/chapters/{cid} -- Delete chapter
   PATCH /books/{id}/manuscript/chapters/reorder -- Reorder chapters
   POST /books/{id}/manuscript/analyze         -- Analyze manuscript
   GET  /books/{id}/manuscript/readability-score -- Readability metrics
@@ -16,37 +16,59 @@ Endpoints:
   POST /writing/readability                   -- Compute readability from raw text
   POST /writing-sessions                      -- Record writing session
 
-  --- Writing Studio stubs ---
-  GET    /manuscripts                         -- List manuscripts (stub)
-  POST   /manuscripts                         -- Create manuscript (stub)
-  GET    /manuscripts/{id}                    -- Get manuscript with chapters (stub)
-  PATCH  /manuscripts/{id}                    -- Update manuscript metadata (stub)
-  DELETE /manuscripts/{id}                    -- Delete manuscript (stub)
-  POST   /manuscripts/{id}/export             -- Export manuscript (stub)
-  POST   /writing/generate-outline            -- Generate enhanced outline (stub)
-  POST   /writing/create-from-outline         -- Create manuscript from outline (stub)
-  POST   /writing/generate                    -- AI writing generation (stub)
-  GET    /writing/readability/{chapter_id}    -- Readability scores (stub)
-  POST   /writing/sessions/start              -- Start writing session (stub)
-  PATCH  /writing/sessions/{id}/end           -- End writing session (stub)
-  GET    /writing/analytics                   -- Writing analytics (stub)
-  GET    /manuscripts/{id}/chapters/{ch_id}/versions          -- Chapter versions (stub)
-  POST   /manuscripts/{id}/chapters/{ch_id}/versions/{ver_id}/restore -- Restore version (stub)
+  --- Manuscript CRUD ---
+  GET    /manuscripts                         -- List manuscripts
+  POST   /manuscripts                         -- Create manuscript
+  GET    /manuscripts/{id}                    -- Get manuscript with chapters
+  PATCH  /manuscripts/{id}                    -- Update manuscript metadata
+  DELETE /manuscripts/{id}                    -- Soft delete manuscript
+
+  --- Chapters (manuscript-based) ---
+  GET    /manuscripts/{id}/chapters                    -- List chapters
+  POST   /manuscripts/{id}/chapters                    -- Create chapter
+  GET    /manuscripts/{id}/chapters/{ch_id}            -- Get chapter
+  PATCH  /manuscripts/{id}/chapters/{ch_id}            -- Update chapter
+  DELETE /manuscripts/{id}/chapters/{ch_id}            -- Delete chapter
+  POST   /manuscripts/{id}/chapters/reorder            -- Reorder chapters
+  PUT    /manuscripts/{id}/chapters/{ch_id}/content    -- Auto-save content
+
+  --- Version History ---
+  GET    /manuscripts/{id}/chapters/{ch_id}/versions              -- List versions
+  GET    /manuscripts/{id}/chapters/{ch_id}/versions/{ver_id}     -- Get version
+  POST   /manuscripts/{id}/chapters/{ch_id}/versions/{ver_id}/restore -- Restore
+
+  --- AI Writing ---
+  POST   /writing/generate         -- SSE streaming generation (all 6 actions)
+  POST   /writing/readability      -- Compute readability from raw text
+
+  --- Writing Sessions ---
+  POST   /writing/sessions/start       -- Start session
+  POST   /writing/sessions/{id}/heartbeat -- Heartbeat
+  POST   /writing/sessions/{id}/end    -- End session
+  GET    /writing/sessions             -- List sessions
+
+  --- Export/Import ---
+  POST   /manuscripts/{id}/export      -- Export manuscript
+  POST   /manuscripts/import           -- Import file (FormData)
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+import logging
+from datetime import UTC
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
+from app.core.exceptions import AppException
 from app.database import get_db
 from app.modules.ai_writing import schemas, service
 from app.modules.ai_writing.generator import generate_stream, generate_sync
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -88,7 +110,7 @@ async def generate(
 
 
 # ---------------------------------------------------------------------------
-# Manuscript
+# Manuscript (book-based, legacy)
 # ---------------------------------------------------------------------------
 
 @router.get(
@@ -103,11 +125,17 @@ async def get_manuscript(
     current_user: dict = Depends(get_current_user),
 ):
     """Get the full manuscript for a book, including all chapters."""
-    return await service.get_manuscript(db, book_id)
+    try:
+        return await service.get_manuscript(db, book_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error fetching manuscript for book %s", book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 # ---------------------------------------------------------------------------
-# Chapter CRUD
+# Chapter CRUD (book-based, legacy)
 # ---------------------------------------------------------------------------
 
 @router.get(
@@ -122,7 +150,13 @@ async def list_chapters(
     current_user: dict = Depends(get_current_user),
 ):
     """List all chapters for a book."""
-    return await service.list_chapters(db, book_id)
+    try:
+        return await service.list_chapters(db, book_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error listing chapters for book %s", book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @router.get(
@@ -138,10 +172,13 @@ async def get_chapter(
     current_user: dict = Depends(get_current_user),
 ):
     """Get a single chapter."""
-    chapter = await service.get_chapter(db, book_id, chapter_id)
-    if not chapter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-    return chapter
+    try:
+        return await service.get_chapter(db, book_id, chapter_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error fetching chapter %s for book %s", chapter_id, book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @router.post(
@@ -158,7 +195,13 @@ async def create_chapter(
     current_user: dict = Depends(get_current_user),
 ):
     """Create a new chapter for a book."""
-    return await service.create_chapter(db, book_id, data)
+    try:
+        return await service.create_chapter(db, book_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error creating chapter for book %s", book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @router.put(
@@ -175,10 +218,57 @@ async def update_chapter(
     current_user: dict = Depends(get_current_user),
 ):
     """Update an existing chapter."""
-    chapter = await service.update_chapter(db, book_id, chapter_id, data)
-    if not chapter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-    return chapter
+    try:
+        return await service.update_chapter(db, book_id, chapter_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error updating chapter %s for book %s", chapter_id, book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.delete(
+    "/books/{book_id}/manuscript/chapters/{chapter_id}",
+    summary="Delete chapter",
+    description="Delete a chapter from a book's manuscript.",
+)
+async def delete_chapter_book(
+    book_id: UUID,
+    chapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete a chapter from a book's manuscript."""
+    try:
+        from datetime import datetime
+
+        from sqlalchemy import select as sa_select
+
+        from app.models.content import Chapter
+
+        manuscript = await service._get_or_create_manuscript(db, book_id)
+        result = await db.execute(
+            sa_select(Chapter).where(
+                Chapter.manuscript_id == manuscript.id,
+                Chapter.id == chapter_id,
+            )
+        )
+        chapter = result.scalar_one_or_none()
+        if not chapter:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Chapter {chapter_id} not found for book {book_id}",
+            )
+        chapter.deleted_at = datetime.now(UTC)
+        await db.flush()
+        return {"message": "Chapter deleted", "chapter_id": str(chapter_id)}
+    except HTTPException:
+        raise
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error deleting chapter %s for book %s", chapter_id, book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @router.patch(
@@ -194,7 +284,13 @@ async def reorder_chapters(
     current_user: dict = Depends(get_current_user),
 ):
     """Reorder chapters within a manuscript."""
-    return await service.reorder_chapters(db, book_id, data)
+    try:
+        return await service.reorder_chapters(db, book_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error reordering chapters for book %s", book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +309,13 @@ async def analyze_manuscript(
     current_user: dict = Depends(get_current_user),
 ):
     """Analyze manuscript: readability, pacing, word count."""
-    return await service.analyze_manuscript(db, book_id)
+    try:
+        return await service.analyze_manuscript(db, book_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error analyzing manuscript for book %s", book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @router.get(
@@ -228,7 +330,13 @@ async def get_readability_score(
     current_user: dict = Depends(get_current_user),
 ):
     """Get readability metrics for a manuscript."""
-    return await service.get_readability_score(db, book_id)
+    try:
+        return await service.get_readability_score(db, book_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error computing readability for book %s", book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +356,13 @@ async def generate_outline(
     current_user: dict = Depends(get_current_user),
 ):
     """AI-generate a book outline."""
-    return await service.generate_outline(db, book_id, data)
+    try:
+        return await service.generate_outline(db, book_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error generating outline for book %s", book_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 @router.post(
@@ -266,46 +380,18 @@ async def generate_outline_standalone(
     current_user: dict = Depends(get_current_user),
 ):
     """AI-generate a standalone book outline without requiring an existing book."""
-    return await service.generate_outline_standalone(data, db)
+    try:
+        return await service.generate_outline_standalone(data, db)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error generating standalone outline")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 # ---------------------------------------------------------------------------
-# Writing Sessions
+# Legacy writing session endpoint
 # ---------------------------------------------------------------------------
-
-@router.get(
-    "/writing-sessions",
-    summary="List writing sessions (stub)",
-    description="Return recent writing sessions. Stub: returns sample data.",
-)
-async def list_writing_sessions_stub(
-    book_id: str | None = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """List writing sessions (stub with sample data)."""
-    now = datetime.now(UTC)
-    return [
-        {
-            "id": "session-001",
-            "book_id": "book-001",
-            "book_title": "The Art of Self-Publishing",
-            "chapter_title": "Chapter 3: Marketing",
-            "words_written": 1250,
-            "duration_minutes": 45,
-            "created_at": (now - timedelta(hours=2)).isoformat(),
-        },
-        {
-            "id": "session-002",
-            "book_id": "book-002",
-            "book_title": "Midnight in the Garden of Words",
-            "chapter_title": "Chapter 1: Prologue",
-            "words_written": 800,
-            "duration_minutes": 30,
-            "created_at": (now - timedelta(days=1)).isoformat(),
-        },
-    ]
-
 
 @router.post(
     "/writing-sessions",
@@ -320,66 +406,651 @@ async def record_writing_session(
     current_user: dict = Depends(get_current_user),
 ):
     """Record a writing session."""
-    user_id = current_user["user_id"]
-    return await service.record_writing_session(db, user_id, data)
+    try:
+        user_id = current_user["user_id"]
+        return await service.record_writing_session(db, user_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error recording writing session")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
 
 
 # ===========================================================================
-# Writing Studio – Stub Endpoints
+# Manuscript CRUD (Writing Studio)
 # ===========================================================================
-# These endpoints return placeholder data so the frontend can be developed
-# against a stable API contract before the real implementation is wired up.
-# ---------------------------------------------------------------------------
-
-_STUB_MANUSCRIPT_ID = "00000000-0000-0000-0000-000000000001"
-_STUB_CHAPTER_ID = "00000000-0000-0000-0000-000000000010"
-_STUB_VERSION_ID = "00000000-0000-0000-0000-000000000100"
-_STUB_SESSION_ID = "00000000-0000-0000-0000-000000001000"
-
-
-def _stub_chapter(*, chapter_id: str = _STUB_CHAPTER_ID, order: int = 1) -> dict:
-    now = datetime.now(UTC).isoformat()
-    return {
-        "id": chapter_id,
-        "manuscript_id": _STUB_MANUSCRIPT_ID,
-        "title": f"Chapter {order} (stub)",
-        "content": "",
-        "order": order,
-        "synopsis": "",
-        "word_count": 0,
-        "created_at": now,
-        "updated_at": now,
-    }
-
-
-def _stub_manuscript(*, include_chapters: bool = False) -> dict:
-    now = datetime.now(UTC).isoformat()
-    return {
-        "id": _STUB_MANUSCRIPT_ID,
-        "title": "Untitled Manuscript (stub)",
-        "status": "draft",
-        "chapters": [_stub_chapter()] if include_chapters else [],
-        "total_word_count": 0,
-        "created_at": now,
-        "updated_at": now,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Manuscripts CRUD (stub)
-# ---------------------------------------------------------------------------
 
 @router.get(
-    "/books",
-    summary="List books (stub)",
-    description="Return all books for the current user. Stub: returns sample data.",
+    "/manuscripts",
+    response_model=list[schemas.ManuscriptListItem],
+    summary="List manuscripts",
+    description="List all manuscripts for the current user with optional filtering.",
 )
-async def list_books_stub(
+async def list_manuscripts(
+    status_filter: str | None = Query(None, alias="status"),
+    sort: str | None = Query(None, description="Sort by: updated_at, title, word_count, oldest"),
+    search: str | None = Query(None, description="Search manuscripts by title"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """List books for the authenticated user (stub)."""
-    now = datetime.now(UTC)
+    """List manuscripts for the authenticated user."""
+    try:
+        user_id = current_user["user_id"]
+        return await service.list_manuscripts(
+            db,
+            user_id,
+            status_filter=status_filter,
+            sort=sort,
+            search=search,
+        )
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error listing manuscripts")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/manuscripts",
+    response_model=schemas.ManuscriptDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create manuscript",
+    description="Create a new manuscript with optional project association.",
+)
+async def create_manuscript(
+    data: schemas.ManuscriptCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a new manuscript."""
+    try:
+        user_id = current_user["user_id"]
+        return await service.create_manuscript(db, user_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error creating manuscript")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.get(
+    "/manuscripts/{manuscript_id}",
+    response_model=schemas.ManuscriptDetail,
+    summary="Get manuscript",
+    description="Get a manuscript with full metadata and chapters.",
+)
+async def get_manuscript_detail(
+    manuscript_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get a single manuscript with chapters."""
+    try:
+        return await service.get_manuscript_detail(db, manuscript_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error fetching manuscript %s", manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.patch(
+    "/manuscripts/{manuscript_id}",
+    response_model=schemas.ManuscriptDetail,
+    summary="Update manuscript metadata",
+    description="Update manuscript title, status, or target word count.",
+)
+async def update_manuscript(
+    manuscript_id: UUID,
+    data: schemas.ManuscriptUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Update manuscript metadata."""
+    try:
+        return await service.update_manuscript(db, manuscript_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error updating manuscript %s", manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.delete(
+    "/manuscripts/{manuscript_id}",
+    summary="Delete manuscript",
+    description="Soft-delete a manuscript.",
+)
+async def delete_manuscript(
+    manuscript_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Soft-delete a manuscript."""
+    try:
+        return await service.soft_delete_manuscript(db, manuscript_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error deleting manuscript %s", manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+# ===========================================================================
+# Chapters (manuscript-based)
+# ===========================================================================
+
+@router.get(
+    "/manuscripts/{manuscript_id}/chapters",
+    response_model=list[schemas.ChapterContent],
+    summary="List chapters for manuscript",
+    description="List all chapters for a manuscript in order.",
+)
+async def list_manuscript_chapters(
+    manuscript_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List all chapters for a manuscript."""
+    try:
+        return await service.list_chapters_for_manuscript(db, manuscript_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error listing chapters for manuscript %s", manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/manuscripts/{manuscript_id}/chapters",
+    response_model=schemas.ChapterContent,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create chapter in manuscript",
+    description="Create a new chapter within a manuscript.",
+)
+async def create_manuscript_chapter(
+    manuscript_id: UUID,
+    data: schemas.ChapterCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a new chapter within a manuscript."""
+    try:
+        return await service.create_chapter_for_manuscript(db, manuscript_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error creating chapter for manuscript %s", manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.get(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}",
+    response_model=schemas.ChapterContent,
+    summary="Get chapter from manuscript",
+    description="Get a single chapter with full content from a manuscript.",
+)
+async def get_manuscript_chapter(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get a single chapter with full content."""
+    try:
+        return await service.get_chapter_for_manuscript(db, manuscript_id, chapter_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error fetching chapter %s for manuscript %s", chapter_id, manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.patch(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}",
+    response_model=schemas.ChapterContent,
+    summary="Update chapter in manuscript",
+    description="Update a chapter's title, content, order, or synopsis.",
+)
+async def update_manuscript_chapter(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    data: schemas.ChapterUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Update a chapter within a manuscript."""
+    try:
+        return await service.update_chapter_for_manuscript(db, manuscript_id, chapter_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error updating chapter %s for manuscript %s", chapter_id, manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.delete(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}",
+    summary="Delete chapter from manuscript",
+    description="Soft-delete a chapter from a manuscript.",
+)
+async def delete_manuscript_chapter(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Soft-delete a chapter from a manuscript."""
+    try:
+        return await service.delete_chapter_for_manuscript(db, manuscript_id, chapter_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error deleting chapter %s for manuscript %s", chapter_id, manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/manuscripts/{manuscript_id}/chapters/reorder",
+    response_model=list[schemas.ChapterContent],
+    summary="Reorder chapters in manuscript",
+    description="Reorder chapters within a manuscript by providing new sort positions.",
+)
+async def reorder_manuscript_chapters(
+    manuscript_id: UUID,
+    data: schemas.ChapterReorderRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Reorder chapters within a manuscript."""
+    try:
+        return await service.reorder_chapters_for_manuscript(db, manuscript_id, data)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error reordering chapters for manuscript %s", manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.put(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/content",
+    response_model=schemas.ChapterContent,
+    summary="Auto-save chapter content",
+    description="Lightweight endpoint for auto-saving chapter content without updating other metadata.",
+)
+async def autosave_chapter_content(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    data: schemas.ChapterContentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Auto-save chapter content (lightweight)."""
+    try:
+        return await service.update_chapter_content(db, manuscript_id, chapter_id, data.content)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error auto-saving chapter %s content", chapter_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+# ===========================================================================
+# Version History
+# ===========================================================================
+
+@router.get(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions",
+    response_model=list[schemas.ChapterVersionSummary],
+    summary="List chapter versions",
+    description="List all saved version snapshots of a chapter.",
+)
+async def list_chapter_versions(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List chapter version snapshots."""
+    try:
+        return await service.list_chapter_versions(db, manuscript_id, chapter_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error listing versions for chapter %s", chapter_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.get(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions/{version_id}",
+    response_model=schemas.ChapterVersionDetail,
+    summary="Get chapter version detail",
+    description="Get the full content of a specific chapter version.",
+)
+async def get_chapter_version(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    version_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get a specific chapter version with full content."""
+    try:
+        return await service.get_chapter_version(db, manuscript_id, chapter_id, version_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error fetching version %s for chapter %s", version_id, chapter_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions/{version_id}/restore",
+    response_model=schemas.ChapterContent,
+    summary="Restore chapter version",
+    description="Restore a chapter to a previous version. Creates a backup snapshot first.",
+)
+async def restore_chapter_version(
+    manuscript_id: UUID,
+    chapter_id: UUID,
+    version_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Restore a chapter to a previous version."""
+    try:
+        return await service.restore_chapter_version(db, manuscript_id, chapter_id, version_id)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error restoring version %s for chapter %s", version_id, chapter_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+# ===========================================================================
+# AI Writing (SSE streaming generation)
+# ===========================================================================
+
+@router.post(
+    "/writing/generate",
+    response_model=schemas.GenerateResponse | None,
+    summary="AI writing generation (SSE streaming)",
+    description=(
+        "Generate AI-written content with support for all 6 generation actions: "
+        "chapter, blurb, outline, title_suggestions, continue_writing, edit_selection. "
+        "Returns SSE stream when stream=true (default)."
+    ),
+)
+async def generate_writing(
+    request: schemas.GenerateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """AI content generation for Writing Studio with SSE streaming support."""
+    try:
+        if request.stream:
+            return StreamingResponse(
+                generate_stream(request),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+        return await generate_sync(request)
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error in AI writing generation")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/writing/readability",
+    response_model=schemas.ReadabilityScore,
+    summary="Compute readability metrics",
+    description="Compute readability metrics for arbitrary text.",
+)
+async def compute_readability(
+    body: schemas.ReadabilityRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Compute readability metrics for arbitrary text."""
+    try:
+        from app.modules.ai_writing.readability import analyze_readability
+
+        text = body.text
+        if not text.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Text must not be empty.",
+            )
+
+        metrics = analyze_readability(text)
+        return schemas.ReadabilityScore(
+            flesch_kincaid_grade=metrics.flesch_kincaid_grade,
+            flesch_reading_ease=metrics.flesch_reading_ease,
+            gunning_fog=metrics.gunning_fog,
+            smog_index=metrics.smog_index,
+            word_count=metrics.word_count,
+            sentence_count=metrics.sentence_count,
+            syllable_count=metrics.syllable_count,
+            avg_words_per_sentence=metrics.avg_words_per_sentence,
+            avg_syllables_per_word=metrics.avg_syllables_per_word,
+            reading_level=metrics.reading_level,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Error computing readability")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+# ===========================================================================
+# Writing Sessions
+# ===========================================================================
+
+@router.post(
+    "/writing/sessions/start",
+    response_model=schemas.WritingSessionStartResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Start writing session",
+    description="Start a timed writing session for productivity tracking.",
+)
+async def start_writing_session(
+    data: schemas.WritingSessionStartRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Start a writing session."""
+    try:
+        user_id = current_user["user_id"]
+        return await service.start_writing_session(
+            db,
+            user_id,
+            manuscript_id=data.manuscript_id,
+            chapter_id=data.chapter_id,
+        )
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error starting writing session")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/writing/sessions/{session_id}/heartbeat",
+    summary="Writing session heartbeat",
+    description="Send a heartbeat to keep the writing session active and update progress.",
+)
+async def heartbeat_writing_session(
+    session_id: UUID,
+    data: schemas.WritingSessionHeartbeatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Send a heartbeat for an active writing session."""
+    try:
+        return await service.heartbeat_writing_session(
+            db,
+            session_id,
+            words_written=data.words_written,
+            current_chapter_id=data.current_chapter_id,
+        )
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error processing heartbeat for session %s", session_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/writing/sessions/{session_id}/end",
+    response_model=schemas.WritingSessionEndResponse,
+    summary="End writing session",
+    description="End an active writing session and finalize metrics.",
+)
+async def end_writing_session(
+    session_id: UUID,
+    data: schemas.WritingSessionEndRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """End a writing session."""
+    try:
+        return await service.end_writing_session(
+            db,
+            session_id,
+            words_written=data.words_written,
+            notes=data.notes,
+        )
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error ending writing session %s", session_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.get(
+    "/writing/sessions",
+    response_model=list[schemas.WritingSessionListItem],
+    summary="List writing sessions",
+    description="List writing sessions for the current user with optional filtering.",
+)
+async def list_writing_sessions(
+    manuscript_id: UUID | None = Query(None, description="Filter by manuscript ID"),
+    limit: int = Query(20, ge=1, le=100, description="Maximum number of sessions to return"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List writing sessions."""
+    try:
+        user_id = current_user["user_id"]
+        return await service.list_writing_sessions(
+            db,
+            user_id,
+            manuscript_id=manuscript_id,
+            limit=limit,
+        )
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error listing writing sessions")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+# ===========================================================================
+# Export / Import
+# ===========================================================================
+
+@router.post(
+    "/manuscripts/{manuscript_id}/export",
+    response_model=schemas.ExportResponse,
+    summary="Export manuscript",
+    description="Export a manuscript to the specified format (docx, pdf, epub, markdown, txt).",
+)
+async def export_manuscript(
+    manuscript_id: UUID,
+    data: schemas.ExportRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Export manuscript to the specified format."""
+    try:
+        result = await service.export_manuscript(
+            db,
+            manuscript_id,
+            export_format=data.format,
+            include_toc=data.include_toc,
+            include_metadata=data.include_metadata,
+        )
+        return schemas.ExportResponse(
+            download_url=result["download_url"],
+            format=result["format"],
+            manuscript_id=manuscript_id,
+        )
+    except AppException:
+        raise
+    except Exception as exc:
+        logger.exception("Error exporting manuscript %s", manuscript_id)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post(
+    "/manuscripts/import",
+    response_model=schemas.ImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import manuscript",
+    description="Import a manuscript from an uploaded file (FormData).",
+)
+async def import_manuscript(
+    file: UploadFile = File(..., description="The manuscript file to import"),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Import a manuscript from an uploaded file."""
+    try:
+        user_id = current_user["user_id"]
+        content = await file.read()
+        filename = file.filename or "untitled"
+
+        result = await service.import_manuscript(db, user_id, filename, content)
+        return schemas.ImportResponse(
+            manuscript_id=UUID(result["manuscript_id"]),
+            title=result["title"],
+            chapter_count=result["chapter_count"],
+            word_count=result["word_count"],
+        )
+    except AppException:
+        raise
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="File encoding not supported. Please upload a UTF-8 text file.",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Error importing manuscript")
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+# ===========================================================================
+# Legacy endpoints kept for backward compatibility
+# ===========================================================================
+
+@router.get(
+    "/books",
+    summary="List books (deprecated)",
+    description="Return all books for the current user. Deprecated: use /manuscripts instead.",
+    deprecated=True,
+)
+async def list_books_legacy(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List books for the authenticated user (legacy)."""
+    from datetime import timedelta
+
+    now = __import__("datetime").datetime.now(UTC)
     return [
         {
             "id": "book-001",
@@ -405,329 +1076,21 @@ async def list_books_stub(
             "updated_at": (now - timedelta(days=1)).isoformat(),
             "created_at": now.isoformat(),
         },
-        {
-            "id": "book-003",
-            "title": "Marketing for Authors",
-            "status": "editing",
-            "chapter_count": 10,
-            "word_count": 45000,
-            "target_word_count": 50000,
-            "genre": "Self-Help",
-            "cover_url": None,
-            "updated_at": (now - timedelta(days=5)).isoformat(),
-            "created_at": now.isoformat(),
-        },
     ]
 
 
 @router.get(
-    "/manuscripts",
-    summary="List manuscripts (stub)",
-    description="Return all manuscripts for the current user. Stub: returns empty list.",
-)
-async def list_manuscripts_stub(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """List manuscripts for the authenticated user (stub)."""
-    return []
-
-
-@router.post(
-    "/manuscripts",
-    status_code=status.HTTP_201_CREATED,
-    summary="Create manuscript (stub)",
-    description="Create a new manuscript. Stub: returns placeholder manuscript.",
-)
-async def create_manuscript_stub(
-    body: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Create a new manuscript (stub)."""
-    return _stub_manuscript()
-
-
-@router.get(
-    "/manuscripts/{manuscript_id}",
-    summary="Get manuscript (stub)",
-    description="Get a manuscript with its chapters. Stub: returns placeholder.",
-)
-async def get_manuscript_stub(
-    manuscript_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Get a single manuscript with chapters (stub)."""
-    return _stub_manuscript(include_chapters=True)
-
-
-@router.delete(
-    "/manuscripts/{manuscript_id}",
-    summary="Delete manuscript (stub)",
-    description="Delete a manuscript. Stub: returns confirmation message.",
-)
-async def delete_manuscript_stub(
-    manuscript_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Delete a manuscript (stub)."""
-    return {"message": "Deleted"}
-
-
-@router.post(
-    "/manuscripts/{manuscript_id}/export",
-    summary="Export manuscript (stub)",
-    description="Export a manuscript to the specified format. Stub: returns a download URL.",
-)
-async def export_manuscript_stub(
-    manuscript_id: UUID,
-    body: dict,
-    current_user: dict = Depends(get_current_user),
-):
-    """Export manuscript (stub)."""
-    fmt = body.get("format", "docx")
-    return {"download_url": f"/exports/manuscript-{manuscript_id}.{fmt}", "format": fmt}
-
-
-@router.patch(
-    "/manuscripts/{manuscript_id}",
-    summary="Update manuscript metadata (stub)",
-    description="Update manuscript metadata such as title or status. Stub: echoes back the update.",
-)
-async def update_manuscript_stub(
-    manuscript_id: UUID,
-    body: dict,
-    current_user: dict = Depends(get_current_user),
-):
-    """Update manuscript metadata (stub)."""
-    return {"id": str(manuscript_id), **body}
-
-
-@router.delete(
-    "/books/{book_id}/manuscript/chapters/{chapter_id}",
-    summary="Delete chapter (stub)",
-    description="Delete a chapter from a book's manuscript. Stub: returns confirmation.",
-)
-async def delete_chapter_stub(
-    book_id: UUID,
-    chapter_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Delete a chapter (stub)."""
-    return {"message": "Chapter deleted", "chapter_id": str(chapter_id)}
-
-
-# ---------------------------------------------------------------------------
-# Enhanced Outline (stub)
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/writing/generate-outline",
-    summary="Generate enhanced outline (stub)",
-    description="AI-generate a detailed chapter outline for a book. Stub: returns empty chapters.",
-)
-async def generate_outline_enhanced_stub(
-    body: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Generate an enhanced book outline (stub)."""
-    return {"chapters": []}
-
-
-@router.post(
-    "/writing/create-from-outline",
-    summary="Create manuscript from outline (stub)",
-    description="Create a full manuscript scaffold from an outline. Stub: returns placeholder.",
-)
-async def create_from_outline_stub(
-    body: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Create a manuscript from an outline (stub)."""
-    return _stub_manuscript(include_chapters=True)
-
-
-# ---------------------------------------------------------------------------
-# AI Writing (stub)
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/writing/generate",
-    summary="AI writing generation (stub)",
-    description="Generate AI-written content for a chapter or section. Stub: returns empty content.",
-)
-async def generate_writing_stub(
-    body: dict,
-    current_user: dict = Depends(get_current_user),
-):
-    """AI content generation for Writing Studio (stub)."""
-    return {"content": ""}
-
-
-# ---------------------------------------------------------------------------
-# Readability (stub)
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/writing/readability/{chapter_id}",
-    summary="Get chapter readability scores (stub)",
-    description="Get readability metrics for a specific chapter. Stub: returns placeholder scores.",
-)
-async def get_chapter_readability_stub(
-    chapter_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Readability scores for a chapter (stub)."""
-    return {
-        "chapter_id": str(chapter_id),
-        "flesch_kincaid_grade": 0.0,
-        "flesch_reading_ease": 0.0,
-        "gunning_fog": 0.0,
-        "smog_index": 0.0,
-        "word_count": 0,
-        "sentence_count": 0,
-        "syllable_count": 0,
-        "avg_words_per_sentence": 0.0,
-        "avg_syllables_per_word": 0.0,
-        "reading_level": "N/A",
-    }
-
-
-@router.post(
-    "/writing/readability",
-    summary="Compute readability metrics",
-    description="Compute readability metrics for arbitrary text using textstat.",
-)
-async def compute_readability(
-    body: dict,
-    current_user: dict = Depends(get_current_user),
-):
-    """Compute readability metrics for arbitrary text."""
-    import re
-
-    import textstat
-
-    text = body.get("text", "")
-    if not text.strip():
-        return {
-            "grade_level": 0,
-            "flesch_ease": 0,
-            "flesch_label": "N/A",
-            "passive_voice_pct": 0,
-            "avg_sentence_length": 0,
-            "word_count": 0,
-            "suggestions": [],
-        }
-
-    words = text.split()
-    word_count = len(words)
-    sentences = [s.strip() for s in text.replace("!", ".").replace("?", ".").split(".") if s.strip()]
-    sentence_count = max(len(sentences), 1)
-    avg_sentence_length = round(word_count / sentence_count, 1)
-
-    grade = round(textstat.flesch_kincaid_grade(text), 1)
-    flesch = round(textstat.flesch_reading_ease(text), 1)
-
-    # Flesch label
-    if flesch >= 90:
-        flesch_label = "Very Easy"
-    elif flesch >= 80:
-        flesch_label = "Easy"
-    elif flesch >= 70:
-        flesch_label = "Fairly Easy"
-    elif flesch >= 60:
-        flesch_label = "Standard"
-    elif flesch >= 50:
-        flesch_label = "Fairly Difficult"
-    elif flesch >= 30:
-        flesch_label = "Difficult"
-    else:
-        flesch_label = "Very Confusing"
-
-    # Passive voice detection (simple heuristic)
-    passive_patterns = re.findall(
-        r"\b(was|were|been|being|is|are|am)\b\s+\w+ed\b", text, re.IGNORECASE
-    )
-    passive_pct = round(len(passive_patterns) / max(sentence_count, 1) * 100, 1)
-
-    # Suggestions
-    suggestions: list[str] = []
-    if grade > 12:
-        suggestions.append("Consider simplifying sentences for a broader audience.")
-    if avg_sentence_length > 25:
-        suggestions.append("Try breaking up longer sentences.")
-    if passive_pct > 15:
-        suggestions.append("Reduce passive voice for more engaging writing.")
-    if flesch < 50:
-        suggestions.append("The text may be difficult to read. Consider using simpler words.")
-
-    return {
-        "grade_level": grade,
-        "flesch_ease": flesch,
-        "flesch_label": flesch_label,
-        "passive_voice_pct": passive_pct,
-        "avg_sentence_length": avg_sentence_length,
-        "word_count": word_count,
-        "suggestions": suggestions,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Writing Sessions (stub)
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/writing/sessions/start",
-    summary="Start writing session (stub)",
-    description="Start a timed writing session for productivity tracking. Stub: returns session ID.",
-)
-async def start_writing_session_stub(
-    body: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Start a writing session (stub)."""
-    return {"session_id": "stub"}
-
-
-@router.patch(
-    "/writing/sessions/{session_id}/end",
-    summary="End writing session (stub)",
-    description="End an active writing session. Stub: returns confirmation.",
-)
-async def end_writing_session_stub(
-    session_id: UUID,
-    body: dict | None = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """End a writing session (stub)."""
-    return {"message": "Session ended"}
-
-
-# ---------------------------------------------------------------------------
-# Analytics (stub)
-# ---------------------------------------------------------------------------
-
-@router.get(
     "/writing/analytics",
-    summary="Get writing analytics (stub)",
-    description="Get writing productivity and progress analytics. Stub: returns placeholder data.",
+    summary="Get writing analytics",
+    description="Get writing productivity and progress analytics.",
+    deprecated=True,
 )
-async def get_writing_analytics_stub(
+async def get_writing_analytics(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Writing analytics dashboard data (stub)."""
+    """Writing analytics dashboard data (placeholder)."""
     return {
         "total_words_written": 0,
         "total_sessions": 0,
@@ -738,38 +1101,3 @@ async def get_writing_analytics_stub(
         "streak_days": 0,
         "manuscripts_in_progress": 0,
     }
-
-
-# ---------------------------------------------------------------------------
-# Chapter Versions (stub)
-# ---------------------------------------------------------------------------
-
-@router.get(
-    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions",
-    summary="List chapter versions (stub)",
-    description="List saved versions / snapshots of a chapter. Stub: returns empty list.",
-)
-async def list_chapter_versions_stub(
-    manuscript_id: UUID,
-    chapter_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """List chapter versions (stub)."""
-    return []
-
-
-@router.post(
-    "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions/{version_id}/restore",
-    summary="Restore chapter version (stub)",
-    description="Restore a chapter to a previous version. Stub: returns placeholder chapter.",
-)
-async def restore_chapter_version_stub(
-    manuscript_id: UUID,
-    chapter_id: UUID,
-    version_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    """Restore a chapter to a previous version (stub)."""
-    return _stub_chapter(chapter_id=str(chapter_id))
