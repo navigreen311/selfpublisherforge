@@ -1,71 +1,99 @@
 "use client";
 
-import type { StyleCard } from "../types";
+import type { VoiceFingerprint } from "../types";
 
 interface VoiceCharacteristicsProps {
-  styleCard: StyleCard;
+  fingerprint: VoiceFingerprint;
 }
 
-function extractFromSummary(summary: string, label: string): string | null {
-  // Look for patterns like "first-person POV", "third-person", "past tense", "present tense"
-  const lower = summary.toLowerCase();
-
-  if (label === "POV") {
-    const povMatch = summary.match(
-      /\b(first[- ]person|second[- ]person|third[- ]person|omniscient|limited)\b/i
-    );
-    return povMatch ? povMatch[0] : null;
-  }
-
-  if (label === "Tense") {
-    const tenseMatch = summary.match(
-      /\b(past tense|present tense|future tense)\b/i
-    );
-    return tenseMatch ? tenseMatch[0] : null;
-  }
-
-  return null;
+interface CharacteristicItem {
+  label: string;
+  value: number;
+  description: string;
 }
 
-const rows = [
-  { label: "POV", key: "pov" },
-  { label: "Tense", key: "tense" },
-  { label: "Tone", key: "tone" },
-  { label: "Vocabulary", key: "vocabulary_level" },
-  { label: "Sentence Style", key: "sentence_style" },
-  { label: "Paragraph Style", key: "paragraph_style" },
-  { label: "Rhetorical Style", key: "rhetorical_style" },
-  { label: "Dialogue Style", key: "dialogue_style" },
-] as const;
+function intensityLabel(value: number): string {
+  if (value >= 0.7) return "High";
+  if (value >= 0.4) return "Moderate";
+  if (value >= 0.1) return "Low";
+  return "Minimal";
+}
 
-export default function VoiceCharacteristics({
-  styleCard,
-}: VoiceCharacteristicsProps) {
-  function getValue(row: (typeof rows)[number]): string {
-    if (row.key === "pov") {
-      return extractFromSummary(styleCard.summary, "POV") ?? "See summary";
-    }
-    if (row.key === "tense") {
-      return extractFromSummary(styleCard.summary, "Tense") ?? "See summary";
-    }
-    return (styleCard as Record<string, unknown>)[row.key] as string;
-  }
+function intensityColor(value: number): string {
+  if (value >= 0.7) return "bg-green-500";
+  if (value >= 0.4) return "bg-yellow-500";
+  if (value >= 0.1) return "bg-orange-500";
+  return "bg-muted-foreground";
+}
+
+function CharacteristicRow({ label, value, description }: CharacteristicItem) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b last:border-b-0">
+      <div className="flex-1">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <div className="flex items-center gap-2 ml-4">
+        <div className={`h-2 w-2 rounded-full ${intensityColor(value)}`} />
+        <span className="text-sm font-medium w-20 text-right">
+          {intensityLabel(value)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function VoiceCharacteristics({ fingerprint }: VoiceCharacteristicsProps) {
+  const { rhetorical, dialogue } = fingerprint;
+
+  const characteristics: CharacteristicItem[] = [
+    {
+      label: "Metaphor Usage",
+      value: rhetorical.metaphor_density,
+      description: "Frequency of metaphorical language",
+    },
+    {
+      label: "Simile Usage",
+      value: rhetorical.simile_density,
+      description: "Frequency of explicit comparisons",
+    },
+    {
+      label: "Humor Markers",
+      value: rhetorical.humor_marker_density,
+      description: "Presence of humor and wit",
+    },
+    {
+      label: "Emotional Intensity",
+      value: rhetorical.emotional_intensity,
+      description: "Strength of emotional expression",
+    },
+    {
+      label: "Alliteration",
+      value: rhetorical.alliteration_density,
+      description: "Use of repeated initial sounds",
+    },
+    {
+      label: "Rhetorical Questions",
+      value: rhetorical.rhetorical_question_density,
+      description: "Questions used for effect",
+    },
+    {
+      label: "Dialogue Presence",
+      value: dialogue.dialogue_ratio,
+      description: "Proportion of text that is dialogue",
+    },
+    {
+      label: "Dialogue-to-Narrative",
+      value: dialogue.dialogue_to_narrative_ratio,
+      description: "Balance between speech and narration",
+    },
+  ];
 
   return (
-    <dl className="border rounded-lg overflow-hidden divide-y divide-border">
-      {rows.map((row, index) => (
-        <div
-          key={row.key}
-          className={`flex px-4 py-3 ${
-            index % 2 === 0 ? "bg-muted/50" : "bg-background"
-          }`}
-        >
-          <dt className="w-40 shrink-0 font-medium text-muted-foreground">
-            {row.label}
-          </dt>
-          <dd className="text-foreground">{getValue(row)}</dd>
-        </div>
+    <div className="space-y-1">
+      {characteristics.map((item) => (
+        <CharacteristicRow key={item.label} {...item} />
       ))}
-    </dl>
+    </div>
   );
 }
