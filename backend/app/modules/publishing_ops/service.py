@@ -29,16 +29,19 @@ from app.models.publishing import (
     PublishingAccount as PublishingAccountModel,
 )
 from app.modules.publishing_ops.epub_generator import generate_epub
-from app.modules.publishing_ops.models import BookPricing, ExportJob, FormattingTemplateModel, PricingHistory
+from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel, ISBNRecord
 from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
     BookMetadataUpdate,
+    CreateISBNRequest,
     ExportFormat,
     ExportRequest,
     ExportResponse,
     FormattingTemplate,
     FormattingTemplateCreate,
+    ISBNResponse,
+    ISBNStatus,
     ListingDetail,
     ListingSyncResponse,
     PlatformType,
@@ -48,6 +51,7 @@ from app.modules.publishing_ops.schemas import (
     TemplateGenre,
     TemplateStyleSettings,
     TrimSize,
+    UpdateISBNRequest,
 )
 from app.modules.publishing_ops.templates import get_all_templates
 from app.tasks.publishing_ops import (
@@ -293,88 +297,6 @@ async def generate_export(
             created_at=export_job.created_at,
             message=export_job.message or "",
         )
-
-
-# ---------------------------------------------------------------------------
-# Export History
-# ---------------------------------------------------------------------------
-
-async def list_exports(db: AsyncSession, org_id: uuid.UUID) -> list[ExportResponse]:
-    """Return all exports for an organisation, newest first."""
-    stmt = (
-        select(ExportJob)
-        .where(
-            ExportJob.org_id == org_id,
-            ExportJob.deleted_at.is_(None),
-        )
-        .order_by(ExportJob.created_at.desc())
-    )
-    result = await db.execute(stmt)
-    rows = result.scalars().all()
-    return [
-        ExportResponse(
-            id=row.id,
-            book_id=row.book_id,
-            format=row.format,
-            status=row.status,
-            file_url=row.file_url,
-            file_size_bytes=row.file_size_bytes,
-            page_count=row.page_count,
-            created_at=row.created_at,
-            message=row.message or "",
-        )
-        for row in rows
-    ]
-
-
-async def get_export(
-    db: AsyncSession, export_id: uuid.UUID, org_id: uuid.UUID
-) -> ExportResponse | None:
-    """Return a single export job, or ``None`` if not found."""
-    stmt = (
-        select(ExportJob)
-        .where(
-            ExportJob.id == export_id,
-            ExportJob.org_id == org_id,
-            ExportJob.deleted_at.is_(None),
-        )
-    )
-    result = await db.execute(stmt)
-    row = result.scalar_one_or_none()
-    if row is None:
-        return None
-    return ExportResponse(
-        id=row.id,
-        book_id=row.book_id,
-        format=row.format,
-        status=row.status,
-        file_url=row.file_url,
-        file_size_bytes=row.file_size_bytes,
-        page_count=row.page_count,
-        created_at=row.created_at,
-        message=row.message or "",
-    )
-
-
-async def get_export_download_url(
-    db: AsyncSession, export_id: uuid.UUID, org_id: uuid.UUID
-) -> str | None:
-    """Return the download URL for a completed export, or ``None``."""
-    stmt = (
-        select(ExportJob)
-        .where(
-            ExportJob.id == export_id,
-            ExportJob.org_id == org_id,
-            ExportJob.deleted_at.is_(None),
-        )
-    )
-    result = await db.execute(stmt)
-    row = result.scalar_one_or_none()
-    if row is None:
-        return None
-    if row.status != "completed":
-        return None
-    return row.file_url
 
 
 # ---------------------------------------------------------------------------
@@ -675,204 +597,110 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
 
 
 # ---------------------------------------------------------------------------
-# Pricing
+# ISBNs
 # ---------------------------------------------------------------------------
 
-async def get_pricing(
-    db: AsyncSession,
-    book_id: uuid.UUID,
-    org_id: uuid.UUID,
-) -> dict | None:
-    """Return the book_pricing row for a given book and org, or None."""
+def _isbn_row_to_response(row: ISBNRecord) -> ISBNResponse:
+    """Map an ISBNRecord ORM instance to an ISBNResponse schema."""
+    return ISBNResponse(
+        id=row.id,
+        org_id=row.org_id,
+        isbn=row.isbn,
+        format=row.format,
+        status=row.status,
+        book_id=row.book_id,
+        title=row.title,
+        notes=row.notes,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+async def list_isbns(db: AsyncSession, org_id: uuid.UUID) -> list[ISBNResponse]:
+    """Return all ISBN records for an organisation."""
     stmt = (
-        select(BookPricing)
+        select(ISBNRecord)
         .where(
-            BookPricing.book_id == book_id,
-            BookPricing.org_id == org_id,
-            BookPricing.deleted_at.is_(None),
+            ISBNRecord.org_id == org_id,
+            ISBNRecord.deleted_at.is_(None),
+        )
+        .order_by(ISBNRecord.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    return [_isbn_row_to_response(row) for row in rows]
+
+
+async def create_isbn(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    data: CreateISBNRequest,
+) -> ISBNResponse:
+    """Register a new ISBN for the organisation."""
+    fmt_value = data.format.value if hasattr(data.format, "value") else str(data.format)
+    status = ISBNStatus.ASSIGNED.value if data.book_id else ISBNStatus.AVAILABLE.value
+
+    record = ISBNRecord(
+        org_id=org_id,
+        isbn=data.isbn,
+        format=fmt_value,
+        status=status,
+        book_id=data.book_id,
+        title=data.title,
+        notes=data.notes,
+    )
+    db.add(record)
+    await db.flush()
+    await db.refresh(record)
+    return _isbn_row_to_response(record)
+
+
+async def update_isbn(
+    db: AsyncSession,
+    isbn_id: uuid.UUID,
+    data: UpdateISBNRequest,
+) -> ISBNResponse | None:
+    """Update an existing ISBN record. Returns None if not found."""
+    stmt = (
+        select(ISBNRecord)
+        .where(
+            ISBNRecord.id == isbn_id,
+            ISBNRecord.deleted_at.is_(None),
         )
     )
     result = await db.execute(stmt)
-    row = result.scalar_one_or_none()
-    if row is None:
+    record = result.scalar_one_or_none()
+    if record is None:
         return None
 
-    return {
-        "id": row.id,
-        "book_id": row.book_id,
-        "org_id": row.org_id,
-        "currency": row.currency,
-        "kindle_price": row.kindle_price,
-        "paperback_price": row.paperback_price,
-        "hardcover_price": row.hardcover_price,
-        "audiobook_price": row.audiobook_price,
-        "page_count": row.page_count,
-        "print_type": row.print_type,
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
-    }
+    update_dict = data.model_dump(exclude_unset=True)
+    for field, value in update_dict.items():
+        if field == "format" and value is not None:
+            value = value.value if hasattr(value, "value") else str(value)
+        elif field == "status" and value is not None:
+            value = value.value if hasattr(value, "value") else str(value)
+        setattr(record, field, value)
+
+    record.updated_at = _now()
+    await db.flush()
+    await db.refresh(record)
+    return _isbn_row_to_response(record)
 
 
-async def update_pricing(
-    db: AsyncSession,
-    book_id: uuid.UUID,
-    org_id: uuid.UUID,
-    updates: dict,
-) -> dict:
-    """Upsert book_pricing and record changed fields in pricing_history."""
+async def delete_isbn(db: AsyncSession, isbn_id: uuid.UUID) -> bool:
+    """Soft-delete an ISBN record."""
     stmt = (
-        select(BookPricing)
+        select(ISBNRecord)
         .where(
-            BookPricing.book_id == book_id,
-            BookPricing.org_id == org_id,
-            BookPricing.deleted_at.is_(None),
+            ISBNRecord.id == isbn_id,
+            ISBNRecord.deleted_at.is_(None),
         )
     )
     result = await db.execute(stmt)
-    row = result.scalar_one_or_none()
+    record = result.scalar_one_or_none()
+    if record is None:
+        return False
 
-    tracked_fields = {
-        "currency", "kindle_price", "paperback_price",
-        "hardcover_price", "audiobook_price", "page_count", "print_type",
-    }
-
-    if row is None:
-        # INSERT — all provided fields are "new"
-        row = BookPricing(
-            book_id=book_id,
-            org_id=org_id,
-        )
-        for field, value in updates.items():
-            if field in tracked_fields:
-                setattr(row, field, value)
-                # Record history for the initial set
-                db.add(PricingHistory(
-                    book_id=book_id,
-                    org_id=org_id,
-                    field_name=field,
-                    old_value=None,
-                    new_value=str(value) if value is not None else None,
-                ))
-        db.add(row)
-    else:
-        # UPDATE — only record history for actually-changed fields
-        for field, value in updates.items():
-            if field not in tracked_fields:
-                continue
-            old_value = getattr(row, field, None)
-            if old_value != value:
-                db.add(PricingHistory(
-                    book_id=book_id,
-                    org_id=org_id,
-                    field_name=field,
-                    old_value=str(old_value) if old_value is not None else None,
-                    new_value=str(value) if value is not None else None,
-                ))
-                setattr(row, field, value)
-
+    record.deleted_at = _now()
     await db.flush()
-    await db.refresh(row)
-
-    return {
-        "id": row.id,
-        "book_id": row.book_id,
-        "org_id": row.org_id,
-        "currency": row.currency,
-        "kindle_price": row.kindle_price,
-        "paperback_price": row.paperback_price,
-        "hardcover_price": row.hardcover_price,
-        "audiobook_price": row.audiobook_price,
-        "page_count": row.page_count,
-        "print_type": row.print_type,
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
-    }
-
-
-def calculate_royalty(
-    price: float,
-    format: str,
-    platform: str,
-    page_count: int = 0,
-    print_type: str = "black_white",
-) -> dict:
-    """Pure function — compute estimated royalty for a given price/format/platform.
-
-    Supported platforms & formats:
-    - KDP Kindle: 70% royalty if price is $2.99–$9.99, else 35%.
-    - KDP Print:  60% of (price - printing_cost).
-                  printing_cost = page_count * 0.012 + 0.85
-    - IngramSpark: 40% wholesale discount.
-                   royalty = price * 0.55 - printing_cost
-                   printing_cost = page_count * 0.012 + 0.85
-    - ACX: 40% royalty-share, 25% exclusive.
-    """
-    platform_lower = platform.lower()
-    format_lower = format.lower()
-
-    printing_cost = page_count * 0.012 + 0.85
-
-    if platform_lower == "kdp" and format_lower == "kindle":
-        if 2.99 <= price <= 9.99:
-            rate = 0.70
-        else:
-            rate = 0.35
-        royalty = round(price * rate, 2)
-        return {
-            "platform": platform,
-            "format": format,
-            "price": price,
-            "royalty_rate": rate,
-            "royalty": royalty,
-            "printing_cost": 0.0,
-        }
-
-    if platform_lower == "kdp" and format_lower in ("print", "paperback", "hardcover"):
-        royalty = round(0.60 * (price - printing_cost), 2)
-        royalty = max(royalty, 0.0)
-        return {
-            "platform": platform,
-            "format": format,
-            "price": price,
-            "royalty_rate": 0.60,
-            "royalty": royalty,
-            "printing_cost": round(printing_cost, 2),
-        }
-
-    if platform_lower in ("ingram_spark", "ingramspark", "ingram"):
-        royalty = round(price * 0.55 - printing_cost, 2)
-        royalty = max(royalty, 0.0)
-        return {
-            "platform": platform,
-            "format": format,
-            "price": price,
-            "royalty_rate": 0.55,
-            "wholesale_discount": 0.40,
-            "royalty": royalty,
-            "printing_cost": round(printing_cost, 2),
-        }
-
-    if platform_lower == "acx":
-        royalty_share_rate = 0.40
-        exclusive_rate = 0.25
-        royalty = round(price * royalty_share_rate, 2)
-        return {
-            "platform": platform,
-            "format": format,
-            "price": price,
-            "royalty_rate": royalty_share_rate,
-            "exclusive_rate": exclusive_rate,
-            "royalty": royalty,
-            "printing_cost": 0.0,
-        }
-
-    # Fallback for unknown platforms
-    return {
-        "platform": platform,
-        "format": format,
-        "price": price,
-        "royalty_rate": 0.0,
-        "royalty": 0.0,
-        "printing_cost": 0.0,
-        "note": f"Unsupported platform/format combination: {platform}/{format}",
-    }
+    return True

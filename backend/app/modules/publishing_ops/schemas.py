@@ -214,46 +214,6 @@ class BookMetadata(BookMetadataBase):
     model_config = {"from_attributes": True}
 
 
-# ---------- ISBN Management ----------
-
-
-class ISBNFormat(str, Enum):
-    PAPERBACK = "paperback"
-    HARDCOVER = "hardcover"
-    EBOOK = "ebook"
-    AUDIOBOOK = "audiobook"
-
-
-class ISBNCreate(BaseModel):
-    isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13")
-    format: ISBNFormat
-    book_id: uuid.UUID | None = None
-
-
-class ISBNUpdate(BaseModel):
-    format: ISBNFormat | None = None
-    book_id: uuid.UUID | None = None
-
-
-class ISBNDetail(BaseModel):
-    id: uuid.UUID
-    org_id: uuid.UUID
-    isbn: str
-    format: ISBNFormat
-    book_id: uuid.UUID | None = None
-    barcode_url: str | None = None
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class ISBNBarcodeResponse(BaseModel):
-    isbn_id: uuid.UUID
-    isbn: str
-    barcode_url: str
-
-
 # ---------- Listings ----------
 
 class ListingBase(BaseModel):
@@ -286,70 +246,53 @@ class ListingSyncResponse(BaseModel):
     message: str = "Listing sync has been queued"
 
 
-# ---------- ISBN Management ----------
+# ---------- ISBNs ----------
+
+class ISBNStatus(str, Enum):
+    AVAILABLE = "available"
+    ASSIGNED = "assigned"
+    USED = "used"
+    RETIRED = "retired"
+
+
+class ISBNFormat(str, Enum):
+    ISBN_13 = "isbn_13"
+    ISBN_10 = "isbn_10"
+
 
 class CreateISBNRequest(BaseModel):
-    isbn: str = Field(..., min_length=10, max_length=17)
-    format: str | None = None
+    isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13 value")
+    format: ISBNFormat = ISBNFormat.ISBN_13
     book_id: uuid.UUID | None = None
+    title: str | None = Field(None, max_length=500, description="Book title associated with this ISBN")
+    notes: str | None = None
 
 
 class UpdateISBNRequest(BaseModel):
-    format: str | None = None
+    isbn: str | None = Field(None, min_length=10, max_length=17)
+    format: ISBNFormat | None = None
+    status: ISBNStatus | None = None
     book_id: uuid.UUID | None = None
-    status: str | None = None
+    title: str | None = Field(None, max_length=500)
+    notes: str | None = None
 
 
 class ISBNResponse(BaseModel):
     id: uuid.UUID
+    org_id: uuid.UUID
     isbn: str
-    format: str | None
-    book_id: uuid.UUID | None
-    status: str
-    barcode_url: str | None
+    format: ISBNFormat
+    status: ISBNStatus
+    book_id: uuid.UUID | None = None
+    title: str | None = None
+    notes: str | None = None
     created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class GenerateBarcodeRequest(BaseModel):
-    price: float | None = None
-    format: str = "png"  # png or svg
-
-
-# ---------- Pricing ----------
-
-class UpdatePricingRequest(BaseModel):
-    kindle_price: float | None = None
-    paperback_price: float | None = None
-    hardcover_price: float | None = None
-    audiobook_price: float | None = None
-
-
-class PricingResponse(BaseModel):
-    id: uuid.UUID
-    book_id: uuid.UUID
-    kindle_price: float | None
-    paperback_price: float | None
-    hardcover_price: float | None
-    audiobook_price: float | None
-    currency: str
     updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-# ---------- Royalty Calculator ----------
-
-class RoyaltyCalcRequest(BaseModel):
-    price: float
-    format: str
-    platform: str
-    page_count: int | None = None
-    print_type: str | None = None
-
-
-class RoyaltyCalcResponse(BaseModel):
-    print_cost: float
-    royalty_rate: float
-    royalty_amount: float
+class GenerateBarcodeRequest(BaseModel):
+    width: int = Field(default=200, ge=50, le=1000, description="Barcode width in pixels")
+    height: int = Field(default=100, ge=25, le=500, description="Barcode height in pixels")
+    include_text: bool = Field(default=True, description="Whether to include human-readable text below the barcode")

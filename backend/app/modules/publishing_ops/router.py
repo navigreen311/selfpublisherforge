@@ -11,6 +11,11 @@ GET    /templates             List formatting templates
 POST   /templates             Create custom template
 GET    /listings              List all listings across platforms
 POST   /listings/{id}/sync    Sync listing with platform
+GET    /isbns                 List all ISBNs
+POST   /isbns                 Register a new ISBN
+PATCH  /isbns/{id}            Update an ISBN record
+DELETE /isbns/{id}            Delete an ISBN record
+POST   /isbns/{id}/generate-barcode  Generate barcode for ISBN
 
 Book metadata endpoints are on a separate router registered at "/api/v1":
 GET    /books/{id}/metadata   Get book metadata
@@ -30,14 +35,18 @@ from app.modules.publishing_ops import service
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
     BookMetadataUpdate,
+    CreateISBNRequest,
     ExportRequest,
     ExportResponse,
     FormattingTemplate,
     FormattingTemplateCreate,
+    GenerateBarcodeRequest,
+    ISBNResponse,
     ListingDetail,
     ListingSyncResponse,
     PublishingAccount,
     PublishingAccountCreate,
+    UpdateISBNRequest,
 )
 
 router = APIRouter(tags=["publishing"])
@@ -236,3 +245,90 @@ async def sync_listing(
 ):
     """Trigger a sync for a specific listing with its platform."""
     return await service.sync_listing(db, listing_id)
+
+
+# ---------- ISBNs ----------
+
+@router.get(
+    "/isbns",
+    response_model=list[ISBNResponse],
+    summary="List ISBNs",
+    description="List all ISBNs for the organisation.",
+)
+async def list_isbns(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List all ISBNs for the organisation."""
+    org_id = current_user["org_id"]
+    return await service.list_isbns(db, org_id)
+
+
+@router.post(
+    "/isbns",
+    response_model=ISBNResponse,
+    status_code=201,
+    summary="Create ISBN",
+    description="Register a new ISBN for the organisation.",
+)
+async def create_isbn(
+    body: CreateISBNRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Register a new ISBN."""
+    org_id = current_user["org_id"]
+    return await service.create_isbn(db, org_id, body)
+
+
+@router.patch(
+    "/isbns/{isbn_id}",
+    response_model=ISBNResponse,
+    summary="Update ISBN",
+    description="Update an existing ISBN record.",
+)
+async def update_isbn(
+    isbn_id: uuid.UUID,
+    body: UpdateISBNRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Update an existing ISBN record."""
+    result = await service.update_isbn(db, isbn_id, body)
+    if result is None:
+        raise HTTPException(status_code=404, detail="ISBN not found")
+    return result
+
+
+@router.delete(
+    "/isbns/{isbn_id}",
+    status_code=204,
+    summary="Delete ISBN",
+    description="Remove an ISBN record.",
+)
+async def delete_isbn(
+    isbn_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete (soft-delete) an ISBN record."""
+    deleted = await service.delete_isbn(db, isbn_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="ISBN not found")
+    return
+
+
+@router.post(
+    "/isbns/{isbn_id}/generate-barcode",
+    summary="Generate ISBN barcode",
+    description="Generate a barcode image for a registered ISBN.",
+)
+async def generate_barcode(
+    isbn_id: uuid.UUID,
+    body: GenerateBarcodeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate a barcode image for a registered ISBN."""
+    # Return placeholder URL for now
+    return {"barcode_url": f"/api/v1/publishing/isbns/{isbn_id}/barcode.png"}
