@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.audiobook import service
+from app.modules.audiobook import service_crud as crud_service
+from app.modules.audiobook.schemas_extended import AudiobookStatsResponse
 from app.modules.audiobook.schemas import (
     PronunciationCreate,
     PronunciationListResponse,
@@ -144,3 +146,20 @@ async def delete_pronunciation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Pronunciation entry not found.",
         )
+
+
+
+
+# Stats endpoint
+
+@router.get(
+    "/stats",
+    response_model=AudiobookStatsResponse,
+    summary="Get audiobook statistics",
+    description="Get statistics for audiobook projects in the organization: total, in progress, completed, and total duration.",
+)
+async def get_audiobook_stats(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await crud_service.get_audiobook_stats(db, current_user["org_id"])
