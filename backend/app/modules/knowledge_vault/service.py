@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, select
+import httpx
+from sqlalchemy import and_, delete, select
 from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.knowledge_vault import importer
-from app.modules.knowledge_vault.models import KnowledgeEntry
+from app.modules.knowledge_vault.models import KnowledgeAttachment, KnowledgeEntry
 from app.modules.knowledge_vault.schemas import (
     CreateEntryRequest,
     UpdateEntryRequest,
@@ -370,3 +372,189 @@ class KnowledgeService:
         recent_titles = [r[0] for r in result.all()]
 
         return await importer.suggest_research(existing_tags, recent_titles)
+
+
+# ── Standalone helper functions ─────────────────────────────────────
+
+
+def _word_count(text: str | None) -> int:
+    """Return the number of whitespace-delimited words in *text*."""
+    if not text:
+        return 0
+    return len(text.split())
+
+
+async def create_entry_full(
+    db: AsyncSession,
+    org_id: UUID,
+    payload: CreateEntryRequest,
+) -> KnowledgeEntry:
+    """Create a KnowledgeEntry with category, project_id, and word_count calculation.
+
+    Accepts the standard *CreateEntryRequest* and enriches the stored metadata
+    with ``word_count``, and optionally ``category`` / ``project_id`` if
+    present in ``payload.metadata``.
+    """
+    merged_meta: dict[str, Any] = dict(payload.metadata) if payload.metadata else {}
+    merged_meta["word_count"] = _word_count(payload.content)
+
+    entry = KnowledgeEntry(
+        org_id=org_id,
+        title=payload.title,
+        content=payload.content,
+        source_url=payload.source_url,
+        source_type=payload.source_type,
+        tags=payload.tags,
+        credibility_score=payload.credibility_score,
+        metadata_=merged_meta,
+    )
+    db.add(entry)
+    await db.flush()
+    await db.refresh(entry)
+    return entry
+
+
+async def update_entry(
+    db: AsyncSession,
+    entry_id: UUID,
+    org_id: UUID,
+    payload: UpdateEntryRequest,
+) -> KnowledgeEntry | None:
+    """Update all mutable fields on an existing KnowledgeEntry.
+
+    Returns ``None`` when the entry does not exist or belongs to a different org.
+    """
+    result = await db.execute(
+        select(KnowledgeEntry).where(
+            and_(
+                KnowledgeEntry.id == entry_id,
+                KnowledgeEntry.org_id == org_id,
+                KnowledgeEntry.deleted_at.is_(None),
+            )
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        return None
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if "metadata" in update_data:
+        update_data["metadata_"] = update_data.pop("metadata")
+
+    # Recalculate word_count when content changes
+    if "content" in update_data:
+        meta = dict(entry.metadata_) if entry.metadata_ else {}
+        meta["word_count"] = _word_count(update_data["content"])
+        update_data["metadata_"] = {**meta, **update_data.get("metadata_", {})}
+
+    for key, value in update_data.items():
+        setattr(entry, key, value)
+
+    await db.flush()
+    await db.refresh(entry)
+    return entry
+
+
+async def upload_attachment(
+    db: AsyncSession,
+    entry_id: UUID,
+    org_id: UUID,
+    file_name: str,
+    file_url: str,
+    file_size: int | None = None,
+    mime_type: str | None = None,
+) -> KnowledgeAttachment:
+    """Insert a new row into ``knowledge_attachments``."""
+    attachment = KnowledgeAttachment(
+        org_id=org_id,
+        entry_id=entry_id,
+        file_name=file_name,
+        file_url=file_url,
+        file_size=file_size,
+        mime_type=mime_type,
+    )
+    db.add(attachment)
+    await db.flush()
+    await db.refresh(attachment)
+    return attachment
+
+
+async def list_attachments(
+    db: AsyncSession,
+    entry_id: UUID,
+    org_id: UUID,
+) -> list[KnowledgeAttachment]:
+    """Return all non-deleted attachments for a given entry and org."""
+    result = await db.execute(
+        select(KnowledgeAttachment)
+        .where(
+            and_(
+                KnowledgeAttachment.entry_id == entry_id,
+                KnowledgeAttachment.org_id == org_id,
+                KnowledgeAttachment.deleted_at.is_(None),
+            )
+        )
+        .order_by(KnowledgeAttachment.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def delete_attachment(
+    db: AsyncSession,
+    entry_id: UUID,
+    attachment_id: UUID,
+    org_id: UUID,
+) -> bool:
+    """Soft-delete an attachment. Returns ``True`` if a row was found and marked."""
+    result = await db.execute(
+        select(KnowledgeAttachment).where(
+            and_(
+                KnowledgeAttachment.id == attachment_id,
+                KnowledgeAttachment.entry_id == entry_id,
+                KnowledgeAttachment.org_id == org_id,
+                KnowledgeAttachment.deleted_at.is_(None),
+            )
+        )
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        return False
+
+    attachment.deleted_at = datetime.now(UTC)
+    await db.flush()
+    return True
+
+
+async def import_from_url(
+    db: AsyncSession,
+    org_id: UUID,
+    url: str,
+) -> KnowledgeEntry:
+    """Fetch *url* via httpx, strip HTML tags, and create a KnowledgeEntry."""
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        resp = await client.get(url, headers={"User-Agent": "SelfPublisherForge/1.0"})
+        resp.raise_for_status()
+        html = resp.text
+
+    # Extract title
+    title_match = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+    title = title_match.group(1).strip() if title_match else url
+
+    # Strip HTML to plain text
+    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<(br|/p|/div|/h[1-6])[^>]*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    content = text.strip()
+
+    if len(content) > 50_000:
+        content = content[:50_000] + "\n...[truncated]"
+
+    payload = CreateEntryRequest(
+        title=title,
+        content=content,
+        source_url=url,
+        source_type="url",
+    )
+    return await create_entry_full(db, org_id, payload)
