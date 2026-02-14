@@ -15,6 +15,7 @@ from app.modules.llm_orchestration.providers.base import LLMRequest
 from app.modules.llm_orchestration.router_config import ModelID
 from app.modules.style_cloning import service
 from app.modules.style_cloning.schemas import (
+    AddSampleRequest,
     AnalyzeRequest,
     ConformityCheckRequest,
     ConformityCheckResult,
@@ -23,6 +24,7 @@ from app.modules.style_cloning.schemas import (
     GenerateSampleRequest,
     ProfileListResponse,
     ProfileResponse,
+    SampleResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -260,3 +262,67 @@ async def conformity_check(
             detail="Profile not found or not yet analyzed",
         )
     return result
+
+
+# ---------------------------------------------------------------------------
+# Sample CRUD
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/{profile_id}/samples",
+    response_model=SampleResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a text sample",
+    description="Add a text sample to a style profile.",
+)
+async def add_sample(
+    profile_id: uuid.UUID,
+    body: AddSampleRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Add a text sample to a profile."""
+    org_id = current_user["org_id"]
+    try:
+        return await service.add_sample(db, profile_id, org_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get(
+    "/{profile_id}/samples",
+    response_model=list[SampleResponse],
+    summary="List profile samples",
+    description="List all text samples for a style profile.",
+)
+async def list_samples(
+    profile_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List samples for a profile."""
+    org_id = current_user["org_id"]
+    try:
+        return await service.list_samples(db, profile_id, org_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.delete(
+    "/{profile_id}/samples/{sample_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a sample",
+    description="Delete a text sample from a style profile.",
+)
+async def delete_sample(
+    profile_id: uuid.UUID,
+    sample_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete a sample."""
+    org_id = current_user["org_id"]
+    success = await service.delete_sample(db, profile_id, sample_id, org_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return

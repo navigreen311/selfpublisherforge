@@ -142,6 +142,25 @@ class ConformityCheckResult(BaseModel):
     feedback: list[str] = Field(default_factory=list, description="Actionable feedback items")
 
 
+class AddSampleRequest(BaseModel):
+    text: str = Field(..., min_length=1, description="Raw sample text to add")
+    label: str | None = Field(None, max_length=255, description="Optional label for the sample")
+    source_type: str = Field("paste", max_length=50, description="How the sample was provided")
+    source_reference: uuid.UUID | None = Field(None, description="Optional reference to a content asset")
+
+
+class SampleResponse(BaseModel):
+    id: uuid.UUID
+    profile_id: uuid.UUID
+    label: str | None = None
+    source_type: str
+    word_count: int
+    file_name: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class ProfileResponse(BaseModel):
     id: uuid.UUID
     org_id: uuid.UUID
