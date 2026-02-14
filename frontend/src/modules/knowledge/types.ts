@@ -61,3 +61,22 @@ export interface ImportResult {
   source_type: string;
   status: string;
 }
+
+export interface CreateEntryPayload {
+  title: string;
+  content: string;
+  source_type?: string;
+  tags?: string[];
+  category?: string;
+  project_id?: string;
+}
+
+export interface Attachment {
+  id: string;
+  entry_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  url: string;
+  created_at: string | null;
+}
