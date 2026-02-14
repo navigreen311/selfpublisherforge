@@ -41,6 +41,31 @@
     "suggestedTags": "Suggested Tags",
     "metadata": "Metadata",
     "deleteConfirmTitle": "Delete entry",
-    "deleteConfirmMessage": "Are you sure you want to delete this entry? This action cannot be undone."
+    "deleteConfirmMessage": "Are you sure you want to delete this entry? This action cannot be undone.",
+    "editor": {
+      "save": "Save",
+      "saving": "Saving...",
+      "saveSuccess": "Entry saved successfully",
+      "saveError": "Failed to save entry",
+      "deleteSuccess": "Entry deleted successfully",
+      "moreActions": "More actions",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Entry title",
+      "titleRequired": "Title is required",
+      "categoryLabel": "Category",
+      "categoryPlaceholder": "e.g. Research, Notes, Reference",
+      "linkedProjectLabel": "Linked Project",
+      "linkedProjectPlaceholder": "Project name or ID",
+      "tagsLabel": "Tags",
+      "tagPlaceholder": "Add a tag...",
+      "addTag": "Add",
+      "contentLabel": "Content",
+      "contentPlaceholder": "Write your entry content here...",
+      "attachments": "Attachments",
+      "addAttachment": "Add Attachment",
+      "noAttachments": "No attachments yet",
+      "createdAt": "Created",
+      "updatedAt": "Updated"
+    }
   }
 }
