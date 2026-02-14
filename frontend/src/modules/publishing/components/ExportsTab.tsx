@@ -1,20 +1,12 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { ExportWizard } from "./ExportWizard";
+import React from 'react';
 
 export function ExportsTab() {
-  const [bookId] = useState("default");
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">Export Book</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Generate EPUB or print-ready PDF files for your book.
-        </p>
-      </div>
-      <ExportWizard bookId={bookId} />
+    <div className="rounded-lg border p-4">
+      <h3 className="text-lg font-semibold">Exports</h3>
+      <p className="text-sm text-muted-foreground">Manage your file exports.</p>
     </div>
   );
 }
