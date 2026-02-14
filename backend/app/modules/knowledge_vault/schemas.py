@@ -17,6 +17,8 @@ class CreateEntryRequest(BaseModel):
     source_type: str = Field(default="manual", pattern=r"^(manual|url|file|clip)$")
     tags: list[str] = Field(default_factory=list)
     credibility_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    category: str | None = Field(default=None, max_length=200)
+    project_id: UUID | None = Field(default=None)
     metadata: dict = Field(default_factory=dict)
 
 
@@ -27,6 +29,8 @@ class UpdateEntryRequest(BaseModel):
     source_type: str | None = Field(default=None, pattern=r"^(manual|url|file|clip)$")
     tags: list[str] | None = None
     credibility_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    category: str | None = Field(default=None, max_length=200)
+    project_id: UUID | None = None
     metadata: dict | None = None
 
 
@@ -40,6 +44,8 @@ class KnowledgeEntryResponse(BaseModel):
     source_type: str
     tags: list[str]
     credibility_score: float | None = None
+    category: str | None = None
+    project_id: UUID | None = None
     metadata: dict
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -80,6 +86,10 @@ class ImportRequest(BaseModel):
     file_name: str | None = Field(default=None, max_length=500)
     file_content_base64: str | None = None
     extract_facts: bool = Field(default=True)
+
+
+class ImportURLRequest(BaseModel):
+    url: str = Field(..., min_length=1, max_length=2048)
 
 
 class ImportResponse(BaseModel):

@@ -43,6 +43,8 @@ class KnowledgeService:
             source_type=payload.source_type,
             tags=payload.tags,
             credibility_score=payload.credibility_score,
+            category=payload.category,
+            project_id=payload.project_id,
             metadata_=payload.metadata,
         )
         self.db.add(entry)
@@ -84,6 +86,7 @@ class KnowledgeService:
         *,
         tags: list[str] | None = None,
         source_type: str | None = None,
+        category: str | None = None,
         cursor: str | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
@@ -102,6 +105,8 @@ class KnowledgeService:
             stmt = stmt.where(KnowledgeEntry.tags.overlap(tags))
         if source_type:
             stmt = stmt.where(KnowledgeEntry.source_type == source_type)
+        if category:
+            stmt = stmt.where(KnowledgeEntry.category == category)
         if cursor:
             stmt = stmt.where(KnowledgeEntry.created_at < cursor)
 
