@@ -40,17 +40,14 @@ export default function PublishingDashboardPage() {
 
       {/* Stats */}
       <StatsCards
-        accounts={accounts}
-        listings={listings}
-        listingsLoading={listingsLoading}
-        listingsError={listingsError}
+        accountCount={accounts.length}
+        activeListingCount={listings.length}
+        pendingExportCount={0}
+        totalRevenue={0}
       />
 
       {/* Tabs: Listings & Accounts */}
-      <PublishingTabs
-        accounts={accounts}
-        accountsLoading={accountsLoading}
-      />
+      <PublishingTabs />
     </div>
   );
 }

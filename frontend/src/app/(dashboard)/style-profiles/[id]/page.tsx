@@ -132,33 +132,26 @@ export default function StyleProfileDetailPage({ params }: PageProps) {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6 mt-4">
-          <VoiceCharacteristics
-            styleCard={profile.style_card}
-            loading={profile.status === "analyzing"}
-          />
-          <StyleMetrics
-            fingerprint={fingerprintData?.fingerprint}
-            loading={fingerprintPending && profile.status === "ready"}
-          />
+          {profile.style_card && (
+            <VoiceCharacteristics
+              styleCard={profile.style_card}
+            />
+          )}
+          {fingerprintData?.fingerprint && (
+            <StyleMetrics
+              fingerprint={fingerprintData.fingerprint}
+            />
+          )}
         </TabsContent>
 
         {/* Test Tab */}
         <TabsContent value="test" className="mt-4">
-          <TestRefine
-            onCheck={handleConformityCheck}
-            onGenerate={handleGenerate}
-            isChecking={conformityMutation.isPending}
-            isGenerating={generateMutation.isPending}
-            profileReady={profile.status === "ready"}
-          />
+          <TestRefine profileId={id} />
         </TabsContent>
 
         {/* Samples Tab */}
         <TabsContent value="samples" className="mt-4">
-          <SampleComparison
-            onAddSamples={handleAnalyze}
-            isSubmitting={analyzeMutation.isPending}
-          />
+          <SampleComparison profileId={id} />
         </TabsContent>
       </Tabs>
     </div>

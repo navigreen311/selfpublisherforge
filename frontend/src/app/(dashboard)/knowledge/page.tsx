@@ -143,7 +143,7 @@ export default function KnowledgeVaultPage() {
         <CategoryFilter
           categories={categories}
           selectedCategory={selectedCategory}
-          onSelectCategory={handleSelectCategory}
+          onSelect={handleSelectCategory}
         />
       )}
 

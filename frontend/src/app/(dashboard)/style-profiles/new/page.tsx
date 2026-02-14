@@ -150,7 +150,7 @@ export default function NewStyleProfilePage() {
             {/* Quick Start: Preset Picker */}
             <div className="border-t pt-4">
               <h3 className="text-sm font-semibold mb-3">{t("new.quickStart")}</h3>
-              <PresetPicker selected={preset} onSelect={setPreset} />
+              <PresetPicker selectedPreset={preset} onSelect={setPreset} />
             </div>
 
             {/* Voice Description textarea */}
