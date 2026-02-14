@@ -1,10 +1,10 @@
 """Knowledge Vault database models."""
 
 
-from sqlalchemy import BigInteger, Column, Float, ForeignKey, String, Text
+from sqlalchemy import Column, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID as PG_UUID
 
-from app.database import BaseModel, TenantModel
+from app.database import TenantModel
 
 
 class KnowledgeEntry(TenantModel):
@@ -21,6 +21,8 @@ class KnowledgeEntry(TenantModel):
     )
     tags: list[str] = Column(ARRAY(String(100)), nullable=False, server_default="{}")  # type: ignore[assignment]
     credibility_score: float | None = Column(Float, nullable=True)  # type: ignore[assignment]
+    category: str | None = Column(String(200), nullable=True, index=True)  # type: ignore[assignment]
+    project_id: str | None = Column(PG_UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True, index=True)  # type: ignore[assignment]
     metadata_: dict = Column("metadata", JSONB, nullable=False, server_default="{}")  # type: ignore[assignment]
 
     def __repr__(self) -> str:
@@ -36,29 +38,10 @@ class KnowledgeEntry(TenantModel):
             "source_type": self.source_type,
             "tags": self.tags or [],
             "credibility_score": self.credibility_score,
+            "category": self.category,
+            "project_id": str(self.project_id) if self.project_id else None,
             "metadata": self.metadata_ or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
         }
-
-
-class KnowledgeAttachment(BaseModel):
-    """A file attachment linked to a knowledge entry."""
-
-    __tablename__ = "knowledge_attachments"
-
-    entry_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("knowledge_entries.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    file_name: str = Column(String(500), nullable=False)  # type: ignore[assignment]
-    file_url: str = Column(String(2048), nullable=False)  # type: ignore[assignment]
-    file_size: int = Column(BigInteger, nullable=False, default=0)  # type: ignore[assignment]
-    mime_type: str = Column(String(127), nullable=False, default="application/octet-stream")  # type: ignore[assignment]
-    s3_key: str = Column(String(1024), nullable=True)  # type: ignore[assignment]
-
-    def __repr__(self) -> str:
-        return f"<KnowledgeAttachment id={self.id} file_name={self.file_name!r}>"

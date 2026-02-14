@@ -22,6 +22,7 @@ from app.modules.knowledge_vault.schemas import (
     CreateEntryRequest,
     ImportRequest,
     ImportResponse,
+    ImportURLRequest,
     KnowledgeEntryResponse,
     SearchRequest,
     SearchResult,
@@ -112,6 +113,41 @@ async def import_entry(
     )
 
 
+# ── Import from URL (simplified) ─────────────────────────────────
+
+@router.post(
+    "/import-url",
+    response_model=ImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import a web article as a knowledge entry",
+    description="Fetch a URL, extract its text content (stripping HTML), and create a knowledge entry.",
+)
+async def import_from_url(
+    body: ImportURLRequest,
+    current_user: dict = Depends(get_current_user),
+    service: KnowledgeService = Depends(_get_service),
+):
+    """Import a web article as a knowledge entry."""
+    try:
+        entry = await service.import_entry(
+            org_id=_org_id(current_user),
+            url=body.url,
+            extract_facts=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch URL: {exc}")
+
+    return ImportResponse(
+        entry_id=entry.id,
+        title=entry.title,
+        content_preview=entry.content[:300] if entry.content else "",
+        tags=entry.tags or [],
+        source_type=entry.source_type,
+    )
+
+
 # ── Tags ─────────────────────────────────────────────────────────
 
 @router.get(
@@ -172,6 +208,7 @@ async def create_entry(
 async def list_entries(
     tag: list[str] | None = Query(default=None),
     source_type: str | None = Query(default=None),
+    category: str | None = Query(default=None),
     cursor: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
@@ -181,6 +218,7 @@ async def list_entries(
         _org_id(current_user),
         tags=tag,
         source_type=source_type,
+        category=category,
         cursor=cursor,
         limit=limit,
     )
@@ -448,6 +486,8 @@ def _entry_response(entry) -> dict:
         "source_type": entry.source_type,
         "tags": entry.tags or [],
         "credibility_score": entry.credibility_score,
+        "category": entry.category,
+        "project_id": entry.project_id,
         "metadata": entry.metadata_ or {},
         "created_at": entry.created_at,
         "updated_at": entry.updated_at,
