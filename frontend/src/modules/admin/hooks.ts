@@ -11,6 +11,14 @@ import type {
   OrgFilters,
   AuditLogFilters,
   PaginatedResponse,
+  PlatformStatsDetailed,
+  ActivityLogEntry,
+  AdminUserDetail,
+  InviteUserPayload,
+  UpdateUserPayload,
+  AdminOrgDetail,
+  UpdateOrgPayload,
+  BillingOverviewData,
 } from "./types";
 
 export type * from "./types";
@@ -18,6 +26,7 @@ export type * from "./types";
 // ─── Query Keys ──────────────────────────────────────────────────────────────
 
 export const adminKeys = {
+  all: ["admin"] as const,
   stats: ["admin", "stats"] as const,
   users: (filters: UserFilters, page: number) => ["admin", "users", filters, page] as const,
   orgs: (filters: OrgFilters, page: number) => ["admin", "orgs", filters, page] as const,
@@ -121,6 +130,139 @@ export function useAuditLog(filters: AuditLogFilters = {}, page = 1, pageSize = 
         `/api/v1/admin/audit-log?${params.toString()}`
       );
       return data;
+    },
+  });
+}
+
+export function useDetailedPlatformStats() {
+  return useQuery({
+    queryKey: [...adminKeys.all, "detailed-stats"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/admin/stats");
+      return res.data as PlatformStatsDetailed;
+    },
+  });
+}
+
+export function useActivityLog(filters?: { action?: string; resource_type?: string; limit?: number }) {
+  return useQuery({
+    queryKey: [...adminKeys.all, "activity", filters],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/admin/activity", { params: filters });
+      return res.data as { activities: ActivityLogEntry[]; total: number };
+    },
+  });
+}
+
+export function useAdminUserDetail(userId: string | undefined) {
+  return useQuery({
+    queryKey: [...adminKeys.all, "user", userId],
+    queryFn: async () => {
+      const res = await api.get(`/api/v1/admin/users/${userId}`);
+      return res.data as AdminUserDetail;
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useInviteUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: InviteUserPayload) => {
+      const res = await api.post("/api/v1/admin/users/invite", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+    },
+  });
+}
+
+export function useUpdateAdminUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: UpdateUserPayload }) => {
+      const res = await api.patch(`/api/v1/admin/users/${userId}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+    },
+  });
+}
+
+export function useDeactivateUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.post(`/api/v1/admin/users/${userId}/deactivate`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+    },
+  });
+}
+
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.post(`/api/v1/admin/users/${userId}/reset-password`);
+      return res.data;
+    },
+  });
+}
+
+export function useAdminOrganizations() {
+  return useQuery({
+    queryKey: [...adminKeys.all, "organizations-list"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/admin/organizations");
+      return res.data as AdminOrgDetail[];
+    },
+  });
+}
+
+export function useAdminOrgDetail(orgId: string | undefined) {
+  return useQuery({
+    queryKey: [...adminKeys.all, "org", orgId],
+    queryFn: async () => {
+      const res = await api.get(`/api/v1/admin/organizations/${orgId}`);
+      return res.data as AdminOrgDetail;
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useUpdateAdminOrg() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orgId, data }: { orgId: string; data: UpdateOrgPayload }) => {
+      const res = await api.patch(`/api/v1/admin/organizations/${orgId}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+    },
+  });
+}
+
+export function useAdminBilling() {
+  return useQuery({
+    queryKey: [...adminKeys.all, "billing"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/admin/billing");
+      return res.data as BillingOverviewData;
+    },
+  });
+}
+
+export function useAdminBillingUsage() {
+  return useQuery({
+    queryKey: [...adminKeys.all, "billing-usage"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/admin/billing/usage");
+      return res.data;
     },
   });
 }

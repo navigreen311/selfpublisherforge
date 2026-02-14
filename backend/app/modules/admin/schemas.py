@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from shared.types.enums import PlanTier
+from app.schemas.common import PlanTier
 
 
 # ---------------------------------------------------------------------------
@@ -56,3 +56,122 @@ class FeatureFlag(BaseModel):
 class FeatureFlagsResponse(BaseModel):
     """Response containing all feature flags."""
     flags: list[FeatureFlag]
+
+
+# ---------------------------------------------------------------------------
+# Platform Statistics
+# ---------------------------------------------------------------------------
+
+class PlatformStatsResponse(BaseModel):
+    """Platform-wide statistics for admin dashboard."""
+    users_total: int
+    users_active_week: int
+    organizations: int
+    books: int
+    ai_tasks_month: int
+    tokens_month: int
+    storage_used_bytes: int
+    monthly_revenue: float
+
+
+# ---------------------------------------------------------------------------
+# Activity Log
+# ---------------------------------------------------------------------------
+
+class ActivityLogEntry(BaseModel):
+    """Individual activity log entry."""
+    id: UUID
+    user_name: str
+    user_email: str
+    action: str
+    resource_type: str | None
+    resource_id: UUID | None
+    details: dict | None
+    created_at: datetime
+
+
+class ActivityLogResponse(BaseModel):
+    """Response containing activity log entries."""
+    activities: list[ActivityLogEntry]
+    total: int
+
+
+class ActivityLogFilters(BaseModel):
+    """Filters for activity log queries."""
+    action: str | None = None
+    resource_type: str | None = None
+    from_date: datetime | None = None
+    to_date: datetime | None = None
+    limit: int = 50
+
+
+# ---------------------------------------------------------------------------
+# User Management
+# ---------------------------------------------------------------------------
+
+class AdminUserDetail(BaseModel):
+    """Detailed user information for admin view."""
+    id: UUID
+    email: str
+    name: str
+    role: str
+    status: str
+    org_id: UUID
+    org_name: str
+    last_active: datetime | None
+    books_count: int
+    manuscripts_count: int
+    ai_tasks_count: int
+    permissions: list[str]
+
+
+class InviteUserRequest(BaseModel):
+    """Request to invite a new user."""
+    email: str
+    role: str = "author"
+    message: str | None = None
+
+
+class UpdateUserRequest(BaseModel):
+    """Request to update user settings."""
+    role: str | None = None
+    status: str | None = None
+    permissions: list[str] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Organization Management
+# ---------------------------------------------------------------------------
+
+class AdminOrgDetail(BaseModel):
+    """Detailed organization information for admin view."""
+    id: UUID
+    name: str
+    slug: str
+    plan_tier: str
+    owner_name: str
+    member_count: int
+    books_count: int
+    storage_used_bytes: int
+    storage_limit_bytes: int
+    feature_toggles: dict
+    created_at: datetime
+
+
+class UpdateOrgRequest(BaseModel):
+    """Request to update organization settings."""
+    name: str | None = None
+    feature_toggles: dict | None = None
+
+
+# ---------------------------------------------------------------------------
+# Billing
+# ---------------------------------------------------------------------------
+
+class BillingOverview(BaseModel):
+    """Billing overview for an organization."""
+    plan_name: str
+    plan_price: float
+    next_billing: datetime | None
+    usage: dict
+    invoices: list[dict]

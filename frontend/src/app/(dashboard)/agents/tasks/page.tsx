@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import {
   useTasks,
   useCreateTask,
@@ -10,232 +10,60 @@ import {
   useCancelTask,
   useAgents,
 } from "@/modules/agents/hooks";
-import { TaskList } from "@/modules/agents/components/TaskList";
-import { TaskDetail } from "@/modules/agents/components/TaskDetail";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { RecentTasksList } from "@/modules/agents/components/RecentTasksList";
+import { TaskExecutionView } from "@/modules/agents/components/TaskExecutionView";
+import { NewTaskModal } from "@/modules/agents/components/NewTaskModal";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { AgentTask, TaskStatus } from "@/modules/agents/types";
 import { useTranslations } from "@/hooks/use-translations";
 
 export default function TasksPage() {
   const t = useTranslations("agents");
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | "">("");
-  const [selectedTask, setSelectedTask] = useState<AgentTask | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskAgentId, setNewTaskAgentId] = useState("");
-  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
+  const [agentFilter, setAgentFilter] = useState<string>("all");
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [showNewTask, setShowNewTask] = useState(false);
 
-  // Dialog state
-  const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const STATUS_OPTIONS: { value: TaskStatus | ""; label: string }[] = [
-    { value: "", label: t("tasks.allStatuses") },
-    { value: "pending", label: t("tasks.pending") },
-    { value: "running", label: t("tasks.running") },
-    { value: "awaiting_approval", label: t("tasks.awaitingApproval") },
-    { value: "approved", label: t("tasks.approved") },
-    { value: "rejected", label: t("tasks.rejected") },
-    { value: "completed", label: t("tasks.completed") },
-    { value: "failed", label: t("tasks.failed") },
-    { value: "cancelled", label: t("tasks.cancelled") },
+  const STATUS_FILTERS: { value: TaskStatus | "all"; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "pending", label: "Pending" },
+    { value: "running", label: "Running" },
+    { value: "completed", label: "Complete" },
+    { value: "failed", label: "Failed" },
   ];
 
   const { data: agentsData } = useAgents();
   const { data: tasksData, isLoading } = useTasks(
-    statusFilter ? { status: statusFilter as TaskStatus } : undefined
+    statusFilter !== "all" ? { status: statusFilter as TaskStatus } : undefined
   );
-  const createTask = useCreateTask();
-  const approveTask = useApproveTask();
-  const rejectTask = useRejectTask();
-  const cancelTask = useCancelTask();
 
   const tasks = tasksData?.items || [];
   const agents = agentsData?.items || [];
 
-  const handleCreateTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim() || !newTaskAgentId) return;
-    createTask.mutate(
-      {
-        agent_id: newTaskAgentId,
-        title: newTaskTitle,
-        description: newTaskDescription || undefined,
-      },
-      {
-        onSuccess: () => {
-          setShowCreateForm(false);
-          setNewTaskTitle("");
-          setNewTaskDescription("");
-          setNewTaskAgentId("");
-        },
-      }
-    );
+  // Filter by agent if selected
+  const filteredTasks = agentFilter === "all"
+    ? tasks
+    : tasks.filter(task => task.agent_id === agentFilter);
+
+  const handleTaskClick = (taskId: string) => {
+    setActiveTaskId(taskId);
   };
 
-  const openApproveDialog = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    setShowApproveDialog(true);
-  };
-
-  const openRejectDialog = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    setRejectionReason("");
-    setShowRejectDialog(true);
-  };
-
-  const handleApproveConfirm = () => {
-    if (!selectedTaskId) return;
-    setIsProcessing(true);
-    approveTask.mutate(
-      { taskId: selectedTaskId },
-      {
-        onSuccess: (updatedTask) => {
-          setIsProcessing(false);
-          setShowApproveDialog(false);
-          setSelectedTaskId(null);
-          // If we're in detail view, update the selected task
-          if (selectedTask && selectedTask.id === selectedTaskId) {
-            setSelectedTask(updatedTask);
-          }
-        },
-        onError: () => {
-          setIsProcessing(false);
-        },
-      }
-    );
-  };
-
-  const handleRejectConfirm = () => {
-    if (!selectedTaskId || !rejectionReason.trim()) return;
-    setIsProcessing(true);
-    rejectTask.mutate(
-      { taskId: selectedTaskId, reason: rejectionReason.trim() },
-      {
-        onSuccess: (updatedTask) => {
-          setIsProcessing(false);
-          setShowRejectDialog(false);
-          setSelectedTaskId(null);
-          setRejectionReason("");
-          // If we're in detail view, update the selected task
-          if (selectedTask && selectedTask.id === selectedTaskId) {
-            setSelectedTask(updatedTask);
-          }
-        },
-        onError: () => {
-          setIsProcessing(false);
-        },
-      }
-    );
-  };
-
-  if (selectedTask) {
+  // Show task execution view if active task is set
+  if (activeTaskId) {
     return (
-      <div className="space-y-4">
-        <TaskDetail
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onApprove={() => openApproveDialog(selectedTask.id)}
-          onReject={() => openRejectDialog(selectedTask.id)}
-          onCancel={() => {
-            cancelTask.mutate(
-              { taskId: selectedTask.id, reason: "Cancelled by user" },
-              {
-                onSuccess: (updatedTask) => {
-                  setSelectedTask(updatedTask);
-                },
-              }
-            );
-          }}
-        />
-
-        {/* Approve dialog */}
-        <ConfirmDialog
-          open={showApproveDialog}
-          onOpenChange={(open) => {
-            setShowApproveDialog(open);
-            if (!open) setSelectedTaskId(null);
-          }}
-          onConfirm={handleApproveConfirm}
-          title={t("tasks.approveTask")}
-          description={t("tasks.approveDescription")}
-          confirmText={t("tasks.approve")}
-          cancelText={t("cancel")}
-          variant="default"
-          loading={isProcessing}
-        />
-
-        {/* Reject dialog */}
-        <Dialog
-          open={showRejectDialog}
-          onOpenChange={(open) => {
-            if (!isProcessing) {
-              setShowRejectDialog(open);
-              if (!open) {
-                setSelectedTaskId(null);
-                setRejectionReason("");
-              }
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("tasks.rejectTask")}</DialogTitle>
-              <DialogDescription>
-                {t("tasks.rejectDescription")}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-2">
-              <Textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder={t("tasks.rejectionReasonPlaceholder")}
-                rows={3}
-                aria-label={t("tasks.rejectionReason")}
-                disabled={isProcessing}
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRejectDialog(false);
-                  setSelectedTaskId(null);
-                  setRejectionReason("");
-                }}
-                disabled={isProcessing}
-                aria-label={t("tasks.cancelRejection")}
-              >
-                {t("cancel")}
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleRejectConfirm}
-                disabled={isProcessing || !rejectionReason.trim()}
-                aria-label={t("tasks.confirmRejection")}
-              >
-                {isProcessing && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {isProcessing ? t("tasks.processing") : t("tasks.reject")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <TaskExecutionView
+        taskId={activeTaskId}
+        onClose={() => setActiveTaskId(null)}
+      />
     );
   }
 
@@ -248,181 +76,86 @@ export default function TasksPage() {
             {t("tasks.subtitle")}
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          aria-label={showCreateForm ? t("tasks.cancelCreate") : t("tasks.createNewTask")}
-        >
-          {showCreateForm ? t("cancel") : t("tasks.newTask")}
-        </button>
+        <Button onClick={() => setShowNewTask(true)} className="inline-flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          {t("tasks.newTask")}
+        </Button>
       </div>
 
-      {/* Create task form */}
-      {showCreateForm && (
-        <form
-          onSubmit={handleCreateTask}
-          className="rounded-lg border p-4 space-y-3"
-        >
-          <h3 className="text-sm font-semibold">{t("tasks.createTask")}</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium mb-1">{t("tasks.agent")}</label>
-              <select
-                value={newTaskAgentId}
-                onChange={(e) => setNewTaskAgentId(e.target.value)}
-                className="w-full rounded-md border px-2 py-1.5 text-sm"
-                required
-              >
-                <option value="">{t("tasks.selectAgent")}</option>
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">{t("tasks.taskTitle")}</label>
-              <input
-                type="text"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder={t("tasks.taskTitlePlaceholder")}
-                className="w-full rounded-md border px-2 py-1.5 text-sm"
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">
-              {t("tasks.taskDescription")}
-            </label>
-            <textarea
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
-              placeholder={t("tasks.taskDescriptionPlaceholder")}
-              className="w-full rounded-md border px-2 py-1.5 text-sm"
-              rows={2}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={createTask.isPending}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            aria-label={t("tasks.submitTask")}
-          >
-            {createTask.isPending ? t("tasks.creating") : t("tasks.createTask")}
-          </button>
-        </form>
-      )}
-
       {/* Filters */}
-      <div className="flex items-center gap-3">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "")}
-          className="rounded-md border px-3 py-1.5 text-sm"
-          aria-label={t("tasks.filterByStatus")}
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Status filter pills */}
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setStatusFilter(filter.value)}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                statusFilter === filter.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              {filter.label}
+            </button>
           ))}
-        </select>
-        <span className="text-sm text-muted-foreground">
-          {t("tasks.totalTasks", { count: tasksData?.total_count ?? 0 })}
-        </span>
+        </div>
+
+        {/* Agent filter dropdown */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted-foreground">Agent:</label>
+          <Select value={agentFilter} onValueChange={setAgentFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Agents" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Agents</SelectItem>
+              {agents.map((agent) => (
+                <SelectItem key={agent.id} value={agent.id}>
+                  {agent.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Task count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredTasks.length} of {tasksData?.total_count ?? 0} tasks
       </div>
 
       {/* Task list */}
       {isLoading ? (
-        <div className="text-muted-foreground">{t("tasks.loadingTasks")}</div>
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          Loading tasks...
+        </div>
+      ) : filteredTasks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
+          <p className="text-muted-foreground">No tasks found</p>
+          <Button
+            onClick={() => setShowNewTask(true)}
+            variant="link"
+            className="mt-2"
+          >
+            Create your first task
+          </Button>
+        </div>
       ) : (
-        <TaskList
-          tasks={tasks}
-          onSelect={setSelectedTask}
-          onApprove={(task) => openApproveDialog(task.id)}
-          onReject={(task) => openRejectDialog(task.id)}
-          onCancel={(task) =>
-            cancelTask.mutate({ taskId: task.id, reason: "Cancelled by user" })
-          }
+        <RecentTasksList
+          tasks={filteredTasks}
+          onViewOutput={handleTaskClick}
         />
       )}
 
-      {/* Approve dialog */}
-      <ConfirmDialog
-        open={showApproveDialog}
-        onOpenChange={(open) => {
-          setShowApproveDialog(open);
-          if (!open) setSelectedTaskId(null);
-        }}
-        onConfirm={handleApproveConfirm}
-        title={t("tasks.approveTask")}
-        description={t("tasks.approveDescription")}
-        confirmText={t("tasks.approve")}
-        cancelText={t("cancel")}
-        variant="default"
-        loading={isProcessing}
+      {/* New task modal */}
+      <NewTaskModal
+        open={showNewTask}
+        onOpenChange={setShowNewTask}
+        agents={agents}
       />
-
-      {/* Reject dialog */}
-      <Dialog
-        open={showRejectDialog}
-        onOpenChange={(open) => {
-          if (!isProcessing) {
-            setShowRejectDialog(open);
-            if (!open) {
-              setSelectedTaskId(null);
-              setRejectionReason("");
-            }
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("tasks.rejectTask")}</DialogTitle>
-            <DialogDescription>
-              {t("tasks.rejectDescription")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-2">
-            <Textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder={t("tasks.rejectionReasonPlaceholder")}
-              rows={3}
-              aria-label={t("tasks.rejectionReason")}
-              disabled={isProcessing}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowRejectDialog(false);
-                setSelectedTaskId(null);
-                setRejectionReason("");
-              }}
-              disabled={isProcessing}
-              aria-label={t("tasks.cancelRejection")}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectConfirm}
-              disabled={isProcessing || !rejectionReason.trim()}
-              aria-label={t("tasks.confirmRejection")}
-            >
-              {isProcessing && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {isProcessing ? t("tasks.processing") : t("tasks.reject")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

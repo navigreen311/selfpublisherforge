@@ -10,6 +10,7 @@ const TABS = [
   { label: "Security", href: "/settings/security" },
   { label: "Billing", href: "/settings/billing" },
   { label: "API Keys", href: "/settings/api-keys" },
+  { label: "Notifications", href: "/settings/notifications" },
 ] as const;
 
 export default function SettingsLayout({
