@@ -29,29 +29,30 @@ from app.models.publishing import (
     PublishingAccount as PublishingAccountModel,
 )
 from app.modules.publishing_ops.epub_generator import generate_epub
-from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel, ISBNRecord
+from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
 from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
+    BookFormat,
     BookMetadata,
     BookMetadataUpdate,
-    CreateISBNRequest,
     ExportFormat,
     ExportRequest,
     ExportResponse,
     FormattingTemplate,
     FormattingTemplateCreate,
-    ISBNResponse,
-    ISBNStatus,
     ListingDetail,
     ListingSyncResponse,
     PlatformType,
     PricingInfo,
+    PricingResponse,
     PublishingAccount,
     PublishingAccountCreate,
+    RoyaltyCalcRequest,
+    RoyaltyCalcResponse,
     TemplateGenre,
     TemplateStyleSettings,
     TrimSize,
-    UpdateISBNRequest,
+    UpdatePricingRequest,
 )
 from app.modules.publishing_ops.templates import get_all_templates
 from app.tasks.publishing_ops import (
@@ -597,110 +598,125 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
 
 
 # ---------------------------------------------------------------------------
-# ISBNs
+# Pricing
 # ---------------------------------------------------------------------------
 
-def _isbn_row_to_response(row: ISBNRecord) -> ISBNResponse:
-    """Map an ISBNRecord ORM instance to an ISBNResponse schema."""
-    return ISBNResponse(
-        id=row.id,
-        org_id=row.org_id,
-        isbn=row.isbn,
-        format=row.format,
-        status=row.status,
-        book_id=row.book_id,
-        title=row.title,
-        notes=row.notes,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
-    )
+def _calculate_royalty(
+    price: float,
+    fmt: BookFormat,
+    platform: PlatformType,
+    page_count: int | None = None,
+) -> tuple[float, float | None]:
+    """Calculate royalty and optional printing cost for a price/format/platform.
+
+    Returns (estimated_royalty, printing_cost).
+
+    KDP Kindle:  70% if $2.99-$9.99, else 35%
+    KDP Print:   60% of (price - printing_cost)
+                 printing_cost = page_count * 0.012 + 0.85
+    """
+    if platform == PlatformType.KDP and fmt == BookFormat.KINDLE:
+        rate = 0.70 if 2.99 <= price <= 9.99 else 0.35
+        return round(price * rate, 2), None
+
+    if platform == PlatformType.KDP and fmt in (BookFormat.PAPERBACK, BookFormat.HARDCOVER):
+        pages = page_count or 200  # sensible default
+        printing_cost = round(pages * 0.012 + 0.85, 2)
+        royalty = round(0.60 * max(price - printing_cost, 0), 2)
+        return royalty, printing_cost
+
+    # Generic fallback for other platforms: 50% flat
+    return round(price * 0.50, 2), None
 
 
-async def list_isbns(db: AsyncSession, org_id: uuid.UUID) -> list[ISBNResponse]:
-    """Return all ISBN records for an organisation."""
-    stmt = (
-        select(ISBNRecord)
-        .where(
-            ISBNRecord.org_id == org_id,
-            ISBNRecord.deleted_at.is_(None),
-        )
-        .order_by(ISBNRecord.created_at.desc())
-    )
+async def get_pricing(db: AsyncSession, book_id: uuid.UUID) -> PricingResponse | None:
+    """Retrieve pricing info for a book from the JSONB metadata_ column."""
+    stmt = select(Book).where(Book.id == book_id, Book.deleted_at.is_(None))
     result = await db.execute(stmt)
-    rows = result.scalars().all()
-    return [_isbn_row_to_response(row) for row in rows]
-
-
-async def create_isbn(
-    db: AsyncSession,
-    org_id: uuid.UUID,
-    data: CreateISBNRequest,
-) -> ISBNResponse:
-    """Register a new ISBN for the organisation."""
-    fmt_value = data.format.value if hasattr(data.format, "value") else str(data.format)
-    status = ISBNStatus.ASSIGNED.value if data.book_id else ISBNStatus.AVAILABLE.value
-
-    record = ISBNRecord(
-        org_id=org_id,
-        isbn=data.isbn,
-        format=fmt_value,
-        status=status,
-        book_id=data.book_id,
-        title=data.title,
-        notes=data.notes,
-    )
-    db.add(record)
-    await db.flush()
-    await db.refresh(record)
-    return _isbn_row_to_response(record)
-
-
-async def update_isbn(
-    db: AsyncSession,
-    isbn_id: uuid.UUID,
-    data: UpdateISBNRequest,
-) -> ISBNResponse | None:
-    """Update an existing ISBN record. Returns None if not found."""
-    stmt = (
-        select(ISBNRecord)
-        .where(
-            ISBNRecord.id == isbn_id,
-            ISBNRecord.deleted_at.is_(None),
-        )
-    )
-    result = await db.execute(stmt)
-    record = result.scalar_one_or_none()
-    if record is None:
+    book = result.scalar_one_or_none()
+    if book is None:
         return None
 
-    update_dict = data.model_dump(exclude_unset=True)
-    for field, value in update_dict.items():
-        if field == "format" and value is not None:
-            value = value.value if hasattr(value, "value") else str(value)
-        elif field == "status" and value is not None:
-            value = value.value if hasattr(value, "value") else str(value)
-        setattr(record, field, value)
+    meta = book.metadata_ or {}
+    pricing = meta.get("pricing", {})
 
-    record.updated_at = _now()
-    await db.flush()
-    await db.refresh(record)
-    return _isbn_row_to_response(record)
+    kindle_price = pricing.get("kindle_price")
+    paperback_price = pricing.get("paperback_price")
+    hardcover_price = pricing.get("hardcover_price")
+    page_count = meta.get("page_count")
 
+    royalties: dict[str, float] = {}
+    if kindle_price is not None and kindle_price > 0:
+        r, _ = _calculate_royalty(kindle_price, BookFormat.KINDLE, PlatformType.KDP)
+        royalties["kindle"] = r
+    if paperback_price is not None and paperback_price > 0:
+        r, _ = _calculate_royalty(paperback_price, BookFormat.PAPERBACK, PlatformType.KDP, page_count)
+        royalties["paperback"] = r
+    if hardcover_price is not None and hardcover_price > 0:
+        r, _ = _calculate_royalty(hardcover_price, BookFormat.HARDCOVER, PlatformType.KDP, page_count)
+        royalties["hardcover"] = r
 
-async def delete_isbn(db: AsyncSession, isbn_id: uuid.UUID) -> bool:
-    """Soft-delete an ISBN record."""
-    stmt = (
-        select(ISBNRecord)
-        .where(
-            ISBNRecord.id == isbn_id,
-            ISBNRecord.deleted_at.is_(None),
-        )
+    return PricingResponse(
+        book_id=book.id,
+        currency=pricing.get("currency", "USD"),
+        kindle_price=kindle_price,
+        paperback_price=paperback_price,
+        hardcover_price=hardcover_price,
+        sale_price=pricing.get("sale_price"),
+        is_enrolled_in_kdp_select=pricing.get("is_enrolled_in_kdp_select", False),
+        estimated_royalties=royalties,
+        updated_at=book.updated_at,
     )
-    result = await db.execute(stmt)
-    record = result.scalar_one_or_none()
-    if record is None:
-        return False
 
-    record.deleted_at = _now()
+
+async def update_pricing(
+    db: AsyncSession,
+    book_id: uuid.UUID,
+    data: UpdatePricingRequest,
+) -> PricingResponse:
+    """Update pricing info for a book in the JSONB metadata_ column."""
+    stmt = select(Book).where(Book.id == book_id, Book.deleted_at.is_(None))
+    result = await db.execute(stmt)
+    book = result.scalar_one_or_none()
+
+    if book is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    existing_meta = book.metadata_ or {}
+    existing_pricing = existing_meta.get("pricing", {})
+
+    update_dict = data.model_dump(exclude_unset=True)
+    existing_pricing.update(update_dict)
+    existing_meta["pricing"] = existing_pricing
+
+    book.metadata_ = existing_meta
     await db.flush()
-    return True
+    await db.refresh(book)
+
+    return await get_pricing(db, book_id)  # type: ignore[return-value]
+
+
+def calculate_royalty(data: RoyaltyCalcRequest) -> RoyaltyCalcResponse:
+    """Pure calculation — no DB needed."""
+    royalty, printing_cost = _calculate_royalty(
+        data.price, data.format, data.platform, data.page_count,
+    )
+
+    # Determine the rate that was applied
+    if data.platform == PlatformType.KDP and data.format == BookFormat.KINDLE:
+        rate = 0.70 if 2.99 <= data.price <= 9.99 else 0.35
+    elif data.platform == PlatformType.KDP and data.format in (BookFormat.PAPERBACK, BookFormat.HARDCOVER):
+        rate = 0.60
+    else:
+        rate = 0.50
+
+    return RoyaltyCalcResponse(
+        price=data.price,
+        format=data.format,
+        platform=data.platform,
+        royalty_rate=rate,
+        printing_cost=printing_cost,
+        estimated_royalty=royalty,
+        currency=data.currency,
+    )

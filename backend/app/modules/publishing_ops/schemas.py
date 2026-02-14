@@ -246,53 +246,51 @@ class ListingSyncResponse(BaseModel):
     message: str = "Listing sync has been queued"
 
 
-# ---------- ISBNs ----------
+# ---------- Pricing ----------
 
-class ISBNStatus(str, Enum):
-    AVAILABLE = "available"
-    ASSIGNED = "assigned"
-    USED = "used"
-    RETIRED = "retired"
-
-
-class ISBNFormat(str, Enum):
-    ISBN_13 = "isbn_13"
-    ISBN_10 = "isbn_10"
+class BookFormat(str, Enum):
+    KINDLE = "kindle"
+    PAPERBACK = "paperback"
+    HARDCOVER = "hardcover"
 
 
-class CreateISBNRequest(BaseModel):
-    isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13 value")
-    format: ISBNFormat = ISBNFormat.ISBN_13
-    book_id: uuid.UUID | None = None
-    title: str | None = Field(None, max_length=500, description="Book title associated with this ISBN")
-    notes: str | None = None
+class UpdatePricingRequest(BaseModel):
+    currency: str = "USD"
+    kindle_price: float | None = Field(None, ge=0, description="Kindle ebook price")
+    paperback_price: float | None = Field(None, ge=0, description="Paperback print price")
+    hardcover_price: float | None = Field(None, ge=0, description="Hardcover print price")
+    sale_price: float | None = Field(None, ge=0, description="Optional sale/promo price")
+    is_enrolled_in_kdp_select: bool = False
 
 
-class UpdateISBNRequest(BaseModel):
-    isbn: str | None = Field(None, min_length=10, max_length=17)
-    format: ISBNFormat | None = None
-    status: ISBNStatus | None = None
-    book_id: uuid.UUID | None = None
-    title: str | None = Field(None, max_length=500)
-    notes: str | None = None
-
-
-class ISBNResponse(BaseModel):
-    id: uuid.UUID
-    org_id: uuid.UUID
-    isbn: str
-    format: ISBNFormat
-    status: ISBNStatus
-    book_id: uuid.UUID | None = None
-    title: str | None = None
-    notes: str | None = None
-    created_at: datetime
+class PricingResponse(BaseModel):
+    book_id: uuid.UUID
+    currency: str = "USD"
+    kindle_price: float | None = None
+    paperback_price: float | None = None
+    hardcover_price: float | None = None
+    sale_price: float | None = None
+    is_enrolled_in_kdp_select: bool = False
+    estimated_royalties: dict[str, float] = Field(
+        default_factory=dict,
+        description="Estimated royalties keyed by format (kindle, paperback, hardcover)",
+    )
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+
+class RoyaltyCalcRequest(BaseModel):
+    price: float = Field(..., gt=0, description="List price for the book")
+    format: BookFormat = Field(..., description="Book format (kindle, paperback, hardcover)")
+    platform: PlatformType = PlatformType.KDP
+    page_count: int | None = Field(None, ge=1, description="Page count (required for print formats)")
+    currency: str = "USD"
 
 
-class GenerateBarcodeRequest(BaseModel):
-    width: int = Field(default=200, ge=50, le=1000, description="Barcode width in pixels")
-    height: int = Field(default=100, ge=25, le=500, description="Barcode height in pixels")
-    include_text: bool = Field(default=True, description="Whether to include human-readable text below the barcode")
+class RoyaltyCalcResponse(BaseModel):
+    price: float
+    format: BookFormat
+    platform: PlatformType
+    royalty_rate: float = Field(..., description="Royalty rate applied (e.g. 0.70 for 70%)")
+    printing_cost: float | None = Field(None, description="Printing cost for print formats")
+    estimated_royalty: float = Field(..., description="Estimated royalty per unit sold")
+    currency: str = "USD"
