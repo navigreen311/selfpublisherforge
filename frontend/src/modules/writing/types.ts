@@ -141,7 +141,7 @@ export interface WritingSessionEntry {
   book_title?: string;
 }
 
-export type SaveStatus = "idle" | "saving" | "saved" | "error";
+export type SaveStatus = "idle" | "saving" | "saved" | "unsaved" | "error";
 
 // ---------------------------------------------------------------------------
 // Enhanced AI Writing types

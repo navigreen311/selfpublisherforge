@@ -632,11 +632,21 @@ export default function ManuscriptEditorPage() {
           ) : activeChapterId ? (
             <ManuscriptEditor
               content={editorContent}
-              onChange={handleEditorChange}
+              chapterTitle={activeChapter?.title || ""}
+              onContentChange={handleEditorChange}
+              onTitleChange={(title) => activeChapterId && updateChapter?.mutate({ title })}
+              onSaveStatusChange={() => {}}
+              onWordCountChange={() => {}}
               onSelectionChange={handleSelectionChange}
               onSave={handleSave}
-              className="flex-1"
             />
+
+
+
+
+
+
+
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center space-y-4 max-w-md px-6">

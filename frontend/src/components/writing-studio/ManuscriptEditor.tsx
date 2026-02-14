@@ -144,7 +144,7 @@ export function ManuscriptEditor({
           color: theme === "dark" ? "#6366f1" : "#3b82f6",
           width: 2,
         },
-        gapcursor: true,
+        
       }),
       Placeholder.configure({
         placeholder: "Start writing, or press / for AI commands...",
@@ -265,7 +265,7 @@ export function ManuscriptEditor({
     const incomingJson = JSON.stringify(content);
 
     if (currentJson !== incomingJson && content) {
-      editor.commands.setContent(content, false);
+      editor.commands.setContent(content, { emitUpdate: false });
       // Update word count after content sync
       const words = editor.storage.characterCount?.words() ?? 0;
       onWordCountChange(words);

@@ -40,7 +40,7 @@ const STORAGE_KEY = "spf-editor-settings";
 // ---------------------------------------------------------------------------
 
 let listeners: Array<() => void> = [];
-let cachedSettings: EditorSettings | null = null;
+let cachedSettings: EditorSettings = DEFAULT_EDITOR_SETTINGS;
 
 function getSettingsSnapshot(): EditorSettings {
   if (cachedSettings) return cachedSettings;
@@ -71,14 +71,14 @@ function subscribe(listener: () => void) {
   // Listen for storage events from other browser tabs
   const handleStorage = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY) {
-      cachedSettings = null; // Invalidate cache
+      cachedSettings = DEFAULT_EDITOR_SETTINGS; // Invalidate cache
       listeners.forEach((l) => l());
     }
   };
 
   // Listen for our custom event (same-tab reactivity)
   const handleCustom = () => {
-    cachedSettings = null;
+    cachedSettings = DEFAULT_EDITOR_SETTINGS;
     listeners.forEach((l) => l());
   };
 
