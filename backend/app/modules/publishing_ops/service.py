@@ -34,7 +34,9 @@ from app.modules.publishing_ops.pdf_generator import generate_pdf_bytes
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
     BookMetadataUpdate,
+    ExportDetailResponse,
     ExportFormat,
+    ExportListResponse,
     ExportRequest,
     ExportResponse,
     FormattingTemplate,
@@ -293,6 +295,94 @@ async def generate_export(
             created_at=export_job.created_at,
             message=export_job.message or "",
         )
+
+
+# ---------------------------------------------------------------------------
+# Export History
+# ---------------------------------------------------------------------------
+
+async def list_exports(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+) -> list[ExportListResponse]:
+    """Return all export jobs for an organisation, newest first."""
+    stmt = (
+        select(ExportJob)
+        .where(
+            ExportJob.org_id == org_id,
+            ExportJob.deleted_at.is_(None),
+        )
+        .order_by(ExportJob.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    return [
+        ExportListResponse(
+            id=row.id,
+            book_id=row.book_id,
+            format=row.format,
+            status=row.status,
+            file_size_bytes=row.file_size_bytes,
+            page_count=row.page_count,
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
+
+
+async def get_export(
+    db: AsyncSession,
+    export_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> ExportDetailResponse | None:
+    """Return full details for a single export job, or None if not found."""
+    stmt = (
+        select(ExportJob)
+        .where(
+            ExportJob.id == export_id,
+            ExportJob.org_id == org_id,
+            ExportJob.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    return ExportDetailResponse(
+        id=row.id,
+        book_id=row.book_id,
+        format=row.format,
+        status=row.status,
+        file_url=row.file_url,
+        file_size_bytes=row.file_size_bytes,
+        page_count=row.page_count,
+        message=row.message,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+async def get_export_download_url(
+    db: AsyncSession,
+    export_id: uuid.UUID,
+    org_id: uuid.UUID,
+) -> str | None:
+    """Return the file URL for a completed export, or None if not found/ready."""
+    stmt = (
+        select(ExportJob)
+        .where(
+            ExportJob.id == export_id,
+            ExportJob.org_id == org_id,
+            ExportJob.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    if row.status != "completed" or not row.file_url:
+        return None
+    return row.file_url
 
 
 # ---------------------------------------------------------------------------
