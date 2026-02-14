@@ -132,12 +132,17 @@ class StyleProfile(TenantModel):
     confidence: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
     style_card: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     sample_texts: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
+    total_sample_words: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     # Relationships
     organization = relationship(
         "Organization", back_populates="style_profiles",
         primaryjoin="StyleProfile.org_id == Organization.id",
         foreign_keys="[StyleProfile.org_id]",
+    )
+    samples = relationship(
+        "StyleProfileSample", back_populates="profile",
+        cascade="all, delete-orphan", lazy="selectin",
     )
 
     __table_args__ = (
@@ -147,6 +152,32 @@ class StyleProfile(TenantModel):
         Index("ix_style_profiles_sample_sources_gin", "sample_sources", postgresql_using="gin"),
         Index("ix_style_profiles_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
         Index("ix_style_profiles_org_id_created_at", "org_id", "created_at"),
+    )
+
+
+class StyleProfileSample(BaseModel):
+    __tablename__ = "style_profile_samples"
+
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("style_profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    source_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="paste", server_default="paste",
+    )
+    source_reference: Mapped[uuid.UUID | None] = mapped_column(nullable=True, default=None)
+    word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+
+    # Relationships
+    profile = relationship("StyleProfile", back_populates="samples")
+
+    __table_args__ = (
+        Index("ix_style_profile_samples_profile_id", "profile_id"),
+        Index("ix_style_profile_samples_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 
