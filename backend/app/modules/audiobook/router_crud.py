@@ -10,13 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.audiobook import service_crud
-from app.modules.audiobook.schemas_extended import (
-    ProjectCreateRequest,
-    ProjectDetailResponse,
-    ProjectListResponse,
-    ProjectResponse,
-    ProjectUpdateRequest,
-)
+from app.modules.audiobook.schemas_extended import (    ProjectCreateRequest,    ProjectDetailResponse,    ProjectListResponse,    ProjectPauseResponse,    ProjectResponse,    ProjectResumeResponse,    ProjectUpdateRequest,    WizardCreateRequest,)
 
 router = APIRouter()
 
@@ -119,3 +113,66 @@ async def delete_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found.",
         )
+
+
+# ── Creation Wizard endpoint ──────────────────────────────────────────────
+
+
+@router.post(
+    "/projects/create-from-wizard",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create audiobook project from wizard",
+    description="Create a new audiobook project from manuscript via creation wizard with tier, voice, platform, and budget settings.",
+)
+async def create_project_from_wizard(
+    body: WizardCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await service_crud.create_project_from_wizard(db, current_user["org_id"], body)
+
+
+
+
+# ── Pause/Resume endpoints ────────────────────────────────────────────────
+
+
+@router.patch(
+    "/projects/{project_id}/pause",
+    response_model=ProjectPauseResponse,
+    summary="Pause audiobook generation",
+    description="Pause an audiobook project's generation process.",
+)
+async def pause_project(
+    project_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await service_crud.pause_project(db, project_id, current_user["org_id"])
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found.",
+        )
+    return result
+
+
+@router.patch(
+    "/projects/{project_id}/resume",
+    response_model=ProjectResumeResponse,
+    summary="Resume audiobook generation",
+    description="Resume a paused audiobook project's generation process.",
+)
+async def resume_project(
+    project_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await service_crud.resume_project(db, project_id, current_user["org_id"])
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found.",
+        )
+    return result

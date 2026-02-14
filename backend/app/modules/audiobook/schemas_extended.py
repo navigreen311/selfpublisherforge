@@ -277,3 +277,56 @@ class DownloadResponse(BaseModel):
     expires_at: datetime
     filename: str
     file_size_bytes: int
+
+
+# ── Creation Wizard schemas ──────────────────────────────────────────────
+
+
+class WizardCreateRequest(BaseModel):
+    """Request body for creating an audiobook project from the creation wizard."""
+
+    manuscript_id: UUID = Field(..., description="ID of the manuscript to create audiobook from.")
+    voice_id: UUID = Field(..., description="Primary narrator voice ID.")
+    tier: str = Field(..., description="Service tier: free, standard, premium.", pattern="^(free|standard|premium)$")
+    platform: str = Field("acx", description="Target distribution platform.", pattern="^(acx|findaway|authors_republic|generic)$")
+    speed: float = Field(1.0, description="Narration speed multiplier.", ge=0.5, le=2.0)
+    style: str = Field("neutral", description="Narration style preset.")
+    budget: float | None = Field(None, description="Optional budget cap in USD.", ge=0)
+    title: str | None = Field(None, description="Optional title override.")
+    settings: dict[str, Any] | None = Field(None, description="Additional project settings.")
+
+    def model_dump(self, **kwargs):
+        """Ensure dict-style access compatibility with service layer."""
+        return super().model_dump(**kwargs)
+
+
+class AudiobookStatsResponse(BaseModel):
+    """Statistics for audiobook projects in the organization."""
+
+    total_projects: int = Field(..., description="Total number of audiobook projects.")
+    in_progress: int = Field(..., description="Number of projects currently in progress.")
+    completed: int = Field(..., description="Number of completed projects.")
+    total_duration: float = Field(..., description="Total duration in seconds across all projects.")
+
+
+class VoicePreviewRequest(BaseModel):
+    """Request body for generating a voice preview."""
+
+    voice_id: UUID = Field(..., description="Voice ID to preview.")
+    text: str = Field("The quick brown fox jumps over the lazy dog.", max_length=500, description="Sample text to generate.")
+
+
+class ProjectPauseResponse(BaseModel):
+    """Response for pausing a project."""
+
+    project_id: UUID
+    status: str
+    message: str
+
+
+class ProjectResumeResponse(BaseModel):
+    """Response for resuming a project."""
+
+    project_id: UUID
+    status: str
+    message: str
