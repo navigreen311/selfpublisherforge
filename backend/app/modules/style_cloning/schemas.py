@@ -169,33 +169,16 @@ class FingerprintResponse(BaseModel):
     fingerprint: VoiceFingerprint
 
 
-class AddSampleRequest(BaseModel):
-    text: str = Field(..., min_length=1)
-    label: str | None = None
-    source_type: str = "paste"  # paste, upload, chapter
-    source_reference: uuid.UUID | None = None
-
-
 class SampleResponse(BaseModel):
     id: uuid.UUID
     profile_id: uuid.UUID
-    label: str | None
-    source_type: str | None
-    word_count: int
-    file_name: str | None
+    org_id: uuid.UUID
+    text: str
+    label: str | None = None
+    source_type: str | None = None
+    source_reference: str | None = None
+    word_count: int = 0
     created_at: datetime
+    updated_at: datetime
 
-
-class TuneRequest(BaseModel):
-    formality_adjust: float = Field(0, ge=-1, le=1)
-    warmth_adjust: float = Field(0, ge=-1, le=1)
-    sentence_length_adjust: float = Field(0, ge=-1, le=1)
-    complexity_adjust: float = Field(0, ge=-1, le=1)
-
-
-class UpdateProfileRequest(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    genre: str | None = None
-    preset: str | None = None
-    voice_description: str | None = None
+    model_config = {"from_attributes": True}
