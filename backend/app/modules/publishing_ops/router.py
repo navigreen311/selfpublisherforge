@@ -7,6 +7,9 @@ POST   /accounts              Connect a publishing account
 DELETE /accounts/{id}          Disconnect account
 POST   /export/epub           Generate EPUB from manuscript
 POST   /export/pdf            Generate print-ready PDF
+GET    /exports               List all manuscript exports
+GET    /exports/{id}          Get export details
+GET    /exports/{id}/download  Download URL for completed export
 GET    /templates             List formatting templates
 POST   /templates             Create custom template
 GET    /listings              List all listings across platforms
@@ -33,6 +36,8 @@ from app.modules.publishing_ops import service
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
     BookMetadataUpdate,
+    ExportDetailResponse,
+    ExportListResponse,
     ExportRequest,
     ExportResponse,
     FormattingTemplate,
@@ -141,6 +146,63 @@ async def export_pdf(
     org_id = current_user["org_id"]
     request.format = "pdf"  # type: ignore[assignment]
     return await service.generate_export(db, org_id, request)
+
+
+# ---------- Export History ----------
+
+@router.get(
+    "/exports",
+    response_model=list[ExportListResponse],
+    summary="List manuscript exports",
+    description="List all manuscript exports for the organization.",
+)
+async def list_exports(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List all manuscript exports for the org."""
+    org_id = current_user["org_id"]
+    return await service.list_exports(db, org_id)
+
+
+@router.get(
+    "/exports/{export_id}",
+    response_model=ExportDetailResponse,
+    summary="Get export details",
+    description="Retrieve full details for a single export job.",
+)
+async def get_export(
+    export_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get full details of a specific export."""
+    org_id = current_user["org_id"]
+    export = await service.get_export(db, export_id, org_id)
+    if export is None:
+        raise HTTPException(status_code=404, detail="Export not found")
+    return export
+
+
+@router.get(
+    "/exports/{export_id}/download",
+    summary="Download export",
+    description="Return the download URL for a completed export.",
+)
+async def download_export(
+    export_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return the download URL for a completed export."""
+    org_id = current_user["org_id"]
+    url = await service.get_export_download_url(db, export_id, org_id)
+    if url is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Export not found or not yet completed",
+        )
+    return {"download_url": url}
 
 
 # ---------- Formatting Templates ----------

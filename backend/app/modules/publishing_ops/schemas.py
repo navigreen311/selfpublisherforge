@@ -119,6 +119,35 @@ class ExportResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ExportListResponse(BaseModel):
+    """Summary view of an export job for list endpoints."""
+    id: uuid.UUID
+    book_id: uuid.UUID
+    format: ExportFormat
+    status: str
+    file_size_bytes: int | None = None
+    page_count: int | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ExportDetailResponse(BaseModel):
+    """Full detail view of a single export job."""
+    id: uuid.UUID
+    book_id: uuid.UUID
+    format: ExportFormat
+    status: str
+    file_url: str | None = None
+    file_size_bytes: int | None = None
+    page_count: int | None = None
+    message: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ---------- Formatting Templates ----------
 
 class TemplateStyleSettings(BaseModel):
