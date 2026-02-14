@@ -29,8 +29,17 @@ import {
   AlertCircle,
   CircleDot,
   FileEdit,
+  Pause,
+  Play,
+  Download,
+  FileUp,
 } from "lucide-react";
-import { useAudiobookProjects } from "../hooks";
+import { toast } from "sonner";
+import {
+  useAudiobookProjects,
+  useUpdateAudiobookProject,
+  useExportAudiobook,
+} from "../hooks";
 
 // ---------------------------------------------------------------------------
 // Types (local — matches the shape returned by the API / useAudiobookProjects)
@@ -154,10 +163,65 @@ function ProjectCard({
   project: AudiobookProjectItem;
   onClick: () => void;
 }) {
+  const router = useRouter();
   const config = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.draft;
   const StatusIcon = config.icon;
   const progress = getProgress(project.completed_chapters, project.chapter_count);
   const cost = project.actual_cost > 0 ? project.actual_cost : project.estimated_cost;
+
+  const { mutate: updateProject, isPending: isUpdating } =
+    useUpdateAudiobookProject(project.id);
+  const { mutate: exportAudiobook, isPending: isExporting } =
+    useExportAudiobook(project.id);
+
+  const handlePause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    updateProject(
+      { status: "draft" },
+      {
+        onSuccess: () => toast.success("Generation paused"),
+      }
+    );
+  };
+
+  const handleContinueSetup = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/audiobook-studio/${project.id}`);
+  };
+
+  const handleApproveAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/audiobook-studio/${project.id}`);
+    toast.info("Navigate to project to approve chapters individually");
+  };
+
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    exportAudiobook(
+      { format: "mp3" },
+      {
+        onSuccess: (result) => {
+          toast.success("Export ready!");
+          window.open(result.download_url, "_blank");
+        },
+      }
+    );
+  };
+
+  const handleExportACX = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    exportAudiobook(
+      { format: "acx" },
+      {
+        onSuccess: (result) => {
+          toast.success("ACX export ready!");
+          window.open(result.download_url, "_blank");
+        },
+      }
+    );
+  };
+
+  const isBusy = isUpdating || isExporting;
 
   return (
     <Card
@@ -216,6 +280,78 @@ function ProjectCard({
             <DollarSign className="h-3 w-3 shrink-0" aria-hidden="true" />
             <span>{formatCost(cost)}</span>
           </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {project.status === "draft" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleContinueSetup}
+              disabled={isBusy}
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Continue Setup
+            </Button>
+          )}
+          {project.status === "generating" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handlePause}
+              disabled={isBusy}
+            >
+              {isUpdating ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Pause className="h-3 w-3 mr-1" />
+              )}
+              Pause
+            </Button>
+          )}
+          {project.status === "reviewing" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleApproveAll}
+              disabled={isBusy}
+            >
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Approve All
+            </Button>
+          )}
+          {project.status === "complete" && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleDownload}
+                disabled={isBusy}
+              >
+                {isExporting ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3 mr-1" />
+                )}
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleExportACX}
+                disabled={isBusy}
+              >
+                <FileUp className="h-3 w-3 mr-1" />
+                Export ACX
+              </Button>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>

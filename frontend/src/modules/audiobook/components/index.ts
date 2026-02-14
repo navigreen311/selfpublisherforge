@@ -14,5 +14,7 @@ export { SentenceHighlighter } from "./SentenceHighlighter";
 export { ACXValidator } from "./ACXValidator";
 export { AudiobookExport } from "./AudiobookExport";
 export { SSMLEditor } from "./SSMLEditor";
+export { CreateAudiobookWizard } from "./CreateAudiobookWizard";
+export type { CreateAudiobookWizardProps } from "./CreateAudiobookWizard";
 export { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
 export type { KeyboardShortcutsHelpProps } from "./KeyboardShortcutsHelp";
