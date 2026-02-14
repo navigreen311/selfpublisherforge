@@ -1,6 +1,5 @@
 """Pydantic schemas for the Knowledge Vault module."""
 
-import uuid
 from datetime import datetime
 from uuid import UUID
 
@@ -14,11 +13,9 @@ SOURCE_TYPES = {"manual", "url", "file", "clip"}
 class CreateEntryRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     content: str = Field(default="")
-    category: str = Field(default="notes")
     source_url: str | None = Field(default=None, max_length=2048)
     source_type: str = Field(default="manual", pattern=r"^(manual|url|file|clip)$")
     tags: list[str] = Field(default_factory=list)
-    project_id: uuid.UUID | None = None
     credibility_score: float | None = Field(default=None, ge=0.0, le=1.0)
     metadata: dict = Field(default_factory=dict)
 
@@ -121,15 +118,12 @@ class SuggestionsResponse(BaseModel):
 
 # ── Attachments ─────────────────────────────────────────────────
 class AttachmentResponse(BaseModel):
-    id: uuid.UUID
-    entry_id: uuid.UUID
-    file_name: str | None
+    id: UUID
+    entry_id: UUID
+    file_name: str
     file_url: str
-    file_size: int | None
-    mime_type: str | None
-    created_at: datetime
+    file_size: int
+    mime_type: str
+    created_at: datetime | None = None
 
-
-# ── Import URL ──────────────────────────────────────────────────
-class ImportURLRequest(BaseModel):
-    url: str = Field(..., min_length=1)
+    model_config = {"from_attributes": True}

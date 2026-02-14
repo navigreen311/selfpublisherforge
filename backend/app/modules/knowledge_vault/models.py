@@ -4,7 +4,7 @@
 from sqlalchemy import BigInteger, Column, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID as PG_UUID
 
-from app.database import TenantModel
+from app.database import BaseModel, TenantModel
 
 
 class KnowledgeEntry(TenantModel):
@@ -43,29 +43,22 @@ class KnowledgeEntry(TenantModel):
         }
 
 
-class KnowledgeAttachment(TenantModel):
-    """File attachment linked to a KnowledgeEntry."""
+class KnowledgeAttachment(BaseModel):
+    """A file attachment linked to a knowledge entry."""
 
     __tablename__ = "knowledge_attachments"
 
-    entry_id = Column(PG_UUID(as_uuid=True), ForeignKey("knowledge_entries.id"), nullable=False, index=True)  # type: ignore[assignment]
+    entry_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("knowledge_entries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     file_name: str = Column(String(500), nullable=False)  # type: ignore[assignment]
     file_url: str = Column(String(2048), nullable=False)  # type: ignore[assignment]
-    file_size: int | None = Column(BigInteger, nullable=True)  # type: ignore[assignment]
-    mime_type: str | None = Column(String(255), nullable=True)  # type: ignore[assignment]
+    file_size: int = Column(BigInteger, nullable=False, default=0)  # type: ignore[assignment]
+    mime_type: str = Column(String(127), nullable=False, default="application/octet-stream")  # type: ignore[assignment]
+    s3_key: str = Column(String(1024), nullable=True)  # type: ignore[assignment]
 
     def __repr__(self) -> str:
         return f"<KnowledgeAttachment id={self.id} file_name={self.file_name!r}>"
-
-    def to_dict(self) -> dict:
-        return {
-            "id": str(self.id),
-            "org_id": str(self.org_id),
-            "entry_id": str(self.entry_id),
-            "file_name": self.file_name,
-            "file_url": self.file_url,
-            "file_size": self.file_size,
-            "mime_type": self.mime_type,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
