@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     DEEPGRAM_API_KEY: str = ""
 
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     # ------------------------------------------------------------------
     # Validators

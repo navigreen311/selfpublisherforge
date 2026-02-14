@@ -1,7 +1,7 @@
 """Tier-based access control middleware for module gating.
 
 Provides FastAPI dependencies that verify an organization's subscription tier
-has access to a requested module based on the module registry.
+has access to a requested module based on module tier requirements.
 
 Usage::
 
@@ -24,28 +24,52 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.organization import Organization
-from shared.contracts.module_registry import get_module, modules_for_tier
-from shared.types.enums import PlanTier
+from app.schemas.common import PlanTier
+
+
+# ---- Simple module tier registry ----
+# Maps module slugs to the minimum tier required.
+_TIER_ORDER = [PlanTier.FREE, PlanTier.STARTER, PlanTier.PRO, PlanTier.BUSINESS, PlanTier.ENTERPRISE]
+
+MODULE_TIERS: dict[str, PlanTier] = {
+    "admin": PlanTier.FREE,  # all tiers can reach admin (role check happens inside)
+    "settings": PlanTier.FREE,
+    "agents": PlanTier.FREE,
+    "market-intelligence": PlanTier.FREE,
+    "knowledge-vault": PlanTier.FREE,
+    "ai-writing": PlanTier.FREE,
+    "style-cloning": PlanTier.STARTER,
+    "production-pipeline": PlanTier.STARTER,
+    "publishing-ops": PlanTier.STARTER,
+    "kdp-validation": PlanTier.STARTER,
+    "product-page": PlanTier.PRO,
+    "pricing-automation": PlanTier.PRO,
+    "competitor-finder": PlanTier.PRO,
+    "marketing": PlanTier.PRO,
+    "advertising": PlanTier.PRO,
+    "review-intelligence": PlanTier.PRO,
+    "analytics": PlanTier.BUSINESS,
+    "portfolio-economics": PlanTier.BUSINESS,
+    "cover-design": PlanTier.BUSINESS,
+    "chrome-extension": PlanTier.ENTERPRISE,
+}
+
+
+def _tier_includes(org_tier: PlanTier, required_tier: PlanTier) -> bool:
+    """Return True if org_tier >= required_tier in the tier hierarchy."""
+    try:
+        return _TIER_ORDER.index(org_tier) >= _TIER_ORDER.index(required_tier)
+    except ValueError:
+        return False
 
 
 async def _get_org_tier(
     db: AsyncSession,
     org_id: UUID,
 ) -> PlanTier:
-    """Fetch the organization's current plan tier.
-
-    Args:
-        db: Database session
-        org_id: Organization ID
-
-    Returns:
-        The organization's plan tier
-
-    Raises:
-        HTTPException(404): If organization not found
-    """
+    """Fetch the organization's current plan tier."""
     result = await db.execute(
-        select(Organization.plan_tier)
+        select(Organization.tier)
         .where(Organization.id == org_id, Organization.deleted_at.is_(None))
     )
     tier = result.scalar_one_or_none()
@@ -56,36 +80,25 @@ async def _get_org_tier(
             detail="Organization not found",
         )
 
+    # Convert string to PlanTier if needed
+    if isinstance(tier, str):
+        try:
+            return PlanTier(tier)
+        except ValueError:
+            return PlanTier.FREE
     return tier
 
 
 def require_module(module_slug: str) -> Callable:
     """Create a FastAPI dependency that enforces module access based on tier.
 
-    Verifies that the user's organization has a subscription tier that includes
-    access to the specified module. Returns 403 if access is denied.
-
     Args:
-        module_slug: The module slug from the module registry (e.g., "competitor-finder")
+        module_slug: The module slug (e.g., "competitor-finder")
 
     Returns:
-        A FastAPI dependency function that can be used with Depends()
-
-    Raises:
-        KeyError: If module_slug is not found in the registry (at startup)
-
-    Usage::
-
-        @router.post("/analyze")
-        async def endpoint(user=Depends(require_module("competitor-finder"))):
-            org_id = user["org_id"]
-            ...
+        A FastAPI dependency function
     """
-    # Validate module exists at dependency creation time (startup)
-    try:
-        module = get_module(module_slug)
-    except KeyError:
-        raise ValueError(f"Unknown module slug: {module_slug}")
+    required_tier = MODULE_TIERS.get(module_slug, PlanTier.FREE)
 
     async def _tier_checker(
         current_user: dict = Depends(get_current_user),
@@ -100,19 +113,13 @@ def require_module(module_slug: str) -> Callable:
                 detail="User must belong to an organization to access this module",
             )
 
-        # Fetch org's current tier
         org_tier = await _get_org_tier(db, org_id)
 
-        # Get all modules available to this tier
-        available_modules = modules_for_tier(org_tier)
-        available_slugs = {m.slug for m in available_modules}
-
-        # Check if the requested module is in the available set
-        if module_slug not in available_slugs:
+        if not _tier_includes(org_tier, required_tier):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
-                    f"Module '{module.name}' requires {module.tier.value} tier or higher. "
+                    f"Module '{module_slug}' requires {required_tier.value} tier or higher. "
                     f"Current tier: {org_tier.value}"
                 ),
             )

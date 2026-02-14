@@ -23,6 +23,9 @@ import type {
   WorkflowCreate,
   WorkflowListResponse,
   AgentWorkflow,
+  TaskCreatePayload,
+  AgentUsageStats,
+  CustomAgentPayload,
 } from "./types";
 
 export type * from "./types";
@@ -398,4 +401,135 @@ export function useTaskUpdates(onUpdate: (task: AgentTask) => void) {
   }, [connect]);
 
   return { connected };
+}
+
+// ---------------------------------------------------------------------------
+// Extended task hooks
+// ---------------------------------------------------------------------------
+
+// New task creation
+export function useCreateTaskMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ agentId, data }: { agentId: string; data: TaskCreatePayload }) => {
+      const res = await api.post(`/api/v1/agents/${agentId}/tasks`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: agentKeys.tasks() });
+    },
+  });
+}
+
+// Rate task
+export function useRateTask() {
+  return useMutation({
+    mutationFn: async ({ taskId, rating }: { taskId: string; rating: number }) => {
+      const res = await api.post(`/api/v1/agents/tasks/${taskId}/rate`, { rating });
+      return res.data;
+    },
+  });
+}
+
+// Approve task
+export function useApproveTaskMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const res = await api.post(`/api/v1/agents/tasks/${taskId}/approve`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: agentKeys.tasks() });
+    },
+  });
+}
+
+// Regenerate task
+export function useRegenerateTask() {
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const res = await api.post(`/api/v1/agents/tasks/${taskId}/regenerate`);
+      return res.data;
+    },
+  });
+}
+
+// Stop task
+export function useStopTask() {
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const res = await api.post(`/api/v1/agents/tasks/${taskId}/stop`);
+      return res.data;
+    },
+  });
+}
+
+// Usage stats
+export function useAgentUsage(period: string = "30d") {
+  return useQuery({
+    queryKey: [...agentKeys.all, "usage", period],
+    queryFn: async () => {
+      const res = await api.get(`/api/v1/agents/usage`, { params: { period } });
+      return res.data as AgentUsageStats;
+    },
+  });
+}
+
+// Configure agent
+export function useConfigureAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ agentId, data }: { agentId: string; data: AgentConfigUpdate }) => {
+      const res = await api.patch(`/api/v1/agents/${agentId}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: agentKeys.all });
+    },
+  });
+}
+
+// Create custom agent
+export function useCreateCustomAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CustomAgentPayload) => {
+      const res = await api.post(`/api/v1/agents`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: agentKeys.all });
+    },
+  });
+}
+
+// Delete custom agent
+export function useDeleteAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (agentId: string) => {
+      const res = await api.delete(`/api/v1/agents/${agentId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: agentKeys.all });
+    },
+  });
+}
+
+// Get single task detail
+export function useTaskDetail(taskId: string | undefined) {
+  return useQuery({
+    queryKey: [...agentKeys.tasks(), taskId],
+    queryFn: async () => {
+      const res = await api.get(`/api/v1/agents/tasks/${taskId}`);
+      return res.data;
+    },
+    enabled: !!taskId,
+    refetchInterval: (query) => {
+      const data = query.state.data as any;
+      return data?.status === "running" ? 2000 : false;
+    },
+  });
 }

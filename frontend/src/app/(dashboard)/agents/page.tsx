@@ -4,11 +4,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
-import { useAgents, useTasks, useBudgets, useEmergencyStop } from "@/modules/agents/hooks";
-import { AgentCard } from "@/modules/agents/components/AgentCard";
-import { TaskList } from "@/modules/agents/components/TaskList";
-import { BudgetMeter } from "@/modules/agents/components/BudgetMeter";
+import { Loader2, Plus } from "lucide-react";
+import { useAgents, useTasks, useAgentUsage, useEmergencyStop } from "@/modules/agents/hooks";
+import { Button } from "@/components/ui/button";
+import { AgentStatsBar } from "@/modules/agents/components/AgentStatsBar";
+import { EnhancedAgentCard } from "@/modules/agents/components/EnhancedAgentCard";
+import { RecentTasksList } from "@/modules/agents/components/RecentTasksList";
+import { NewTaskModal } from "@/modules/agents/components/NewTaskModal";
+import { ConfigureAgentPanel } from "@/modules/agents/components/ConfigureAgentPanel";
+import { CreateAgentModal } from "@/modules/agents/components/CreateAgentModal";
+import { TaskExecutionView } from "@/modules/agents/components/TaskExecutionView";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Agent } from "@/modules/agents/types";
 import { useTranslations } from "@/hooks/use-translations";
@@ -18,15 +23,19 @@ export default function AgentDashboardPage() {
   const router = useRouter();
   const { data: agentsData, isLoading: agentsLoading } = useAgents();
   const { data: tasksData, isLoading: tasksLoading } = useTasks({
-    limit: 5,
+    limit: 10,
   });
-  const { data: budgetsData, isLoading: budgetsLoading } = useBudgets();
+  const { data: usageData, isLoading: usageLoading } = useAgentUsage();
   const emergencyStop = useEmergencyStop();
   const [showConfirmStop, setShowConfirmStop] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(undefined);
+  const [showNewTask, setShowNewTask] = useState(false);
+  const [showConfigure, setShowConfigure] = useState(false);
+  const [showCreateAgent, setShowCreateAgent] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | undefined>(undefined);
 
   const agents = agentsData?.items || [];
   const recentTasks = tasksData?.items || [];
-  const budgets = budgetsData?.items || [];
 
   const handleEmergencyStop = () => {
     emergencyStop.mutate(undefined, {
@@ -36,8 +45,29 @@ export default function AgentDashboardPage() {
     });
   };
 
-  // Map agent IDs to names for budget display
-  const agentNameMap = new Map(agents.map((a) => [a.id, a.name]));
+  const handleNewTask = (agentId: string) => {
+    setSelectedAgentId(agentId);
+    setShowNewTask(true);
+  };
+
+  const handleConfigure = (agentId: string) => {
+    setSelectedAgentId(agentId);
+    setShowConfigure(true);
+  };
+
+  const handleTaskClick = (taskId: string) => {
+    setActiveTaskId(taskId);
+  };
+
+  // Show task execution view if active task is set
+  if (activeTaskId) {
+    return (
+      <TaskExecutionView
+        taskId={activeTaskId}
+        onClose={() => setActiveTaskId(undefined)}
+      />
+    );
+  }
 
   // Full-page loading skeleton while initial data is being fetched
   if (agentsLoading && tasksLoading) {
@@ -49,25 +79,21 @@ export default function AgentDashboardPage() {
             <Skeleton className="h-8 w-40" />
             <Skeleton className="h-5 w-96" />
           </div>
-          <Skeleton className="h-10 w-36" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-36" />
+          </div>
         </div>
+
+        {/* Stats bar skeleton */}
+        <Skeleton className="h-24 w-full" />
 
         {/* Agents grid skeleton */}
         <section aria-label={t("loadingAgents")}>
           <Skeleton className="h-6 w-40 mb-4" />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-36" />
-            ))}
-          </div>
-        </section>
-
-        {/* Budget skeleton */}
-        <section aria-label={t("loadingBudget")}>
-          <Skeleton className="h-6 w-40 mb-4" />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(2)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
+              <Skeleton key={i} className="h-48" />
             ))}
           </div>
         </section>
@@ -77,7 +103,7 @@ export default function AgentDashboardPage() {
           <Skeleton className="h-6 w-32 mb-4" />
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         </section>
@@ -95,40 +121,49 @@ export default function AgentDashboardPage() {
             {t("subtitle")}
           </p>
         </div>
-        <div>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowCreateAgent(true)}
+            className="inline-flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            {t("createAgent")}
+          </Button>
           {!showConfirmStop ? (
-            <button
+            <Button
+              variant="destructive"
               onClick={() => setShowConfirmStop(true)}
               disabled={emergencyStop.isPending}
               aria-label={t("emergencyStopLabel")}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
               {t("emergencyStop")}
-            </button>
+            </Button>
           ) : (
             <div className="flex items-center gap-2">
               <span className="text-sm text-red-600 font-medium">
                 {t("confirmStopMessage")}
               </span>
-              <button
+              <Button
+                variant="destructive"
                 onClick={handleEmergencyStop}
                 disabled={emergencyStop.isPending}
                 aria-label={t("confirmStopLabel")}
-                className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                size="sm"
               >
                 {emergencyStop.isPending && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                 )}
                 {emergencyStop.isPending ? t("stopping") : t("confirm")}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => setShowConfirmStop(false)}
                 disabled={emergencyStop.isPending}
                 aria-label={t("cancelStopLabel")}
-                className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                size="sm"
               >
                 {t("cancel")}
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -141,48 +176,31 @@ export default function AgentDashboardPage() {
         </div>
       )}
 
+      {/* Agent usage stats bar */}
+      <AgentStatsBar stats={usageData} isLoading={usageLoading} />
+
       {/* Available agents */}
       <section aria-labelledby="available-agents-heading">
         <h2 id="available-agents-heading" className="text-lg font-semibold mb-4">{t("availableAgents")}</h2>
         {agentsLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-36" />
+              <Skeleton key={i} className="h-48" />
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {agents.map((agent) => (
-              <AgentCard
+              <EnhancedAgentCard
                 key={agent.id}
                 agent={agent}
-                onCreateTask={() => {
-                  router.push(`/agents/tasks?create=true&agent_id=${agent.id}`);
-                }}
-                onConfigure={() => {
-                  router.push(`/agents/settings?agent_id=${agent.id}`);
-                }}
+                onNewTask={() => handleNewTask(agent.id)}
+                onConfigure={() => handleConfigure(agent.id)}
               />
             ))}
           </div>
         )}
       </section>
-
-      {/* Budget overview */}
-      {budgets.length > 0 && (
-        <section aria-labelledby="budget-overview-heading">
-          <h2 id="budget-overview-heading" className="text-lg font-semibold mb-4">{t("budgetOverview")}</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {budgets.map((budget) => (
-              <BudgetMeter
-                key={budget.id}
-                budget={budget}
-                agentName={agentNameMap.get(budget.agent_id) || "Unknown Agent"}
-              />
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Recent tasks */}
       <section aria-labelledby="recent-tasks-heading">
@@ -199,13 +217,35 @@ export default function AgentDashboardPage() {
         {tasksLoading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         ) : (
-          <TaskList tasks={recentTasks} />
+          <RecentTasksList
+            tasks={recentTasks}
+            onViewOutput={handleTaskClick}
+          />
         )}
       </section>
+
+      {/* Modals */}
+      <NewTaskModal
+        open={showNewTask}
+        onOpenChange={setShowNewTask}
+        agentId={selectedAgentId}
+        agents={agents}
+      />
+
+      <ConfigureAgentPanel
+        open={showConfigure}
+        onOpenChange={setShowConfigure}
+        agent={agents.find(a => a.id === selectedAgentId) || null}
+      />
+
+      <CreateAgentModal
+        open={showCreateAgent}
+        onOpenChange={setShowCreateAgent}
+      />
     </div>
   );
 }

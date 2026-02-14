@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from shared.types.enums import PlanTier
+from app.schemas.common import PlanTier
 
 
 # ---------------------------------------------------------------------------

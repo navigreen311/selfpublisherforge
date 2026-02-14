@@ -267,3 +267,90 @@ class EmergencyStopResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+# ---------------------------------------------------------------------------
+# Extended task execution schemas (Worker 02)
+# ---------------------------------------------------------------------------
+
+class TaskCreateRequest(BaseModel):
+    """Request to create and execute a task."""
+    agent_id: UUID
+    task_type: str
+    book_id: UUID | None = None
+    instructions: str
+    execution_mode: str = "draft"
+    priority: str = "normal"
+    max_tokens: int = 4096
+
+
+class TaskExecutionResponse(BaseModel):
+    """Real-time task execution status and progress."""
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: UUID
+    status: str
+    progress: int
+    steps: list[dict]
+    output: str | None = None
+    tokens_used: int
+    cost: float
+    execution_time_seconds: int | None = None
+
+
+class TaskRateRequest(BaseModel):
+    """Request to rate task output quality."""
+    rating: int = Field(..., ge=1, le=5)
+
+
+class TaskApproveResponse(BaseModel):
+    """Response after approving a task."""
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: UUID
+    approved_at: str
+    applied_to: str | None = None
+
+
+class AgentUsageResponse(BaseModel):
+    """Agent usage statistics and costs."""
+    model_config = ConfigDict(from_attributes=True)
+
+    total_tasks: int
+    running_tasks: int
+    total_tokens: int
+    total_cost: float
+    by_agent: list[dict]
+
+
+class AgentConfigureRequest(BaseModel):
+    """Request to configure an existing agent."""
+    model_config = ConfigDict(protected_namespaces=())
+
+    name: str | None = None
+    description: str | None = None
+    system_prompt: str | None = None
+    model: str | None = None
+    max_tokens: int | None = Field(default=None, ge=1, le=200000)
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    default_execution_mode: str | None = None
+    task_types: list[dict] | None = None
+    context_sources: list[str] | None = None
+    budget_per_task: float | None = None
+    monthly_budget: float | None = None
+
+
+class CustomAgentCreateRequest(BaseModel):
+    """Request to create a custom agent."""
+    model_config = ConfigDict(protected_namespaces=())
+
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str
+    category: str = "custom"
+    icon: str = "🤖"
+    system_prompt: str
+    task_types: list[dict]
+    model: str = "claude-sonnet-4-5-20250929"
+    max_tokens: int = 4096
+    temperature: float = 0.7
+    default_execution_mode: str = "draft"

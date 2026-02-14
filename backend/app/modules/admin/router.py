@@ -1,8 +1,9 @@
 """FastAPI router for admin endpoints (/api/v1/admin/...)."""
 
+from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import require_role
@@ -120,5 +121,306 @@ async def deactivate_user(
 
     Requires Enterprise tier and admin/owner role.
     """
-    await service.deactivate_user(db, user_id)
-    return MessageResponse(message=f"User {user_id} deactivated successfully")
+    result = await service.deactivate_user(db, user_id)
+    return MessageResponse(message=result["message"])
+
+
+# ---------------------------------------------------------------------------
+# GET /stats
+# ---------------------------------------------------------------------------
+@router.get(
+    "/stats",
+    response_model=schemas.PlatformStatsResponse,
+    summary="Get platform statistics",
+    description="Get platform-wide statistics including users, organizations, and books.",
+)
+async def get_platform_stats(
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get platform statistics (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    return await service.get_platform_stats(db)
+
+
+# ---------------------------------------------------------------------------
+# GET /activity
+# ---------------------------------------------------------------------------
+@router.get(
+    "/activity",
+    response_model=schemas.ActivityLogResponse,
+    summary="Get activity log",
+    description="Get activity log with optional filtering.",
+)
+async def get_activity_log(
+    action: str | None = Query(None, description="Filter by action type"),
+    resource_type: str | None = Query(None, description="Filter by resource type"),
+    from_date: datetime | None = Query(None, description="Filter from date"),
+    to_date: datetime | None = Query(None, description="Filter to date"),
+    limit: int = Query(50, ge=1, le=500, description="Number of entries to return"),
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get activity log (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    filters = schemas.ActivityLogFilters(
+        action=action,
+        resource_type=resource_type,
+        from_date=from_date,
+        to_date=to_date,
+        limit=limit,
+    )
+    return await service.get_activity_log(db, filters)
+
+
+# ---------------------------------------------------------------------------
+# GET /users/{user_id}
+# ---------------------------------------------------------------------------
+@router.get(
+    "/users/{user_id}",
+    response_model=schemas.AdminUserDetail,
+    summary="Get user detail",
+    description="Get detailed information about a specific user.",
+)
+async def get_user_detail(
+    user_id: UUID,
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get user detail (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    return await service.get_user_detail(db, user_id)
+
+
+# ---------------------------------------------------------------------------
+# POST /users/invite
+# ---------------------------------------------------------------------------
+@router.post(
+    "/users/invite",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Invite user",
+    description="Invite a new user to the platform.",
+)
+async def invite_user(
+    body: schemas.InviteUserRequest,
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Invite a user (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    result = await service.invite_user(db, current_user.organization_id, body)
+    return MessageResponse(message=result["message"])
+
+
+# ---------------------------------------------------------------------------
+# PATCH /users/{user_id}
+# ---------------------------------------------------------------------------
+@router.patch(
+    "/users/{user_id}",
+    response_model=MessageResponse,
+    summary="Update user",
+    description="Update user settings including role and status.",
+)
+async def update_user(
+    user_id: UUID,
+    body: schemas.UpdateUserRequest,
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update user (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    result = await service.update_user(db, user_id, body)
+    return MessageResponse(message=result["message"])
+
+
+# ---------------------------------------------------------------------------
+# POST /users/{user_id}/reset-password
+# ---------------------------------------------------------------------------
+@router.post(
+    "/users/{user_id}/reset-password",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Reset user password",
+    description="Send password reset email to user.",
+)
+async def reset_user_password(
+    user_id: UUID,
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset user password (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    result = await service.reset_user_password(db, user_id)
+    return MessageResponse(message=result["message"])
+
+
+# ---------------------------------------------------------------------------
+# POST /users/{user_id}/deactivate
+# ---------------------------------------------------------------------------
+@router.post(
+    "/users/{user_id}/deactivate",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Deactivate user",
+    description="Deactivate a user account (alternative endpoint).",
+)
+async def deactivate_user_post(
+    user_id: UUID,
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deactivate a user account (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    result = await service.deactivate_user(db, user_id)
+    return MessageResponse(message=result["message"])
+
+
+# ---------------------------------------------------------------------------
+# GET /organizations
+# ---------------------------------------------------------------------------
+@router.get(
+    "/organizations",
+    response_model=list[schemas.AdminOrgDetail],
+    summary="List organizations",
+    description="Get a list of all organizations with details.",
+)
+async def get_organizations(
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List organizations (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    return await service.get_organizations(db)
+
+
+# ---------------------------------------------------------------------------
+# GET /organizations/{org_id}
+# ---------------------------------------------------------------------------
+@router.get(
+    "/organizations/{org_id}",
+    response_model=schemas.AdminOrgDetail,
+    summary="Get organization detail",
+    description="Get detailed information about a specific organization.",
+)
+async def get_org_detail(
+    org_id: UUID,
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get organization detail (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    return await service.get_org_detail(db, org_id)
+
+
+# ---------------------------------------------------------------------------
+# PATCH /organizations/{org_id}
+# ---------------------------------------------------------------------------
+@router.patch(
+    "/organizations/{org_id}",
+    response_model=MessageResponse,
+    summary="Update organization",
+    description="Update organization settings.",
+)
+async def update_org(
+    org_id: UUID,
+    body: schemas.UpdateOrgRequest,
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update organization (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    result = await service.update_org(db, org_id, body)
+    return MessageResponse(message=result["message"])
+
+
+# ---------------------------------------------------------------------------
+# GET /billing
+# ---------------------------------------------------------------------------
+@router.get(
+    "/billing",
+    response_model=schemas.BillingOverview,
+    summary="Get billing overview",
+    description="Get billing overview for the current organization.",
+)
+async def get_billing_overview(
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get billing overview (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    return await service.get_billing_overview(db, current_user.organization_id)
+
+
+# ---------------------------------------------------------------------------
+# GET /billing/usage
+# ---------------------------------------------------------------------------
+@router.get(
+    "/billing/usage",
+    summary="Get billing usage",
+    description="Get current billing usage for the organization.",
+)
+async def get_billing_usage(
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get billing usage (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    return await service.get_billing_usage(db, current_user.organization_id)
+
+
+# ---------------------------------------------------------------------------
+# GET /billing/invoices
+# ---------------------------------------------------------------------------
+@router.get(
+    "/billing/invoices",
+    summary="Get billing invoices",
+    description="Get invoice history for the organization.",
+)
+async def get_billing_invoices(
+    current_user=Depends(require_role("admin", "owner")),
+    _tier_check=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get billing invoices (admin only).
+
+    Requires Enterprise tier and admin/owner role.
+    """
+    # Return empty list for now - would integrate with billing service
+    return {"invoices": []}

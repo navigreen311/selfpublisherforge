@@ -8,8 +8,8 @@ import { useAuthStore } from "@/lib/store";
 export default function LoginPage() {
   const router = useRouter();
   const { setUser, setTokens } = useAuthStore();
-  const [email, setEmail] = useState("admin@selfpublisherforge.com");
-  const [password, setPassword] = useState("Admin123!");
+  const [email, setEmail] = useState("jane@example.com");
+  const [password, setPassword] = useState("demo123");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [debug, setDebug] = useState("");

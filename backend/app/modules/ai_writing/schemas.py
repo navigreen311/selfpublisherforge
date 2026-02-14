@@ -29,6 +29,15 @@ class GenerationType(str, Enum):
     tone_adjustment = "tone_adjustment"
 
 
+class WritingAction(str, Enum):
+    write = "write"
+    rewrite = "rewrite"
+    expand = "expand"
+    shorten = "shorten"
+    continue_ = "continue"
+    ideas = "ideas"
+
+
 class ModelPreference(str, Enum):
     auto = "auto"
     claude = "claude"
@@ -74,6 +83,45 @@ class GenerateResponse(BaseModel):
     request_id: UUID
     generation_type: GenerationType
     content: str
+    tokens_used: int = 0
+    quality_results: dict[str, Any] = Field(default_factory=dict)
+    model_used: str = ""
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Action-based generation (6-action Writing Studio)
+# ---------------------------------------------------------------------------
+
+class ActionGenerateRequest(BaseModel):
+    """Request for a 6-action writing generation (write/rewrite/expand/shorten/continue/ideas)."""
+    model_config = ConfigDict(protected_namespaces=())
+
+    action: WritingAction
+    project_id: UUID | None = None
+    instruction: str = ""
+    selected_text: str = ""
+    context_before: str = ""
+    context_after: str = ""
+    chapter_outline: str = ""
+    previous_content: str = ""
+    style_profile: str = ""
+    tone: str = ""
+    length: str = ""
+    genre: str = ""
+    model_preference: ModelPreference = ModelPreference.auto
+    stream: bool = True
+    quality_checks: list[str] = Field(default_factory=list)
+
+
+class ActionGenerateResponse(BaseModel):
+    """Response from a 6-action writing generation."""
+    model_config = ConfigDict(protected_namespaces=())
+
+    request_id: UUID
+    action: WritingAction
+    content: str
+    word_count: int = 0
     tokens_used: int = 0
     quality_results: dict[str, Any] = Field(default_factory=dict)
     model_used: str = ""

@@ -4,3 +4,6 @@ export { TaskDetail } from "./TaskDetail";
 export { WorkflowBuilder } from "./WorkflowBuilder";
 export { BudgetMeter } from "./BudgetMeter";
 export { AuditLog } from "./AuditLog";
+export { AgentStatsBar } from "./AgentStatsBar";
+export { EnhancedAgentCard } from "./EnhancedAgentCard";
+export { RecentTasksList } from "./RecentTasksList";
