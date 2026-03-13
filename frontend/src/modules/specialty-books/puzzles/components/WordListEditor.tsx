@@ -1,0 +1,20 @@
+"use client";
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Shield, Sparkles, Loader2, X } from "lucide-react";
+import { useGenerateWordList, useSanitizeWordList } from "../hooks";
+export interface WordListEditorProps { words: string[]; onChange: (words: string[]) => void; }
+export function WordListEditor({ words, onChange }: WordListEditorProps) {
+  const [newWord, setNewWord] = useState(""); const [theme, setTheme] = useState(""); const [generateCount, setGenerateCount] = useState("20"); const [difficulty, setDifficulty] = useState("standard");
+  const { mutate: generateWords, isPending: isGenerating } = useGenerateWordList();
+  const { mutate: sanitize, isPending: isSanitizing } = useSanitizeWordList();
+  const addWord = () => { const word = newWord.trim().toUpperCase(); if (word && !words.includes(word)) { onChange([...words, word]); setNewWord(""); } };
+  const removeWord = (word: string) => onChange(words.filter((w) => w !== word));
+  const handleGenerate = () => { if (!theme.trim()) return; generateWords({ theme: theme.trim(), count: parseInt(generateCount) || 20, difficulty }, { onSuccess: (r) => { const existing = new Set(words); const nw = r.words.map((w) => w.toUpperCase()).filter((w) => !existing.has(w)); onChange([...words, ...nw]); } }); };
+  const handleSanitize = () => { sanitize({ words }, { onSuccess: (r) => onChange(r.sanitized.map((w) => w.toUpperCase())) }); };
+  return (<div className="space-y-3"><div className="flex gap-2"><Input placeholder="Add a word..." value={newWord} onChange={(e) => setNewWord(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addWord(); } }} className="flex-1" /><Button variant="outline" size="sm" onClick={addWord} disabled={!newWord.trim()}><Plus className="h-4 w-4" /></Button></div><div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 border rounded-md">{words.length === 0 ? (<p className="text-xs text-muted-foreground/60 italic py-4 w-full text-center">No words added yet</p>) : words.map((word) => (<Badge key={word} variant="secondary" className="text-xs font-mono gap-1 pr-1">{word}<button onClick={() => removeWord(word)} className="ml-0.5 hover:text-destructive"><X className="h-3 w-3" /></button></Badge>))}</div><div className="text-xs text-muted-foreground text-right">{words.length} word{words.length !== 1 ? "s" : ""}</div><div className="border rounded-lg p-3 space-y-2"><Label className="text-xs font-semibold">AI Generate by Theme</Label><div className="grid grid-cols-3 gap-2"><Input placeholder="Theme (e.g. Animals)" value={theme} onChange={(e) => setTheme(e.target.value)} className="col-span-1 text-xs h-8" /><Input type="number" min="5" max="100" value={generateCount} onChange={(e) => setGenerateCount(e.target.value)} className="text-xs h-8" placeholder="Count" /><Select value={difficulty} onValueChange={setDifficulty}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="simple">Simple</SelectItem><SelectItem value="standard">Standard</SelectItem><SelectItem value="advanced">Advanced</SelectItem></SelectContent></Select></div><div className="flex gap-2"><Button variant="default" size="sm" className="h-7 text-xs flex-1" onClick={handleGenerate} disabled={isGenerating || !theme.trim()}>{isGenerating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}Generate Words</Button><Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleSanitize} disabled={isSanitizing || words.length === 0}>{isSanitizing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Shield className="h-3 w-3 mr-1" />}Sanitize</Button></div></div></div>);
+}
