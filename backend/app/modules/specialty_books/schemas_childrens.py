@@ -12,6 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from .schemas_shared import PreflightCheck, TrimSize
 
 
+# -- Enums -----------------------------------------------------------------
+
+
 class AgeRange(str, Enum):
     BABY = "0-2"
     TODDLER = "2-4"
@@ -89,7 +92,12 @@ class FearIntensity(str, Enum):
     MODERATE = "moderate"
 
 
+# -- Book CRUD -------------------------------------------------------------
+
+
 class ChildrensBookCreate(BaseModel):
+    """Request body for creating a children's book project."""
+
     title: str = Field(..., min_length=1, max_length=255)
     subtitle: str | None = Field(None, max_length=255)
     author: str = Field(..., min_length=1, max_length=255)
@@ -97,7 +105,7 @@ class ChildrensBookCreate(BaseModel):
     page_count: int = Field(24, ge=8, le=64)
     trim_size: TrimSize = TrimSize.SIZE_8_5X8_5
     illustration_style: IllustrationStyle = IllustrationStyle.WATERCOLOR
-    color_palette: str | None = Field(None, max_length=255)
+    color_palette: str | None = Field(None, max_length=255, description="Named palette or hex list.")
     story_mode: StoryMode = StoryMode.PROSE
     creation_mode: CreationMode = CreationMode.AI_GENERATE
     theme_moral: str | None = Field(None, max_length=500)
@@ -108,10 +116,15 @@ class ChildrensBookCreate(BaseModel):
     bilingual_language: str | None = Field(None, max_length=50)
     bilingual_layout: BilingualLayout | None = None
     fear_intensity: FearIntensity = FearIntensity.NONE
-    safety_settings: dict[str, Any] | None = None
+    safety_settings: dict[str, Any] | None = Field(
+        None,
+        description="Content safety overrides: blocked_themes, trademark_enforcement, etc.",
+    )
 
 
 class ChildrensBookUpdate(BaseModel):
+    """Partial update for a children's book project."""
+
     title: str | None = Field(None, min_length=1, max_length=255)
     subtitle: str | None = Field(None, max_length=255)
     author: str | None = Field(None, min_length=1, max_length=255)
@@ -134,6 +147,8 @@ class ChildrensBookUpdate(BaseModel):
 
 
 class ChildrensBookResponse(BaseModel):
+    """Full children's book project response."""
+
     id: UUID
     org_id: UUID
     title: str
@@ -159,15 +174,23 @@ class ChildrensBookResponse(BaseModel):
     qa_score: float | None = Field(None, ge=0.0, le=100.0)
     created_at: datetime
     updated_at: datetime | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class ChildrensBookListResponse(BaseModel):
+    """Paginated list of children's books."""
+
     items: list[ChildrensBookResponse]
     total: int
 
 
+# -- Pages -----------------------------------------------------------------
+
+
 class PageCreate(BaseModel):
+    """Request body for creating a page."""
+
     page_number: int = Field(..., ge=1, le=64)
     page_type: PageType = PageType.STORY
     layout: PageLayout = PageLayout.IMAGE_TOP_TEXT_BOTTOM
@@ -185,6 +208,8 @@ class PageCreate(BaseModel):
 
 
 class PageUpdate(BaseModel):
+    """Partial update for a page."""
+
     page_number: int | None = Field(None, ge=1, le=64)
     page_type: PageType | None = None
     layout: PageLayout | None = None
@@ -202,6 +227,8 @@ class PageUpdate(BaseModel):
 
 
 class PageResponse(BaseModel):
+    """Full page response."""
+
     id: UUID
     book_id: UUID
     page_number: int
@@ -220,29 +247,47 @@ class PageResponse(BaseModel):
     illustration_seed: int | None = None
     created_at: datetime
     updated_at: datetime | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class PageReorderItem(BaseModel):
+    """A single page reorder instruction."""
+
     page_id: UUID
     new_position: int = Field(..., ge=1, le=64)
 
 
 class PageReorderRequest(BaseModel):
+    """Request to reorder pages."""
+
     pages: list[PageReorderItem] = Field(..., min_length=1)
 
 
+# -- Characters ------------------------------------------------------------
+
+
 class CharacterCreate(BaseModel):
+    """Request body for creating a character."""
+
     name: str = Field(..., min_length=1, max_length=100)
     species: str | None = Field(None, max_length=100)
     description: str | None = Field(None, max_length=1000)
-    reference_images: list[str] | None = None
+    reference_images: list[str] | None = Field(None, description="URLs of reference images.")
     auto_append: bool = True
-    clothing_rules: dict[str, Any] | None = None
-    scale_rules: dict[str, Any] | None = None
+    clothing_rules: dict[str, Any] | None = Field(
+        None,
+        description="Clothing consistency rules: outfit descriptions per scene type.",
+    )
+    scale_rules: dict[str, Any] | None = Field(
+        None,
+        description="Scale consistency rules: height relative to other characters/objects.",
+    )
 
 
 class CharacterUpdate(BaseModel):
+    """Partial update for a character."""
+
     name: str | None = Field(None, min_length=1, max_length=100)
     species: str | None = Field(None, max_length=100)
     description: str | None = Field(None, max_length=1000)
@@ -253,6 +298,8 @@ class CharacterUpdate(BaseModel):
 
 
 class CharacterResponse(BaseModel):
+    """Full character response."""
+
     id: UUID
     book_id: UUID
     name: str
@@ -264,10 +311,16 @@ class CharacterResponse(BaseModel):
     scale_rules: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
+# -- Story Generation ------------------------------------------------------
+
+
 class GenerateStoryRequest(BaseModel):
+    """Request to AI-generate a full story across pages."""
+
     prompt: str | None = Field(None, max_length=2000)
     theme: str | None = Field(None, max_length=255)
     character: str | None = Field(None, max_length=255)
@@ -277,18 +330,27 @@ class GenerateStoryRequest(BaseModel):
 
 
 class GeneratedPage(BaseModel):
+    """A single page from AI story generation."""
+
     page_number: int
     text_content: str
     illustration_prompt: str
 
 
 class GenerateStoryResponse(BaseModel):
+    """AI-generated story split across pages."""
+
     pages: list[GeneratedPage]
     total_pages: int
     reading_level: str | None = None
 
 
+# -- Text Analysis ----------------------------------------------------------
+
+
 class PacingDataPoint(BaseModel):
+    """A single data point on the page-turn pacing map."""
+
     page_number: int
     word_count: int
     surprise_score: float = Field(0.0, ge=0.0, le=1.0)
@@ -296,6 +358,8 @@ class PacingDataPoint(BaseModel):
 
 
 class RhymeAnalysis(BaseModel):
+    """Rhyme pattern analysis for rhyming story mode."""
+
     scheme_detected: str | None = None
     consistency_score: float = Field(0.0, ge=0.0, le=100.0)
     broken_rhymes: list[dict[str, Any]] = Field(default_factory=list)
@@ -303,6 +367,8 @@ class RhymeAnalysis(BaseModel):
 
 
 class TextAnalysisResponse(BaseModel):
+    """Reading level, rhythm, pacing, and rhyme analysis."""
+
     book_id: UUID
     reading_level: str
     reading_level_score: float = Field(..., ge=0.0, le=20.0)
@@ -313,7 +379,12 @@ class TextAnalysisResponse(BaseModel):
     sentence_length_avg: float | None = None
 
 
+# -- Continuity Check -------------------------------------------------------
+
+
 class ContinuityIssue(BaseModel):
+    """A single continuity issue found in illustration prompts."""
+
     page_number: int
     issue_type: str
     description: str
@@ -321,13 +392,20 @@ class ContinuityIssue(BaseModel):
 
 
 class ContinuityCheckResponse(BaseModel):
+    """Illustration prompt consistency check result."""
+
     book_id: UUID
     issues: list[ContinuityIssue] = Field(default_factory=list)
     total_issues: int = 0
     consistency_score: float = Field(0.0, ge=0.0, le=100.0)
 
 
+# -- Safety Check -----------------------------------------------------------
+
+
 class TrademarkIssue(BaseModel):
+    """A detected trademark issue."""
+
     page_number: int | None = None
     term: str
     category: str
@@ -335,6 +413,8 @@ class TrademarkIssue(BaseModel):
 
 
 class ContentIssue(BaseModel):
+    """A detected content sensitivity issue."""
+
     page_number: int | None = None
     issue_type: str
     description: str
@@ -342,56 +422,83 @@ class ContentIssue(BaseModel):
 
 
 class SafetyCheckResponse(BaseModel):
+    """Trademark and content sensitivity check result."""
+
     book_id: UUID
     trademark_issues: list[TrademarkIssue] = Field(default_factory=list)
     content_issues: list[ContentIssue] = Field(default_factory=list)
     overall_safe: bool = True
 
 
+# -- Illustration Generation ------------------------------------------------
+
+
 class IllustrationGenerateRequest(BaseModel):
-    prompt: str | None = Field(None, max_length=2000)
+    """Request to generate an illustration for a page."""
+
+    prompt: str | None = Field(None, max_length=2000, description="Override the page prompt.")
     style_override: IllustrationStyle | None = None
     seed: int | None = None
     variation_count: int = Field(1, ge=1, le=4)
 
 
 class IllustrationVariant(BaseModel):
+    """A single generated illustration variant."""
+
     url: str
     seed: int
     model: str
 
 
 class IllustrationGenerateResponse(BaseModel):
+    """Generated illustration result."""
+
     page_id: UUID
     variants: list[IllustrationVariant] = Field(default_factory=list)
     prompt_used: str
     provenance_id: UUID | None = None
 
 
+# -- Translation ------------------------------------------------------------
+
+
 class TranslateRequest(BaseModel):
+    """Request to generate bilingual translation for a book."""
+
     target_language: str = Field(..., min_length=2, max_length=50)
     layout: BilingualLayout = BilingualLayout.SIDE_BY_SIDE
     age_appropriate: bool = True
 
 
 class TranslatedPage(BaseModel):
+    """Translation result for a single page."""
+
     page_number: int
     original_text: str
     translated_text: str
 
 
 class TranslateResponse(BaseModel):
+    """Bilingual translation result."""
+
     book_id: UUID
     target_language: str
     layout: BilingualLayout
     pages: list[TranslatedPage] = Field(default_factory=list)
 
 
+# -- Export -----------------------------------------------------------------
+
+
 class ExportRequest(BaseModel):
+    """Request to generate an export file."""
+
     format: ExportFormat
 
 
 class ExportResponse(BaseModel):
+    """Export file result."""
+
     book_id: UUID
     format: ExportFormat
     url: str
@@ -399,7 +506,12 @@ class ExportResponse(BaseModel):
     preflight_results: list[PreflightCheck] | None = None
 
 
+# -- Preflight --------------------------------------------------------------
+
+
 class PreflightResponse(BaseModel):
+    """Full preflight check result."""
+
     book_id: UUID
     checks: list[PreflightCheck] = Field(default_factory=list)
     all_passed: bool = False
@@ -408,12 +520,22 @@ class PreflightResponse(BaseModel):
     failed_count: int = 0
 
 
+# -- Device Preview ---------------------------------------------------------
+
+
 class DevicePreviewRequest(BaseModel):
+    """Request to generate a device-accurate preview."""
+
     device: DeviceType
-    page_numbers: list[int] | None = None
+    page_numbers: list[int] | None = Field(
+        None,
+        description="Specific pages to preview; omit for all.",
+    )
 
 
 class DevicePreviewPage(BaseModel):
+    """A single device preview page."""
+
     page_number: int
     preview_url: str
     width_px: int
@@ -421,6 +543,8 @@ class DevicePreviewPage(BaseModel):
 
 
 class DevicePreviewResponse(BaseModel):
+    """Device preview result."""
+
     book_id: UUID
     device: DeviceType
     pages: list[DevicePreviewPage] = Field(default_factory=list)
