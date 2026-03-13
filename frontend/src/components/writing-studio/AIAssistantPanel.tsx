@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "@/hooks/use-translations";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -73,17 +73,6 @@ const LENGTH_OPTIONS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Count words in plain text (strips HTML tags). */
-function countWords(text: string): number {
-  const plain = text.replace(/<[^>]*>/g, " ").trim();
-  if (!plain) return 0;
-  return plain.split(/\s+/).filter(Boolean).length;
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -108,8 +97,6 @@ export function AIAssistantPanel({
   const [selectionWarning, setSelectionWarning] = useState("");
   const [instructionHistory, setInstructionHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [currentAction, setCurrentAction] = useState<string>("write");
-  const [lastRequest, setLastRequest] = useState<GenerateRequest | null>(null);
 
   const {
     content: generatedContent,
@@ -118,12 +105,6 @@ export function AIAssistantPanel({
     startGeneration,
     stopGeneration,
   } = useSSEGeneration();
-
-  // Compute the original word count of selected text for shorten comparison
-  const selectedTextWordCount = useMemo(
-    () => (selectedText ? countWords(selectedText) : 0),
-    [selectedText]
-  );
 
   // -----------------------------------------------------------------------
   // Handlers
@@ -137,8 +118,6 @@ export function AIAssistantPanel({
         setTimeout(() => setSelectionWarning(""), 3000);
         return;
       }
-
-      setCurrentAction(action);
 
       const request: GenerateRequest = {
         generation_type: action,
@@ -156,7 +135,6 @@ export function AIAssistantPanel({
         stream: true,
         quality_checks: ["readability"],
       };
-      setLastRequest(request);
       startGeneration(request);
     },
     [
@@ -180,8 +158,6 @@ export function AIAssistantPanel({
       setHistoryIndex(-1);
     }
 
-    setCurrentAction("write");
-
     const request: GenerateRequest = {
       generation_type: "write",
       project_id: projectId,
@@ -197,7 +173,6 @@ export function AIAssistantPanel({
       stream: true,
       quality_checks: ["readability"],
     };
-    setLastRequest(request);
     startGeneration(request);
   }, [
     bookId,
@@ -223,44 +198,12 @@ export function AIAssistantPanel({
   }, [generatedContent, onReplaceSelection]);
 
   const handleRegenerate = useCallback(() => {
-    if (lastRequest) {
-      startGeneration(lastRequest);
-    } else {
-      handleQuickAction("write");
-    }
-  }, [lastRequest, startGeneration, handleQuickAction]);
+    handleQuickAction("write");
+  }, [handleQuickAction]);
 
-  const handleEditPrompt = useCallback(() => {
-    // Pre-fill the instruction area with the last used instruction
-    const lastInstruction = lastRequest?.instructions || customInstruction;
-    setCustomInstruction(lastInstruction);
-  }, [lastRequest, customInstruction]);
-
-  const handleSelectIdea = useCallback(
-    (idea: string) => {
-      setCustomInstruction(idea);
-      setCurrentAction("write");
-
-      const request: GenerateRequest = {
-        generation_type: "write",
-        project_id: projectId,
-        instructions: idea,
-        context: {
-          book_id: bookId,
-          chapter_id: chapterId,
-          selected_text: selectedText || "",
-          tone,
-          length,
-        },
-        model_preference: "auto",
-        stream: true,
-        quality_checks: ["readability"],
-      };
-      setLastRequest(request);
-      startGeneration(request);
-    },
-    [bookId, chapterId, length, projectId, selectedText, startGeneration, tone]
-  );
+  const handleEditRetry = useCallback(() => {
+    setCustomInstruction(generatedContent || customInstruction);
+  }, [generatedContent, customInstruction]);
 
   // -----------------------------------------------------------------------
   // Readability helpers
@@ -393,17 +336,12 @@ export function AIAssistantPanel({
         <AIOutputDisplay
           content={generatedContent}
           isStreaming={isStreaming}
-          action={currentAction}
-          originalWordCount={
-            currentAction === "shorten" ? selectedTextWordCount : undefined
-          }
           error={error}
           hasSelection={!!selectedText}
           onInsert={handleInsert}
           onReplace={handleReplace}
           onRegenerate={handleRegenerate}
-          onEditPrompt={handleEditPrompt}
-          onSelectIdea={handleSelectIdea}
+          onEditRetry={handleEditRetry}
         />
       </div>
 

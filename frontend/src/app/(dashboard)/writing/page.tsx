@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { differenceInMinutes, differenceInHours, differenceInDays, format } from "date-fns";
+import { formatDistanceToNow, differenceInDays, format } from "date-fns";
 import { useTranslations } from "@/hooks/use-translations";
 import { useBooks, useWritingSessions } from "@/modules/writing/hooks";
 import type { BookEntry, WritingSessionEntry } from "@/modules/writing/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WritingAnalytics } from "@/components/writing-studio/WritingAnalytics";
 import { NewManuscriptModal } from "@/components/writing-studio/NewManuscriptModal";
-import { ManuscriptCardMenu } from "@/components/writing-studio/ManuscriptCardMenu";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -18,7 +17,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Writing Studio landing page.
@@ -41,17 +47,9 @@ type SortOption = "recent" | "title" | "progress";
 function formatRelativeDate(dateStr: string | undefined): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
-  const now = new Date();
-  const minutesDiff = differenceInMinutes(now, date);
-  const hoursDiff = differenceInHours(now, date);
-  const daysDiff = differenceInDays(now, date);
-
-  if (minutesDiff < 1) return "Just now";
-  if (minutesDiff < 60) return `${minutesDiff} minutes ago`;
-  if (hoursDiff < 24) return hoursDiff === 1 ? "1 hour ago" : `${hoursDiff} hours ago`;
-  if (daysDiff === 1) return "Yesterday";
-  if (daysDiff < 7) return `${daysDiff} days ago`;
-  return format(date, "MMM d, yyyy");
+  const daysDiff = differenceInDays(new Date(), date);
+  if (daysDiff >= 7) return format(date, "MMM d, yyyy");
+  return formatDistanceToNow(date, { addSuffix: true });
 }
 
 function formatSessionDate(dateStr: string): string {
@@ -210,6 +208,108 @@ function EmptyBooksState({ t }: { t: (key: string) => string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Manuscript row action menu
+// ---------------------------------------------------------------------------
+
+function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) => string }) {
+  const handleAction = (action: string) => {
+    // Placeholder actions -- show alert for now
+    switch (action) {
+      case "rename":
+        alert(`${t("manuscripts.menu.rename")}: ${book.title}`);
+        break;
+      case "duplicate":
+        alert(`${t("manuscripts.menu.duplicate")}: ${book.title}`);
+        break;
+      case "export-docx":
+        alert(`${t("manuscripts.menu.exportDocx")}: ${book.title}`);
+        break;
+      case "export-epub":
+        alert(`${t("manuscripts.menu.exportEpub")}: ${book.title}`);
+        break;
+      case "export-pdf":
+        alert(`${t("manuscripts.menu.exportPdf")}: ${book.title}`);
+        break;
+      case "export-txt":
+        alert(`${t("manuscripts.menu.exportTxt")}: ${book.title}`);
+        break;
+      case "export-md":
+        alert(`${t("manuscripts.menu.exportMd")}: ${book.title}`);
+        break;
+      case "analytics":
+        alert(`${t("manuscripts.menu.viewAnalytics")}: ${book.title}`);
+        break;
+      case "move-to-project":
+        alert(`${t("manuscripts.menu.moveToProject")}: ${book.title}`);
+        break;
+      case "archive":
+        alert(`${t("manuscripts.menu.archive")}: ${book.title}`);
+        break;
+      case "delete":
+        alert(`${t("manuscripts.menu.delete")}: ${book.title}`);
+        break;
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="h-8 w-8 flex items-center justify-center rounded-md border text-muted-foreground hover:bg-muted transition-colors"
+          aria-label={t("manuscripts.menu.rename")}
+        >
+          &#8230;
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => handleAction("rename")}>
+          {t("manuscripts.menu.rename")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("duplicate")}>
+          {t("manuscripts.menu.duplicate")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => handleAction("analytics")}>
+          {t("manuscripts.menu.viewAnalytics")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("move-to-project")}>
+          {t("manuscripts.menu.moveToProject")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          {t("manuscripts.menu.exportLabel")}
+        </DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => handleAction("export-docx")}>
+          {t("manuscripts.menu.exportDocx")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-epub")}>
+          {t("manuscripts.menu.exportEpub")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-pdf")}>
+          {t("manuscripts.menu.exportPdf")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-txt")}>
+          {t("manuscripts.menu.exportTxt")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => handleAction("export-md")}>
+          {t("manuscripts.menu.exportMd")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => handleAction("archive")}>
+          {t("manuscripts.menu.archive")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-red-600 focus:text-red-600"
+          onSelect={() => handleAction("delete")}
+        >
+          {t("manuscripts.menu.delete")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Progress bar for manuscript
 // ---------------------------------------------------------------------------
 
@@ -317,12 +417,8 @@ function WritingSessionsSection({
                     bookTitleMap[session.book_id] ||
                     t("stats.unknownBook")}
                 </td>
-                <td className="px-2 sm:px-4 py-2 text-muted-foreground truncate max-w-[150px]" title={session.chapter_title || undefined}>
-                  {session.chapter_title
-                    ? session.chapter_title.length > 25
-                      ? session.chapter_title.slice(0, 25) + "\u2026"
-                      : session.chapter_title
-                    : "\u2014"}
+                <td className="px-2 sm:px-4 py-2 text-muted-foreground">
+                  {session.chapter_title || "\u2014"}
                 </td>
                 <td className="px-2 sm:px-4 py-2">
                   {session.words_written.toLocaleString()}
@@ -602,7 +698,7 @@ export default function WritingStudioPage() {
                       >
                         {t("manuscripts.openEditor")}
                       </Link>
-                      <ManuscriptCardMenu manuscript={book} />
+                      <ManuscriptActionMenu book={book} t={t} />
                     </div>
                   </div>
                 </div>
@@ -633,12 +729,13 @@ export default function WritingStudioPage() {
           />
         </div>
         <div className="mt-2 text-right">
-          <Link
-            href="/analytics"
+          <button
+            type="button"
+            onClick={() => setAnalyticsOpen(true)}
             className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
           >
             {t("sessions.viewAll")}
-          </Link>
+          </button>
         </div>
       </div>
 
