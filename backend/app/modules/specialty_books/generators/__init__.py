@@ -1,19 +1,14 @@
-"""Puzzle generators for Specialty Books module.
+"""Puzzle generators for Specialty Books module."""
 
-Pure algorithmic generators — NOT AI-based.
-AI is only used for word list and clue generation upstream.
-"""
-
-from app.modules.specialty_books.generators.word_search import generate_word_search
-from app.modules.specialty_books.generators.crossword import generate_crossword
-from app.modules.specialty_books.generators.svg_renderer import (
-    render_word_search_svg,
-    render_crossword_svg,
+from app.modules.specialty_books.generators.maze import generate_maze
+from app.modules.specialty_books.generators.sudoku import generate_sudoku
+from app.modules.specialty_books.generators.word_scramble import generate_word_scramble
+from app.modules.specialty_books.generators.cryptogram import generate_cryptogram
+from app.modules.specialty_books.generators.svg_renderer_extended import (
+    render_maze_svg, render_sudoku_svg, render_word_scramble_svg, render_cryptogram_svg,
 )
 
 __all__ = [
-    "generate_word_search",
-    "generate_crossword",
-    "render_word_search_svg",
-    "render_crossword_svg",
+    "generate_maze", "generate_sudoku", "generate_word_scramble", "generate_cryptogram",
+    "render_maze_svg", "render_sudoku_svg", "render_word_scramble_svg", "render_cryptogram_svg",
 ]

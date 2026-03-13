@@ -1,1 +1,1 @@
-"""Specialty Books module: Children's, Coloring, and Puzzle book studios."""
+"""Specialty Books module — Children's, Coloring & Puzzle Books."""
