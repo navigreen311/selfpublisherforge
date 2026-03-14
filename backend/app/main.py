@@ -256,4 +256,7 @@ def _register_routers(app: FastAPI):
     from app.modules.specialty.style_clone.router import router as style_clone_router
     app.include_router(style_clone_router, prefix=prefix, tags=["specialty-style-clone"])
 
+    from app.modules.specialty.comic.router import router as comic_router
+    app.include_router(comic_router, prefix=prefix, tags=["specialty-comic"])
+
 app = create_app()
