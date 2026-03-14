@@ -51,6 +51,7 @@ export function useStyleClones(
       });
       return data;
     },
+    retry: false,
   });
 }
 
