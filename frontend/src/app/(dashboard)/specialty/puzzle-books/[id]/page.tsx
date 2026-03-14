@@ -100,7 +100,7 @@ export default function PuzzleBookEditorPage() {
   const bookId = params.id as string;
 
   const { data: book, isLoading: bookLoading } = usePuzzleBook(bookId);
-  const { data: puzzles, isLoading: puzzlesLoading } = usePuzzles(bookId);
+  const { data: puzzles } = usePuzzles(bookId);
   const generatePuzzle = useGeneratePuzzle(bookId);
   const exportBook = useExport(bookId);
 
@@ -154,15 +154,67 @@ export default function PuzzleBookEditorPage() {
     generatePuzzle.mutate(buildMutationInput());
   }, [selectedPuzzle, generatePuzzle, buildMutationInput]);
 
+  // Right-panel form state
+  const [editPuzzleType, setEditPuzzleType] = useState<PuzzleType>("word_search");
+  const [editTheme, setEditTheme] = useState("");
+  const [editGridSize, setEditGridSize] = useState("10x10");
+  const [editDifficulty, setEditDifficulty] = useState("medium");
+  const [editWordList, setEditWordList] = useState("");
+  const [allowDiagonal, setAllowDiagonal] = useState(false);
+  const [allowBackwards, setAllowBackwards] = useState(false);
+
+  // ─── Derived ────────────────────────────────────────────────────────────────
+  const puzzleList = puzzles ?? [];
+  const selectedPuzzle = puzzleList.find((p) => p.id === selectedPuzzleId) ?? null;
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+  const handleSelectPuzzle = useCallback(
+    (puzzle: Puzzle) => {
+      setSelectedPuzzleId(puzzle.id);
+      setEditPuzzleType(puzzle.puzzle_type);
+      setEditTheme(puzzle.theme ?? "");
+      setEditGridSize(puzzle.grid_size ?? "10x10");
+      setEditDifficulty(puzzle.difficulty);
+      setEditWordList(puzzle.word_list?.join("\n") ?? "");
+      setShowAnswerKey(false);
+    },
+    [],
+  );
+
+  const handleNewPuzzle = () => {
+    setSelectedPuzzleId(null);
+    setEditPuzzleType("word_search");
+    setEditTheme("");
+    setEditGridSize("10x10");
+    setEditDifficulty("medium");
+    setEditWordList("");
+    setAllowDiagonal(false);
+    setAllowBackwards(false);
+    setShowAnswerKey(false);
+  };
+
+  const handleGenerate = () => {
+    const wordListArray = editWordList
+      .split("\n")
+      .map((w) => w.trim())
+      .filter(Boolean);
+
+    generatePuzzle.mutate({
+      puzzle_type: editPuzzleType,
+      difficulty: editDifficulty,
+      grid_size: editGridSize,
+      theme: editTheme || undefined,
+      word_list: wordListArray.length > 0 ? wordListArray : undefined,
+    });
+  };
+
+  // ─── Loading state ──────────────────────────────────────────────────────────
   if (bookLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-        <div className="h-6 w-96 bg-muted animate-pulse rounded" />
-        <div className="grid grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
-          ))}
+      <div className="flex h-screen items-center justify-center">
+        <div className="space-y-3 text-center">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded mx-auto" />
+          <div className="h-4 w-64 bg-muted animate-pulse rounded mx-auto" />
         </div>
       </div>
     );
@@ -170,14 +222,16 @@ export default function PuzzleBookEditorPage() {
 
   if (!book) {
     return (
-      <div className="container mx-auto py-6">
-        <p className="text-muted-foreground">Book not found.</p>
-        <Button variant="outline" asChild className="mt-4">
-          <Link href="/specialty/puzzle-books">
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Puzzle Books
-          </Link>
-        </Button>
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">Book not found.</p>
+          <Button variant="outline" asChild>
+            <Link href="/specialty/puzzle-books">
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back to Puzzle Books
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -200,7 +254,9 @@ export default function PuzzleBookEditorPage() {
   }
 
   const statusLabel = book.status.replace("_", " ");
+  const wordListLines = editWordList.split("\n").filter((w) => w.trim().length > 0);
 
+  // ─── Main three-panel layout ────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* ─── Top Bar ──────────────────────────────────────────────────── */}
@@ -236,7 +292,12 @@ export default function PuzzleBookEditorPage() {
             </p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowReviews(true)}>
+            <MessageSquareWarning className="h-4 w-4 mr-1" />
+            Reviews
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -252,7 +313,7 @@ export default function PuzzleBookEditorPage() {
             onClick={() => exportBook.mutate({ format: "pdf", include_answers: true })}
             disabled={exportBook.isPending}
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 mr-1" />
             {exportBook.isPending ? "Exporting..." : "Export PDF"}
           </Button>
         </div>
