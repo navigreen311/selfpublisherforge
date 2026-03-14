@@ -31,6 +31,7 @@ import {
   Sparkles,
   Trash2,
   Plus,
+  HelpCircle,
 } from "lucide-react";
 import type { PuzzleType } from "../hooks";
 
@@ -193,6 +194,13 @@ const PUZZLE_TYPES_LIST: {
     defaultGridSize: "variable",
     gridSizes: ["variable"],
   },
+  {
+    type: "trivia",
+    label: "Trivia",
+    icon: HelpCircle,
+    defaultGridSize: "n/a",
+    gridSizes: ["n/a"],
+  },
 ];
 
 const DIFFICULTY_OPTIONS = ["easy", "medium", "hard"];
@@ -285,8 +293,23 @@ export function Step1BookDetails({ data, onChange }: StepProps) {
                   .filter(Boolean);
                 const typesStr =
                   types.length > 0 ? types.join(", ") : "Puzzles";
+                const totalCount = data.selected_puzzle_types.reduce(
+                  (sum, c) => sum + (c.quantity || 0),
+                  0
+                );
+                const difficulties = [
+                  ...new Set(
+                    data.selected_puzzle_types.map((c) => c.difficulty)
+                  ),
+                ];
+                const difficultyStr =
+                  difficulties.length === 1
+                    ? difficulties[0].charAt(0).toUpperCase() +
+                      difficulties[0].slice(1)
+                    : "Mixed Difficulty";
+                const countStr = totalCount > 0 ? `${totalCount} ` : "";
                 onChange({
-                  subtitle: `${typesStr} with Answers`,
+                  subtitle: `${countStr}${typesStr} Puzzles with Answers — ${difficultyStr}`,
                 });
               }}
             >
@@ -295,7 +318,7 @@ export function Step1BookDetails({ data, onChange }: StepProps) {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            AI suggests including puzzle types + &ldquo;with answers&rdquo;
+            Generates subtitle from count, types, and difficulty
           </p>
         </div>
       </div>
