@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,20 +16,13 @@ import {
   Lock,
   Binary,
   Link2,
-  CheckCircle2,
-  AlertTriangle,
+  Eye,
   MessageSquareWarning,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -40,6 +33,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   usePuzzleBook,
@@ -89,6 +84,15 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   hard: "bg-red-500/10 text-red-600",
 };
 
+const GRID_SIZE_OPTIONS = [
+  { value: "10x10", label: "10 x 10" },
+  { value: "15x15", label: "15 x 15" },
+  { value: "20x20", label: "20 x 20" },
+  { value: "4x4", label: "4 x 4" },
+  { value: "6x6", label: "6 x 6" },
+  { value: "9x9", label: "9 x 9" },
+];
+
 // ─── Page Component ───────────────────────────────────────────────────────────
 
 export default function PuzzleBookEditorPage() {
@@ -96,23 +100,76 @@ export default function PuzzleBookEditorPage() {
   const bookId = params.id as string;
 
   const { data: book, isLoading: bookLoading } = usePuzzleBook(bookId);
-  const { data: puzzles, isLoading: puzzlesLoading } = usePuzzles(bookId);
+  const { data: puzzles } = usePuzzles(bookId);
   const generatePuzzle = useGeneratePuzzle(bookId);
   const exportBook = useExport(bookId);
 
-  const [activeTab, setActiveTab] = useState("puzzles");
-  const [puzzleTypeFilter, setPuzzleTypeFilter] = useState<string>("all");
-  const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [selectedPuzzleId, setSelectedPuzzleId] = useState<string | null>(null);
+  const [showAnswerKey, setShowAnswerKey] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
 
+  // Right-panel form state
+  const [editPuzzleType, setEditPuzzleType] = useState<PuzzleType>("word_search");
+  const [editTheme, setEditTheme] = useState("");
+  const [editGridSize, setEditGridSize] = useState("10x10");
+  const [editDifficulty, setEditDifficulty] = useState("medium");
+  const [editWordList, setEditWordList] = useState("");
+  const [allowDiagonal, setAllowDiagonal] = useState(false);
+  const [allowBackwards, setAllowBackwards] = useState(false);
+
+  // ─── Derived ────────────────────────────────────────────────────────────────
+  const puzzleList = puzzles ?? [];
+  const selectedPuzzle = puzzleList.find((p) => p.id === selectedPuzzleId) ?? null;
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+  const handleSelectPuzzle = useCallback(
+    (puzzle: Puzzle) => {
+      setSelectedPuzzleId(puzzle.id);
+      setEditPuzzleType(puzzle.puzzle_type);
+      setEditTheme(puzzle.theme ?? "");
+      setEditGridSize(puzzle.grid_size ?? "10x10");
+      setEditDifficulty(puzzle.difficulty);
+      setEditWordList(puzzle.word_list?.join("\n") ?? "");
+      setShowAnswerKey(false);
+    },
+    [],
+  );
+
+  const handleNewPuzzle = () => {
+    setSelectedPuzzleId(null);
+    setEditPuzzleType("word_search");
+    setEditTheme("");
+    setEditGridSize("10x10");
+    setEditDifficulty("medium");
+    setEditWordList("");
+    setAllowDiagonal(false);
+    setAllowBackwards(false);
+    setShowAnswerKey(false);
+  };
+
+  const handleGenerate = () => {
+    const wordListArray = editWordList
+      .split("\n")
+      .map((w) => w.trim())
+      .filter(Boolean);
+
+    generatePuzzle.mutate({
+      puzzle_type: editPuzzleType,
+      difficulty: editDifficulty,
+      grid_size: editGridSize,
+      theme: editTheme || undefined,
+      word_list: wordListArray.length > 0 ? wordListArray : undefined,
+    });
+  };
+
+  // ─── Loading state ──────────────────────────────────────────────────────────
   if (bookLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-        <div className="h-6 w-96 bg-muted animate-pulse rounded" />
-        <div className="grid grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
-          ))}
+      <div className="flex h-screen items-center justify-center">
+        <div className="space-y-3 text-center">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded mx-auto" />
+          <div className="h-4 w-64 bg-muted animate-pulse rounded mx-auto" />
         </div>
       </div>
     );
@@ -120,275 +177,211 @@ export default function PuzzleBookEditorPage() {
 
   if (!book) {
     return (
-      <div className="container mx-auto py-6">
-        <p className="text-muted-foreground">Book not found.</p>
-        <Button variant="outline" asChild className="mt-4">
-          <Link href="/specialty/puzzle-books">
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Puzzle Books
-          </Link>
-        </Button>
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">Book not found.</p>
+          <Button variant="outline" asChild>
+            <Link href="/specialty/puzzle-books">
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back to Puzzle Books
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
-  const filteredPuzzles = (puzzles ?? []).filter((p) => {
-    if (puzzleTypeFilter !== "all" && p.puzzle_type !== puzzleTypeFilter)
-      return false;
-    if (difficultyFilter !== "all" && p.difficulty !== difficultyFilter)
-      return false;
-    return true;
-  });
+  // ─── Reviews fullscreen view ────────────────────────────────────────────────
+  if (showReviews) {
+    return (
+      <div className="flex h-screen flex-col">
+        <div className="flex items-center gap-3 border-b px-4 py-3">
+          <Button variant="ghost" size="sm" onClick={() => setShowReviews(false)}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Editor
+          </Button>
+          <h2 className="text-lg font-semibold">Reviews &amp; Feedback</h2>
+        </div>
+        <div className="flex-1 overflow-auto p-6">
+          <ReviewFeedbackPanel bookType="puzzle-books" bookId={bookId} />
+        </div>
+      </div>
+    );
+  }
 
   const statusLabel = book.status.replace("_", " ");
+  const wordListLines = editWordList.split("\n").filter((w) => w.trim().length > 0);
 
+  // ─── Main three-panel layout ────────────────────────────────────────────────
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Back link */}
-      <Button variant="ghost" size="sm" asChild className="gap-1.5">
-        <Link href="/specialty/puzzle-books">
-          <ChevronLeft className="h-4 w-4" />
-          Back to Puzzle Books
-        </Link>
-      </Button>
-
-      {/* Book Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{book.title}</h1>
-            <Badge className={cn("capitalize", STATUS_COLORS[book.status] ?? "")}>
+    <div className="flex h-screen flex-col">
+      {/* ─── Top Bar ───────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/specialty/puzzle-books">
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Link>
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold">{book.title}</h1>
+            <Badge className={cn("capitalize text-[10px]", STATUS_COLORS[book.status] ?? "")}>
               {statusLabel}
             </Badge>
           </div>
-          {book.subtitle && (
-            <p className="text-muted-foreground mt-1">{book.subtitle}</p>
-          )}
-          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-            <span className="capitalize">
-              Audience: {book.audience.replace("_", " ")}
-            </span>
-            <span className="capitalize">
-              Difficulty: {book.difficulty_mode}
-            </span>
-            <span>
-              {book.puzzles_created}/{book.total_puzzles} puzzles
-            </span>
-          </div>
+          <span className="text-sm text-muted-foreground">
+            {book.puzzles_created}/{book.total_puzzles} puzzles
+          </span>
+          <span className="text-sm text-muted-foreground capitalize">
+            {book.difficulty_mode}
+          </span>
+          <span className="text-sm text-muted-foreground capitalize">
+            {book.audience.replace("_", " ")}
+          </span>
         </div>
+
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowReviews(true)}>
+            <MessageSquareWarning className="h-4 w-4 mr-1" />
+            Reviews
+          </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() =>
-              exportBook.mutate({ format: "pdf", include_answers: true })
-            }
+            onClick={() => exportBook.mutate({ format: "pdf", include_answers: true })}
             disabled={exportBook.isPending}
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 mr-1" />
             {exportBook.isPending ? "Exporting..." : "Export PDF"}
           </Button>
         </div>
       </div>
 
-      <Separator />
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="puzzles">Puzzles</TabsTrigger>
-          <TabsTrigger value="word-lists">Word Lists</TabsTrigger>
-          <TabsTrigger value="clues">Clues</TabsTrigger>
-          <TabsTrigger value="difficulty">Difficulty</TabsTrigger>
-          <TabsTrigger value="answer-keys">Answer Keys</TabsTrigger>
-          <TabsTrigger value="quality">Quality</TabsTrigger>
-          <TabsTrigger value="export">Export</TabsTrigger>
-          <TabsTrigger value="reviews" className="gap-1.5">
-            <MessageSquareWarning className="h-3.5 w-3.5" />
-            Reviews
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ─── Puzzles Tab ──────────────────────────────────────────── */}
-        <TabsContent value="puzzles" className="space-y-4 mt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-3">
-              <Select
-                value={puzzleTypeFilter}
-                onValueChange={setPuzzleTypeFilter}
-              >
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Puzzle Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {book.puzzle_config.map((c) => (
-                    <SelectItem key={c.type} value={c.type}>
-                      {PUZZLE_TYPE_LABELS[c.type as PuzzleType] ?? c.type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={difficultyFilter}
-                onValueChange={setDifficultyFilter}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              size="sm"
-              onClick={() =>
-                generatePuzzle.mutate({
-                  puzzle_type:
-                    (book.puzzle_config[0]?.type as PuzzleType) ?? "word_search",
-                  difficulty: "medium",
-                })
-              }
-              disabled={generatePuzzle.isPending}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {generatePuzzle.isPending ? "Generating..." : "Generate Puzzle"}
+      {/* ─── Three-Panel Layout ────────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* ─── LEFT PANEL: Page Thumbnails ─────────────────────────────────── */}
+        <div className="w-56 flex-shrink-0 border-r flex flex-col">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <span className="text-sm font-medium">Pages</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNewPuzzle}>
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
-
-          {puzzlesLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <div className="p-4 space-y-3">
-                    <div className="h-10 w-10 bg-muted rounded" />
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : filteredPuzzles.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {filteredPuzzles.map((puzzle) => (
-                <PuzzleItemCard key={puzzle.id} puzzle={puzzle} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-muted-foreground mb-4">
-                No puzzles generated yet. Click &ldquo;Generate Puzzle&rdquo;
-                to create your first puzzle.
-              </p>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ─── Word Lists Tab ───────────────────────────────────────── */}
-        <TabsContent value="word-lists" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Word Lists</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                View and manage word lists used across all puzzles in this book.
-                Words are validated through the sanitization pipeline.
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Regenerate Lists
-                </Button>
-                <Button variant="outline" size="sm">
-                  Sanitize All
-                </Button>
-              </div>
-              {(puzzles ?? [])
-                .filter((p) => p.word_list && p.word_list.length > 0)
-                .map((puzzle) => (
-                  <div key={puzzle.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        #{puzzle.puzzle_number}{" "}
-                        {PUZZLE_TYPE_LABELS[puzzle.puzzle_type] ??
-                          puzzle.puzzle_type}
-                      </span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {puzzle.word_list?.length ?? 0} words
-                      </Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {puzzle.word_list?.slice(0, 20).map((word) => (
-                        <span
-                          key={word}
-                          className="text-xs bg-muted px-1.5 py-0.5 rounded"
-                        >
-                          {word}
-                        </span>
-                      ))}
-                      {(puzzle.word_list?.length ?? 0) > 20 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{(puzzle.word_list?.length ?? 0) - 20} more
-                        </span>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {puzzleList.map((puzzle) => {
+              const Icon = PUZZLE_TYPE_ICONS[puzzle.puzzle_type] ?? Search;
+              const isSelected = selectedPuzzleId === puzzle.id;
+              return (
+                <button
+                  key={puzzle.id}
+                  onClick={() => handleSelectPuzzle(puzzle)}
+                  className={cn(
+                    "w-full rounded-md border p-2 text-left transition-colors",
+                    "hover:bg-accent",
+                    isSelected && "ring-2 ring-primary bg-accent",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs font-medium">#{puzzle.puzzle_number}</span>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-[9px] capitalize ml-auto",
+                        DIFFICULTY_COLORS[puzzle.difficulty] ?? "",
                       )}
+                    >
+                      {puzzle.difficulty}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[9px] capitalize", STATUS_COLORS[puzzle.status] ?? "")}
+                    >
+                      {puzzle.status}
+                    </Badge>
+                  </div>
+                  {puzzle.theme && (
+                    <p className="text-[10px] text-muted-foreground mt-1 truncate">
+                      {puzzle.theme}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ─── CENTER PANEL: Preview ───────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 border-b">
+            <span className="text-sm font-medium">Preview</span>
+            {selectedPuzzle && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="answer-key-toggle-center" className="text-xs">
+                  Answer Key
+                </Label>
+                <Switch
+                  id="answer-key-toggle-center"
+                  checked={showAnswerKey}
+                  onCheckedChange={setShowAnswerKey}
+                />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {selectedPuzzle ? (
+              <div className="space-y-4">
+                {/* Grid data / Solution data */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {showAnswerKey ? "Solution Data" : "Grid Data"}
+                      </span>
+                    </div>
+                    <pre className="text-xs bg-muted rounded-md p-3 overflow-auto max-h-80 whitespace-pre-wrap">
+                      {JSON.stringify(
+                        showAnswerKey
+                          ? selectedPuzzle.solution_data ?? {}
+                          : selectedPuzzle.grid_data ?? {},
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  </CardContent>
+                </Card>
+
+                {/* Word list badges */}
+                {selectedPuzzle.word_list && selectedPuzzle.word_list.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium">
+                      Word List ({selectedPuzzle.word_list.length})
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedPuzzle.word_list.map((word) => (
+                        <Badge key={word} variant="secondary" className="text-xs">
+                          {word}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                )}
 
-        {/* ─── Clues Tab ────────────────────────────────────────────── */}
-        <TabsContent value="clues" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Clue Management</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Review and edit clues for crossword and other clue-based
-                puzzles. Clue style:{" "}
-                <Badge variant="outline" className="text-[10px] capitalize">
-                  {book.clue_style.replace("_", " ")}
-                </Badge>
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Regenerate Clues
-                </Button>
-                <Button variant="outline" size="sm">
-                  QA All Clues
-                </Button>
-                <Button variant="outline" size="sm">
-                  Auto-Fix Ambiguous
-                </Button>
-              </div>
-              {(puzzles ?? [])
-                .filter((p) => p.clues && p.clues.length > 0)
-                .map((puzzle) => (
-                  <div key={puzzle.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        #{puzzle.puzzle_number}{" "}
-                        {PUZZLE_TYPE_LABELS[puzzle.puzzle_type]}
-                      </span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {puzzle.clues?.length ?? 0} clues
-                      </Badge>
-                    </div>
+                {/* Clues */}
+                {selectedPuzzle.clues && selectedPuzzle.clues.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium">
+                      Clues ({selectedPuzzle.clues.length})
+                    </span>
                     <div className="space-y-1">
-                      {puzzle.clues?.slice(0, 5).map((clue, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-baseline gap-2 text-xs"
-                        >
-                          <span className="text-muted-foreground font-mono w-4">
+                      {selectedPuzzle.clues.map((clue, idx) => (
+                        <div key={idx} className="flex items-baseline gap-2 text-xs">
+                          <span className="text-muted-foreground font-mono w-5">
                             {idx + 1}.
                           </span>
                           <span>{clue.clue}</span>
@@ -397,442 +390,202 @@ export default function PuzzleBookEditorPage() {
                           </span>
                         </div>
                       ))}
-                      {(puzzle.clues?.length ?? 0) > 5 && (
-                        <p className="text-xs text-muted-foreground">
-                          +{(puzzle.clues?.length ?? 0) - 5} more clues
-                        </p>
-                      )}
                     </div>
                   </div>
-                ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                )}
 
-        {/* ─── Difficulty Tab ───────────────────────────────────────── */}
-        <TabsContent value="difficulty" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Difficulty Calibration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Mode:{" "}
-                  <span className="capitalize font-medium text-foreground">
-                    {book.difficulty_mode}
-                  </span>
-                </p>
-                <Button variant="outline" size="sm">
-                  Recalibrate All
-                </Button>
-              </div>
-              {/* Difficulty distribution */}
-              <div className="space-y-2">
-                <Label className="text-sm">Distribution</Label>
-                <div className="flex gap-4">
-                  {["easy", "medium", "hard"].map((level) => {
-                    const count = (puzzles ?? []).filter(
-                      (p) => p.difficulty === level
-                    ).length;
-                    const total = (puzzles ?? []).length || 1;
-                    const pct = Math.round((count / total) * 100);
-                    return (
-                      <div key={level} className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="capitalize">{level}</span>
-                          <span className="text-muted-foreground">
-                            {count} ({pct}%)
-                          </span>
-                        </div>
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all",
-                              level === "easy"
-                                ? "bg-green-500"
-                                : level === "medium"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                            )}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {/* Puzzle difficulty scores */}
-              <div className="space-y-2">
-                {(puzzles ?? []).map((puzzle) => (
-                  <div
-                    key={puzzle.id}
-                    className="flex items-center justify-between rounded-md border p-2 text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground font-mono w-6">
-                        #{puzzle.puzzle_number}
-                      </span>
-                      <span>
-                        {PUZZLE_TYPE_LABELS[puzzle.puzzle_type] ??
-                          puzzle.puzzle_type}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "text-[10px] capitalize",
-                          DIFFICULTY_COLORS[puzzle.difficulty] ?? ""
-                        )}
-                      >
-                        {puzzle.difficulty}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground w-12 text-right">
-                        {puzzle.difficulty_score}/100
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ─── Answer Keys Tab ──────────────────────────────────────── */}
-        <TabsContent value="answer-keys" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Answer Keys</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Position:{" "}
-                  <span className="capitalize font-medium text-foreground">
-                    {book.answer_key_position === "back"
-                      ? "Back of book"
-                      : book.answer_key_position === "reverse"
-                        ? "Reverse of puzzle page"
-                        : "No answer key"}
-                  </span>
-                </p>
-                <Button variant="outline" size="sm">
-                  Generate All Keys
-                </Button>
-                <Button variant="outline" size="sm">
-                  Verify Keys
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {(puzzles ?? []).map((puzzle) => {
-                  const hasKey = !!puzzle.solution_data;
-                  return (
-                    <div
-                      key={puzzle.id}
-                      className="flex items-center justify-between rounded-md border p-2 text-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground font-mono w-6">
-                          #{puzzle.puzzle_number}
+                {/* Quality issues */}
+                {selectedPuzzle.quality_issues &&
+                  selectedPuzzle.quality_issues.length > 0 && (
+                    <Card className="border-yellow-500/30">
+                      <CardContent className="p-4">
+                        <span className="text-sm font-medium text-yellow-600">
+                          Quality Issues
                         </span>
-                        <span>
-                          {PUZZLE_TYPE_LABELS[puzzle.puzzle_type] ??
-                            puzzle.puzzle_type}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {hasKey ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-500/10 text-green-600 text-[10px]"
-                          >
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Generated
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="secondary"
-                            className="bg-muted text-muted-foreground text-[10px]"
-                          >
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Missing
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                        <ul className="mt-2 space-y-1">
+                          {selectedPuzzle.quality_issues.map((issue, idx) => (
+                            <li
+                              key={idx}
+                              className="text-xs text-muted-foreground flex items-start gap-1.5"
+                            >
+                              <span className="text-yellow-500 mt-0.5">&bull;</span>
+                              {issue}
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ─── Quality Tab ──────────────────────────────────────────── */}
-        <TabsContent value="quality" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Quality Dashboard</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-2xl font-bold">
-                    {book.quality_score ?? "--"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Overall Score
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-2xl font-bold">
-                    {(puzzles ?? []).filter((p) => p.status === "verified")
-                      .length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Verified</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-2xl font-bold">
-                    {(puzzles ?? []).filter(
-                      (p) =>
-                        p.quality_issues && p.quality_issues.length > 0
-                    ).length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    With Issues
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-2xl font-bold">
-                    {(puzzles ?? []).filter((p) => p.status === "failed")
-                      .length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Failed</p>
-                </div>
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  Select a puzzle from the left panel or create a new one.
+                </p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Run Full QA
-                </Button>
-                <Button variant="outline" size="sm">
-                  Fix All Issues
-                </Button>
-              </div>
-              {/* Quality issues list */}
-              {(puzzles ?? [])
-                .filter(
-                  (p) => p.quality_issues && p.quality_issues.length > 0
-                )
-                .map((puzzle) => (
-                  <div key={puzzle.id} className="rounded-lg border p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm font-medium">
-                        #{puzzle.puzzle_number}{" "}
-                        {PUZZLE_TYPE_LABELS[puzzle.puzzle_type]}
-                      </span>
-                    </div>
-                    <ul className="space-y-1">
-                      {puzzle.quality_issues?.map((issue, idx) => (
-                        <li
-                          key={idx}
-                          className="text-xs text-muted-foreground flex items-start gap-1.5"
-                        >
-                          <span className="text-yellow-500 mt-0.5">
-                            &bull;
-                          </span>
-                          {issue}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            )}
+          </div>
+        </div>
 
-        {/* ─── Export Tab ───────────────────────────────────────────── */}
-        <TabsContent value="export" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Export & Publish</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Generate print-ready files for your puzzle book. All puzzles
-                will be verified before export.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border p-4 space-y-3">
-                  <h3 className="font-medium text-sm">Print-Ready PDF</h3>
-                  <p className="text-xs text-muted-foreground">
-                    KDP interior with bleed, trim marks, and 300 DPI
-                    resolution. Includes puzzles and answer keys.
-                  </p>
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    onClick={() =>
-                      exportBook.mutate({
-                        format: "pdf",
-                        dpi: 300,
-                        include_answers: true,
-                      })
-                    }
-                    disabled={exportBook.isPending}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export PDF
-                  </Button>
-                </div>
-                <div className="rounded-lg border p-4 space-y-3">
-                  <h3 className="font-medium text-sm">Individual Pages</h3>
-                  <p className="text-xs text-muted-foreground">
-                    PNG images per page at 300 DPI. Useful for other print
-                    platforms or custom layouts.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() =>
-                      exportBook.mutate({
-                        format: "png",
-                        dpi: 300,
-                        include_answers: true,
-                      })
-                    }
-                    disabled={exportBook.isPending}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export PNGs
-                  </Button>
-                </div>
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <h3 className="font-medium text-sm">Pre-Export Checklist</h3>
-                <div className="space-y-1">
-                  {[
-                    {
-                      label: "All puzzles generated",
-                      ok: book.puzzles_created >= book.total_puzzles,
-                    },
-                    {
-                      label: "All puzzles verified solvable",
-                      ok:
-                        (puzzles ?? []).length > 0 &&
-                        (puzzles ?? []).every(
-                          (p) => p.status === "verified"
-                        ),
-                    },
-                    {
-                      label: "Answer keys generated",
-                      ok:
-                        book.answer_key_position === "none" ||
-                        (puzzles ?? []).every((p) => !!p.solution_data),
-                    },
-                    {
-                      label: "Word lists sanitized",
-                      ok: true,
-                    },
-                    {
-                      label: "Difficulty calibration complete",
-                      ok: (puzzles ?? []).every(
-                        (p) => p.difficulty_score > 0
-                      ),
-                    },
-                  ].map((check) => (
-                    <div
-                      key={check.label}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      {check.ok ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                      )}
-                      <span
-                        className={cn(
-                          check.ok
-                            ? "text-foreground"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {check.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ─── Reviews Tab ──────────────────────────────────────────── */}
-        <TabsContent value="reviews" className="space-y-4 mt-4">
-          <ReviewFeedbackPanel bookType="puzzle-books" bookId={bookId} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ─── Puzzle Item Card ─────────────────────────────────────────────────────────
-
-function PuzzleItemCard({ puzzle }: { puzzle: Puzzle }) {
-  const Icon =
-    PUZZLE_TYPE_ICONS[puzzle.puzzle_type] ?? Search;
-
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-primary" />
+        {/* ─── RIGHT PANEL: Settings ───────────────────────────────────────── */}
+        <div className="w-72 flex-shrink-0 border-l flex flex-col">
+          <div className="px-4 py-2 border-b">
             <span className="text-sm font-medium">
-              #{puzzle.puzzle_number}
+              {selectedPuzzle ? "Puzzle Settings" : "New Puzzle"}
             </span>
           </div>
-          <Badge
-            variant="secondary"
-            className={cn(
-              "text-[10px] capitalize",
-              STATUS_COLORS[puzzle.status] ?? ""
-            )}
-          >
-            {puzzle.status}
-          </Badge>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Puzzle Type */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Puzzle Type</Label>
+              <Select
+                value={editPuzzleType}
+                onValueChange={(v) => setEditPuzzleType(v as PuzzleType)}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(PUZZLE_TYPE_LABELS) as PuzzleType[]).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {PUZZLE_TYPE_LABELS[type]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Theme */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Theme</Label>
+              <Input
+                className="h-8 text-xs"
+                placeholder="e.g. Animals, Space..."
+                value={editTheme}
+                onChange={(e) => setEditTheme(e.target.value)}
+              />
+            </div>
+
+            {/* Grid Size */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Grid Size</Label>
+              <Select value={editGridSize} onValueChange={setEditGridSize}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GRID_SIZE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Difficulty */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Difficulty</Label>
+              <Select value={editDifficulty} onValueChange={setEditDifficulty}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
+            {/* Direction Options */}
+            <div className="space-y-3">
+              <span className="text-xs font-medium">Direction Options</span>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="allow-diagonal" className="text-xs">
+                  Allow diagonal
+                </Label>
+                <Switch
+                  id="allow-diagonal"
+                  checked={allowDiagonal}
+                  onCheckedChange={setAllowDiagonal}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="allow-backwards" className="text-xs">
+                  Allow backwards
+                </Label>
+                <Switch
+                  id="allow-backwards"
+                  checked={allowBackwards}
+                  onCheckedChange={setAllowBackwards}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Word List */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Word List</Label>
+                <span className="text-[10px] text-muted-foreground">
+                  {wordListLines.length} word{wordListLines.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <Textarea
+                className="text-xs min-h-[100px] resize-y"
+                placeholder={"One word per line\napple\nbanana\ncherry"}
+                value={editWordList}
+                onChange={(e) => setEditWordList(e.target.value)}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Show Answer Key */}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="answer-key-right" className="text-xs">
+                Show Answer Key
+              </Label>
+              <Switch
+                id="answer-key-right"
+                checked={showAnswerKey}
+                onCheckedChange={setShowAnswerKey}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Generate / Regenerate */}
+            <Button
+              className="w-full"
+              size="sm"
+              onClick={handleGenerate}
+              disabled={generatePuzzle.isPending}
+            >
+              {generatePuzzle.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : selectedPuzzle ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Regenerate
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Generate
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {PUZZLE_TYPE_LABELS[puzzle.puzzle_type] ?? puzzle.puzzle_type}
-        </p>
-        <div className="flex items-center justify-between">
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-[10px] capitalize",
-              DIFFICULTY_COLORS[puzzle.difficulty] ?? ""
-            )}
-          >
-            {puzzle.difficulty}
-          </Badge>
-          {puzzle.grid_size && (
-            <span className="text-[10px] text-muted-foreground">
-              {puzzle.grid_size}
-            </span>
-          )}
-        </div>
-        {puzzle.theme && (
-          <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">
-            {puzzle.theme}
-          </span>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
