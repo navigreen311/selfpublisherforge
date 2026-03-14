@@ -182,6 +182,8 @@ const BILINGUAL_LANGUAGES = [
   "Korean",
   "Arabic",
   "Hindi",
+  "Russian",
+  "Vietnamese",
 ];
 
 // ---------------------------------------------------------------------------
@@ -446,6 +448,19 @@ export function Step2FormatStyle({ data, onChange }: StepProps) {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Style Clone */}
+      <div className="space-y-2">
+        <Label>Style Clone (Optional)</Label>
+        <p className="text-xs text-muted-foreground">
+          Apply a saved illustration style profile to keep art consistent.
+        </p>
+        <StyleClonePicker
+          value={data.style_clone_id || undefined}
+          onChange={(id) => onChange({ style_clone_id: id ?? "" })}
+          bookType="childrens"
+        />
       </div>
     </div>
   );
