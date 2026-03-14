@@ -109,6 +109,7 @@ export default function CreateChildrensBookPage() {
         trim_size: data.trim_size,
         illustration_style: data.illustration_style,
         color_palette: data.color_palette,
+        style_clone_id: data.style_clone_id || undefined,
         story_mode: data.story_mode,
         creation_mode: data.creation_mode,
         is_bilingual: data.is_bilingual,
