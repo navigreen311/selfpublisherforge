@@ -198,25 +198,25 @@ class CookbookType(str, enum.Enum):
 
 class ChapterOrganization(str, enum.Enum):
     """How cookbook chapters are organized."""
-    by_meal = "by_meal"
-    by_course = "by_course"
-    by_ingredient = "by_ingredient"
-    by_cuisine = "by_cuisine"
-    by_season = "by_season"
-    by_technique = "by_technique"
-    by_occasion = "by_occasion"
+    by_meal = "by_meal"                # Breakfast, Lunch, Dinner
+    by_course = "by_course"            # Appetizer, Main, Dessert
+    by_ingredient = "by_ingredient"    # Chicken, Beef, Seafood
+    by_cuisine = "by_cuisine"          # Italian, Mexican, Thai
+    by_season = "by_season"            # Spring, Summer, Fall, Winter
+    by_technique = "by_technique"      # Grilling, Baking, Slow Cooking
+    by_occasion = "by_occasion"        # Weeknight, Party, Holiday
     custom = "custom"
 
 
 class RecipeLayout(str, enum.Enum):
     """Layout style for recipe pages."""
-    classic = "classic"
-    magazine = "magazine"
-    minimal = "minimal"
-    full_photo = "full_photo"
-    step_by_step = "step_by_step"
-    card = "card"
-    two_column = "two_column"
+    classic = "classic"                # Photo top, recipe below
+    magazine = "magazine"              # Side-by-side photo and recipe
+    minimal = "minimal"               # Text-focused, small photo
+    full_photo = "full_photo"          # Full-page photo, recipe on next page
+    step_by_step = "step_by_step"      # Photo for each step
+    card = "card"                      # Recipe card format
+    two_column = "two_column"          # Two recipes per page
 
 
 class IllustrationMethod(str, enum.Enum):
@@ -233,7 +233,7 @@ class CookbookInteriorType(str, enum.Enum):
     """Interior printing type."""
     full_color = "full_color"
     black_and_white = "black_and_white"
-    color_inserts = "color_inserts"
+    color_inserts = "color_inserts"     # B&W with color photo section
 
 
 class RecipeDifficulty(str, enum.Enum):
