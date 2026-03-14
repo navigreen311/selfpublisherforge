@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError, ValidationError
@@ -784,6 +784,44 @@ async def list_puzzle_books(
     )
     result = await db.execute(stmt)
     return [_book_to_dict(b) for b in result.scalars().all()]
+
+
+async def get_stats(
+    db: AsyncSession,
+    org_id: UUID,
+) -> dict[str, Any]:
+    """Return aggregate statistics for puzzle books in an organization."""
+    base = [PuzzleBook.org_id == org_id, PuzzleBook.deleted_at.is_(None)]
+
+    total_stmt = select(func.count()).select_from(PuzzleBook).where(*base)
+    total_result = await db.execute(total_stmt)
+    total_books = total_result.scalar() or 0
+
+    in_progress_stmt = select(func.count()).select_from(PuzzleBook).where(
+        *base, PuzzleBook.status == BookStatus.in_progress
+    )
+    in_progress_result = await db.execute(in_progress_stmt)
+    in_progress = in_progress_result.scalar() or 0
+
+    published_stmt = select(func.count()).select_from(PuzzleBook).where(
+        *base, PuzzleBook.status == BookStatus.published
+    )
+    published_result = await db.execute(published_stmt)
+    published = published_result.scalar() or 0
+
+    book_ids_stmt = select(PuzzleBook.id).where(*base)
+    puzzles_stmt = select(func.count()).select_from(Puzzle).where(
+        Puzzle.book_id.in_(book_ids_stmt),
+    )
+    puzzles_result = await db.execute(puzzles_stmt)
+    pages_created = puzzles_result.scalar() or 0
+
+    return {
+        "total_books": total_books,
+        "in_progress": in_progress,
+        "published": published,
+        "pages_created": pages_created,
+    }
 
 
 async def create_puzzle_book(

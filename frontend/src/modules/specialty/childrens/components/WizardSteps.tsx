@@ -179,14 +179,15 @@ const BILINGUAL_LANGUAGES = [
   "French",
   "German",
   "Portuguese",
-  "Italian",
-  "Mandarin",
+  "Chinese Simplified",
+  "Chinese Traditional",
   "Japanese",
   "Korean",
-  "Arabic",
+  "Italian",
   "Hindi",
+  "Arabic",
   "Russian",
-  "Vietnamese",
+  "Other",
 ];
 
 // ---------------------------------------------------------------------------
@@ -677,58 +678,38 @@ export function Step4ContentSafety({ data, onChange }: StepProps) {
         </div>
       </div>
 
-      {/* Enforced Safety Checkboxes */}
+      {/* Content Exclusion Checkboxes */}
       <div className="space-y-1">
         <Label className="text-sm font-medium">
-          Enforced Safety Rules
+          Content Exclusions
         </Label>
         <p className="text-xs text-muted-foreground mb-3">
-          These settings are enforced to ensure child-safe content.
+          These content rules are enforced to ensure child-safe material.
         </p>
 
         <div className="space-y-3">
-          {[
+          {([
             {
               key: "safety_no_weapons" as const,
               label: "No weapons or violence",
-              enforced: true,
             },
             {
               key: "safety_no_scary" as const,
               label: "No scary / dark imagery",
-              enforced: true,
             },
             {
               key: "safety_no_trademarks" as const,
               label: "No trademarked characters",
-              enforced: true,
             },
             {
               key: "safety_no_stereotypes" as const,
               label: "No stereotypical depictions",
-              enforced: true,
             },
             {
               key: "safety_age_vocabulary" as const,
               label: "Age-appropriate vocabulary",
-              enforced: true,
             },
-            {
-              key: "safety_trademark_enforcement" as const,
-              label: "Trademark-safe prompt enforcement",
-              enforced: false,
-            },
-            {
-              key: "safety_content_precheck" as const,
-              label: "Content sensitivity pre-check",
-              enforced: false,
-            },
-            {
-              key: "safety_provenance_logging" as const,
-              label: "Model/style provenance logging",
-              enforced: false,
-            },
-          ].map((item) => (
+          ] as const).map((item) => (
             <div
               key={item.key}
               className="flex items-center justify-between rounded-md border p-3"
@@ -743,16 +724,58 @@ export function Step4ContentSafety({ data, onChange }: StepProps) {
                   )}
                 />
                 <span className="text-sm">{item.label}</span>
-                {item.enforced && (
-                  <Badge variant="secondary" className="text-[10px]">
-                    Enforced
-                  </Badge>
-                )}
               </div>
               <Switch
                 checked={data[item.key]}
                 onCheckedChange={(v) => onChange({ [item.key]: v })}
-                disabled={item.enforced}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Illustration Safety Checkboxes */}
+      <div className="space-y-1">
+        <Label className="text-sm font-medium">
+          Illustration Safety
+        </Label>
+        <p className="text-xs text-muted-foreground mb-3">
+          Additional safety checks for generated illustrations.
+        </p>
+
+        <div className="space-y-3">
+          {([
+            {
+              key: "safety_trademark_enforcement" as const,
+              label: "Trademark-safe prompt enforcement",
+            },
+            {
+              key: "safety_content_precheck" as const,
+              label: "Content sensitivity pre-check",
+            },
+            {
+              key: "safety_provenance_logging" as const,
+              label: "Model/style provenance logging",
+            },
+          ] as const).map((item) => (
+            <div
+              key={item.key}
+              className="flex items-center justify-between rounded-md border p-3"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle2
+                  className={cn(
+                    "h-4 w-4",
+                    data[item.key]
+                      ? "text-green-500"
+                      : "text-muted-foreground",
+                  )}
+                />
+                <span className="text-sm">{item.label}</span>
+              </div>
+              <Switch
+                checked={data[item.key]}
+                onCheckedChange={(v) => onChange({ [item.key]: v })}
               />
             </div>
           ))}

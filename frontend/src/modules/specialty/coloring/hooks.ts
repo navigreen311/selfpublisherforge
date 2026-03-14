@@ -136,6 +136,7 @@ export function useColoringBooks(params?: {
       }>(BASE, { params });
       return data;
     },
+    placeholderData: { items: [], total: 0, cursor: undefined },
   });
 }
 

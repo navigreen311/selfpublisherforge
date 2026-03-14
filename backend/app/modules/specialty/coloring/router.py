@@ -44,6 +44,20 @@ router = APIRouter(prefix="/specialty/coloring-books", tags=["coloring-books"])
 
 
 @router.get(
+    "/stats",
+    response_model=SuccessResponse[dict],
+    summary="Get coloring book stats",
+    description="Return aggregate statistics for coloring books in the current organization.",
+)
+async def get_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    result = await service.get_stats(db, current_user["org_id"])
+    return SuccessResponse(data=result)
+
+
+@router.get(
     "/simulation/palettes",
     response_model=SuccessResponse[list],
     summary="List simulation color palettes",

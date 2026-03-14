@@ -18,6 +18,7 @@ import {
   PartyPopper,
   Timer,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { useCookbooks, useCookbookStats } from "@/modules/specialty/cookbook/hooks";
 import { CookbookCard } from "@/modules/specialty/cookbook/components/CookbookCard";
+import { EmptyState } from "@/components/shared/empty-state";
 
 // ---------------------------------------------------------------------------
 // Quick-start templates
@@ -116,6 +118,7 @@ const TEMPLATES: QuickTemplate[] = [
 // ---------------------------------------------------------------------------
 
 export default function CookbookBooksPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -279,21 +282,13 @@ export default function CookbookBooksPage() {
       ) : (
         <div className="space-y-10">
           {/* Empty state */}
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-              <ChefHat className="h-12 w-12 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">No cookbooks yet</h3>
-            <p className="text-muted-foreground max-w-md mb-6">
-              Create your first cookbook with recipes, meal plans, and shopping
-              lists. Start from scratch or pick a quick-start template below.
-            </p>
-            <Button asChild>
-              <Link href="/specialty/cookbook-books/new">
-                <Plus className="h-4 w-4 mr-2" /> Create Your First Cookbook
-              </Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon={<span className="text-4xl">📖</span>}
+            title="No cookbooks yet"
+            description="Create your first cookbook with AI-powered recipe management."
+            actionLabel="+ Create Your First Cookbook"
+            onAction={() => router.push("/specialty/cookbook-books/new")}
+          />
 
           {/* Quick-start templates */}
           <div>

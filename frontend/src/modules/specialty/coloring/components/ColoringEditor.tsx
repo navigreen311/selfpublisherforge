@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import {
   Brush,
   Pen,
+  Pencil,
   Eraser,
   PaintBucket,
   Spline,
@@ -24,9 +25,12 @@ import {
   SlidersHorizontal,
   Type,
   Gauge,
+  RefreshCw,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,7 +109,9 @@ const CANVAS_TOOLS: ToolDef[] = [
 
 const PAGE_ACTIONS = [
   { id: "generate", label: "Generate", icon: Wand2 },
+  { id: "regenerate", label: "Regenerate", icon: RefreshCw },
   { id: "upload", label: "Upload", icon: Upload },
+  { id: "variations", label: "Variations", icon: Copy },
   { id: "clean_lines", label: "Clean Lines", icon: Sparkles },
   { id: "vectorize", label: "Vectorize", icon: Spline },
   { id: "quality_check", label: "Quality Check", icon: ShieldCheck },
@@ -124,6 +130,14 @@ const BORDER_STYLES = [
 
 const DIFFICULTY_LABELS = ["Very Easy", "Easy", "Medium", "Hard", "Very Hard"];
 
+const SIMULATION_MEDIA = [
+  { id: "marker", label: "Marker", icon: Pen, filter: "sepia(0.15) saturate(0.8)" },
+  { id: "crayon", label: "Crayon", icon: Pencil, filter: "sepia(0.3) saturate(0.6) contrast(0.9)" },
+  { id: "pencil", label: "Pencil", icon: Pencil, filter: "grayscale(0.4) brightness(1.1) contrast(0.85)" },
+] as const;
+
+type SimMediaId = (typeof SIMULATION_MEDIA)[number]["id"];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export interface ColoringEditorProps {
@@ -140,21 +154,21 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
   const [zoom, setZoom] = useState([100]);
   const [undoStack] = useState<number>(0);
   const [redoStack] = useState<number>(0);
-  const [illustrationPrompt, setIllustrationPrompt] = useState("");
-  const [borderStyle, setBorderStyle] = useState("none");
-  const [difficulty, setDifficulty] = useState([3]);
-  const [caption, setCaption] = useState("");
-  const [promptOpen, setPromptOpen] = useState(true);
-  const [pipelineOpen, setPipelineOpen] = useState(true);
-  const [postProcessOpen, setPostProcessOpen] = useState(true);
-  const [simulationOpen, setSimulationOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(true);
 
   // Right panel state
   const [illustrationPrompt, setIllustrationPrompt] = useState("");
   const [borderStyle, setBorderStyle] = useState("none");
   const [difficulty, setDifficulty] = useState([3]);
   const [caption, setCaption] = useState("");
+
+  // Post-processing sliders
+  const [lineThreshold, setLineThreshold] = useState([128]);
+  const [strokeWeight, setStrokeWeight] = useState([3]);
+  const [inkDensity, setInkDensity] = useState([80]);
+  const [vectorizeEnabled, setVectorizeEnabled] = useState(false);
+
+  // Simulation media
+  const [simMedia, setSimMedia] = useState<SimMediaId>("marker");
 
   // Collapsible sections
   const [promptOpen, setPromptOpen] = useState(true);
@@ -178,6 +192,12 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPage?.id]);
+
+  const hasImage =
+    selectedPage?.status !== "pending" &&
+    selectedPage?.status !== "generating";
+
+  const activeSimConfig = SIMULATION_MEDIA.find((m) => m.id === simMedia)!;
 
   return (
     <div className="flex h-[calc(100vh-280px)] min-h-[600px] border rounded-lg overflow-hidden bg-background">
@@ -416,10 +436,10 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                   className="text-sm resize-none"
                   disabled={!selectedPage}
                 />
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     size="sm"
-                    className="flex-1 gap-1.5"
+                    className="gap-1.5"
                     disabled={!selectedPage || !illustrationPrompt.trim()}
                     onClick={() =>
                       selectedPage &&
@@ -428,6 +448,19 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                   >
                     <Wand2 className="h-3.5 w-3.5" />
                     Generate
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={!selectedPage || !hasImage}
+                    onClick={() =>
+                      selectedPage &&
+                      onPageAction(selectedPage.id, "regenerate")
+                    }
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Regenerate
                   </Button>
                   <Button
                     variant="outline"
@@ -441,18 +474,31 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                     <Upload className="h-3.5 w-3.5" />
                     Upload
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={!selectedPage || !hasImage}
+                    onClick={() =>
+                      selectedPage &&
+                      onPageAction(selectedPage.id, "variations")
+                    }
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Variations
+                  </Button>
                 </div>
               </CollapsibleContent>
             </Collapsible>
 
             <Separator />
 
-            {/* ── Quality Pipeline ─────────────────────────────────── */}
+            {/* ── Line Art Quality Pipeline (7 steps) ─────────────── */}
             <Collapsible open={pipelineOpen} onOpenChange={setPipelineOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-sm font-medium hover:text-primary transition-colors">
                 <span className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4" />
-                  Quality Pipeline
+                  Line Art Quality Pipeline
                 </span>
                 <ChevronDown
                   className={cn(
@@ -467,23 +513,41 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                     <div className="space-y-2">
                       {[
                         {
-                          step: "Generated",
+                          step: "1. Image Generated",
                           done:
                             selectedPage.status !== "pending" &&
                             selectedPage.status !== "generating",
                         },
                         {
-                          step: "Lines Cleaned",
+                          step: "2. Background Removed",
+                          done:
+                            selectedPage.status !== "pending" &&
+                            selectedPage.status !== "generating",
+                        },
+                        {
+                          step: "3. Lines Cleaned",
                           done:
                             selectedPage.status === "cleaned" ||
                             selectedPage.status === "approved",
                         },
                         {
-                          step: "Vectorized",
+                          step: "4. Stroke Normalized",
+                          done:
+                            selectedPage.status === "cleaned" ||
+                            selectedPage.status === "approved",
+                        },
+                        {
+                          step: "5. Shapes Closed",
+                          done:
+                            selectedPage.status === "cleaned" ||
+                            selectedPage.status === "approved",
+                        },
+                        {
+                          step: "6. Vectorized",
                           done: !!selectedPage.vectorized_url,
                         },
                         {
-                          step: "QA Passed",
+                          step: "7. QA Passed",
                           done: selectedPage.status === "approved",
                         },
                       ].map(({ step, done }) => (
@@ -582,7 +646,76 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                   )}
                 />
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 pb-3">
+              <CollapsibleContent className="space-y-4 pb-3">
+                {/* Line Threshold Slider */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Line Threshold</Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      {lineThreshold[0]}
+                    </span>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={255}
+                    step={1}
+                    value={lineThreshold}
+                    onValueChange={setLineThreshold}
+                    disabled={!selectedPage}
+                  />
+                </div>
+
+                {/* Stroke Weight Slider */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Stroke Weight</Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      {strokeWeight[0]}px
+                    </span>
+                  </div>
+                  <Slider
+                    min={1}
+                    max={10}
+                    step={0.5}
+                    value={strokeWeight}
+                    onValueChange={setStrokeWeight}
+                    disabled={!selectedPage}
+                  />
+                </div>
+
+                {/* Ink Density Slider */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Ink Density</Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      {inkDensity[0]}%
+                    </span>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={inkDensity}
+                    onValueChange={setInkDensity}
+                    disabled={!selectedPage}
+                  />
+                </div>
+
+                {/* Vectorize Toggle */}
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="vectorize-toggle" className="text-xs">
+                    Vectorize Output
+                  </Label>
+                  <Switch
+                    id="vectorize-toggle"
+                    checked={vectorizeEnabled}
+                    onCheckedChange={setVectorizeEnabled}
+                    disabled={!selectedPage}
+                  />
+                </div>
+
+                <Separator />
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -614,7 +747,7 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
 
             <Separator />
 
-            {/* ── Simulation Preview ───────────────────────────────── */}
+            {/* ── Coloring Simulation ───────────────────────────────── */}
             <Collapsible
               open={simulationOpen}
               onOpenChange={setSimulationOpen}
@@ -622,7 +755,7 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
               <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-sm font-medium hover:text-primary transition-colors">
                 <span className="flex items-center gap-2">
                   <Eye className="h-4 w-4" />
-                  Simulation Preview
+                  Coloring Simulation
                 </span>
                 <ChevronDown
                   className={cn(
@@ -634,6 +767,23 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
               <CollapsibleContent className="space-y-3 pb-3">
                 {selectedPage?.illustration_url ? (
                   <>
+                    {/* Media type buttons */}
+                    <div className="flex gap-1">
+                      {SIMULATION_MEDIA.map((media) => (
+                        <Button
+                          key={media.id}
+                          variant={simMedia === media.id ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1 gap-1.5 text-xs"
+                          onClick={() => setSimMedia(media.id)}
+                        >
+                          <media.icon className="h-3.5 w-3.5" />
+                          {media.label}
+                        </Button>
+                      ))}
+                    </div>
+
+                    {/* Preview */}
                     <div className="aspect-[3/4] bg-white border rounded-md overflow-hidden">
                       <img
                         src={
@@ -642,12 +792,12 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                         }
                         alt={`Simulation preview P${selectedPage.page_number}`}
                         className="w-full h-full object-contain opacity-80"
-                        style={{ filter: "sepia(0.15) saturate(0.8)" }}
+                        style={{ filter: activeSimConfig.filter }}
                         draggable={false}
                       />
                     </div>
                     <p className="text-[10px] text-muted-foreground text-center">
-                      Simulated coloring preview (marker style)
+                      Simulated coloring preview ({activeSimConfig.label.toLowerCase()} style)
                     </p>
                     <Button
                       variant="outline"
@@ -672,7 +822,7 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
 
             <Separator />
 
-            {/* ── Border / Difficulty / Caption ────────────────────── */}
+            {/* ── Page Settings: Border / Difficulty / Caption ─────── */}
             <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-sm font-medium hover:text-primary transition-colors">
                 <span className="flex items-center gap-2">
@@ -690,7 +840,7 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                 <div className="space-y-1.5">
                   <Label className="text-xs flex items-center gap-1.5">
                     <Frame className="h-3 w-3" />
-                    Border Style
+                    Page Border
                   </Label>
                   <Select
                     value={borderStyle}
@@ -713,7 +863,7 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
                 <div className="space-y-1.5">
                   <Label className="text-xs flex items-center gap-1.5">
                     <Gauge className="h-3 w-3" />
-                    Difficulty
+                    Difficulty Rating
                   </Label>
                   <Slider
                     min={1}

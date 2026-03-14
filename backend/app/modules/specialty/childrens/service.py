@@ -322,6 +322,59 @@ async def _get_character_or_404(
 
 
 # ---------------------------------------------------------------------------
+# Stats
+# ---------------------------------------------------------------------------
+
+
+async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
+    """Return aggregate statistics for the org's children's books.
+
+    All counters default to 0 (never null) when no data exists.
+    """
+    base_filter = [
+        ChildrensBook.org_id == org_id,
+        ChildrensBook.deleted_at.is_(None),
+    ]
+
+    total_result = await db.execute(
+        select(func.count()).select_from(ChildrensBook).where(*base_filter)
+    )
+    total_books = total_result.scalar() or 0
+
+    in_progress_result = await db.execute(
+        select(func.count()).select_from(ChildrensBook).where(
+            *base_filter,
+            ChildrensBook.status == BookStatus.in_progress,
+        )
+    )
+    in_progress = in_progress_result.scalar() or 0
+
+    published_result = await db.execute(
+        select(func.count()).select_from(ChildrensBook).where(
+            *base_filter,
+            ChildrensBook.status == BookStatus.published,
+        )
+    )
+    published = published_result.scalar() or 0
+
+    book_ids_subq = select(ChildrensBook.id).where(*base_filter)
+    pages_result = await db.execute(
+        select(func.count()).select_from(ChildrensBookPage).where(
+            ChildrensBookPage.book_id.in_(book_ids_subq),
+            ChildrensBookPage.deleted_at.is_(None),
+        )
+    )
+    pages_created = pages_result.scalar() or 0
+
+    return {
+        "total_books": total_books,
+        "in_progress": in_progress,
+        "published": published,
+        "pages_created": pages_created,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Book CRUD
 # ---------------------------------------------------------------------------
 

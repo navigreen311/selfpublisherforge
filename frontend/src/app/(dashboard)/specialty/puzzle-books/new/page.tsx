@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useCreatePuzzleBook } from "@/modules/specialty/puzzles/hooks";
 import type { PuzzleType } from "@/modules/specialty/puzzles/hooks";
 import {
@@ -52,6 +53,7 @@ const DEFAULT_GRID_SIZES: Record<PuzzleType, string> = {
   cryptogram: "n/a",
   number_search: "15x15",
   word_connect: "variable",
+  trivia: "n/a",
 };
 
 interface TemplatePrefill {
@@ -61,6 +63,8 @@ interface TemplatePrefill {
   clueStyle?: string;
   seasonal?: { enabled: boolean; theme: string };
   wordDifficulty?: string;
+  difficulty?: string;
+  gridSizeOverride?: string;
 }
 
 const TEMPLATE_PREFILLS: Record<string, TemplatePrefill> = {
@@ -88,6 +92,7 @@ const TEMPLATE_PREFILLS: Record<string, TemplatePrefill> = {
     title: "Large Print Word Search",
     puzzleTypes: ["Word Search"],
     audience: "large_print",
+    gridSizeOverride: "20x20",
   },
   "holiday-puzzles": {
     title: "Holiday Puzzles",
@@ -100,6 +105,7 @@ const TEMPLATE_PREFILLS: Record<string, TemplatePrefill> = {
     audience: "kids",
     clueStyle: "kid_friendly",
     wordDifficulty: "simple",
+    difficulty: "easy",
   },
 };
 
@@ -115,8 +121,8 @@ function buildPrefillData(templateId: string | null): WizardData {
       return {
         type,
         quantity: 10,
-        difficulty: "medium",
-        grid_size: DEFAULT_GRID_SIZES[type] ?? "15x15",
+        difficulty: tpl.difficulty ?? "medium",
+        grid_size: tpl.gridSizeOverride ?? DEFAULT_GRID_SIZES[type] ?? "15x15",
       } satisfies PuzzleTypeConfig;
     })
     .filter((c): c is PuzzleTypeConfig => c !== null);
@@ -217,6 +223,8 @@ export default function CreatePuzzleBookPage() {
     }
 
     const extras: string[] = [];
+    if (data.extras_answer_key) extras.push("answer_key");
+    if (data.extras_intro) extras.push("intro");
     if (data.extras_toc) extras.push("toc");
     if (data.extras_instructions) extras.push("instructions");
     if (data.extras_difficulty_badges) extras.push("difficulty_badges");
@@ -283,6 +291,11 @@ export default function CreatePuzzleBookPage() {
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Puzzle Books", href: "/specialty/puzzle-books" },
+        { label: "New" },
+      ]} />
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild className="gap-1.5">
         <Link href="/specialty/puzzle-books">

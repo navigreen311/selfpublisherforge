@@ -52,6 +52,7 @@ import {
 } from "@/modules/specialty/coloring/hooks";
 import type { ExportOptions } from "@/modules/specialty/coloring/hooks";
 import { ReviewFeedbackPanel } from "@/modules/specialty/shared/components/ReviewFeedbackPanel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,11 @@ export default function ColoringBookEditorPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Coloring Books", href: "/specialty/coloring-books" },
+        { label: book.title },
+      ]} />
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -125,7 +131,7 @@ export default function ColoringBookEditorPage() {
             className="mb-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
+            Back to Coloring Books
           </Button>
           <h1 className="text-2xl font-bold">{book.title}</h1>
           {book.subtitle && (
@@ -420,7 +426,7 @@ export default function ColoringBookEditorPage() {
                 </p>
               </div>
               <Button
-                onClick={() => batchGenerate.mutate()}
+                onClick={() => batchGenerate.mutate(undefined)}
                 disabled={batchGenerate.isPending}
               >
                 {batchGenerate.isPending ? (

@@ -36,6 +36,8 @@ import {
 import type { PuzzleBook } from "@/modules/specialty/puzzles/hooks";
 import { PuzzleCard } from "@/modules/specialty/puzzles/components/PuzzleCard";
 import { TemplateCard } from "@/modules/specialty/puzzles/components/TemplateCard";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 // ─── Sort ─────────────────────────────────────────────────────────────────────
 
@@ -155,6 +157,10 @@ export default function PuzzleBooksPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Puzzle Books" },
+      ]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -177,8 +183,8 @@ export default function PuzzleBooksPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BookOpen className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-lg bg-[#3B82F6]/10 flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-[#3B82F6]" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.total_books ?? 0}</p>
@@ -188,8 +194,8 @@ export default function PuzzleBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-yellow-500" />
+            <div className="h-10 w-10 rounded-lg bg-[#F59E0B]/10 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-[#F59E0B]" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.in_progress ?? 0}</p>
@@ -199,8 +205,8 @@ export default function PuzzleBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <Globe className="h-5 w-5 text-green-500" />
+            <div className="h-10 w-10 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
+              <Globe className="h-5 w-5 text-[#10B981]" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.published ?? 0}</p>
@@ -210,8 +216,8 @@ export default function PuzzleBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Puzzle className="h-5 w-5 text-blue-500" />
+            <div className="h-10 w-10 rounded-lg bg-[#6366F1]/10 flex items-center justify-center">
+              <Puzzle className="h-5 w-5 text-[#6366F1]" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -315,21 +321,13 @@ export default function PuzzleBooksPage() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-            <Puzzle className="h-12 w-12 text-primary" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">No puzzle books yet</h3>
-          <p className="text-muted-foreground max-w-md mb-6">
-            Create your first puzzle book. Choose from word search, crossword,
-            maze, sudoku, and more puzzle types with auto-generated answer keys.
-          </p>
-          <Button asChild>
-            <Link href="/specialty/puzzle-books/new">
-              <Plus className="h-4 w-4 mr-2" /> Create Your First Book
-            </Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon="🧩"
+          title="No puzzle books yet"
+          description="Create your first puzzle book with auto-generated puzzles and answer keys."
+          actionLabel="+ Create Your First Book"
+          onAction={() => router.push("/specialty/puzzle-books/new")}
+        />
       )}
     </div>
   );

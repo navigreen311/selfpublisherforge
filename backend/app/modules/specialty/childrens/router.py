@@ -22,6 +22,23 @@ router = APIRouter(prefix="/specialty/childrens-books", tags=["childrens-books"]
 
 
 # ---------------------------------------------------------------------------
+# Stats
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/stats",
+    response_model=SuccessResponse[dict],
+    summary="Get children's book stats",
+)
+async def get_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return SuccessResponse(data=await service.get_stats(db, current_user["org_id"]))
+
+
+# ---------------------------------------------------------------------------
 # Book CRUD
 # ---------------------------------------------------------------------------
 
