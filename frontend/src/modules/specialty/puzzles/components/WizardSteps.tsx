@@ -107,7 +107,7 @@ const AUDIENCES = [
   {
     value: "kids",
     label: "Kids",
-    desc: "Ages 4-8, simple & fun",
+    desc: "Ages 5-10, simple & fun",
     icon: Baby,
   },
   {
