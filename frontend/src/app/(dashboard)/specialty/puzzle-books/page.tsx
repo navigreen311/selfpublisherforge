@@ -181,9 +181,7 @@ export default function PuzzleBooksPage() {
               <BookOpen className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {stats?.total_books ?? 0}
-              </p>
+              <p className="text-2xl font-bold">{stats?.total_books ?? 0}</p>
               <p className="text-xs text-muted-foreground">Total Books</p>
             </div>
           </CardContent>
@@ -194,9 +192,7 @@ export default function PuzzleBooksPage() {
               <Clock className="h-5 w-5 text-yellow-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {stats?.in_progress ?? 0}
-              </p>
+              <p className="text-2xl font-bold">{stats?.in_progress ?? 0}</p>
               <p className="text-xs text-muted-foreground">In Progress</p>
             </div>
           </CardContent>
@@ -207,9 +203,7 @@ export default function PuzzleBooksPage() {
               <Globe className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {stats?.published ?? 0}
-              </p>
+              <p className="text-2xl font-bold">{stats?.published ?? 0}</p>
               <p className="text-xs text-muted-foreground">Published</p>
             </div>
           </CardContent>
@@ -325,9 +319,7 @@ export default function PuzzleBooksPage() {
           <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
             <Puzzle className="h-12 w-12 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">
-            No puzzle books yet
-          </h3>
+          <h3 className="text-xl font-semibold mb-2">No puzzle books yet</h3>
           <p className="text-muted-foreground max-w-md mb-6">
             Create your first puzzle book. Choose from word search, crossword,
             maze, sudoku, and more puzzle types with auto-generated answer keys.

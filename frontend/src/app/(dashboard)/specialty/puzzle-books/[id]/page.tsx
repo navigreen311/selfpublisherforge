@@ -249,9 +249,7 @@ export default function PuzzleBookEditorPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() =>
-              exportBook.mutate({ format: "pdf", include_answers: true })
-            }
+            onClick={() => exportBook.mutate({ format: "pdf", include_answers: true })}
             disabled={exportBook.isPending}
           >
             <Download className="h-4 w-4 mr-2" />
