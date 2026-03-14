@@ -17,6 +17,7 @@ import {
   Earth,
   PartyPopper,
   Timer,
+  AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
 import { useCookbooks, useCookbookStats } from "@/modules/specialty/cookbook/hooks";
 import { CookbookCard } from "@/modules/specialty/cookbook/components/CookbookCard";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 // ---------------------------------------------------------------------------
 // Quick-start templates
@@ -121,21 +123,29 @@ export default function CookbookBooksPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("recent");
 
   const filters = {
     ...(search && { search }),
     ...(statusFilter !== "all" && { status: statusFilter }),
-    ...(typeFilter !== "all" && { cookbook_type: typeFilter }),
+    ...(sortBy !== "recent" && { sort: sortBy }),
   };
 
   const { data: stats } = useCookbookStats();
-  const { data: cookbooksData, isLoading } = useCookbooks(1, 50, filters);
+  const { data: cookbooksData, isLoading, isError, error } = useCookbooks(1, 50, filters);
 
   const cookbooks = cookbooksData?.items ?? [];
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: "Specialty", href: "/specialty" },
+          { label: "Cookbooks" },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -158,8 +168,11 @@ export default function CookbookBooksPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BookOpen className="h-5 w-5 text-primary" />
+            <div
+              className="h-10 w-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
+            >
+              <BookOpen className="h-5 w-5" style={{ color: "#3B82F6" }} />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.total_cookbooks ?? 0}</p>
@@ -169,8 +182,11 @@ export default function CookbookBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-yellow-500" />
+            <div
+              className="h-10 w-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "rgba(245, 158, 11, 0.1)" }}
+            >
+              <Clock className="h-5 w-5" style={{ color: "#F59E0B" }} />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.in_progress ?? 0}</p>
@@ -180,8 +196,11 @@ export default function CookbookBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <Globe className="h-5 w-5 text-green-500" />
+            <div
+              className="h-10 w-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "rgba(16, 185, 129, 0.1)" }}
+            >
+              <Globe className="h-5 w-5" style={{ color: "#10B981" }} />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.published ?? 0}</p>
@@ -191,8 +210,11 @@ export default function CookbookBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-              <UtensilsCrossed className="h-5 w-5 text-orange-500" />
+            <div
+              className="h-10 w-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "rgba(99, 102, 241, 0.1)" }}
+            >
+              <UtensilsCrossed className="h-5 w-5" style={{ color: "#6366F1" }} />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.total_recipes ?? 0}</p>
@@ -202,8 +224,11 @@ export default function CookbookBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-blue-500" />
+            <div
+              className="h-10 w-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "rgba(99, 102, 241, 0.1)" }}
+            >
+              <FileText className="h-5 w-5" style={{ color: "#6366F1" }} />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats?.total_chapters ?? 0}</p>
@@ -226,7 +251,7 @@ export default function CookbookBooksPage() {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
@@ -235,32 +260,20 @@ export default function CookbookBooksPage() {
             <SelectItem value="published">Published</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Cookbook Type" />
+            <SelectValue placeholder="Sort By" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="general">General</SelectItem>
-            <SelectItem value="baking">Baking</SelectItem>
-            <SelectItem value="vegetarian">Vegetarian</SelectItem>
-            <SelectItem value="vegan">Vegan</SelectItem>
-            <SelectItem value="keto">Keto</SelectItem>
-            <SelectItem value="paleo">Paleo</SelectItem>
-            <SelectItem value="gluten_free">Gluten-Free</SelectItem>
-            <SelectItem value="regional">Regional</SelectItem>
-            <SelectItem value="international">International</SelectItem>
-            <SelectItem value="holiday">Holiday</SelectItem>
-            <SelectItem value="quick_easy">Quick & Easy</SelectItem>
-            <SelectItem value="gourmet">Gourmet</SelectItem>
-            <SelectItem value="meal_prep">Meal Prep</SelectItem>
-            <SelectItem value="kids">Kids</SelectItem>
-            <SelectItem value="desserts">Desserts</SelectItem>
+            <SelectItem value="recent">Recently Updated</SelectItem>
+            <SelectItem value="title_asc">Title A-Z</SelectItem>
+            <SelectItem value="title_desc">Title Z-A</SelectItem>
+            <SelectItem value="created">Date Created</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Cookbook Grid or Empty State */}
+      {/* Cookbook Grid, Loading, Error, or Empty State */}
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -272,6 +285,19 @@ export default function CookbookBooksPage() {
               </div>
             </Card>
           ))}
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-destructive/25 rounded-lg">
+          <div className="rounded-full bg-destructive/10 p-4 mb-4">
+            <AlertCircle className="h-10 w-10 text-destructive" />
+          </div>
+          <h3 className="text-lg font-semibold mb-1">Failed to load cookbooks</h3>
+          <p className="text-sm text-muted-foreground max-w-sm mb-4">
+            {error instanceof Error ? error.message : "An unexpected error occurred. Please try again."}
+          </p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
         </div>
       ) : cookbooks.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
