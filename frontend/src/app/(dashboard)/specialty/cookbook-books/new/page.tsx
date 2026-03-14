@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useCreateCookbook } from "@/modules/specialty/cookbook/hooks";
 import {
   Step1Details,
@@ -156,6 +157,13 @@ export default function CreateCookbookPage() {
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Cookbooks", href: "/specialty/cookbook-books" },
+        { label: "New" },
+      ]} />
+
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild className="gap-1.5">
         <Link href="/specialty/cookbook-books">

@@ -44,6 +44,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import {
   useCookbook,
   useCookbookChapters,
@@ -179,11 +180,20 @@ export default function CookbookDetailPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
+      {/* Breadcrumb */}
+      <div className="px-4 pt-2">
+        <Breadcrumb items={[
+          { label: "Specialty", href: "/specialty" },
+          { label: "Cookbooks", href: "/specialty/cookbook-books" },
+          { label: book.title },
+        ]} />
+      </div>
       {/* Header */}
       <div className="h-14 border-b flex items-center gap-3 px-4 shrink-0">
-        <Button variant="ghost" size="sm" className="gap-1.5"
-          onClick={() => router.push("/specialty/cookbook-books")}>
-          <ChevronLeft className="h-4 w-4" /> Back
+        <Button variant="ghost" size="sm" className="gap-1.5" asChild>
+          <Link href="/specialty/cookbook-books">
+            <ChevronLeft className="h-4 w-4" /> Back to Cookbooks
+          </Link>
         </Button>
         <div className="h-6 w-px bg-border" />
         <div className="flex items-center gap-2 min-w-0">
