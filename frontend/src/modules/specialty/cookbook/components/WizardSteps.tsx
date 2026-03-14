@@ -10,21 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  Leaf,
   BookOpen,
   Cake,
-  Leaf,
-  Vegan,
-  Flame,
-  Drumstick,
-  Wheat,
   Globe,
-  MapPin,
-  PartyPopper,
+  Users,
+  Dumbbell,
   Timer,
-  ChefHat,
-  UtensilsCrossed,
-  Baby,
-  IceCream,
   Plus,
   X,
 } from "lucide-react";
@@ -33,13 +25,36 @@ import {
 // Wizard Data Type
 // ---------------------------------------------------------------------------
 
+export type CookbookType =
+  | "diet_lifestyle"
+  | "recipe_collection"
+  | "baking_desserts"
+  | "cultural_cuisine"
+  | "kids_family"
+  | "fitness_meal_prep"
+  | "quick_easy";
+
+export const CUISINE_DIET_OPTIONS = [
+  "Ketogenic",
+  "Paleo",
+  "Vegetarian",
+  "Vegan",
+  "Mediterranean",
+  "Whole30",
+  "Low-Carb",
+  "Gluten-Free",
+  "Dairy-Free",
+  "Custom",
+] as const;
+
 export interface WizardData {
   // Step 1: Details
   title: string;
   subtitle: string;
   author: string;
-  cookbook_type: string;
+  cookbook_type: CookbookType | "";
   cuisine: string;
+  cuisine_diet: string;
   target_audience: string;
   description: string;
 
@@ -64,8 +79,9 @@ export const DEFAULT_WIZARD_DATA: WizardData = {
   title: "",
   subtitle: "",
   author: "",
-  cookbook_type: "general",
+  cookbook_type: "",
   cuisine: "",
+  cuisine_diet: "",
   target_audience: "",
   description: "",
 
@@ -88,22 +104,54 @@ export const DEFAULT_WIZARD_DATA: WizardData = {
 // Constants
 // ---------------------------------------------------------------------------
 
-const COOKBOOK_TYPES = [
-  { value: "general", label: "General", icon: BookOpen },
-  { value: "baking", label: "Baking", icon: Cake },
-  { value: "vegetarian", label: "Vegetarian", icon: Leaf },
-  { value: "vegan", label: "Vegan", icon: Vegan },
-  { value: "keto", label: "Keto", icon: Flame },
-  { value: "paleo", label: "Paleo", icon: Drumstick },
-  { value: "gluten_free", label: "Gluten-Free", icon: Wheat },
-  { value: "regional", label: "Regional", icon: MapPin },
-  { value: "international", label: "International", icon: Globe },
-  { value: "holiday", label: "Holiday", icon: PartyPopper },
-  { value: "quick_easy", label: "Quick & Easy", icon: Timer },
-  { value: "gourmet", label: "Gourmet", icon: ChefHat },
-  { value: "meal_prep", label: "Meal Prep", icon: UtensilsCrossed },
-  { value: "kids", label: "Kids", icon: Baby },
-  { value: "desserts", label: "Desserts", icon: IceCream },
+const COOKBOOK_TYPES: {
+  value: CookbookType;
+  label: string;
+  desc: string;
+  icon: typeof Leaf;
+}[] = [
+  {
+    value: "diet_lifestyle",
+    label: "Diet / Lifestyle",
+    desc: "Keto, Paleo, etc.",
+    icon: Leaf,
+  },
+  {
+    value: "recipe_collection",
+    label: "Recipe Collection",
+    desc: "100+ recipes",
+    icon: BookOpen,
+  },
+  {
+    value: "baking_desserts",
+    label: "Baking & Desserts",
+    desc: "Sweet treats and pastries",
+    icon: Cake,
+  },
+  {
+    value: "cultural_cuisine",
+    label: "Cultural Cuisine",
+    desc: "Italian, Mexican, Thai, etc.",
+    icon: Globe,
+  },
+  {
+    value: "kids_family",
+    label: "Kids & Family",
+    desc: "Family-friendly recipes",
+    icon: Users,
+  },
+  {
+    value: "fitness_meal_prep",
+    label: "Fitness / Meal Prep",
+    desc: "Healthy meal planning",
+    icon: Dumbbell,
+  },
+  {
+    value: "quick_easy",
+    label: "Quick & Easy",
+    desc: "30-minute meals",
+    icon: Timer,
+  },
 ];
 
 const TRIM_SIZES = [
@@ -311,7 +359,7 @@ export function Step1Details({ data, onChange }: StepProps) {
         <Label>
           Cookbook Type <span className="text-destructive">*</span>
         </Label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {COOKBOOK_TYPES.map((type) => {
             const Icon = type.icon;
             const isSelected = data.cookbook_type === type.value;
@@ -322,15 +370,48 @@ export function Step1Details({ data, onChange }: StepProps) {
                   "p-3 cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 text-center",
                   isSelected && "ring-2 ring-primary bg-primary/5",
                 )}
-                onClick={() => onChange({ cookbook_type: type.value })}
+                onClick={() =>
+                  onChange({
+                    cookbook_type: type.value,
+                    // Reset cuisine_diet when switching away from diet_lifestyle
+                    ...(type.value !== "diet_lifestyle"
+                      ? { cuisine_diet: "" }
+                      : {}),
+                  })
+                }
               >
                 <Icon className="h-5 w-5 mx-auto mb-1 text-primary" />
                 <p className="text-xs font-medium">{type.label}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {type.desc}
+                </p>
               </Card>
             );
           })}
         </div>
       </div>
+
+      {/* Secondary dropdown for Diet / Lifestyle */}
+      {data.cookbook_type === "diet_lifestyle" && (
+        <div className="space-y-2">
+          <Label htmlFor="cuisine_diet">
+            Cuisine / Diet <span className="text-destructive">*</span>
+          </Label>
+          <select
+            id="cuisine_diet"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={data.cuisine_diet}
+            onChange={(e) => onChange({ cuisine_diet: e.target.value })}
+          >
+            <option value="">Select a diet or cuisine...</option>
+            {CUISINE_DIET_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">

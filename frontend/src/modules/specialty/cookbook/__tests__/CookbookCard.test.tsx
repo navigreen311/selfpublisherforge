@@ -17,7 +17,7 @@ jest.mock("lucide-react", () => ({
 
 const mockCookbook: Cookbook = {
   id: "test-cookbook-1", org_id: "org-1", title: "Italian Kitchen", author: "Chef Test",
-  cookbook_type: "international", cuisine: "Italian", chapter_organization: "by_course",
+  cookbook_type: "cultural_cuisine", cuisine: "Italian", chapter_organization: "by_course",
   recipe_layout: "classic", illustration_method: "ai_generated", interior_type: "full_color",
   page_count: 120, trim_size: "8x10", include_nutrition: true, include_meal_plans: false,
   include_shopping_lists: false, include_index: true, include_conversion_charts: true,

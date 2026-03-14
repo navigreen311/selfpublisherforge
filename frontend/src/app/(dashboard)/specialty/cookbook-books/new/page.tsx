@@ -65,6 +65,8 @@ function validateStep(step: number, data: WizardData): string | null {
     case 1:
       if (!data.title.trim()) return "Title is required";
       if (!data.cookbook_type) return "Please select a cookbook type";
+      if (data.cookbook_type === "diet_lifestyle" && !data.cuisine_diet)
+        return "Please select a cuisine or diet";
       return null;
     case 2:
       if (!data.trim_size) return "Please select a trim size";
@@ -127,6 +129,7 @@ export default function CreateCookbookPage() {
         author: data.author || "self",
         cookbook_type: data.cookbook_type,
         cuisine: data.cuisine || undefined,
+        cuisine_diet: data.cuisine_diet || undefined,
         target_audience: data.target_audience || undefined,
         description: data.description || undefined,
         trim_size: data.trim_size,
