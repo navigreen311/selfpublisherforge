@@ -76,6 +76,9 @@ from app.modules.specialty.models.cookbook import (
     MealPlan,
     Recipe,
 )
+from app.modules.specialty.models.style_clone import (
+    StyleCloneProfile,
+)
 from app.modules.specialty.models.shared import (
     AccessibilityVariant,
     AssetProvenance,
@@ -163,6 +166,8 @@ __all__ = [
     "CookbookChapter",
     "Recipe",
     "MealPlan",
+    # Style Clones
+    "StyleCloneProfile",
     # Shared
     "AssetProvenance",
     "FontLicense",
