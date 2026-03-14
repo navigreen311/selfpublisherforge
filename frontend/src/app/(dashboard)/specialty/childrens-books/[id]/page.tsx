@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -23,6 +23,7 @@ import {
   Palette,
   Layers,
   MessageSquareWarning,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,13 +41,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   useChildrensBook,
   useBookPages,
   useBookCharacters,
+  useGenerateIllustration,
+  useUploadImage,
+  useGenerateVariations,
 } from "@/modules/specialty/childrens/hooks";
 import { ReviewFeedbackPanel } from "@/modules/specialty/shared/components/ReviewFeedbackPanel";
 
@@ -90,8 +93,27 @@ export default function ChildrensBookDetailPage() {
   const { data: pages } = useBookPages(bookId);
   const { data: characters } = useBookCharacters(bookId);
 
+  const generateIllustration = useGenerateIllustration(bookId);
+  const uploadImage = useUploadImage(bookId);
+  const generateVariations = useGenerateVariations(bookId);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("editor");
+  const [enabledCharacters, setEnabledCharacters] = useState<Set<string>>(new Set());
+
+  const toggleCharacter = (charId: string) => {
+    setEnabledCharacters((prev) => {
+      const next = new Set(prev);
+      if (next.has(charId)) {
+        next.delete(charId);
+      } else {
+        next.add(charId);
+      }
+      return next;
+    });
+  };
 
   // Loading state
   if (isLoading) {
@@ -149,8 +171,53 @@ export default function ChildrensBookDetailPage() {
 
   const currentPage = pages?.[selectedPageIndex];
 
+  const handleGenerate = () => {
+    if (!currentPage) return;
+    const prompt = currentPage.illustration_prompt ?? "";
+    if (!prompt.trim()) return;
+    // Build prompt with enabled character descriptions appended
+    let fullPrompt = prompt;
+    if (characters && enabledCharacters.size > 0) {
+      const charDescs = characters
+        .filter((c) => enabledCharacters.has(c.id))
+        .map((c) => `[Character: ${c.name} — ${c.description}]`)
+        .join(" ");
+      if (charDescs) fullPrompt = `${prompt}\n\n${charDescs}`;
+    }
+    generateIllustration.mutate({ pageId: currentPage.id, prompt: fullPrompt });
+  };
+
+  const handleUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentPage) return;
+    uploadImage.mutate({ pageId: currentPage.id, file });
+    e.target.value = "";
+  };
+
+  const handleVariations = () => {
+    if (!currentPage) return;
+    generateVariations.mutate({ pageId: currentPage.id });
+  };
+
+  const isGenerating = generateIllustration.isPending;
+  const isUploading = uploadImage.isPending;
+  const isVariating = generateVariations.isPending;
+
   return (
     <div className="h-screen flex flex-col bg-background">
+      {/* Hidden file input for upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       {/* Header */}
       <div className="h-14 border-b flex items-center gap-3 px-4 shrink-0">
         <Button
@@ -279,8 +346,18 @@ export default function ChildrensBookDetailPage() {
                       <div className="flex flex-col items-center gap-3 text-muted-foreground">
                         <ImageIcon className="h-16 w-16" />
                         <p className="text-sm">No illustration</p>
-                        <Button size="sm" variant="outline" className="gap-1.5">
-                          <Wand2 className="h-3.5 w-3.5" />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          disabled={isGenerating}
+                          onClick={handleGenerate}
+                        >
+                          {isGenerating ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Wand2 className="h-3.5 w-3.5" />
+                          )}
                           Generate
                         </Button>
                       </div>
@@ -404,17 +481,61 @@ export default function ChildrensBookDetailPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                      <Wand2 className="h-3 w-3" /> Generate
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      disabled={isGenerating}
+                      onClick={handleGenerate}
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Wand2 className="h-3 w-3" />
+                      )}
+                      Generate
                     </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                      <RotateCw className="h-3 w-3" /> Regenerate
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      disabled={isGenerating}
+                      onClick={handleGenerate}
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RotateCw className="h-3 w-3" />
+                      )}
+                      Regenerate
                     </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                      <Upload className="h-3 w-3" /> Upload
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      disabled={isUploading}
+                      onClick={handleUpload}
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Upload className="h-3 w-3" />
+                      )}
+                      Upload
                     </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                      <Layers className="h-3 w-3" /> 4 Variations
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      disabled={isVariating || !currentPage.illustration_url}
+                      onClick={handleVariations}
+                    >
+                      {isVariating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Layers className="h-3 w-3" />
+                      )}
+                      4 Variations
                     </Button>
                   </div>
 
@@ -431,6 +552,72 @@ export default function ChildrensBookDetailPage() {
                       </p>
                     </div>
                   )}
+
+                  <Separator />
+
+                  {/* Character Toggle */}
+                  <div className="space-y-2">
+                    <Label className="text-xs flex items-center gap-1">
+                      <Users className="h-3 w-3" /> Characters in Scene
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Toggle characters to include their descriptions in the illustration prompt.
+                    </p>
+                    {characters && characters.length > 0 ? (
+                      <div className="space-y-2">
+                        {characters.map((char) => (
+                          <div
+                            key={char.id}
+                            className={cn(
+                              "flex items-center justify-between rounded-md border p-2 transition-colors",
+                              enabledCharacters.has(char.id)
+                                ? "bg-primary/5 border-primary/30"
+                                : "bg-muted/30",
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                {char.reference_images?.[0] ? (
+                                  <img
+                                    src={char.reference_images[0]}
+                                    alt={char.name}
+                                    className="h-full w-full object-cover rounded-full"
+                                  />
+                                ) : (
+                                  <span className="text-[9px] font-medium">
+                                    {char.name.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{char.name}</p>
+                                {char.species && (
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {char.species}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Switch
+                              checked={enabledCharacters.has(char.id)}
+                              onCheckedChange={() => toggleCharacter(char.id)}
+                              className="shrink-0"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground italic">
+                        No characters defined.{" "}
+                        <button
+                          className="underline hover:text-foreground"
+                          onClick={() => setActiveTab("characters")}
+                        >
+                          Add characters
+                        </button>
+                      </p>
+                    )}
+                  </div>
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground">
