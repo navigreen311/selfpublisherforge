@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -117,6 +117,67 @@ const BONUS_PAGE_OPTIONS = [
 
 const STEPS = ["Book Details", "Format & Style", "Content"];
 
+
+// Template Pre-fill Config
+
+const TEMPLATE_PREFILLS: Record<
+  string,
+  {
+    title: string;
+    themeDescription: string;
+    audience?: "kids" | "teens" | "adults";
+    lineStyle?: string;
+    complexity?: number[];
+  }
+> = {
+  animals: {
+    title: "Animals & Wildlife Coloring Book",
+    themeDescription: "Lions, elephants, birds, and sea creatures in detailed line art.",
+  },
+  mandalas: {
+    title: "Mandalas & Patterns Coloring Book",
+    themeDescription: "Intricate circular mandala designs with repeating symmetry.",
+    lineStyle: "zentangle",
+    complexity: [7],
+  },
+  fantasy: {
+    title: "Fantasy Worlds Coloring Book",
+    themeDescription: "Dragons, castles, fairies, and enchanted forests to color.",
+    lineStyle: "whimsical_decorative",
+  },
+  nature: {
+    title: "Nature Scenes Coloring Book",
+    themeDescription: "Landscapes, gardens, flowers, and tranquil outdoor scenes.",
+    lineStyle: "sketchy_hand_drawn",
+  },
+  holidays: {
+    title: "Holidays & Seasons Coloring Book",
+    themeDescription: "Christmas, Halloween, Easter, and seasonal celebrations.",
+    lineStyle: "whimsical_decorative",
+  },
+  space: {
+    title: "Space & Sci-Fi Coloring Book",
+    themeDescription: "Planets, rockets, aliens, and futuristic cityscapes.",
+    lineStyle: "clean_outlines",
+  },
+  food: {
+    title: "Food & Desserts Coloring Book",
+    themeDescription: "Cupcakes, fruits, sweets, and delicious dishes to color.",
+    lineStyle: "bold_simple",
+  },
+  geometric: {
+    title: "Geometric Abstract Coloring Book",
+    themeDescription: "Tessellations, op-art illusions, and abstract geometric forms.",
+    lineStyle: "clean_outlines",
+    complexity: [8],
+  },
+};
+
+function getTemplatePrefill(templateId: string | null) {
+  if (!templateId) return null;
+  return TEMPLATE_PREFILLS[templateId] ?? null;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NewColoringBookPage() {
@@ -125,12 +186,16 @@ export default function NewColoringBookPage() {
   const templateId = searchParams.get("template");
   const createBook = useCreateColoringBook();
 
+  const prefill = useMemo(() => getTemplatePrefill(templateId), [templateId]);
+
+  const prefill = useMemo(() => getTemplatePrefill(templateId), [templateId]);
+
   const [step, setStep] = useState(0);
 
   // Step 1 state
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(prefill?.title ?? "");
   const [subtitle, setSubtitle] = useState("");
-  const [audience, setAudience] = useState<"kids" | "teens" | "adults">("adults");
+  const [audience, setAudience] = useState<"kids" | "teens" | "adults">(prefill?.audience ?? "adults");
   const [seriesEnabled, setSeriesEnabled] = useState(false);
   const [seriesName, setSeriesName] = useState("");
   const [volumeNumber, setVolumeNumber] = useState(1);
@@ -138,13 +203,13 @@ export default function NewColoringBookPage() {
   // Step 2 state
   const [pageCount, setPageCount] = useState([30]);
   const [trimSize, setTrimSize] = useState("8.5x11");
-  const [lineStyle, setLineStyle] = useState("clean_outlines");
+  const [lineStyle, setLineStyle] = useState(prefill?.lineStyle ?? "clean_outlines");
   const [lineWeight, setLineWeight] = useState([3]);
   const [strokeUniformity, setStrokeUniformity] = useState(true);
-  const [complexity, setComplexity] = useState([5]);
+  const [complexity, setComplexity] = useState(prefill?.complexity ?? [5]);
 
   // Step 3 state
-  const [themeDescription, setThemeDescription] = useState("");
+  const [themeDescription, setThemeDescription] = useState(prefill?.themeDescription ?? "");
   const [generationMethod, setGenerationMethod] =
     useState<CreateColoringBookInput["generation_method"]>("all_at_once");
   const [bonusPages, setBonusPages] = useState<string[]>(["title_page"]);

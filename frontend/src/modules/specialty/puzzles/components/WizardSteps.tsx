@@ -34,6 +34,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import type { PuzzleType } from "../hooks";
+import { useSanitizeWordList } from "../hooks";
 
 // ─── Wizard Data Type ─────────────────────────────────────────────────────────
 
@@ -218,6 +219,7 @@ const THEME_CATEGORIES = [
   "Space",
   "Ocean",
   "Technology",
+  "Travel",
 ];
 
 const SEASONAL_THEMES = [
@@ -739,6 +741,25 @@ export function Step2PuzzleSelection({ data, onChange }: StepProps) {
 // ─── Step 3: Themes & Words ───────────────────────────────────────────────────
 
 export function Step3ThemesWords({ data, onChange }: StepProps) {
+  const sanitize = useSanitizeWordList();
+
+  const handleSanitize = () => {
+    const words = data.custom_word_list
+      .split(/[,
+]+/)
+      .map((w) => w.trim())
+      .filter(Boolean);
+    if (words.length === 0) return;
+    sanitize.mutate(
+      { words },
+      {
+        onSuccess: (result) => {
+          onChange({ custom_word_list: result.clean_words.join(", ") });
+        },
+      }
+    );
+  };
+
   const addTheme = (theme: string) => {
     if (!data.themes.includes(theme)) {
       onChange({ themes: [...data.themes, theme] });

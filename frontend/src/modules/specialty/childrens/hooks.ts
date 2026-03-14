@@ -20,6 +20,7 @@ export interface ChildrensBook {
   trim_size: string;
   illustration_style: string;
   color_palette: string;
+  style_clone_id?: string;
   story_mode: string;
   creation_mode: string;
   is_bilingual: boolean;

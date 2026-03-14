@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { StyleClonePicker } from "@/modules/specialty/style-clone/components/StyleClonePicker";
 import {
   Droplets,
   Smile,
@@ -46,6 +47,7 @@ export interface WizardData {
   trim_size: string;
   illustration_style: string;
   color_palette: string;
+  style_clone_id: string;
   // Step 3
   creation_mode: string;
   story_prompt: string;
@@ -78,6 +80,7 @@ export const DEFAULT_WIZARD_DATA: WizardData = {
   trim_size: "",
   illustration_style: "",
   color_palette: "",
+  style_clone_id: "",
   creation_mode: "ai-generate",
   story_prompt: "",
   theme_moral: "",
@@ -458,7 +461,7 @@ export function Step2FormatStyle({ data, onChange }: StepProps) {
         </p>
         <StyleClonePicker
           value={data.style_clone_id || undefined}
-          onChange={(id) => onChange({ style_clone_id: id ?? "" })}
+          onChange={(id: string | undefined) => onChange({ style_clone_id: id ?? "" })}
           bookType="childrens"
         />
       </div>
