@@ -174,6 +174,96 @@ class BookType(str, enum.Enum):
     coloring = "coloring"
     puzzle = "puzzle"
     comic = "comic"
+    cookbook = "cookbook"
+
+
+class CookbookType(str, enum.Enum):
+    """Type of cookbook."""
+    general = "general"
+    baking = "baking"
+    vegetarian = "vegetarian"
+    vegan = "vegan"
+    keto = "keto"
+    paleo = "paleo"
+    gluten_free = "gluten_free"
+    regional = "regional"
+    international = "international"
+    holiday = "holiday"
+    quick_easy = "quick_easy"
+    gourmet = "gourmet"
+    meal_prep = "meal_prep"
+    kids = "kids"
+    desserts = "desserts"
+
+
+class ChapterOrganization(str, enum.Enum):
+    """How cookbook chapters are organized."""
+    by_meal = "by_meal"
+    by_course = "by_course"
+    by_ingredient = "by_ingredient"
+    by_cuisine = "by_cuisine"
+    by_season = "by_season"
+    by_technique = "by_technique"
+    by_occasion = "by_occasion"
+    custom = "custom"
+
+
+class RecipeLayout(str, enum.Enum):
+    """Layout style for recipe pages."""
+    classic = "classic"
+    magazine = "magazine"
+    minimal = "minimal"
+    full_photo = "full_photo"
+    step_by_step = "step_by_step"
+    card = "card"
+    two_column = "two_column"
+
+
+class IllustrationMethod(str, enum.Enum):
+    """How illustrations/photos are handled."""
+    ai_generated = "ai_generated"
+    stock_photos = "stock_photos"
+    user_uploaded = "user_uploaded"
+    illustrated = "illustrated"
+    no_illustrations = "no_illustrations"
+    mixed = "mixed"
+
+
+class CookbookInteriorType(str, enum.Enum):
+    """Interior printing type."""
+    full_color = "full_color"
+    black_and_white = "black_and_white"
+    color_inserts = "color_inserts"
+
+
+class RecipeDifficulty(str, enum.Enum):
+    """Difficulty level for a recipe."""
+    beginner = "beginner"
+    easy = "easy"
+    intermediate = "intermediate"
+    advanced = "advanced"
+    expert = "expert"
+
+
+class MealPlanType(str, enum.Enum):
+    """Type of meal plan."""
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
+    custom = "custom"
+
+
+class ChapterType(str, enum.Enum):
+    """Type of cookbook chapter."""
+    recipes = "recipes"
+    introduction = "introduction"
+    techniques = "techniques"
+    ingredients_guide = "ingredients_guide"
+    meal_plans = "meal_plans"
+    index = "index"
+    about_author = "about_author"
+    acknowledgments = "acknowledgments"
+    conversion_charts = "conversion_charts"
 
 
 class AssetType(str, enum.Enum):
