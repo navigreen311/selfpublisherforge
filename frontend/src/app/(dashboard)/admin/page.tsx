@@ -5,13 +5,13 @@ import { SystemStats } from "@/modules/admin/components/SystemStats";
 import { AuditLog } from "@/modules/admin/components/AuditLog";
 
 export default function AdminOverviewPage() {
-  const { data: stats, isLoading } = useDetailedPlatformStats();
+  const { data: stats, isLoading, isError, error } = useDetailedPlatformStats();
 
   return (
     <div className="space-y-8">
       <section>
         <h2 className="text-xl font-semibold mb-4">Platform Statistics</h2>
-        <SystemStats stats={stats} isLoading={isLoading} />
+        <SystemStats stats={stats} isLoading={isLoading} isError={isError} error={error} />
       </section>
       <section>
         <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>

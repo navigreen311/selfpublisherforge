@@ -141,6 +141,12 @@ export function useDetailedPlatformStats() {
       const res = await api.get("/api/v1/admin/stats");
       return res.data as PlatformStatsDetailed;
     },
+    retry: (failureCount, error: any) => {
+      // Don't retry on auth/permission errors — they won't resolve on retry
+      const status = error?.response?.status;
+      if (status === 401 || status === 403 || status === 404) return false;
+      return failureCount < 2;
+    },
   });
 }
 
