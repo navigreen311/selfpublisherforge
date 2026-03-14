@@ -17,7 +17,8 @@ export type PuzzleType =
   | "word_scramble"
   | "cryptogram"
   | "number_search"
-  | "word_connect";
+  | "word_connect"
+  | "trivia";
 
 export type Audience = "kids" | "teens" | "adults" | "large_print";
 
