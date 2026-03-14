@@ -19,7 +19,16 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError
-from app.database import TenantModel
+from app.modules.specialty.models.comic import (
+    CharacterCostume,
+    CharacterExpression,
+    CharacterPose,
+    Comic,
+    ComicBubble,
+    ComicCharacter,
+    ComicPage,
+    ComicPanel,
+)
 from app.modules.specialty.models.enums import (
     BookStatus,
     BubbleType,
@@ -29,129 +38,6 @@ from app.modules.specialty.models.enums import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Lightweight ORM models (inline so we don't modify existing files)
-# ---------------------------------------------------------------------------
-
-from sqlalchemy import (  # noqa: E402
-    Boolean,
-    Column,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
-from sqlalchemy.dialects.postgresql import JSONB
-
-
-class Comic(TenantModel):
-    __tablename__ = "comics"
-
-    title = Column(String(500), nullable=False)
-    subtitle = Column(String(500), nullable=True)
-    author_name = Column(String(300), nullable=True)
-    art_style = Column(Enum(ComicArtStyle), nullable=True)
-    comic_format = Column(Enum(ComicFormat), nullable=True)
-    status = Column(Enum(BookStatus), nullable=False, default=BookStatus.draft)
-    genre = Column(String(200), nullable=True)
-    synopsis = Column(Text, nullable=True)
-    script_text = Column(Text, nullable=True)
-    trim_size = Column(String(20), default="6.625x10.25")
-    page_count = Column(Integer, default=0)
-    target_audience = Column(String(100), nullable=True)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class ComicPage(TenantModel):
-    __tablename__ = "comic_pages"
-
-    comic_id = Column(ForeignKey("comics.id"), nullable=False, index=True)
-    page_number = Column(Integer, nullable=False)
-    layout_template = Column(String(50), nullable=True)
-    background_description = Column(Text, nullable=True)
-    background_image_url = Column(String(1000), nullable=True)
-    notes = Column(Text, nullable=True)
-    dpi = Column(Integer, default=300)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class ComicPanel(TenantModel):
-    __tablename__ = "comic_panels"
-
-    page_id = Column(ForeignKey("comic_pages.id"), nullable=False, index=True)
-    panel_number = Column(Integer, nullable=False)
-    panel_type = Column(Enum(PanelType), default=PanelType.standard)
-    description = Column(Text, nullable=True)
-    art_prompt = Column(Text, nullable=True)
-    image_url = Column(String(1000), nullable=True)
-    x = Column(Float, default=0.0)
-    y = Column(Float, default=0.0)
-    width = Column(Float, default=1.0)
-    height = Column(Float, default=1.0)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class ComicBubble(TenantModel):
-    __tablename__ = "comic_bubbles"
-
-    panel_id = Column(ForeignKey("comic_panels.id"), nullable=False, index=True)
-    bubble_type = Column(Enum(BubbleType), default=BubbleType.speech)
-    text = Column(Text, nullable=True)
-    character_name = Column(String(200), nullable=True)
-    font_family = Column(String(100), nullable=True)
-    font_size = Column(Integer, nullable=True)
-    x = Column(Float, default=0.5)
-    y = Column(Float, default=0.5)
-    width = Column(Float, nullable=True)
-    height = Column(Float, nullable=True)
-    tail_direction = Column(String(20), nullable=True)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class ComicCharacter(TenantModel):
-    __tablename__ = "comic_characters"
-
-    comic_id = Column(ForeignKey("comics.id"), nullable=False, index=True)
-    name = Column(String(200), nullable=False)
-    description = Column(Text, nullable=True)
-    visual_traits = Column(Text, nullable=True)
-    personality = Column(Text, nullable=True)
-    reference_images = Column(JSONB, default=list)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class CharacterExpression(TenantModel):
-    __tablename__ = "comic_character_expressions"
-
-    character_id = Column(ForeignKey("comic_characters.id"), nullable=False, index=True)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    image_url = Column(String(1000), nullable=True)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class CharacterPose(TenantModel):
-    __tablename__ = "comic_character_poses"
-
-    character_id = Column(ForeignKey("comic_characters.id"), nullable=False, index=True)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    image_url = Column(String(1000), nullable=True)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class CharacterCostume(TenantModel):
-    __tablename__ = "comic_character_costumes"
-
-    character_id = Column(ForeignKey("comic_characters.id"), nullable=False, index=True)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    image_url = Column(String(1000), nullable=True)
-    metadata_json = Column(JSONB, default=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -249,17 +135,29 @@ def _comic_to_dict(comic: Comic) -> dict[str, Any]:
         "org_id": str(comic.org_id),
         "title": comic.title,
         "subtitle": comic.subtitle,
-        "author_name": comic.author_name,
+        "author": comic.author,
+        "artist": comic.artist,
+        "letterer": comic.letterer,
+        "colorist": comic.colorist,
         "art_style": comic.art_style.value if comic.art_style else None,
-        "comic_format": comic.comic_format.value if comic.comic_format else None,
+        "format": comic.format.value if comic.format else None,
+        "color_mode": comic.color_mode.value if comic.color_mode else None,
+        "ink_style": comic.ink_style.value if comic.ink_style else None,
+        "pacing": comic.pacing.value if comic.pacing else None,
         "status": comic.status.value if comic.status else None,
         "genre": comic.genre,
-        "synopsis": comic.synopsis,
+        "premise": comic.premise,
         "script_text": comic.script_text,
         "trim_size": comic.trim_size,
         "page_count": comic.page_count,
         "target_audience": comic.target_audience,
-        "metadata": comic.metadata_json or {},
+        "border_style": comic.border_style.value if comic.border_style else None,
+        "gutter_style": comic.gutter_style.value if comic.gutter_style else None,
+        "content_rating": comic.content_rating,
+        "violence_level": comic.violence_level,
+        "language_level": comic.language_level,
+        "safety_settings": comic.safety_settings or {},
+        "qa_score": comic.qa_score,
         "created_at": comic.created_at.isoformat() if comic.created_at else None,
         "updated_at": comic.updated_at.isoformat() if comic.updated_at else None,
     }
@@ -270,12 +168,12 @@ def _page_to_dict(page: ComicPage) -> dict[str, Any]:
         "id": str(page.id),
         "comic_id": str(page.comic_id),
         "page_number": page.page_number,
+        "page_type": page.page_type,
+        "script_text": page.script_text,
+        "thumbnail_url": page.thumbnail_url,
+        "full_art_url": page.full_art_url,
         "layout_template": page.layout_template,
-        "background_description": page.background_description,
-        "background_image_url": page.background_image_url,
-        "notes": page.notes,
-        "dpi": page.dpi,
-        "metadata": page.metadata_json or {},
+        "panel_count": page.panel_count,
         "created_at": page.created_at.isoformat() if page.created_at else None,
         "updated_at": page.updated_at.isoformat() if page.updated_at else None,
     }
@@ -285,16 +183,18 @@ def _panel_to_dict(panel: ComicPanel) -> dict[str, Any]:
     return {
         "id": str(panel.id),
         "page_id": str(panel.page_id),
-        "panel_number": panel.panel_number,
+        "panel_order": panel.panel_order,
         "panel_type": panel.panel_type.value if panel.panel_type else None,
         "description": panel.description,
         "art_prompt": panel.art_prompt,
-        "image_url": panel.image_url,
+        "art_url": panel.art_url,
+        "art_seed": panel.art_seed,
         "x": panel.x,
         "y": panel.y,
         "width": panel.width,
         "height": panel.height,
-        "metadata": panel.metadata_json or {},
+        "border_style": panel.border_style.value if panel.border_style else None,
+        "background_color": panel.background_color,
         "created_at": panel.created_at.isoformat() if panel.created_at else None,
         "updated_at": panel.updated_at.isoformat() if panel.updated_at else None,
     }
@@ -304,17 +204,15 @@ def _bubble_to_dict(bubble: ComicBubble) -> dict[str, Any]:
     return {
         "id": str(bubble.id),
         "panel_id": str(bubble.panel_id),
+        "bubble_order": bubble.bubble_order,
         "bubble_type": bubble.bubble_type.value if bubble.bubble_type else None,
         "text": bubble.text,
         "character_name": bubble.character_name,
-        "font_family": bubble.font_family,
+        "font": bubble.font,
         "font_size": bubble.font_size,
         "x": bubble.x,
         "y": bubble.y,
-        "width": bubble.width,
-        "height": bubble.height,
         "tail_direction": bubble.tail_direction,
-        "metadata": bubble.metadata_json or {},
         "created_at": bubble.created_at.isoformat() if bubble.created_at else None,
         "updated_at": bubble.updated_at.isoformat() if bubble.updated_at else None,
     }
@@ -325,11 +223,13 @@ def _char_to_dict(char: ComicCharacter) -> dict[str, Any]:
         "id": str(char.id),
         "comic_id": str(char.comic_id),
         "name": char.name,
+        "role": char.role,
         "description": char.description,
-        "visual_traits": char.visual_traits,
-        "personality": char.personality,
+        "visual_description": char.visual_description,
         "reference_images": char.reference_images or [],
-        "metadata": char.metadata_json or {},
+        "auto_append": char.auto_append,
+        "default_costume": char.default_costume,
+        "color_palette": char.color_palette or {},
         "created_at": char.created_at.isoformat() if char.created_at else None,
         "updated_at": char.updated_at.isoformat() if char.updated_at else None,
     }
@@ -341,8 +241,7 @@ def _expression_to_dict(expr: CharacterExpression) -> dict[str, Any]:
         "character_id": str(expr.character_id),
         "name": expr.name,
         "description": expr.description,
-        "image_url": expr.image_url,
-        "metadata": expr.metadata_json or {},
+        "reference_url": expr.reference_url,
         "created_at": expr.created_at.isoformat() if expr.created_at else None,
     }
 
@@ -353,8 +252,7 @@ def _pose_to_dict(pose: CharacterPose) -> dict[str, Any]:
         "character_id": str(pose.character_id),
         "name": pose.name,
         "description": pose.description,
-        "image_url": pose.image_url,
-        "metadata": pose.metadata_json or {},
+        "reference_url": pose.reference_url,
         "created_at": pose.created_at.isoformat() if pose.created_at else None,
     }
 
@@ -365,8 +263,8 @@ def _costume_to_dict(costume: CharacterCostume) -> dict[str, Any]:
         "character_id": str(costume.character_id),
         "name": costume.name,
         "description": costume.description,
-        "image_url": costume.image_url,
-        "metadata": costume.metadata_json or {},
+        "reference_url": costume.reference_url,
+        "is_default": costume.is_default,
         "created_at": costume.created_at.isoformat() if costume.created_at else None,
     }
 
@@ -392,7 +290,6 @@ async def _get_page_or_404(
     stmt = select(ComicPage).where(
         ComicPage.id == page_id,
         ComicPage.comic_id == comic_id,
-        ComicPage.org_id == org_id,
         ComicPage.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -408,7 +305,6 @@ async def _get_panel_or_404(
     stmt = select(ComicPanel).where(
         ComicPanel.id == panel_id,
         ComicPanel.page_id == page_id,
-        ComicPanel.org_id == org_id,
         ComicPanel.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -424,7 +320,6 @@ async def _get_bubble_or_404(
     stmt = select(ComicBubble).where(
         ComicBubble.id == bubble_id,
         ComicBubble.panel_id == panel_id,
-        ComicBubble.org_id == org_id,
         ComicBubble.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -440,7 +335,6 @@ async def _get_character_or_404(
     stmt = select(ComicCharacter).where(
         ComicCharacter.id == char_id,
         ComicCharacter.comic_id == comic_id,
-        ComicCharacter.org_id == org_id,
         ComicCharacter.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -480,15 +374,23 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
     published_result = await db.execute(published_stmt)
     published = published_result.scalar() or 0
 
+    comic_ids_stmt = select(Comic.id).where(
+        Comic.org_id == org_id,
+        Comic.deleted_at.is_(None),
+    )
     pages_stmt = select(func.count()).select_from(ComicPage).where(
-        ComicPage.org_id == org_id,
+        ComicPage.comic_id.in_(comic_ids_stmt),
         ComicPage.deleted_at.is_(None),
     )
     pages_result = await db.execute(pages_stmt)
     pages_created = pages_result.scalar() or 0
 
+    page_ids_stmt = select(ComicPage.id).where(
+        ComicPage.comic_id.in_(comic_ids_stmt),
+        ComicPage.deleted_at.is_(None),
+    )
     panels_stmt = select(func.count()).select_from(ComicPanel).where(
-        ComicPanel.org_id == org_id,
+        ComicPanel.page_id.in_(page_ids_stmt),
         ComicPanel.deleted_at.is_(None),
     )
     panels_result = await db.execute(panels_stmt)
@@ -532,8 +434,8 @@ async def list_comics(
         stmt = stmt.where(Comic.status == status_filter)
         count_stmt = count_stmt.where(Comic.status == status_filter)
     if format_filter:
-        stmt = stmt.where(Comic.comic_format == format_filter)
-        count_stmt = count_stmt.where(Comic.comic_format == format_filter)
+        stmt = stmt.where(Comic.format == format_filter)
+        count_stmt = count_stmt.where(Comic.format == format_filter)
     if search:
         like_term = f"%{search}%"
         stmt = stmt.where(Comic.title.ilike(like_term))
@@ -563,17 +465,28 @@ async def create_comic(
         org_id=org_id,
         title=payload["title"],
         subtitle=payload.get("subtitle"),
-        author_name=payload.get("author_name"),
+        author=payload.get("author"),
+        artist=payload.get("artist"),
+        letterer=payload.get("letterer"),
+        colorist=payload.get("colorist"),
+        format=payload.get("format"),
         art_style=payload.get("art_style"),
-        comic_format=payload.get("comic_format"),
+        color_mode=payload.get("color_mode"),
+        ink_style=payload.get("ink_style"),
+        pacing=payload.get("pacing"),
         status=BookStatus.draft.value,
         genre=payload.get("genre"),
-        synopsis=payload.get("synopsis"),
+        premise=payload.get("premise"),
         script_text=payload.get("script_text"),
         trim_size=payload.get("trim_size", "6.625x10.25"),
-        page_count=payload.get("page_count", 0),
+        page_count=payload.get("page_count", 24),
         target_audience=payload.get("target_audience"),
-        metadata_json=payload.get("metadata", {}),
+        border_style=payload.get("border_style"),
+        gutter_style=payload.get("gutter_style"),
+        content_rating=payload.get("content_rating"),
+        violence_level=payload.get("violence_level"),
+        language_level=payload.get("language_level"),
+        safety_settings=payload.get("safety_settings"),
     )
     db.add(comic)
     await db.flush()
@@ -601,14 +514,15 @@ async def update_comic(
     """Update a comic book."""
     comic = await _get_comic_or_404(db, org_id, comic_id)
     allowed = {
-        "title", "subtitle", "author_name", "art_style", "comic_format",
-        "status", "genre", "synopsis", "script_text", "trim_size",
-        "page_count", "target_audience", "metadata",
+        "title", "subtitle", "author", "artist", "letterer", "colorist",
+        "format", "art_style", "color_mode", "ink_style", "pacing",
+        "status", "genre", "premise", "script_text", "trim_size",
+        "page_count", "target_audience", "border_style", "gutter_style",
+        "content_rating", "violence_level", "language_level", "safety_settings",
     }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(comic, col, value)
+            setattr(comic, key, value)
     await db.flush()
     await db.refresh(comic)
     return _comic_to_dict(comic)
@@ -638,7 +552,6 @@ async def list_pages(
         select(ComicPage)
         .where(
             ComicPage.comic_id == comic_id,
-            ComicPage.org_id == org_id,
             ComicPage.deleted_at.is_(None),
         )
         .order_by(ComicPage.page_number)
@@ -663,15 +576,14 @@ async def create_page(
         payload["page_number"] = current_max + 1
 
     page = ComicPage(
-        org_id=org_id,
         comic_id=comic_id,
         page_number=payload["page_number"],
+        page_type=payload.get("page_type", "story"),
+        script_text=payload.get("script_text"),
+        thumbnail_url=payload.get("thumbnail_url"),
+        full_art_url=payload.get("full_art_url"),
         layout_template=payload.get("layout_template"),
-        background_description=payload.get("background_description"),
-        background_image_url=payload.get("background_image_url"),
-        notes=payload.get("notes"),
-        dpi=payload.get("dpi", 300),
-        metadata_json=payload.get("metadata", {}),
+        panel_count=payload.get("panel_count", 6),
     )
     db.add(page)
     await db.flush()
@@ -698,13 +610,12 @@ async def update_page(
     """Update a comic page."""
     page = await _get_page_or_404(db, org_id, comic_id, page_id)
     allowed = {
-        "page_number", "layout_template", "background_description",
-        "background_image_url", "notes", "dpi", "metadata",
+        "page_number", "page_type", "script_text", "thumbnail_url",
+        "full_art_url", "layout_template", "panel_count",
     }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(page, col, value)
+            setattr(page, key, value)
     await db.flush()
     await db.refresh(page)
     return _page_to_dict(page)
@@ -731,7 +642,6 @@ async def reorder_pages(
             .where(
                 ComicPage.id == UUID(str(pid)),
                 ComicPage.comic_id == comic_id,
-                ComicPage.org_id == org_id,
             )
             .values(page_number=idx)
         )
@@ -752,10 +662,9 @@ async def list_panels(
         select(ComicPanel)
         .where(
             ComicPanel.page_id == page_id,
-            ComicPanel.org_id == org_id,
             ComicPanel.deleted_at.is_(None),
         )
-        .order_by(ComicPanel.panel_number)
+        .order_by(ComicPanel.panel_order)
     )
     result = await db.execute(stmt)
     return [_panel_to_dict(p) for p in result.scalars().all()]
@@ -765,27 +674,27 @@ async def create_panel(
     db: AsyncSession, org_id: UUID, page_id: UUID, payload: dict[str, Any]
 ) -> dict[str, Any]:
     """Create a new panel on a page."""
-    if "panel_number" not in payload:
-        max_stmt = select(func.max(ComicPanel.panel_number)).where(
+    if "panel_order" not in payload:
+        max_stmt = select(func.max(ComicPanel.panel_order)).where(
             ComicPanel.page_id == page_id,
             ComicPanel.deleted_at.is_(None),
         )
         max_result = await db.execute(max_stmt)
         current_max = max_result.scalar() or 0
-        payload["panel_number"] = current_max + 1
+        payload["panel_order"] = current_max + 1
 
     panel = ComicPanel(
-        org_id=org_id,
         page_id=page_id,
-        panel_number=payload["panel_number"],
+        panel_order=payload["panel_order"],
         panel_type=payload.get("panel_type", PanelType.standard.value),
         description=payload.get("description"),
         art_prompt=payload.get("art_prompt"),
         x=payload.get("x", 0.0),
         y=payload.get("y", 0.0),
-        width=payload.get("width", 1.0),
-        height=payload.get("height", 1.0),
-        metadata_json=payload.get("metadata", {}),
+        width=payload.get("width", 50.0),
+        height=payload.get("height", 50.0),
+        border_style=payload.get("border_style"),
+        background_color=payload.get("background_color"),
     )
     db.add(panel)
     await db.flush()
@@ -799,13 +708,13 @@ async def update_panel(
     """Update a panel."""
     panel = await _get_panel_or_404(db, org_id, page_id, panel_id)
     allowed = {
-        "panel_number", "panel_type", "description", "art_prompt",
-        "x", "y", "width", "height", "metadata",
+        "panel_order", "panel_type", "description", "art_prompt",
+        "art_url", "art_seed", "x", "y", "width", "height",
+        "border_style", "background_color",
     }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(panel, col, value)
+            setattr(panel, key, value)
     await db.flush()
     await db.refresh(panel)
     return _panel_to_dict(panel)
@@ -834,10 +743,9 @@ async def list_bubbles(
         select(ComicBubble)
         .where(
             ComicBubble.panel_id == panel_id,
-            ComicBubble.org_id == org_id,
             ComicBubble.deleted_at.is_(None),
         )
-        .order_by(ComicBubble.created_at)
+        .order_by(ComicBubble.bubble_order)
     )
     result = await db.execute(stmt)
     return [_bubble_to_dict(b) for b in result.scalars().all()]
@@ -848,19 +756,16 @@ async def create_bubble(
 ) -> dict[str, Any]:
     """Create a new bubble in a panel."""
     bubble = ComicBubble(
-        org_id=org_id,
         panel_id=panel_id,
+        bubble_order=payload.get("bubble_order", 0),
         bubble_type=payload.get("bubble_type", BubbleType.speech.value),
         text=payload.get("text"),
         character_name=payload.get("character_name"),
-        font_family=payload.get("font_family"),
+        font=payload.get("font"),
         font_size=payload.get("font_size"),
-        x=payload.get("x", 0.5),
-        y=payload.get("y", 0.5),
-        width=payload.get("width"),
-        height=payload.get("height"),
+        x=payload.get("x", 50.0),
+        y=payload.get("y", 10.0),
         tail_direction=payload.get("tail_direction"),
-        metadata_json=payload.get("metadata", {}),
     )
     db.add(bubble)
     await db.flush()
@@ -874,13 +779,12 @@ async def update_bubble(
     """Update a bubble."""
     bubble = await _get_bubble_or_404(db, org_id, panel_id, bubble_id)
     allowed = {
-        "bubble_type", "text", "character_name", "font_family",
-        "font_size", "x", "y", "width", "height", "tail_direction", "metadata",
+        "bubble_order", "bubble_type", "text", "character_name",
+        "font", "font_size", "x", "y", "tail_direction",
     }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(bubble, col, value)
+            setattr(bubble, key, value)
     await db.flush()
     await db.refresh(bubble)
     return _bubble_to_dict(bubble)
@@ -918,7 +822,7 @@ async def get_script(
             p_id = UUID(panel_data["id"])
             bubbles = await list_bubbles(db, org_id, p_id)
             panel_scripts.append({
-                "panel_number": panel_data["panel_number"],
+                "panel_number": panel_data["panel_order"],
                 "description": panel_data["description"],
                 "art_prompt": panel_data["art_prompt"],
                 "dialogue": [
@@ -971,13 +875,13 @@ async def generate_script(
     characters = await list_characters(db, org_id, comic_id)
     logger.info("Generating script for comic %s", comic_id)
 
-    premise = payload.get("premise", comic.synopsis or "")
+    premise = payload.get("premise", comic.premise or "")
     genre = payload.get("genre", comic.genre or "action")
     target_pages = payload.get("target_pages", 22)
     tone = payload.get("tone", "dramatic")
 
     char_descriptions = "\n".join(
-        f"- {c['name']}: {c.get('description', '')} {c.get('visual_traits', '')}"
+        f"- {c['name']}: {c.get('description', '')} {c.get('visual_description', '')}"
         for c in characters
     ) or "No characters defined yet."
 
@@ -1028,7 +932,6 @@ async def expand_panel(
     # Find the panel across all pages
     stmt = select(ComicPanel).where(
         ComicPanel.id == panel_id,
-        ComicPanel.org_id == org_id,
         ComicPanel.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1054,8 +957,6 @@ async def expand_panel(
     raw = await _llm_generate(prompt, system_prompt=system_prompt, max_tokens=2000)
 
     panel.art_prompt = raw
-    panel.metadata_json = panel.metadata_json or {}
-    panel.metadata_json["expanded_at"] = datetime.now(UTC).isoformat()
     await db.flush()
     await db.refresh(panel)
 
@@ -1098,15 +999,10 @@ async def generate_next_page(
 
     # Create the page
     page = ComicPage(
-        org_id=org_id,
         comic_id=comic_id,
         page_number=next_page_num,
-        notes=f"AI-generated. Direction: {direction}",
-        dpi=300,
-        metadata_json={
-            "generated": True,
-            "generation_timestamp": datetime.now(UTC).isoformat(),
-        },
+        page_type="story",
+        script_text=raw,
     )
     db.add(page)
     await db.flush()
@@ -1147,7 +1043,6 @@ async def list_characters(
         select(ComicCharacter)
         .where(
             ComicCharacter.comic_id == comic_id,
-            ComicCharacter.org_id == org_id,
             ComicCharacter.deleted_at.is_(None),
         )
         .order_by(ComicCharacter.created_at)
@@ -1162,14 +1057,15 @@ async def create_character(
     """Create a character for a comic."""
     await _get_comic_or_404(db, org_id, comic_id)
     char = ComicCharacter(
-        org_id=org_id,
         comic_id=comic_id,
         name=payload["name"],
+        role=payload.get("role"),
         description=payload.get("description"),
-        visual_traits=payload.get("visual_traits"),
-        personality=payload.get("personality"),
+        visual_description=payload.get("visual_description"),
         reference_images=payload.get("reference_images", []),
-        metadata_json=payload.get("metadata", {}),
+        auto_append=payload.get("auto_append", True),
+        default_costume=payload.get("default_costume"),
+        color_palette=payload.get("color_palette"),
     )
     db.add(char)
     await db.flush()
@@ -1183,13 +1079,12 @@ async def update_character(
     """Update a character."""
     char = await _get_character_or_404(db, org_id, comic_id, char_id)
     allowed = {
-        "name", "description", "visual_traits", "personality",
-        "reference_images", "metadata",
+        "name", "role", "description", "visual_description",
+        "reference_images", "auto_append", "default_costume", "color_palette",
     }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(char, col, value)
+            setattr(char, key, value)
     await db.flush()
     await db.refresh(char)
     return _char_to_dict(char)
@@ -1212,7 +1107,6 @@ async def add_expression(
     # Verify character exists
     stmt = select(ComicCharacter).where(
         ComicCharacter.id == char_id,
-        ComicCharacter.org_id == org_id,
         ComicCharacter.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1221,12 +1115,10 @@ async def add_expression(
         raise NotFoundError("ComicCharacter", f"Character {char_id} not found")
 
     expr = CharacterExpression(
-        org_id=org_id,
         character_id=char_id,
         name=payload["name"],
         description=payload.get("description"),
-        image_url=payload.get("image_url"),
-        metadata_json=payload.get("metadata", {}),
+        reference_url=payload.get("reference_url"),
     )
     db.add(expr)
     await db.flush()
@@ -1240,7 +1132,6 @@ async def add_pose(
     """Add a pose to a character."""
     stmt = select(ComicCharacter).where(
         ComicCharacter.id == char_id,
-        ComicCharacter.org_id == org_id,
         ComicCharacter.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1249,12 +1140,10 @@ async def add_pose(
         raise NotFoundError("ComicCharacter", f"Character {char_id} not found")
 
     pose = CharacterPose(
-        org_id=org_id,
         character_id=char_id,
         name=payload["name"],
         description=payload.get("description"),
-        image_url=payload.get("image_url"),
-        metadata_json=payload.get("metadata", {}),
+        reference_url=payload.get("reference_url"),
     )
     db.add(pose)
     await db.flush()
@@ -1268,7 +1157,6 @@ async def add_costume(
     """Add a costume to a character."""
     stmt = select(ComicCharacter).where(
         ComicCharacter.id == char_id,
-        ComicCharacter.org_id == org_id,
         ComicCharacter.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1277,12 +1165,11 @@ async def add_costume(
         raise NotFoundError("ComicCharacter", f"Character {char_id} not found")
 
     costume = CharacterCostume(
-        org_id=org_id,
         character_id=char_id,
         name=payload["name"],
         description=payload.get("description"),
-        image_url=payload.get("image_url"),
-        metadata_json=payload.get("metadata", {}),
+        reference_url=payload.get("reference_url"),
+        is_default=payload.get("is_default", False),
     )
     db.add(costume)
     await db.flush()
@@ -1299,8 +1186,8 @@ async def generate_character_references(
 
     style = comic.art_style.value if comic.art_style else "american_classic"
     base_desc = f"{char.description or char.name}"
-    if char.visual_traits:
-        base_desc += f", {char.visual_traits}"
+    if char.visual_description:
+        base_desc += f", {char.visual_description}"
 
     views = ["front view", "side view", "action pose", "emotional close-up"]
     reference_urls: list[str] = []
@@ -1423,7 +1310,6 @@ async def apply_layout_template(
     # Verify page exists
     stmt = select(ComicPage).where(
         ComicPage.id == page_id,
-        ComicPage.org_id == org_id,
         ComicPage.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1434,7 +1320,6 @@ async def apply_layout_template(
     # Soft-delete existing panels on this page
     existing_stmt = select(ComicPanel).where(
         ComicPanel.page_id == page_id,
-        ComicPanel.org_id == org_id,
         ComicPanel.deleted_at.is_(None),
     )
     existing_result = await db.execute(existing_stmt)
@@ -1445,15 +1330,13 @@ async def apply_layout_template(
     created_panels: list[dict[str, Any]] = []
     for idx, pos in enumerate(template["positions"], start=1):
         panel = ComicPanel(
-            org_id=org_id,
             page_id=page_id,
-            panel_number=idx,
+            panel_order=idx,
             panel_type=PanelType.standard.value,
             x=pos["x"],
             y=pos["y"],
             width=pos["w"],
             height=pos["h"],
-            metadata_json={"template_id": template_id},
         )
         db.add(panel)
         await db.flush()
@@ -1492,7 +1375,7 @@ async def export_comic(
     book_data: dict[str, Any] = {
         "id": str(comic_id),
         "title": comic.title,
-        "author": comic.author_name or "",
+        "author": comic.author or "",
         "trim_size": comic.trim_size or "6.625x10.25",
         "interior_type": "color",
         "pages": pages,
@@ -1504,7 +1387,7 @@ async def export_comic(
         for p in pages:
             page_images.append({
                 "page_number": p["page_number"],
-                "image_url": p.get("background_image_url", ""),
+                "image_url": p.get("full_art_url", ""),
             })
         return {
             "comic_id": str(comic_id),
@@ -1589,10 +1472,10 @@ async def run_preflight(
         page_id = UUID(p["id"])
         panels = await list_panels(db, org_id, page_id)
         for panel in panels:
-            if not panel.get("image_url") and not panel.get("art_prompt"):
+            if not panel.get("art_url") and not panel.get("art_prompt"):
                 panels_without_art.append({
                     "page": p["page_number"],
-                    "panel": panel["panel_number"],
+                    "panel": panel["panel_order"],
                 })
     checks.append({
         "check": "panel_art",
@@ -1612,13 +1495,13 @@ async def run_preflight(
             if is_recto and panel.get("x", 0) < 0.05:
                 gutter_issues.append({
                     "page": pn,
-                    "panel": panel["panel_number"],
+                    "panel": panel["panel_order"],
                     "detail": "Panel starts very close to gutter on recto page",
                 })
             elif not is_recto and (panel.get("x", 0) + panel.get("width", 0)) > 0.95:
                 gutter_issues.append({
                     "page": pn,
-                    "panel": panel["panel_number"],
+                    "panel": panel["panel_order"],
                     "detail": "Panel extends very close to gutter on verso page",
                 })
     checks.append({
@@ -1640,7 +1523,7 @@ async def run_preflight(
                 if not bubble.get("text"):
                     empty_bubbles.append({
                         "page": p["page_number"],
-                        "panel": panel["panel_number"],
+                        "panel": panel["panel_order"],
                         "bubble_type": bubble.get("bubble_type"),
                     })
     checks.append({

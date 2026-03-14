@@ -333,28 +333,15 @@ class WordListSourceType(str, enum.Enum):
     curated = "curated"
 
 
-class CookbookType(str, enum.Enum):
-    """Type of cookbook."""
-    general = "general"
-    baking = "baking"
-    vegetarian = "vegetarian"
-    vegan = "vegan"
-    keto = "keto"
-    paleo = "paleo"
-    gluten_free = "gluten_free"
-    regional = "regional"
-    holiday = "holiday"
-    meal_prep = "meal_prep"
-    kids = "kids"
-    desserts = "desserts"
-
-
-class RecipeDifficulty(str, enum.Enum):
-    """Difficulty level for recipes."""
-    easy = "easy"
-    medium = "medium"
-    hard = "hard"
-    expert = "expert"
+class PhotoUsageType(str, enum.Enum):
+    """How a photo reference is used in illustration generation."""
+    character_reference = "character_reference"
+    scene_reference = "scene_reference"
+    style_reference = "style_reference"
+    background = "background"
+    texture = "texture"
+    color_palette = "color_palette"
+    composition = "composition"
 
 
 class LicenseType(str, enum.Enum):

@@ -32,78 +32,13 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Lightweight ORM models (inline so we don't modify existing files)
+# ORM models — imported from the canonical models module
 # ---------------------------------------------------------------------------
-# These mirror the expected database tables. In production the models would
-# live in their own ``models.py`` and be imported by Alembic.
-
-from sqlalchemy import (  # noqa: E402
-    Boolean,
-    Column,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
+from app.modules.specialty.models.childrens import (  # noqa: E402
+    ChildrensBook,
+    ChildrensBookCharacter,
+    ChildrensBookPage,
 )
-from sqlalchemy.dialects.postgresql import JSONB
-
-
-class ChildrensBook(TenantModel):
-    __tablename__ = "childrens_books"
-
-    title = Column(String(500), nullable=False)
-    subtitle = Column(String(500), nullable=True)
-    author_name = Column(String(300), nullable=True)
-    age_range = Column(Enum(AgeRange), nullable=False, default=AgeRange.preschool)
-    status = Column(Enum(BookStatus), nullable=False, default=BookStatus.draft)
-    page_count = Column(Integer, default=0)
-    trim_size = Column(String(20), default="8.5x8.5")
-    illustration_style = Column(Enum(IllustrationStyle), nullable=True)
-    color_palette = Column(String(50), nullable=True)
-    story_prompt = Column(Text, nullable=True)
-    theme = Column(String(300), nullable=True)
-    tone = Column(String(100), nullable=True)
-    story_mode = Column(String(50), nullable=True)
-    bilingual = Column(Boolean, default=False)
-    bilingual_language = Column(String(50), nullable=True)
-    bilingual_layout = Column(String(50), nullable=True)
-    fear_intensity = Column(String(20), default="none")
-    metadata_json = Column(JSONB, default=dict)
-    qa_score = Column(Float, nullable=True)
-
-
-class ChildrensBookPage(TenantModel):
-    __tablename__ = "childrens_book_pages"
-
-    book_id = Column(ForeignKey("childrens_books.id"), nullable=False, index=True)
-    page_number = Column(Integer, nullable=False)
-    text_content = Column(Text, nullable=True)
-    illustration_prompt = Column(Text, nullable=True)
-    layout = Column(Enum(PageLayout), default=PageLayout.image_top_text_bottom)
-    image_url = Column(String(1000), nullable=True)
-    thumbnail_url = Column(String(1000), nullable=True)
-    font_size = Column(Integer, nullable=True)
-    text_position = Column(String(20), nullable=True)
-    dpi = Column(Integer, default=300)
-    metadata_json = Column(JSONB, default=dict)
-    translated_text = Column(Text, nullable=True)
-
-
-class ChildrensBookCharacter(TenantModel):
-    __tablename__ = "childrens_book_characters"
-
-    book_id = Column(ForeignKey("childrens_books.id"), nullable=False, index=True)
-    name = Column(String(200), nullable=False)
-    species_type = Column(String(200), nullable=True)
-    description = Column(Text, nullable=True)
-    clothing_rules = Column(Text, nullable=True)
-    scale_rules = Column(Text, nullable=True)
-    setting_continuity = Column(Text, nullable=True)
-    time_of_day_rules = Column(Text, nullable=True)
-    reference_images = Column(JSONB, default=list)  # list of URLs
-    metadata_json = Column(JSONB, default=dict)
 
 
 # ---------------------------------------------------------------------------

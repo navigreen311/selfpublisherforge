@@ -15,24 +15,16 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    func,
-    select,
-    update,
-)
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError
-from app.database import TenantModel
+from app.modules.specialty.models.cookbook import (
+    Cookbook,
+    CookbookChapter,
+    MealPlan,
+    Recipe,
+)
 from app.modules.specialty.models.enums import (
     BookStatus,
     CookbookType,
@@ -40,77 +32,6 @@ from app.modules.specialty.models.enums import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Lightweight ORM models (inline so we don't modify existing files)
-# ---------------------------------------------------------------------------
-# These mirror the expected database tables. In production the models would
-# live in their own ``models.py`` and be imported by Alembic.
-
-
-class Cookbook(TenantModel):
-    __tablename__ = "cookbooks"
-
-    title = Column(String(500), nullable=False)
-    subtitle = Column(String(500), nullable=True)
-    author_name = Column(String(300), nullable=True)
-    cookbook_type = Column(Enum(CookbookType), nullable=False, default=CookbookType.general)
-    status = Column(Enum(BookStatus), nullable=False, default=BookStatus.draft)
-    cuisine = Column(String(200), nullable=True)
-    description = Column(Text, nullable=True)
-    trim_size = Column(String(20), default="8.5x11")
-    chapter_count = Column(Integer, default=0)
-    recipe_count = Column(Integer, default=0)
-    dietary_tags = Column(JSONB, default=list)  # e.g. ["vegetarian", "gluten-free"]
-    metadata_json = Column(JSONB, default=dict)
-
-
-class CookbookChapter(TenantModel):
-    __tablename__ = "cookbook_chapters"
-
-    cookbook_id = Column(ForeignKey("cookbooks.id"), nullable=False, index=True)
-    title = Column(String(500), nullable=False)
-    description = Column(Text, nullable=True)
-    sort_order = Column(Integer, nullable=False, default=0)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class Recipe(TenantModel):
-    __tablename__ = "cookbook_recipes"
-
-    chapter_id = Column(ForeignKey("cookbook_chapters.id"), nullable=False, index=True)
-    title = Column(String(500), nullable=False)
-    description = Column(Text, nullable=True)
-    difficulty = Column(Enum(RecipeDifficulty), nullable=True, default=RecipeDifficulty.easy)
-    cuisine = Column(String(200), nullable=True)
-    prep_time_minutes = Column(Integer, nullable=True)
-    cook_time_minutes = Column(Integer, nullable=True)
-    servings = Column(Integer, default=4)
-    sort_order = Column(Integer, nullable=False, default=0)
-    image_url = Column(String(1000), nullable=True)
-    # ingredients: [{"name": str, "amount": float, "unit": str, "category": str}]
-    ingredients = Column(JSONB, default=list)
-    # instructions: [{"step": int, "text": str, "time_minutes": int|None}]
-    instructions = Column(JSONB, default=list)
-    # nutrition: {"calories": int, "protein_g": float, "carbs_g": float, "fat_g": float, ...}
-    nutrition = Column(JSONB, default=dict)
-    dietary_tags = Column(JSONB, default=list)  # e.g. ["vegan", "nut-free"]
-    tips = Column(Text, nullable=True)
-    metadata_json = Column(JSONB, default=dict)
-
-
-class MealPlan(TenantModel):
-    __tablename__ = "cookbook_meal_plans"
-
-    cookbook_id = Column(ForeignKey("cookbooks.id"), nullable=False, index=True)
-    title = Column(String(500), nullable=False)
-    description = Column(Text, nullable=True)
-    duration_days = Column(Integer, default=7)
-    dietary_goals = Column(JSONB, default=dict)  # e.g. {"calories_per_day": 2000}
-    # plan_data: {"days": [{"day": 1, "meals": [{"meal": "breakfast", "recipe_id": str}]}]}
-    plan_data = Column(JSONB, default=dict)
-    metadata_json = Column(JSONB, default=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -163,16 +84,26 @@ def _cookbook_to_dict(cb: Cookbook) -> dict[str, Any]:
         "org_id": str(cb.org_id),
         "title": cb.title,
         "subtitle": cb.subtitle,
-        "author_name": cb.author_name,
+        "author": cb.author,
         "cookbook_type": cb.cookbook_type.value if cb.cookbook_type else None,
         "status": cb.status.value if cb.status else None,
         "cuisine": cb.cuisine,
+        "target_audience": cb.target_audience,
         "description": cb.description,
+        "chapter_organization": cb.chapter_organization.value if cb.chapter_organization else None,
+        "recipe_layout": cb.recipe_layout.value if cb.recipe_layout else None,
+        "illustration_method": cb.illustration_method.value if cb.illustration_method else None,
+        "interior_type": cb.interior_type.value if cb.interior_type else None,
         "trim_size": cb.trim_size,
-        "chapter_count": cb.chapter_count,
-        "recipe_count": cb.recipe_count,
+        "page_count": cb.page_count,
+        "include_nutrition": cb.include_nutrition,
+        "include_meal_plans": cb.include_meal_plans,
+        "include_shopping_lists": cb.include_shopping_lists,
+        "include_index": cb.include_index,
+        "include_conversion_charts": cb.include_conversion_charts,
         "dietary_tags": cb.dietary_tags or [],
-        "metadata": cb.metadata_json or {},
+        "metadata_settings": cb.metadata_settings or {},
+        "qa_score": cb.qa_score,
         "created_at": cb.created_at.isoformat() if cb.created_at else None,
         "updated_at": cb.updated_at.isoformat() if cb.updated_at else None,
     }
@@ -184,8 +115,9 @@ def _chapter_to_dict(ch: CookbookChapter) -> dict[str, Any]:
         "cookbook_id": str(ch.cookbook_id),
         "title": ch.title,
         "description": ch.description,
-        "sort_order": ch.sort_order,
-        "metadata": ch.metadata_json or {},
+        "introduction_text": ch.introduction_text,
+        "chapter_order": ch.chapter_order,
+        "chapter_type": ch.chapter_type.value if ch.chapter_type else None,
         "created_at": ch.created_at.isoformat() if ch.created_at else None,
         "updated_at": ch.updated_at.isoformat() if ch.updated_at else None,
     }
@@ -198,18 +130,23 @@ def _recipe_to_dict(r: Recipe) -> dict[str, Any]:
         "title": r.title,
         "description": r.description,
         "difficulty": r.difficulty.value if r.difficulty else None,
-        "cuisine": r.cuisine,
         "prep_time_minutes": r.prep_time_minutes,
         "cook_time_minutes": r.cook_time_minutes,
+        "total_time_minutes": r.total_time_minutes,
         "servings": r.servings,
-        "sort_order": r.sort_order,
+        "recipe_order": r.recipe_order,
         "image_url": r.image_url,
+        "image_prompt": r.image_prompt,
         "ingredients": r.ingredients or [],
         "instructions": r.instructions or [],
         "nutrition": r.nutrition or {},
-        "dietary_tags": r.dietary_tags or [],
+        "notes": r.notes,
         "tips": r.tips,
-        "metadata": r.metadata_json or {},
+        "variations": r.variations or [],
+        "tags": r.tags or [],
+        "dietary_flags": r.dietary_flags or [],
+        "source": r.source,
+        "scaling_factor": r.scaling_factor,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "updated_at": r.updated_at.isoformat() if r.updated_at else None,
     }
@@ -221,10 +158,11 @@ def _meal_plan_to_dict(mp: MealPlan) -> dict[str, Any]:
         "cookbook_id": str(mp.cookbook_id),
         "title": mp.title,
         "description": mp.description,
-        "duration_days": mp.duration_days,
+        "plan_type": mp.plan_type.value if mp.plan_type else None,
+        "days": mp.days or [],
+        "total_calories_target": mp.total_calories_target,
         "dietary_goals": mp.dietary_goals or {},
-        "plan_data": mp.plan_data or {},
-        "metadata": mp.metadata_json or {},
+        "shopping_list": mp.shopping_list or [],
         "created_at": mp.created_at.isoformat() if mp.created_at else None,
         "updated_at": mp.updated_at.isoformat() if mp.updated_at else None,
     }
@@ -251,7 +189,6 @@ async def _get_chapter_or_404(
     stmt = select(CookbookChapter).where(
         CookbookChapter.id == chapter_id,
         CookbookChapter.cookbook_id == cookbook_id,
-        CookbookChapter.org_id == org_id,
         CookbookChapter.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -266,7 +203,6 @@ async def _get_recipe_or_404(
 ) -> Recipe:
     stmt = select(Recipe).where(
         Recipe.id == recipe_id,
-        Recipe.org_id == org_id,
         Recipe.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -282,7 +218,6 @@ async def _get_meal_plan_or_404(
     stmt = select(MealPlan).where(
         MealPlan.id == plan_id,
         MealPlan.cookbook_id == cookbook_id,
-        MealPlan.org_id == org_id,
         MealPlan.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -293,31 +228,11 @@ async def _get_meal_plan_or_404(
 
 
 async def _update_cookbook_counts(db: AsyncSession, cookbook_id: UUID) -> None:
-    """Refresh chapter_count and recipe_count on a cookbook."""
-    ch_count_stmt = select(func.count()).select_from(CookbookChapter).where(
-        CookbookChapter.cookbook_id == cookbook_id,
-        CookbookChapter.deleted_at.is_(None),
-    )
-    ch_result = await db.execute(ch_count_stmt)
+    """No-op: Cookbook model does not store denormalized counts.
 
-    ch_ids_stmt = select(CookbookChapter.id).where(
-        CookbookChapter.cookbook_id == cookbook_id,
-        CookbookChapter.deleted_at.is_(None),
-    )
-    r_count_stmt = select(func.count()).select_from(Recipe).where(
-        Recipe.chapter_id.in_(ch_ids_stmt),
-        Recipe.deleted_at.is_(None),
-    )
-    r_result = await db.execute(r_count_stmt)
-
-    await db.execute(
-        update(Cookbook)
-        .where(Cookbook.id == cookbook_id)
-        .values(
-            chapter_count=ch_result.scalar() or 0,
-            recipe_count=r_result.scalar() or 0,
-        )
-    )
+    Kept as a hook for future use (e.g. cache refresh).
+    """
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -429,14 +344,25 @@ async def create_cookbook(
         org_id=org_id,
         title=payload["title"],
         subtitle=payload.get("subtitle"),
-        author_name=payload.get("author_name"),
+        author=payload.get("author"),
         cookbook_type=payload.get("cookbook_type", CookbookType.general.value),
         status=BookStatus.draft.value,
         cuisine=payload.get("cuisine"),
+        target_audience=payload.get("target_audience"),
         description=payload.get("description"),
-        trim_size=payload.get("trim_size", "8.5x11"),
+        chapter_organization=payload.get("chapter_organization"),
+        recipe_layout=payload.get("recipe_layout"),
+        illustration_method=payload.get("illustration_method"),
+        interior_type=payload.get("interior_type"),
+        trim_size=payload.get("trim_size", "8x10"),
+        page_count=payload.get("page_count", 100),
+        include_nutrition=payload.get("include_nutrition", True),
+        include_meal_plans=payload.get("include_meal_plans", False),
+        include_shopping_lists=payload.get("include_shopping_lists", False),
+        include_index=payload.get("include_index", True),
+        include_conversion_charts=payload.get("include_conversion_charts", True),
         dietary_tags=payload.get("dietary_tags", []),
-        metadata_json=payload.get("metadata", {}),
+        metadata_settings=payload.get("metadata_settings"),
     )
     db.add(cb)
     await db.flush()
@@ -458,13 +384,17 @@ async def update_cookbook(
     """Update a cookbook."""
     cb = await _get_cookbook_or_404(db, org_id, cookbook_id)
     allowed = {
-        "title", "subtitle", "author_name", "cookbook_type", "status",
-        "cuisine", "description", "trim_size", "dietary_tags", "metadata",
+        "title", "subtitle", "author", "cookbook_type", "status",
+        "cuisine", "target_audience", "description",
+        "chapter_organization", "recipe_layout", "illustration_method",
+        "interior_type", "trim_size", "page_count",
+        "include_nutrition", "include_meal_plans", "include_shopping_lists",
+        "include_index", "include_conversion_charts",
+        "dietary_tags", "metadata_settings",
     }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(cb, col, value)
+            setattr(cb, key, value)
     await db.flush()
     await db.refresh(cb)
     return _cookbook_to_dict(cb)
@@ -494,10 +424,9 @@ async def list_chapters(
         select(CookbookChapter)
         .where(
             CookbookChapter.cookbook_id == cookbook_id,
-            CookbookChapter.org_id == org_id,
             CookbookChapter.deleted_at.is_(None),
         )
-        .order_by(CookbookChapter.sort_order)
+        .order_by(CookbookChapter.chapter_order)
     )
     result = await db.execute(stmt)
     return [_chapter_to_dict(ch) for ch in result.scalars().all()]
@@ -509,23 +438,23 @@ async def create_chapter(
     """Create a new chapter in a cookbook."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
 
-    # Auto-assign sort_order if not provided
-    if "sort_order" not in payload:
-        max_stmt = select(func.max(CookbookChapter.sort_order)).where(
+    # Auto-assign chapter_order if not provided
+    if "chapter_order" not in payload:
+        max_stmt = select(func.max(CookbookChapter.chapter_order)).where(
             CookbookChapter.cookbook_id == cookbook_id,
             CookbookChapter.deleted_at.is_(None),
         )
         max_result = await db.execute(max_stmt)
         current_max = max_result.scalar() or 0
-        payload["sort_order"] = current_max + 1
+        payload["chapter_order"] = current_max + 1
 
     ch = CookbookChapter(
-        org_id=org_id,
         cookbook_id=cookbook_id,
         title=payload["title"],
         description=payload.get("description"),
-        sort_order=payload["sort_order"],
-        metadata_json=payload.get("metadata", {}),
+        introduction_text=payload.get("introduction_text"),
+        chapter_order=payload["chapter_order"],
+        chapter_type=payload.get("chapter_type"),
     )
     db.add(ch)
     await db.flush()
@@ -541,11 +470,10 @@ async def update_chapter(
 ) -> dict:
     """Update a chapter."""
     ch = await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
-    allowed = {"title", "description", "sort_order", "metadata"}
+    allowed = {"title", "description", "introduction_text", "chapter_order", "chapter_type"}
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(ch, col, value)
+            setattr(ch, key, value)
     await db.flush()
     await db.refresh(ch)
     return _chapter_to_dict(ch)
@@ -573,9 +501,8 @@ async def reorder_chapters(
             .where(
                 CookbookChapter.id == UUID(str(cid)),
                 CookbookChapter.cookbook_id == cookbook_id,
-                CookbookChapter.org_id == org_id,
             )
-            .values(sort_order=idx)
+            .values(chapter_order=idx)
         )
     await db.flush()
     return await list_chapters(db, org_id, cookbook_id)
@@ -594,10 +521,9 @@ async def list_recipes(
         select(Recipe)
         .where(
             Recipe.chapter_id == chapter_id,
-            Recipe.org_id == org_id,
             Recipe.deleted_at.is_(None),
         )
-        .order_by(Recipe.sort_order)
+        .order_by(Recipe.recipe_order)
     )
     result = await db.execute(stmt)
     return [_recipe_to_dict(r) for r in result.scalars().all()]
@@ -609,7 +535,6 @@ async def create_recipe(
     """Create a new recipe in a chapter."""
     ch_stmt = select(CookbookChapter).where(
         CookbookChapter.id == chapter_id,
-        CookbookChapter.org_id == org_id,
         CookbookChapter.deleted_at.is_(None),
     )
     ch_result = await db.execute(ch_stmt)
@@ -617,33 +542,38 @@ async def create_recipe(
     if chapter is None:
         raise NotFoundError("CookbookChapter", f"Chapter {chapter_id} not found")
 
-    # Auto-assign sort_order if not provided
-    if "sort_order" not in payload:
-        max_stmt = select(func.max(Recipe.sort_order)).where(
+    # Auto-assign recipe_order if not provided
+    if "recipe_order" not in payload:
+        max_stmt = select(func.max(Recipe.recipe_order)).where(
             Recipe.chapter_id == chapter_id,
             Recipe.deleted_at.is_(None),
         )
         max_result = await db.execute(max_stmt)
         current_max = max_result.scalar() or 0
-        payload["sort_order"] = current_max + 1
+        payload["recipe_order"] = current_max + 1
 
     r = Recipe(
-        org_id=org_id,
         chapter_id=chapter_id,
         title=payload["title"],
         description=payload.get("description"),
         difficulty=payload.get("difficulty", RecipeDifficulty.easy.value),
-        cuisine=payload.get("cuisine"),
         prep_time_minutes=payload.get("prep_time_minutes"),
         cook_time_minutes=payload.get("cook_time_minutes"),
-        servings=payload.get("servings", 4),
-        sort_order=payload["sort_order"],
+        total_time_minutes=payload.get("total_time_minutes"),
+        servings=payload.get("servings"),
+        recipe_order=payload["recipe_order"],
         ingredients=payload.get("ingredients", []),
         instructions=payload.get("instructions", []),
         nutrition=payload.get("nutrition", {}),
-        dietary_tags=payload.get("dietary_tags", []),
+        notes=payload.get("notes"),
         tips=payload.get("tips"),
-        metadata_json=payload.get("metadata", {}),
+        variations=payload.get("variations"),
+        tags=payload.get("tags"),
+        dietary_flags=payload.get("dietary_flags", []),
+        image_url=payload.get("image_url"),
+        image_prompt=payload.get("image_prompt"),
+        source=payload.get("source"),
+        scaling_factor=payload.get("scaling_factor", 1.0),
     )
     db.add(r)
     await db.flush()
@@ -667,14 +597,15 @@ async def update_recipe(
     """Update a recipe."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
     allowed = {
-        "title", "description", "difficulty", "cuisine", "prep_time_minutes",
-        "cook_time_minutes", "servings", "sort_order", "ingredients",
-        "instructions", "nutrition", "dietary_tags", "tips", "metadata",
+        "title", "description", "difficulty", "prep_time_minutes",
+        "cook_time_minutes", "total_time_minutes", "servings", "recipe_order",
+        "ingredients", "instructions", "nutrition", "notes", "tips",
+        "variations", "tags", "dietary_flags", "image_url", "image_prompt",
+        "source", "scaling_factor",
     }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(r, col, value)
+            setattr(r, key, value)
     await db.flush()
     await db.refresh(r)
     return _recipe_to_dict(r)
@@ -707,9 +638,8 @@ async def reorder_recipes(
             .where(
                 Recipe.id == UUID(str(rid)),
                 Recipe.chapter_id == chapter_id,
-                Recipe.org_id == org_id,
             )
-            .values(sort_order=idx)
+            .values(recipe_order=idx)
         )
     await db.flush()
     return await list_recipes(db, org_id, chapter_id)
@@ -899,7 +829,6 @@ async def batch_calculate_nutrition(
     )
     recipe_stmt = select(Recipe).where(
         Recipe.chapter_id.in_(ch_ids_stmt),
-        Recipe.org_id == org_id,
         Recipe.deleted_at.is_(None),
     )
     result = await db.execute(recipe_stmt)
@@ -965,7 +894,6 @@ async def list_meal_plans(
         select(MealPlan)
         .where(
             MealPlan.cookbook_id == cookbook_id,
-            MealPlan.org_id == org_id,
             MealPlan.deleted_at.is_(None),
         )
         .order_by(MealPlan.created_at)
@@ -980,14 +908,14 @@ async def create_meal_plan(
     """Create a new meal plan."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
     mp = MealPlan(
-        org_id=org_id,
         cookbook_id=cookbook_id,
         title=payload["title"],
         description=payload.get("description"),
-        duration_days=payload.get("duration_days", 7),
+        plan_type=payload.get("plan_type"),
+        days=payload.get("days"),
+        total_calories_target=payload.get("total_calories_target"),
         dietary_goals=payload.get("dietary_goals", {}),
-        plan_data=payload.get("plan_data", {}),
-        metadata_json=payload.get("metadata", {}),
+        shopping_list=payload.get("shopping_list"),
     )
     db.add(mp)
     await db.flush()
@@ -1001,11 +929,13 @@ async def update_meal_plan(
 ) -> dict:
     """Update a meal plan."""
     mp = await _get_meal_plan_or_404(db, org_id, cookbook_id, plan_id)
-    allowed = {"title", "description", "duration_days", "dietary_goals", "plan_data", "metadata"}
+    allowed = {
+        "title", "description", "plan_type", "days",
+        "total_calories_target", "dietary_goals", "shopping_list",
+    }
     for key, value in payload.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(mp, col, value)
+            setattr(mp, key, value)
     await db.flush()
     await db.refresh(mp)
     return _meal_plan_to_dict(mp)
@@ -1039,7 +969,6 @@ async def auto_fill_meal_plan(
     )
     recipe_stmt = select(Recipe).where(
         Recipe.chapter_id.in_(ch_ids_stmt),
-        Recipe.org_id == org_id,
         Recipe.deleted_at.is_(None),
     )
     result = await db.execute(recipe_stmt)
@@ -1048,7 +977,8 @@ async def auto_fill_meal_plan(
 
     meals_per_day = payload.get("meals_per_day", 3)
     meal_names = ["breakfast", "lunch", "dinner"][:meals_per_day]
-    duration = mp.duration_days or 7
+    # Default duration based on plan_type: weekly=7
+    duration = payload.get("duration_days", 7)
 
     days = []
     recipe_index = 0
@@ -1060,8 +990,7 @@ async def auto_fill_meal_plan(
             recipe_index += 1
         days.append({"day": day_num, "meals": meals})
 
-    plan_data = {"days": days}
-    mp.plan_data = plan_data
+    mp.days = days
     await db.flush()
     await db.refresh(mp)
 
@@ -1071,7 +1000,7 @@ async def auto_fill_meal_plan(
         "duration_days": duration,
         "meals_per_day": meals_per_day,
         "recipes_available": len(recipe_ids),
-        "plan_data": plan_data,
+        "days": days,
         "status": "auto_filled",
     }
 
@@ -1091,7 +1020,6 @@ async def generate_shopping_list(
     """
     stmt = select(MealPlan).where(
         MealPlan.id == plan_id,
-        MealPlan.org_id == org_id,
         MealPlan.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1099,8 +1027,7 @@ async def generate_shopping_list(
     if mp is None:
         raise NotFoundError("MealPlan", f"Meal plan {plan_id} not found")
 
-    plan_data = mp.plan_data or {}
-    days = plan_data.get("days", [])
+    days = mp.days or []
 
     recipe_ids: set[str] = set()
     for day in days:
@@ -1246,7 +1173,7 @@ async def generate_front_matter(
     logger.info("Generating front matter for cookbook %s", cookbook_id)
 
     sections = payload.get("sections", ["introduction", "about_author", "acknowledgments"])
-    author_bio = payload.get("author_bio", cb.author_name or "the author")
+    author_bio = payload.get("author_bio", cb.author or "the author")
     inspiration = payload.get("cookbook_inspiration", cb.description or "")
 
     system_prompt = (
@@ -1309,7 +1236,7 @@ async def export_cookbook(
     book_data: dict[str, Any] = {
         "id": str(cookbook_id),
         "title": cb.title,
-        "author": cb.author_name or "",
+        "author": cb.author or "",
         "trim_size": cb.trim_size or "8.5x11",
         "interior_type": "color",
         "pages": all_recipes,
@@ -1429,14 +1356,14 @@ async def run_preflight(
 
     # 7. Cookbook metadata completeness
     has_title = bool(cb.title)
-    has_author = bool(cb.author_name)
+    has_author = bool(cb.author)
     has_description = bool(cb.description)
     metadata_complete = has_title and has_author and has_description
     missing = []
     if not has_title:
         missing.append("title")
     if not has_author:
-        missing.append("author_name")
+        missing.append("author")
     if not has_description:
         missing.append("description")
     checks.append({
