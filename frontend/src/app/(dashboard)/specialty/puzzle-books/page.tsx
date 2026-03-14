@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,7 +17,6 @@ import {
   ZoomIn,
   CalendarDays,
   Baby,
-  ArrowUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,11 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  usePuzzleBooks,
-  usePuzzleBookStats,
-} from "@/modules/specialty/puzzles/hooks";
-import type { PuzzleBook } from "@/modules/specialty/puzzles/hooks";
+import { usePuzzleBooks, usePuzzleBookStats } from "@/modules/specialty/puzzles/hooks";
 import { PuzzleCard } from "@/modules/specialty/puzzles/components/PuzzleCard";
 import { TemplateCard } from "@/modules/specialty/puzzles/components/TemplateCard";
 
@@ -113,7 +108,6 @@ export default function PuzzleBooksPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [audienceFilter, setAudienceFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   const filters = {
     ...(search && { search }),
@@ -124,10 +118,7 @@ export default function PuzzleBooksPage() {
   const { data: stats } = usePuzzleBookStats();
   const { data: booksData, isLoading } = usePuzzleBooks(filters);
 
-  const books = useMemo(() => {
-    const items = booksData?.items ?? [];
-    return sortBooks(items, sortBy);
-  }, [booksData?.items, sortBy]);
+  const books = booksData?.items ?? [];
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -258,21 +249,6 @@ export default function PuzzleBooksPage() {
             <SelectItem value="teens">Teens</SelectItem>
             <SelectItem value="adults">Adults</SelectItem>
             <SelectItem value="large_print">Large Print</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={sortBy}
-          onValueChange={(v) => setSortBy(v as SortOption)}
-        >
-          <SelectTrigger className="w-[160px]">
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest First</SelectItem>
-            <SelectItem value="oldest">Oldest First</SelectItem>
-            <SelectItem value="title_asc">Title A-Z</SelectItem>
-            <SelectItem value="title_desc">Title Z-A</SelectItem>
           </SelectContent>
         </Select>
       </div>
