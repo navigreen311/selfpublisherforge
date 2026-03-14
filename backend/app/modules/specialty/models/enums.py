@@ -173,6 +173,7 @@ class BookType(str, enum.Enum):
     childrens = "childrens"
     coloring = "coloring"
     puzzle = "puzzle"
+    comic = "comic"
 
 
 class AssetType(str, enum.Enum):
@@ -246,3 +247,113 @@ class LicenseType(str, enum.Enum):
     commercial = "commercial"
     personal = "personal"
     sil_ofl = "sil_ofl"
+
+
+class ComicFormat(str, enum.Enum):
+    """Comic book format/type."""
+    single_issue = "single_issue"          # Standard 22-32 pages
+    graphic_novel = "graphic_novel"        # 48-200+ pages
+    manga = "manga"                        # Japanese style, right-to-left
+    webcomic = "webcomic"                  # Digital-first format
+    mini_series = "mini_series"            # 4-6 issue limited series
+    one_shot = "one_shot"                  # Single standalone issue
+    trade_paperback = "trade_paperback"    # Collected edition
+
+
+class ComicArtStyle(str, enum.Enum):
+    """Art style for comic book illustrations."""
+    american_classic = "american_classic"
+    manga = "manga"
+    franco_belgian = "franco_belgian"
+    indie = "indie"
+    cartoon = "cartoon"
+    realistic = "realistic"
+    noir = "noir"
+    watercolor = "watercolor"
+    pixel_art = "pixel_art"
+    minimalist = "minimalist"
+
+
+class ColorMode(str, enum.Enum):
+    """Color mode for comic art."""
+    full_color = "full_color"
+    grayscale = "grayscale"
+    black_and_white = "black_and_white"
+    duotone = "duotone"
+    limited_palette = "limited_palette"
+    spot_color = "spot_color"
+
+
+class InkStyle(str, enum.Enum):
+    """Inking style for comic art."""
+    clean = "clean"
+    hatching = "hatching"
+    cross_hatching = "cross_hatching"
+    brush = "brush"
+    digital = "digital"
+    woodcut = "woodcut"
+    stipple = "stipple"
+
+
+class ComicPacing(str, enum.Enum):
+    """Pacing style for comic storytelling."""
+    action = "action"
+    dialogue_heavy = "dialogue_heavy"
+    balanced = "balanced"
+    cinematic = "cinematic"
+    decompressed = "decompressed"
+    compressed = "compressed"
+
+
+class TargetAudience(str, enum.Enum):
+    """Target audience for comic books."""
+    all_ages = "all_ages"
+    kids = "kids"               # 6-12
+    teen = "teen"                # 13-17
+    young_adult = "young_adult" # 16-25
+    mature = "mature"           # 18+
+
+
+class PanelType(str, enum.Enum):
+    """Type of comic panel."""
+    standard = "standard"
+    wide = "wide"
+    tall = "tall"
+    splash = "splash"           # Full page
+    double_splash = "double_splash"  # Two-page spread
+    inset = "inset"             # Small panel inside another
+    borderless = "borderless"
+    circular = "circular"
+    diagonal = "diagonal"
+
+
+class BubbleType(str, enum.Enum):
+    """Type of speech/text bubble."""
+    speech = "speech"
+    thought = "thought"
+    narration = "narration"
+    whisper = "whisper"
+    shout = "shout"
+    radio = "radio"             # Electronic/radio communication
+    caption = "caption"
+    sfx = "sfx"                 # Sound effect
+
+
+class BorderStyle(str, enum.Enum):
+    """Panel border style."""
+    solid = "solid"
+    dashed = "dashed"
+    wavy = "wavy"
+    jagged = "jagged"
+    none = "none"
+    double = "double"
+    rough = "rough"
+
+
+class GutterStyle(str, enum.Enum):
+    """Gutter (space between panels) style."""
+    standard = "standard"
+    narrow = "narrow"
+    wide = "wide"
+    none = "none"
+    bleeding = "bleeding"
