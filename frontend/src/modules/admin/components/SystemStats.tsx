@@ -2,12 +2,15 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Activity, Building2, BookOpen, Zap, Database, DollarSign, TrendingUp } from "lucide-react";
+import { Users, Activity, Building2, BookOpen, Zap, Database, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { PlatformStatsDetailed } from "@/modules/admin/types";
 
 interface SystemStatsProps {
-  stats: any;
+  stats: PlatformStatsDetailed | undefined;
   isLoading: boolean;
+  isError?: boolean;
+  error?: unknown;
 }
 
 // Format helpers
@@ -19,7 +22,7 @@ function formatNumber(num: number | undefined | null): string {
 }
 
 function formatBytes(bytes: number | undefined | null): string {
-  if (bytes === undefined || bytes === null) return "--";
+  if (bytes === undefined || bytes === null) return "0 B";
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
   if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
   if (bytes >= 1_024) return `${(bytes / 1_024).toFixed(1)} KB`;
@@ -79,36 +82,53 @@ function StatCard({ label, value, subtitle, icon: Icon, isLoading }: StatCardPro
   );
 }
 
-export function SystemStats({ stats, isLoading }: SystemStatsProps) {
-  // Calculate derived values
-  const usersThisMonth = stats?.new_users_this_month ?? 0;
-  const usersThisMonthText = usersThisMonth > 0 ? `+${formatNumber(usersThisMonth)} this month` : undefined;
+function getErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "response" in error) {
+    const resp = (error as any).response;
+    if (resp?.status === 403) return "You do not have permission to view platform statistics.";
+    if (resp?.status === 401) return "Please log in to view platform statistics.";
+  }
+  return "Failed to load platform statistics. Please try again later.";
+}
+
+export function SystemStats({ stats, isLoading, isError, error }: SystemStatsProps) {
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3 text-destructive">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <p className="text-sm">{getErrorMessage(error)}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Row 1 */}
       <StatCard
         label="Total Users"
-        value={formatNumber(stats?.total_users)}
-        subtitle={usersThisMonthText}
+        value={formatNumber(stats?.users_total)}
         icon={Users}
         isLoading={isLoading}
       />
       <StatCard
         label="Active This Week"
-        value={formatNumber(stats?.active_users_week ?? stats?.active_users)}
+        value={formatNumber(stats?.users_active_week)}
         icon={Activity}
         isLoading={isLoading}
       />
       <StatCard
         label="Organizations"
-        value={formatNumber(stats?.total_organizations)}
+        value={formatNumber(stats?.organizations)}
         icon={Building2}
         isLoading={isLoading}
       />
       <StatCard
         label="Total Books"
-        value={formatNumber(stats?.total_books ?? stats?.books)}
+        value={formatNumber(stats?.books)}
         icon={BookOpen}
         isLoading={isLoading}
       />
@@ -116,25 +136,25 @@ export function SystemStats({ stats, isLoading }: SystemStatsProps) {
       {/* Row 2 */}
       <StatCard
         label="AI Tasks This Month"
-        value={formatNumber(stats?.ai_tasks_month ?? stats?.ai_tasks_this_month)}
+        value={formatNumber(stats?.ai_tasks_month)}
         icon={Zap}
         isLoading={isLoading}
       />
       <StatCard
         label="Tokens Used"
-        value={formatNumber(stats?.tokens_month ?? stats?.tokens_used)}
+        value={formatNumber(stats?.tokens_month)}
         icon={TrendingUp}
         isLoading={isLoading}
       />
       <StatCard
         label="Storage Used"
-        value={formatBytes(stats?.storage_used_bytes ?? (stats?.total_storage_gb ? stats.total_storage_gb * 1_073_741_824 : null))}
+        value={formatBytes(stats?.storage_used_bytes)}
         icon={Database}
         isLoading={isLoading}
       />
       <StatCard
         label="Monthly Revenue"
-        value={formatCurrency(stats?.monthly_revenue ?? (stats?.mrr ? stats.mrr / 100 : null))}
+        value={formatCurrency(stats?.monthly_revenue)}
         icon={DollarSign}
         isLoading={isLoading}
       />
