@@ -173,6 +173,97 @@ class BookType(str, enum.Enum):
     childrens = "childrens"
     coloring = "coloring"
     puzzle = "puzzle"
+    comic = "comic"
+    cookbook = "cookbook"
+
+
+class CookbookType(str, enum.Enum):
+    """Type of cookbook."""
+    general = "general"
+    baking = "baking"
+    vegetarian = "vegetarian"
+    vegan = "vegan"
+    keto = "keto"
+    paleo = "paleo"
+    gluten_free = "gluten_free"
+    regional = "regional"
+    international = "international"
+    holiday = "holiday"
+    quick_easy = "quick_easy"
+    gourmet = "gourmet"
+    meal_prep = "meal_prep"
+    kids = "kids"
+    desserts = "desserts"
+
+
+class ChapterOrganization(str, enum.Enum):
+    """How cookbook chapters are organized."""
+    by_meal = "by_meal"                # Breakfast, Lunch, Dinner
+    by_course = "by_course"            # Appetizer, Main, Dessert
+    by_ingredient = "by_ingredient"    # Chicken, Beef, Seafood
+    by_cuisine = "by_cuisine"          # Italian, Mexican, Thai
+    by_season = "by_season"            # Spring, Summer, Fall, Winter
+    by_technique = "by_technique"      # Grilling, Baking, Slow Cooking
+    by_occasion = "by_occasion"        # Weeknight, Party, Holiday
+    custom = "custom"
+
+
+class RecipeLayout(str, enum.Enum):
+    """Layout style for recipe pages."""
+    classic = "classic"                # Photo top, recipe below
+    magazine = "magazine"              # Side-by-side photo and recipe
+    minimal = "minimal"               # Text-focused, small photo
+    full_photo = "full_photo"          # Full-page photo, recipe on next page
+    step_by_step = "step_by_step"      # Photo for each step
+    card = "card"                      # Recipe card format
+    two_column = "two_column"          # Two recipes per page
+
+
+class IllustrationMethod(str, enum.Enum):
+    """How illustrations/photos are handled."""
+    ai_generated = "ai_generated"
+    stock_photos = "stock_photos"
+    user_uploaded = "user_uploaded"
+    illustrated = "illustrated"
+    no_illustrations = "no_illustrations"
+    mixed = "mixed"
+
+
+class CookbookInteriorType(str, enum.Enum):
+    """Interior printing type."""
+    full_color = "full_color"
+    black_and_white = "black_and_white"
+    color_inserts = "color_inserts"     # B&W with color photo section
+
+
+class RecipeDifficulty(str, enum.Enum):
+    """Difficulty level for a recipe."""
+    beginner = "beginner"
+    easy = "easy"
+    intermediate = "intermediate"
+    advanced = "advanced"
+    expert = "expert"
+
+
+class MealPlanType(str, enum.Enum):
+    """Type of meal plan."""
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
+    custom = "custom"
+
+
+class ChapterType(str, enum.Enum):
+    """Type of cookbook chapter."""
+    recipes = "recipes"
+    introduction = "introduction"
+    techniques = "techniques"
+    ingredients_guide = "ingredients_guide"
+    meal_plans = "meal_plans"
+    index = "index"
+    about_author = "about_author"
+    acknowledgments = "acknowledgments"
+    conversion_charts = "conversion_charts"
 
 
 class AssetType(str, enum.Enum):
@@ -238,6 +329,55 @@ class WordListSourceType(str, enum.Enum):
     user_uploaded = "user_uploaded"
     api = "api"
     curated = "curated"
+
+
+class ComicFormat(str, enum.Enum):
+    """Comic book format."""
+    single_issue = "single_issue"
+    trade_paperback = "trade_paperback"
+    graphic_novel = "graphic_novel"
+    webcomic = "webcomic"
+    manga = "manga"
+    minicomic = "minicomic"
+
+
+class ComicArtStyle(str, enum.Enum):
+    """Art style for comic book illustrations."""
+    american_classic = "american_classic"
+    manga = "manga"
+    franco_belgian = "franco_belgian"
+    indie = "indie"
+    cartoon = "cartoon"
+    realistic = "realistic"
+    noir = "noir"
+    watercolor = "watercolor"
+    pixel_art = "pixel_art"
+    minimalist = "minimalist"
+
+
+class PanelType(str, enum.Enum):
+    """Type of comic panel."""
+    standard = "standard"
+    wide = "wide"
+    tall = "tall"
+    splash = "splash"
+    double_splash = "double_splash"
+    inset = "inset"
+    borderless = "borderless"
+    circular = "circular"
+    diagonal = "diagonal"
+
+
+class BubbleType(str, enum.Enum):
+    """Type of speech/text bubble."""
+    speech = "speech"
+    thought = "thought"
+    narration = "narration"
+    whisper = "whisper"
+    shout = "shout"
+    radio = "radio"
+    caption = "caption"
+    sfx = "sfx"
 
 
 class LicenseType(str, enum.Enum):
