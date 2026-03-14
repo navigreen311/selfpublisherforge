@@ -31,6 +31,9 @@ import {
   CheckCircle,
   Settings2,
   Headphones,
+  Zap,
+  UtensilsCrossed,
+  Copy,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,6 +67,9 @@ const navItems: NavItem[] = [
   { label: "Children's Books", href: "/specialty/childrens-books", icon: Sparkles },
   { label: "Coloring Books", href: "/specialty/coloring-books", icon: Paintbrush },
   { label: "Puzzle Books", href: "/specialty/puzzle-books", icon: Puzzle },
+  { label: "Comic Books", href: "/specialty/comic-books", icon: Zap },
+  { label: "Cookbooks", href: "/specialty/cookbook-books", icon: UtensilsCrossed },
+  { label: "Style Clones", href: "/specialty/style-clones", icon: Copy },
   { label: "Style Profiles", href: "/style-profiles", icon: Fingerprint },
   { label: "Knowledge Vault", href: "/knowledge", icon: LibraryBig },
   { label: "Publishing", href: "/publishing", icon: BookOpen },

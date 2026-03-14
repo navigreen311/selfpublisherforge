@@ -33,6 +33,7 @@ from app.modules.specialty.models.enums import (
     LicenseType,
     LineStyle,
     MealPlanType,
+    PhotoUsageType,
     PageLayout,
     PanelType,
     PreflightStatus,
@@ -79,6 +80,9 @@ from app.modules.specialty.models.cookbook import (
 from app.modules.specialty.models.style_clone import (
     StyleCloneProfile,
 )
+from app.modules.specialty.models.photo import (
+    PhotoReference,
+)
 from app.modules.specialty.models.shared import (
     AccessibilityVariant,
     AssetProvenance,
@@ -116,6 +120,7 @@ __all__ = [
     "LicenseType",
     "LineStyle",
     "PageLayout",
+    "PhotoUsageType",
     "PreflightStatus",
     "PuzzleType",
     "StoryMode",
@@ -168,6 +173,8 @@ __all__ = [
     "MealPlan",
     # Style Clones
     "StyleCloneProfile",
+    # Photo References
+    "PhotoReference",
     # Shared
     "AssetProvenance",
     "FontLicense",

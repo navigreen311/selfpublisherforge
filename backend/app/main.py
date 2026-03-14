@@ -262,4 +262,7 @@ def _register_routers(app: FastAPI):
     from app.modules.specialty.cookbook.router import router as cookbook_router
     app.include_router(cookbook_router, prefix=prefix, tags=["specialty-cookbook"])
 
+    from app.modules.specialty.photo.router import router as photo_router
+    app.include_router(photo_router, prefix=prefix, tags=["specialty-photo"])
+
 app = create_app()
