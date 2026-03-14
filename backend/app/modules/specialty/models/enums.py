@@ -331,6 +331,30 @@ class WordListSourceType(str, enum.Enum):
     curated = "curated"
 
 
+class CookbookType(str, enum.Enum):
+    """Type of cookbook."""
+    general = "general"
+    baking = "baking"
+    vegetarian = "vegetarian"
+    vegan = "vegan"
+    keto = "keto"
+    paleo = "paleo"
+    gluten_free = "gluten_free"
+    regional = "regional"
+    holiday = "holiday"
+    meal_prep = "meal_prep"
+    kids = "kids"
+    desserts = "desserts"
+
+
+class RecipeDifficulty(str, enum.Enum):
+    """Difficulty level for recipes."""
+    easy = "easy"
+    medium = "medium"
+    hard = "hard"
+    expert = "expert"
+
+
 class LicenseType(str, enum.Enum):
     """Font license type."""
     open_source = "open_source"
