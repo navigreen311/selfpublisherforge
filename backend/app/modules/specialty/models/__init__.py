@@ -42,6 +42,9 @@ from app.modules.specialty.models.puzzles import (
     Puzzle,
     PuzzleBook,
 )
+from app.modules.specialty.models.style_clone import (
+    StyleCloneProfile,
+)
 from app.modules.specialty.models.shared import (
     AccessibilityVariant,
     AssetProvenance,
@@ -97,6 +100,8 @@ __all__ = [
     # Puzzle Books
     "PuzzleBook",
     "Puzzle",
+    # Style Clones
+    "StyleCloneProfile",
     # Shared
     "AssetProvenance",
     "FontLicense",
