@@ -184,6 +184,8 @@ const BILINGUAL_LANGUAGES = [
   "Hindi",
   "Russian",
   "Vietnamese",
+  "Russian",
+  "Vietnamese",
 ];
 
 // ---------------------------------------------------------------------------
