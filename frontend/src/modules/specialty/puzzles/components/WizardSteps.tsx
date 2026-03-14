@@ -107,7 +107,7 @@ const AUDIENCES = [
   {
     value: "kids",
     label: "Kids",
-    desc: "Ages 4-8, simple & fun",
+    desc: "Ages 5-10, simple & fun",
     icon: Baby,
   },
   {
@@ -787,10 +787,21 @@ export function Step3ThemesWords({ data, onChange }: StepProps) {
             value={data.custom_word_list}
             onChange={(e) => onChange({ custom_word_list: e.target.value })}
           />
-          <p className="text-xs text-muted-foreground">
-            Words will be sanitized for offensive terms, trademarks, and
-            abbreviations
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground flex-1">
+              Words will be sanitized for offensive terms, trademarks, and
+              abbreviations
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!data.custom_word_list.trim() || sanitize.isPending}
+              onClick={handleSanitize}
+            >
+              {sanitize.isPending ? "Sanitizing\u2026" : "Sanitize Words"}
+            </Button>
+          </div>
         </div>
       )}
 

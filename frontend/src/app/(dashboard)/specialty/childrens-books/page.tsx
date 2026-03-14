@@ -36,7 +36,7 @@ export default function ChildrensBooksPage() {
   };
 
   const { data: stats } = useChildrensBookStats();
-  const { data: booksData, isLoading } = useChildrensBooks(1, 50, filters);
+  const { data: booksData, isLoading, isError } = useChildrensBooks(1, 50, filters);
 
   const books = booksData?.items ?? [];
 
@@ -152,7 +152,7 @@ export default function ChildrensBooksPage() {
         </Select>
       </div>
 
-      {/* Book Grid or Empty State */}
+      {/* Book Grid, Error, or Empty State */}
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -165,29 +165,41 @@ export default function ChildrensBooksPage() {
             </Card>
           ))}
         </div>
-      ) : books.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {books.map((book) => (
-            <BookCard key={book.id} book={book} />
-          ))}
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-24 w-24 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
+            <BookOpen className="h-12 w-12 text-destructive" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">
+            Failed to load books
+          </h3>
+          <p className="text-muted-foreground max-w-md mb-6">
+            Something went wrong while fetching your children&apos;s books.
+            Please try again later.
+          </p>
         </div>
-      ) : (
+      ) : books.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-            <Sparkles className="h-12 w-12 text-primary" />
+            <BookOpen className="h-12 w-12 text-primary" />
           </div>
           <h3 className="text-xl font-semibold mb-2">
             No children&apos;s books yet
           </h3>
           <p className="text-muted-foreground max-w-md mb-6">
-            Create your first AI-illustrated children&apos;s book. Choose from
-            board books, picture books, early readers, and chapter books.
+            Create your first illustrated children&apos;s book with AI-generated artwork.
           </p>
           <Button asChild>
             <Link href="/specialty/childrens-books/new">
               <Plus className="h-4 w-4 mr-2" /> Create Your First Book
             </Link>
           </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {books.map((book) => (
+            <BookCard key={book.id} book={book} />
+          ))}
         </div>
       )}
     </div>
