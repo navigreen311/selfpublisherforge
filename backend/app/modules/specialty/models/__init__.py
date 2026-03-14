@@ -19,6 +19,7 @@ from app.modules.specialty.models.enums import (
     ISBNStatus,
     LicenseType,
     LineStyle,
+    PhotoUsageType,
     PageLayout,
     PreflightStatus,
     PuzzleType,
@@ -41,6 +42,9 @@ from app.modules.specialty.models.coloring import (
 from app.modules.specialty.models.puzzles import (
     Puzzle,
     PuzzleBook,
+)
+from app.modules.specialty.models.photo import (
+    PhotoReference,
 )
 from app.modules.specialty.models.shared import (
     AccessibilityVariant,
@@ -79,6 +83,7 @@ __all__ = [
     "LicenseType",
     "LineStyle",
     "PageLayout",
+    "PhotoUsageType",
     "PreflightStatus",
     "PuzzleType",
     "StoryMode",
@@ -97,6 +102,8 @@ __all__ = [
     # Puzzle Books
     "PuzzleBook",
     "Puzzle",
+    # Photo References
+    "PhotoReference",
     # Shared
     "AssetProvenance",
     "FontLicense",

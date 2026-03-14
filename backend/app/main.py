@@ -253,4 +253,7 @@ def _register_routers(app: FastAPI):
     from app.modules.specialty.shared.router import router as specialty_shared_router
     app.include_router(specialty_shared_router, prefix=prefix, tags=["specialty-shared"])
 
+    from app.modules.specialty.photo.router import router as photo_router
+    app.include_router(photo_router, prefix=prefix, tags=["specialty-photo"])
+
 app = create_app()
