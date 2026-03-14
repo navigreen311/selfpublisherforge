@@ -51,7 +51,7 @@ const TEMPLATES: QuickTemplate[] = [
     name: "Family Favorites",
     description: "A classic collection of beloved family recipes organized by meal",
     icon: <UtensilsCrossed className="h-6 w-6" />,
-    cookbook_type: "general",
+    cookbook_type: "recipe_collection",
     chapter_organization: "by_meal",
     recipe_layout: "classic",
   },
@@ -60,7 +60,7 @@ const TEMPLATES: QuickTemplate[] = [
     name: "Healthy Meal Prep",
     description: "Step-by-step meal prep guide with nutrition info",
     icon: <Timer className="h-6 w-6" />,
-    cookbook_type: "meal_prep",
+    cookbook_type: "fitness_meal_prep",
     chapter_organization: "by_course",
     recipe_layout: "step_by_step",
   },
@@ -69,7 +69,7 @@ const TEMPLATES: QuickTemplate[] = [
     name: "Baking Bible",
     description: "Comprehensive baking guide organized by technique",
     icon: <Cake className="h-6 w-6" />,
-    cookbook_type: "baking",
+    cookbook_type: "baking_desserts",
     chapter_organization: "by_technique",
     recipe_layout: "full_photo",
   },
@@ -78,7 +78,7 @@ const TEMPLATES: QuickTemplate[] = [
     name: "Vegan Kitchen",
     description: "Plant-based recipes organized by main ingredient",
     icon: <Salad className="h-6 w-6" />,
-    cookbook_type: "vegan",
+    cookbook_type: "diet_lifestyle",
     chapter_organization: "by_ingredient",
     recipe_layout: "magazine",
   },
@@ -87,16 +87,16 @@ const TEMPLATES: QuickTemplate[] = [
     name: "World Cuisines",
     description: "A global culinary journey organized by cuisine",
     icon: <Earth className="h-6 w-6" />,
-    cookbook_type: "international",
+    cookbook_type: "cultural_cuisine",
     chapter_organization: "by_cuisine",
     recipe_layout: "full_photo",
   },
   {
-    slug: "holiday-cookbook",
-    name: "Holiday Cookbook",
-    description: "Seasonal recipes for holidays and special occasions",
+    slug: "kids-family",
+    name: "Kids & Family",
+    description: "Family-friendly recipes for all ages",
     icon: <PartyPopper className="h-6 w-6" />,
-    cookbook_type: "holiday",
+    cookbook_type: "kids_family",
     chapter_organization: "by_occasion",
     recipe_layout: "classic",
   },
@@ -238,21 +238,13 @@ export default function CookbookBooksPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="general">General</SelectItem>
-            <SelectItem value="baking">Baking</SelectItem>
-            <SelectItem value="vegetarian">Vegetarian</SelectItem>
-            <SelectItem value="vegan">Vegan</SelectItem>
-            <SelectItem value="keto">Keto</SelectItem>
-            <SelectItem value="paleo">Paleo</SelectItem>
-            <SelectItem value="gluten_free">Gluten-Free</SelectItem>
-            <SelectItem value="regional">Regional</SelectItem>
-            <SelectItem value="international">International</SelectItem>
-            <SelectItem value="holiday">Holiday</SelectItem>
+            <SelectItem value="diet_lifestyle">Diet / Lifestyle</SelectItem>
+            <SelectItem value="recipe_collection">Recipe Collection</SelectItem>
+            <SelectItem value="baking_desserts">Baking & Desserts</SelectItem>
+            <SelectItem value="cultural_cuisine">Cultural Cuisine</SelectItem>
+            <SelectItem value="kids_family">Kids & Family</SelectItem>
+            <SelectItem value="fitness_meal_prep">Fitness / Meal Prep</SelectItem>
             <SelectItem value="quick_easy">Quick & Easy</SelectItem>
-            <SelectItem value="gourmet">Gourmet</SelectItem>
-            <SelectItem value="meal_prep">Meal Prep</SelectItem>
-            <SelectItem value="kids">Kids</SelectItem>
-            <SelectItem value="desserts">Desserts</SelectItem>
           </SelectContent>
         </Select>
       </div>

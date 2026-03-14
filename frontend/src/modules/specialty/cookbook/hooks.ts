@@ -13,6 +13,7 @@ export interface Cookbook {
   author: string;
   cookbook_type: string;
   cuisine?: string;
+  cuisine_diet?: string;
   target_audience?: string;
   description?: string;
   trim_size: string;
