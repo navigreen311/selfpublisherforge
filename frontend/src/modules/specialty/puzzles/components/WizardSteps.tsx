@@ -31,6 +31,7 @@ import {
   Sparkles,
   Trash2,
   Plus,
+  HelpCircle,
 } from "lucide-react";
 import type { PuzzleType } from "../hooks";
 
@@ -107,7 +108,7 @@ const AUDIENCES = [
   {
     value: "kids",
     label: "Kids",
-    desc: "Ages 4-8, simple & fun",
+    desc: "Ages 5-10, simple & fun",
     icon: Baby,
   },
   {
@@ -193,6 +194,13 @@ const PUZZLE_TYPES_LIST: {
     defaultGridSize: "variable",
     gridSizes: ["variable"],
   },
+  {
+    type: "trivia",
+    label: "Trivia",
+    icon: HelpCircle,
+    defaultGridSize: "n/a",
+    gridSizes: ["n/a"],
+  },
 ];
 
 const DIFFICULTY_OPTIONS = ["easy", "medium", "hard"];
@@ -277,10 +285,24 @@ export function Step1BookDetails({ data, onChange }: StepProps) {
               onClick={() => {
                 const types = data.selected_puzzle_types
                   .map((c) => {
-                    const pt = PUZZLE_TYPES_LIST.find(
-                      (p) => p.type === c.type
-                    );
-                    return pt?.label;
+                const totalCount = data.selected_puzzle_types.reduce(
+                  (sum, c) => sum + (c.quantity || 0),
+                  0
+                );
+                const difficulties = [
+                  ...new Set(
+                    data.selected_puzzle_types.map((c) => c.difficulty)
+                  ),
+                ];
+                const difficultyStr =
+                  difficulties.length === 1
+                    ? difficulties[0].charAt(0).toUpperCase() +
+                      difficulties[0].slice(1)
+                    : "Mixed Difficulty";
+                const countStr = totalCount > 0 ? `${totalCount} ` : "";
+                onChange({
+                  subtitle: `${countStr}${typesStr} Puzzles with Answers — ${difficultyStr}`,
+                });
                   })
                   .filter(Boolean);
                 const typesStr =
@@ -787,10 +809,21 @@ export function Step3ThemesWords({ data, onChange }: StepProps) {
             value={data.custom_word_list}
             onChange={(e) => onChange({ custom_word_list: e.target.value })}
           />
-          <p className="text-xs text-muted-foreground">
-            Words will be sanitized for offensive terms, trademarks, and
-            abbreviations
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground flex-1">
+              Words will be sanitized for offensive terms, trademarks, and
+              abbreviations
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!data.custom_word_list.trim() || sanitize.isPending}
+              onClick={handleSanitize}
+            >
+              {sanitize.isPending ? "Sanitizing\u2026" : "Sanitize Words"}
+            </Button>
+          </div>
         </div>
       )}
 
