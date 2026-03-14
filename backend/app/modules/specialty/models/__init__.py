@@ -8,20 +8,28 @@ from app.modules.specialty.models.enums import (
     BilingualLayout,
     BookStatus,
     BookType,
+    ChapterOrganization,
+    ChapterType,
     ClueStyle,
     ColoringPageType,
     ColorPalette,
+    CookbookInteriorType,
+    CookbookType,
     Difficulty,
     DifficultyMode,
     DistributorName,
     FearIntensity,
+    IllustrationMethod,
     IllustrationStyle,
     ISBNStatus,
     LicenseType,
     LineStyle,
+    MealPlanType,
     PageLayout,
     PreflightStatus,
     PuzzleType,
+    RecipeDifficulty,
+    RecipeLayout,
     StoryMode,
     TemplateType,
     TextPosition,
@@ -41,6 +49,12 @@ from app.modules.specialty.models.coloring import (
 from app.modules.specialty.models.puzzles import (
     Puzzle,
     PuzzleBook,
+)
+from app.modules.specialty.models.cookbook import (
+    Cookbook,
+    CookbookChapter,
+    MealPlan,
+    Recipe,
 )
 from app.modules.specialty.models.shared import (
     AccessibilityVariant,
@@ -85,6 +99,14 @@ __all__ = [
     "TemplateType",
     "TextPosition",
     "VariantType",
+    "ChapterOrganization",
+    "ChapterType",
+    "CookbookInteriorType",
+    "CookbookType",
+    "IllustrationMethod",
+    "MealPlanType",
+    "RecipeDifficulty",
+    "RecipeLayout",
     "WordDifficulty",
     "WordListSourceType",
     # Children's Books
@@ -97,6 +119,11 @@ __all__ = [
     # Puzzle Books
     "PuzzleBook",
     "Puzzle",
+    # Cookbooks
+    "Cookbook",
+    "CookbookChapter",
+    "Recipe",
+    "MealPlan",
     # Shared
     "AssetProvenance",
     "FontLicense",
