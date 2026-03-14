@@ -231,9 +231,17 @@ export default function NewColoringBookPage() {
     useState<CreateColoringBookInput["generation_method"]>("all_at_once");
   const [bonusPages, setBonusPages] = useState<string[]>(["title_page"]);
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const progressPercent = ((step + 1) / STEPS.length) * 100;
 
   const lineWeightNumeric = LINE_WEIGHTS.find((lw) => lw.value === lineWeight)?.numeric ?? 5;
+
+  function validateStep(s: number): string | null {
+    if (s === 0 && !title.trim()) return "Title is required";
+    if (s === 2 && !themeDescription.trim()) return "Theme description is required";
+    return null;
+  }
 
   const canNext = () => {
     if (step === 0) return title.trim().length > 0;
@@ -243,6 +251,9 @@ export default function NewColoringBookPage() {
   };
 
   const handleCreate = async () => {
+    const err = validateStep(step);
+    if (err) { setValidationError(err); return; }
+    setValidationError(null);
     const input: CreateColoringBookInput = {
       title,
       subtitle: subtitle || undefined,
@@ -322,7 +333,7 @@ export default function NewColoringBookPage() {
               id="title"
               placeholder="e.g., Amazing Animals Coloring Book"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { setTitle(e.target.value); setValidationError(null); }}
             />
           </div>
 
@@ -592,7 +603,7 @@ export default function NewColoringBookPage() {
               placeholder="Describe the theme or subjects for your coloring pages. Be as specific as you like — e.g., 'Cute woodland animals in whimsical forest settings with mushrooms, flowers, and tiny houses.'"
               rows={4}
               value={themeDescription}
-              onChange={(e) => setThemeDescription(e.target.value)}
+              onChange={(e) => { setThemeDescription(e.target.value); setValidationError(null); }}
             />
           </div>
 
@@ -665,11 +676,16 @@ export default function NewColoringBookPage() {
         </div>
       )}
 
+      {/* Validation Error */}
+      {validationError && (
+        <p className="text-sm text-destructive font-medium">{validationError}</p>
+      )}
+
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t">
         <Button
           variant="outline"
-          onClick={() => setStep((s) => s - 1)}
+          onClick={() => { setStep((s) => s - 1); setValidationError(null); }}
           disabled={step === 0}
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -677,7 +693,12 @@ export default function NewColoringBookPage() {
         </Button>
 
         {step < STEPS.length - 1 ? (
-          <Button onClick={() => setStep((s) => s + 1)} disabled={!canNext()}>
+          <Button onClick={() => {
+            const err = validateStep(step);
+            if (err) { setValidationError(err); return; }
+            setValidationError(null);
+            setStep((s) => s + 1);
+          }}>
             Next
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>

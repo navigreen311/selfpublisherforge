@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useComics, useComicStats } from "@/modules/specialty/comic/hooks";
 import { ComicCard } from "@/modules/specialty/comic/components/ComicCard";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 // ---------------------------------------------------------------------------
 // Quick-start templates
@@ -110,6 +111,10 @@ export default function ComicBooksPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Comic Books" },
+      ]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -132,8 +137,8 @@ export default function ComicBooksPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-lg bg-[#3B82F6]/10 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-[#3B82F6]" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -145,8 +150,8 @@ export default function ComicBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-yellow-500" />
+            <div className="h-10 w-10 rounded-lg bg-[#F59E0B]/10 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-[#F59E0B]" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -158,8 +163,8 @@ export default function ComicBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <Globe className="h-5 w-5 text-green-500" />
+            <div className="h-10 w-10 rounded-lg bg-[#10B981]/10 flex items-center justify-center">
+              <Globe className="h-5 w-5 text-[#10B981]" />
             </div>
             <div>
               <p className="text-2xl font-bold">
@@ -171,8 +176,8 @@ export default function ComicBooksPage() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-blue-500" />
+            <div className="h-10 w-10 rounded-lg bg-[#6366F1]/10 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-[#6366F1]" />
             </div>
             <div>
               <p className="text-2xl font-bold">

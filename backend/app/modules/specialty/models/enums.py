@@ -361,6 +361,7 @@ class ComicFormat(str, enum.Enum):
     mini_series = "mini_series"            # 4-6 issue limited series
     one_shot = "one_shot"                  # Single standalone issue
     trade_paperback = "trade_paperback"    # Collected edition
+    kids_comic = "kids_comic"              # Ages 6-12, simple layouts
     minicomic = "minicomic"
 
 

@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useCreateCookbook } from "@/modules/specialty/cookbook/hooks";
 import {
   Step1Details,
@@ -65,6 +66,8 @@ function validateStep(step: number, data: WizardData): string | null {
     case 1:
       if (!data.title.trim()) return "Title is required";
       if (!data.cookbook_type) return "Please select a cookbook type";
+      if (data.cookbook_type === "diet_lifestyle" && !data.cuisine_diet)
+        return "Please select a cuisine or diet";
       return null;
     case 2:
       if (!data.trim_size) return "Please select a trim size";
@@ -127,6 +130,7 @@ export default function CreateCookbookPage() {
         author: data.author || "self",
         cookbook_type: data.cookbook_type,
         cuisine: data.cuisine || undefined,
+        cuisine_diet: data.cuisine_diet || undefined,
         target_audience: data.target_audience || undefined,
         description: data.description || undefined,
         trim_size: data.trim_size,
@@ -153,6 +157,13 @@ export default function CreateCookbookPage() {
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Cookbooks", href: "/specialty/cookbook-books" },
+        { label: "New" },
+      ]} />
+
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild className="gap-1.5">
         <Link href="/specialty/cookbook-books">

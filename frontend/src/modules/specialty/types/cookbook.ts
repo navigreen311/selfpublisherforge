@@ -7,21 +7,13 @@
 // ---------------------------------------------------------------------------
 
 export type CookbookType =
-  | "general"
-  | "baking"
-  | "vegetarian"
-  | "vegan"
-  | "keto"
-  | "paleo"
-  | "gluten_free"
-  | "regional"
-  | "international"
-  | "holiday"
-  | "quick_easy"
-  | "gourmet"
-  | "meal_prep"
-  | "kids"
-  | "desserts";
+  | "diet_lifestyle"
+  | "recipe_collection"
+  | "baking_desserts"
+  | "cultural_cuisine"
+  | "kids_family"
+  | "fitness_meal_prep"
+  | "quick_easy";
 
 export type ChapterOrganization =
   | "by_meal"
@@ -81,6 +73,7 @@ export interface Cookbook {
   author?: string;
   cookbook_type: CookbookType;
   cuisine?: string;
+  cuisine_diet?: string;
   target_audience?: string;
   description?: string;
   chapter_organization: ChapterOrganization;
@@ -207,6 +200,7 @@ export interface CreateCookbookRequest {
   author?: string;
   cookbook_type: CookbookType;
   cuisine?: string;
+  cuisine_diet?: string;
   target_audience?: string;
   description?: string;
   chapter_organization: ChapterOrganization;

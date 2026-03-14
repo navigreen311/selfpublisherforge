@@ -59,21 +59,13 @@ function QAScoreRing({ score }: { score?: number }) {
 // ---------------------------------------------------------------------------
 
 const TYPE_LABELS: Record<string, string> = {
-  general: "General",
-  baking: "Baking",
-  vegetarian: "Vegetarian",
-  vegan: "Vegan",
-  keto: "Keto",
-  paleo: "Paleo",
-  gluten_free: "Gluten-Free",
-  regional: "Regional",
-  international: "International",
-  holiday: "Holiday",
+  diet_lifestyle: "Diet / Lifestyle",
+  recipe_collection: "Recipe Collection",
+  baking_desserts: "Baking & Desserts",
+  cultural_cuisine: "Cultural Cuisine",
+  kids_family: "Kids & Family",
+  fitness_meal_prep: "Fitness / Meal Prep",
   quick_easy: "Quick & Easy",
-  gourmet: "Gourmet",
-  meal_prep: "Meal Prep",
-  kids: "Kids",
-  desserts: "Desserts",
 };
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
