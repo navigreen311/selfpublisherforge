@@ -182,6 +182,8 @@ const BILINGUAL_LANGUAGES = [
   "Korean",
   "Arabic",
   "Hindi",
+  "Russian",
+  "Vietnamese",
 ];
 
 // ---------------------------------------------------------------------------
