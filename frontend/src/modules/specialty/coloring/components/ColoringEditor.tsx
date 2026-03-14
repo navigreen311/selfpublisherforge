@@ -54,23 +54,9 @@ import {
 import { cn } from "@/lib/utils";
 import type { ColoringPage } from "../hooks";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+type CanvasTool = "brush" | "pen" | "eraser" | "fill" | "smooth" | "close_shape" | "normalize";
 
-type CanvasTool =
-  | "brush"
-  | "pen"
-  | "eraser"
-  | "fill"
-  | "smooth"
-  | "close_shape"
-  | "normalize";
-
-interface ToolDef {
-  id: CanvasTool;
-  label: string;
-  icon: typeof Brush;
-  description: string;
-}
+interface ToolDef { id: CanvasTool; label: string; icon: typeof Brush; description: string; }
 
 const CANVAS_TOOLS: ToolDef[] = [
   {
@@ -154,6 +140,15 @@ export function ColoringEditor({ pages, onPageAction }: ColoringEditorProps) {
   const [zoom, setZoom] = useState([100]);
   const [undoStack] = useState<number>(0);
   const [redoStack] = useState<number>(0);
+  const [illustrationPrompt, setIllustrationPrompt] = useState("");
+  const [borderStyle, setBorderStyle] = useState("none");
+  const [difficulty, setDifficulty] = useState([3]);
+  const [caption, setCaption] = useState("");
+  const [promptOpen, setPromptOpen] = useState(true);
+  const [pipelineOpen, setPipelineOpen] = useState(true);
+  const [postProcessOpen, setPostProcessOpen] = useState(true);
+  const [simulationOpen, setSimulationOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(true);
 
   // Right panel state
   const [illustrationPrompt, setIllustrationPrompt] = useState("");

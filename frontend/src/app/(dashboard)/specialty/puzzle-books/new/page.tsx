@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useCreatePuzzleBook } from "@/modules/specialty/puzzles/hooks";
+import type { PuzzleType } from "@/modules/specialty/puzzles/hooks";
 import {
   Step1BookDetails,
   Step2PuzzleSelection,
@@ -16,6 +17,7 @@ import {
   Step4LayoutExtras,
   DEFAULT_WIZARD_DATA,
   type WizardData,
+  type PuzzleTypeConfig,
 } from "@/modules/specialty/puzzles/components/WizardSteps";
 
 // ---------------------------------------------------------------------------
@@ -28,6 +30,108 @@ const STEPS = [
   { label: "Themes & Words", number: 3 },
   { label: "Layout & Extras", number: 4 },
 ];
+
+// ---------------------------------------------------------------------------
+// Template Pre-fill Config
+// ---------------------------------------------------------------------------
+
+const PUZZLE_TYPE_MAP: Record<string, PuzzleType> = {
+  "Word Search": "word_search",
+  Crossword: "crossword",
+  Maze: "maze",
+  Sudoku: "sudoku",
+  "Word Scramble": "word_scramble",
+};
+
+const DEFAULT_GRID_SIZES: Record<PuzzleType, string> = {
+  word_search: "15x15",
+  crossword: "15x15",
+  maze: "20x20",
+  sudoku: "9x9",
+  word_scramble: "n/a",
+  cryptogram: "n/a",
+  number_search: "15x15",
+  word_connect: "variable",
+};
+
+interface TemplatePrefill {
+  title: string;
+  puzzleTypes: string[];
+  audience?: string;
+  clueStyle?: string;
+  seasonal?: { enabled: boolean; theme: string };
+  wordDifficulty?: string;
+}
+
+const TEMPLATE_PREFILLS: Record<string, TemplatePrefill> = {
+  "word-search-collection": {
+    title: "Word Search Collection",
+    puzzleTypes: ["Word Search"],
+  },
+  "crossword-compendium": {
+    title: "Crossword Compendium",
+    puzzleTypes: ["Crossword"],
+  },
+  "maze-adventure": {
+    title: "Maze Adventure",
+    puzzleTypes: ["Maze"],
+  },
+  "sudoku-challenge": {
+    title: "Sudoku Challenge",
+    puzzleTypes: ["Sudoku"],
+  },
+  "mixed-puzzle-fun": {
+    title: "Mixed Puzzle Fun",
+    puzzleTypes: ["Word Search", "Crossword", "Maze", "Sudoku"],
+  },
+  "large-print-word-search": {
+    title: "Large Print Word Search",
+    puzzleTypes: ["Word Search"],
+    audience: "large_print",
+  },
+  "holiday-puzzles": {
+    title: "Holiday Puzzles",
+    puzzleTypes: ["Word Search", "Crossword", "Maze"],
+    seasonal: { enabled: true, theme: "christmas" },
+  },
+  "kids-activity-book": {
+    title: "Kids Activity Book",
+    puzzleTypes: ["Word Search", "Maze", "Word Scramble"],
+    audience: "kids",
+    clueStyle: "kid_friendly",
+    wordDifficulty: "simple",
+  },
+};
+
+function buildPrefillData(templateId: string | null): WizardData {
+  if (!templateId) return DEFAULT_WIZARD_DATA;
+  const tpl = TEMPLATE_PREFILLS[templateId];
+  if (!tpl) return DEFAULT_WIZARD_DATA;
+
+  const puzzleConfigs: PuzzleTypeConfig[] = tpl.puzzleTypes
+    .map((name) => {
+      const type = PUZZLE_TYPE_MAP[name];
+      if (!type) return null;
+      return {
+        type,
+        quantity: 10,
+        difficulty: "medium",
+        grid_size: DEFAULT_GRID_SIZES[type] ?? "15x15",
+      } satisfies PuzzleTypeConfig;
+    })
+    .filter((c): c is PuzzleTypeConfig => c !== null);
+
+  return {
+    ...DEFAULT_WIZARD_DATA,
+    title: tpl.title,
+    audience: tpl.audience ?? "",
+    selected_puzzle_types: puzzleConfigs,
+    clue_style: tpl.clueStyle ?? "standard",
+    word_difficulty: tpl.wordDifficulty ?? "standard",
+    seasonal_enabled: tpl.seasonal?.enabled ?? false,
+    seasonal_theme: tpl.seasonal?.theme ?? "",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -72,8 +176,13 @@ function validateStep(step: number, data: WizardData): string | null {
 
 export default function CreatePuzzleBookPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("template");
+
+  const initialData = useMemo(() => buildPrefillData(templateId), [templateId]);
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [data, setData] = useState<WizardData>(DEFAULT_WIZARD_DATA);
+  const [data, setData] = useState<WizardData>(initialData);
   const [error, setError] = useState<string | null>(null);
 
   const createBook = useCreatePuzzleBook();
@@ -158,6 +267,7 @@ export default function CreatePuzzleBookPage() {
             ? data.custom_percentages
             : undefined,
         theme_input_method: data.theme_input_method,
+        template_id: templateId ?? undefined,
         series_name: data.series_enabled ? data.series_name : undefined,
         volume_number: data.series_enabled
           ? parseInt(data.volume_number, 10) || undefined
@@ -185,7 +295,9 @@ export default function CreatePuzzleBookPage() {
       <div>
         <h1 className="text-2xl font-bold">Create Puzzle Book</h1>
         <p className="text-muted-foreground">
-          Set up your new puzzle book in 4 steps.
+          {templateId
+            ? "Starting from template. Customize your settings below."
+            : "Set up your new puzzle book in 4 steps."}
         </p>
       </div>
 

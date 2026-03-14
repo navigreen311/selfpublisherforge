@@ -188,8 +188,7 @@ export default function NewColoringBookPage() {
 
   const prefill = useMemo(() => getTemplatePrefill(templateId), [templateId]);
 
-  const prefill = useMemo(() => getTemplatePrefill(templateId), [templateId]);
-
+>>>>>>> origin/ai-feature/fix-coloring-editor-v2
   const [step, setStep] = useState(0);
 
   // Step 1 state
