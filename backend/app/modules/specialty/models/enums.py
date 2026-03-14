@@ -246,3 +246,12 @@ class LicenseType(str, enum.Enum):
     commercial = "commercial"
     personal = "personal"
     sil_ofl = "sil_ofl"
+
+
+class ComicFormat(str, enum.Enum):
+    single_issue = "single_issue"
+    trade_paperback = "trade_paperback"
+    graphic_novel = "graphic_novel"
+    webcomic = "webcomic"
+    manga = "manga"
+    minicomic = "minicomic"
