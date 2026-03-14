@@ -240,4 +240,17 @@ def _register_routers(app: FastAPI):
     from app.modules.dictation.websocket import router as dictation_ws_router
     app.include_router(dictation_ws_router, prefix=f"{prefix}", tags=["dictation-ws"])
 
+    # --- Specialty Books Module ---
+    from app.modules.specialty.childrens.router import router as childrens_router
+    app.include_router(childrens_router, prefix=prefix, tags=["specialty-childrens"])
+
+    from app.modules.specialty.coloring.router import router as coloring_router
+    app.include_router(coloring_router, prefix=prefix, tags=["specialty-coloring"])
+
+    from app.modules.specialty.puzzles.router import router as puzzles_router
+    app.include_router(puzzles_router, prefix=prefix, tags=["specialty-puzzles"])
+
+    from app.modules.specialty.shared.router import router as specialty_shared_router
+    app.include_router(specialty_shared_router, prefix=prefix, tags=["specialty-shared"])
+
 app = create_app()

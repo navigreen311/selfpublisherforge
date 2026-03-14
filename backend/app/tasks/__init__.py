@@ -30,6 +30,7 @@ celery_app = Celery(
         "app.tasks.style_cloning",
         "app.tasks.audiobook_tasks",
         "app.tasks.mastering_tasks",
+        "app.tasks.specialty_tasks",
     ],
 )
 
