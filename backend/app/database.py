@@ -10,6 +10,51 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.config import get_settings
 
+_settings_tmp = get_settings()
+_is_sqlite = _settings_tmp.DATABASE_URL.startswith("sqlite")
+
+if _is_sqlite:
+    # -----------------------------------------------------------------------
+    # Patch: make PostgreSQL-specific types fall back to generic equivalents
+    # so every model file keeps its imports unchanged.
+    # -----------------------------------------------------------------------
+    import sqlalchemy.dialects.postgresql as _pg_dialect
+    from sqlalchemy import JSON as _JSON, String as _String, Uuid as _GenericUuid
+    from sqlalchemy.types import TypeDecorator as _TD
+
+    class _PortableJSONB(_JSON):
+        """Drop-in for JSONB that works on any backend."""
+
+    class _PortableARRAY(_TD):
+        """Drop-in for ARRAY that stores as JSON text on SQLite."""
+        impl = _JSON
+        cache_ok = True
+        def __init__(self, item_type=None, **kw):
+            super().__init__()
+
+    _pg_dialect.JSONB = _PortableJSONB          # type: ignore
+    _pg_dialect.json.JSONB = _PortableJSONB      # type: ignore
+    _pg_dialect.UUID = _GenericUuid               # type: ignore
+    _pg_dialect.ARRAY = _PortableARRAY            # type: ignore
+    _pg_dialect.array.ARRAY = _PortableARRAY      # type: ignore
+
+    # Patch DDL compiler to strip gen_random_uuid() server defaults on SQLite
+    from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler, SQLiteDDLCompiler
+    _orig_get_col_spec = SQLiteDDLCompiler.get_column_specification
+    def _patched_get_col_spec(self, column, **kw):
+        if column.server_default is not None:
+            sd_text = str(getattr(column.server_default, 'arg', ''))
+            if 'gen_random_uuid' in sd_text:
+                saved = column.server_default
+                column.server_default = None
+                result = _orig_get_col_spec(self, column, **kw)
+                column.server_default = saved
+                return result
+        return _orig_get_col_spec(self, column, **kw)
+    SQLiteDDLCompiler.get_column_specification = _patched_get_col_spec
+
+del _settings_tmp
+
 # ---------------------------------------------------------------------------
 # Patch: force SQLAlchemy Enum to use .value (lowercase) instead of .name
 # (uppercase) for PEP-435 enums.  The Alembic migrations create PostgreSQL
@@ -27,7 +72,12 @@ _SAEnum.__init__ = _patched_enum_init
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
-engine = create_async_engine(settings.DATABASE_URL, echo=settings.DATABASE_ECHO)
+
+_engine_kwargs: dict = {"echo": settings.DATABASE_ECHO}
+if _is_sqlite:
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_async_engine(settings.DATABASE_URL, **_engine_kwargs)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 class Base(DeclarativeBase):
@@ -63,7 +113,7 @@ class BaseModel(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
         default=uuid.uuid4,
-        server_default=text("gen_random_uuid()")
+        server_default=text("gen_random_uuid()"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -95,8 +145,17 @@ async def get_db():
 async def init_db():
     """Verify database connectivity.
 
-    Schema creation is handled by Alembic migrations, so we only test
-    the connection here rather than calling ``Base.metadata.create_all``.
+    For SQLite (local dev without Docker), auto-creates all tables.
+    For PostgreSQL, schema creation is handled by Alembic migrations.
     """
-    async with engine.connect() as conn:
-        await conn.execute(text("SELECT 1"))
+    if _is_sqlite:
+        async with engine.begin() as conn:
+            for table in Base.metadata.sorted_tables:
+                try:
+                    await conn.run_sync(table.create, checkfirst=True)
+                except Exception:
+                    pass  # table/index already exists — fine for dev
+        logger.info("SQLite dev database initialised (tables auto-created)")
+    else:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
