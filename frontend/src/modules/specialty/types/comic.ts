@@ -5,7 +5,7 @@ export interface Comic {
   subtitle?: string;
   author?: string;
   artist?: string;
-  format: "single_issue" | "graphic_novel" | "manga" | "webcomic";
+  format: "single_issue" | "graphic_novel" | "manga" | "webcomic" | "kids_comic" | "mini_series" | "one_shot" | "trade_paperback";
   art_style: string;
   color_mode: string;
   ink_style: string;

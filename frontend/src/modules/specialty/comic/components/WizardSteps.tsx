@@ -92,6 +92,7 @@ const FORMATS = [
   { value: "single_issue", label: "Single Issue", desc: "22-32 pages, serialized" },
   { value: "graphic_novel", label: "Graphic Novel", desc: "Long-form, self-contained" },
   { value: "manga", label: "Manga", desc: "Japanese-style, right-to-left" },
+  { value: "kids_comic", label: "Kids Comic", desc: "Ages 6-12, simple layouts, 16-24 pages" },
   { value: "webcomic", label: "Webcomic", desc: "Digital-first, scroll format" },
   { value: "mini_series", label: "Mini Series", desc: "Limited run, 4-12 issues" },
   { value: "one_shot", label: "One-Shot", desc: "Single standalone issue" },
