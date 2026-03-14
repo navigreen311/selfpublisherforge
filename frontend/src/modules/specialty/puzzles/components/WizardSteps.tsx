@@ -428,6 +428,11 @@ export function Step2PuzzleSelection({ data, onChange }: StepProps) {
     }
   };
 
+  const totalPuzzleCount = data.selected_puzzle_types.reduce(
+    (sum, c) => sum + c.quantity,
+    0
+  );
+
   const updatePuzzleConfig = (
     type: PuzzleType,
     field: keyof PuzzleTypeConfig,
@@ -578,6 +583,21 @@ export function Step2PuzzleSelection({ data, onChange }: StepProps) {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Total Puzzle Count */}
+      {data.selected_puzzle_types.length > 0 && (
+        <div className="rounded-lg border bg-muted/50 p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Total Puzzles</p>
+            <p className="text-xs text-muted-foreground">
+              Sum of all selected puzzle type quantities
+            </p>
+          </div>
+          <Badge variant="secondary" className="text-lg px-4 py-1">
+            {totalPuzzleCount}
+          </Badge>
         </div>
       )}
 
