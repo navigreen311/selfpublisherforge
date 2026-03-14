@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import {
   useComic,
   useComicPages,
@@ -226,6 +227,14 @@ export default function ComicBookDetailPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
+      {/* Breadcrumb */}
+      <div className="px-4 pt-2">
+        <Breadcrumb items={[
+          { label: "Specialty", href: "/specialty" },
+          { label: "Comic Books", href: "/specialty/comic-books" },
+          { label: comic.title },
+        ]} />
+      </div>
       {/* Header */}
       <div className="h-14 border-b flex items-center gap-3 px-4 shrink-0">
         <Button
