@@ -31,6 +31,7 @@ import {
   Sparkles,
   Trash2,
   Plus,
+  HelpCircle,
 } from "lucide-react";
 import type { PuzzleType } from "../hooks";
 

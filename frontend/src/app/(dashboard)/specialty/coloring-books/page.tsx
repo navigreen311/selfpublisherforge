@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -19,6 +19,7 @@ import {
   FileText,
   CheckCircle2,
   BarChart3,
+  ArrowUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,13 +102,40 @@ export default function ColoringBooksPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   const { data, isLoading, error } = useColoringBooks({
     search: search || undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
 
-  const books = data?.items ?? [];
+  const rawBooks = data?.items ?? [];
+
+  const books = useMemo(() => {
+    const sorted = [...rawBooks];
+    switch (sortBy) {
+      case "oldest":
+        sorted.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+        break;
+      case "title_asc":
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "title_desc":
+        sorted.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case "newest":
+      default:
+        sorted.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+        break;
+    }
+    return sorted;
+  }, [rawBooks, sortBy]);
 
   // Compute stats
   const totalBooks = data?.total ?? 0;
@@ -204,6 +232,18 @@ export default function ColoringBooksPage() {
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-40">
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="title_asc">Title A–Z</SelectItem>
+                <SelectItem value="title_desc">Title Z–A</SelectItem>
               </SelectContent>
             </Select>
           </div>
