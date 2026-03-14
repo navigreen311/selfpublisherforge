@@ -259,4 +259,7 @@ def _register_routers(app: FastAPI):
     from app.modules.specialty.comic.router import router as comic_router
     app.include_router(comic_router, prefix=prefix, tags=["specialty-comic"])
 
+    from app.modules.specialty.cookbook.router import router as cookbook_router
+    app.include_router(cookbook_router, prefix=prefix, tags=["specialty-cookbook"])
+
 app = create_app()

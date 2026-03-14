@@ -194,6 +194,8 @@ class CookbookType(str, enum.Enum):
     meal_prep = "meal_prep"
     kids = "kids"
     desserts = "desserts"
+    family = "family"
+    quick_meals = "quick_meals"
 
 
 class ChapterOrganization(str, enum.Enum):
