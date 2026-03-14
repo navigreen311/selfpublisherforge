@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Book,
+  Palette,
   Plus,
   Search,
   Loader2,
@@ -109,7 +110,7 @@ export default function ColoringBooksPage() {
 
   const books = data?.items ?? [];
 
-  // Compute stats
+  // Compute stats - always resolve to 0 when no data
   const totalBooks = data?.total ?? 0;
   const inProgress = books.filter((b) => b.status === "in_progress").length;
   const published = books.filter((b) => b.status === "published").length;
@@ -137,32 +138,12 @@ export default function ColoringBooksPage() {
         </Button>
       </div>
 
-      {/* Stat Cards */}
+      {/* Stat Cards - always render values (0 when empty), never skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={Book}
-          label="Total Books"
-          value={totalBooks}
-          loading={isLoading}
-        />
-        <StatCard
-          icon={BarChart3}
-          label="In Progress"
-          value={inProgress}
-          loading={isLoading}
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label="Published"
-          value={published}
-          loading={isLoading}
-        />
-        <StatCard
-          icon={FileText}
-          label="Pages Created"
-          value={pagesCreated}
-          loading={isLoading}
-        />
+        <StatCard icon={Book} label="Total Books" value={totalBooks} />
+        <StatCard icon={BarChart3} label="In Progress" value={inProgress} />
+        <StatCard icon={CheckCircle2} label="Published" value={published} />
+        <StatCard icon={FileText} label="Pages Created" value={pagesCreated} />
       </div>
 
       {/* Quick-Start Templates */}
@@ -209,7 +190,7 @@ export default function ColoringBooksPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading && !data ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-72 rounded-lg" />
@@ -221,7 +202,7 @@ export default function ColoringBooksPage() {
           </div>
         ) : books.length === 0 ? (
           <div className="border rounded-lg p-12 text-center">
-            <Book className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+            <Palette className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
             <h3 className="text-lg font-medium mb-2">No coloring books yet</h3>
             <p className="text-muted-foreground mb-4">
               Create your first coloring book or start from a template above.
@@ -251,12 +232,10 @@ function StatCard({
   icon: Icon,
   label,
   value,
-  loading,
 }: {
   icon: typeof Book;
   label: string;
   value: number;
-  loading: boolean;
 }) {
   return (
     <div className="border rounded-lg p-5">
@@ -266,11 +245,7 @@ function StatCard({
         </div>
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
-          {loading ? (
-            <Skeleton className="h-7 w-12 mt-1" />
-          ) : (
-            <p className="text-2xl font-bold">{value}</p>
-          )}
+          <p className="text-2xl font-bold">{value}</p>
         </div>
       </div>
     </div>
