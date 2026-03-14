@@ -307,8 +307,23 @@ export function Step1BookDetails({ data, onChange }: StepProps) {
                   .filter(Boolean);
                 const typesStr =
                   types.length > 0 ? types.join(", ") : "Puzzles";
+                const totalCount = data.selected_puzzle_types.reduce(
+                  (sum, c) => sum + (c.quantity || 0),
+                  0
+                );
+                const difficulties = [
+                  ...new Set(
+                    data.selected_puzzle_types.map((c) => c.difficulty)
+                  ),
+                ];
+                const difficultyStr =
+                  difficulties.length === 1
+                    ? difficulties[0].charAt(0).toUpperCase() +
+                      difficulties[0].slice(1)
+                    : "Mixed Difficulty";
+                const countStr = totalCount > 0 ? `${totalCount} ` : "";
                 onChange({
-                  subtitle: `${typesStr} with Answers`,
+                  subtitle: `${countStr}${typesStr} Puzzles with Answers — ${difficultyStr}`,
                 });
               }}
             >
@@ -317,7 +332,7 @@ export function Step1BookDetails({ data, onChange }: StepProps) {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            AI suggests including puzzle types + &ldquo;with answers&rdquo;
+            Generates subtitle from count, types, and difficulty
           </p>
         </div>
       </div>
@@ -426,6 +441,11 @@ export function Step2PuzzleSelection({ data, onChange }: StepProps) {
       });
     }
   };
+
+  const totalPuzzleCount = data.selected_puzzle_types.reduce(
+    (sum, c) => sum + c.quantity,
+    0
+  );
 
   const updatePuzzleConfig = (
     type: PuzzleType,
@@ -577,6 +597,21 @@ export function Step2PuzzleSelection({ data, onChange }: StepProps) {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Total Puzzle Count */}
+      {data.selected_puzzle_types.length > 0 && (
+        <div className="rounded-lg border bg-muted/50 p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Total Puzzles</p>
+            <p className="text-xs text-muted-foreground">
+              Sum of all selected puzzle type quantities
+            </p>
+          </div>
+          <Badge variant="secondary" className="text-lg px-4 py-1">
+            {totalPuzzleCount}
+          </Badge>
         </div>
       )}
 

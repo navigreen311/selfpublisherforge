@@ -284,7 +284,10 @@ export default function PuzzleBooksPage() {
             <SelectItem value="large_print">Large Print</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+        <Select
+          value={sortBy}
+          onValueChange={(v) => setSortBy(v as SortOption)}
+        >
           <SelectTrigger className="w-[160px]">
             <ArrowUpDown className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Sort" />
@@ -292,8 +295,8 @@ export default function PuzzleBooksPage() {
           <SelectContent>
             <SelectItem value="newest">Newest First</SelectItem>
             <SelectItem value="oldest">Oldest First</SelectItem>
-            <SelectItem value="title_asc">Title A–Z</SelectItem>
-            <SelectItem value="title_desc">Title Z–A</SelectItem>
+            <SelectItem value="title_asc">Title A-Z</SelectItem>
+            <SelectItem value="title_desc">Title Z-A</SelectItem>
           </SelectContent>
         </Select>
       </div>
