@@ -16,6 +16,7 @@ import {
   BarChart3,
   CheckCircle2,
   AlertTriangle,
+  MessageSquareWarning,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ import {
   useExport,
 } from "@/modules/specialty/coloring/hooks";
 import type { ExportOptions } from "@/modules/specialty/coloring/hooks";
+import { ReviewFeedbackPanel } from "@/modules/specialty/shared/components/ReviewFeedbackPanel";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -175,6 +177,10 @@ export default function ColoringBookEditorPage() {
           <TabsTrigger value="export" className="gap-1.5">
             <Download className="h-4 w-4" />
             Export
+          </TabsTrigger>
+          <TabsTrigger value="reviews" className="gap-1.5">
+            <MessageSquareWarning className="h-4 w-4" />
+            Reviews
           </TabsTrigger>
         </TabsList>
 
@@ -693,6 +699,11 @@ export default function ColoringBookEditorPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Reviews Tab */}
+        <TabsContent value="reviews" className="mt-6">
+          <ReviewFeedbackPanel bookType="coloring-books" bookId={bookId} />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,27 +19,17 @@ import {
   Loader2,
   Fingerprint,
 } from "lucide-react";
+import {
+  useProvenance,
+  useExportProvenance,
+  type PageProvenance,
+} from "../hooks";
 
 // ---------------------------------------------------------------------------
-// Types
+// Constants
 // ---------------------------------------------------------------------------
 
-type ProvenanceStatus = "verified" | "pending" | "missing";
-
-interface PageProvenance {
-  page: number;
-  model: string;
-  promptHash: string;
-  seed: string;
-  generatedDate: string;
-  status: ProvenanceStatus;
-}
-
-interface FontLicenseEntry {
-  fontName: string;
-  licenseType: string;
-  commercialPrintSafe: boolean;
-}
+type ProvenanceStatus = PageProvenance["status"];
 
 const STATUS_BADGE: Record<
   ProvenanceStatus,
@@ -52,90 +41,26 @@ const STATUS_BADGE: Record<
 };
 
 // ---------------------------------------------------------------------------
-// Mock data (will be replaced by API calls)
-// ---------------------------------------------------------------------------
-
-const MOCK_PROVENANCE: PageProvenance[] = [
-  {
-    page: 1,
-    model: "DALL-E 3",
-    promptHash: "a3f8c2d1e5b74f...",
-    seed: "48291037",
-    generatedDate: "2026-03-10T14:22:00Z",
-    status: "verified",
-  },
-  {
-    page: 2,
-    model: "DALL-E 3",
-    promptHash: "b7e1d4f9c2a836...",
-    seed: "91720384",
-    generatedDate: "2026-03-10T14:23:00Z",
-    status: "verified",
-  },
-  {
-    page: 3,
-    model: "DALL-E 3",
-    promptHash: "c9a2f3e8d1b647...",
-    seed: "37461928",
-    generatedDate: "2026-03-10T14:25:00Z",
-    status: "verified",
-  },
-  {
-    page: 4,
-    model: "Stable Diffusion XL",
-    promptHash: "d4b7c1e9f3a258...",
-    seed: "62839140",
-    generatedDate: "2026-03-11T09:12:00Z",
-    status: "pending",
-  },
-  {
-    page: 5,
-    model: "",
-    promptHash: "",
-    seed: "",
-    generatedDate: "",
-    status: "missing",
-  },
-];
-
-const MOCK_FONTS: FontLicenseEntry[] = [
-  {
-    fontName: "Open Sans",
-    licenseType: "Apache 2.0",
-    commercialPrintSafe: true,
-  },
-  {
-    fontName: "Lora",
-    licenseType: "OFL 1.1",
-    commercialPrintSafe: true,
-  },
-  {
-    fontName: "Comic Neue",
-    licenseType: "OFL 1.1",
-    commercialPrintSafe: true,
-  },
-  {
-    fontName: "CustomHandwriting",
-    licenseType: "Personal Use Only",
-    commercialPrintSafe: false,
-  },
-];
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ProvenancePanel() {
-  const [exporting, setExporting] = useState(false);
-  const [provenanceData] = useState<PageProvenance[]>(MOCK_PROVENANCE);
-  const [fontData] = useState<FontLicenseEntry[]>(MOCK_FONTS);
+interface ProvenancePanelProps {
+  bookId: string;
+  bookType?: string;
+}
 
-  const handleExportReport = async () => {
-    setExporting(true);
-    // TODO: call API  GET /api/v1/specialty/childrens/{bookId}/provenance/export
-    await new Promise((r) => setTimeout(r, 1500));
-    // In production, this would trigger a PDF download
-    setExporting(false);
+export function ProvenancePanel({
+  bookId,
+  bookType = "childrens-books",
+}: ProvenancePanelProps) {
+  const { data, isLoading } = useProvenance(bookType, bookId);
+  const exportMutation = useExportProvenance(bookType, bookId);
+
+  const provenanceData = data?.pages ?? [];
+  const fontData = data?.fonts ?? [];
+
+  const handleExportReport = () => {
+    exportMutation.mutate();
   };
 
   const formatDate = (iso: string) => {
@@ -149,6 +74,16 @@ export function ProvenancePanel() {
       minute: "2-digit",
     });
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6 flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -166,14 +101,14 @@ export function ProvenancePanel() {
           <Button
             variant="outline"
             onClick={handleExportReport}
-            disabled={exporting}
+            disabled={exportMutation.isPending}
           >
-            {exporting ? (
+            {exportMutation.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <FileDown className="mr-2 h-4 w-4" />
             )}
-            {exporting ? "Exporting..." : "Export Compliance Report"}
+            {exportMutation.isPending ? "Exporting..." : "Export Compliance Report"}
           </Button>
         </div>
 

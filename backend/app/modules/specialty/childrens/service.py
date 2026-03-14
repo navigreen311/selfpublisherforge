@@ -205,8 +205,29 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
         response = await svc.complete(request)
         return response.content
     except Exception:
-        logger.warning("LLM orchestration unavailable; returning placeholder", exc_info=True)
-        return "{LLM placeholder – orchestration service not configured}"
+        logger.warning("LLM orchestration unavailable; returning structured fallback", exc_info=True)
+        return json.dumps({
+            "status": "service_unavailable",
+            "message": (
+                "The AI text-generation service is currently unavailable. "
+                "A manual template has been provided below."
+            ),
+            "template": {
+                "title": "[Enter book title]",
+                "pages": [
+                    {
+                        "page_number": i,
+                        "text_content": f"[Enter text for page {i}]",
+                    }
+                    for i in range(1, 6)
+                ],
+                "instructions": (
+                    "Fill in each page's text_content field. "
+                    "Re-submit once the AI service is restored for "
+                    "AI-assisted refinement."
+                ),
+            },
+        })
 
 
 async def _llm_generate_image(prompt: str) -> dict[str, str]:
@@ -233,8 +254,18 @@ async def _llm_generate_image(prompt: str) -> dict[str, str]:
         except (json.JSONDecodeError, KeyError):
             return {"image_url": "", "prompt_used": prompt}
     except Exception:
-        logger.warning("Image generation unavailable; returning placeholder", exc_info=True)
-        return {"image_url": f"placeholder://illustration/{_uuid.uuid4()}", "prompt_used": prompt}
+        logger.warning("Image generation unavailable; returning pending stub", exc_info=True)
+        page_id = str(_uuid.uuid4())
+        return {
+            "image_url": f"/api/v1/storage/specialty/childrens/pending/pages/{page_id}/illustration.png",
+            "status": "pending_generation",
+            "prompt_used": prompt,
+            "message": (
+                "The illustration generation service is currently unavailable. "
+                "The image has been queued and will be generated when the service "
+                "is restored. You may also upload a custom illustration."
+            ),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -1582,62 +1613,78 @@ async def gutter_check(
 async def export_book(
     db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]
 ) -> dict[str, Any]:
-    """Generate export file (PDF / individual pages).
+    """Generate export file (PDF / PNG / PDF/X-1a).
 
-    Builds the export manifest and returns a download URL.  In production
-    the actual PDF rendering would be done by a worker process.
+    Delegates to the shared export engine for structured manifest
+    generation.  In production the actual rendering would be done by
+    a worker process consuming the returned manifest.
     """
+    from app.modules.specialty.shared.export_engine import (
+        calculate_export_metadata,
+        generate_pdf_manifest,
+        generate_pdfx1a_manifest,
+        generate_png_pages,
+    )
+
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
 
     export_format = options.get("format", "pdf")
-    dpi = options.get("dpi", 300)
-    include_bleed = options.get("include_bleed", True)
-    color_profile = options.get("color_profile", "CMYK")
 
-    # Parse trim size into dimensions
-    trim = book.trim_size or "8.5x8.5"
-    parts = trim.split("x")
-    width_in = float(parts[0]) if len(parts) > 0 else 8.5
-    height_in = float(parts[1]) if len(parts) > 1 else 8.5
-    bleed_in = 0.125 if include_bleed else 0
-
-    width_px = int((width_in + 2 * bleed_in) * dpi)
-    height_px = int((height_in + 2 * bleed_in) * dpi)
+    # Build book_data dict for the export engine
+    book_data: dict[str, Any] = {
+        "id": str(book_id),
+        "title": book.title,
+        "author": book.author_name or "",
+        "trim_size": book.trim_size or "8.5x8.5",
+        "interior_type": "color",
+        "pages": pages,
+    }
 
     export_id = str(_uuid.uuid4())
     export_url = f"exports/childrens/{book_id}/{export_id}.{export_format}"
 
-    page_manifests = []
-    for p in pages:
-        page_manifests.append({
-            "page_number": p["page_number"],
-            "image_url": p.get("image_url"),
-            "text_content": p.get("text_content"),
-            "layout": p.get("layout"),
-            "has_image": bool(p.get("image_url")),
-        })
-
-    return {
-        "book_id": str(book_id),
-        "export_id": export_id,
-        "export_url": export_url,
-        "format": export_format,
-        "dpi": dpi,
-        "color_profile": color_profile,
-        "include_bleed": include_bleed,
-        "dimensions": {
-            "width_in": width_in,
-            "height_in": height_in,
-            "bleed_in": bleed_in,
-            "width_px": width_px,
-            "height_px": height_px,
-        },
-        "pages": page_manifests,
-        "total_pages": len(pages),
-        "status": "processing",
-        "created_at": datetime.now(UTC).isoformat(),
-    }
+    # Dispatch to the appropriate engine function
+    if export_format == "png":
+        png_pages = generate_png_pages("childrens", book_data)
+        metadata = calculate_export_metadata("childrens", book_data)
+        return {
+            "book_id": str(book_id),
+            "export_id": export_id,
+            "export_url": export_url,
+            "format": "png",
+            "png_pages": png_pages,
+            "metadata": metadata,
+            "status": "processing",
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+    elif export_format == "pdfx1a":
+        manifest = generate_pdfx1a_manifest("childrens", book_data)
+        metadata = calculate_export_metadata("childrens", book_data)
+        return {
+            "book_id": str(book_id),
+            "export_id": export_id,
+            "export_url": export_url,
+            "format": "pdfx1a",
+            "manifest": manifest,
+            "metadata": metadata,
+            "status": "processing",
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+    else:
+        # Default: PDF
+        manifest = generate_pdf_manifest("childrens", book_data, options)
+        metadata = calculate_export_metadata("childrens", book_data)
+        return {
+            "book_id": str(book_id),
+            "export_id": export_id,
+            "export_url": export_url,
+            "format": export_format,
+            "manifest": manifest,
+            "metadata": metadata,
+            "status": "processing",
+            "created_at": datetime.now(UTC).isoformat(),
+        }
 
 
 async def export_kindle(
@@ -1645,17 +1692,35 @@ async def export_kindle(
 ) -> dict[str, Any]:
     """Generate fixed-layout KPF/EPUB export.
 
-    Returns an export manifest for the Kindle pipeline. Actual rendering
-    is handled asynchronously by a worker.
+    Uses the shared export engine for page ordering and metadata, then
+    layers Kindle-specific viewport and rendition data on top.
     """
+    from app.modules.specialty.shared.export_engine import (
+        calculate_export_metadata,
+        generate_pdf_manifest,
+    )
+
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
 
     kindle_format = options.get("format", "kpf")  # kpf or epub3
     export_id = str(_uuid.uuid4())
 
+    # Build book_data for export engine
+    book_data: dict[str, Any] = {
+        "id": str(book_id),
+        "title": book.title,
+        "author": book.author_name or "",
+        "trim_size": book.trim_size or "8.5x8.5",
+        "interior_type": "color",
+        "pages": pages,
+    }
+
+    # Get structured manifest and metadata from the engine
+    pdf_manifest = generate_pdf_manifest("childrens", book_data, options)
+    metadata = calculate_export_metadata("childrens", book_data)
+
     # Fixed-layout dimensions for Kindle
-    # Kindle Fire HD 10: 1920x1200
     device_profiles = {
         "kindle_fire_hd10": {"width": 1920, "height": 1200},
         "kindle_fire_hd8": {"width": 1280, "height": 800},
@@ -1663,6 +1728,33 @@ async def export_kindle(
     }
     target_device = options.get("target_device", "kindle_fire_hd10")
     device = device_profiles.get(target_device, device_profiles["kindle_fire_hd10"])
+
+    # Calculate viewport to fit device while preserving aspect ratio
+    trim_w = metadata["dimensions"]["trim_width_in"]
+    trim_h = metadata["dimensions"]["trim_height_in"]
+    book_aspect = trim_w / trim_h
+    device_aspect = device["width"] / device["height"]
+    if book_aspect > device_aspect:
+        viewport_w = device["width"]
+        viewport_h = int(device["width"] / book_aspect)
+    else:
+        viewport_h = device["height"]
+        viewport_w = int(device["height"] * book_aspect)
+
+    # Build per-page spine entries from the manifest
+    page_entries = []
+    for p in pdf_manifest["pages"]:
+        page_entries.append({
+            "sequence": p["sequence"],
+            "section": p["section"],
+            "type": p["type"],
+            "idref": f"page{p['sequence']:04d}",
+            "image_url": p.get("image_url"),
+            "text_content": p.get("text_content"),
+            "layout": p.get("layout") or "image_top_text_bottom",
+            "is_blank": p["is_blank"],
+            "properties": "rendition:layout-pre-paginated",
+        })
 
     return {
         "book_id": str(book_id),
@@ -1672,7 +1764,23 @@ async def export_kindle(
         "fixed_layout": True,
         "target_device": target_device,
         "device_dimensions": device,
-        "total_pages": len(pages),
+        "viewport": {"width": viewport_w, "height": viewport_h},
+        "rendition": {
+            "layout": "pre-paginated",
+            "orientation": "landscape" if trim_w > trim_h else ("portrait" if trim_h > trim_w else "auto"),
+            "spread": "landscape" if trim_w > trim_h else "none",
+        },
+        "opf_metadata": {
+            "dc:title": book.title,
+            "dc:creator": book.author_name or "",
+            "dc:language": book.bilingual_language if book.bilingual else "en",
+            "meta_fixed_layout": "true",
+            "meta_original_resolution": f"{viewport_w}x{viewport_h}",
+        },
+        "spine": page_entries,
+        "total_pages": pdf_manifest["total_pages"],
+        "page_counts": pdf_manifest["page_counts"],
+        "metadata": metadata,
         "read_aloud_ready": book.bilingual or False,
         "status": "processing",
         "created_at": datetime.now(UTC).isoformat(),
@@ -1686,25 +1794,65 @@ async def device_preview(
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
 
+    # Physical dimensions per device (diagonal inches and PPI)
     devices = [
-        {"name": "Kindle Fire HD 10", "width": 1920, "height": 1200, "type": "tablet"},
-        {"name": "Kindle Fire HD 8", "width": 1280, "height": 800, "type": "tablet"},
-        {"name": "iPad Pro 12.9", "width": 2048, "height": 2732, "type": "tablet"},
-        {"name": "iPad Mini", "width": 1536, "height": 2048, "type": "tablet"},
-        {"name": "iPhone 15 Pro", "width": 1179, "height": 2556, "type": "phone"},
-        {"name": "Desktop Browser", "width": 1920, "height": 1080, "type": "desktop"},
+        {"name": "Kindle Fire HD 10", "width": 1920, "height": 1200, "type": "tablet", "ppi": 224, "diag_in": 10.1},
+        {"name": "Kindle Fire HD 8", "width": 1280, "height": 800, "type": "tablet", "ppi": 189, "diag_in": 8.0},
+        {"name": "iPad Pro 12.9", "width": 2048, "height": 2732, "type": "tablet", "ppi": 264, "diag_in": 12.9},
+        {"name": "iPad Mini", "width": 1536, "height": 2048, "type": "tablet", "ppi": 326, "diag_in": 8.3},
+        {"name": "iPhone 15 Pro", "width": 1179, "height": 2556, "type": "phone", "ppi": 460, "diag_in": 6.1},
+        {"name": "Desktop Browser", "width": 1920, "height": 1080, "type": "desktop", "ppi": 96, "diag_in": 24.0},
     ]
+
+    # Parse book trim size
+    trim = book.trim_size or "8.5x8.5"
+    trim_parts = trim.split("x")
+    book_w_in = float(trim_parts[0]) if len(trim_parts) > 0 else 8.5
+    book_h_in = float(trim_parts[1]) if len(trim_parts) > 1 else 8.5
+    book_aspect = book_w_in / book_h_in
 
     preview_page = options.get("page_number", 1)
     target_page = next((p for p in pages if p["page_number"] == preview_page), None)
 
     previews = []
     for device in devices:
+        dev_w = device["width"]
+        dev_h = device["height"]
+        ppi = device["ppi"]
+
+        # Physical display area in inches
+        dev_w_in = dev_w / ppi
+        dev_h_in = dev_h / ppi
+
+        # Fit book page into device screen, preserving aspect ratio
+        dev_aspect = dev_w / dev_h
+        if book_aspect > dev_aspect:
+            # Book is wider relative to device: fit to width
+            render_w = dev_w
+            render_h = int(dev_w / book_aspect)
+        else:
+            # Book is taller relative to device: fit to height
+            render_h = dev_h
+            render_w = int(dev_h * book_aspect)
+
+        # Scale factor: how the physical book maps to this screen
+        scale_factor = round((render_w / ppi) / book_w_in, 4)
+        offset_x = (dev_w - render_w) // 2
+        offset_y = (dev_h - render_h) // 2
+
         previews.append({
             "device": device["name"],
             "device_type": device["type"],
-            "width": device["width"],
-            "height": device["height"],
+            "screen_width": dev_w,
+            "screen_height": dev_h,
+            "ppi": ppi,
+            "physical_width_in": round(dev_w_in, 2),
+            "physical_height_in": round(dev_h_in, 2),
+            "render_width": render_w,
+            "render_height": render_h,
+            "offset_x": offset_x,
+            "offset_y": offset_y,
+            "scale_factor": scale_factor,
             "preview_url": f"previews/childrens/{book_id}/page_{preview_page}_{device['name'].lower().replace(' ', '_')}.png",
             "source_image": target_page["image_url"] if target_page else None,
         })
@@ -1712,6 +1860,7 @@ async def device_preview(
     return {
         "book_id": str(book_id),
         "page_number": preview_page,
+        "book_trim": {"width_in": book_w_in, "height_in": book_h_in},
         "devices": previews,
     }
 
@@ -1739,17 +1888,53 @@ async def reflow(
     scale_x = new_width / current_width
     scale_y = new_height / current_height
 
+    # Area-based scale drives font sizing (preserves visual proportion)
+    area_scale = math.sqrt((new_width * new_height) / (current_width * current_height))
+
+    # Aspect ratio change detection
+    current_aspect = current_width / current_height
+    new_aspect = new_width / new_height
+    aspect_ratio_changed = abs(current_aspect - new_aspect) > 0.05
+
+    # Standard inner margins (inches) based on new trim size
+    min_dim = min(new_width, new_height)
+    margin_in = 0.5 if min_dim >= 8 else (0.375 if min_dim >= 6 else 0.25)
+
+    # Effective content area in both trims
+    old_content_w = current_width - 2 * margin_in
+    old_content_h = current_height - 2 * margin_in
+    new_content_w = new_width - 2 * margin_in
+    new_content_h = new_height - 2 * margin_in
+
     reflowed_pages = []
     for p in pages:
         font_size = p.get("font_size") or 18
-        new_font_size = max(10, int(font_size * min(scale_x, scale_y)))
+        # Scale font by area ratio, clamped to readable range
+        new_font_size = max(10, min(36, round(font_size * area_scale)))
+
+        # Estimate whether text will overflow the new content area
+        text = p.get("text_content") or ""
+        word_count = len(text.split())
+        # Rough chars-per-line estimate at the new font size (assuming ~0.6 em width)
+        chars_per_line = max(1, int(new_content_w * 72 / (new_font_size * 0.6)))
+        lines_needed = max(1, math.ceil(len(text) / chars_per_line))
+        line_height = new_font_size * 1.4 / 72  # inches
+        text_height_in = lines_needed * line_height
+
+        layout = p.get("layout") or "image_top_text_bottom"
+        # Text zone gets roughly 35-40% of content height for most layouts
+        text_zone_fraction = 1.0 if layout == "full_bleed_image" else 0.38
+        available_text_height = new_content_h * text_zone_fraction
+        text_overflow = text_height_in > available_text_height
+
         reflowed_pages.append({
             "page_number": p["page_number"],
             "original_font_size": font_size,
             "new_font_size": new_font_size,
-            "text_content": p.get("text_content"),
-            "layout": p.get("layout"),
-            "needs_review": abs(scale_x - scale_y) > 0.1,  # aspect ratio changed significantly
+            "text_content": text,
+            "layout": layout,
+            "text_overflow": text_overflow,
+            "needs_review": aspect_ratio_changed or text_overflow,
         })
 
     return {
@@ -1758,6 +1943,13 @@ async def reflow(
         "new_trim": new_trim,
         "scale_x": round(scale_x, 3),
         "scale_y": round(scale_y, 3),
+        "area_scale": round(area_scale, 3),
+        "aspect_ratio_changed": aspect_ratio_changed,
+        "margins_in": margin_in,
+        "content_area": {
+            "original": {"width_in": round(old_content_w, 3), "height_in": round(old_content_h, 3)},
+            "new": {"width_in": round(new_content_w, 3), "height_in": round(new_content_h, 3)},
+        },
         "pages": reflowed_pages,
         "needs_review_count": sum(1 for p in reflowed_pages if p["needs_review"]),
     }

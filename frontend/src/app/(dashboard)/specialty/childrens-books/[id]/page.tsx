@@ -22,6 +22,7 @@ import {
   Type,
   Palette,
   Layers,
+  MessageSquareWarning,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ import {
   useBookPages,
   useBookCharacters,
 } from "@/modules/specialty/childrens/hooks";
+import { ReviewFeedbackPanel } from "@/modules/specialty/shared/components/ReviewFeedbackPanel";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -206,6 +208,10 @@ export default function ChildrensBookDetailPage() {
             <TabsTrigger value="export" className="gap-1.5">
               <Download className="h-3.5 w-3.5" />
               Export
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-1.5">
+              <MessageSquareWarning className="h-3.5 w-3.5" />
+              Reviews
             </TabsTrigger>
           </TabsList>
         </div>
@@ -742,6 +748,13 @@ export default function ChildrensBookDetailPage() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </TabsContent>
+
+        {/* Reviews Tab */}
+        <TabsContent value="reviews" className="flex-1 overflow-auto m-0 p-6">
+          <div className="max-w-4xl mx-auto">
+            <ReviewFeedbackPanel bookType="childrens-books" bookId={bookId} />
           </div>
         </TabsContent>
       </Tabs>

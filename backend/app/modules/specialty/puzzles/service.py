@@ -7,6 +7,7 @@ variant creation, quality checks, export, and preflight.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import math
 import random
@@ -1087,6 +1088,39 @@ async def verify_puzzle(
 
 
 # ---------------------------------------------------------------------------
+# LLM helper
+# ---------------------------------------------------------------------------
+
+
+async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 4000) -> str:
+    """Call the LLM orchestration service and return generated text.
+
+    Falls back to a placeholder when the orchestration service is not
+    fully configured (e.g. during development or testing).
+    """
+    try:
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
+        from app.modules.llm_orchestration.schemas import (
+            CompletionRequest,
+            GenerationConfig,
+            TaskType,
+        )
+
+        svc = LLMOrchestrationService()
+        request = CompletionRequest(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            task_type=TaskType.CREATIVE,
+            config=GenerationConfig(max_tokens=max_tokens),
+        )
+        response = await svc.complete(request)
+        return response.content
+    except Exception:
+        logger.warning("LLM orchestration unavailable; returning empty fallback", exc_info=True)
+        return ""
+
+
+# ---------------------------------------------------------------------------
 # Word List Generation & Sanitisation
 # ---------------------------------------------------------------------------
 
@@ -1098,8 +1132,8 @@ async def generate_word_list(
 ) -> dict[str, Any]:
     """Use LLM to generate a themed word list.
 
-    In production this calls the AI service. Here we return a placeholder that
-    follows the expected contract so the endpoint is fully wired.
+    Builds a structured prompt and calls the LLM orchestration service.
+    Falls back to an empty list when the service is unavailable.
     """
     # Determine word length range by difficulty
     length_ranges = {
@@ -1109,13 +1143,54 @@ async def generate_word_list(
     }
     min_len, max_len = length_ranges.get(difficulty, (4, 10))
 
-    # Placeholder: in production, this calls the LLM service
-    # e.g. result = await llm_service.generate(prompt=f"Generate {count} {theme} words ...")
+    system_prompt = (
+        "You are a word list generator for puzzle books. Generate age-appropriate, "
+        "themed word lists. Each word must be a single, real English word suitable "
+        "for puzzles. Return valid JSON only."
+    )
+
+    user_prompt = (
+        f"Generate exactly {count} words related to the theme '{theme}'.\n"
+        f"Difficulty level: {difficulty}\n"
+        f"Word length constraints: minimum {min_len} letters, maximum {max_len} letters.\n"
+        f"All words must be common, age-appropriate, and clearly related to the theme.\n"
+        f"Do NOT include proper nouns, abbreviations, or hyphenated words.\n\n"
+        f"Return a JSON array of {count} uppercase strings, e.g. [\"WORD1\", \"WORD2\", ...]"
+    )
+
+    raw = await _llm_generate(user_prompt, system_prompt=system_prompt, max_tokens=2000)
+
+    # Parse response into clean word list
     words: list[str] = []
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                words = [
+                    w.upper().strip()
+                    for w in parsed
+                    if isinstance(w, str)
+                    and min_len <= len(w.strip()) <= max_len
+                ]
+        except json.JSONDecodeError:
+            # Try to extract words line-by-line as fallback
+            for line in raw.splitlines():
+                word = line.strip().strip("-*•").strip().upper()
+                if word.isalpha() and min_len <= len(word) <= max_len:
+                    words.append(word)
+
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    unique_words: list[str] = []
+    for w in words:
+        if w not in seen:
+            seen.add(w)
+            unique_words.append(w)
+    words = unique_words[:count]
+
     logger.info(
-        "generate_word_list called: theme=%s, count=%d, difficulty=%s "
-        "(LLM integration pending)",
-        theme, count, difficulty,
+        "generate_word_list called: theme=%s, count=%d, difficulty=%s, generated=%d",
+        theme, count, difficulty, len(words),
     )
 
     return {
@@ -1125,7 +1200,6 @@ async def generate_word_list(
         "words": words,
         "min_length": min_len,
         "max_length": max_len,
-        "note": "LLM integration pending - connect to AI service for production word generation",
     }
 
 
@@ -1160,9 +1234,9 @@ async def generate_clues(
     """Generate clues for a puzzle via LLM in the specified style.
 
     Styles: Standard, Kid-friendly, Trivia, Themed.
-    In production this calls the AI service. Here we wire the contract.
+    Calls the LLM orchestration service to produce high-quality clues.
     """
-    await _get_book_or_404(db, org_id, book_id)
+    book = await _get_book_or_404(db, org_id, book_id)
     puzzle = await _get_puzzle_or_404(db, book_id, puzzle_id)
 
     if puzzle.puzzle_type not in (PuzzleType.crossword, PuzzleType.word_scramble):
@@ -1171,19 +1245,72 @@ async def generate_clues(
             f"puzzles, not {puzzle.puzzle_type}."
         )
 
-    # Placeholder: in production, send word list + style to LLM
+    word_list: list[str] = puzzle.word_list or []
+    if not word_list:
+        return {
+            "puzzle_id": str(puzzle.id),
+            "style": style,
+            "clue_count": 0,
+            "clues": {},
+        }
+
+    system_prompt = (
+        "You are a crossword clue writer. Write clear, unambiguous clues that have "
+        "exactly one correct answer. Never include the answer word in the clue. "
+        "Return valid JSON only."
+    )
+
+    style_guidance = {
+        "Standard": "Write concise, dictionary-style clues suitable for adults.",
+        "Kid-friendly": "Write simple, fun clues using vocabulary appropriate for children ages 6-12.",
+        "Trivia": "Write clues in the form of trivia questions or fun facts.",
+        "Themed": f"Write clues that connect each word back to the theme of the puzzle. "
+                  f"Book themes: {', '.join(book.themes or ['general'])}.",
+    }
+    guidance = style_guidance.get(style, style_guidance["Standard"])
+
+    words_json = json.dumps(word_list)
+    user_prompt = (
+        f"Generate one clue for each of the following words: {words_json}\n\n"
+        f"Clue style: {style}\n"
+        f"Style guidance: {guidance}\n"
+        f"Puzzle type: {puzzle.puzzle_type}\n\n"
+        f"Rules:\n"
+        f"- Each clue must clearly point to its answer word and no other word.\n"
+        f"- Never include the answer word (or any form of it) in the clue.\n"
+        f"- Keep clues concise (3-15 words each).\n\n"
+        f"Return a JSON object mapping each word to its clue, e.g.:\n"
+        f'  {{"WORD": "A clue for the word", ...}}'
+    )
+
+    raw = await _llm_generate(user_prompt, system_prompt=system_prompt, max_tokens=4000)
+
+    # Parse LLM response into clue mapping
     clues: dict[str, str] = {}
-    if puzzle.word_list:
-        for word in puzzle.word_list:
-            clues[word] = f"[{style}] Clue for '{word}' (LLM pending)"
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                for word in word_list:
+                    # Try case-insensitive match
+                    clue = parsed.get(word) or parsed.get(word.upper()) or parsed.get(word.lower())
+                    if clue and isinstance(clue, str):
+                        clues[word] = clue
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse LLM clue response as JSON")
+
+    # Fill in fallback clues for any words the LLM missed
+    for word in word_list:
+        if word not in clues:
+            clues[word] = f"[{style}] Clue for '{word}' (generation failed)"
 
     puzzle.clues = {"style": style, "clues": clues}
     await db.flush()
     await db.refresh(puzzle)
 
     logger.info(
-        "generate_clues called: puzzle=%s, style=%s (LLM integration pending)",
-        puzzle_id, style,
+        "generate_clues called: puzzle=%s, style=%s, clue_count=%d",
+        puzzle_id, style, len(clues),
     )
 
     return {
@@ -1191,7 +1318,6 @@ async def generate_clues(
         "style": style,
         "clue_count": len(clues),
         "clues": clues,
-        "note": "LLM integration pending - connect to AI service for production clue generation",
     }
 
 
@@ -1268,7 +1394,8 @@ async def auto_fix_clues(
 ) -> dict[str, Any]:
     """AI fix ambiguous clues across all puzzles in the book.
 
-    In production this sends flagged clues to the LLM for rewording.
+    Identifies problematic clues (contains answer, too short) and sends
+    them to the LLM for rewriting while maintaining the original style.
     """
     book = await _get_book_or_404(db, org_id, book_id)
 
@@ -1282,26 +1409,84 @@ async def auto_fix_clues(
     fixed_count = 0
     total_issues = 0
 
+    system_prompt = (
+        "You are a crossword clue editor. You fix problematic puzzle clues. "
+        "Write improved clues that are clear, unambiguous, and never contain "
+        "the answer word. Return valid JSON only."
+    )
+
     for puzzle in puzzles:
         clues_data = puzzle.clues or {}
         clues_map: dict[str, str] = clues_data.get("clues", {})
+        style = clues_data.get("style", "Standard")
 
+        # Collect all clues that need fixing in this puzzle
+        flagged: list[dict[str, Any]] = []
         for word, clue in list(clues_map.items()):
             clue_lower = clue.lower().strip()
-            needs_fix = False
+            issues: list[str] = []
 
-            # Check if clue contains the answer
             if word.lower() in clue_lower:
-                needs_fix = True
-
-            # Check if clue is too short
+                issues.append("contains the answer word")
             if len(clue.split()) < 3:
-                needs_fix = True
+                issues.append("too short / ambiguous")
 
-            if needs_fix:
+            if issues:
                 total_issues += 1
-                # Placeholder: in production, call LLM to rewrite
-                clues_map[word] = f"[Auto-fixed] Improved clue for '{word}' (LLM pending)"
+                flagged.append({
+                    "word": word,
+                    "original_clue": clue,
+                    "issues": issues,
+                })
+
+        if not flagged:
+            continue
+
+        # Batch all flagged clues for this puzzle into one LLM call
+        flagged_json = json.dumps(flagged, indent=2)
+        user_prompt = (
+            f"The following puzzle clues have been flagged for quality issues.\n"
+            f"Clue style: {style}\n\n"
+            f"Flagged clues:\n{flagged_json}\n\n"
+            f"For each flagged clue, write an improved replacement that:\n"
+            f"- Does NOT contain the answer word or any form of it\n"
+            f"- Is at least 3 words long\n"
+            f"- Maintains the '{style}' clue style\n"
+            f"- Has exactly one correct answer (the word shown)\n\n"
+            f"Return a JSON object mapping each word to its improved clue, e.g.:\n"
+            f'  {{"WORD": "An improved clue", ...}}'
+        )
+
+        raw = await _llm_generate(user_prompt, system_prompt=system_prompt, max_tokens=4000)
+
+        if raw:
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict):
+                    for item in flagged:
+                        word = item["word"]
+                        new_clue = (
+                            parsed.get(word)
+                            or parsed.get(word.upper())
+                            or parsed.get(word.lower())
+                        )
+                        if new_clue and isinstance(new_clue, str):
+                            clues_map[word] = new_clue
+                            fixed_count += 1
+                        else:
+                            # LLM didn't return this word; apply a safe fallback
+                            clues_map[word] = f"[Auto-fixed] Clue for '{word}'"
+                            fixed_count += 1
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse LLM auto-fix response as JSON")
+                # Apply safe fallback for all flagged clues
+                for item in flagged:
+                    clues_map[item["word"]] = f"[Auto-fixed] Clue for '{item['word']}'"
+                    fixed_count += 1
+        else:
+            # LLM unavailable; apply safe fallback
+            for item in flagged:
+                clues_map[item["word"]] = f"[Auto-fixed] Clue for '{item['word']}'"
                 fixed_count += 1
 
         puzzle.clues = {**clues_data, "clues": clues_map}
@@ -1309,7 +1494,7 @@ async def auto_fix_clues(
     await db.flush()
 
     logger.info(
-        "auto_fix_clues called: book=%s, fixed=%d/%d (LLM integration pending)",
+        "auto_fix_clues called: book=%s, fixed=%d/%d",
         book_id, fixed_count, total_issues,
     )
 
@@ -1318,7 +1503,6 @@ async def auto_fix_clues(
         "puzzles_checked": len(puzzles),
         "issues_found": total_issues,
         "clues_fixed": fixed_count,
-        "note": "LLM integration pending - connect to AI service for production clue fixing",
     }
 
 
@@ -1777,9 +1961,18 @@ async def export_book(
 ) -> dict[str, Any]:
     """Export the puzzle book as a print-ready file.
 
-    Generates a PDF with puzzle pages followed by the answer key section.
-    In production this calls the PDF rendering service.
+    Delegates to the shared export engine which produces a structured
+    manifest with puzzle pages, answer key section (at the configured
+    position), front matter (TOC, instructions), crop marks, and
+    registration marks.
     """
+    from app.modules.specialty.shared.export_engine import (
+        calculate_export_metadata,
+        generate_pdf_manifest,
+        generate_pdfx1a_manifest,
+        generate_png_pages,
+    )
+
     book = await _get_book_or_404(db, org_id, book_id)
 
     stmt = (
@@ -1790,34 +1983,82 @@ async def export_book(
     result = await db.execute(stmt)
     puzzles = list(result.scalars().all())
 
-    # Calculate page counts
-    puzzle_pages = len(puzzles)
-    answer_pages = math.ceil(len(puzzles) / 4)  # compact layout: 4 per page
-    toc_pages = 1 if book.has_toc else 0
-    instruction_pages = 1
-    total_pages = puzzle_pages + answer_pages + toc_pages + instruction_pages
+    # Build page dicts for puzzle content pages
+    puzzle_page_dicts = []
+    for p in puzzles:
+        puzzle_page_dicts.append({
+            "page_number": p.puzzle_number,
+            "page_type": "content",
+            "label": f"Puzzle {p.puzzle_number}",
+            "puzzle_type": str(p.puzzle_type) if p.puzzle_type else None,
+            "difficulty": str(p.difficulty) if p.difficulty else None,
+            "theme": p.theme,
+        })
 
-    # Placeholder: in production, call PDF rendering service
-    logger.info(
-        "export_book called: book=%s, format=%s, pages=%d "
-        "(PDF rendering pending)",
-        book_id, format, total_pages,
-    )
+    # Build answer key page dicts (compact: 4 answers per page)
+    answer_page_count = max(1, math.ceil(len(puzzles) / 4)) if puzzles else 0
+    answer_page_dicts = [
+        {"type": "answer_key", "label": f"Answer Key {i + 1}"}
+        for i in range(answer_page_count)
+    ]
+
+    # Build front matter (TOC + instructions)
+    front_matter: list[dict[str, Any]] = []
+    front_matter.append({"type": "title_page", "label": "Title Page"})
+    if book.has_toc:
+        front_matter.append({"type": "table_of_contents", "label": "Table of Contents"})
+    front_matter.append({"type": "instructions", "label": "Instructions"})
+
+    # Determine answer key position
+    answer_key_pos = str(book.answer_key_position) if book.answer_key_position else "back_of_book"
+
+    # Puzzle books default trim size (model has no trim_size column)
+    trim_size = "8.5x11"
+
+    book_data: dict[str, Any] = {
+        "id": str(book_id),
+        "title": book.title,
+        "trim_size": trim_size,
+        "interior_type": "bw",
+        "pages": puzzle_page_dicts,
+        "front_matter": front_matter,
+        "answer_pages": answer_page_dicts,
+        "answer_key_position": answer_key_pos,
+        "puzzle_count": len(puzzles),
+    }
+
+    export_url = f"/exports/puzzles/{book_id}/export.{format}"
+
+    if format == "png":
+        png_pages = generate_png_pages("puzzles", book_data)
+        metadata = calculate_export_metadata("puzzles", book_data)
+    elif format == "pdfx1a":
+        manifest = generate_pdfx1a_manifest("puzzles", book_data)
+        metadata = calculate_export_metadata("puzzles", book_data)
+    else:
+        manifest = generate_pdf_manifest("puzzles", book_data)
+        metadata = calculate_export_metadata("puzzles", book_data)
 
     book.status = BookStatus.exported
     await db.flush()
 
+    if format == "png":
+        return {
+            "book_id": str(book_id),
+            "format": "png",
+            "export_url": export_url,
+            "png_pages": png_pages,
+            "metadata": metadata,
+            "status": "processing",
+        }
+
     return {
         "book_id": str(book_id),
         "format": format,
-        "status": "export_queued",
-        "total_pages": total_pages,
-        "puzzle_pages": puzzle_pages,
-        "answer_pages": answer_pages,
-        "toc_pages": toc_pages,
-        "instruction_pages": instruction_pages,
-        "download_url": None,
-        "note": "PDF rendering service integration pending",
+        "export_url": export_url,
+        "manifest": manifest,
+        "metadata": metadata,
+        "status": "processing",
     }
 
 

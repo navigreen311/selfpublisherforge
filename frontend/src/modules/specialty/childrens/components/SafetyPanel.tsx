@@ -20,33 +20,17 @@ import {
   ScanSearch,
   AlertTriangle,
 } from "lucide-react";
+import {
+  useSafetyCheck,
+  type TrademarkHit,
+  type SensitivityIssue,
+  type SensitivityCategory,
+  type Severity,
+} from "../hooks";
 
 // ---------------------------------------------------------------------------
-// Types
+// Constants
 // ---------------------------------------------------------------------------
-
-type Severity = "critical" | "warning" | "info";
-
-interface TrademarkHit {
-  id: string;
-  page: number;
-  term: string;
-  context: string;
-}
-
-type SensitivityCategory =
-  | "violence"
-  | "fear"
-  | "stereotypes"
-  | "mature_themes";
-
-interface SensitivityIssue {
-  id: string;
-  page: number;
-  category: SensitivityCategory;
-  description: string;
-  severity: Severity;
-}
 
 const CATEGORY_LABELS: Record<SensitivityCategory, string> = {
   violence: "Violence",
@@ -55,7 +39,10 @@ const CATEGORY_LABELS: Record<SensitivityCategory, string> = {
   mature_themes: "Mature Themes",
 };
 
-const SEVERITY_VARIANT: Record<Severity, "destructive" | "default" | "secondary"> = {
+const SEVERITY_VARIANT: Record<
+  Severity,
+  "destructive" | "default" | "secondary"
+> = {
   critical: "destructive",
   warning: "default",
   info: "secondary",
@@ -78,13 +65,19 @@ const BLOCKED_TERMS_DISPLAY = [
 // Component
 // ---------------------------------------------------------------------------
 
-export function SafetyPanel() {
-  const [scanning, setScanning] = useState(false);
+interface SafetyPanelProps {
+  bookId: string;
+}
+
+export function SafetyPanel({ bookId }: SafetyPanelProps) {
   const [hasRun, setHasRun] = useState(false);
   const [trademarkHits, setTrademarkHits] = useState<TrademarkHit[]>([]);
   const [sensitivityIssues, setSensitivityIssues] = useState<
     SensitivityIssue[]
   >([]);
+
+  const safetyCheck = useSafetyCheck(bookId);
+  const scanning = safetyCheck.isPending;
 
   const totalIssues = trademarkHits.length + sensitivityIssues.length;
   const hasCritical =
@@ -92,48 +85,14 @@ export function SafetyPanel() {
     trademarkHits.length > 0;
   const isSafe = hasRun && totalIssues === 0;
 
-  const runSafetyScan = async () => {
-    setScanning(true);
-    // TODO: call API  POST /api/v1/specialty/childrens-books/{bookId}/safety-check
-    await new Promise((r) => setTimeout(r, 2000));
-
-    // Simulated results
-    setTrademarkHits([
-      {
-        id: "t1",
-        page: 3,
-        term: "Frozen",
-        context: '...a dress like in "Frozen"...',
+  const runSafetyScan = () => {
+    safetyCheck.mutate(undefined, {
+      onSuccess: (data) => {
+        setTrademarkHits(data.trademark_hits);
+        setSensitivityIssues(data.sensitivity_issues);
+        setHasRun(true);
       },
-      {
-        id: "t2",
-        page: 11,
-        term: "in the style of",
-        context: "...in the style of Hayao Miyazaki...",
-      },
-    ]);
-
-    setSensitivityIssues([
-      {
-        id: "s1",
-        page: 8,
-        category: "fear",
-        description:
-          "Illustration prompt references 'dark shadowy monster lurking behind door' - may exceed mild fear threshold for ages 3-5.",
-        severity: "warning",
-      },
-      {
-        id: "s2",
-        page: 14,
-        category: "stereotypes",
-        description:
-          "Character description uses potentially stereotypical cultural trope. Review for sensitivity.",
-        severity: "info",
-      },
-    ]);
-
-    setHasRun(true);
-    setScanning(false);
+    });
   };
 
   return (

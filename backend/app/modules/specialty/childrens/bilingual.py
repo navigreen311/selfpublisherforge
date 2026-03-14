@@ -129,8 +129,14 @@ def translate_book(
         f"4. Follow these age-appropriate language constraints:\n"
         f"{_age_constraints_prompt(age_range)}\n"
         f"5. Preserve page breaks exactly — each page must be translated "
-        f"independently so illustrations stay aligned.\n"
-        f"6. Return ONLY the translated text, nothing else."
+        f"independently so illustrations stay aligned.\n\n"
+        f"OUTPUT FORMAT: Respond with valid JSON only. No markdown, no code "
+        f"fences, no extra commentary. Use this exact structure:\n"
+        f'{{"translated_text": "<your translation here>", '
+        f'"back_translation": "<literal English back-translation for QA>", '
+        f'"notes": "<any cultural adaptation notes, or empty string>"}}\n\n'
+        f"If the input text is empty or whitespace-only, return:\n"
+        f'{{"translated_text": "", "back_translation": "", "notes": ""}}'
     )
 
     translated_pages: list[dict[str, Any]] = []
@@ -176,10 +182,26 @@ def translate_book(
 # ---------------------------------------------------------------------------
 
 
+# Expected word-count ratio bounds per target language relative to English.
+# Values are (lower_bound, upper_bound) representing the typical range of
+# translated_word_count / english_word_count.
+_LANGUAGE_RATIO_BOUNDS: dict[str, tuple[float, float]] = {
+    "es": (1.1, 1.35),   # Spanish: ~20% longer
+    "fr": (1.15, 1.4),   # French: ~25% longer
+    "de": (0.9, 1.2),    # German: roughly similar (compounds reduce word count)
+    "pt": (1.1, 1.35),   # Portuguese: similar to Spanish
+    "it": (1.1, 1.35),   # Italian: similar to Spanish
+    "zh": (0.4, 0.8),    # Chinese: much fewer "words" (character-based)
+    "ja": (0.4, 0.85),   # Japanese: fewer segmented words
+    "ko": (0.6, 1.0),    # Korean: somewhat fewer words
+}
+
+
 def validate_translation(
     original: list[dict[str, Any]],
     translated: list[dict[str, Any]],
     age_range: str,
+    target_language: str | None = None,
 ) -> dict[str, Any]:
     """Validate translated pages against the original.
 
@@ -247,20 +269,32 @@ def validate_translation(
         if not orig_text:
             continue
 
-        # Word-count ratio check (translations shouldn't be wildly different)
+        # Word-count ratio check using language-specific bounds
         orig_wc = _word_count(orig_text)
         trans_wc = _word_count(trans_text)
         if orig_wc > 0 and trans_wc > 0:
             ratio = trans_wc / orig_wc
-            if ratio > 2.0 or ratio < 0.3:
+            lo, hi = _LANGUAGE_RATIO_BOUNDS.get(
+                target_language or "", (0.3, 2.0)
+            )
+            # Apply tolerance: allow 30% beyond expected bounds for short pages
+            tolerance = 0.3 if orig_wc < 20 else 0.15
+            effective_lo = lo - tolerance
+            effective_hi = hi + tolerance
+            if ratio < effective_lo or ratio > effective_hi:
+                expected_range = f"{lo:.2f}–{hi:.2f}"
                 issues.append(
                     {
                         "type": "word_count_ratio",
                         "page": page_num,
+                        "target_language": target_language,
+                        "expected_ratio_range": expected_range,
+                        "actual_ratio": round(ratio, 2),
                         "message": (
                             f"Page {page_num}: translation word count ({trans_wc}) "
-                            f"differs significantly from original ({orig_wc}), "
-                            f"ratio={ratio:.2f}"
+                            f"vs original ({orig_wc}) gives ratio={ratio:.2f}, "
+                            f"outside expected range {expected_range} "
+                            f"for {_LANGUAGE_NAMES.get(target_language or '', 'unknown')}"
                         ),
                     }
                 )

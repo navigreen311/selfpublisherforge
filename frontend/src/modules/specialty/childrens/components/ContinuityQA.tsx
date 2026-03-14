@@ -19,30 +19,19 @@ import {
   Wand2,
   PlayCircle,
 } from "lucide-react";
+import {
+  useContinuityCheck,
+  useAutoFixPrompts,
+  type ContinuityIssue,
+  type ContinuityIssueType,
+  type ContinuitySeverity,
+} from "../hooks";
 
 // ---------------------------------------------------------------------------
-// Types
+// Labels & variants
 // ---------------------------------------------------------------------------
 
-type IssueType =
-  | "missing_clothing"
-  | "scale_mismatch"
-  | "location_inconsistency"
-  | "time_of_day_mismatch"
-  | "style_drift";
-
-type Severity = "critical" | "warning" | "info";
-
-interface ContinuityIssue {
-  id: string;
-  page: number;
-  issueType: IssueType;
-  description: string;
-  severity: Severity;
-  autoFixable: boolean;
-}
-
-const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
+const ISSUE_TYPE_LABELS: Record<ContinuityIssueType, string> = {
   missing_clothing: "Missing Clothing Reference",
   scale_mismatch: "Scale Mismatch",
   location_inconsistency: "Location Inconsistency",
@@ -50,7 +39,7 @@ const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
   style_drift: "Style Drift",
 };
 
-const SEVERITY_VARIANT: Record<Severity, "destructive" | "default" | "secondary"> = {
+const SEVERITY_VARIANT: Record<ContinuitySeverity, "destructive" | "default" | "secondary"> = {
   critical: "destructive",
   warning: "default",
   info: "secondary",
@@ -60,80 +49,29 @@ const SEVERITY_VARIANT: Record<Severity, "destructive" | "default" | "secondary"
 // Component
 // ---------------------------------------------------------------------------
 
-export function ContinuityQA() {
+interface ContinuityQAProps {
+  bookId: string;
+}
+
+export function ContinuityQA({ bookId }: ContinuityQAProps) {
   const [issues, setIssues] = useState<ContinuityIssue[]>([]);
-  const [scanning, setScanning] = useState(false);
-  const [fixing, setFixing] = useState(false);
   const [hasRun, setHasRun] = useState(false);
+
+  const continuityCheck = useContinuityCheck(bookId);
+  const autoFix = useAutoFixPrompts(bookId);
 
   const fixableCount = issues.filter((i) => i.autoFixable).length;
   const allResolved = hasRun && issues.length === 0;
 
   const runCheck = async () => {
-    setScanning(true);
-    // TODO: call API  POST /api/v1/specialty/childrens-books/{bookId}/continuity-check
-    await new Promise((r) => setTimeout(r, 1800));
-
-    // Simulated results for UI demonstration
-    const mockIssues: ContinuityIssue[] = [
-      {
-        id: "1",
-        page: 4,
-        issueType: "missing_clothing",
-        description:
-          "Character 'Luna' prompt on page 4 does not mention red collar with gold bell.",
-        severity: "warning",
-        autoFixable: true,
-      },
-      {
-        id: "2",
-        page: 7,
-        issueType: "scale_mismatch",
-        description:
-          "Luna described as same height as rabbit on page 7, but scale rule says twice the size.",
-        severity: "critical",
-        autoFixable: true,
-      },
-      {
-        id: "3",
-        page: 12,
-        issueType: "location_inconsistency",
-        description:
-          "Garden gate described as green on page 12, but setting rule specifies blue gate.",
-        severity: "warning",
-        autoFixable: true,
-      },
-      {
-        id: "4",
-        page: 15,
-        issueType: "time_of_day_mismatch",
-        description:
-          "Page 15 prompt says 'bright midday sun' but time-of-day rules specify sunset for pages 13-16.",
-        severity: "warning",
-        autoFixable: true,
-      },
-      {
-        id: "5",
-        page: 9,
-        issueType: "style_drift",
-        description:
-          "Generated image on page 9 shows significant style deviation from watercolor baseline.",
-        severity: "info",
-        autoFixable: false,
-      },
-    ];
-
-    setIssues(mockIssues);
+    const result = await continuityCheck.mutateAsync();
+    setIssues(result);
     setHasRun(true);
-    setScanning(false);
   };
 
   const autoFixAll = async () => {
-    setFixing(true);
-    // TODO: call API  POST /api/v1/specialty/childrens-books/{bookId}/auto-fix-prompts
-    await new Promise((r) => setTimeout(r, 2000));
-    setIssues((prev) => prev.filter((i) => !i.autoFixable));
-    setFixing(false);
+    const result = await autoFix.mutateAsync();
+    setIssues(result.remaining_issues);
   };
 
   return (
@@ -154,29 +92,44 @@ export function ContinuityQA() {
               <Button
                 variant="outline"
                 onClick={autoFixAll}
-                disabled={fixing}
+                disabled={autoFix.isPending}
               >
-                {fixing ? (
+                {autoFix.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Wand2 className="mr-2 h-4 w-4" />
                 )}
-                {fixing
+                {autoFix.isPending
                   ? "Fixing..."
                   : `Auto-Fix All (${fixableCount})`}
               </Button>
             )}
 
-            <Button onClick={runCheck} disabled={scanning}>
-              {scanning ? (
+            <Button onClick={runCheck} disabled={continuityCheck.isPending}>
+              {continuityCheck.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <PlayCircle className="mr-2 h-4 w-4" />
               )}
-              {scanning ? "Scanning..." : "Run Continuity Check"}
+              {continuityCheck.isPending ? "Scanning..." : "Run Continuity Check"}
             </Button>
           </div>
         </div>
+
+        {/* Error states */}
+        {continuityCheck.isError && (
+          <div className="flex items-center gap-2 text-destructive text-sm p-3 bg-destructive/10 rounded-md">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <p>Failed to run continuity check. Please try again.</p>
+          </div>
+        )}
+
+        {autoFix.isError && (
+          <div className="flex items-center gap-2 text-destructive text-sm p-3 bg-destructive/10 rounded-md">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <p>Auto-fix failed. Please try again.</p>
+          </div>
+        )}
 
         {/* All-clear state */}
         {allResolved && (
@@ -236,7 +189,7 @@ export function ContinuityQA() {
         )}
 
         {/* Not-yet-run state */}
-        {!hasRun && !scanning && (
+        {!hasRun && !continuityCheck.isPending && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <AlertTriangle className="h-12 w-12 mb-3 opacity-40" />
             <p className="text-sm">

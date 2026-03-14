@@ -18,6 +18,7 @@ import {
   Link2,
   CheckCircle2,
   AlertTriangle,
+  MessageSquareWarning,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import {
   type PuzzleType,
   type Puzzle,
 } from "@/modules/specialty/puzzles/hooks";
+import { ReviewFeedbackPanel } from "@/modules/specialty/shared/components/ReviewFeedbackPanel";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -193,7 +195,7 @@ export default function PuzzleBookEditorPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="puzzles">Puzzles</TabsTrigger>
           <TabsTrigger value="word-lists">Word Lists</TabsTrigger>
           <TabsTrigger value="clues">Clues</TabsTrigger>
@@ -201,6 +203,10 @@ export default function PuzzleBookEditorPage() {
           <TabsTrigger value="answer-keys">Answer Keys</TabsTrigger>
           <TabsTrigger value="quality">Quality</TabsTrigger>
           <TabsTrigger value="export">Export</TabsTrigger>
+          <TabsTrigger value="reviews" className="gap-1.5">
+            <MessageSquareWarning className="h-3.5 w-3.5" />
+            Reviews
+          </TabsTrigger>
         </TabsList>
 
         {/* ─── Puzzles Tab ──────────────────────────────────────────── */}
@@ -765,6 +771,11 @@ export default function PuzzleBookEditorPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ─── Reviews Tab ──────────────────────────────────────────── */}
+        <TabsContent value="reviews" className="space-y-4 mt-4">
+          <ReviewFeedbackPanel bookType="puzzle-books" bookId={bookId} />
         </TabsContent>
       </Tabs>
     </div>

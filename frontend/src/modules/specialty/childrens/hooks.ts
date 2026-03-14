@@ -122,6 +122,33 @@ export interface PaginatedResponse<T> {
 }
 
 // ---------------------------------------------------------------------------
+// Continuity QA Types
+// ---------------------------------------------------------------------------
+
+export type ContinuityIssueType =
+  | "missing_clothing"
+  | "scale_mismatch"
+  | "location_inconsistency"
+  | "time_of_day_mismatch"
+  | "style_drift";
+
+export type ContinuitySeverity = "critical" | "warning" | "info";
+
+export interface ContinuityIssue {
+  id: string;
+  page: number;
+  issueType: ContinuityIssueType;
+  description: string;
+  severity: ContinuitySeverity;
+  autoFixable: boolean;
+}
+
+export interface AutoFixResult {
+  fixed_count: number;
+  remaining_issues: ContinuityIssue[];
+}
+
+// ---------------------------------------------------------------------------
 // Query Keys
 // ---------------------------------------------------------------------------
 
@@ -136,6 +163,8 @@ export const childrensBookKeys = {
     [...childrensBookKeys.all, "pages", bookId] as const,
   characters: (bookId: string) =>
     [...childrensBookKeys.all, "characters", bookId] as const,
+  continuity: (bookId: string) =>
+    [...childrensBookKeys.all, "continuity", bookId] as const,
   stats: () => [...childrensBookKeys.all, "stats"] as const,
 };
 
@@ -256,6 +285,104 @@ export function useBookPages(bookId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Illustration Actions
+// ---------------------------------------------------------------------------
+
+export interface GenerateIllustrationPayload {
+  prompt: string;
+}
+
+export interface GenerateIllustrationResponse {
+  illustration_url: string;
+}
+
+export interface UploadImageResponse {
+  illustration_url: string;
+}
+
+export interface GenerateVariationsResponse {
+  variation_urls: string[];
+}
+
+export function useGenerateIllustration(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<
+    GenerateIllustrationResponse,
+    Error,
+    { pageId: string; prompt: string }
+  >({
+    mutationFn: async ({ pageId, prompt }) => {
+      const { data } = await api.post(
+        `${API_BASE}/${bookId}/pages/${pageId}/generate-illustration`,
+        { prompt },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.pages(bookId),
+      });
+      toast.success("Illustration generated successfully");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useUploadImage(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<UploadImageResponse, Error, { pageId: string; file: File }>(
+    {
+      mutationFn: async ({ pageId, file }) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const { data } = await api.post(
+          `${API_BASE}/${bookId}/pages/${pageId}/upload-image`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } },
+        );
+        return data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: childrensBookKeys.pages(bookId),
+        });
+        toast.success("Image uploaded successfully");
+      },
+      onError: (error) => {
+        toast.error(extractApiError(error));
+      },
+    },
+  );
+}
+
+export function useGenerateVariations(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<
+    GenerateVariationsResponse,
+    Error,
+    { pageId: string }
+  >({
+    mutationFn: async ({ pageId }) => {
+      const { data } = await api.post(
+        `${API_BASE}/${bookId}/pages/${pageId}/generate-variations`,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.pages(bookId),
+      });
+      toast.success("Variations generated successfully");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Characters
 // ---------------------------------------------------------------------------
 
@@ -267,5 +394,278 @@ export function useBookCharacters(bookId: string) {
       return data;
     },
     enabled: !!bookId,
+  });
+}
+
+export interface CreateCharacterPayload {
+  name: string;
+  species?: string;
+  description: string;
+  auto_append: boolean;
+  clothing_rules?: Record<string, unknown>;
+  scale_rules?: Record<string, unknown>;
+}
+
+export interface UpdateCharacterPayload
+  extends Partial<CreateCharacterPayload> {}
+
+export function useCreateCharacter(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<ChildrensBookCharacter, Error, CreateCharacterPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post(
+        `${API_BASE}/${bookId}/characters`,
+        payload,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.characters(bookId),
+      });
+      toast.success("Character created");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useUpdateCharacter(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<
+    ChildrensBookCharacter,
+    Error,
+    { characterId: string; payload: UpdateCharacterPayload }
+  >({
+    mutationFn: async ({ characterId, payload }) => {
+      const { data } = await api.patch(
+        `${API_BASE}/${bookId}/characters/${characterId}`,
+        payload,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.characters(bookId),
+      });
+      toast.success("Character updated");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useDeleteCharacter(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (characterId) => {
+      await api.delete(`${API_BASE}/${bookId}/characters/${characterId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.characters(bookId),
+      });
+      toast.success("Character deleted");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export interface GenerateReferencesResponse {
+  reference_images: string[];
+}
+
+export function useGenerateReferences(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<
+    GenerateReferencesResponse,
+    Error,
+    { characterId: string; view: string }
+  >({
+    mutationFn: async ({ characterId, view }) => {
+      const { data } = await api.post(
+        `${API_BASE}/${bookId}/characters/${characterId}/generate-references`,
+        { view },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.characters(bookId),
+      });
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Continuity QA
+// ---------------------------------------------------------------------------
+
+export function useContinuityCheck(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<ContinuityIssue[], Error>({
+    mutationFn: async () => {
+      const { data } = await api.post(
+        `${API_BASE}/${bookId}/continuity-check`,
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(childrensBookKeys.continuity(bookId), data);
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+export function useAutoFixPrompts(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<AutoFixResult, Error>({
+    mutationFn: async () => {
+      const { data } = await api.post(
+        `${API_BASE}/${bookId}/auto-fix-prompts`,
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.continuity(bookId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.pages(bookId),
+      });
+      toast.success("Auto-fix applied successfully");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Safety Check
+// ---------------------------------------------------------------------------
+
+export interface TrademarkHit {
+  id: string;
+  page: number;
+  term: string;
+  context: string;
+}
+
+export type Severity = "critical" | "warning" | "info";
+
+export type SensitivityCategory =
+  | "violence"
+  | "fear"
+  | "stereotypes"
+  | "mature_themes";
+
+export interface SensitivityIssue {
+  id: string;
+  page: number;
+  category: SensitivityCategory;
+  description: string;
+  severity: Severity;
+}
+
+export interface SafetyCheckResponse {
+  trademark_hits: TrademarkHit[];
+  sensitivity_issues: SensitivityIssue[];
+}
+
+export function useSafetyCheck(bookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<SafetyCheckResponse, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.post(`${API_BASE}/${bookId}/safety-check`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: childrensBookKeys.detail(bookId),
+      });
+      toast.success("Safety scan complete");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Provenance
+// ---------------------------------------------------------------------------
+
+export interface PageProvenance {
+  page: number;
+  model: string;
+  promptHash: string;
+  seed: string;
+  generatedDate: string;
+  status: "verified" | "pending" | "missing";
+}
+
+export interface FontLicenseEntry {
+  fontName: string;
+  licenseType: string;
+  commercialPrintSafe: boolean;
+}
+
+export interface ProvenanceResponse {
+  pages: PageProvenance[];
+  fonts: FontLicenseEntry[];
+}
+
+const PROVENANCE_API_BASE = "/api/v1/specialty";
+
+export const provenanceKeys = {
+  detail: (bookType: string, bookId: string) =>
+    ["provenance", bookType, bookId] as const,
+};
+
+export function useProvenance(bookType: string, bookId: string) {
+  return useQuery<ProvenanceResponse>({
+    queryKey: provenanceKeys.detail(bookType, bookId),
+    queryFn: async () => {
+      const { data } = await api.get(
+        `${PROVENANCE_API_BASE}/${bookType}/${bookId}/provenance`,
+      );
+      return data;
+    },
+    enabled: !!bookType && !!bookId,
+  });
+}
+
+export function useExportProvenance(bookType: string, bookId: string) {
+  return useMutation<Blob, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.post(
+        `${PROVENANCE_API_BASE}/${bookType}/${bookId}/provenance/export`,
+        {},
+        { responseType: "blob" },
+      );
+      return data;
+    },
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `provenance-report-${bookId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Compliance report exported");
+    },
+    onError: (error) => {
+      toast.error(extractApiError(error));
+    },
   });
 }

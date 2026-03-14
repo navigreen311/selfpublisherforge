@@ -40,6 +40,7 @@ import {
   Info,
   Sparkles,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { LayoutSelector, type LayoutType } from "./LayoutSelector";
 
@@ -110,6 +111,11 @@ interface PagePropertiesProps {
   onUploadImage: () => void;
   onRegenerate: () => void;
   onGenerateVariations: () => void;
+  /** Loading states for illustration action buttons */
+  isGenerating?: boolean;
+  isUploading?: boolean;
+  isRegenerating?: boolean;
+  isGeneratingVariations?: boolean;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -127,6 +133,10 @@ export function PageProperties({
   onUploadImage,
   onRegenerate,
   onGenerateVariations,
+  isGenerating = false,
+  isUploading = false,
+  isRegenerating = false,
+  isGeneratingVariations = false,
 }: PagePropertiesProps) {
   const minFontSize = MIN_FONT_SIZES[ageRange];
 
@@ -494,36 +504,56 @@ export function PageProperties({
                     size="sm"
                     className="h-8 gap-1 text-xs"
                     onClick={onGenerateIllustration}
+                    disabled={isGenerating}
                   >
-                    <Wand2 className="h-3 w-3" />
-                    Generate
+                    {isGenerating ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Wand2 className="h-3 w-3" />
+                    )}
+                    {isGenerating ? "Generating..." : "Generate"}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     className="h-8 gap-1 text-xs"
                     onClick={onUploadImage}
+                    disabled={isUploading}
                   >
-                    <Upload className="h-3 w-3" />
-                    Upload
+                    {isUploading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Upload className="h-3 w-3" />
+                    )}
+                    {isUploading ? "Uploading..." : "Upload"}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     className="h-8 gap-1 text-xs"
                     onClick={onRegenerate}
+                    disabled={isRegenerating}
                   >
-                    <RefreshCw className="h-3 w-3" />
-                    Regenerate
+                    {isRegenerating ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    {isRegenerating ? "Regenerating..." : "Regenerate"}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     className="h-8 gap-1 text-xs"
                     onClick={onGenerateVariations}
+                    disabled={isGeneratingVariations}
                   >
-                    <Grid2X2 className="h-3 w-3" />
-                    4 Variations
+                    {isGeneratingVariations ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Grid2X2 className="h-3 w-3" />
+                    )}
+                    {isGeneratingVariations ? "Generating..." : "4 Variations"}
                   </Button>
                 </div>
 

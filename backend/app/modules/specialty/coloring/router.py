@@ -1,6 +1,7 @@
 """FastAPI router for the Coloring Book Creator.
 
-Endpoints (16 total):
+Endpoints (18 total):
+    GET        /api/v1/specialty/coloring-books/simulation/palettes -- List palettes
     GET/POST   /api/v1/specialty/coloring-books               -- List / Create books
     GET        /api/v1/specialty/coloring-books/{id}           -- Read book
     PATCH      /api/v1/specialty/coloring-books/{id}           -- Update book
@@ -12,6 +13,7 @@ Endpoints (16 total):
     POST       .../{id}/pages/{page_id}/vectorize              -- Convert to SVG
     POST       .../{id}/pages/{page_id}/quality-check          -- Per-page QA
     POST       .../{id}/pages/{page_id}/coloring-simulation    -- Preview colored-in
+    POST       .../{id}/pages/{page_id}/detect-regions         -- Detect colorable regions
     POST       .../{id}/batch-generate                         -- Batch generate (async)
     GET        .../{id}/batch-generate/{job_id}/status          -- Poll batch progress
     POST       .../{id}/quality-check                          -- Book-level QA dashboard
@@ -34,6 +36,26 @@ from app.database import get_db
 from app.modules.specialty.coloring import service
 
 router = APIRouter(prefix="/specialty/coloring-books", tags=["coloring-books"])
+
+
+# ---------------------------------------------------------------------------
+# Simulation Palettes (must be defined before /{book_id} routes)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/simulation/palettes",
+    response_model=SuccessResponse[list],
+    summary="List simulation color palettes",
+    description="Return all predefined color palettes available for coloring simulation.",
+)
+async def list_simulation_palettes(
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.specialty.coloring.simulation import get_color_palettes
+
+    palettes = get_color_palettes()
+    return SuccessResponse(data=palettes)
 
 
 # ---------------------------------------------------------------------------
@@ -266,8 +288,49 @@ async def coloring_simulation(
         book_id,
         page_id,
         medium=body.get("medium", "marker"),
+        palette=body.get("palette"),
     )
     return SuccessResponse(data=result)
+
+
+@router.post(
+    "/{book_id}/pages/{page_id}/detect-regions",
+    response_model=SuccessResponse[list],
+    summary="Detect colorable regions",
+    description="Detect enclosed colorable regions in a page's line art for coloring simulation.",
+)
+async def detect_page_regions(
+    book_id: UUID,
+    page_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    from app.modules.specialty.coloring.simulation import detect_regions
+
+    # Verify ownership and page existence
+    await service.get_coloring_book(db, current_user["org_id"], book_id)
+    from app.modules.specialty.models.coloring import ColoringBookPage
+    from sqlalchemy import select as sa_select
+
+    stmt = sa_select(ColoringBookPage).where(
+        ColoringBookPage.id == page_id,
+        ColoringBookPage.book_id == book_id,
+    )
+    result = await db.execute(stmt)
+    page = result.scalar_one_or_none()
+    if page is None:
+        from app.core.exceptions import AppException
+
+        raise AppException(
+            status_code=404,
+            code="PAGE_NOT_FOUND",
+            message=f"Page {page_id} not found in book {book_id}",
+        )
+
+    # Fetch image data for region detection
+    image_data = b""  # In production: fetch from storage
+    regions = detect_regions(image_data)
+    return SuccessResponse(data=regions)
 
 
 # ---------------------------------------------------------------------------

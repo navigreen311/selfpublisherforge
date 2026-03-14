@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { PageThumbnailStrip, type PageData } from "./PageThumbnailStrip";
 import { SpreadView, type ZoomLevel } from "./SpreadView";
 import {
@@ -12,6 +13,11 @@ import {
   type ReadabilityInfo,
 } from "./PageProperties";
 import type { LayoutType } from "./LayoutSelector";
+import {
+  useGenerateIllustration,
+  useUploadImage,
+  useGenerateVariations,
+} from "../hooks";
 
 // ─── Helper: generate a default page ────────────────────────────────────────
 
@@ -32,6 +38,8 @@ function generateInitialPages(count: number): PageData[] {
 // ─── SpreadEditor Props ─────────────────────────────────────────────────────
 
 interface SpreadEditorProps {
+  /** The book ID for API calls */
+  bookId: string;
   /** Book's age range — drives minimum font size enforcement */
   ageRange?: AgeRange;
   /** Initial page count (default 32 for picture books) */
@@ -45,6 +53,7 @@ interface SpreadEditorProps {
 // ─── SpreadEditor Component ─────────────────────────────────────────────────
 
 export function SpreadEditor({
+  bookId,
   ageRange = "picture",
   initialPageCount = 32,
   onPagesChange,
@@ -210,26 +219,106 @@ export function SpreadEditor({
     [selectedPage]
   );
 
-  // Illustration action stubs (would call API in production)
+  // ── Illustration mutations ───────────────────────────────────────────────
+  const generateIllustration = useGenerateIllustration(bookId);
+  const uploadImage = useUploadImage(bookId);
+  const generateVariations = useGenerateVariations(bookId);
+
+  // Hidden file input for upload
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // ── Variation URLs state ────────────────────────────────────────────────
+  const [variationUrls, setVariationUrls] = React.useState<
+    Record<string, string[]>
+  >({});
+
+  // Track whether the current generate call is a "regenerate" action
+  const [isRegenerateAction, setIsRegenerateAction] = React.useState(false);
+
+  // Helper to update a page's illustration URL in local state
+  const updatePageIllustrationUrl = React.useCallback(
+    (pageId: string, url: string) => {
+      const newPages = pages.map((p) =>
+        p.id === pageId ? { ...p, illustrationUrl: url } : p,
+      );
+      updatePages(newPages);
+    },
+    [pages, updatePages],
+  );
+
   const handleGenerateIllustration = React.useCallback(() => {
-    // TODO: Call /api/v1/specialty/childrens-books/{id}/pages/{page_id}/generate-illustration
-    console.log("Generate illustration for page", selectedPage?.pageNumber);
-  }, [selectedPage]);
+    if (!selectedPage) return;
+    const prompt = currentIllustrationProps.prompt;
+    if (!prompt.trim()) {
+      toast.error("Please enter an illustration prompt first");
+      return;
+    }
+    setIsRegenerateAction(false);
+    generateIllustration.mutate(
+      { pageId: selectedPage.id, prompt },
+      {
+        onSuccess: (data) => {
+          updatePageIllustrationUrl(selectedPage.id, data.illustration_url);
+        },
+      },
+    );
+  }, [selectedPage, currentIllustrationProps.prompt, generateIllustration, updatePageIllustrationUrl]);
 
   const handleUploadImage = React.useCallback(() => {
-    // TODO: Open file picker and call upload endpoint
-    console.log("Upload image for page", selectedPage?.pageNumber);
+    if (!selectedPage) return;
+    fileInputRef.current?.click();
   }, [selectedPage]);
+
+  const handleFileChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !selectedPage) return;
+      uploadImage.mutate(
+        { pageId: selectedPage.id, file },
+        {
+          onSuccess: (data) => {
+            updatePageIllustrationUrl(selectedPage.id, data.illustration_url);
+          },
+        },
+      );
+      // Reset the input so the same file can be re-selected
+      e.target.value = "";
+    },
+    [selectedPage, uploadImage, updatePageIllustrationUrl],
+  );
 
   const handleRegenerate = React.useCallback(() => {
-    // TODO: Call generate-illustration with same prompt
-    console.log("Regenerate illustration for page", selectedPage?.pageNumber);
-  }, [selectedPage]);
+    if (!selectedPage) return;
+    const prompt = currentIllustrationProps.prompt;
+    if (!prompt.trim()) {
+      toast.error("Please enter an illustration prompt first");
+      return;
+    }
+    setIsRegenerateAction(true);
+    generateIllustration.mutate(
+      { pageId: selectedPage.id, prompt },
+      {
+        onSuccess: (data) => {
+          updatePageIllustrationUrl(selectedPage.id, data.illustration_url);
+        },
+      },
+    );
+  }, [selectedPage, currentIllustrationProps.prompt, generateIllustration, updatePageIllustrationUrl]);
 
   const handleGenerateVariations = React.useCallback(() => {
-    // TODO: Call /api/v1/specialty/childrens-books/{id}/pages/{page_id}/generate-variations
-    console.log("Generate 4 variations for page", selectedPage?.pageNumber);
-  }, [selectedPage]);
+    if (!selectedPage) return;
+    generateVariations.mutate(
+      { pageId: selectedPage.id },
+      {
+        onSuccess: (data) => {
+          setVariationUrls((prev) => ({
+            ...prev,
+            [selectedPage.id]: data.variation_urls,
+          }));
+        },
+      },
+    );
+  }, [selectedPage, generateVariations]);
 
   const handleGuidesToggle = React.useCallback(() => {
     setGuidesVisible((prev) => !prev);
@@ -340,7 +429,67 @@ export function SpreadEditor({
         onUploadImage={handleUploadImage}
         onRegenerate={handleRegenerate}
         onGenerateVariations={handleGenerateVariations}
+        isGenerating={generateIllustration.isPending && !isRegenerateAction}
+        isUploading={uploadImage.isPending}
+        isRegenerating={generateIllustration.isPending && isRegenerateAction}
+        isGeneratingVariations={generateVariations.isPending}
       />
+
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* Variation thumbnails overlay */}
+      {selectedPage && variationUrls[selectedPage.id]?.length ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold">
+              Illustration Variations
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {variationUrls[selectedPage.id].map((url, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="overflow-hidden rounded-md border-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                  onClick={() => {
+                    updatePageIllustrationUrl(selectedPage.id, url);
+                    setVariationUrls((prev) => {
+                      const next = { ...prev };
+                      delete next[selectedPage.id];
+                      return next;
+                    });
+                  }}
+                >
+                  <img
+                    src={url}
+                    alt={`Variation ${i + 1}`}
+                    className="h-40 w-40 object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="mt-4 text-sm text-gray-500 hover:text-gray-700"
+              onClick={() =>
+                setVariationUrls((prev) => {
+                  const next = { ...prev };
+                  delete next[selectedPage!.id];
+                  return next;
+                })
+              }
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,15 +1,15 @@
 """Add specialty books module tables (children's, coloring, puzzle + shared).
 
-Revision ID: specialty_001
-Revises: None (standalone)
+Revision ID: 019
+Revises: 018
 """
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-revision = "specialty_001"
-down_revision = None
-branch_labels = ("specialty",)
+revision = "019"
+down_revision = "018"
+branch_labels = None
 depends_on = None
 
 

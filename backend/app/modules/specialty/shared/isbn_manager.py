@@ -8,7 +8,6 @@ Blueprint refs: 12.4
 from __future__ import annotations
 
 import base64
-import io
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -81,34 +80,187 @@ def _validate_isbn13(isbn: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def generate_barcode(isbn: str) -> str:
-    """Generate an EAN-13 barcode image for *isbn*.
+    """Generate an EAN-13 barcode SVG for *isbn*.
 
-    Returns base64-encoded PNG data.  Uses ``python-barcode`` when
-    available, otherwise returns a placeholder.
+    Returns base64-encoded SVG data.  Implemented in pure Python with no
+    external dependencies.  The barcode follows the EAN-13 specification
+    with proper L/G/R encoding, guard patterns, and human-readable digits.
     """
     clean_isbn = isbn.replace("-", "").replace(" ", "")
 
-    try:
-        import barcode as barcode_lib  # type: ignore[import-untyped]
-        from barcode.writer import ImageWriter  # type: ignore[import-untyped]
+    if len(clean_isbn) != 13 or not clean_isbn.isdigit():
+        raise ValueError(f"EAN-13 barcode requires exactly 13 digits, got: {clean_isbn!r}")
 
-        ean = barcode_lib.get_barcode_class("ean13")
-        code = ean(clean_isbn, writer=ImageWriter())
+    svg = _render_ean13_svg(clean_isbn)
+    return base64.b64encode(svg.encode("utf-8")).decode("ascii")
 
-        buf = io.BytesIO()
-        code.write(buf)
-        buf.seek(0)
-        return base64.b64encode(buf.read()).decode("ascii")
-    except (ImportError, Exception):
-        # Fallback placeholder
-        placeholder_svg = (
-            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">'
-            '<rect width="200" height="100" fill="#fff" stroke="#000"/>'
-            f'<text x="100" y="55" text-anchor="middle" font-size="12">{clean_isbn}</text>'
-            '<text x="100" y="75" text-anchor="middle" font-size="9" fill="#888">EAN-13</text>'
-            "</svg>"
-        )
-        return base64.b64encode(placeholder_svg.encode()).decode("ascii")
+
+# EAN-13 encoding tables -----------------------------------------------
+
+# L-codes (odd parity, left half)
+_L_CODES: list[str] = [
+    "0001101",  # 0
+    "0011001",  # 1
+    "0010011",  # 2
+    "0111101",  # 3
+    "0100011",  # 4
+    "0110001",  # 5
+    "0101111",  # 6
+    "0111011",  # 7
+    "0110111",  # 8
+    "0001011",  # 9
+]
+
+# G-codes (even parity, left half)
+_G_CODES: list[str] = [
+    "0100111",  # 0
+    "0110011",  # 1
+    "0011011",  # 2
+    "0100001",  # 3
+    "0011101",  # 4
+    "0111001",  # 5
+    "0000101",  # 6
+    "0010001",  # 7
+    "0001001",  # 8
+    "0010111",  # 9
+]
+
+# R-codes (right half — complement of L-codes)
+_R_CODES: list[str] = [
+    "1110010",  # 0
+    "1100110",  # 1
+    "1101100",  # 2
+    "1000010",  # 3
+    "1011100",  # 4
+    "1001110",  # 5
+    "1010000",  # 6
+    "1000100",  # 7
+    "1001000",  # 8
+    "1110100",  # 9
+]
+
+# First-digit parity patterns (which of L/G to use for digits 2-7)
+# L = 0, G = 1
+_FIRST_DIGIT_PATTERNS: list[str] = [
+    "LLLLLL",  # 0
+    "LLGLGG",  # 1
+    "LLGGLG",  # 2
+    "LLGGGL",  # 3
+    "LGLLGG",  # 4
+    "LGGLLG",  # 5
+    "LGGGLL",  # 6
+    "LGLGLG",  # 7
+    "LGLGGL",  # 8
+    "LGGLGL",  # 9
+]
+
+
+def _ean13_binary(digits: str) -> str:
+    """Convert 13-digit string to the full EAN-13 binary bar pattern.
+
+    Returns a string of '0' (space) and '1' (bar) characters.
+    """
+    first_digit = int(digits[0])
+    parity = _FIRST_DIGIT_PATTERNS[first_digit]
+
+    bars: list[str] = []
+
+    # Start guard: 101
+    bars.append("101")
+
+    # Left half: digits[1..6] encoded with L or G per parity pattern
+    for i in range(6):
+        d = int(digits[1 + i])
+        if parity[i] == "L":
+            bars.append(_L_CODES[d])
+        else:
+            bars.append(_G_CODES[d])
+
+    # Centre guard: 01010
+    bars.append("01010")
+
+    # Right half: digits[7..12] encoded with R-codes
+    for i in range(6):
+        d = int(digits[7 + i])
+        bars.append(_R_CODES[d])
+
+    # End guard: 101
+    bars.append("101")
+
+    return "".join(bars)
+
+
+def _render_ean13_svg(digits: str) -> str:
+    """Render a complete EAN-13 barcode as an SVG string."""
+    binary = _ean13_binary(digits)
+
+    module_w = 2          # width of narrowest bar in SVG units
+    bar_h = 70            # normal bar height
+    guard_extra = 5       # extra height for guard bars
+    font_size = 12
+    text_y = bar_h + guard_extra + font_size + 2
+    quiet_zone = 10 * module_w  # quiet zone width (≥ 9 modules recommended)
+
+    total_modules = len(binary)  # 95 modules for EAN-13
+    svg_w = total_modules * module_w + 2 * quiet_zone
+    svg_h = text_y + 4
+
+    # Identify guard bar positions (start: 0-2, centre: 45-49, end: 92-94)
+    guard_positions: set[int] = set()
+    for p in range(3):
+        guard_positions.add(p)        # start guard
+    for p in range(45, 50):
+        guard_positions.add(p)        # centre guard
+    for p in range(92, 95):
+        guard_positions.add(p)        # end guard
+
+    # Build bar rectangles
+    rects: list[str] = []
+    for i, ch in enumerate(binary):
+        if ch == "1":
+            x = quiet_zone + i * module_w
+            h = bar_h + guard_extra if i in guard_positions else bar_h
+            rects.append(
+                f'<rect x="{x}" y="0" width="{module_w}" height="{h}" fill="#000"/>'
+            )
+
+    # Human-readable digits -------------------------------------------------
+    texts: list[str] = []
+
+    # First digit (to the left of the start guard)
+    texts.append(
+        f'<text x="{quiet_zone - 4}" y="{text_y}" '
+        f'font-family="monospace" font-size="{font_size}" text-anchor="end">'
+        f"{digits[0]}</text>"
+    )
+
+    # Left group (digits 1-6), centred under left bars (modules 3-44)
+    left_centre = quiet_zone + (3 + 42) * module_w // 2
+    left_text = digits[1:7]
+    texts.append(
+        f'<text x="{left_centre}" y="{text_y}" '
+        f'font-family="monospace" font-size="{font_size}" text-anchor="middle" '
+        f'letter-spacing="2">{left_text}</text>'
+    )
+
+    # Right group (digits 7-12), centred under right bars (modules 50-91)
+    right_centre = quiet_zone + (50 + 91) * module_w // 2
+    right_text = digits[7:13]
+    texts.append(
+        f'<text x="{right_centre}" y="{text_y}" '
+        f'font-family="monospace" font-size="{font_size}" text-anchor="middle" '
+        f'letter-spacing="2">{right_text}</text>'
+    )
+
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">'
+        f'<rect width="{svg_w}" height="{svg_h}" fill="#fff"/>'
+        + "".join(rects)
+        + "".join(texts)
+        + "</svg>"
+    )
+    return svg
 
 
 # ---------------------------------------------------------------------------

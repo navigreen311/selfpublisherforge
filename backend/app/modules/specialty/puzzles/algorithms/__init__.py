@@ -21,6 +21,11 @@ from .word_search import (
     generate_word_search,
     render_to_svg as render_word_search_svg,
 )
+from .word_connect import (
+    calculate_difficulty as word_connect_difficulty,
+    generate_word_connect,
+    render_to_svg as render_word_connect_svg,
+)
 
 __all__ = [
     # Word Search
@@ -35,4 +40,8 @@ __all__ = [
     "generate_maze",
     "maze_difficulty",
     "render_maze_svg",
+    # Word Connect
+    "generate_word_connect",
+    "word_connect_difficulty",
+    "render_word_connect_svg",
 ]

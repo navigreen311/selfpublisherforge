@@ -54,12 +54,23 @@ class QualityReport:
 
 
 @dataclass
+class StepResult:
+    """Result of a single pipeline step."""
+
+    step_name: str
+    success: bool
+    issues: list[QualityIssue] = field(default_factory=list)
+    error: str | None = None
+
+
+@dataclass
 class PipelineResult:
     """Return value of run_full_pipeline."""
 
     image_data: bytes
     report: QualityReport
     steps_completed: list[str] = field(default_factory=list)
+    step_results: list[StepResult] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -648,6 +659,11 @@ async def run_full_pipeline(image_data: bytes) -> PipelineResult:
     Step 1 (generation) is NOT called here -- the caller passes in already-
     generated image data.
 
+    Each step is wrapped in error handling so that a failure in one step is
+    recorded but does not prevent subsequent steps from running.  The final
+    ``PipelineResult`` includes per-step success/failure information in
+    ``step_results``.
+
     Parameters
     ----------
     image_data:
@@ -656,40 +672,76 @@ async def run_full_pipeline(image_data: bytes) -> PipelineResult:
     Returns
     -------
     PipelineResult
-        Cleaned image bytes, quality report, and list of completed steps.
+        Cleaned image bytes, quality report, list of completed steps,
+        and per-step structured results.
     """
     steps_completed: list[str] = []
+    step_results: list[StepResult] = []
     all_issues: list[QualityIssue] = []
 
-    # Step 2: Auto-Clean (threshold binarization)
-    image_data, issues = await step_2_auto_clean(image_data)
-    all_issues.extend(issues)
-    steps_completed.append("auto_clean")
+    # Define processing steps (2-6) with uniform signature: bytes in -> (bytes, issues) out
+    processing_steps: list[tuple[str, Any]] = [
+        ("auto_clean", step_2_auto_clean),
+        ("stroke_uniformity", step_3_stroke_uniformity),
+        ("closed_shapes", step_4_closed_shapes),
+        ("speck_removal", step_5_speck_removal),
+        ("background_check", step_6_background_check),
+    ]
 
-    # Step 3: Stroke Uniformity
-    image_data, issues = await step_3_stroke_uniformity(image_data)
-    all_issues.extend(issues)
-    steps_completed.append("stroke_uniformity")
-
-    # Step 4: Closed Shapes (detection only)
-    image_data, issues = await step_4_closed_shapes(image_data)
-    all_issues.extend(issues)
-    steps_completed.append("closed_shapes")
-
-    # Step 5: Speck Removal
-    image_data, issues = await step_5_speck_removal(image_data)
-    all_issues.extend(issues)
-    steps_completed.append("speck_removal")
-
-    # Step 6: Background Check
-    image_data, issues = await step_6_background_check(image_data)
-    all_issues.extend(issues)
-    steps_completed.append("background_check")
+    for step_name, step_fn in processing_steps:
+        try:
+            image_data, issues = await step_fn(image_data)
+            all_issues.extend(issues)
+            steps_completed.append(step_name)
+            step_results.append(StepResult(
+                step_name=step_name,
+                success=True,
+                issues=list(issues),
+            ))
+        except Exception as exc:
+            error_msg = f"Step '{step_name}' failed: {exc}"
+            logger.error(error_msg, exc_info=True)
+            failure_issue = QualityIssue(
+                step=step_name,
+                severity=Severity.ERROR,
+                message=error_msg,
+            )
+            all_issues.append(failure_issue)
+            step_results.append(StepResult(
+                step_name=step_name,
+                success=False,
+                issues=[failure_issue],
+                error=str(exc),
+            ))
+            # Continue with the image data we have so far
 
     # Step 7: Quality Check (final verification)
-    report = await step_7_quality_check(image_data)
-    report.issues = all_issues + report.issues
-    steps_completed.append("quality_check")
+    try:
+        report = await step_7_quality_check(image_data)
+        report.issues = all_issues + report.issues
+        steps_completed.append("quality_check")
+        step_results.append(StepResult(
+            step_name="quality_check",
+            success=True,
+            issues=list(report.issues),
+        ))
+    except Exception as exc:
+        error_msg = f"Step 'quality_check' failed: {exc}"
+        logger.error(error_msg, exc_info=True)
+        failure_issue = QualityIssue(
+            step="quality_check",
+            severity=Severity.ERROR,
+            message=error_msg,
+        )
+        all_issues.append(failure_issue)
+        step_results.append(StepResult(
+            step_name="quality_check",
+            success=False,
+            issues=[failure_issue],
+            error=str(exc),
+        ))
+        # Build a fallback report since step 7 failed
+        report = QualityReport(score=0, issues=all_issues, passed=False)
 
     # Recalculate passed based on all issues
     has_errors = any(i.severity == Severity.ERROR for i in report.issues)
@@ -699,4 +751,5 @@ async def run_full_pipeline(image_data: bytes) -> PipelineResult:
         image_data=image_data,
         report=report,
         steps_completed=steps_completed,
+        step_results=step_results,
     )
