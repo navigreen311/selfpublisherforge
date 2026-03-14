@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowDownAZ,
   BookOpen,
   Clock,
   Globe,
@@ -28,6 +29,7 @@ export default function ChildrensBooksPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [ageFilter, setAgeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("recently-updated");
 
   const filters = {
     ...(search && { search }),
@@ -38,7 +40,28 @@ export default function ChildrensBooksPage() {
   const { data: stats } = useChildrensBookStats();
   const { data: booksData, isLoading } = useChildrensBooks(1, 50, filters);
 
-  const books = booksData?.items ?? [];
+  const books = useMemo(() => {
+    const items = [...(booksData?.items ?? [])];
+    switch (sortBy) {
+      case "title-az":
+        return items.sort((a, b) => a.title.localeCompare(b.title));
+      case "title-za":
+        return items.sort((a, b) => b.title.localeCompare(a.title));
+      case "date-created":
+        return items.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+      case "qa-score":
+        return items.sort((a, b) => (b.qa_score ?? 0) - (a.qa_score ?? 0));
+      case "recently-updated":
+      default:
+        return items.sort(
+          (a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        );
+    }
+  }, [booksData?.items, sortBy]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -136,6 +159,19 @@ export default function ChildrensBooksPage() {
             <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="in-progress">In Progress</SelectItem>
             <SelectItem value="published">Published</SelectItem>
+          </SelectContent>
+        </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[200px]">
+            <ArrowDownAZ className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Sort By" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recently-updated">Recently Updated</SelectItem>
+            <SelectItem value="title-az">Title A-Z</SelectItem>
+            <SelectItem value="title-za">Title Z-A</SelectItem>
+            <SelectItem value="date-created">Date Created</SelectItem>
+            <SelectItem value="qa-score">QA Score</SelectItem>
           </SelectContent>
         </Select>
         <Select value={ageFilter} onValueChange={setAgeFilter}>
