@@ -173,6 +173,21 @@ class BookType(str, enum.Enum):
     childrens = "childrens"
     coloring = "coloring"
     puzzle = "puzzle"
+    cookbook = "cookbook"
+
+
+class CookbookType(str, enum.Enum):
+    """Type of cookbook."""
+    general = "general"
+    baking = "baking"
+    vegetarian = "vegetarian"
+    vegan = "vegan"
+    keto = "keto"
+    paleo = "paleo"
+    gluten_free = "gluten_free"
+    family = "family"
+    quick_meals = "quick_meals"
+    international = "international"
 
 
 class AssetType(str, enum.Enum):
