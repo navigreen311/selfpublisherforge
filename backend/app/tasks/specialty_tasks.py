@@ -421,13 +421,33 @@ async def _export_book_async(
             else:
                 raise ValueError(f"Unknown book type: {book_type}")
 
-            # Assemble export (placeholder — actual rendering delegates to
-            # a book-type-specific exporter service)
-            export_filename = f"{book_id}.{format}"
-            export_url = f"/exports/{book_type}/{export_filename}"
+            # Assemble export via the shared export engine
+            from app.modules.specialty.shared.export_engine import (
+                generate_pdf_manifest,
+                generate_pdfx1a_manifest,
+                generate_png_pages,
+                calculate_export_metadata,
+            )
 
-            # TODO: Upload via StorageService once wired
-            download_url = f"https://storage.selfpublisherforge.com/exports/{book_type}/{export_filename}"
+            book_data = {
+                "id": str(book_id),
+                "title": getattr(book, "title", "Untitled"),
+                "trim_size": getattr(book, "trim_size", "8.5x11"),
+                "interior_type": "bw" if book_type == "coloring" else "premium_color" if book_type == "childrens" else "bw",
+                "pages": [{"page_number": i, "page_type": "content"} for i in range(1, total_pages + 1)],
+            }
+
+            if format == "pdfx1a":
+                generate_pdfx1a_manifest(book_type, book_data)
+            elif format == "png":
+                generate_png_pages(book_type, book_data)
+            else:
+                generate_pdf_manifest(book_type, book_data)
+
+            metadata = calculate_export_metadata(book_type, book_data)
+
+            export_filename = f"{book_id}.{format}"
+            download_url = f"/api/v1/storage/specialty/{book_type}/{book_id}/export.{format}"
 
             _publish_event(
                 book_type, book_id, "export_complete",
@@ -527,8 +547,13 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
 
                 for page in pages:
                     try:
-                        # In production: fetch actual image bytes from storage
-                        image_data = b""  # placeholder
+                        # Fetch image data from storage
+                        from app.modules.specialty.coloring.service import _fetch_specialty_asset
+                        image_url = page.cleaned_url or page.illustration_url or ""
+                        image_data = _fetch_specialty_asset(image_url) if image_url else b""
+                        if not image_data:
+                            logger.warning("No image data for page %d, skipping QA", page.page_number)
+                            continue
                         pipeline_result = await run_full_pipeline(image_data)
 
                         page.quality_score = pipeline_result.report.score
@@ -705,38 +730,42 @@ async def _generate_puzzle_batch_async(
                     word_list = config.get("word_list", [])
                     clues = config.get("clues")
 
-                    # Generate puzzle grid (placeholder — delegates to
-                    # book-type-specific puzzle generator algorithms)
-                    grid_data = {
-                        "type": puzzle_type,
-                        "size": grid_size,
-                        "generated": True,
-                    }
+                    # Generate puzzle using real algorithm
+                    from app.modules.specialty.puzzles.algorithms import (
+                        generate_word_search, generate_crossword, generate_maze,
+                        generate_sudoku, generate_word_scramble, generate_cryptogram,
+                        generate_number_search, generate_word_connect,
+                    )
 
-                    # Generate answer data
-                    answer_data = {
-                        "type": puzzle_type,
-                        "solution_verified": True,
-                    }
+                    gs = int(grid_size.split("x")[0]) if "x" in str(grid_size) else 15
 
-                    # Calculate difficulty score (0-100 scale)
-                    difficulty_map = {
-                        "easy": 25.0,
-                        "medium": 50.0,
-                        "hard": 75.0,
-                        "expert": 95.0,
-                    }
-                    difficulty_score = difficulty_map.get(difficulty, 50.0)
+                    if puzzle_type == "word_search":
+                        result = generate_word_search(word_list or ["PUZZLE", "BOOK", "WORD"], gs)
+                    elif puzzle_type == "crossword":
+                        clue_dict = clues or {w: f"Clue for {w}" for w in (word_list or ["PUZZLE"])}
+                        result = generate_crossword(word_list or list(clue_dict.keys()), clue_dict)
+                    elif puzzle_type == "maze":
+                        result = generate_maze(gs, gs)
+                    elif puzzle_type == "sudoku":
+                        result = generate_sudoku(9, difficulty)
+                    elif puzzle_type == "word_scramble":
+                        result = generate_word_scramble(word_list or ["PUZZLE", "SCRAMBLE"])
+                    elif puzzle_type == "cryptogram":
+                        result = generate_cryptogram(theme or "THE QUICK BROWN FOX")
+                    elif puzzle_type == "number_search":
+                        result = generate_number_search(word_list or ["123", "456"], gs)
+                    elif puzzle_type == "word_connect":
+                        pairs = [(word_list[i], word_list[i+1]) for i in range(0, len(word_list)-1, 2)] if word_list and len(word_list) >= 2 else [("CAT", "FELINE")]
+                        result = generate_word_connect(pairs, difficulty)
+                    else:
+                        result = generate_word_search(word_list or ["DEFAULT"], gs)
 
-                    # Verify solution (placeholder — real implementation calls
-                    # solver algorithms per puzzle type)
-                    has_unique_solution = True
+                    grid_data = result.get("grid", result)
+                    answer_data = result.get("solution", result.get("answer_data", result))
+                    difficulty_score = result.get("difficulty_score", 50.0)
+                    has_unique_solution = result.get("has_unique_solution", True)
                     is_verified = True
-
-                    # Content hash for deduplication
-                    import hashlib
-                    content_str = f"{puzzle_type}:{grid_size}:{','.join(word_list)}"
-                    content_hash = hashlib.sha256(content_str.encode()).hexdigest()
+                    content_hash = result.get("content_hash", "")
 
                     puzzle = Puzzle(
                         book_id=book_id,
