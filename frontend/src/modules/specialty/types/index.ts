@@ -8,3 +8,4 @@ export * from "./shared";
 export * from "./comic";
 export * from "./cookbook";
 export * from "./photo";
+export * from "./style-clone";
