@@ -33,6 +33,7 @@ import {
   Plus,
 } from "lucide-react";
 import type { PuzzleType } from "../hooks";
+import { useSanitizeWordList } from "../hooks";
 
 // ─── Wizard Data Type ─────────────────────────────────────────────────────────
 
@@ -210,6 +211,7 @@ const THEME_CATEGORIES = [
   "Space",
   "Ocean",
   "Technology",
+  "Travel",
 ];
 
 const SEASONAL_THEMES = [
@@ -682,6 +684,25 @@ export function Step2PuzzleSelection({ data, onChange }: StepProps) {
 // ─── Step 3: Themes & Words ───────────────────────────────────────────────────
 
 export function Step3ThemesWords({ data, onChange }: StepProps) {
+  const sanitize = useSanitizeWordList();
+
+  const handleSanitize = () => {
+    const words = data.custom_word_list
+      .split(/[,
+]+/)
+      .map((w) => w.trim())
+      .filter(Boolean);
+    if (words.length === 0) return;
+    sanitize.mutate(
+      { words },
+      {
+        onSuccess: (result) => {
+          onChange({ custom_word_list: result.clean_words.join(", ") });
+        },
+      }
+    );
+  };
+
   const addTheme = (theme: string) => {
     if (!data.themes.includes(theme)) {
       onChange({ themes: [...data.themes, theme] });
@@ -787,10 +808,21 @@ export function Step3ThemesWords({ data, onChange }: StepProps) {
             value={data.custom_word_list}
             onChange={(e) => onChange({ custom_word_list: e.target.value })}
           />
-          <p className="text-xs text-muted-foreground">
-            Words will be sanitized for offensive terms, trademarks, and
-            abbreviations
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground flex-1">
+              Words will be sanitized for offensive terms, trademarks, and
+              abbreviations
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!data.custom_word_list.trim() || sanitize.isPending}
+              onClick={handleSanitize}
+            >
+              {sanitize.isPending ? "Sanitizing�" : "Sanitize Words"}
+            </Button>
+          </div>
         </div>
       )}
 
