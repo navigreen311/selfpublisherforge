@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,20 +30,54 @@ export function FilterBar({
   sortValue,
   onSortChange,
 }: FilterBarProps) {
+  const [localSearch, setLocalSearch] = useState(searchValue);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onSearchChangeRef = useRef(onSearchChange);
+
+  // Keep callback ref current without triggering effects
+  onSearchChangeRef.current = onSearchChange;
+
+  // Sync external searchValue changes into local state
+  useEffect(() => {
+    setLocalSearch(searchValue);
+  }, [searchValue]);
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setLocalSearch(value);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      debounceRef.current = setTimeout(() => {
+        onSearchChangeRef.current(value);
+      }, 300);
+    },
+    []
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="flex flex-col sm:flex-row gap-3">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={searchPlaceholder}
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
+          value={localSearch}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-9"
         />
       </div>
       <Select value={statusValue} onValueChange={onStatusChange}>
         <SelectTrigger className="w-[160px]">
-          <SelectValue placeholder="Status" />
+          <SelectValue placeholder="All Statuses" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Statuses</SelectItem>

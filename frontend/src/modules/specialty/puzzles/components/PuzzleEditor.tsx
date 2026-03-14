@@ -17,6 +17,7 @@ import {
   GripVertical,
   Eye,
   AlertTriangle,
+  Presentation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ const PUZZLE_TYPE_ICONS: Record<PuzzleType, typeof Grid3X3> = {
   cryptogram: Lock,
   number_search: Binary,
   word_connect: Link2,
+  trivia: Presentation,
 };
 
 const PUZZLE_TYPE_LABELS: Record<PuzzleType, string> = {
@@ -59,6 +61,7 @@ const PUZZLE_TYPE_LABELS: Record<PuzzleType, string> = {
   cryptogram: "Cryptogram",
   number_search: "Number Search",
   word_connect: "Word Connect",
+  trivia: "Trivia",
 };
 
 const DIFFICULTY_STYLES: Record<string, string> = {

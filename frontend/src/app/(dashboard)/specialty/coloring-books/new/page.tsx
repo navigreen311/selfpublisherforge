@@ -20,6 +20,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useCreateColoringBook } from "@/modules/specialty/coloring/hooks";
 import type { CreateColoringBookInput } from "@/modules/specialty/coloring/hooks";
 
@@ -93,11 +95,25 @@ const LINE_STYLES = [
   },
 ];
 
+const PAGE_COUNTS = [20, 30, 40, 50, 60];
+
 const TRIM_SIZES = [
   { value: "8.5x11", label: '8.5" x 11" (Letter)' },
   { value: "8.5x8.5", label: '8.5" x 8.5" (Square)' },
   { value: "6x9", label: '6" x 9"' },
-  { value: "8x10", label: '8" x 10"' },
+];
+
+const LINE_WEIGHTS = [
+  { value: "thin", label: "Thin", numeric: 2 },
+  { value: "medium", label: "Medium", numeric: 5 },
+  { value: "thick", label: "Thick", numeric: 8 },
+];
+
+const BORDER_STYLES = [
+  { value: "none", label: "None" },
+  { value: "simple", label: "Simple Line" },
+  { value: "double", label: "Double Line" },
+  { value: "decorative", label: "Decorative" },
 ];
 
 const GENERATION_METHODS = [
@@ -188,7 +204,6 @@ export default function NewColoringBookPage() {
 
   const prefill = useMemo(() => getTemplatePrefill(templateId), [templateId]);
 
->>>>>>> origin/ai-feature/fix-coloring-editor-v2
   const [step, setStep] = useState(0);
 
   // Step 1 state
@@ -197,15 +212,18 @@ export default function NewColoringBookPage() {
   const [audience, setAudience] = useState<"kids" | "teens" | "adults">(prefill?.audience ?? "adults");
   const [seriesEnabled, setSeriesEnabled] = useState(false);
   const [seriesName, setSeriesName] = useState("");
-  const [volumeNumber, setVolumeNumber] = useState(1);
+  const [volumeNumber, setVolumeNumber] = useState("1");
 
   // Step 2 state
-  const [pageCount, setPageCount] = useState([30]);
+  const [pageCount, setPageCount] = useState(30);
   const [trimSize, setTrimSize] = useState("8.5x11");
   const [lineStyle, setLineStyle] = useState(prefill?.lineStyle ?? "clean_outlines");
-  const [lineWeight, setLineWeight] = useState([3]);
+  const [lineWeight, setLineWeight] = useState("medium");
   const [strokeUniformity, setStrokeUniformity] = useState(true);
   const [complexity, setComplexity] = useState(prefill?.complexity ?? [5]);
+  const [pageBorders, setPageBorders] = useState(false);
+  const [borderStyle, setBorderStyle] = useState("simple");
+  const [pageNumbers, setPageNumbers] = useState(false);
 
   // Step 3 state
   const [themeDescription, setThemeDescription] = useState(prefill?.themeDescription ?? "");
@@ -214,6 +232,8 @@ export default function NewColoringBookPage() {
   const [bonusPages, setBonusPages] = useState<string[]>(["title_page"]);
 
   const progressPercent = ((step + 1) / STEPS.length) * 100;
+
+  const lineWeightNumeric = LINE_WEIGHTS.find((lw) => lw.value === lineWeight)?.numeric ?? 5;
 
   const canNext = () => {
     if (step === 0) return title.trim().length > 0;
@@ -227,17 +247,17 @@ export default function NewColoringBookPage() {
       title,
       subtitle: subtitle || undefined,
       audience,
-      page_count: pageCount[0],
+      page_count: pageCount,
       trim_size: trimSize,
       line_style: lineStyle,
-      line_weight: lineWeight[0],
+      line_weight: lineWeightNumeric,
       complexity: complexity[0],
       stroke_uniformity: strokeUniformity,
       theme_description: themeDescription,
       generation_method: generationMethod,
       bonus_pages: bonusPages,
       series_name: seriesEnabled ? seriesName : undefined,
-      volume_number: seriesEnabled ? volumeNumber : undefined,
+      volume_number: seriesEnabled ? parseInt(volumeNumber) || 1 : undefined,
       template_id: templateId ?? undefined,
     };
     const book = await createBook.mutateAsync(input);
@@ -254,6 +274,11 @@ export default function NewColoringBookPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Coloring Books", href: "/specialty/coloring-books" },
+        { label: "New" },
+      ]} />
       {/* Header */}
       <div>
         <Button
@@ -263,7 +288,7 @@ export default function NewColoringBookPage() {
           className="mb-2"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
+          Back to Coloring Books
         </Button>
         <h1 className="text-2xl font-bold">Create Coloring Book</h1>
         <p className="text-muted-foreground mt-1">
@@ -273,7 +298,7 @@ export default function NewColoringBookPage() {
         </p>
       </div>
 
-      {/* Progress */}
+      {/* Progress / Step Indicators */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted-foreground">
           {STEPS.map((s, i) => (
@@ -352,28 +377,40 @@ export default function NewColoringBookPage() {
               <Label htmlFor="series">Part of a series</Label>
             </div>
             {seriesEnabled && (
-              <div className="grid grid-cols-2 gap-4 pl-1">
-                <div className="space-y-2">
-                  <Label htmlFor="series-name">Series Name</Label>
-                  <Input
-                    id="series-name"
-                    placeholder="e.g., Relaxing Coloring Series"
-                    value={seriesName}
-                    onChange={(e) => setSeriesName(e.target.value)}
-                  />
+              <div className="space-y-4 pl-1">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="series-name">Series Name</Label>
+                    <Input
+                      id="series-name"
+                      placeholder="e.g., Relaxing Coloring Series"
+                      value={seriesName}
+                      onChange={(e) => setSeriesName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="volume">Volume Number</Label>
+                    <Select value={volumeNumber} onValueChange={setVolumeNumber}>
+                      <SelectTrigger id="volume">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            Volume {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="volume">Volume Number</Label>
-                  <Input
-                    id="volume"
-                    type="number"
-                    min={1}
-                    value={volumeNumber}
-                    onChange={(e) =>
-                      setVolumeNumber(parseInt(e.target.value) || 1)
-                    }
-                  />
-                </div>
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Series volumes share consistent branding (cover layout, fonts,
+                    and color palette) for a cohesive look on retail shelves.
+                  </AlertDescription>
+                </Alert>
               </div>
             )}
           </div>
@@ -384,17 +421,20 @@ export default function NewColoringBookPage() {
       {step === 1 && (
         <div className="space-y-6">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Page Count: {pageCount[0]}</Label>
-              <span className="text-xs text-muted-foreground">20 - 60</span>
+            <Label>Page Count</Label>
+            <div className="flex gap-2">
+              {PAGE_COUNTS.map((count) => (
+                <Button
+                  key={count}
+                  type="button"
+                  variant={pageCount === count ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setPageCount(count)}
+                >
+                  {count}
+                </Button>
+              ))}
             </div>
-            <Slider
-              min={20}
-              max={60}
-              step={2}
-              value={pageCount}
-              onValueChange={setPageCount}
-            />
           </div>
 
           <div className="space-y-2">
@@ -444,26 +484,30 @@ export default function NewColoringBookPage() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Line Weight: {lineWeight[0]}px</Label>
-              <span className="text-xs text-muted-foreground">1 - 10</span>
-            </div>
-            <Slider
-              min={1}
-              max={10}
-              step={1}
+            <Label>Line Weight</Label>
+            <RadioGroup
               value={lineWeight}
               onValueChange={setLineWeight}
-            />
+              className="flex gap-4"
+            >
+              {LINE_WEIGHTS.map((lw) => (
+                <div key={lw.value} className="flex items-center gap-2">
+                  <RadioGroupItem value={lw.value} id={`lw-${lw.value}`} />
+                  <Label htmlFor={`lw-${lw.value}`} className="cursor-pointer font-normal">
+                    {lw.label}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
 
           <div className="flex items-center gap-3">
-            <Switch
+            <Checkbox
               id="stroke-uniformity"
               checked={strokeUniformity}
-              onCheckedChange={setStrokeUniformity}
+              onCheckedChange={(checked) => setStrokeUniformity(checked === true)}
             />
-            <Label htmlFor="stroke-uniformity">
+            <Label htmlFor="stroke-uniformity" className="cursor-pointer">
               Enforce stroke uniformity
             </Label>
           </div>
@@ -482,13 +526,59 @@ export default function NewColoringBookPage() {
             />
           </div>
 
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Single-sided printing enforced &bull; Coloring-safe inner margin
-              applied (+0.25&quot; at spine)
-            </AlertDescription>
-          </Alert>
+          {/* Page Options */}
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">Page Options</Label>
+
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Single-sided printing is enforced for all coloring books.
+                A coloring-safe inner margin (+0.25&quot; at spine) is applied automatically.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="page-borders"
+                  checked={pageBorders}
+                  onCheckedChange={(checked) => setPageBorders(checked === true)}
+                />
+                <Label htmlFor="page-borders" className="cursor-pointer">
+                  Page borders
+                </Label>
+              </div>
+              {pageBorders && (
+                <div className="pl-7 space-y-2">
+                  <Label htmlFor="border-style">Border Style</Label>
+                  <Select value={borderStyle} onValueChange={setBorderStyle}>
+                    <SelectTrigger id="border-style" className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BORDER_STYLES.map((bs) => (
+                        <SelectItem key={bs.value} value={bs.value}>
+                          {bs.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="page-numbers"
+                  checked={pageNumbers}
+                  onCheckedChange={(checked) => setPageNumbers(checked === true)}
+                />
+                <Label htmlFor="page-numbers" className="cursor-pointer">
+                  Page numbers
+                </Label>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -550,7 +640,7 @@ export default function NewColoringBookPage() {
           </div>
 
           <div className="space-y-3">
-            <Label>Bonus Pages</Label>
+            <Label>Include</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {BONUS_PAGE_OPTIONS.map((bp) => (
                 <div

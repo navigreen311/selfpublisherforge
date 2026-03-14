@@ -65,8 +65,13 @@ export interface WizardData {
   seasonal_theme: string;
   word_difficulty: string;
   custom_word_list: string;
+  safety_no_offensive: boolean;
+  safety_no_trademarks: boolean;
+  safety_age_appropriate: boolean;
   // Step 4
   answer_key_position: string;
+  extras_answer_key: boolean;
+  extras_intro: boolean;
   extras_toc: boolean;
   extras_instructions: boolean;
   extras_difficulty_badges: boolean;
@@ -93,7 +98,12 @@ export const DEFAULT_WIZARD_DATA: WizardData = {
   seasonal_theme: "",
   word_difficulty: "standard",
   custom_word_list: "",
+  safety_no_offensive: true,
+  safety_no_trademarks: true,
+  safety_age_appropriate: true,
   answer_key_position: "back",
+  extras_answer_key: true,
+  extras_intro: true,
   extras_toc: true,
   extras_instructions: true,
   extras_difficulty_badges: false,
@@ -216,10 +226,10 @@ const THEME_CATEGORIES = [
   "Geography",
   "Music",
   "Movies",
-  "Space",
-  "Ocean",
   "Technology",
-  "Travel",
+  "Holidays",
+  "Professions",
+  "Custom",
 ];
 
 const SEASONAL_THEMES = [
@@ -285,39 +295,27 @@ export function Step1BookDetails({ data, onChange }: StepProps) {
               size="sm"
               className="shrink-0 gap-1.5"
               onClick={() => {
-                const types = data.selected_puzzle_types
+                const typeLabels = data.selected_puzzle_types
                   .map((c) => {
-                const totalCount = data.selected_puzzle_types.reduce(
-                  (sum, c) => sum + (c.quantity || 0),
-                  0
-                );
-                const difficulties = [
-                  ...new Set(
-                    data.selected_puzzle_types.map((c) => c.difficulty)
-                  ),
-                ];
-                const difficultyStr =
-                  difficulties.length === 1
-                    ? difficulties[0].charAt(0).toUpperCase() +
-                      difficulties[0].slice(1)
-                    : "Mixed Difficulty";
-                const countStr = totalCount > 0 ? `${totalCount} ` : "";
-                onChange({
-                  subtitle: `${countStr}${typesStr} Puzzles with Answers — ${difficultyStr}`,
-                });
+                    const ptDef = PUZZLE_TYPES_LIST.find(
+                      (p) => p.type === c.type
+                    );
+                    return ptDef?.label;
                   })
                   .filter(Boolean);
                 const typesStr =
-                  types.length > 0 ? types.join(", ") : "Puzzles";
+                  typeLabels.length > 0
+                    ? typeLabels.join(", ")
+                    : "Puzzle";
                 const totalCount = data.selected_puzzle_types.reduce(
                   (sum, c) => sum + (c.quantity || 0),
                   0
                 );
-                const difficulties = [
-                  ...new Set(
+                const difficulties = Array.from(
+                  new Set(
                     data.selected_puzzle_types.map((c) => c.difficulty)
-                  ),
-                ];
+                  )
+                );
                 const difficultyStr =
                   difficulties.length === 1
                     ? difficulties[0].charAt(0).toUpperCase() +
@@ -611,9 +609,28 @@ export function Step2PuzzleSelection({ data, onChange }: StepProps) {
               Sum of all selected puzzle type quantities
             </p>
           </div>
-          <Badge variant="secondary" className="text-lg px-4 py-1">
-            {totalPuzzleCount}
-          </Badge>
+          <div className="text-right">
+            <Badge variant="secondary" className="text-lg px-4 py-1">
+              {totalPuzzleCount}
+            </Badge>
+            <p className="text-xs text-muted-foreground mt-1">
+              ~{Math.ceil(
+                totalPuzzleCount *
+                  (data.layout === "two_per_page" ? 0.5 : 1) +
+                  (data.extras_toc ? 2 : 0) +
+                  (data.extras_instructions
+                    ? data.selected_puzzle_types.length
+                    : 0) +
+                  (data.extras_section_dividers
+                    ? data.selected_puzzle_types.length
+                    : 0) +
+                  (data.answer_key_position !== "none"
+                    ? Math.ceil(totalPuzzleCount * 0.25)
+                    : 0)
+              )}{" "}
+              pages estimated
+            </p>
+          </div>
         </div>
       )}
 
@@ -745,8 +762,7 @@ export function Step3ThemesWords({ data, onChange }: StepProps) {
 
   const handleSanitize = () => {
     const words = data.custom_word_list
-      .split(/[,
-]+/)
+      .split(/[,\n]+/)
       .map((w) => w.trim())
       .filter(Boolean);
     if (words.length === 0) return;
@@ -960,6 +976,43 @@ export function Step3ThemesWords({ data, onChange }: StepProps) {
           ))}
         </div>
       </div>
+
+      {/* Safety Checks */}
+      <div className="space-y-3">
+        <Label>Safety Checks</Label>
+        <div className="space-y-2">
+          {[
+            {
+              key: "safety_no_offensive" as const,
+              label: "Filter offensive / inappropriate words",
+            },
+            {
+              key: "safety_no_trademarks" as const,
+              label: "Exclude trademarked terms",
+            },
+            {
+              key: "safety_age_appropriate" as const,
+              label: "Enforce age-appropriate content",
+            },
+          ].map((safety) => (
+            <div
+              key={safety.key}
+              className="flex items-center space-x-2 rounded-md border p-3"
+            >
+              <Checkbox
+                id={safety.key}
+                checked={data[safety.key]}
+                onCheckedChange={(v) =>
+                  onChange({ [safety.key]: v === true })
+                }
+              />
+              <Label htmlFor={safety.key} className="text-sm cursor-pointer">
+                {safety.label}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1021,6 +1074,14 @@ export function Step4LayoutExtras({ data, onChange }: StepProps) {
         <div className="space-y-2">
           {[
             {
+              key: "extras_answer_key" as const,
+              label: "Answer Key",
+            },
+            {
+              key: "extras_intro" as const,
+              label: "Introduction Page",
+            },
+            {
               key: "extras_toc" as const,
               label: "Table of Contents",
             },
@@ -1030,7 +1091,7 @@ export function Step4LayoutExtras({ data, onChange }: StepProps) {
             },
             {
               key: "extras_difficulty_badges" as const,
-              label: "Difficulty badges on puzzles",
+              label: "Difficulty ratings on puzzles",
             },
             {
               key: "extras_section_dividers" as const,

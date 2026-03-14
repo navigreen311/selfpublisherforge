@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowDownAZ,
   BookOpen,
@@ -24,8 +25,11 @@ import {
 } from "@/components/ui/select";
 import { useChildrensBooks, useChildrensBookStats } from "@/modules/specialty/childrens/hooks";
 import { BookCard } from "@/modules/specialty/childrens/components/BookCard";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 export default function ChildrensBooksPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [ageFilter, setAgeFilter] = useState<string>("all");
@@ -37,8 +41,9 @@ export default function ChildrensBooksPage() {
     ...(ageFilter !== "all" && { age_range: ageFilter }),
   };
 
-  const { data: stats } = useChildrensBookStats();
-  const { data: booksData, isLoading, isError } = useChildrensBooks(1, 50, filters);
+  const { data: stats, isLoading: statsLoading } = useChildrensBookStats();
+  const { data: booksData, isLoading, isFetching, isError } = useChildrensBooks(1, 50, filters);
+  const booksLoading = isLoading && isFetching;
 
   const books = useMemo(() => {
     const items = [...(booksData?.items ?? [])];
@@ -65,6 +70,10 @@ export default function ChildrensBooksPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Children's Books" },
+      ]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -189,7 +198,7 @@ export default function ChildrensBooksPage() {
       </div>
 
       {/* Book Grid, Error, or Empty State */}
-      {isLoading ? (
+      {booksLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <Card key={i} className="overflow-hidden animate-pulse">
@@ -202,35 +211,19 @@ export default function ChildrensBooksPage() {
           ))}
         </div>
       ) : isError ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-24 w-24 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-            <BookOpen className="h-12 w-12 text-destructive" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">
-            Failed to load books
-          </h3>
-          <p className="text-muted-foreground max-w-md mb-6">
-            Something went wrong while fetching your children&apos;s books.
-            Please try again later.
-          </p>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="Failed to load books"
+          description="Something went wrong while fetching your children's books. Please try again later."
+        />
       ) : books.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-            <BookOpen className="h-12 w-12 text-primary" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">
-            No children&apos;s books yet
-          </h3>
-          <p className="text-muted-foreground max-w-md mb-6">
-            Create your first illustrated children&apos;s book with AI-generated artwork.
-          </p>
-          <Button asChild>
-            <Link href="/specialty/childrens-books/new">
-              <Plus className="h-4 w-4 mr-2" /> Create Your First Book
-            </Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No children's books yet"
+          description="Create your first illustrated children's book with AI-generated artwork."
+          actionLabel="+ Create Your First Book"
+          onAction={() => router.push("/specialty/childrens-books/new")}
+        />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {books.map((book) => (

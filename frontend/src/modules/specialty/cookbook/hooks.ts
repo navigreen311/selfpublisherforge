@@ -98,6 +98,7 @@ export interface CookbookStats {
   in_progress: number;
   published: number;
   total_recipes: number;
+  total_chapters: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -124,6 +125,8 @@ export function useCookbooks(page = 1, pageSize = 20, filters?: { status?: strin
       const { data } = await api.get(API_BASE, { params: { page, page_size: pageSize, ...filters } });
       return data;
     },
+    retry: false,
+    placeholderData: { items: [], total: 0, page: 1, page_size: pageSize },
   });
 }
 
@@ -134,6 +137,8 @@ export function useCookbookStats() {
       const { data } = await api.get(API_BASE + "/stats");
       return data;
     },
+    retry: false,
+    placeholderData: { total_cookbooks: 0, in_progress: 0, published: 0, total_recipes: 0, total_chapters: 0 },
   });
 }
 

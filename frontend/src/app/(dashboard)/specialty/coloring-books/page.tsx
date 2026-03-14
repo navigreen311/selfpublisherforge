@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Book,
-  Palette,
   Plus,
-  Search,
-  Loader2,
   PawPrint,
   Flower2,
   Sword,
@@ -20,21 +17,15 @@ import {
   FileText,
   CheckCircle2,
   BarChart3,
-  ArrowUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { FilterBar } from "@/modules/specialty/shared/components/FilterBar";
 import { TemplateCard } from "@/modules/specialty/coloring/components/TemplateCard";
 import { BookCard } from "@/modules/specialty/coloring/components/BookCard";
 import { useColoringBooks } from "@/modules/specialty/coloring/hooks";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
@@ -121,13 +112,20 @@ export default function ColoringBooksPage() {
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
         );
         break;
-      case "title_asc":
+      case "title-asc":
         sorted.sort((a, b) => a.title.localeCompare(b.title));
         break;
-      case "title_desc":
+      case "title-desc":
         sorted.sort((a, b) => b.title.localeCompare(a.title));
         break;
+      case "updated":
+        sorted.sort(
+          (a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        );
+        break;
       case "newest":
+      case "created":
       default:
         sorted.sort(
           (a, b) =>
@@ -150,6 +148,10 @@ export default function ColoringBooksPage() {
 
   return (
     <div className="space-y-8">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Coloring Books" },
+      ]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -168,10 +170,10 @@ export default function ColoringBooksPage() {
 
       {/* Stat Cards - always render values (0 when empty), never skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Book} label="Total Books" value={totalBooks} />
-        <StatCard icon={BarChart3} label="In Progress" value={inProgress} />
-        <StatCard icon={CheckCircle2} label="Published" value={published} />
-        <StatCard icon={FileText} label="Pages Created" value={pagesCreated} />
+        <StatCard icon={Book} label="Total Books" value={totalBooks} color="#3B82F6" />
+        <StatCard icon={BarChart3} label="In Progress" value={inProgress} color="#F59E0B" />
+        <StatCard icon={CheckCircle2} label="Published" value={published} color="#10B981" />
+        <StatCard icon={FileText} label="Pages Created" value={pagesCreated} color="#6366F1" />
       </div>
 
       {/* Quick-Start Templates */}
@@ -194,40 +196,18 @@ export default function ColoringBooksPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Your Books</h2>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search books..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 w-60"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40">
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest First</SelectItem>
-                <SelectItem value="oldest">Oldest First</SelectItem>
-                <SelectItem value="title_asc">Title A–Z</SelectItem>
-                <SelectItem value="title_desc">Title Z–A</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        </div>
+
+        <div className="mb-4">
+          <FilterBar
+            searchPlaceholder="Search coloring books..."
+            searchValue={search}
+            onSearchChange={setSearch}
+            statusValue={statusFilter}
+            onStatusChange={setStatusFilter}
+            sortValue={sortBy}
+            onSortChange={setSortBy}
+          />
         </div>
 
         {isLoading && !data ? (
@@ -241,19 +221,13 @@ export default function ColoringBooksPage() {
             Failed to load coloring books. Please try again.
           </div>
         ) : books.length === 0 ? (
-          <div className="border rounded-lg p-12 text-center">
-            <Palette className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No coloring books yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first coloring book or start from a template above.
-            </p>
-            <Button asChild>
-              <Link href="/specialty/coloring-books/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Book
-              </Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon="🖍️"
+            title="No coloring books yet"
+            description="Create your first coloring book with AI-generated line art."
+            actionLabel="+ Create Your First Book"
+            onAction={() => router.push("/specialty/coloring-books/new")}
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {books.map((book) => (
@@ -272,16 +246,21 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  color,
 }: {
   icon: typeof Book;
   label: string;
   value: number;
+  color: string;
 }) {
   return (
     <div className="border rounded-lg p-5">
       <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-primary/10 p-2">
-          <Icon className="h-4 w-4 text-primary" />
+        <div
+          className="rounded-lg p-2"
+          style={{ backgroundColor: `${color}15` }}
+        >
+          <Icon className="h-4 w-4" style={{ color }} />
         </div>
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>

@@ -202,6 +202,47 @@ async def list_coloring_books(
     return [_book_to_dict(b) for b in result.scalars().all()]
 
 
+async def get_stats(
+    db: AsyncSession,
+    org_id: UUID,
+) -> dict[str, Any]:
+    """Return aggregate statistics for coloring books in an organization."""
+    from app.modules.specialty.models.coloring import ColoringBook, ColoringBookPage
+    from app.modules.specialty.models.enums import BookStatus
+
+    base = [ColoringBook.org_id == org_id, ColoringBook.deleted_at.is_(None)]
+
+    total_stmt = select(func.count()).select_from(ColoringBook).where(*base)
+    total_result = await db.execute(total_stmt)
+    total_books = total_result.scalar() or 0
+
+    in_progress_stmt = select(func.count()).select_from(ColoringBook).where(
+        *base, ColoringBook.status == BookStatus.in_progress
+    )
+    in_progress_result = await db.execute(in_progress_stmt)
+    in_progress = in_progress_result.scalar() or 0
+
+    published_stmt = select(func.count()).select_from(ColoringBook).where(
+        *base, ColoringBook.status == BookStatus.published
+    )
+    published_result = await db.execute(published_stmt)
+    published = published_result.scalar() or 0
+
+    book_ids_stmt = select(ColoringBook.id).where(*base)
+    pages_stmt = select(func.count()).select_from(ColoringBookPage).where(
+        ColoringBookPage.book_id.in_(book_ids_stmt),
+    )
+    pages_result = await db.execute(pages_stmt)
+    pages_created = pages_result.scalar() or 0
+
+    return {
+        "total_books": total_books,
+        "in_progress": in_progress,
+        "published": published,
+        "pages_created": pages_created,
+    }
+
+
 async def create_coloring_book(
     db: AsyncSession,
     org_id: UUID,

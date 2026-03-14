@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useCreateChildrensBook } from "@/modules/specialty/childrens/hooks";
 import {
   Step1BookDetails,
@@ -149,6 +150,11 @@ export default function CreateChildrensBookPage() {
 
   return (
     <div className="container mx-auto py-6 max-w-3xl space-y-6">
+      <Breadcrumb items={[
+        { label: "Specialty", href: "/specialty" },
+        { label: "Children's Books", href: "/specialty/childrens-books" },
+        { label: "New" },
+      ]} />
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild className="gap-1.5">
         <Link href="/specialty/childrens-books">

@@ -32,6 +32,7 @@ import {
   useSetDefault,
 } from "../hooks";
 import { StyleCloneCreator } from "./StyleCloneCreator";
+import { EmptyState } from "@/components/shared/empty-state";
 import type { StyleCloneProfile } from "@/modules/specialty/types/style-clone";
 
 // ---------------------------------------------------------------------------
@@ -275,23 +276,13 @@ export function StyleCloneManager() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-            <Palette className="h-12 w-12 text-primary" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">
-            No style profiles yet
-          </h3>
-          <p className="text-muted-foreground max-w-md mb-6">
-            Create your first style profile by uploading reference images. The
-            AI will analyze the art style and generate consistent illustrations
-            across your books.
-          </p>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Your First Style Profile
-          </Button>
-        </div>
+        <EmptyState
+          icon={<span className="text-4xl">🎨</span>}
+          title="No style profiles yet"
+          description="Create your first illustration style profile for consistent artwork."
+          actionLabel="+ Create Style Profile"
+          onAction={() => setDialogOpen(true)}
+        />
       )}
     </div>
   );
