@@ -146,6 +146,13 @@ def _register_routers(app: FastAPI):
     from app.modules.activity.router import router as activity_router
     app.include_router(activity_router, prefix=f"{prefix}/activity", tags=["activity"])
 
+    # Final Gaps Stream 1 — Identity & Access
+    from app.modules.pen_names.router import router as pen_names_router
+    app.include_router(pen_names_router, prefix=f"{prefix}/pen-names", tags=["pen-names"])
+
+    from app.modules.team.router import router as team_router
+    app.include_router(team_router, prefix=prefix, tags=["team"])
+
     from app.modules.realtime.router import router as realtime_router
     app.include_router(realtime_router, tags=["realtime"])
 

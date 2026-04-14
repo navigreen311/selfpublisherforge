@@ -56,6 +56,7 @@ from app.modules.knowledge_vault.models import KnowledgeEntry
 
 # Module-specific models
 from app.modules.activity.models import ActivityLog
+from app.modules.team.models import Role, TeamInvitation
 from app.modules.notifications.models import Notification, NotificationPreference
 from app.modules.pricing_automation.models import CompetitorPrice, PricingABTest, PricingRule, Promotion
 from app.modules.product_page_lab.models import ABTest
@@ -77,6 +78,7 @@ __all__ = [
     "PortfolioMetric", "ABTestStatus", "ReportStatus",
     # Module models
     "ActivityLog",
+    "Role", "TeamInvitation",
     "Notification", "NotificationPreference",
     "KnowledgeEntry",
     "Pipeline", "PipelineTask", "PipelineTemplate",

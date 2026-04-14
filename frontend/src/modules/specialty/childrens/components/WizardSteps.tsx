@@ -16,6 +16,48 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { StyleClonePicker } from "@/modules/specialty/style-clone/components/StyleClonePicker";
+import { PenNameSelect } from "@/modules/pen-names/components/PenNameSelect";
+import { usePenNames } from "@/modules/pen-names/hooks";
+import {
+  Select as FallbackSelect,
+  SelectContent as FallbackSelectContent,
+  SelectItem as FallbackSelectItem,
+  SelectTrigger as FallbackSelectTrigger,
+  SelectValue as FallbackSelectValue,
+} from "@/components/ui/select";
+
+function ChildrensAuthorField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { data: penNames = [] } = usePenNames();
+  if (penNames.length === 0) {
+    return (
+      <FallbackSelect value={value} onValueChange={onChange}>
+        <FallbackSelectTrigger id="author">
+          <FallbackSelectValue placeholder="Select author or pen name" />
+        </FallbackSelectTrigger>
+        <FallbackSelectContent>
+          <FallbackSelectItem value="self">My Name</FallbackSelectItem>
+          <FallbackSelectItem value="pen-name">Pen Name</FallbackSelectItem>
+        </FallbackSelectContent>
+      </FallbackSelect>
+    );
+  }
+  const selected = penNames.find((p) => p.display_name === value);
+  return (
+    <PenNameSelect
+      value={selected?.id ?? null}
+      onChange={(id) => {
+        const match = penNames.find((p) => p.id === id);
+        if (match) onChange(match.display_name);
+      }}
+    />
+  );
+}
 import {
   Droplets,
   Smile,
@@ -234,18 +276,15 @@ export function Step1BookDetails({ data, onChange }: StepProps) {
 
         <div className="space-y-2">
           <Label htmlFor="author">Author</Label>
-          <Select
+          {/*
+           * Stream 1 (Final Gaps) — use the reusable PenNameSelect so the
+           * children's wizard pulls from the real pen_names API. Falls back
+           * to the legacy two-option dropdown if no pen names exist yet.
+           */}
+          <ChildrensAuthorField
             value={data.author}
-            onValueChange={(v) => onChange({ author: v })}
-          >
-            <SelectTrigger id="author">
-              <SelectValue placeholder="Select author or pen name" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="self">My Name</SelectItem>
-              <SelectItem value="pen-name">Pen Name</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(v) => onChange({ author: v })}
+          />
         </div>
       </div>
 
