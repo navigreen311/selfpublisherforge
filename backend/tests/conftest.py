@@ -50,6 +50,18 @@ def _compile_array_sqlite(element, compiler, **kw):
     return "TEXT"
 
 
+# Also handle the generic sqlalchemy.ARRAY (not from the postgresql dialect)
+# used by some modules (e.g. production_pipeline). Without this the schema
+# create fails because SQLite's native type compiler cannot render ARRAY.
+from sqlalchemy.sql import sqltypes as _sqltypes  # noqa: E402
+
+
+@compiles(_sqltypes.ARRAY, "sqlite")
+def _compile_generic_array_sqlite(element, compiler, **kw):
+    """Generic ARRAY -> TEXT on SQLite."""
+    return "TEXT"
+
+
 @compiles(PG_UUID, "sqlite")
 def _compile_pg_uuid_sqlite(element, compiler, **kw):
     """PostgreSQL UUID -> CHAR(32) on SQLite."""

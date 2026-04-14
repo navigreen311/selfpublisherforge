@@ -131,6 +131,24 @@ async def create_project(
 
     logger.info(f"Created project {project.id} for organization {organization_id}")
 
+    # Emit webhook event for external automation (Zapier, Make, etc.)
+    try:
+        from app.modules.webhooks.service import dispatch_event
+
+        dispatch_event(
+            "book.created",
+            {
+                "book_id": str(project.id),
+                "title": project.title,
+                "book_type": project.book_type,
+                "status": project.status,
+                "project_type": project.type,
+            },
+            org_id=organization_id,
+        )
+    except Exception:  # noqa: BLE001 - never break project creation on webhook errors
+        logger.exception("Failed to dispatch book.created webhook")
+
     return _project_to_response(project)
 
 
@@ -315,6 +333,7 @@ async def update_project(
         project.book_type = book_type
     if target_launch_date is not None:
         project.target_launch_date = target_launch_date
+    old_status = project.status
     if status is not None:
         project.status = status
     if genre is not None:
@@ -347,6 +366,35 @@ async def update_project(
     project.updated_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(project)
+
+    # Emit webhook events for automation
+    try:
+        from app.modules.webhooks.service import dispatch_event
+
+        if status is not None and old_status != status:
+            dispatch_event(
+                "book.status_changed",
+                {
+                    "book_id": str(project.id),
+                    "title": project.title,
+                    "old_status": old_status,
+                    "new_status": status,
+                },
+                org_id=org_id,
+            )
+            if status == "published":
+                dispatch_event(
+                    "book.published",
+                    {
+                        "book_id": str(project.id),
+                        "title": project.title,
+                        "book_type": project.book_type,
+                        "status": status,
+                    },
+                    org_id=org_id,
+                )
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed to dispatch project update webhook")
 
     return _project_to_response(project)
 

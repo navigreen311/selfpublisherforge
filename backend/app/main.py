@@ -274,4 +274,18 @@ def _register_routers(app: FastAPI):
     from app.modules.specialty.photo.router import router as photo_router
     app.include_router(photo_router, prefix=prefix, tags=["specialty-photo"])
 
+    # --- Integration: Webhooks + Embeddable Review Widget ---
+    from app.modules.webhooks.routes import router as webhooks_router
+    app.include_router(webhooks_router, prefix=f"{prefix}/webhooks", tags=["webhooks"])
+
+    from app.modules.reviews_public.routes import (
+        public_router as reviews_public_router,
+        widget_config_router,
+    )
+    app.include_router(reviews_public_router, prefix=prefix, tags=["public-reviews"])
+    app.include_router(widget_config_router, prefix=prefix, tags=["public-reviews"])
+
+    from app.modules.reviews_public.widget import widget_router
+    app.include_router(widget_router, tags=["public-reviews"])
+
 app = create_app()
