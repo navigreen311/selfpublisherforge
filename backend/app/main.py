@@ -128,6 +128,9 @@ def _register_routers(app: FastAPI):
     from app.modules.projects.router import router as projects_router
     app.include_router(projects_router, prefix=f"{prefix}/projects", tags=["projects"])
 
+    from app.modules.bulk_ops.router import router as bulk_ops_router
+    app.include_router(bulk_ops_router, prefix=f"{prefix}/books", tags=["bulk-ops"])
+
     from app.modules.dashboard.router import router as dashboard_router
     app.include_router(dashboard_router, prefix=f"{prefix}/dashboard", tags=["dashboard"])
 

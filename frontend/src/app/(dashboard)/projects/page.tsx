@@ -11,9 +11,12 @@ import {
   MoreHorizontal,
   Archive,
   Trash2,
+  CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionsToolbar } from "@/components/shared/BulkActionsToolbar";
 import {
   Card,
   CardContent,
@@ -97,6 +100,12 @@ export default function ProjectsPage() {
   const [archiveTarget, setArchiveTarget] = React.useState<Project | null>(null);
   const [isArchiving, setIsArchiving] = React.useState(false);
 
+  // Bulk selection state
+  const [bulkMode, setBulkMode] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
+    new Set(),
+  );
+
   const deleteProject = useDeleteProject();
   const updateProject = useUpdateProject();
 
@@ -175,12 +184,53 @@ export default function ProjectsPage() {
             {t("subtitle")}
           </p>
         </div>
-        <Button asChild aria-label="Create a new project" className="w-full sm:w-auto">
-          <Link href="/projects/new">
-            <Plus className="mr-2 h-4 w-4" /> {t("newProject")}
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => {
+              setBulkMode((v) => !v);
+              setSelectedIds(new Set());
+            }}
+            aria-label={bulkMode ? "Exit bulk mode" : "Enter bulk mode"}
+            aria-pressed={bulkMode}
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            {bulkMode ? "Exit Bulk" : "Bulk Select"}
+          </Button>
+          <Button asChild aria-label="Create a new project" className="w-full sm:w-auto">
+            <Link href="/projects/new">
+              <Plus className="mr-2 h-4 w-4" /> {t("newProject")}
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {bulkMode && (
+        <BulkActionsToolbar
+          selectedIds={Array.from(selectedIds)}
+          totalCount={filteredProjects.length}
+          allSelected={
+            filteredProjects.length > 0 &&
+            selectedIds.size === filteredProjects.length
+          }
+          onToggleSelectAll={() => {
+            if (selectedIds.size === filteredProjects.length) {
+              setSelectedIds(new Set());
+            } else {
+              setSelectedIds(
+                new Set(filteredProjects.map((p: Project) => p.id)),
+              );
+            }
+          }}
+          onClearSelection={() => {
+            setSelectedIds(new Set());
+            setBulkMode(false);
+          }}
+          selectedPreview={filteredProjects
+            .filter((p: Project) => selectedIds.has(p.id))
+            .map((p: Project) => ({ id: p.id, title: p.title }))}
+        />
+      )}
 
       {/* Filters -- shared FilterBar per Phase 1.2 + inline type filter */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -260,10 +310,42 @@ export default function ProjectsPage() {
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
+                  {bulkMode && (
+                    <Checkbox
+                      checked={selectedIds.has(project.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (checked) {
+                            next.add(project.id);
+                          } else {
+                            next.delete(project.id);
+                          }
+                          return next;
+                        });
+                      }}
+                      aria-label={`Select project ${project.title}`}
+                      className="mt-1"
+                    />
+                  )}
                   <Link
                     href={`/projects/${project.id}`}
                     className="flex-1 min-w-0"
                     aria-label={`Open project ${project.title}`}
+                    onClick={(e) => {
+                      if (bulkMode) {
+                        e.preventDefault();
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(project.id)) {
+                            next.delete(project.id);
+                          } else {
+                            next.add(project.id);
+                          }
+                          return next;
+                        });
+                      }
+                    }}
                   >
                     <CardTitle className="text-sm sm:text-base hover:underline cursor-pointer">
                       {project.title}
