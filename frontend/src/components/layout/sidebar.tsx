@@ -34,6 +34,7 @@ import {
   Zap,
   UtensilsCrossed,
   Copy,
+  Brush,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -69,8 +70,8 @@ const navItems: NavItem[] = [
   { label: "Puzzle Books", href: "/specialty/puzzle-books", icon: Puzzle },
   { label: "Comic Books", href: "/specialty/comic-books", icon: Zap },
   { label: "Cookbooks", href: "/specialty/cookbook-books", icon: UtensilsCrossed },
-  { label: "Style Clones", href: "/specialty/style-clones", icon: Copy },
-  { label: "Style Profiles", href: "/style-profiles", icon: Fingerprint },
+  { label: "Style Profiles", href: "/specialty/style-clones", icon: Brush },
+  { label: "Style Library", href: "/style-profiles", icon: Fingerprint },
   { label: "Knowledge Vault", href: "/knowledge", icon: LibraryBig },
   { label: "Publishing", href: "/publishing", icon: BookOpen },
   { label: "Production Pipeline", href: "/pipeline", icon: Workflow },
