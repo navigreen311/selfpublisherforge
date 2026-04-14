@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
+from app.modules.team.permissions import require_permission
 from app.modules.billing import service
 from app.modules.billing.schemas import (
     CheckoutRequest,
@@ -68,6 +69,7 @@ async def get_subscription(
     response_model=CheckoutResponse,
     summary="Create checkout session",
     description="Create a Stripe Checkout session for subscribing or upgrading. Requires admin or owner role.",
+    dependencies=[Depends(require_permission("billing", "create"))],
 )
 async def create_checkout(
     body: CheckoutRequest,
