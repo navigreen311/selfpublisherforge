@@ -1,0 +1,11 @@
+Royalty Date,ASIN,Title,Transaction Type,Units Sold,KENP Read,Royalty Rate,Royalty,Currency
+2026-01,B0ABC12345,Keto Cookbook Secrets,Kindle eBook,145,0,70%,"$1,020.15",USD
+2026-01,B0ABC12345,Keto Cookbook Secrets,Paperback,42,0,60%,$380.50,USD
+2026-01,B0ABC12345,Keto Cookbook Secrets,Kindle Unlimited,0,412000,0,$620.00,USD
+2026-02,B0ABC12345,Keto Cookbook Secrets,Kindle eBook,162,0,70%,"$1,180.40",USD
+2026-02,B0ABC12345,Keto Cookbook Secrets,Paperback,48,0,60%,$410.00,USD
+2026-02,B0ABC12345,Keto Cookbook Secrets,Kindle Unlimited,0,445000,0,$680.00,USD
+2026-03,B0ABC12345,Keto Cookbook Secrets,Kindle eBook,184,0,70%,"$1,340.90",USD
+2026-03,B0ABC12345,Keto Cookbook Secrets,Paperback,52,0,60%,$445.75,USD
+2026-03,B0ABC12345,Keto Cookbook Secrets,Hardcover,3,0,60%,$45.50,USD
+2026-03,B0ABC12345,Keto Cookbook Secrets,Kindle Unlimited,0,490000,0,$740.00,USD

@@ -180,6 +180,10 @@ def _register_routers(app: FastAPI):
     app.include_router(publishing_router, prefix=f"{prefix}/publishing", tags=["publishing"])
     app.include_router(publishing_metadata_router, prefix=prefix, tags=["publishing"])
 
+    # Print proof ordering (scaffold — mocked provider response)
+    from app.modules.proof_orders.router import router as proof_orders_router
+    app.include_router(proof_orders_router, prefix=f"{prefix}/publishing", tags=["proof-orders"])
+
     from app.modules.kdp_validation.router import router as kdp_router
     app.include_router(kdp_router, prefix=prefix, tags=["kdp-validation"])
 
@@ -205,6 +209,13 @@ def _register_routers(app: FastAPI):
 
     from app.modules.analytics.router import router as analytics_router
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
+
+    # Royalty tracking & tax dashboard
+    from app.modules.royalties.router import router as royalties_router
+    app.include_router(royalties_router, prefix=f"{prefix}/royalties", tags=["royalties"])
+
+    from app.modules.tax.router import router as tax_router
+    app.include_router(tax_router, prefix=f"{prefix}/tax", tags=["tax"])
 
     # Tier 6-8: Intelligence & Scale
     from app.modules.agent_system.router import router as agent_router
