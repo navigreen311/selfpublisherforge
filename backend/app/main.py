@@ -206,6 +206,9 @@ def _register_routers(app: FastAPI):
     from app.modules.analytics.router import router as analytics_router
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
 
+    from app.modules.series_analytics.router import router as series_analytics_router
+    app.include_router(series_analytics_router, prefix=prefix, tags=["series-analytics"])
+
     # Tier 6-8: Intelligence & Scale
     from app.modules.agent_system.router import router as agent_router
     app.include_router(agent_router, prefix=f"{prefix}/agents", tags=["agents"])
