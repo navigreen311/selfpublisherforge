@@ -38,6 +38,10 @@ import { WritingProgress } from "@/components/dashboard/WritingProgress";
 import { PublishingPipeline } from "@/components/dashboard/PublishingPipeline";
 import { UpcomingDeadlines } from "@/components/dashboard/UpcomingDeadlines";
 import { AgentActivityFeed } from "@/components/dashboard/AgentActivityFeed";
+// Phase 2.1 aggregate widgets (GET /api/v1/dashboard)
+import { RevenueTrendChart } from "@/components/dashboard/RevenueTrendChart";
+import { AIInsightsPanel } from "@/components/dashboard/AIInsightsPanel";
+import { ActivePipelinesPanel } from "@/components/dashboard/ActivePipelinesPanel";
 
 // ── Icon mapping for KPI labels ─────────────────────────────────────────
 
@@ -309,6 +313,19 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* ROW 2b: Revenue Trend (60%) + AI Insights (40%) -- Phase 2.1 aggregate */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div className="lg:col-span-3">
+          <RevenueTrendChart />
+        </div>
+        <div className="lg:col-span-2">
+          <AIInsightsPanel />
+        </div>
+      </div>
+
+      {/* ROW 2c: Active Pipelines (full width) -- Phase 2.1 aggregate */}
+      <ActivePipelinesPanel />
 
       {/* ROW 3: Writing Progress (60%) + Upcoming Deadlines (40%) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
