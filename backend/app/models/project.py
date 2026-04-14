@@ -138,9 +138,16 @@ class Book(BaseModel):
     metadata_: Mapped[dict | None] = mapped_column(
         "metadata", JSONB, nullable=True, default=None
     )
+    pen_name_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("pen_names.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
 
     # Relationships
     project = relationship("Project", back_populates="books")
+    pen_name = relationship("PenName", foreign_keys=[pen_name_id])
     manuscripts = relationship("Manuscript", back_populates="book", lazy="selectin")
     book_versions = relationship("BookVersion", back_populates="book", lazy="selectin")
     listings = relationship("Listing", back_populates="book", lazy="selectin")
@@ -202,7 +209,19 @@ class PenName(TenantModel):
     __tablename__ = "pen_names"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    amazon_author_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    photo_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    genres: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=list)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    book_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
     brand_guidelines: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
