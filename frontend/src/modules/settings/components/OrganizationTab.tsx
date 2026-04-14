@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -299,10 +300,12 @@ export function OrganizationTab() {
             </div>
           )}
 
-          <div className="flex justify-start">
-            <Button variant="outline" size="sm">
-              + Invite Team Member
-            </Button>
+          <div className="flex justify-start gap-2">
+            <Link href="/settings/team">
+              <Button variant="outline" size="sm">
+                Manage team &amp; roles →
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
