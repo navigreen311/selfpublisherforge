@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.projects import schemas, service
+from app.modules.webhooks.emitter import emit_event
 from app.schemas.common import MessageResponse
 
 router = APIRouter()
@@ -31,7 +32,7 @@ async def create_project(
     """Create a new project."""
     org_id = current_user["org_id"]
 
-    return await service.create_project(
+    project = await service.create_project(
         db,
         organization_id=org_id,
         title=body.title,
@@ -53,6 +54,24 @@ async def create_project(
         has_ai_content=body.has_ai_content,
         is_public_domain=body.is_public_domain,
     )
+
+    # Emit project.created webhook event (best-effort).
+    try:
+        await emit_event(
+            db,
+            org_id=org_id,
+            event_type="project.created",
+            data={
+                "project_id": str(getattr(project, "id", "")),
+                "title": getattr(project, "title", None),
+                "project_type": getattr(project, "project_type", None),
+                "book_type": getattr(project, "book_type", None),
+            },
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    return project
 
 
 # ---------------------------------------------------------------------------

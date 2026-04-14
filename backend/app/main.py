@@ -155,6 +155,9 @@ def _register_routers(app: FastAPI):
     from app.modules.settings.router import router as settings_router
     app.include_router(settings_router, prefix=f"{prefix}/settings", tags=["settings"])
 
+    from app.modules.webhooks.router import router as webhooks_router
+    app.include_router(webhooks_router, prefix=f"{prefix}/webhooks", tags=["webhooks"])
+
     # Tier 1-2: Data & Creation
     from app.modules.llm_orchestration import router as llm_router
     app.include_router(llm_router, prefix=f"{prefix}/llm", tags=["llm"])
