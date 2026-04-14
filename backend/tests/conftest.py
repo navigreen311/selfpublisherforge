@@ -50,6 +50,16 @@ def _compile_array_sqlite(element, compiler, **kw):
     return "TEXT"
 
 
+# Also handle the generic sqlalchemy.ARRAY type (not the PG dialect one).
+from sqlalchemy.types import ARRAY as _GenericArray
+
+
+@compiles(_GenericArray, "sqlite")
+def _compile_generic_array_sqlite(element, compiler, **kw):
+    """Generic ARRAY -> TEXT on SQLite (stored as JSON string)."""
+    return "TEXT"
+
+
 @compiles(PG_UUID, "sqlite")
 def _compile_pg_uuid_sqlite(element, compiler, **kw):
     """PostgreSQL UUID -> CHAR(32) on SQLite."""
