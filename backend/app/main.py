@@ -143,6 +143,9 @@ def _register_routers(app: FastAPI):
     from app.modules.notifications.router import router as notifications_router
     app.include_router(notifications_router, prefix=f"{prefix}/notifications", tags=["notifications"])
 
+    from app.modules.activity.router import router as activity_router
+    app.include_router(activity_router, prefix=f"{prefix}/activity", tags=["activity"])
+
     from app.modules.realtime.router import router as realtime_router
     app.include_router(realtime_router, tags=["realtime"])
 

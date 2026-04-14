@@ -27,6 +27,64 @@ from app.modules.settings.schemas import (
 router = APIRouter()
 
 
+@router.get("/integrations/status")
+async def get_integrations_status(
+    current_user: dict = Depends(require_role("member", "editor", "admin", "owner")),
+):
+    """Get configured/not-configured status for each integration."""
+    from app.config import settings as app_settings
+
+    def _is_set(value: str | None) -> bool:
+        if not value:
+            return False
+        v = str(value).strip()
+        return bool(v) and not v.startswith("YOUR_")
+
+    integrations = [
+        {
+            "id": "stripe",
+            "name": "Stripe",
+            "category": "payments",
+            "description": "Process subscriptions and one-time payments.",
+            "configured": _is_set(getattr(app_settings, "STRIPE_SECRET_KEY", None)),
+            "docs_url": "https://stripe.com/docs",
+        },
+        {
+            "id": "sendgrid",
+            "name": "SendGrid",
+            "category": "email",
+            "description": "Transactional email delivery.",
+            "configured": _is_set(getattr(app_settings, "SENDGRID_API_KEY", None)),
+            "docs_url": "https://sendgrid.com/docs",
+        },
+        {
+            "id": "s3",
+            "name": "Amazon S3",
+            "category": "storage",
+            "description": "Object storage for assets and exports.",
+            "configured": bool(getattr(app_settings, "S3_BUCKET", None)),
+            "docs_url": "https://docs.aws.amazon.com/s3/",
+        },
+        {
+            "id": "openai",
+            "name": "OpenAI",
+            "category": "ai",
+            "description": "GPT-powered writing and generation.",
+            "configured": _is_set(getattr(app_settings, "OPENAI_API_KEY", None)),
+            "docs_url": "https://platform.openai.com/docs",
+        },
+        {
+            "id": "anthropic",
+            "name": "Anthropic Claude",
+            "category": "ai",
+            "description": "Claude-powered writing and generation.",
+            "configured": _is_set(getattr(app_settings, "ANTHROPIC_API_KEY", None)),
+            "docs_url": "https://docs.anthropic.com",
+        },
+    ]
+    return {"integrations": integrations}
+
+
 @router.get("/organization", response_model=OrgSettingsResponse)
 async def get_org_settings(
     current_user: dict = Depends(require_role("member", "editor", "admin", "owner")),

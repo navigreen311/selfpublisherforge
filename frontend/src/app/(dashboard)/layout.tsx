@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { SkipLink } from "@/components/shared/SkipLink";
+import { KeyboardShortcutsProvider } from "@/components/shared/KeyboardShortcutsProvider";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { PageSkeleton } from "@/components/ui/skeleton";
 
@@ -11,6 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen">
       <SkipLink />
+      <KeyboardShortcutsProvider />
       <Sidebar />
       <MobileNav />
       <div className="flex-1 flex flex-col overflow-hidden">
