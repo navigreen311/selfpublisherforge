@@ -90,6 +90,10 @@ class Project(TenantModel):
     is_public_domain: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     subgenre: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    # 2.2 spec: book_type drives module wiring (cookbook, coloring, puzzle, etc.)
+    book_type: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    # 2.2 spec: explicit launch date (separate from target_date completion goal)
+    target_launch_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True, default=None)
 
     # Relationships
     organization = relationship(

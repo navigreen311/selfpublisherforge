@@ -55,6 +55,7 @@ from app.models.audiobook import (
 from app.modules.knowledge_vault.models import KnowledgeEntry
 
 # Module-specific models
+from app.modules.activity.models import ActivityLog
 from app.modules.notifications.models import Notification, NotificationPreference
 from app.modules.pricing_automation.models import CompetitorPrice, PricingABTest, PricingRule, Promotion
 from app.modules.product_page_lab.models import ABTest
@@ -75,6 +76,7 @@ __all__ = [
     "DomainAgent", "DomainAgentTask", "DomainAgentWorkflow", "DomainAgentBudget", "DomainAuditTrail",
     "PortfolioMetric", "ABTestStatus", "ReportStatus",
     # Module models
+    "ActivityLog",
     "Notification", "NotificationPreference",
     "KnowledgeEntry",
     "Pipeline", "PipelineTask", "PipelineTemplate",
