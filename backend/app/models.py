@@ -16,3 +16,4 @@ from app.modules.pricing_automation.models import *  # noqa: F403
 from app.modules.product_page_lab.models import *  # noqa: F403
 from app.modules.production_pipeline.models import *  # noqa: F403
 from app.modules.review_intelligence.models import *  # noqa: F403
+from app.modules.webhooks.models import *  # noqa: F403
