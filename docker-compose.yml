@@ -305,7 +305,7 @@ services:
       - spf-network
 
   grafana:
-    image: grafana/grafana:10.2-oss
+    image: grafana/grafana-oss:10.2.3
     ports:
       - "3001:3000"
     environment:
