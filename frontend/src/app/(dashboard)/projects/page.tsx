@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/use-translations";
 import {
   Plus,
-  Search,
   FolderOpen,
   AlertCircle,
   MoreHorizontal,
@@ -14,7 +13,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -40,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { FilterBar } from "@/components/shared/FilterBar";
 import {
   useProjects,
   useDeleteProject,
@@ -86,6 +85,7 @@ export default function ProjectsPage() {
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState("all");
+  const [sortBy, setSortBy] = React.useState("updated_desc");
 
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
 
@@ -110,14 +110,36 @@ export default function ProjectsPage() {
     search: debouncedSearch || undefined,
   });
 
-  // Client-side type filter (the API may not support type filtering)
+  // Client-side type filter + sort (the API may not support type filtering)
   const filteredProjects = React.useMemo(() => {
     if (!projects) return [];
-    return projects.filter((p: Project) => {
+    const filtered = projects.filter((p: Project) => {
       const matchesType = typeFilter === "all" || p.type === typeFilter;
       return matchesType;
     });
-  }, [projects, typeFilter]);
+    const sorted = [...filtered];
+    switch (sortBy) {
+      case "title_asc":
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "title_desc":
+        sorted.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case "created_desc":
+        sorted.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+        break;
+      case "updated_desc":
+      default:
+        sorted.sort(
+          (a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        );
+    }
+    return sorted;
+  }, [projects, typeFilter, sortBy]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -160,16 +182,22 @@ export default function ProjectsPage() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Filters -- shared FilterBar per Phase 1.2 + inline type filter */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-            aria-label="Search projects"
+        <div className="flex-1">
+          <FilterBar
+            searchPlaceholder={t("searchPlaceholder")}
+            onSearch={setSearch}
+            statusOptions={[
+              { label: t("filters.allStatus"), value: "all" },
+              { label: t("filters.draft"), value: "draft" },
+              { label: t("filters.active"), value: "active" },
+              { label: t("filters.archived"), value: "archived" },
+            ]}
+            onStatusChange={setStatusFilter}
+            initialStatus={statusFilter}
+            onSortChange={setSortBy}
+            initialSort={sortBy}
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -181,17 +209,6 @@ export default function ProjectsPage() {
             <SelectItem value="book">{t("filters.book")}</SelectItem>
             <SelectItem value="series">{t("filters.series")}</SelectItem>
             <SelectItem value="course">{t("filters.course")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[140px]" aria-label="Filter by project status">
-            <SelectValue placeholder={t("filters.status")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("filters.allStatus")}</SelectItem>
-            <SelectItem value="draft">{t("filters.draft")}</SelectItem>
-            <SelectItem value="active">{t("filters.active")}</SelectItem>
-            <SelectItem value="archived">{t("filters.archived")}</SelectItem>
           </SelectContent>
         </Select>
       </div>

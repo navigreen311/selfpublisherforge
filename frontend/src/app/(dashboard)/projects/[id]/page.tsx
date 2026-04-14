@@ -35,7 +35,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Clock, FileText, StickyNote, Layers } from "lucide-react";
 import {
   useProject,
   useUpdateProject,
@@ -322,6 +325,17 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
+      {/* Phase 2.2 tabbed detail view: Overview / Modules / Timeline / Files / Notes */}
+      <Tabs defaultValue="overview">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="modules">Modules</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6 mt-4">
       {/* Project Details Card */}
       <Card>
         <CardHeader>
@@ -533,6 +547,79 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
       )}
+
+        </TabsContent>
+
+        <TabsContent value="modules" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Linked Modules</CardTitle>
+              <CardDescription>
+                Production modules attached to this project.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                icon={<Layers />}
+                title="No linked modules yet"
+                description="Modules like Cover Design, Audiobook, and Marketing will appear here once started."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Timeline</CardTitle>
+              <CardDescription>Milestones and activity history.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                icon={<Clock />}
+                title="No timeline events yet"
+                description="Milestones, stage changes, and completions will be logged here."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="files" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Files</CardTitle>
+              <CardDescription>
+                Manuscripts, covers, audio masters and other assets.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                icon={<FileText />}
+                title="No files uploaded"
+                description="Upload manuscripts, covers, and other assets to keep everything in one place."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notes" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes</CardTitle>
+              <CardDescription>
+                Private notes and to-dos for this project.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                icon={<StickyNote />}
+                title="No notes yet"
+                description="Jot down ideas, blockers, or reminders about this project."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
