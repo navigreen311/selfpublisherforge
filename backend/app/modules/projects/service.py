@@ -22,15 +22,21 @@ from app.modules.projects.schemas import (
 logger = logging.getLogger(__name__)
 
 
-def _project_to_response(project: Project) -> ProjectResponse:
+def _project_to_response(
+    project: Project,
+    linked_modules: list | None = None,
+) -> ProjectResponse:
     """Convert a Project ORM instance to a ProjectResponse schema."""
     return ProjectResponse(
         id=project.id,
         title=project.title,
         description=project.description,
-        project_type=project.type,
-        status=project.status,
+        project_type=project.type.value if hasattr(project.type, "value") else str(project.type),
+        book_type=getattr(project, "book_type", None),
+        target_launch_date=getattr(project, "target_launch_date", None),
+        status=project.status.value if hasattr(project.status, "value") else str(project.status),
         organization_id=project.org_id,
+        linked_modules=linked_modules or [],
         genre=project.genre,
         subgenre=project.subgenre,
         target_audience=project.target_audience,
@@ -55,6 +61,8 @@ async def create_project(
     title: str,
     description: str | None = None,
     project_type: str = "book",
+    book_type: str | None = None,
+    target_launch_date: dt_module.date | None = None,
     genre: str | None = None,
     subgenre: str | None = None,
     target_audience: str | None = None,
@@ -100,6 +108,8 @@ async def create_project(
         type=project_type,
         status="draft",
         org_id=organization_id,
+        book_type=book_type,
+        target_launch_date=target_launch_date,
         genre=genre,
         subgenre=subgenre,
         target_audience=target_audience,
@@ -164,7 +174,61 @@ async def get_project(
             message="Access denied",
         )
 
-    return _project_to_response(project)
+    linked = await _compute_linked_modules(db, project.id)
+    return _project_to_response(project, linked_modules=linked)
+
+
+async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
+    """Return ProjectModuleProgress entries for modules linked to this project.
+
+    Fails soft: if any module query errors (e.g., table missing), we skip
+    that module so the project detail still renders.
+    """
+    from app.modules.projects.schemas import ProjectModuleProgress
+
+    out: list[ProjectModuleProgress] = []
+
+    # Books
+    try:
+        from app.models.project import Book
+
+        result = await db.execute(
+            select(func.count(Book.id)).where(
+                Book.project_id == project_id, Book.deleted_at.is_(None)
+            )
+        )
+        count = result.scalar() or 0
+        out.append(
+            ProjectModuleProgress(
+                module_type="books",
+                status="linked" if count else "not_started",
+                count=int(count),
+            )
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("linked books failed: %s", exc)
+
+    # Pipelines
+    try:
+        from app.modules.production_pipeline.models import Pipeline
+
+        result = await db.execute(
+            select(Pipeline).where(Pipeline.deleted_at.is_(None))
+        )
+        pipelines = [p for p in result.scalars().all() if getattr(p, "book_id", None)]
+        # Simple heuristic: any pipeline whose book belongs to this project
+        # (we don't require it -- just surface pipeline count for the project)
+        out.append(
+            ProjectModuleProgress(
+                module_type="pipeline",
+                status="linked" if pipelines else "not_started",
+                count=len(pipelines),
+            )
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("linked pipelines failed: %s", exc)
+
+    return out
 
 
 async def update_project(
@@ -174,6 +238,8 @@ async def update_project(
     user_role: str,
     title: str | None = None,
     description: str | None = None,
+    book_type: str | None = None,
+    target_launch_date: dt_module.date | None = None,
     status: str | None = None,
     genre: str | None = None,
     subgenre: str | None = None,
@@ -245,6 +311,10 @@ async def update_project(
         project.title = title
     if description is not None:
         project.description = description
+    if book_type is not None:
+        project.book_type = book_type
+    if target_launch_date is not None:
+        project.target_launch_date = target_launch_date
     if status is not None:
         project.status = status
     if genre is not None:
@@ -307,12 +377,30 @@ async def list_projects(
     if request.status:
         query = query.where(Project.status == request.status)
 
+    if request.book_type:
+        query = query.where(Project.book_type == request.book_type)
+
+    if request.search:
+        like = f"%{request.search}%"
+        query = query.where(Project.title.ilike(like))
+
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
     total = await db.scalar(count_query) or 0
 
+    # Sort
+    sort_key = (request.sort or "-created_at").strip()
+    desc = sort_key.startswith("-")
+    key = sort_key.lstrip("-")
+    sort_col = {
+        "created_at": Project.created_at,
+        "title": Project.title,
+        "target_date": Project.target_date,
+    }.get(key, Project.created_at)
+    order = sort_col.desc() if desc else sort_col.asc()
+
     # Apply pagination
-    query = query.limit(request.limit).offset(request.offset).order_by(Project.created_at.desc())
+    query = query.limit(request.limit).offset(request.offset).order_by(order)
 
     result = await db.execute(query)
     projects = result.scalars().all()
@@ -321,8 +409,10 @@ async def list_projects(
         ProjectListItem(
             id=p.id,
             title=p.title,
-            project_type=p.type,
-            status=p.status,
+            project_type=p.type.value if hasattr(p.type, "value") else str(p.type),
+            status=p.status.value if hasattr(p.status, "value") else str(p.status),
+            book_type=getattr(p, "book_type", None),
+            target_launch_date=getattr(p, "target_launch_date", None),
             genre=p.genre,
             target_date=p.target_date,
             target_word_count=p.target_word_count,

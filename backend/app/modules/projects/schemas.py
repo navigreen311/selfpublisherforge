@@ -15,6 +15,14 @@ class ProjectCreateRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     description: str | None = None
     project_type: str = Field(default="book", pattern="^(book|series|course)$")
+    book_type: str | None = Field(
+        None,
+        description=(
+            "Project book type: nonfiction, fiction, childrens, coloring, "
+            "puzzle, comic, cookbook, other."
+        ),
+    )
+    target_launch_date: date | None = None
     genre: str | None = None
     subgenre: str | None = None
     pen_name: str | None = None
@@ -35,6 +43,8 @@ class ProjectUpdateRequest(BaseModel):
     """Request to update project details."""
     title: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = None
+    book_type: str | None = None
+    target_launch_date: date | None = None
     status: str | None = Field(None, pattern="^(planning|in_progress|completed|archived|draft|active)$")
     genre: str | None = None
     subgenre: str | None = None
@@ -57,11 +67,25 @@ class ProjectListRequest(BaseModel):
     offset: int = Field(default=0, ge=0)
     project_type: str | None = None
     status: str | None = None
+    book_type: str | None = None
+    search: str | None = None
+    sort: str | None = Field(
+        default=None,
+        description="Sort key: created_at, -created_at, title, -title, target_date, -target_date.",
+    )
 
 
 # ---------------------------------------------------------------------------
 # Responses
 # ---------------------------------------------------------------------------
+
+class ProjectModuleProgress(BaseModel):
+    """Linked module summary for a project."""
+    module_type: str
+    status: str
+    progress_pct: int = 0
+    count: int = 0
+
 
 class ProjectResponse(BaseModel):
     """Project details."""
@@ -69,8 +93,11 @@ class ProjectResponse(BaseModel):
     title: str
     description: str | None
     project_type: str
+    book_type: str | None = None
+    target_launch_date: date | None = None
     status: str
     organization_id: UUID
+    linked_modules: list[ProjectModuleProgress] = []
     genre: str | None = None
     subgenre: str | None = None
     target_audience: str | None = None
@@ -94,6 +121,8 @@ class ProjectListItem(BaseModel):
     title: str
     project_type: str
     status: str
+    book_type: str | None = None
+    target_launch_date: date | None = None
     genre: str | None = None
     target_date: date | None = None
     target_word_count: int | None = None
