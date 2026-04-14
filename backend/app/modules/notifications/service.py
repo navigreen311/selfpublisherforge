@@ -87,6 +87,9 @@ async def create_notification(
     await db.flush()
     await db.refresh(notification)
 
+    # --- WebSocket push (best-effort, never blocks the caller) -----------
+    await _push_websocket_event(notification)
+
     # --- Email dispatch (best-effort, never blocks the caller) -----------
     await _maybe_send_email(
         db=db,
@@ -96,6 +99,37 @@ async def create_notification(
     )
 
     return notification
+
+
+async def _push_websocket_event(notification: Notification) -> None:
+    """Publish a ``notification.created`` event to the realtime channel.
+
+    We broadcast on the AGENTS channel keyed by org_id so clients listening
+    on ``/ws/agents/{org_id}`` receive unread-count/popover updates.
+    Failures are swallowed -- notifications persist regardless.
+    """
+    try:
+        from app.modules.realtime.router import manager as ws_manager
+        from app.modules.realtime.schemas import WSChannel
+
+        await ws_manager.broadcast(
+            WSChannel.AGENTS,
+            str(notification.org_id),
+            {
+                "type": "notification.created",
+                "data": {
+                    "id": str(notification.id),
+                    "user_id": str(notification.user_id),
+                    "type": notification.type.value
+                    if hasattr(notification.type, "value")
+                    else str(notification.type),
+                    "title": notification.title,
+                    "message": notification.message,
+                },
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("notification WS push failed: %s", exc)
 
 
 async def _maybe_send_email(

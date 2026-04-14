@@ -37,6 +37,8 @@ async def create_project(
         title=body.title,
         description=body.description,
         project_type=body.project_type,
+        book_type=body.book_type,
+        target_launch_date=body.target_launch_date,
         genre=body.genre,
         subgenre=body.subgenre,
         target_audience=body.target_audience,
@@ -67,6 +69,9 @@ async def list_projects(
     offset: int = 0,
     project_type: str | None = None,
     status: str | None = None,
+    book_type: str | None = None,
+    search: str | None = None,
+    sort: str | None = None,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -78,6 +83,9 @@ async def list_projects(
         offset=offset,
         project_type=project_type,
         status=status,
+        book_type=book_type,
+        search=search,
+        sort=sort,
     )
 
     return await service.list_projects(db, org_id, request)
@@ -105,11 +113,12 @@ async def get_project(
 # ---------------------------------------------------------------------------
 # PUT /projects/{project_id}
 # ---------------------------------------------------------------------------
-@router.put(
+@router.api_route(
     "/{project_id}",
+    methods=["PUT", "PATCH"],
     response_model=schemas.ProjectResponse,
     summary="Update project",
-    description="Update project title, description, or status.",
+    description="Update project fields (PATCH/PUT both supported).",
 )
 async def update_project(
     project_id: UUID,
@@ -125,6 +134,8 @@ async def update_project(
         user_role=current_user["role"],
         title=body.title,
         description=body.description,
+        book_type=body.book_type,
+        target_launch_date=body.target_launch_date,
         status=body.status,
         genre=body.genre,
         subgenre=body.subgenre,
