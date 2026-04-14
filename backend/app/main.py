@@ -203,6 +203,22 @@ def _register_routers(app: FastAPI):
     from app.modules.review_intelligence.router import router as review_router
     app.include_router(review_router, prefix=f"{prefix}/reviews", tags=["reviews"])
 
+    # Embeddable Review Widgets (Feature 9)
+    from app.modules.review_intelligence.widgets import (
+        auth_router as review_widgets_auth_router,
+        public_router as review_widgets_public_router,
+    )
+    app.include_router(
+        review_widgets_auth_router,
+        prefix=f"{prefix}/review-widgets",
+        tags=["review-widgets"],
+    )
+    app.include_router(
+        review_widgets_public_router,
+        prefix=prefix,
+        tags=["review-widgets-public"],
+    )
+
     from app.modules.analytics.router import router as analytics_router
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
 
