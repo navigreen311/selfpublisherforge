@@ -20,6 +20,43 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { PenNameSelect } from "@/modules/pen-names/components/PenNameSelect";
+import { usePenNames } from "@/modules/pen-names/hooks";
+
+/**
+ * Small adapter that lets the wizard work with the new PenNameSelect while
+ * keeping its legacy string `author` field. Picking a pen name writes its
+ * display_name back to the form.
+ */
+function PenNameAuthorField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { data: penNames = [] } = usePenNames();
+  const selected = penNames.find((p) => p.display_name === value);
+  if (penNames.length === 0) {
+    return (
+      <Input
+        id="author"
+        placeholder="Author or pen name"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+  return (
+    <PenNameSelect
+      value={selected?.id ?? null}
+      onChange={(id) => {
+        const match = penNames.find((p) => p.id === id);
+        if (match) onChange(match.display_name);
+      }}
+    />
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Wizard Data Type
@@ -345,11 +382,15 @@ export function Step1Details({ data, onChange }: StepProps) {
 
         <div className="space-y-2">
           <Label htmlFor="author">Author</Label>
-          <Input
-            id="author"
-            placeholder="Author or pen name"
+          {/*
+           * Stream 1 (Final Gaps) integration example: plug the reusable
+           * PenNameSelect into the cookbook wizard. Wizards keep a plain
+           * string `author` for back-compat; when a pen name is picked we
+           * record its display name.
+           */}
+          <PenNameAuthorField
             value={data.author}
-            onChange={(e) => onChange({ author: e.target.value })}
+            onChange={(name) => onChange({ author: name })}
           />
         </div>
       </div>
