@@ -131,7 +131,7 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
         raise
     except Exception as e:
         logger.error(f"Task analyze_pending_reviews failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @celery_app.task(
@@ -183,7 +183,7 @@ def check_alerts(self, org_id: str, book_id: str):
         raise
     except Exception as e:
         logger.error(f"Alert check task failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @celery_app.task(
@@ -288,7 +288,7 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
         raise
     except Exception as e:
         logger.error(f"Velocity snapshot task failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @celery_app.task(name="review_intelligence.compute_reputation", soft_time_limit=300, time_limit=600)

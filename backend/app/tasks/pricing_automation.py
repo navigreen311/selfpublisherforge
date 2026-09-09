@@ -257,7 +257,7 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -459,7 +459,7 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -559,7 +559,7 @@ def activate_scheduled_promotions(self) -> dict:
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -671,7 +671,7 @@ def complete_expired_promotions(self) -> dict:
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ──────────────────── Celery Beat Schedule ────────────────────

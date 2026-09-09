@@ -51,7 +51,7 @@ def check_deadlines(self) -> dict:
         raise
     except Exception as exc:
         logger.error("check_deadlines failed: %s", exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 

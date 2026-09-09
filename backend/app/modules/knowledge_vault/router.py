@@ -104,7 +104,7 @@ async def import_entry(
             extract_facts=payload.extract_facts,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return ImportResponse(
         entry_id=entry.id,
@@ -138,9 +138,9 @@ async def import_from_url(
             extract_facts=True,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch URL: {exc}")
+        raise HTTPException(status_code=502, detail=f"Failed to fetch URL: {exc}") from exc
 
     return ImportResponse(
         entry_id=entry.id,
@@ -370,9 +370,9 @@ async def upload_attachment(
             Body=content,
             ContentType=mime_type,
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("Failed to upload attachment to S3")
-        raise HTTPException(status_code=502, detail="Failed to upload file to storage")
+        raise HTTPException(status_code=502, detail="Failed to upload file to storage") from exc
 
     # Generate a presigned download URL
     file_url = s3.generate_presigned_url(

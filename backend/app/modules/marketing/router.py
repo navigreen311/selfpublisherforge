@@ -99,7 +99,7 @@ async def list_launch_plans(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status_filter}",
-            )
+            ) from None
 
     service = MarketingService(db)
     plans, total = await service.list_launch_plans(
@@ -204,7 +204,7 @@ async def list_email_sequences(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status_filter}",
-            )
+            ) from None
 
     service = MarketingService(db)
     sequences, total = await service.list_email_sequences(
@@ -325,7 +325,7 @@ async def get_social_calendar(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid platform: {platform}",
-            )
+            ) from None
 
     service = MarketingService(db)
     calendar_data = await service.get_social_calendar(
@@ -383,7 +383,7 @@ async def list_arc_campaigns(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status_filter}",
-            )
+            ) from None
 
     service = MarketingService(db)
     campaigns, total = await service.list_arc_campaigns(

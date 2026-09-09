@@ -267,7 +267,7 @@ async def check_coherence(
     try:
         result = await service_series.check_series_coherence(db, series_id, user["org_id"])
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {
         "series_id": series_id,
         "score": result["score"],
@@ -399,7 +399,7 @@ async def get_isbn_pool(
             {"isbn": isbn},
         )
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post(
@@ -425,7 +425,7 @@ async def assign_isbn(
             },
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return result
 
 

@@ -91,7 +91,7 @@ async def create_variations(
     try:
         variations = await service.create_variations(db, current_user["org_id"], cover_id, request)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return SuccessResponse(data=variations)
 
 

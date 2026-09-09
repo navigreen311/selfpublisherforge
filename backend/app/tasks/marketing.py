@@ -104,7 +104,7 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
         raise
     except Exception as exc:
         logger.error(f"Failed to send scheduled emails: {exc}", exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 
@@ -181,7 +181,7 @@ def send_social_post_reminders(self, org_id: str) -> dict:
         raise
     except Exception as exc:
         logger.error(f"Failed to send social post reminders: {exc}", exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 
@@ -247,7 +247,7 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
         raise
     except Exception as exc:
         logger.error(f"Failed to send ARC follow-ups: {exc}", exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 

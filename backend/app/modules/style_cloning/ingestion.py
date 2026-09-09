@@ -128,7 +128,7 @@ def _extract_docx(content: bytes) -> str:
     try:
         from docx import Document  # python-docx
     except ImportError:
-        raise RuntimeError("python-docx is required for DOCX ingestion")
+        raise RuntimeError("python-docx is required for DOCX ingestion") from None
     doc = Document(io.BytesIO(content))
     paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
     return "\n\n".join(paragraphs)
@@ -139,7 +139,7 @@ def _extract_epub(content: bytes) -> str:
         import ebooklib
         from ebooklib import epub
     except ImportError:
-        raise RuntimeError("ebooklib is required for EPUB ingestion")
+        raise RuntimeError("ebooklib is required for EPUB ingestion") from None
     from html.parser import HTMLParser
 
     class _TagStripper(HTMLParser):
@@ -184,7 +184,7 @@ def _extract_pdf(content: bytes) -> str:
                 pages.append(text.strip())
         return "\n\n".join(pages)
     except ImportError:
-        raise RuntimeError("pypdf or PyPDF2 is required for PDF ingestion")
+        raise RuntimeError("pypdf or PyPDF2 is required for PDF ingestion") from None
 
 
 # ---------------------------------------------------------------------------

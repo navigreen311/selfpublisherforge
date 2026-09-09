@@ -43,7 +43,41 @@ ignore = [
 known-first-party = ["app", "shared"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "ARG001", "ARG002"]
+# Test code is held to the same correctness bar as app code, but a handful of
+# rules describe production concerns that do not apply to it.
+"tests/**/*.py" = [
+    "S101",    # assert is the point of a test
+    "S105",    # "hardcoded password" — these are fixture tokens, not secrets
+    "S106",    #   ditto, passed as a function argument
+    "S311",    # random for fixture data, never for security
+    "ARG001",  # pytest fixtures are requested by name and often unused in-body
+    "ARG002",
+    "ERA001",  # commented-out code in tests is usually a documented variant
+    "F841",    # bound-but-unused locals are common when asserting on a call
+    "E402",    # several suites set env vars before importing app modules
+    "E741",    # `l`/`I` appear in table-shaped fixture data
+    "N806",    # fixture builders use PascalCase for model classes
+    "RUF001",  # em dashes and quotes in test docstrings
+    "RUF002",
+]
+
+# CLI and seeding scripts: printing to stdout is their purpose.
+"scripts/**/*.py" = [
+    "T201",    # print is the interface
+    "S311",    # random sample data
+    "ERA001",
+]
+
+# Alembic revisions are generated and then hand-edited; they are not a place
+# to apply general style rules, and rewriting them rewrites history.
+"migrations/**/*.py" = [
+    "E501",
+    "ERA001",
+    "F401",
+    "S110",
+    "SIM105",
+    "UP035",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

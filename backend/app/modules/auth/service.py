@@ -190,7 +190,7 @@ async def refresh_access_token(db: AsyncSession, *, refresh_token: str) -> Token
     try:
         payload = decode_token(refresh_token)
     except ValueError:
-        raise AppException(status_code=401, code="INVALID_TOKEN", message="Invalid refresh token.")
+        raise AppException(status_code=401, code="INVALID_TOKEN", message="Invalid refresh token.") from None
 
     if payload.get("type") != "refresh":
         raise AppException(status_code=401, code="INVALID_TOKEN", message="Token is not a refresh token.")

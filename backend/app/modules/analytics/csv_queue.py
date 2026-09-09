@@ -158,7 +158,7 @@ def _resolve_platform(platform: str) -> Platform:
     except ValueError:
         raise ValueError(
             f"Unrecognised platform identifier: {platform!r}. " f"Supported values: {sorted(_PLATFORM_ALIASES.keys())}"
-        )
+        ) from None
 
 
 # ---------------------------------------------------------------------------

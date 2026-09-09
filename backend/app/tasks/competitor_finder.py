@@ -122,7 +122,7 @@ def process_single_analysis(
         raise
     except Exception as exc:
         logger.error("Task failed, retrying: %s", exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -419,7 +419,7 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
         raise
     except Exception as exc:
         logger.error("Alert check task failed: %s", exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------

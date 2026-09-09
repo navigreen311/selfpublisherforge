@@ -56,11 +56,11 @@ def import_from_url_task(self, org_id: str, url: str, extract_facts: bool = True
             except SQLAlchemyError as exc:
                 await db.rollback()
                 logger.error("Database error importing URL %s: %s", url, exc, exc_info=True)
-                raise self.retry(exc=exc)
+                raise self.retry(exc=exc) from exc
             except (ConnectionError, OSError, TimeoutError) as exc:
                 await db.rollback()
                 logger.error("Network error importing URL %s: %s", url, exc, exc_info=True)
-                raise self.retry(exc=exc)
+                raise self.retry(exc=exc) from exc
 
     loop = asyncio.new_event_loop()
     try:
@@ -108,11 +108,11 @@ def import_from_file_task(
             except SQLAlchemyError as exc:
                 await db.rollback()
                 logger.error("Database error importing file %s: %s", file_name, exc, exc_info=True)
-                raise self.retry(exc=exc)
+                raise self.retry(exc=exc) from exc
             except (ValueError, UnicodeDecodeError) as exc:
                 await db.rollback()
                 logger.error("File parsing error importing file %s: %s", file_name, exc, exc_info=True)
-                raise self.retry(exc=exc)
+                raise self.retry(exc=exc) from exc
 
     loop = asyncio.new_event_loop()
     try:

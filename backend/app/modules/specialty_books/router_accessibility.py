@@ -76,7 +76,7 @@ async def generate_accessible_variant(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown variant type: {body.variant_type}"
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.post(
@@ -94,7 +94,7 @@ async def safe_zone_heatmap(
     try:
         return await layout_svc.generate_safe_zone_heatmap(db, book_type, book_id, body.page_id, org_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.post(
@@ -109,7 +109,7 @@ async def gutter_check(
     try:
         return await layout_svc.check_gutter_collisions(db, book_type, book_id, org_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.post(
@@ -128,7 +128,7 @@ async def reflow(
     try:
         return await layout_svc.generate_reflow(db, book_type, book_id, org_id, body.target_trim_size)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 
 @router.post(
@@ -146,4 +146,4 @@ async def accessibility_compliance(
     try:
         return await acc_svc.check_accessibility_compliance(db, book_type, book_id, org_id, standard=body.standard)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

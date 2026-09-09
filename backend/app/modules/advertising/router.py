@@ -199,12 +199,12 @@ async def get_campaign_performance(
         try:
             query.date_from = datetime.fromisoformat(date_from)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date_from format")
+            raise HTTPException(status_code=400, detail="Invalid date_from format") from None
     if date_to:
         try:
             query.date_to = datetime.fromisoformat(date_to)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date_to format")
+            raise HTTPException(status_code=400, detail="Invalid date_to format") from None
 
     return await service.get_campaign_performance(
         org_id=current_user["org_id"],
@@ -369,7 +369,7 @@ async def create_facebook_campaign(
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.get(
@@ -395,7 +395,7 @@ async def list_facebook_campaigns(
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.get(
@@ -421,8 +421,8 @@ async def get_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.patch(
@@ -450,8 +450,8 @@ async def update_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.post(
@@ -477,8 +477,8 @@ async def pause_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.get(
@@ -505,7 +505,7 @@ async def get_facebook_campaign_metrics(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid {label} format. Use YYYY-MM-DD.",
-            )
+            ) from None
 
     try:
         return await service.facebook_get_campaign_metrics(
@@ -520,8 +520,8 @@ async def get_facebook_campaign_metrics(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.put(
@@ -549,8 +549,8 @@ async def put_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.get(
@@ -576,7 +576,7 @@ async def get_facebook_campaign_insights(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid {label} format. Use YYYY-MM-DD.",
-            )
+            ) from None
 
     try:
         return await service.facebook_get_campaign_metrics(
@@ -591,8 +591,8 @@ async def get_facebook_campaign_insights(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 class FacebookAudienceCreate(BaseModel):
@@ -644,7 +644,7 @@ async def create_facebook_audience(
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
-        )
+        ) from exc
 
 
 # ─── Enhanced Dashboard Endpoint ────────────────────────────────────────────

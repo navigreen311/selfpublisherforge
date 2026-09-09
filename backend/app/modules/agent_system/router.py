@@ -5,6 +5,7 @@ All endpoints under /api/v1/agents.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -14,7 +15,7 @@ from starlette.responses import StreamingResponse
 from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
 from app.modules.agent_system import service
-from app.modules.agent_system.audit import list_audit_entries
+from app.modules.agent_system.audit import list_audit_entries, record_audit
 from app.modules.agent_system.governance import (
     emergency_stop as gov_emergency_stop,
 )
@@ -256,7 +257,7 @@ async def approve_task(
             ip_address=_get_client_ip(request),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
@@ -287,7 +288,7 @@ async def reject_task(
             ip_address=_get_client_ip(request),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
@@ -318,7 +319,7 @@ async def cancel_task(
             ip_address=_get_client_ip(request),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")

@@ -186,7 +186,7 @@ def _export_docx(title: str, chapters: list[Chapter]) -> bytes:
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
             message=("DOCX export requires the 'python-docx' library. " "Install it with: pip install python-docx"),
-        )
+        ) from None
 
     doc = Document()
 
@@ -226,7 +226,7 @@ def _export_epub(title: str, chapters: list[Chapter]) -> bytes:
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
             message=("EPUB export requires the 'ebooklib' library. " "Install it with: pip install ebooklib"),
-        )
+        ) from None
 
     book = epub.EpubBook()
     book.set_identifier(f"spf-{_uuid.uuid4()}")
@@ -301,7 +301,7 @@ def _export_pdf(title: str, chapters: list[Chapter]) -> bytes:
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
             message=("PDF export requires the 'reportlab' library. " "Install it with: pip install reportlab"),
-        )
+        ) from None
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(

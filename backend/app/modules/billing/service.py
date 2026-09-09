@@ -323,7 +323,7 @@ async def handle_webhook_event(
             status_code=400,
             code="WEBHOOK_SIGNATURE_INVALID",
             message="Invalid Stripe webhook signature.",
-        )
+        ) from None
 
     event_id: str = event["id"]
     event_type: str = event["type"]

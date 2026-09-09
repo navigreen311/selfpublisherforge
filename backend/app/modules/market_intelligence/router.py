@@ -170,7 +170,7 @@ async def track_competitor(
     try:
         return await svc.track_competitor(db=db, request=request, org_id=current_user["org_id"])
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get(

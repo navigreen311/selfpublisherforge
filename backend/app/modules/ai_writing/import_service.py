@@ -180,7 +180,7 @@ def _parse_docx(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
             message=("DOCX import requires the 'python-docx' library. " "Install it with: pip install python-docx"),
-        )
+        ) from None
 
     buf = io.BytesIO(raw_bytes)
     doc = Document(buf)
@@ -236,7 +236,7 @@ def _parse_epub(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
             message=("EPUB import requires the 'ebooklib' library. " "Install it with: pip install ebooklib"),
-        )
+        ) from None
 
     buf = io.BytesIO(raw_bytes)
     book = epub.read_epub(buf)

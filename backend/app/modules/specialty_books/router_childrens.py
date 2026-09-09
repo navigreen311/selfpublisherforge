@@ -49,7 +49,7 @@ async def create_book(
     try:
         return await svc.create_childrens_book(db, current_user["org_id"], body.model_dump(exclude_unset=True))
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
 
 
 @router.get("/{book_id}", response_model=ChildrensBookResponse, summary="Get children's book")

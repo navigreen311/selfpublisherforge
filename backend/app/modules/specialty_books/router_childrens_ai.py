@@ -120,7 +120,7 @@ async def generate_story_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Story generation failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -152,7 +152,7 @@ async def analyze_text_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Text analysis failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -184,7 +184,7 @@ async def continuity_check_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Continuity check failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -216,7 +216,7 @@ async def auto_fix_prompts_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Auto-fix prompts failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -254,4 +254,4 @@ async def translate_book_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Translation failed: {e}",
-        )
+        ) from e

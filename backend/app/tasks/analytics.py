@@ -143,7 +143,7 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
         raise
     except Exception as exc:
         logger.exception("Daily metric aggregation failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -205,7 +205,7 @@ def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
         raise
     except Exception as exc:
         logger.exception("Report generation failed for %s: %s", report_id, exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -404,7 +404,7 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
         raise
     except Exception as exc:
         logger.exception("Royalty sync failed for org %s: %s", org_id, exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------

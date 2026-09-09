@@ -1298,7 +1298,7 @@ async def generate_reflow(
             status_code=422,
             code="INVALID_TRIM_SIZE",
             message=(f"Invalid trim size format: {target_trim_size}. " "Use WxH (e.g., '8x10')."),
-        )
+        ) from None
 
     scale_x = target_w / curr_w
     scale_y = target_h / curr_h

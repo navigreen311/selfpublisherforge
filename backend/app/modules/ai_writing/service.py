@@ -364,7 +364,7 @@ async def update_manuscript(
                 status_code=422,
                 code="VALIDATION_ERROR",
                 message=f"Invalid status: {data['status']}",
-            )
+            ) from None
 
     if "content_type" in data:
         try:
@@ -374,7 +374,7 @@ async def update_manuscript(
                 status_code=422,
                 code="VALIDATION_ERROR",
                 message=f"Invalid content_type: {data['content_type']}",
-            )
+            ) from None
 
     await db.flush()
     await db.refresh(manuscript)

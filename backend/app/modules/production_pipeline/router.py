@@ -145,7 +145,7 @@ async def update_pipeline(
     try:
         pipeline = await service.update_pipeline(db, pipeline_id, current_user["org_id"], payload)
     except WorkflowError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found.")
     return pipeline
@@ -170,7 +170,7 @@ async def add_task(
     try:
         task = await service.add_task(db, pipeline_id, current_user["org_id"], payload)
     except WorkflowError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     if not task:
         raise HTTPException(status_code=404, detail="Pipeline not found.")
     return task
@@ -192,7 +192,7 @@ async def update_task(
     try:
         task = await service.update_task(db, pipeline_id, task_id, current_user["org_id"], payload)
     except WorkflowError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     if not task:
         raise HTTPException(status_code=404, detail="Pipeline or task not found.")
     return task

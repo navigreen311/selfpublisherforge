@@ -411,8 +411,8 @@ async def get_analysis(
         )
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=404, detail="Analysis not found")
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail="Analysis not found") from exc
 
 
 # ---------------------------------------------------------------------------

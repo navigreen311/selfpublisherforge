@@ -63,7 +63,7 @@ except ImportError:
             "No LLM SDK available. Install at least one of: "
             "'pip install anthropic' or 'pip install openai'. "
             "The AI writing module requires an LLM provider to function."
-        )
+        ) from None
 
 
 # ---------------------------------------------------------------------------

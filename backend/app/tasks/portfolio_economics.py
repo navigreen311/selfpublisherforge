@@ -288,7 +288,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -442,7 +442,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -679,7 +679,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -789,7 +789,7 @@ def update_seasonal_calendar(self) -> dict:
         raise
     except Exception as exc:
         logger.error("Failed to update seasonal calendar: %s", str(exc), exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ─── Celery Beat Schedule ────────────────────────────────────────────────────

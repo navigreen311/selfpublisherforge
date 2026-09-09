@@ -164,7 +164,7 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
             status_code=400,
             code="IMAGE_DOWNLOAD_FAILED",
             message=f"Failed to download cover image: {exc!s}",
-        )
+        ) from exc
 
     try:
         img = Image.open(io.BytesIO(image_data))
@@ -185,7 +185,7 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
             status_code=400,
             code="IMAGE_OPEN_FAILED",
             message=f"Failed to open cover image: {exc!s}",
-        )
+        ) from exc
 
 
 def _add_bleed_area(img: Image.Image, dpi: int) -> Image.Image:
@@ -277,7 +277,7 @@ async def _export_pdf(cover: Cover, include_bleed: bool) -> bytes:
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
             message=("PDF export requires the 'reportlab' library. " "Install it with: pip install reportlab"),
-        )
+        ) from None
 
     img = await _get_cover_image(cover)
 

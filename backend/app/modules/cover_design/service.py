@@ -6,7 +6,7 @@ Orchestrates cover generation, template management, and competitor analysis.
 from __future__ import annotations
 
 import logging
-from datetime import UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select

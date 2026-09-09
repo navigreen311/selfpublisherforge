@@ -241,19 +241,19 @@ async def generate_sample(
         raise HTTPException(
             status_code=502,
             detail=f"Text generation failed: {exc}",
-        )
+        ) from exc
     except ValueError as exc:
         logger.error("LLM value error for profile %s: %s", profile_id, exc, exc_info=True)
         raise HTTPException(
             status_code=502,
             detail=f"Text generation failed: {exc}",
-        )
+        ) from exc
     except Exception as exc:
         logger.exception("Unexpected error during LLM generation for profile %s", profile_id)
         raise HTTPException(
             status_code=502,
             detail=f"Text generation failed: {exc}",
-        )
+        ) from exc
 
     return {
         "profile_id": str(profile_id),

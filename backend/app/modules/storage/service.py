@@ -166,12 +166,12 @@ class StorageService:
         # Verify the object actually exists in S3
         try:
             head = self.s3.head_object(Bucket=self.bucket, Key=asset.s3_key)
-        except ClientError:
+        except ClientError as exc:
             raise AppException(
                 status_code=400,
                 code="UPLOAD_NOT_FOUND",
                 message="The file has not been uploaded to storage yet.",
-            )
+            ) from exc
 
         # Back-fill the actual file size from S3 if available
         actual_size = head.get("ContentLength")
@@ -225,7 +225,7 @@ class StorageService:
                     status_code=400,
                     code="INVALID_CURSOR",
                     message="Cursor value is not a valid ISO-8601 datetime.",
-                )
+                ) from None
             query = query.where(ContentAsset.created_at < cursor_dt)
 
         query = query.limit(limit + 1)  # fetch one extra for has_more
@@ -324,7 +324,7 @@ class StorageService:
                 status_code=500,
                 code="PROCESSING_FAILED",
                 message="Asset processing failed due to a storage service error.",
-            )
+            ) from exc
         except OSError as exc:
             logger.error("I/O error during asset processing for %s: %s", asset_id, exc)
             asset.status = AssetStatus.FAILED.value
@@ -334,7 +334,7 @@ class StorageService:
                 status_code=500,
                 code="PROCESSING_FAILED",
                 message="Asset processing failed due to an I/O error.",
-            )
+            ) from exc
 
         return self._to_response(asset)
 

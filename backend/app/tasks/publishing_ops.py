@@ -177,16 +177,16 @@ def task_generate_epub(
         }
     except ClientError as exc:
         logger.error("S3 upload failed for EPUB export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except (ValueError, TypeError, KeyError) as exc:
         logger.error("Data validation error in EPUB generation for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error("EPUB generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -266,16 +266,16 @@ def task_generate_pdf(
         }
     except ClientError as exc:
         logger.error("S3 upload failed for PDF export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except (ValueError, TypeError, KeyError) as exc:
         logger.error("Data validation error in PDF generation for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error("PDF generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -406,6 +406,6 @@ def task_sync_listing(
         raise
     except Exception as exc:
         logger.error("Listing sync failed for listing_id=%s: %s", listing_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     return result

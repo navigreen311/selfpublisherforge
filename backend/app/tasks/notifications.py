@@ -60,7 +60,7 @@ def send_email_task(
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
@@ -74,7 +74,7 @@ def send_email_task(
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -144,7 +144,7 @@ def create_in_app_notification_task(
             str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 

@@ -101,10 +101,10 @@ def refresh_category_data(self):
         raise
     except SQLAlchemyError as exc:
         logger.error("Category refresh DB error: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except ConnectionError as exc:
         logger.error("Category refresh connection failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 def _count_nodes(nodes: list[dict]) -> int:
@@ -190,10 +190,10 @@ def update_bsr_history(self):
         raise
     except SQLAlchemyError as exc:
         logger.error("BSR history update DB error: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except ConnectionError as exc:
         logger.error("BSR history update connection failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -277,10 +277,10 @@ def generate_market_snapshot(self, category_id: str | None = None):
         raise
     except SQLAlchemyError as exc:
         logger.error("Market snapshot generation DB error: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except ConnectionError as exc:
         logger.error("Market snapshot generation connection failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------
