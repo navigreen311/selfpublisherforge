@@ -593,7 +593,11 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
                         from app.modules.specialty.coloring.service import _fetch_specialty_asset
 
                         image_url = page.cleaned_url or page.illustration_url or ""
-                        image_data = _fetch_specialty_asset(image_url) if image_url else b""
+                        image_data = (
+                            await _fetch_specialty_asset(book.org_id, "coloring", book_id, page.id)
+                            if image_url
+                            else b""
+                        )
                         if not image_data:
                             logger.warning("No image data for page %d, skipping QA", page.page_number)
                             continue

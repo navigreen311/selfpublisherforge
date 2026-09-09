@@ -167,7 +167,11 @@ async def generate_with_references(
             references.append(_photo_to_dict(photo))
 
     if not references:
-        raise AppException("No valid photo references found for the given IDs.")
+        raise AppException(
+            status_code=400,
+            code="NO_PHOTO_REFERENCES",
+            message="No valid photo references found for the given IDs.",
+        )
 
     # Stub: in production this would call an AI image generation API
     generated_id = _uuid.uuid4()
