@@ -84,15 +84,24 @@ async def _search_books(db: AsyncSession, org_id: UUID, like: str) -> list[Searc
 
 async def _search_chapters(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
-        from app.models.content import Chapter
+        from app.models.content import Chapter, Manuscript
+        from app.models.project import Book, Project
 
+        # Chapter has no org_id, and neither does Book. The owning org is on
+        # Project: Chapter -> Manuscript -> Book -> Project. Without this the
+        # search returned every tenant's chapters. _search_books already walks
+        # the Book -> Project half of the same chain.
         stmt = (
             select(Chapter)
+            .join(Manuscript, Chapter.manuscript_id == Manuscript.id)
+            .join(Book, Manuscript.book_id == Book.id)
+            .join(Project, Book.project_id == Project.id)
             .where(
-                Chapter.deleted_at.is_(None) if hasattr(Chapter, "deleted_at") else True,
+                Project.org_id == org_id,
+                Chapter.deleted_at.is_(None),
                 or_(
                     Chapter.title.ilike(like),
-                    Chapter.content.ilike(like) if hasattr(Chapter, "content") else Chapter.title.ilike(like),
+                    Chapter.content.ilike(like),
                 ),
             )
             .limit(10)
@@ -114,12 +123,20 @@ async def _search_chapters(db: AsyncSession, org_id: UUID, like: str) -> list[Se
 
 async def _search_recipes(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
-        from app.modules.specialty.cookbook.models import Recipe  # type: ignore
+        # The module is specialty.models.cookbook, not specialty.cookbook.models.
+        # The old path raised ImportError on every call, was swallowed by the
+        # except below and logged at debug, so recipe search always returned [].
+        from app.modules.specialty.models.cookbook import Cookbook, CookbookChapter, Recipe
 
+        # Recipe has no org_id either; scope through chapter -> cookbook. The
+        # previous hasattr guard collapsed to a literal True.
         stmt = (
             select(Recipe)
+            .join(CookbookChapter, Recipe.chapter_id == CookbookChapter.id)
+            .join(Cookbook, CookbookChapter.cookbook_id == Cookbook.id)
             .where(
-                getattr(Recipe, "org_id", None) == org_id if hasattr(Recipe, "org_id") else True,
+                Cookbook.org_id == org_id,
+                Recipe.deleted_at.is_(None),
                 Recipe.title.ilike(like),
             )
             .limit(10)

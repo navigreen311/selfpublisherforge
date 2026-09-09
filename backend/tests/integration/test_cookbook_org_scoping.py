@@ -77,3 +77,23 @@ async def test_chapter_lookup_is_scoped_to_the_owning_org(db_session):
 
     with pytest.raises(NotFoundError):
         await service._get_chapter_or_404(db_session, org_b, cookbook.id, chapter.id)
+
+
+@pytest.mark.asyncio
+async def test_global_search_does_not_return_another_orgs_recipes(db_session):
+    """Global search joins Recipe -> CookbookChapter -> Cookbook for org_id.
+
+    The previous implementation imported Recipe from a module path that does
+    not exist, so it always raised and returned []; the scoping guard beneath
+    it collapsed to a literal True.
+    """
+    from app.modules.search import service as search_service
+
+    org_a, org_b = uuid.uuid4(), uuid.uuid4()
+    await _seed(db_session, org_a)
+
+    owner_hits = await search_service._search_recipes(db_session, org_a, "%Secret%")
+    other_hits = await search_service._search_recipes(db_session, org_b, "%Secret%")
+
+    assert [h.title for h in owner_hits] == ["Secret Recipe"]
+    assert other_hits == []
