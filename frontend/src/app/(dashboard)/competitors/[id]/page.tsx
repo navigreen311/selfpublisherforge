@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import { useCompetitorAnalysis, useWeaknesses, useOpportunity } from "@/modules/competitors/hooks";
 import { OpportunityCard } from "@/modules/competitors/components/OpportunityCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,11 +9,11 @@ import type { WeaknessSignal } from "@/modules/competitors/types";
 import { useTranslations } from "@/hooks/use-translations";
 
 interface CompetitorDetailPageProps {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default function CompetitorDetailPage({ params }: CompetitorDetailPageProps) {
-  const { id } = use(params);
+  const { id } = params;
   const t = useTranslations("competitors");
   const { data: analysis, isLoading: analysisLoading } = useCompetitorAnalysis(id);
   const { data: weaknesses = [], isLoading: weaknessesLoading } = useWeaknesses(id);

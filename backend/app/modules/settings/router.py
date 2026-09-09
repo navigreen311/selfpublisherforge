@@ -32,7 +32,9 @@ async def get_integrations_status(
     current_user: dict = Depends(require_role("member", "editor", "admin", "owner")),
 ):
     """Get configured/not-configured status for each integration."""
-    from app.config import settings as app_settings
+    from app.config import get_settings
+
+    app_settings = get_settings()
 
     def _is_set(value: str | None) -> bool:
         if not value:

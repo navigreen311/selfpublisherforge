@@ -2,18 +2,16 @@
 
 import { ReviewDashboard } from "@/modules/reviews/components/ReviewDashboard";
 import Link from "next/link";
-import { use } from "react";
 import { useTranslations } from "@/hooks/use-translations";
 
 interface BookReviewPageProps {
-  params: Promise<{
+  params: {
     bookId: string;
-  }>;
+  };
 }
 
 export default function BookReviewPage({ params }: BookReviewPageProps) {
-  const resolvedParams = use(params);
-  const { bookId } = resolvedParams;
+  const { bookId } = params;
   const t = useTranslations("reviews");
 
   return (

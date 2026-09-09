@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -19,11 +19,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "@/hooks/use-translations";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default function StyleProfileDetailPage({ params }: PageProps) {
-  const { id } = use(params);
+  const { id } = params;
   const t = useTranslations("style-profiles");
   const { data: profile, isPending } = useStyleProfile(id);
   const { data: fingerprintData, isPending: fingerprintPending } = useStyleFingerprint(id);
