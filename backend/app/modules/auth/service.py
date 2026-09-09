@@ -49,6 +49,7 @@ MAX_SESSIONS = 5
 # Service functions
 # ---------------------------------------------------------------------------
 
+
 async def register_user(
     db: AsyncSession,
     *,
@@ -229,9 +230,7 @@ async def refresh_access_token(db: AsyncSession, *, refresh_token: str) -> Token
 async def logout(db: AsyncSession, *, refresh_token: str) -> None:
     """Delete the session associated with the given refresh token."""
     token_hash = generate_token_hash(refresh_token)
-    await db.execute(
-        delete(UserSession).where(UserSession.refresh_token_hash == token_hash)
-    )
+    await db.execute(delete(UserSession).where(UserSession.refresh_token_hash == token_hash))
     await db.flush()
 
 
@@ -331,7 +330,9 @@ async def verify_mfa_setup(db: AsyncSession, *, user_id: UUID, code: str) -> Non
     if user.mfa_enabled:
         raise AppException(status_code=400, code="MFA_ALREADY_ENABLED", message="MFA is already enabled.")
     if not user.mfa_secret:
-        raise AppException(status_code=400, code="MFA_NOT_SETUP", message="MFA has not been set up. Call /mfa/setup first.")
+        raise AppException(
+            status_code=400, code="MFA_NOT_SETUP", message="MFA has not been set up. Call /mfa/setup first."
+        )
 
     if not verify_totp(user.mfa_secret, code):
         raise AppException(status_code=400, code="INVALID_MFA_CODE", message="Invalid TOTP code.")
@@ -522,6 +523,7 @@ async def handle_google_callback(
 # OAuth — GitHub
 # ---------------------------------------------------------------------------
 
+
 def generate_github_auth_url() -> OAuthAuthorizationURL:
     """Build the GitHub OAuth authorization URL.
 
@@ -552,6 +554,7 @@ async def handle_github_callback(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 async def _create_session(
     db: AsyncSession,
     *,
@@ -562,9 +565,7 @@ async def _create_session(
 ) -> UserSession:
     """Create a new session row, enforcing the max-sessions cap."""
     # Count existing sessions
-    count_result = await db.execute(
-        select(func.count()).select_from(UserSession).where(UserSession.user_id == user_id)
-    )
+    count_result = await db.execute(select(func.count()).select_from(UserSession).where(UserSession.user_id == user_id))
     count = count_result.scalar() or 0
 
     if count >= MAX_SESSIONS:

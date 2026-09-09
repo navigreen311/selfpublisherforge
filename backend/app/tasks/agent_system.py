@@ -70,9 +70,7 @@ async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, A
 
     async with async_session() as db:
         try:
-            result = await db.execute(
-                select(AgentTask).where(AgentTask.id == uuid.UUID(task_id))
-            )
+            result = await db.execute(select(AgentTask).where(AgentTask.id == uuid.UUID(task_id)))
             task = result.scalar_one_or_none()
 
             if task is None:
@@ -165,9 +163,7 @@ async def _execute_agent_workflow_async(
 
     async with async_session() as db:
         try:
-            result = await db.execute(
-                select(AgentWorkflow).where(AgentWorkflow.id == uuid.UUID(workflow_id))
-            )
+            result = await db.execute(select(AgentWorkflow).where(AgentWorkflow.id == uuid.UUID(workflow_id)))
             workflow = result.scalar_one_or_none()
 
             if workflow is None:
@@ -180,13 +176,9 @@ async def _execute_agent_workflow_async(
             engine = WorkflowEngine(db)
 
             if workflow.status == WorkflowStatus.DRAFT:
-                workflow = await engine.start_workflow(
-                    workflow, user_role=user_role
-                )
+                workflow = await engine.start_workflow(workflow, user_role=user_role)
             elif workflow.status in (WorkflowStatus.RUNNING, WorkflowStatus.PAUSED):
-                workflow = await engine.resume_workflow(
-                    workflow, user_role=user_role
-                )
+                workflow = await engine.resume_workflow(workflow, user_role=user_role)
             else:
                 return {
                     "workflow_id": workflow_id,

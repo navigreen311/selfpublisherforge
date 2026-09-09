@@ -101,9 +101,7 @@ class ComplianceScanner:
     def _check_content_policy(self, req: ComplianceScanRequest) -> list[ValidationIssue]:
         issues: list[ValidationIssue] = []
 
-        text_to_scan = " ".join(
-            filter(None, [req.title, req.subtitle, req.description, req.content_sample])
-        )
+        text_to_scan = " ".join(filter(None, [req.title, req.subtitle, req.description, req.content_sample]))
 
         if not text_to_scan.strip():
             return issues
@@ -182,10 +180,7 @@ class ComplianceScanner:
                 ValidationIssue(
                     severity=Severity.WARNING,
                     rule="keyword_count",
-                    message=(
-                        f"You have {len(req.keywords)} keywords. "
-                        "KDP allows a maximum of 7 keyword fields."
-                    ),
+                    message=(f"You have {len(req.keywords)} keywords. " "KDP allows a maximum of 7 keyword fields."),
                     location="keywords",
                 )
             )
@@ -196,10 +191,7 @@ class ComplianceScanner:
                     ValidationIssue(
                         severity=Severity.WARNING,
                         rule="keyword_length",
-                        message=(
-                            f"Keyword '{kw[:50]}...' exceeds 50 characters. "
-                            "Long keywords may be truncated."
-                        ),
+                        message=(f"Keyword '{kw[:50]}...' exceeds 50 characters. " "Long keywords may be truncated."),
                         location="keywords",
                     )
                 )

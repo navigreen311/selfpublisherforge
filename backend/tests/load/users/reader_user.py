@@ -8,6 +8,7 @@ ReaderUser represents 60% of traffic:
 
 Wait time: 1-3 seconds between requests
 """
+
 from __future__ import annotations
 
 import random

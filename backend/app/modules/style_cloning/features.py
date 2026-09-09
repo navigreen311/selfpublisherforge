@@ -88,9 +88,7 @@ _feature_config = _load_feature_words()
 # Common English stop words & top-5000 approximation
 # ---------------------------------------------------------------------------
 
-_STOP_WORDS: frozenset[str] = frozenset(
-    _feature_config.get("stop_words", _DEFAULT_STOP_WORDS)
-)
+_STOP_WORDS: frozenset[str] = frozenset(_feature_config.get("stop_words", _DEFAULT_STOP_WORDS))
 
 # A simplified set of common English words (top ~5000 proxy) — for rare-word
 # detection we flag words NOT in this set.  We use a heuristic: words <= 5
@@ -108,27 +106,23 @@ def _is_content_word(word: str) -> bool:
 # Transition / signal words
 # ---------------------------------------------------------------------------
 
-_TRANSITION_WORDS: frozenset[str] = frozenset(
-    _feature_config.get("transition_words", _DEFAULT_TRANSITION_WORDS)
-)
+_TRANSITION_WORDS: frozenset[str] = frozenset(_feature_config.get("transition_words", _DEFAULT_TRANSITION_WORDS))
 
 # ---------------------------------------------------------------------------
 # Rhetorical device patterns
 # ---------------------------------------------------------------------------
 
-_SIMILE_RE = re.compile(r'\b(?:like|as)\s+(?:a|an|the)\s+\w+', re.IGNORECASE)
+_SIMILE_RE = re.compile(r"\b(?:like|as)\s+(?:a|an|the)\s+\w+", re.IGNORECASE)
 _METAPHOR_INDICATORS = re.compile(
-    r'\b(?:is|was|are|were)\s+(?:a|an|the)\s+\w+',
+    r"\b(?:is|was|are|were)\s+(?:a|an|the)\s+\w+",
     re.IGNORECASE,
 )
 _HUMOR_MARKERS = re.compile(
-    r'(?:lol|haha|heh|\;[\-\)]|😂|ironic(?:ally)?|joke[ds]?|laugh(?:ed|ing)?|funny|hilarious)',
+    r"(?:lol|haha|heh|\;[\-\)]|😂|ironic(?:ally)?|joke[ds]?|laugh(?:ed|ing)?|funny|hilarious)",
     re.IGNORECASE,
 )
-_ALLITERATION_RE = re.compile(r'\b([a-z])\w+\s+\1\w+(?:\s+\1\w+)?', re.IGNORECASE)
-_EMOTIONAL_WORDS: frozenset[str] = frozenset(
-    _feature_config.get("emotional_words", _DEFAULT_EMOTIONAL_WORDS)
-)
+_ALLITERATION_RE = re.compile(r"\b([a-z])\w+\s+\1\w+(?:\s+\1\w+)?", re.IGNORECASE)
+_EMOTIONAL_WORDS: frozenset[str] = frozenset(_feature_config.get("emotional_words", _DEFAULT_EMOTIONAL_WORDS))
 
 # ---------------------------------------------------------------------------
 # Dialogue detection
@@ -144,16 +138,16 @@ _SAID_TAGS = re.compile(
 )
 _SPEECH_TAGS = re.compile(
     r'[\u201D"]\s*(?:,\s*)?(?:he|she|they|I|we|\w+)\s+'
-    r'(?:said|asked|replied|whispered|shouted|exclaimed|muttered|murmured|'
-    r'cried|yelled|stammered|sighed|gasped|snapped|growled|hissed|'
-    r'bellowed|pleaded|demanded|called|screamed|answered|remarked)\b',
+    r"(?:said|asked|replied|whispered|shouted|exclaimed|muttered|murmured|"
+    r"cried|yelled|stammered|sighed|gasped|snapped|growled|hissed|"
+    r"bellowed|pleaded|demanded|called|screamed|answered|remarked)\b",
     re.IGNORECASE,
 )
 _ACTION_BEAT_RE = re.compile(
     r'[\u201D"]\s*[.!?]?\s*[A-Z][a-z]+\s+(?:\w+\s+){0,3}'
-    r'(?:turned|walked|looked|nodded|shook|smiled|frowned|crossed|'
-    r'leaned|sat|stood|stepped|moved|placed|picked|set|put|took|ran|'
-    r'grabbed|reached|pulled|pushed|pointed|waved)',
+    r"(?:turned|walked|looked|nodded|shook|smiled|frowned|crossed|"
+    r"leaned|sat|stood|stepped|moved|placed|picked|set|put|took|ran|"
+    r"grabbed|reached|pulled|pushed|pointed|waved)",
     re.IGNORECASE,
 )
 
@@ -162,9 +156,9 @@ _ACTION_BEAT_RE = re.compile(
 # ---------------------------------------------------------------------------
 
 _CLAUSE_MARKERS = re.compile(
-    r'\b(?:and|but|or|nor|yet|so|because|although|though|while|when|'
-    r'where|if|unless|until|after|before|since|that|which|who|whom|'
-    r'whose|whenever|wherever|whether)\b',
+    r"\b(?:and|but|or|nor|yet|so|because|although|though|while|when|"
+    r"where|if|unless|until|after|before|since|that|which|who|whom|"
+    r"whose|whenever|wherever|whether)\b",
     re.IGNORECASE,
 )
 
@@ -177,9 +171,9 @@ def _count_clauses(sentence: str) -> int:
 def _classify_sentence(sentence: str) -> str:
     clauses = _count_clauses(sentence)
     subordinators = re.findall(
-        r'\b(?:because|although|though|while|when|where|if|unless|until|'
-        r'after|before|since|that|which|who|whom|whose|whenever|wherever|'
-        r'whether)\b',
+        r"\b(?:because|although|though|while|when|where|if|unless|until|"
+        r"after|before|since|that|which|who|whom|whose|whenever|wherever|"
+        r"whether)\b",
         sentence,
         re.IGNORECASE,
     )
@@ -216,16 +210,13 @@ def _count_syllables(word: str) -> int:
 def _flesch_kincaid_grade(total_words: int, total_sentences: int, total_syllables: int) -> float:
     if total_sentences == 0 or total_words == 0:
         return 0.0
-    return (
-        0.39 * (total_words / total_sentences)
-        + 11.8 * (total_syllables / total_words)
-        - 15.59
-    )
+    return 0.39 * (total_words / total_sentences) + 11.8 * (total_syllables / total_words) - 15.59
 
 
 # ---------------------------------------------------------------------------
 # Public extraction functions
 # ---------------------------------------------------------------------------
+
 
 def extract_vocabulary(segmented: SegmentedText) -> VocabularyMetrics:
     """Analyze vocabulary characteristics of the text."""
@@ -305,6 +296,7 @@ def extract_paragraph_metrics(segmented: SegmentedText) -> ParagraphMetrics:
 
     for para in paragraphs:
         from app.modules.style_cloning.ingestion import _split_sentences
+
         sents = _split_sentences(para)
         para_sentence_counts.append(len(sents))
         para_word_counts.append(len(para.split()))
@@ -319,9 +311,7 @@ def extract_paragraph_metrics(segmented: SegmentedText) -> ParagraphMetrics:
     return ParagraphMetrics(
         avg_length=statistics.mean(para_sentence_counts) if para_sentence_counts else 0.0,
         avg_word_count=statistics.mean(para_word_counts) if para_word_counts else 0.0,
-        transition_word_density=(
-            statistics.mean(transition_counts) if transition_counts else 0.0
-        ),
+        transition_word_density=(statistics.mean(transition_counts) if transition_counts else 0.0),
         short_paragraph_ratio=short / total if total else 0.0,
         long_paragraph_ratio=long_ / total if total else 0.0,
     )
@@ -349,8 +339,31 @@ def extract_rhetorical_metrics(segmented: SegmentedText) -> RhetoricalMetrics:
     # Rhetorical questions
     sentences = segmented.sentences
     rhetorical_q = sum(
-        1 for s in sentences
-        if s.rstrip().endswith("?") and not s.lstrip().startswith(("Who ", "What ", "Where ", "When ", "How ", "Why ", "Did ", "Do ", "Does ", "Is ", "Are ", "Was ", "Were ", "Can ", "Could ", "Will ", "Would ", "Should "))
+        1
+        for s in sentences
+        if s.rstrip().endswith("?")
+        and not s.lstrip().startswith(
+            (
+                "Who ",
+                "What ",
+                "Where ",
+                "When ",
+                "How ",
+                "Why ",
+                "Did ",
+                "Do ",
+                "Does ",
+                "Is ",
+                "Are ",
+                "Was ",
+                "Were ",
+                "Can ",
+                "Could ",
+                "Will ",
+                "Would ",
+                "Should ",
+            )
+        )
     )
 
     return RhetoricalMetrics(
@@ -389,15 +402,14 @@ def extract_dialogue_metrics(segmented: SegmentedText) -> DialogueMetrics:
         avg_dialogue_length=avg_dialogue_length,
         said_tag_ratio=said_tags / all_speech_tags if all_speech_tags else 0.0,
         action_beat_ratio=action_beats / total_tags if total_tags else 0.0,
-        dialogue_to_narrative_ratio=(
-            dialogue_words / narrative_words if narrative_words else 0.0
-        ),
+        dialogue_to_narrative_ratio=(dialogue_words / narrative_words if narrative_words else 0.0),
     )
 
 
 # ---------------------------------------------------------------------------
 # Aggregate extractor
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AllFeatures:

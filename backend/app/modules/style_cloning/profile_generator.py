@@ -21,6 +21,7 @@ RATIO_THRESHOLD = float(os.environ.get("STYLE_RATIO_THRESHOLD", "0.5"))
 # We build a 200+ dimension vector from the extracted features.
 # ---------------------------------------------------------------------------
 
+
 def _build_voice_vector(features: AllFeatures) -> tuple[list[float], list[str]]:
     """Build a numeric voice vector from extracted features.
 
@@ -66,7 +67,9 @@ def _build_voice_vector(features: AllFeatures) -> tuple[list[float], list[str]]:
     dims.append(("sent_punctuation_energy", s.question_ratio + s.exclamation_ratio))
     # Sentence pattern buckets (normalized length distribution in 5 buckets)
     for i, bucket_name in enumerate(["very_short", "short", "medium", "long", "very_long"]):
-        dims.append((f"sent_bucket_{bucket_name}", 0.0))  # reserved: sentence-length distribution buckets (not yet computed; requires per-sentence lengths)
+        dims.append(
+            (f"sent_bucket_{bucket_name}", 0.0)
+        )  # reserved: sentence-length distribution buckets (not yet computed; requires per-sentence lengths)
     # Interaction features
     dims.append(("sent_simple_x_avg_len", s.simple_ratio * s.avg_length))
     dims.append(("sent_complex_x_variance", s.complex_ratio * s.length_variance))
@@ -128,6 +131,7 @@ def _build_voice_vector(features: AllFeatures) -> tuple[list[float], list[str]]:
 # ---------------------------------------------------------------------------
 # Style card generation (natural language)
 # ---------------------------------------------------------------------------
+
 
 def _describe_vocabulary_level(v) -> str:
     if v.reading_level < 6:
@@ -232,6 +236,7 @@ def _generate_example_prompts(card: StyleCard) -> list[str]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def generate_voice_fingerprint(
     features: AllFeatures,

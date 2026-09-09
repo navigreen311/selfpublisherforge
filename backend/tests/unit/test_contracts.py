@@ -23,6 +23,7 @@ from app.core.contracts import (
 # Helpers -- small domain models used as generic type arguments
 # ---------------------------------------------------------------------------
 
+
 class _UserOut(BaseModel):
     id: int
     name: str
@@ -37,6 +38,7 @@ class _BookOut(BaseModel):
 # ===================================================================
 # SuccessResponse
 # ===================================================================
+
 
 class TestSuccessResponse:
     """SuccessResponse[T] wraps arbitrary data in a ``data`` field."""
@@ -104,6 +106,7 @@ class TestSuccessResponse:
 # ErrorDetail
 # ===================================================================
 
+
 class TestErrorDetail:
     """ErrorDetail carries per-field validation info."""
 
@@ -130,6 +133,7 @@ class TestErrorDetail:
 # ===================================================================
 # ErrorResponse
 # ===================================================================
+
 
 class TestErrorResponse:
     """ErrorResponse carries a top-level error code, message, and optional details."""
@@ -209,6 +213,7 @@ class TestErrorResponse:
 # PaginatedRequest
 # ===================================================================
 
+
 class TestPaginatedRequest:
     """PaginatedRequest carries cursor-based pagination parameters."""
 
@@ -251,6 +256,7 @@ class TestPaginatedRequest:
 # ===================================================================
 # PaginatedResponse
 # ===================================================================
+
 
 class TestPaginatedResponse:
     """PaginatedResponse[T] carries a page of items plus cursor metadata."""

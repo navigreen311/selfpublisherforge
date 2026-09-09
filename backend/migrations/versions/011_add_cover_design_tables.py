@@ -3,6 +3,7 @@
 Revision ID: 011
 Revises: 010
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -39,7 +40,9 @@ def upgrade() -> None:
         sa.Column("bleed_px", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("platform", sa.String(30), nullable=False, server_default="amazon-kdp"),
         sa.Column("metadata_json", JSONB(), nullable=True),
-        sa.Column("parent_cover_id", UUID(as_uuid=True), sa.ForeignKey("covers.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "parent_cover_id", UUID(as_uuid=True), sa.ForeignKey("covers.id", ondelete="SET NULL"), nullable=True
+        ),
     )
 
     # ── extracted_products ──────────────────────────────────────────
@@ -111,7 +114,14 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("cover_id", UUID(as_uuid=True), sa.ForeignKey("covers.id", ondelete="CASCADE"), nullable=False, unique=True, index=True),
+        sa.Column(
+            "cover_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("covers.id", ondelete="CASCADE"),
+            nullable=False,
+            unique=True,
+            index=True,
+        ),
         sa.Column("state_json", JSONB(), nullable=False),
     )
 
@@ -121,7 +131,9 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("test_id", UUID(as_uuid=True), sa.ForeignKey("ab_tests.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "test_id", UUID(as_uuid=True), sa.ForeignKey("ab_tests.id", ondelete="CASCADE"), nullable=False, index=True
+        ),
         sa.Column("cover_id", UUID(as_uuid=True), nullable=False, index=True),
         sa.Column("ip_hash", sa.String(64), nullable=False, index=True),
         sa.Column("fingerprint", sa.String(64), nullable=True, index=True),

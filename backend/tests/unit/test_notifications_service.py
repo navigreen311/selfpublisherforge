@@ -47,8 +47,10 @@ async def test_create_notification_with_email():
         message="You have been invited",
     )
 
-    with patch("app.modules.notifications.service.send_template_email") as mock_email, \
-         patch("app.modules.notifications.service.is_preference_enabled", return_value=True):
+    with (
+        patch("app.modules.notifications.service.send_template_email") as mock_email,
+        patch("app.modules.notifications.service.is_preference_enabled", return_value=True),
+    ):
         mock_email.return_value = True
 
         result = await service.create_notification(

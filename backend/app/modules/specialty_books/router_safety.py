@@ -80,7 +80,10 @@ async def generate_fingerprint(
 ):
     org_id = body.org_id or current_user["org_id"]
     result = await svc.generate_originality_fingerprint(
-        db, body.book_type, body.book_id, org_id,
+        db,
+        body.book_type,
+        body.book_id,
+        org_id,
     )
     return result
 
@@ -97,7 +100,11 @@ async def compare_originality(
 ):
     org_id = body.org_id or current_user["org_id"]
     result = await svc.compare_originality(
-        db, body.book_id_1, body.book_id_2, org_id, body.book_type,
+        db,
+        body.book_id_1,
+        body.book_id_2,
+        org_id,
+        body.book_type,
     )
     return result
 

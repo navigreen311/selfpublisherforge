@@ -6,6 +6,7 @@ provenance for legal and KDP compliance purposes.
 
 Blueprint refs: 6.2, 7.1
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -22,6 +23,7 @@ from app.modules.specialty.models.shared import AssetProvenance
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ProvenanceRecord:
@@ -44,6 +46,7 @@ class ProvenanceRecord:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _sha256_prompt(prompt_text: str | None) -> str | None:
     """Return the SHA-256 hex digest of *prompt_text*, or ``None``."""
@@ -72,6 +75,7 @@ def _row_to_record(row: AssetProvenance) -> ProvenanceRecord:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def create_provenance_record(
     db: AsyncSession,

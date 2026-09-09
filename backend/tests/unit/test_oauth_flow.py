@@ -87,9 +87,7 @@ class TestGoogleOAuth:
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             tokens = await google_provider.exchange_code("test-code")
 
@@ -108,9 +106,7 @@ class TestGoogleOAuth:
         )
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(AppException) as exc_info:
                 await google_provider.exchange_code("bad-code")
@@ -121,9 +117,7 @@ class TestGoogleOAuth:
     async def test_exchange_code_network_error(self, google_provider):
         """Test code exchange with network error."""
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                side_effect=RequestError("Network error")
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(side_effect=RequestError("Network error"))
 
             with pytest.raises(AppException) as exc_info:
                 await google_provider.exchange_code("test-code")
@@ -139,9 +133,7 @@ class TestGoogleOAuth:
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             with pytest.raises(AppException) as exc_info:
                 await google_provider.exchange_code("test-code")
@@ -162,9 +154,7 @@ class TestGoogleOAuth:
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
             user_info = await google_provider.get_user_info("test-access-token")
 
@@ -186,9 +176,7 @@ class TestGoogleOAuth:
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
             with pytest.raises(AppException) as exc_info:
                 await google_provider.get_user_info("test-access-token")
@@ -207,9 +195,7 @@ class TestGoogleOAuth:
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
             with pytest.raises(AppException) as exc_info:
                 await google_provider.get_user_info("test-access-token")
@@ -265,9 +251,7 @@ class TestGitHubOAuth:
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             tokens = await github_provider.exchange_code("test-code")
 
@@ -290,9 +274,7 @@ class TestGitHubOAuth:
         profile_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                return_value=profile_response
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=profile_response)
 
             user_info = await github_provider.get_user_info("test-token")
 
@@ -328,9 +310,7 @@ class TestGitHubOAuth:
             return profile_response
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                side_effect=mock_get
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(side_effect=mock_get)
 
             user_info = await github_provider.get_user_info("test-token")
 
@@ -358,9 +338,7 @@ class TestGitHubOAuth:
             return profile_response
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                side_effect=mock_get
-            )
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(side_effect=mock_get)
 
             with pytest.raises(AppException) as exc_info:
                 await github_provider.get_user_info("test-token")

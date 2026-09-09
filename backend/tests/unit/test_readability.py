@@ -1,6 +1,5 @@
 """Unit tests for readability scoring algorithms."""
 
-
 from app.modules.ai_writing.readability import (
     ReadabilityMetrics,
     analyze_readability,
@@ -14,6 +13,7 @@ from app.modules.ai_writing.readability import (
 # ---------------------------------------------------------------------------
 # Syllable counting
 # ---------------------------------------------------------------------------
+
 
 class TestCountSyllables:
     def test_single_syllable_words(self):
@@ -48,6 +48,7 @@ class TestCountSyllables:
 # Flesch-Kincaid Grade Level
 # ---------------------------------------------------------------------------
 
+
 class TestFleschKincaidGrade:
     def test_zero_words(self):
         assert flesch_kincaid_grade(0, 1, 0) == 0.0
@@ -78,6 +79,7 @@ class TestFleschKincaidGrade:
 # Flesch Reading Ease
 # ---------------------------------------------------------------------------
 
+
 class TestFleschReadingEase:
     def test_zero_words(self):
         assert flesch_reading_ease(0, 1, 0) == 0.0
@@ -101,6 +103,7 @@ class TestFleschReadingEase:
 # ---------------------------------------------------------------------------
 # Gunning Fog
 # ---------------------------------------------------------------------------
+
 
 class TestGunningFog:
     def test_empty_word_list(self):
@@ -128,6 +131,7 @@ class TestGunningFog:
 # SMOG Index
 # ---------------------------------------------------------------------------
 
+
 class TestSmogIndex:
     def test_zero_sentences(self):
         assert smog_index(0, 0) == 0.0
@@ -148,11 +152,9 @@ class TestSmogIndex:
 # Full analysis
 # ---------------------------------------------------------------------------
 
+
 class TestAnalyzeReadability:
-    SIMPLE_TEXT = (
-        "The cat sat on the mat. The dog ran in the park. "
-        "Birds fly in the sky. Fish swim in the sea."
-    )
+    SIMPLE_TEXT = "The cat sat on the mat. The dog ran in the park. " "Birds fly in the sky. Fish swim in the sea."
     COMPLEX_TEXT = (
         "The multifaceted philosophical underpinnings of contemporary "
         "epistemological discourse necessitate a comprehensive understanding "

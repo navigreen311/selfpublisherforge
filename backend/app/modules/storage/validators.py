@@ -28,11 +28,11 @@ ENABLE_MALWARE_SCAN: bool = os.environ.get("ENABLE_MALWARE_SCAN", "true").lower(
 ALLOWED_MIME_TYPES: dict[AssetType, set[str]] = {
     AssetType.MANUSCRIPT: {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
-        "application/epub+zip",   # .epub
-        "application/pdf",        # .pdf
-        "text/plain",             # .txt
-        "application/rtf",        # .rtf
-        "text/rtf",               # .rtf (alternative)
+        "application/epub+zip",  # .epub
+        "application/pdf",  # .pdf
+        "text/plain",  # .txt
+        "application/rtf",  # .rtf
+        "text/rtf",  # .rtf (alternative)
     },
     AssetType.IMAGE: {
         "image/jpeg",
@@ -57,10 +57,10 @@ ALLOWED_MIME_TYPES: dict[AssetType, set[str]] = {
 # ---------------------------------------------------------------------------
 
 MAX_FILE_SIZE: dict[AssetType, int] = {
-    AssetType.MANUSCRIPT: 50 * 1024 * 1024,   # 50 MB
-    AssetType.IMAGE: 20 * 1024 * 1024,         # 20 MB
-    AssetType.COVER: 20 * 1024 * 1024,         # 20 MB
-    AssetType.EXPORT: 100 * 1024 * 1024,       # 100 MB (generated files can be large)
+    AssetType.MANUSCRIPT: 50 * 1024 * 1024,  # 50 MB
+    AssetType.IMAGE: 20 * 1024 * 1024,  # 20 MB
+    AssetType.COVER: 20 * 1024 * 1024,  # 20 MB
+    AssetType.EXPORT: 100 * 1024 * 1024,  # 100 MB (generated files can be large)
 }
 
 
@@ -93,8 +93,8 @@ _MAGIC_SIGNATURES: dict[str, list[tuple[int, bytes]]] = {
     "image/jpeg": [(0, b"\xff\xd8\xff")],
     "image/png": [(0, b"\x89PNG")],  # 89 50 4E 47
     "image/tiff": [
-        (0, b"II\x2a\x00"),   # little-endian TIFF
-        (0, b"MM\x00\x2a"),   # big-endian TIFF
+        (0, b"II\x2a\x00"),  # little-endian TIFF
+        (0, b"MM\x00\x2a"),  # big-endian TIFF
     ],
     "application/pdf": [(0, b"%PDF")],
     "application/zip": [(0, b"PK\x03\x04")],
@@ -117,9 +117,9 @@ _TEXT_MIME_TYPES: set[str] = {
 # Dangerous binary signatures
 # ---------------------------------------------------------------------------
 
-_PE_HEADER = b"MZ"        # Windows PE executable
+_PE_HEADER = b"MZ"  # Windows PE executable
 _ELF_HEADER = b"\x7fELF"  # Linux ELF executable
-_SHEBANG = b"#!"          # Script shebang
+_SHEBANG = b"#!"  # Script shebang
 
 # MIME types for which a shebang is acceptable
 _SCRIPT_MIME_TYPES: set[str] = {
@@ -135,7 +135,7 @@ _PDF_SUSPICIOUS_PATTERNS: list[re.Pattern[bytes]] = [
     re.compile(rb"/JS\s", re.IGNORECASE),
     re.compile(rb"/Launch\s", re.IGNORECASE),
     re.compile(rb"/OpenAction\s.*?/URI\s", re.IGNORECASE | re.DOTALL),
-    re.compile(rb"/AA\s", re.IGNORECASE),       # Additional Actions
+    re.compile(rb"/AA\s", re.IGNORECASE),  # Additional Actions
     re.compile(rb"/RichMedia\s", re.IGNORECASE),
 ]
 
@@ -153,6 +153,7 @@ _MACRO_SIGNATURES: list[bytes] = [
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
+
 
 def validate_file(
     *,
@@ -202,6 +203,7 @@ def scan_file(
 # ---------------------------------------------------------------------------
 # Internal validators
 # ---------------------------------------------------------------------------
+
 
 def _validate_content_type(content_type: str, asset_type: AssetType) -> None:
     allowed = ALLOWED_MIME_TYPES.get(asset_type, set())
@@ -285,12 +287,28 @@ def _scan_for_malware(
 # Individual scan routines
 # ---------------------------------------------------------------------------
 
+
 def _check_dangerous_extension(file_name: str, content_type: str) -> None:
     """Reject files whose extension suggests an executable regardless of MIME."""
     dangerous_extensions = {
-        ".exe", ".dll", ".bat", ".cmd", ".com", ".scr", ".pif",
-        ".msi", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh",
-        ".ps1", ".sh", ".csh", ".bash",
+        ".exe",
+        ".dll",
+        ".bat",
+        ".cmd",
+        ".com",
+        ".scr",
+        ".pif",
+        ".msi",
+        ".vbs",
+        ".vbe",
+        ".js",
+        ".jse",
+        ".wsf",
+        ".wsh",
+        ".ps1",
+        ".sh",
+        ".csh",
+        ".bash",
     }
     lower_name = file_name.lower()
     for ext in dangerous_extensions:
@@ -343,9 +361,7 @@ def _check_magic_bytes(data: bytes, content_type: str, file_name: str) -> None:
     )
 
 
-def _check_dangerous_signatures(
-    data: bytes, content_type: str, file_name: str
-) -> None:
+def _check_dangerous_signatures(data: bytes, content_type: str, file_name: str) -> None:
     """Detect PE executables, ELF binaries, and unexpected shebangs."""
     # PE header check -- never acceptable for any allowed asset type
     if data[:2] == _PE_HEADER and len(data) > 64:
@@ -427,9 +443,7 @@ def _check_office_macros(data: bytes, content_type: str, file_name: str) -> None
             )
 
 
-def _check_pdf_suspicious_patterns(
-    data: bytes, content_type: str, file_name: str
-) -> None:
+def _check_pdf_suspicious_patterns(data: bytes, content_type: str, file_name: str) -> None:
     """Scan PDF files for JavaScript, auto-launch actions, and other red flags."""
     if content_type != "application/pdf":
         return

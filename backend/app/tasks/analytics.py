@@ -96,9 +96,7 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
                     org_ids = [UUID(org_id)]
                 else:
                     # Get all distinct org_ids from royalty records
-                    query = select(func.distinct(RoyaltyRecord.org_id)).where(
-                        RoyaltyRecord.deleted_at.is_(None)
-                    )
+                    query = select(func.distinct(RoyaltyRecord.org_id)).where(RoyaltyRecord.deleted_at.is_(None))
                     result = await db.execute(query)
                     org_ids = [row[0] for row in result.all()]
 
@@ -119,9 +117,7 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
                                 "total_expenses": str(metrics.total_expenses),
                                 "net_profit": str(metrics.net_profit),
                                 "avg_roi": str(metrics.avg_roi),
-                                "platform_breakdown": {
-                                    k: str(v) for k, v in metrics.platform_breakdown.items()
-                                },
+                                "platform_breakdown": {k: str(v) for k, v in metrics.platform_breakdown.items()},
                                 "format_breakdown": metrics.format_breakdown,
                                 "top_books": metrics.top_books,
                             },
@@ -255,9 +251,7 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                     PublishingAccount.status == PublishingAccountStatus.ACTIVE,
                 ]
                 if platform:
-                    conditions.append(
-                        PublishingAccount.platform == platform
-                    )
+                    conditions.append(PublishingAccount.platform == platform)
 
                 query = select(PublishingAccount).where(and_(*conditions))
                 result = await db.execute(query)
@@ -286,13 +280,9 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                 # ----------------------------------------------------------
                 for account in accounts:
                     acct_platform: str = (
-                        account.platform.value
-                        if hasattr(account.platform, "value")
-                        else str(account.platform)
+                        account.platform.value if hasattr(account.platform, "value") else str(account.platform)
                     )
-                    analytics_platform_key = _PUBLISHING_TO_ANALYTICS_PLATFORM.get(
-                        acct_platform
-                    )
+                    analytics_platform_key = _PUBLISHING_TO_ANALYTICS_PLATFORM.get(acct_platform)
                     detail: dict[str, Any] = {
                         "account_id": str(account.id),
                         "platform": acct_platform,
@@ -315,11 +305,14 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
                             csv_data = account.credentials_encrypted
                             try:
                                 from app.modules.analytics.csv_queue import process_csv_import
+
                                 count = await process_csv_import(db, account.id, account.platform, csv_data)
                                 logger.info("CSV import completed: %d records for account %s", count, account.id)
                                 records_for_account += count
                             except ImportError:
-                                logger.warning("CSV import queue module not available; skipping for account %s", account.id)
+                                logger.warning(
+                                    "CSV import queue module not available; skipping for account %s", account.id
+                                )
                                 # Fall back to the legacy _try_csv_import helper
                                 csv_records = await _try_csv_import(
                                     db,
@@ -418,6 +411,7 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
 # Internal helpers for royalty_sync
 # ---------------------------------------------------------------------------
 
+
 async def _try_csv_import(
     db,
     org_id: UUID,
@@ -430,8 +424,7 @@ async def _try_csv_import(
     """
     if csv_data is None:
         logger.debug(
-            "No pending CSV data to process for org %s (platform=%s); "
-            "CSV queue integration pending.",
+            "No pending CSV data to process for org %s (platform=%s); " "CSV queue integration pending.",
             org_id,
             analytics_platform_key,
         )
@@ -495,8 +488,7 @@ async def _try_api_sync(
         api_records = await _fetch_d2d_royalties(account)
     else:
         logger.warning(
-            "No API sync handler for platform '%s'; skipping. "
-            "API integration pending for this platform.",
+            "No API sync handler for platform '%s'; skipping. " "API integration pending for this platform.",
             acct_platform,
         )
         return 0
@@ -523,9 +515,14 @@ async def _try_api_sync(
             if existing:
                 # Update existing record with fresh data
                 for field in (
-                    "units_sold", "units_refunded", "net_units",
-                    "gross_revenue", "net_revenue", "list_price",
-                    "royalty_rate", "currency",
+                    "units_sold",
+                    "units_refunded",
+                    "net_units",
+                    "gross_revenue",
+                    "net_revenue",
+                    "list_price",
+                    "royalty_rate",
+                    "currency",
                 ):
                     if field in rec_data:
                         setattr(existing, field, rec_data[field])
@@ -588,9 +585,7 @@ async def _fetch_kdp_royalties(account) -> list[dict[str, Any]]:
         )
         return []
 
-    base_url = os.environ.get(
-        "KDP_API_BASE_URL", "https://kdp.amazon.com/api/reports/v1"
-    )
+    base_url = os.environ.get("KDP_API_BASE_URL", "https://kdp.amazon.com/api/reports/v1")
 
     # Determine the reporting period: last full calendar month.
     now = datetime.now(UTC)
@@ -750,7 +745,7 @@ async def _kdp_api_request(
 
         # Exponential backoff: 1s, 2s, 4s
         if attempt < max_retries - 1:
-            backoff = 2 ** attempt
+            backoff = 2**attempt
             logger.debug("Retrying KDP API request in %ds ...", backoff)
             await asyncio.sleep(backoff)
 
@@ -825,12 +820,7 @@ def _parse_kdp_royalty_response(
             gross_obj = item.get("grossRevenue", {})
             net_obj = item.get("netRevenue", {})
 
-            currency = (
-                net_obj.get("currency")
-                or gross_obj.get("currency")
-                or list_price_obj.get("currency")
-                or "USD"
-            )
+            currency = net_obj.get("currency") or gross_obj.get("currency") or list_price_obj.get("currency") or "USD"
 
             format_raw = item.get("formatType", "EBOOK").lower()
             format_map = {
@@ -862,9 +852,7 @@ def _parse_kdp_royalty_response(
             }
             records.append(record)
         except (ValueError, TypeError, KeyError) as exc:
-            logger.warning(
-                "Failed to parse KDP royalty item: %s — %s", exc, item
-            )
+            logger.warning("Failed to parse KDP royalty item: %s — %s", exc, item)
             continue
 
     logger.info(
@@ -903,8 +891,7 @@ async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
             period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
 
             logger.info(
-                "Fetching IngramSpark royalties via IngramSparkClient for account %s, "
-                "period %s to %s",
+                "Fetching IngramSpark royalties via IngramSparkClient for account %s, " "period %s to %s",
                 account.id,
                 period_start.strftime("%Y-%m-%d"),
                 period_end.strftime("%Y-%m-%d"),
@@ -923,8 +910,7 @@ async def _fetch_ingramspark_royalties(account) -> list[dict[str, Any]]:
         )
     except ImportError:
         logger.info(
-            "ingram_client module not available; falling back to legacy API path "
-            "for account %s.",
+            "ingram_client module not available; falling back to legacy API path " "for account %s.",
             account.id,
         )
     except Exception as exc:
@@ -1055,8 +1041,7 @@ async def _ingramspark_api_request(
             else:
                 # Non-retriable client errors (400, 401, 403, etc.)
                 logger.error(
-                    "IngramSpark API returned non-retriable status %d for "
-                    "account %s: %s",
+                    "IngramSpark API returned non-retriable status %d for " "account %s: %s",
                     response.status_code,
                     account_id,
                     response.text[:500],
@@ -1083,13 +1068,12 @@ async def _ingramspark_api_request(
 
         # Exponential backoff: 1 s, 2 s, 4 s
         if attempt < max_retries - 1:
-            backoff = 2 ** attempt
+            backoff = 2**attempt
             logger.debug("Retrying IngramSpark API request in %ds ...", backoff)
             await asyncio.sleep(backoff)
 
     logger.error(
-        "IngramSpark API request failed after %d attempts for account %s. "
-        "Last error: %s",
+        "IngramSpark API request failed after %d attempts for account %s. " "Last error: %s",
         max_retries,
         account_id,
         last_exc,
@@ -1151,9 +1135,7 @@ def _parse_ingramspark_response(
             title = entry.get("title") or entry.get("bookTitle", "Unknown")
             units = int(entry.get("units", 0) or entry.get("quantitySold", 0))
             units_refunded = int(entry.get("unitsRefunded", 0))
-            royalties = Decimal(
-                str(entry.get("royalties", 0) or entry.get("netRevenue", 0))
-            )
+            royalties = Decimal(str(entry.get("royalties", 0) or entry.get("netRevenue", 0)))
             currency = entry.get("currency", "USD")
             marketplace = entry.get("marketplace", "US")
             isbn = entry.get("isbn") or entry.get("isbn13")
@@ -1162,46 +1144,39 @@ def _parse_ingramspark_response(
             if fmt not in ("ebook", "paperback", "hardcover", "audiobook"):
                 fmt = "paperback"
 
-            list_price = Decimal(
-                str(entry.get("listPrice", 0) or entry.get("retailPrice", 0))
-            )
-            gross = Decimal(
-                str(
-                    entry.get("grossRevenue", 0)
-                    or entry.get("grossAmount", royalties)
-                )
-            )
+            list_price = Decimal(str(entry.get("listPrice", 0) or entry.get("retailPrice", 0)))
+            gross = Decimal(str(entry.get("grossRevenue", 0) or entry.get("grossAmount", royalties)))
             royalty_rate = Decimal(str(entry.get("royaltyRate", "0.00")))
 
-            records.append({
-                "platform": "ingram_spark",
-                "marketplace": marketplace,
-                "title": title,
-                "isbn": isbn,
-                "format_type": fmt,
-                "units_sold": max(units, 0),
-                "units_refunded": units_refunded,
-                "net_units": units - units_refunded,
-                "list_price": list_price,
-                "royalty_rate": royalty_rate,
-                "gross_revenue": gross,
-                "net_revenue": royalties,
-                "currency": currency,
-                "period_start": period_start,
-                "period_end": period_end,
-                "raw_data": entry,
-            })
+            records.append(
+                {
+                    "platform": "ingram_spark",
+                    "marketplace": marketplace,
+                    "title": title,
+                    "isbn": isbn,
+                    "format_type": fmt,
+                    "units_sold": max(units, 0),
+                    "units_refunded": units_refunded,
+                    "net_units": units - units_refunded,
+                    "list_price": list_price,
+                    "royalty_rate": royalty_rate,
+                    "gross_revenue": gross,
+                    "net_revenue": royalties,
+                    "currency": currency,
+                    "period_start": period_start,
+                    "period_end": period_end,
+                    "raw_data": entry,
+                }
+            )
         except (KeyError, ValueError, TypeError) as exc:
             logger.warning(
-                "Skipping unparseable IngramSpark compensation entry for "
-                "account %s: %s",
+                "Skipping unparseable IngramSpark compensation entry for " "account %s: %s",
                 account.id,
                 exc,
             )
 
     logger.info(
-        "Parsed %d compensation records from IngramSpark API response "
-        "(%d raw items) for account %s.",
+        "Parsed %d compensation records from IngramSpark API response " "(%d raw items) for account %s.",
         len(records),
         len(report_items),
         account.id,
@@ -1236,8 +1211,7 @@ async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
             period_start = (first_of_this_month - timedelta(days=1)).replace(day=1)
 
             logger.info(
-                "Fetching D2D royalties via D2DClient for account %s, "
-                "period %s to %s",
+                "Fetching D2D royalties via D2DClient for account %s, " "period %s to %s",
                 account.id,
                 period_start.strftime("%Y-%m-%d"),
                 period_end.strftime("%Y-%m-%d"),
@@ -1256,8 +1230,7 @@ async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
         )
     except ImportError:
         logger.info(
-            "d2d_client module not available; falling back to legacy API path "
-            "for account %s.",
+            "d2d_client module not available; falling back to legacy API path " "for account %s.",
             account.id,
         )
     except Exception as exc:
@@ -1274,8 +1247,7 @@ async def _fetch_d2d_royalties(account) -> list[dict[str, Any]]:
     api_key = os.environ.get("D2D_API_KEY", "")
     if not api_key:
         logger.warning(
-            "D2D API key (D2D_API_KEY) not configured for account %s; "
-            "skipping API sync. Pending API integration.",
+            "D2D API key (D2D_API_KEY) not configured for account %s; " "skipping API sync. Pending API integration.",
             account.id,
         )
         return []
@@ -1393,7 +1365,7 @@ async def _d2d_api_request(
 
         # Exponential backoff: 1 s, 2 s, 4 s
         if attempt < max_retries - 1:
-            backoff = 2 ** attempt
+            backoff = 2**attempt
             logger.debug("Retrying D2D API request in %ds ...", backoff)
             await asyncio.sleep(backoff)
 
@@ -1467,9 +1439,7 @@ def _parse_d2d_response(
         payout_items = data.get("payouts", data.get("reports", data.get("sales", [])))
 
     if not payout_items:
-        logger.info(
-            "D2D API returned no payout items for account %s.", account.id
-        )
+        logger.info("D2D API returned no payout items for account %s.", account.id)
         return records
 
     for entry in payout_items:
@@ -1478,11 +1448,7 @@ def _parse_d2d_response(
             units = int(entry.get("unitsSold", 0) or entry.get("units", 0))
             units_refunded = int(entry.get("unitsRefunded", 0))
             royalties = Decimal(
-                str(
-                    entry.get("royaltyAmount", 0)
-                    or entry.get("royalties", 0)
-                    or entry.get("netRevenue", 0)
-                )
+                str(entry.get("royaltyAmount", 0) or entry.get("royalties", 0) or entry.get("netRevenue", 0))
             )
             currency = entry.get("currency", "USD")
 
@@ -1498,35 +1464,30 @@ def _parse_d2d_response(
             if fmt not in ("ebook", "paperback", "hardcover", "audiobook"):
                 fmt = "ebook"
 
-            list_price = Decimal(
-                str(entry.get("listPrice", 0) or entry.get("retailPrice", 0))
-            )
-            gross = Decimal(
-                str(
-                    entry.get("grossAmount", 0)
-                    or entry.get("grossRevenue", royalties)
-                )
-            )
+            list_price = Decimal(str(entry.get("listPrice", 0) or entry.get("retailPrice", 0)))
+            gross = Decimal(str(entry.get("grossAmount", 0) or entry.get("grossRevenue", royalties)))
             royalty_rate = Decimal(str(entry.get("royaltyRate", "0.00")))
 
-            records.append({
-                "platform": "draft2digital",
-                "marketplace": marketplace,
-                "title": title,
-                "isbn": isbn,
-                "format_type": fmt,
-                "units_sold": max(units, 0),
-                "units_refunded": units_refunded,
-                "net_units": units - units_refunded,
-                "list_price": list_price,
-                "royalty_rate": royalty_rate,
-                "gross_revenue": gross,
-                "net_revenue": royalties,
-                "currency": currency,
-                "period_start": period_start,
-                "period_end": period_end,
-                "raw_data": entry,
-            })
+            records.append(
+                {
+                    "platform": "draft2digital",
+                    "marketplace": marketplace,
+                    "title": title,
+                    "isbn": isbn,
+                    "format_type": fmt,
+                    "units_sold": max(units, 0),
+                    "units_refunded": units_refunded,
+                    "net_units": units - units_refunded,
+                    "list_price": list_price,
+                    "royalty_rate": royalty_rate,
+                    "gross_revenue": gross,
+                    "net_revenue": royalties,
+                    "currency": currency,
+                    "period_start": period_start,
+                    "period_end": period_end,
+                    "raw_data": entry,
+                }
+            )
         except (KeyError, ValueError, TypeError) as exc:
             logger.warning(
                 "Skipping unparseable D2D payout entry for account %s: %s",
@@ -1535,8 +1496,7 @@ def _parse_d2d_response(
             )
 
     logger.info(
-        "Parsed %d payout records from D2D API response (%d raw items) "
-        "for account %s.",
+        "Parsed %d payout records from D2D API response (%d raw items) " "for account %s.",
         len(records),
         len(payout_items),
         account.id,

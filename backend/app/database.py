@@ -29,30 +29,35 @@ if _is_sqlite:
 
     class _PortableARRAY(_TD):
         """Drop-in for ARRAY that stores as JSON text on SQLite."""
+
         impl = _JSON
         cache_ok = True
+
         def __init__(self, item_type=None, **kw):
             super().__init__()
 
-    _pg_dialect.JSONB = _PortableJSONB          # type: ignore
-    _pg_dialect.json.JSONB = _PortableJSONB      # type: ignore
-    _pg_dialect.UUID = _GenericUuid               # type: ignore
-    _pg_dialect.ARRAY = _PortableARRAY            # type: ignore
-    _pg_dialect.array.ARRAY = _PortableARRAY      # type: ignore
+    _pg_dialect.JSONB = _PortableJSONB  # type: ignore
+    _pg_dialect.json.JSONB = _PortableJSONB  # type: ignore
+    _pg_dialect.UUID = _GenericUuid  # type: ignore
+    _pg_dialect.ARRAY = _PortableARRAY  # type: ignore
+    _pg_dialect.array.ARRAY = _PortableARRAY  # type: ignore
 
     # Patch DDL compiler to strip gen_random_uuid() server defaults on SQLite
     from sqlalchemy.dialects.sqlite.base import SQLiteDDLCompiler
+
     _orig_get_col_spec = SQLiteDDLCompiler.get_column_specification
+
     def _patched_get_col_spec(self, column, **kw):
         if column.server_default is not None:
-            sd_text = str(getattr(column.server_default, 'arg', ''))
-            if 'gen_random_uuid' in sd_text:
+            sd_text = str(getattr(column.server_default, "arg", ""))
+            if "gen_random_uuid" in sd_text:
                 saved = column.server_default
                 column.server_default = None
                 result = _orig_get_col_spec(self, column, **kw)
                 column.server_default = saved
                 return result
         return _orig_get_col_spec(self, column, **kw)
+
     SQLiteDDLCompiler.get_column_specification = _patched_get_col_spec
 
 del _settings_tmp
@@ -64,10 +69,12 @@ del _settings_tmp
 # ---------------------------------------------------------------------------
 _orig_enum_init = _SAEnum.__init__
 
+
 def _patched_enum_init(self, *enums, **kw):
     if enums and len(enums) == 1 and isinstance(enums[0], type) and issubclass(enums[0], enum.Enum):
         kw.setdefault("values_callable", lambda cls: [e.value for e in cls])
     _orig_enum_init(self, *enums, **kw)
+
 
 _SAEnum.__init__ = _patched_enum_init
 
@@ -81,6 +88,7 @@ if _is_sqlite:
 
 engine = create_async_engine(settings.DATABASE_URL, **_engine_kwargs)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
 
 class Base(DeclarativeBase):
     """Project-wide declarative base.
@@ -109,6 +117,7 @@ class Base(DeclarativeBase):
                     cls.__table_args__ = (*ta, {"extend_existing": True})
         super().__init_subclass__(**kw)
 
+
 class BaseModel(Base):
     __abstract__ = True
 
@@ -117,20 +126,18 @@ class BaseModel(Base):
         default=uuid.uuid4,
         server_default=text("gen_random_uuid()"),
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
 
 class TenantModel(BaseModel):
     __abstract__ = True
 
     org_id: Mapped[uuid.UUID] = mapped_column(index=True)
+
 
 async def get_db():
     async with async_session() as session:
@@ -143,6 +150,7 @@ async def get_db():
             raise
         finally:
             await session.close()
+
 
 async def init_db():
     """Verify database connectivity.

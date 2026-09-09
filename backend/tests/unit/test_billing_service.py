@@ -30,6 +30,7 @@ from app.schemas.common import PlanTier
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_org_row(
     org_id: uuid.UUID,
     *,
@@ -411,8 +412,9 @@ class TestWebhookHandling:
 
     def _mock_idempotency(self):
         """Helper to mock idempotency checks."""
-        return patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock, return_value=False), \
-               patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
+        return patch(
+            "app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock, return_value=False
+        ), patch("app.modules.billing.webhook_handlers.mark_event_processed", new_callable=AsyncMock)
 
     @pytest.mark.asyncio
     @patch("app.modules.billing.webhook_handlers.is_event_processed", new_callable=AsyncMock)
@@ -447,9 +449,7 @@ class TestWebhookHandling:
         mock_db.flush = AsyncMock()
         mock_db.commit = AsyncMock()
 
-        result = await service.handle_webhook_event(
-            mock_db, b"payload", "sig_header"
-        )
+        result = await service.handle_webhook_event(mock_db, b"payload", "sig_header")
 
         assert result["status"] == "processed"
         assert result["event_type"] == "customer.subscription.created"
@@ -490,9 +490,7 @@ class TestWebhookHandling:
         mock_db.commit = AsyncMock()
 
         with patch("app.modules.billing.webhook_handlers.create_notification", new_callable=AsyncMock):
-            result = await service.handle_webhook_event(
-                mock_db, b"payload", "sig_header"
-            )
+            result = await service.handle_webhook_event(mock_db, b"payload", "sig_header")
 
         assert result["status"] == "processed"
         assert result["event_type"] == "customer.subscription.deleted"
@@ -533,9 +531,7 @@ class TestWebhookHandling:
         mock_db.commit = AsyncMock()
 
         with patch("app.modules.billing.webhook_handlers.create_notification", new_callable=AsyncMock):
-            result = await service.handle_webhook_event(
-                mock_db, b"payload", "sig_header"
-            )
+            result = await service.handle_webhook_event(mock_db, b"payload", "sig_header")
 
         assert result["status"] == "processed"
         assert result["event_type"] == "customer.subscription.updated"
@@ -552,9 +548,7 @@ class TestWebhookHandling:
         }
 
         mock_db = AsyncMock()
-        result = await service.handle_webhook_event(
-            mock_db, b"payload", "sig_header"
-        )
+        result = await service.handle_webhook_event(mock_db, b"payload", "sig_header")
         assert result["status"] == "ignored"
 
     @pytest.mark.asyncio
@@ -562,15 +556,11 @@ class TestWebhookHandling:
     async def test_invalid_signature_raises(self, mock_stripe):
         MockSigError = type("SignatureVerificationError", (Exception,), {})
         mock_stripe.SignatureVerificationError = MockSigError
-        mock_stripe.Webhook.construct_event.side_effect = MockSigError(
-            "bad sig"
-        )
+        mock_stripe.Webhook.construct_event.side_effect = MockSigError("bad sig")
 
         mock_db = AsyncMock()
         with pytest.raises(AppException) as exc_info:
-            await service.handle_webhook_event(
-                mock_db, b"payload", "bad_sig"
-            )
+            await service.handle_webhook_event(mock_db, b"payload", "bad_sig")
         assert exc_info.value.code == "WEBHOOK_SIGNATURE_INVALID"
         assert exc_info.value.status_code == 400
 
@@ -599,9 +589,7 @@ class TestWebhookHandling:
         mock_db.flush = AsyncMock()
         mock_db.commit = AsyncMock()
 
-        result = await service.handle_webhook_event(
-            mock_db, b"payload", "sig_header"
-        )
+        result = await service.handle_webhook_event(mock_db, b"payload", "sig_header")
         assert result["status"] == "processed"
         assert result["event_type"] == "invoice.paid"
 
@@ -634,9 +622,7 @@ class TestWebhookHandling:
         mock_db.commit = AsyncMock()
 
         with patch("app.modules.billing.webhook_handlers.create_notification", new_callable=AsyncMock):
-            result = await service.handle_webhook_event(
-                mock_db, b"payload", "sig_header"
-            )
+            result = await service.handle_webhook_event(mock_db, b"payload", "sig_header")
         assert result["status"] == "processed"
         assert result["event_type"] == "invoice.payment_failed"
 
@@ -675,9 +661,7 @@ class TestWebhookHandling:
         mock_db.flush = AsyncMock()
         mock_db.commit = AsyncMock()
 
-        result = await service.handle_webhook_event(
-            mock_db, b"payload", "sig_header"
-        )
+        result = await service.handle_webhook_event(mock_db, b"payload", "sig_header")
         assert result["status"] == "processed"
 
 
@@ -721,9 +705,7 @@ class TestCreateCheckoutSession:
                 success_url="http://localhost:3000/success",
                 cancel_url="http://localhost:3000/cancel",
             )
-            result = await service.create_checkout_session(
-                mock_db, org_id, "test@example.com", request
-            )
+            result = await service.create_checkout_session(mock_db, org_id, "test@example.com", request)
 
         assert result.checkout_url == "https://checkout.stripe.com/session_123"
         assert result.session_id == "cs_session_123"
@@ -735,9 +717,7 @@ class TestCreateCheckoutSession:
         request = CheckoutRequest(plan_tier=PlanTier.FREE)
 
         with pytest.raises(AppException) as exc_info:
-            await service.create_checkout_session(
-                mock_db, org_id, "test@example.com", request
-            )
+            await service.create_checkout_session(mock_db, org_id, "test@example.com", request)
         assert exc_info.value.code == "INVALID_PLAN"
         assert exc_info.value.status_code == 400
 
@@ -764,9 +744,7 @@ class TestCreateCheckoutSession:
             clear=False,
         ):
             request = CheckoutRequest(plan_tier=PlanTier.PRO)
-            result = await service.create_checkout_session(
-                mock_db, org_id, "new@example.com", request
-            )
+            result = await service.create_checkout_session(mock_db, org_id, "new@example.com", request)
 
         mock_stripe.Customer.create.assert_called_once()
         assert result.checkout_url == "https://checkout.stripe.com/new_session"
@@ -783,9 +761,7 @@ class TestCreateCheckoutSession:
         )
         mock_db = _mock_db_with_row(row)
 
-        mock_stripe.checkout.Session.create.side_effect = Exception(
-            "Stripe API error"
-        )
+        mock_stripe.checkout.Session.create.side_effect = Exception("Stripe API error")
 
         with patch.dict(
             service._TIER_TO_PRICE_ID,
@@ -794,9 +770,7 @@ class TestCreateCheckoutSession:
         ):
             request = CheckoutRequest(plan_tier=PlanTier.STARTER)
             with pytest.raises(Exception, match="Stripe API error"):
-                await service.create_checkout_session(
-                    mock_db, org_id, "test@example.com", request
-                )
+                await service.create_checkout_session(mock_db, org_id, "test@example.com", request)
 
     @pytest.mark.asyncio
     async def test_checkout_unconfigured_tier_raises(self):
@@ -812,9 +786,7 @@ class TestCreateCheckoutSession:
             ):
                 request = CheckoutRequest(plan_tier=PlanTier.ENTERPRISE)
                 with pytest.raises(AppException) as exc_info:
-                    await service.create_checkout_session(
-                        mock_db, org_id, "test@example.com", request
-                    )
+                    await service.create_checkout_session(mock_db, org_id, "test@example.com", request)
                 assert exc_info.value.code == "INVALID_PLAN"
 
 
@@ -934,9 +906,7 @@ class TestListInvoices:
         assert result.invoices[0].amount_due == 7900
         assert result.invoices[0].status == "paid"
         assert result.has_more is False
-        mock_stripe.Invoice.list.assert_called_once_with(
-            customer="cus_inv", limit=5
-        )
+        mock_stripe.Invoice.list.assert_called_once_with(customer="cus_inv", limit=5)
 
 
 # ===========================================================================

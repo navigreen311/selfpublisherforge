@@ -5,6 +5,7 @@ export files for KDP, IngramSpark, and B&N Press.
 
 Blueprint refs: 12.5
 """
+
 from __future__ import annotations
 
 import uuid
@@ -43,10 +44,19 @@ DISTRIBUTORS: dict[str, dict[str, Any]] = {
             "bw": {"min": 24, "max": 828},
         },
         "trim_sizes": [
-            "5x8", "5.25x8", "5.5x8.5", "6x9",
-            "6.14x9.21", "6.69x9.61", "7x10",
-            "7.44x9.69", "7.5x9.25", "8x10",
-            "8.25x6", "8.25x8.25", "8.5x8.5",
+            "5x8",
+            "5.25x8",
+            "5.5x8.5",
+            "6x9",
+            "6.14x9.21",
+            "6.69x9.61",
+            "7x10",
+            "7.44x9.69",
+            "7.5x9.25",
+            "8x10",
+            "8.25x6",
+            "8.25x8.25",
+            "8.5x8.5",
             "8.5x11",
         ],
     },
@@ -73,9 +83,15 @@ DISTRIBUTORS: dict[str, dict[str, Any]] = {
             "bw": {"min": 24, "max": 1200},
         },
         "trim_sizes": [
-            "5x8", "5.25x8", "5.5x8.5", "6x9",
-            "6.14x9.21", "7x10", "7.5x9.25",
-            "8x10", "8.5x11",
+            "5x8",
+            "5.25x8",
+            "5.5x8.5",
+            "6x9",
+            "6.14x9.21",
+            "7x10",
+            "7.5x9.25",
+            "8x10",
+            "8.5x11",
         ],
     },
     "bn_press": {
@@ -101,7 +117,11 @@ DISTRIBUTORS: dict[str, dict[str, Any]] = {
             "bw": {"min": 24, "max": 750},
         },
         "trim_sizes": [
-            "5x8", "5.5x8.5", "6x9", "8x10", "8.5x11",
+            "5x8",
+            "5.5x8.5",
+            "6x9",
+            "8x10",
+            "8.5x11",
         ],
     },
 }
@@ -110,6 +130,7 @@ DISTRIBUTORS: dict[str, dict[str, Any]] = {
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PreflightCheck:
@@ -145,6 +166,7 @@ class ExportResult:
 # Preflight checks
 # ---------------------------------------------------------------------------
 
+
 def _run_kdp_checks(book_data: dict[str, Any]) -> list[PreflightCheck]:
     """KDP-specific validation: page count limits, file size, cover dimensions."""
     checks: list[PreflightCheck] = []
@@ -156,68 +178,86 @@ def _run_kdp_checks(book_data: dict[str, Any]) -> list[PreflightCheck]:
     limits = spec["page_count_limits"].get(interior_type, spec["page_count_limits"]["bw"])
 
     if page_count < limits["min"]:
-        checks.append(PreflightCheck(
-            name="kdp_page_count_min",
-            passed=False,
-            message=f"KDP requires at least {limits['min']} pages for {interior_type} interiors. Book has {page_count}.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_page_count_min",
+                passed=False,
+                message=f"KDP requires at least {limits['min']} pages for {interior_type} interiors. Book has {page_count}.",
+            )
+        )
     elif page_count > limits["max"]:
-        checks.append(PreflightCheck(
-            name="kdp_page_count_max",
-            passed=False,
-            message=f"KDP allows at most {limits['max']} pages for {interior_type} interiors. Book has {page_count}.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_page_count_max",
+                passed=False,
+                message=f"KDP allows at most {limits['max']} pages for {interior_type} interiors. Book has {page_count}.",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="kdp_page_count",
-            passed=True,
-            message=f"Page count {page_count} is within KDP limits for {interior_type} interiors.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_page_count",
+                passed=True,
+                message=f"Page count {page_count} is within KDP limits for {interior_type} interiors.",
+            )
+        )
 
     # File size check
     file_size_mb = book_data.get("file_size_mb", 0)
     if file_size_mb > spec["max_file_size_mb"]:
-        checks.append(PreflightCheck(
-            name="kdp_file_size",
-            passed=False,
-            message=f"File size {file_size_mb}MB exceeds KDP limit of {spec['max_file_size_mb']}MB.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_file_size",
+                passed=False,
+                message=f"File size {file_size_mb}MB exceeds KDP limit of {spec['max_file_size_mb']}MB.",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="kdp_file_size",
-            passed=True,
-            message=f"File size {file_size_mb}MB is within KDP limits.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_file_size",
+                passed=True,
+                message=f"File size {file_size_mb}MB is within KDP limits.",
+            )
+        )
 
     # Cover dimensions / DPI check
     cover_dpi = book_data.get("cover_dpi", 300)
     if cover_dpi < spec["cover_specs"]["min_dpi"]:
-        checks.append(PreflightCheck(
-            name="kdp_cover_dpi",
-            passed=False,
-            message=f"Cover DPI ({cover_dpi}) is below KDP minimum of {spec['cover_specs']['min_dpi']}.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_cover_dpi",
+                passed=False,
+                message=f"Cover DPI ({cover_dpi}) is below KDP minimum of {spec['cover_specs']['min_dpi']}.",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="kdp_cover_dpi",
-            passed=True,
-            message=f"Cover DPI ({cover_dpi}) meets KDP requirements.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_cover_dpi",
+                passed=True,
+                message=f"Cover DPI ({cover_dpi}) meets KDP requirements.",
+            )
+        )
 
     # Trim size check
     trim_size = book_data.get("trim_size", "")
     if trim_size and trim_size not in spec["trim_sizes"]:
-        checks.append(PreflightCheck(
-            name="kdp_trim_size",
-            passed=False,
-            message=f"Trim size '{trim_size}' is not available on KDP.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_trim_size",
+                passed=False,
+                message=f"Trim size '{trim_size}' is not available on KDP.",
+            )
+        )
     elif trim_size:
-        checks.append(PreflightCheck(
-            name="kdp_trim_size",
-            passed=True,
-            message=f"Trim size '{trim_size}' is supported on KDP.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="kdp_trim_size",
+                passed=True,
+                message=f"Trim size '{trim_size}' is supported on KDP.",
+            )
+        )
 
     return checks
 
@@ -230,65 +270,80 @@ def _run_ingram_checks(book_data: dict[str, Any]) -> list[PreflightCheck]:
     # PDF standard check
     pdf_standard = book_data.get("pdf_standard", "")
     if pdf_standard != "PDF/X-1a":
-        checks.append(PreflightCheck(
-            name="ingram_pdf_standard",
-            passed=False,
-            message="IngramSpark requires PDF/X-1a format. Current format: "
-                    f"'{pdf_standard or 'standard PDF'}'.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_pdf_standard",
+                passed=False,
+                message="IngramSpark requires PDF/X-1a format. Current format: " f"'{pdf_standard or 'standard PDF'}'.",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="ingram_pdf_standard",
-            passed=True,
-            message="PDF is in PDF/X-1a format.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_pdf_standard",
+                passed=True,
+                message="PDF is in PDF/X-1a format.",
+            )
+        )
 
     # ICC profile check
     has_icc = book_data.get("icc_profile_embedded", False)
     if not has_icc:
-        checks.append(PreflightCheck(
-            name="ingram_icc_profile",
-            passed=False,
-            message="IngramSpark requires embedded ICC color profiles. No ICC profile found.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_icc_profile",
+                passed=False,
+                message="IngramSpark requires embedded ICC color profiles. No ICC profile found.",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="ingram_icc_profile",
-            passed=True,
-            message="ICC color profile is embedded.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_icc_profile",
+                passed=True,
+                message="ICC color profile is embedded.",
+            )
+        )
 
     # Color space must be CMYK
     color_space = book_data.get("color_space", "RGB")
     if color_space != "CMYK":
-        checks.append(PreflightCheck(
-            name="ingram_color_space",
-            passed=False,
-            message=f"IngramSpark requires CMYK color space. Current: {color_space}.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_color_space",
+                passed=False,
+                message=f"IngramSpark requires CMYK color space. Current: {color_space}.",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="ingram_color_space",
-            passed=True,
-            message="Color space is CMYK.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_color_space",
+                passed=True,
+                message="Color space is CMYK.",
+            )
+        )
 
     # Page count
     page_count = book_data.get("page_count", 0)
     interior_type = book_data.get("interior_type", "bw")
     limits = spec["page_count_limits"].get(interior_type, spec["page_count_limits"]["bw"])
     if page_count < limits["min"] or page_count > limits["max"]:
-        checks.append(PreflightCheck(
-            name="ingram_page_count",
-            passed=False,
-            message=f"Page count {page_count} is outside IngramSpark limits ({limits['min']}-{limits['max']}).",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_page_count",
+                passed=False,
+                message=f"Page count {page_count} is outside IngramSpark limits ({limits['min']}-{limits['max']}).",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="ingram_page_count",
-            passed=True,
-            message=f"Page count {page_count} is within IngramSpark limits.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="ingram_page_count",
+                passed=True,
+                message=f"Page count {page_count} is within IngramSpark limits.",
+            )
+        )
 
     return checks
 
@@ -304,51 +359,63 @@ def _run_bn_checks(book_data: dict[str, Any]) -> list[PreflightCheck]:
     min_w = spec["cover_specs"]["min_width"]
     min_h = spec["cover_specs"]["min_height"]
     if cover_width < min_w or cover_height < min_h:
-        checks.append(PreflightCheck(
-            name="bn_cover_dimensions",
-            passed=False,
-            message=f"B&N Press requires cover image at least {min_w}x{min_h}px. "
-                    f"Current: {cover_width}x{cover_height}px.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="bn_cover_dimensions",
+                passed=False,
+                message=f"B&N Press requires cover image at least {min_w}x{min_h}px. "
+                f"Current: {cover_width}x{cover_height}px.",
+            )
+        )
     else:
-        checks.append(PreflightCheck(
-            name="bn_cover_dimensions",
-            passed=True,
-            message=f"Cover dimensions ({cover_width}x{cover_height}px) meet B&N requirements.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="bn_cover_dimensions",
+                passed=True,
+                message=f"Cover dimensions ({cover_width}x{cover_height}px) meet B&N requirements.",
+            )
+        )
 
     # EPUB version (for ebook)
     epub_version = book_data.get("epub_version", "")
     if epub_version and epub_version != spec["interior_specs"]["epub_version"]:
-        checks.append(PreflightCheck(
-            name="bn_epub_version",
-            passed=False,
-            message=f"B&N Press requires EPUB {spec['interior_specs']['epub_version']}. "
-                    f"Current: EPUB {epub_version}.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="bn_epub_version",
+                passed=False,
+                message=f"B&N Press requires EPUB {spec['interior_specs']['epub_version']}. "
+                f"Current: EPUB {epub_version}.",
+            )
+        )
     elif epub_version:
-        checks.append(PreflightCheck(
-            name="bn_epub_version",
-            passed=True,
-            message=f"EPUB version {epub_version} is supported.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="bn_epub_version",
+                passed=True,
+                message=f"EPUB version {epub_version} is supported.",
+            )
+        )
 
     # Page count
     page_count = book_data.get("page_count", 0)
     interior_type = book_data.get("interior_type", "bw")
     limits = spec["page_count_limits"].get(interior_type, spec["page_count_limits"]["bw"])
     if page_count < limits["min"] or page_count > limits["max"]:
-        checks.append(PreflightCheck(
-            name="bn_page_count",
-            passed=False,
-            message=f"Page count {page_count} is outside B&N Press limits ({limits['min']}-{limits['max']}).",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="bn_page_count",
+                passed=False,
+                message=f"Page count {page_count} is outside B&N Press limits ({limits['min']}-{limits['max']}).",
+            )
+        )
     elif page_count > 0:
-        checks.append(PreflightCheck(
-            name="bn_page_count",
-            passed=True,
-            message=f"Page count {page_count} is within B&N Press limits.",
-        ))
+        checks.append(
+            PreflightCheck(
+                name="bn_page_count",
+                passed=True,
+                message=f"Page count {page_count} is within B&N Press limits.",
+            )
+        )
 
     return checks
 
@@ -356,6 +423,7 @@ def _run_bn_checks(book_data: dict[str, Any]) -> list[PreflightCheck]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def run_distributor_preflight(
     db: AsyncSession,
@@ -411,16 +479,10 @@ async def run_distributor_preflight(
         status=PreflightStatus(status) if status in ("passed", "failed") else PreflightStatus.warnings,
         checks={
             "results": [
-                {"name": c.name, "passed": c.passed, "message": c.message, "severity": c.severity}
-                for c in checks
+                {"name": c.name, "passed": c.passed, "message": c.message, "severity": c.severity} for c in checks
             ]
         },
-        issues={
-            "items": [
-                {"name": i.name, "message": i.message, "severity": i.severity}
-                for i in issues
-            ]
-        },
+        issues={"items": [{"name": i.name, "message": i.message, "severity": i.severity} for i in issues]},
     )
     db.add(row)
     await db.flush()

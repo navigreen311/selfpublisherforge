@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 # ── URL content extraction ───────────────────────────────────────
 
+
 async def extract_from_url(url: str) -> dict[str, Any]:
     """
     Fetch a URL and extract its textual content.
@@ -62,6 +63,7 @@ def _strip_html_tags(html: str) -> str:
 
 
 # ── File content extraction ──────────────────────────────────────
+
 
 async def extract_from_file(file_name: str, file_content_base64: str) -> dict[str, Any]:
     """
@@ -116,6 +118,7 @@ def _extract_docx_text(data: bytes) -> str:
 
 # ── AI-powered key fact extraction ───────────────────────────────
 
+
 async def extract_key_facts(content: str) -> dict[str, Any]:
     """
     Use the configured LLM to pull out key facts, suggested tags,
@@ -144,7 +147,7 @@ async def extract_key_facts(content: str) -> dict[str, Any]:
             messages=[{"role": "user", "content": prompt}],
         )
         content_block = message.content[0]
-        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
+        raw_text = content_block.text if hasattr(content_block, "text") else str(content_block)  # type: ignore[union-attr]
         return _parse_extraction_response(raw_text)
     except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI fact extraction failed due to connection issue", exc_info=True)
@@ -196,7 +199,7 @@ async def summarize_content(content: str) -> dict[str, Any]:
             messages=[{"role": "user", "content": prompt}],
         )
         content_block = message.content[0]
-        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
+        raw_text = content_block.text if hasattr(content_block, "text") else str(content_block)  # type: ignore[union-attr]
         return _parse_summary_response(raw_text)
     except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI summarization failed due to connection issue", exc_info=True)
@@ -248,7 +251,7 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
             messages=[{"role": "user", "content": prompt}],
         )
         content_block = message.content[0]
-        raw_text = content_block.text if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
+        raw_text = content_block.text if hasattr(content_block, "text") else str(content_block)  # type: ignore[union-attr]
         import json
 
         data = json.loads(raw_text)
@@ -267,6 +270,7 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
 
 
 # ── Helpers ──────────────────────────────────────────────────────
+
 
 def _parse_extraction_response(raw: str) -> dict[str, Any]:
     import json

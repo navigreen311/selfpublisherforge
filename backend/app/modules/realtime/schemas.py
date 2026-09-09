@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 # Channel enum
 # ---------------------------------------------------------------------------
 
+
 class WSChannel(str, Enum):
     WRITING = "writing"
     AGENTS = "agents"
@@ -22,8 +23,10 @@ class WSChannel(str, Enum):
 # Base message envelope
 # ---------------------------------------------------------------------------
 
+
 class WSMessage(BaseModel):
     """Canonical envelope for every WebSocket message."""
+
     type: str
     channel: WSChannel
     room_id: str
@@ -34,6 +37,7 @@ class WSMessage(BaseModel):
 # ---------------------------------------------------------------------------
 # Writing channel events
 # ---------------------------------------------------------------------------
+
 
 class CursorMoveData(BaseModel):
     user_id: str
@@ -65,6 +69,7 @@ class SaveAckData(BaseModel):
 # ---------------------------------------------------------------------------
 # Agent channel events
 # ---------------------------------------------------------------------------
+
 
 class TaskStartedData(BaseModel):
     task_id: str
@@ -98,6 +103,7 @@ class BudgetAlertData(BaseModel):
 # Analytics channel events
 # ---------------------------------------------------------------------------
 
+
 class MetricUpdateData(BaseModel):
     metric_name: str
     value: float
@@ -119,6 +125,7 @@ class ReportReadyData(BaseModel):
 # ---------------------------------------------------------------------------
 # Publishing channel events
 # ---------------------------------------------------------------------------
+
 
 class ValidationProgressData(BaseModel):
     step: str

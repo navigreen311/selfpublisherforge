@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 # ── Project schemas ──────────────────────────────────────────────────────
 
 
-
 class AudiobookCreateFromWizardRequest(BaseModel):
     """Request body for creating an audiobook project via the wizard flow."""
 
@@ -36,7 +35,9 @@ class ProjectCreateRequest(BaseModel):
     sample_rate: int = Field(44100, description="Audio sample rate in Hz.")
     bit_rate: int = Field(192, description="Audio bit rate in kbps.")
     channels: int = Field(1, description="Number of audio channels (1=mono, 2=stereo).")
-    target_platform: str = Field("acx", description="Target distribution platform.", pattern="^(acx|findaway|authors_republic|generic)$")
+    target_platform: str = Field(
+        "acx", description="Target distribution platform.", pattern="^(acx|findaway|authors_republic|generic)$"
+    )
     settings: dict[str, Any] | None = Field(None, description="Additional project settings.")
     created_by: UUID | None = Field(None, description="User who created the project.")
 
@@ -119,7 +120,6 @@ class ProjectListResponse(BaseModel):
     per_page: int = 20
 
 
-
 # ── Statistics & List schemas ────────────────────────────────────────────
 
 
@@ -184,7 +184,9 @@ class VoiceCloneRequest(BaseModel):
     """Request body for cloning a voice."""
 
     name: str = Field(..., min_length=1, max_length=255, description="Name for the cloned voice.")
-    provider: str = Field("coqui_xtts", description="TTS provider for cloning.", pattern="^(coqui_xtts|elevenlabs|custom_clone)$")
+    provider: str = Field(
+        "coqui_xtts", description="TTS provider for cloning.", pattern="^(coqui_xtts|elevenlabs|custom_clone)$"
+    )
     voice_type: str = Field("custom", description="Voice type.", pattern="^(narrator|character|custom)$")
     gender: str | None = Field(None, description="Voice gender.")
     language: str = Field("en", description="Language code.")
@@ -215,14 +217,11 @@ class VoicePreviewRequest(BaseModel):
     tier: str = Field(..., description="Service tier.", pattern="^(standard|premium)$")
 
 
-
 class VoicePreviewResponse(BaseModel):
     """Response for a voice preview."""
 
     audio_url: str
     duration_seconds: float = Field(..., description="Duration of the preview audio in seconds.")
-
-
 
 
 class MasterRequest(BaseModel):
@@ -351,7 +350,9 @@ class WizardCreateRequest(BaseModel):
     manuscript_id: UUID = Field(..., description="ID of the manuscript to create audiobook from.")
     voice_id: UUID = Field(..., description="Primary narrator voice ID.")
     tier: str = Field(..., description="Service tier: free, standard, premium.", pattern="^(free|standard|premium)$")
-    platform: str = Field("acx", description="Target distribution platform.", pattern="^(acx|findaway|authors_republic|generic)$")
+    platform: str = Field(
+        "acx", description="Target distribution platform.", pattern="^(acx|findaway|authors_republic|generic)$"
+    )
     speed: float = Field(1.0, description="Narration speed multiplier.", ge=0.5, le=2.0)
     style: str = Field("neutral", description="Narration style preset.")
     budget: float | None = Field(None, description="Optional budget cap in USD.", ge=0)
@@ -376,7 +377,9 @@ class VoicePreviewRequest(BaseModel):
     """Request body for generating a voice preview."""
 
     voice_id: UUID = Field(..., description="Voice ID to preview.")
-    text: str = Field("The quick brown fox jumps over the lazy dog.", max_length=500, description="Sample text to generate.")
+    text: str = Field(
+        "The quick brown fox jumps over the lazy dog.", max_length=500, description="Sample text to generate."
+    )
 
 
 class ProjectPauseResponse(BaseModel):

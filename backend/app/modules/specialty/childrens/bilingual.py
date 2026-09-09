@@ -4,6 +4,7 @@ Handles AI-powered translation with cultural adaptation, reading-level
 validation in both languages, change-sync for modified pages, and
 bilingual layout arrangement (side-by-side, alternating, back-section).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -49,10 +50,7 @@ _LANGUAGE_NAMES: dict[str, str] = {
 def _validate_language(lang: str) -> None:
     """Raise ValueError if *lang* is not in SUPPORTED_LANGUAGES."""
     if lang not in SUPPORTED_LANGUAGES:
-        raise ValueError(
-            f"Unsupported language '{lang}'. "
-            f"Supported: {SUPPORTED_LANGUAGES}"
-        )
+        raise ValueError(f"Unsupported language '{lang}'. " f"Supported: {SUPPORTED_LANGUAGES}")
 
 
 def _age_constraints_prompt(age_range: str) -> str:
@@ -62,21 +60,13 @@ def _age_constraints_prompt(age_range: str) -> str:
 
     constraints: list[str] = []
     if rules["max_sentence_words"] is not None:
-        constraints.append(
-            f"- Maximum {rules['max_sentence_words']} words per sentence"
-        )
+        constraints.append(f"- Maximum {rules['max_sentence_words']} words per sentence")
     if rules["max_word_length"] is not None:
-        constraints.append(
-            f"- Maximum {rules['max_word_length']} letters per word"
-        )
+        constraints.append(f"- Maximum {rules['max_word_length']} letters per word")
     if rules["vocab_level"] is not None:
-        constraints.append(
-            f"- Use only top-{rules['vocab_level']} most common words in the target language"
-        )
+        constraints.append(f"- Use only top-{rules['vocab_level']} most common words in the target language")
     min_w, max_w = rules["total_words"]
-    constraints.append(
-        f"- Total book word count should stay between {min_w} and {max_w} words"
-    )
+    constraints.append(f"- Total book word count should stay between {min_w} and {max_w} words")
     return "\n".join(constraints)
 
 
@@ -186,14 +176,14 @@ def translate_book(
 # Values are (lower_bound, upper_bound) representing the typical range of
 # translated_word_count / english_word_count.
 _LANGUAGE_RATIO_BOUNDS: dict[str, tuple[float, float]] = {
-    "es": (1.1, 1.35),   # Spanish: ~20% longer
-    "fr": (1.15, 1.4),   # French: ~25% longer
-    "de": (0.9, 1.2),    # German: roughly similar (compounds reduce word count)
-    "pt": (1.1, 1.35),   # Portuguese: similar to Spanish
-    "it": (1.1, 1.35),   # Italian: similar to Spanish
-    "zh": (0.4, 0.8),    # Chinese: much fewer "words" (character-based)
-    "ja": (0.4, 0.85),   # Japanese: fewer segmented words
-    "ko": (0.6, 1.0),    # Korean: somewhat fewer words
+    "es": (1.1, 1.35),  # Spanish: ~20% longer
+    "fr": (1.15, 1.4),  # French: ~25% longer
+    "de": (0.9, 1.2),  # German: roughly similar (compounds reduce word count)
+    "pt": (1.1, 1.35),  # Portuguese: similar to Spanish
+    "it": (1.1, 1.35),  # Italian: similar to Spanish
+    "zh": (0.4, 0.8),  # Chinese: much fewer "words" (character-based)
+    "ja": (0.4, 0.85),  # Japanese: fewer segmented words
+    "ko": (0.6, 1.0),  # Korean: somewhat fewer words
 }
 
 
@@ -231,20 +221,13 @@ def validate_translation(
         issues.append(
             {
                 "type": "page_count_mismatch",
-                "message": (
-                    f"Original has {len(original)} pages but "
-                    f"translation has {len(translated)} pages."
-                ),
+                "message": (f"Original has {len(original)} pages but " f"translation has {len(translated)} pages."),
             }
         )
 
     # Collect full text for readability scoring
-    original_full_text = "\n".join(
-        p.get("text_content", "") or "" for p in original
-    )
-    translated_full_text = "\n".join(
-        p.get("translated_text", "") or "" for p in translated
-    )
+    original_full_text = "\n".join(p.get("text_content", "") or "" for p in original)
+    translated_full_text = "\n".join(p.get("translated_text", "") or "" for p in translated)
 
     original_readability = calculate_readability_score(original_full_text, resolved_age)
     translated_readability = calculate_readability_score(translated_full_text, resolved_age)
@@ -274,9 +257,7 @@ def validate_translation(
         trans_wc = _word_count(trans_text)
         if orig_wc > 0 and trans_wc > 0:
             ratio = trans_wc / orig_wc
-            lo, hi = _LANGUAGE_RATIO_BOUNDS.get(
-                target_language or "", (0.3, 2.0)
-            )
+            lo, hi = _LANGUAGE_RATIO_BOUNDS.get(target_language or "", (0.3, 2.0))
             # Apply tolerance: allow 30% beyond expected bounds for short pages
             tolerance = 0.3 if orig_wc < 20 else 0.15
             effective_lo = lo - tolerance
@@ -344,8 +325,7 @@ def sync_translations(
     """
     # Build lookup by page_number
     orig_by_num: dict[int, str] = {
-        p.get("page_number", 0): (p.get("text_content") or "").strip()
-        for p in original_pages
+        p.get("page_number", 0): (p.get("text_content") or "").strip() for p in original_pages
     }
 
     changed: list[int] = []
@@ -411,15 +391,10 @@ def get_bilingual_layout(
     """
     valid_modes = {"side_by_side", "alternating", "back_section"}
     if layout_mode not in valid_modes:
-        raise ValueError(
-            f"Invalid layout_mode '{layout_mode}'. Must be one of {valid_modes}"
-        )
+        raise ValueError(f"Invalid layout_mode '{layout_mode}'. Must be one of {valid_modes}")
 
     # Build lookup
-    trans_by_num: dict[int, str] = {
-        p.get("page_number", 0): (p.get("translated_text") or "")
-        for p in translated_pages
-    }
+    trans_by_num: dict[int, str] = {p.get("page_number", 0): (p.get("translated_text") or "") for p in translated_pages}
 
     combined: list[dict[str, Any]] = []
 

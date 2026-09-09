@@ -37,6 +37,7 @@ SUPPORTED_FORMATS: set[str] = {"docx", "epub", "pdf", "txt", "markdown"}
 # Public API
 # ---------------------------------------------------------------------------
 
+
 async def export_manuscript(
     db: AsyncSession,
     manuscript_id: _uuid.UUID,
@@ -99,13 +100,12 @@ async def export_manuscript(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 async def _load_manuscript_with_chapters(
     db: AsyncSession, manuscript_id: _uuid.UUID
 ) -> tuple[Manuscript, list[Chapter]]:
     """Fetch the manuscript and its ordered chapters."""
-    result = await db.execute(
-        select(Manuscript).where(Manuscript.id == manuscript_id)
-    )
+    result = await db.execute(select(Manuscript).where(Manuscript.id == manuscript_id))
     manuscript = result.scalar_one_or_none()
     if not manuscript:
         raise AppException(
@@ -115,9 +115,7 @@ async def _load_manuscript_with_chapters(
         )
 
     ch_result = await db.execute(
-        select(Chapter)
-        .where(Chapter.manuscript_id == manuscript_id)
-        .order_by(Chapter.order_index)
+        select(Chapter).where(Chapter.manuscript_id == manuscript_id).order_by(Chapter.order_index)
     )
     chapters = list(ch_result.scalars().all())
     return manuscript, chapters
@@ -141,6 +139,7 @@ def _chapter_plain_text(chapter: Chapter) -> str:
     if isinstance(content, str) and content.strip().startswith("{"):
         try:
             import json
+
             parsed = json.loads(content)
             if isinstance(parsed, dict) and parsed.get("type") == "doc":
                 return tiptap_to_text(parsed)
@@ -157,6 +156,7 @@ def _chapter_html(chapter: Chapter) -> str:
     if isinstance(content, str) and content.strip().startswith("{"):
         try:
             import json
+
             parsed = json.loads(content)
             if isinstance(parsed, dict) and parsed.get("type") == "doc":
                 return tiptap_to_html(parsed)
@@ -174,6 +174,7 @@ def _chapter_html(chapter: Chapter) -> str:
 # Format-specific exporters
 # ---------------------------------------------------------------------------
 
+
 def _export_docx(title: str, chapters: list[Chapter]) -> bytes:
     """Export to DOCX using python-docx."""
     try:
@@ -184,10 +185,7 @@ def _export_docx(title: str, chapters: list[Chapter]) -> bytes:
         raise AppException(
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
-            message=(
-                "DOCX export requires the 'python-docx' library. "
-                "Install it with: pip install python-docx"
-            ),
+            message=("DOCX export requires the 'python-docx' library. " "Install it with: pip install python-docx"),
         )
 
     doc = Document()
@@ -227,10 +225,7 @@ def _export_epub(title: str, chapters: list[Chapter]) -> bytes:
         raise AppException(
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
-            message=(
-                "EPUB export requires the 'ebooklib' library. "
-                "Install it with: pip install ebooklib"
-            ),
+            message=("EPUB export requires the 'ebooklib' library. " "Install it with: pip install ebooklib"),
         )
 
     book = epub.EpubBook()
@@ -273,9 +268,7 @@ p { text-indent: 1.5em; margin: 0.5em 0; }
             lang="en",
         )
         html_content = _chapter_html(chapter)
-        ch.content = (
-            f"<html><body><h1>{chapter.title}</h1>{html_content}</body></html>"
-        ).encode()
+        ch.content = (f"<html><body><h1>{chapter.title}</h1>{html_content}</body></html>").encode()
         ch.add_item(style)
         book.add_item(ch)
         spine.append(ch)
@@ -307,10 +300,7 @@ def _export_pdf(title: str, chapters: list[Chapter]) -> bytes:
         raise AppException(
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
-            message=(
-                "PDF export requires the 'reportlab' library. "
-                "Install it with: pip install reportlab"
-            ),
+            message=("PDF export requires the 'reportlab' library. " "Install it with: pip install reportlab"),
         )
 
     buf = io.BytesIO()
@@ -366,11 +356,7 @@ def _export_pdf(title: str, chapters: list[Chapter]) -> bytes:
                 para_text = para_text.strip()
                 if para_text:
                     # Escape XML special characters for reportlab
-                    safe_text = (
-                        para_text.replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                    )
+                    safe_text = para_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                     story.append(Paragraph(safe_text, body_style))
 
         story.append(PageBreak())

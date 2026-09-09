@@ -24,6 +24,7 @@ from app.modules.realtime.schemas import WSChannel
 # Test Helpers
 # ---------------------------------------------------------------------------
 
+
 class FakeWebSocket:
     """Minimal WebSocket stand-in for unit testing."""
 
@@ -35,6 +36,7 @@ class FakeWebSocket:
 
         # Starlette's WebSocketState enum
         from starlette.websockets import WebSocketState
+
         self.client_state = WebSocketState.CONNECTED if connected else WebSocketState.DISCONNECTED
 
     async def accept(self) -> None:
@@ -55,6 +57,7 @@ class FakeWebSocket:
 # Tests — Channel Key Generation
 # ---------------------------------------------------------------------------
 
+
 def test_channel_key_writing() -> None:
     assert _channel_key(WSChannel.WRITING, "book-1") == "ws:writing:book-1"
 
@@ -74,6 +77,7 @@ def test_channel_key_publishing() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Connect / Disconnect Lifecycle
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_connect_registers_websocket() -> None:
@@ -167,6 +171,7 @@ async def test_disconnect_on_error() -> None:
 # Tests — Broadcasting to Channel
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_broadcast_sends_to_all_in_room() -> None:
     """Test broadcast to channel sends to all subscribers."""
@@ -227,6 +232,7 @@ async def test_broadcast_removes_dead_connections() -> None:
     ws_dead = FakeWebSocket(connected=False)
 
     from starlette.websockets import WebSocketState
+
     ws_dead.client_state = WebSocketState.DISCONNECTED
 
     await mgr.connect(ws_alive, WSChannel.PUBLISHING, "book-3")  # type: ignore[arg-type]
@@ -253,6 +259,7 @@ async def test_broadcast_to_empty_room_is_noop() -> None:
 # Tests — Personal Messages
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_send_personal_message() -> None:
     """Test send_personal sends to single WebSocket."""
@@ -272,6 +279,7 @@ async def test_send_personal_to_closed_websocket() -> None:
     mgr = ConnectionManager()
     ws = FakeWebSocket(connected=False)
     from starlette.websockets import WebSocketState
+
     ws.client_state = WebSocketState.DISCONNECTED
 
     # Should not raise, just log warning
@@ -292,6 +300,7 @@ async def test_send_personal_with_connection_error() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Redis Pub/Sub (Mocked)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_broadcast_publishes_to_redis() -> None:
@@ -352,6 +361,7 @@ async def test_redis_subscription_on_connect() -> None:
 # Tests — Queries
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_connection_count() -> None:
     """Test get_connection_count returns accurate count."""
@@ -406,6 +416,7 @@ async def test_get_all_rooms_with_counts() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Heartbeat / Ping
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_heartbeat_starts_on_connect() -> None:
@@ -465,6 +476,7 @@ async def test_heartbeat_removes_dead_connections() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Shutdown
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_shutdown_cancels_heartbeat() -> None:

@@ -64,7 +64,6 @@ async def _seed_cover(
 
 
 class TestGenerateCover:
-
     @pytest.mark.asyncio
     async def test_generate_cover_success(self, db_session):
         """Should generate a new cover and persist it."""
@@ -138,7 +137,6 @@ class TestGenerateCover:
 
 
 class TestCreateVariations:
-
     @pytest.mark.asyncio
     async def test_create_variations_success(self, db_session):
         """Should create variations of an existing cover."""
@@ -180,9 +178,7 @@ class TestCreateVariations:
         ) as mock_gen:
             mock_gen.return_value = mock_variations
 
-            result = await service.create_variations(
-                db_session, org_id, original.id, request
-            )
+            result = await service.create_variations(db_session, org_id, original.id, request)
 
         assert len(result) == 2
         assert result[0].image_url == "https://example.com/var1.jpg"
@@ -210,7 +206,6 @@ class TestCreateVariations:
 
 
 class TestListTemplates:
-
     @pytest.mark.asyncio
     async def test_list_all_templates(self):
         """Should return all templates when no genre filter."""
@@ -264,7 +259,6 @@ class TestListTemplates:
 
 
 class TestAnalyzeCompetitors:
-
     @pytest.mark.asyncio
     async def test_analyze_competitors_success(self):
         """Should analyze competitor covers."""
@@ -303,7 +297,6 @@ class TestAnalyzeCompetitors:
 
 
 class TestListCoversForBook:
-
     @pytest.mark.asyncio
     async def test_list_covers_empty(self, db_session):
         """Should return empty list if no covers exist."""
@@ -332,7 +325,6 @@ class TestListCoversForBook:
 
 
 class TestGetCoverById:
-
     @pytest.mark.asyncio
     async def test_get_cover_success(self, db_session):
         """Should retrieve a single cover by ID."""
@@ -355,7 +347,6 @@ class TestGetCoverById:
 
 
 class TestDeleteCover:
-
     @pytest.mark.asyncio
     async def test_delete_cover_success(self, db_session):
         """Should soft-delete a cover."""

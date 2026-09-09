@@ -5,6 +5,7 @@ Each user class represents a different usage pattern:
 - WriterUser: Content creators (30% of traffic)
 - PowerUser: Full workflow users (10% of traffic)
 """
+
 from __future__ import annotations
 
 import logging

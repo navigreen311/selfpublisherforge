@@ -60,6 +60,7 @@ metadata_router = APIRouter(tags=["publishing"])
 
 # ---------- Publishing Accounts ----------
 
+
 @router.get(
     "/accounts",
     response_model=list[PublishingAccount],
@@ -112,6 +113,7 @@ async def delete_account(
 
 # ---------- Export ----------
 
+
 @router.post(
     "/export/epub",
     response_model=ExportResponse,
@@ -149,6 +151,7 @@ async def export_pdf(
 
 
 # ---------- Export History ----------
+
 
 @router.get(
     "/exports",
@@ -207,6 +210,7 @@ async def download_export(
 
 # ---------- Formatting Templates ----------
 
+
 @router.get(
     "/templates",
     response_model=list[FormattingTemplate],
@@ -240,6 +244,7 @@ async def create_template(
 
 
 # ---------- Book Metadata (on separate router) ----------
+
 
 @metadata_router.get(
     "/books/{book_id}/metadata",
@@ -277,6 +282,7 @@ async def update_metadata(
 
 # ---------- Listings ----------
 
+
 @router.get(
     "/listings",
     response_model=list[ListingDetail],
@@ -308,6 +314,7 @@ async def sync_listing(
 
 
 # ---------- Pricing ----------
+
 
 @router.get(
     "/pricing/{book_id}",

@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 # S3 upload helper
 # ---------------------------------------------------------------------------
 
+
 def _upload_to_s3(
     file_bytes: bytes,
     s3_key: str,
@@ -162,7 +163,9 @@ def task_generate_epub(
 
         logger.info(
             "EPUB export completed: export_id=%s, size=%d bytes, url=%s",
-            export_id, file_size, file_url,
+            export_id,
+            file_size,
+            file_url,
         )
 
         return {
@@ -249,7 +252,9 @@ def task_generate_pdf(
 
         logger.info(
             "PDF export completed: export_id=%s, size=%d bytes, url=%s",
-            export_id, file_size, file_url,
+            export_id,
+            file_size,
+            file_url,
         )
 
         return {
@@ -309,12 +314,9 @@ def task_sync_listing(
 
     async def _sync():
         async with async_session() as db:
-            stmt = (
-                select(ListingModel)
-                .where(
-                    ListingModel.id == uuid.UUID(listing_id),
-                    ListingModel.deleted_at.is_(None),
-                )
+            stmt = select(ListingModel).where(
+                ListingModel.id == uuid.UUID(listing_id),
+                ListingModel.deleted_at.is_(None),
             )
             result = await db.execute(stmt)
             listing = result.scalar_one_or_none()
@@ -338,7 +340,8 @@ def task_sync_listing(
 
             logger.info(
                 "Listing sync attempted: listing_id=%s, platform=%s",
-                listing_id, effective_platform,
+                listing_id,
+                effective_platform,
             )
 
             if effective_platform.lower() in _SUPPORTED_PLATFORM_APIS:
@@ -351,7 +354,9 @@ def task_sync_listing(
                 sync_status = "synced"
                 message = f"Successfully synced listing with {effective_platform}"
                 logger.info(
-                    "Listing %s synced with %s", listing_id, effective_platform,
+                    "Listing %s synced with %s",
+                    listing_id,
+                    effective_platform,
                 )
             else:
                 # Platform API adapter is not yet available -- mark as pending
@@ -366,7 +371,8 @@ def task_sync_listing(
                 )
                 logger.info(
                     "Listing %s marked sync_pending -- no API adapter for %s",
-                    listing_id, effective_platform,
+                    listing_id,
+                    effective_platform,
                 )
 
             # Persist the sync metadata inside listing_data
@@ -388,6 +394,7 @@ def task_sync_listing(
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 result = pool.submit(asyncio.run, _sync()).result()
         else:

@@ -6,6 +6,7 @@ clones, and low unique-content ratios.
 
 Blueprint refs: 7.2, 7.4
 """
+
 from __future__ import annotations
 
 import re
@@ -26,6 +27,7 @@ from app.modules.specialty.shared.fingerprinting import (
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SpamRiskReport:
@@ -62,14 +64,13 @@ _PUZZLE_UNIQUE_GRID_THRESHOLD = 1.0
 # Metadata quality
 _MAX_KEYWORDS_IN_TITLE = 4  # More than this suggests keyword stuffing
 _MIN_DESCRIPTION_LENGTH = 50  # Characters
-_KEYWORD_STUFF_PATTERN = re.compile(
-    r"(\b\w+\b)(?:\s*[,|/]\s*\1){2,}", re.IGNORECASE
-)
+_KEYWORD_STUFF_PATTERN = re.compile(r"(\b\w+\b)(?:\s*[,|/]\s*\1){2,}", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
 # Internal checks
 # ---------------------------------------------------------------------------
+
 
 async def _check_interior_originality(
     db: AsyncSession,
@@ -156,10 +157,7 @@ def _check_metadata_quality(
                 ),
             }
         )
-        recs.append(
-            "Simplify the title. Keyword-stuffed titles are a common "
-            "spam signal for KDP."
-        )
+        recs.append("Simplify the title. Keyword-stuffed titles are a common " "spam signal for KDP.")
 
     # Repeated keyword pattern
     if _KEYWORD_STUFF_PATTERN.search(title):
@@ -186,9 +184,7 @@ def _check_metadata_quality(
                 ),
             }
         )
-        recs.append(
-            "Write a more detailed description (at least 50 characters)."
-        )
+        recs.append("Write a more detailed description (at least 50 characters).")
     elif not description:
         penalty += 5.0
         factors.append(
@@ -300,17 +296,11 @@ async def _check_content_substance(
                 {
                     "check": "content_substance_puzzle",
                     "severity": "critical",
-                    "detail": (
-                        f"Only {unique_ratio:.0%} of puzzle grids are unique "
-                        f"(100% unique grids required)"
-                    ),
+                    "detail": (f"Only {unique_ratio:.0%} of puzzle grids are unique " f"(100% unique grids required)"),
                     "unique_ratio": round(unique_ratio, 3),
                 }
             )
-            recs.append(
-                "Puzzle books must have 100% unique grids. "
-                "Regenerate any duplicate puzzles."
-            )
+            recs.append("Puzzle books must have 100% unique grids. " "Regenerate any duplicate puzzles.")
 
     return min(penalty, 20.0), factors, recs
 
@@ -318,6 +308,7 @@ async def _check_content_substance(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def calculate_spam_risk(
     db: AsyncSession,
@@ -369,18 +360,14 @@ async def calculate_spam_risk(
 
     # 2. Interior originality (requires org_id)
     if org_id is not None:
-        orig_penalty, orig_factors, orig_recs = await _check_interior_originality(
-            db, org_id, book_id
-        )
+        orig_penalty, orig_factors, orig_recs = await _check_interior_originality(db, org_id, book_id)
         total_penalty += orig_penalty
         all_factors.extend(orig_factors)
         all_recs.extend(orig_recs)
 
     # 3. Content substance (requires org_id)
     if org_id is not None:
-        subst_penalty, subst_factors, subst_recs = await _check_content_substance(
-            db, book_type, book_id, org_id
-        )
+        subst_penalty, subst_factors, subst_recs = await _check_content_substance(db, book_type, book_id, org_id)
         total_penalty += subst_penalty
         all_factors.extend(subst_factors)
         all_recs.extend(subst_recs)

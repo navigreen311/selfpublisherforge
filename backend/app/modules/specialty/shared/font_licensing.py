@@ -6,6 +6,7 @@ for commercial print use (KDP, IngramSpark, B&N Press).
 
 Blueprint ref: 3.7 (Font Licensing), 6.2
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ from typing import Any
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class FontLicenseInfo:
@@ -331,6 +333,7 @@ SAFE_FONTS: dict[str, FontLicenseInfo] = {
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def check_font_license(font_name: str) -> dict[str, Any]:
     """Check whether a font is safe for commercial print publication.

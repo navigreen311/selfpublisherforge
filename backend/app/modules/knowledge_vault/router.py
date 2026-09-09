@@ -53,6 +53,7 @@ def _org_id(current_user: dict) -> UUID:
 # top-to-bottom, so a GET /tags would otherwise be captured by
 # GET /{entry_id} and fail UUID validation with a 422.
 
+
 @router.post(
     "/search",
     response_model=SearchResult,
@@ -80,6 +81,7 @@ async def search_entries(
 
 
 # ── Import ───────────────────────────────────────────────────────
+
 
 @router.post(
     "/import",
@@ -114,6 +116,7 @@ async def import_entry(
 
 
 # ── Import from URL (simplified) ─────────────────────────────────
+
 
 @router.post(
     "/import-url",
@@ -150,6 +153,7 @@ async def import_from_url(
 
 # ── Tags ─────────────────────────────────────────────────────────
 
+
 @router.get(
     "/tags",
     response_model=TagListResponse,
@@ -164,6 +168,7 @@ async def list_tags(
 
 
 # ── AI Suggestions ───────────────────────────────────────────────
+
 
 @router.get(
     "/suggestions",
@@ -180,6 +185,7 @@ async def get_suggestions(
 
 
 # ── Create ───────────────────────────────────────────────────────
+
 
 @router.post(
     "",
@@ -198,6 +204,7 @@ async def create_entry(
 
 
 # ── List (paginated, filterable) ─────────────────────────────────
+
 
 @router.get(
     "",
@@ -232,6 +239,7 @@ async def list_entries(
 
 # ── Get detail ───────────────────────────────────────────────────
 
+
 @router.get(
     "/{entry_id}",
     response_model=KnowledgeEntryResponse,
@@ -250,6 +258,7 @@ async def get_entry(
 
 
 # ── Update ───────────────────────────────────────────────────────
+
 
 @router.put(
     "/{entry_id}",
@@ -271,6 +280,7 @@ async def update_entry(
 
 # ── Delete (soft) ────────────────────────────────────────────────
 
+
 @router.delete(
     "/{entry_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -288,6 +298,7 @@ async def delete_entry(
 
 
 # ── Summarize ────────────────────────────────────────────────────
+
 
 @router.post(
     "/{entry_id}/summarize",
@@ -474,6 +485,7 @@ async def delete_attachment(
 
 
 # ── Helpers ──────────────────────────────────────────────────────
+
 
 def _entry_response(entry) -> dict:
     """Convert a KnowledgeEntry ORM instance to a response dict."""

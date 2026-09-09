@@ -24,12 +24,12 @@ logger = logging.getLogger(__name__)
 # Default TTLs per task type (seconds) — mirrors router_config but can be
 # overridden independently for cache-only tuning.
 DEFAULT_CACHE_TTLS: dict[TaskType, int] = {
-    TaskType.LONG_FORM_WRITING: 0,           # no caching — creative work
-    TaskType.BLURB_AD_COPY: 86_400,          # 24 hours
-    TaskType.MARKET_ANALYSIS: 86_400,        # 24 hours
+    TaskType.LONG_FORM_WRITING: 0,  # no caching — creative work
+    TaskType.BLURB_AD_COPY: 86_400,  # 24 hours
+    TaskType.MARKET_ANALYSIS: 86_400,  # 24 hours
     TaskType.STYLE_FINGERPRINTING: 604_800,  # 7 days
-    TaskType.REVIEW_SENTIMENT: 86_400,       # 24 hours
-    TaskType.QUICK_EDITS_GRAMMAR: 0,         # no caching — unique input
+    TaskType.REVIEW_SENTIMENT: 86_400,  # 24 hours
+    TaskType.QUICK_EDITS_GRAMMAR: 0,  # no caching — unique input
 }
 
 CACHE_KEY_PREFIX = "llm_cache:"

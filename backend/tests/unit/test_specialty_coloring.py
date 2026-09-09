@@ -3,6 +3,7 @@
 Covers Section 17.2 blueprint test cases (18 test cases that can run without
 live DB or external services).
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -28,6 +29,7 @@ from app.modules.specialty.coloring.quality_pipeline import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_bw_png(width: int = 4, height: int = 4, black_pixels: set | None = None) -> bytes:
     """Create a minimal B&W PNG using PIL for pipeline tests."""
@@ -127,6 +129,7 @@ def _make_page(
 # 1. Single-sided mode enforced with blank backs in export
 # ---------------------------------------------------------------------------
 
+
 class TestSingleSidedExport:
     """Test that export enforces single-sided with auto-inserted blank backs."""
 
@@ -156,6 +159,7 @@ class TestSingleSidedExport:
 # 2. Coloring-safe inner margin applied (+0.25in)
 # ---------------------------------------------------------------------------
 
+
 class TestColoringSafeMargins:
     """Inner margin must add +0.25in at spine for coloring safety."""
 
@@ -176,8 +180,8 @@ class TestColoringSafeMargins:
 # 3. 7-step quality pipeline runs all steps in order
 # ---------------------------------------------------------------------------
 
-class TestPipelineRunsAllSteps:
 
+class TestPipelineRunsAllSteps:
     @pytest.mark.asyncio
     async def test_full_pipeline_completes_6_steps(self):
         """run_full_pipeline (steps 2-7) produces 6 completed step names."""
@@ -206,8 +210,8 @@ class TestPipelineRunsAllSteps:
 # 4. Step 2 auto-clean converts to pure B&W (threshold at 128)
 # ---------------------------------------------------------------------------
 
-class TestStep2AutoClean:
 
+class TestStep2AutoClean:
     @pytest.mark.asyncio
     async def test_gray_below_threshold_becomes_black(self):
         """Pixels with value < 128 must become 0 (black)."""
@@ -217,6 +221,7 @@ class TestStep2AutoClean:
         import io
 
         from PIL import Image
+
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 0 for p in pixels), "All pixels below 128 should be black"
@@ -230,6 +235,7 @@ class TestStep2AutoClean:
         import io
 
         from PIL import Image
+
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 255 for p in pixels), "All pixels >= 128 should be white"
@@ -248,8 +254,8 @@ class TestStep2AutoClean:
 # 5. Step 3 stroke uniformity applies normalization
 # ---------------------------------------------------------------------------
 
-class TestStep3StrokeUniformity:
 
+class TestStep3StrokeUniformity:
     @pytest.mark.asyncio
     async def test_stroke_uniformity_returns_image(self):
         """Step 3 must return valid image bytes."""
@@ -271,8 +277,8 @@ class TestStep3StrokeUniformity:
 # 6. Step 4 closed-shape detection identifies open outlines
 # ---------------------------------------------------------------------------
 
-class TestStep4ClosedShapes:
 
+class TestStep4ClosedShapes:
     @pytest.mark.asyncio
     async def test_closed_shapes_returns_issues_for_edge_touching_lines(self):
         """Lines touching the image edge should be flagged as potentially open."""
@@ -296,8 +302,8 @@ class TestStep4ClosedShapes:
 # 7. Step 5 speck removal removes small connected components
 # ---------------------------------------------------------------------------
 
-class TestStep5SpeckRemoval:
 
+class TestStep5SpeckRemoval:
     @pytest.mark.asyncio
     async def test_specks_below_min_size_removed(self):
         """Connected components smaller than min_size must be erased."""
@@ -308,6 +314,7 @@ class TestStep5SpeckRemoval:
         import io
 
         from PIL import Image
+
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 255 for p in pixels), "Speck should have been removed"
@@ -324,6 +331,7 @@ class TestStep5SpeckRemoval:
         import io
 
         from PIL import Image
+
         result = Image.open(io.BytesIO(cleaned))
         px = result.load()
         black_count = sum(1 for x in range(20) for y in range(20) if px[x, y] == 0)
@@ -334,8 +342,8 @@ class TestStep5SpeckRemoval:
 # 8. Step 6 background check verifies pure white
 # ---------------------------------------------------------------------------
 
-class TestStep6BackgroundCheck:
 
+class TestStep6BackgroundCheck:
     @pytest.mark.asyncio
     async def test_offwhite_corrected_to_pure_white(self):
         """Off-white pixels (e.g. 250) must be set to 255."""
@@ -345,6 +353,7 @@ class TestStep6BackgroundCheck:
         import io
 
         from PIL import Image
+
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 255 for p in pixels), "All off-white should become pure white"
@@ -363,8 +372,8 @@ class TestStep6BackgroundCheck:
 # 9. Step 7 quality check aggregates all results
 # ---------------------------------------------------------------------------
 
-class TestStep7QualityCheck:
 
+class TestStep7QualityCheck:
     @pytest.mark.asyncio
     async def test_quality_check_returns_report(self):
         image = _make_bw_png(10, 10, black_pixels={(i, 5) for i in range(10)})
@@ -397,8 +406,8 @@ class TestStep7QualityCheck:
 # 10. Full pipeline produces QualityReport with score
 # ---------------------------------------------------------------------------
 
-class TestFullPipelineReport:
 
+class TestFullPipelineReport:
     @pytest.mark.asyncio
     async def test_pipeline_report_has_score(self):
         # Use a large enough image with substantial black content to survive
@@ -423,8 +432,8 @@ class TestFullPipelineReport:
 # 11. Batch generation tracks per-page status
 # ---------------------------------------------------------------------------
 
-class TestBatchGenerationTracking:
 
+class TestBatchGenerationTracking:
     def test_batch_job_structure(self):
         """Batch job dict tracks total, completed, failed, and per-page results."""
         job = {
@@ -453,8 +462,8 @@ class TestBatchGenerationTracking:
 # 12. Variation mode flag is stored
 # ---------------------------------------------------------------------------
 
-class TestVariationMode:
 
+class TestVariationMode:
     def test_variation_mode_stored_in_job(self):
         """variation_mode flag must persist in the batch job dict."""
         # Mirrors _batch_jobs structure in service.py
@@ -467,6 +476,7 @@ class TestVariationMode:
     def test_variation_mode_defaults_true(self):
         """batch_generate signature defaults variation_mode=True."""
         import inspect
+
         sig = inspect.signature(coloring_service.batch_generate)
         param = sig.parameters["variation_mode"]
         assert param.default is True
@@ -476,8 +486,8 @@ class TestVariationMode:
 # 13. Quality dashboard aggregates scores across pages
 # ---------------------------------------------------------------------------
 
-class TestQualityDashboardAggregation:
 
+class TestQualityDashboardAggregation:
     def test_average_score_calculation(self):
         """Overall score = mean of per-page qa_scores."""
         pages = [
@@ -499,7 +509,9 @@ class TestQualityDashboardAggregation:
         """Pages with qa_issues should appear in pages_with_issues list."""
         pages = [
             _make_page(1, qa_score=90, qa_issues=[]),
-            _make_page(2, qa_score=60, qa_issues=[{"step": "speck_removal", "severity": "warning", "message": "Found specks"}]),
+            _make_page(
+                2, qa_score=60, qa_issues=[{"step": "speck_removal", "severity": "warning", "message": "Found specks"}]
+            ),
         ]
         pages_with_issues = [p for p in pages if p.qa_issues]
         assert len(pages_with_issues) == 1
@@ -510,8 +522,8 @@ class TestQualityDashboardAggregation:
 # 14. Theme cohesion scoring logic
 # ---------------------------------------------------------------------------
 
-class TestThemeCohesion:
 
+class TestThemeCohesion:
     def test_all_pages_match_theme(self):
         """100% cohesion when all prompts contain the book theme."""
         book_theme = "ocean"
@@ -520,10 +532,7 @@ class TestThemeCohesion:
             _make_page(2, illustration_prompt="deep ocean fish"),
             _make_page(3, illustration_prompt="ocean shore"),
         ]
-        matches = sum(
-            1 for p in pages
-            if p.illustration_prompt and book_theme.lower() in p.illustration_prompt.lower()
-        )
+        matches = sum(1 for p in pages if p.illustration_prompt and book_theme.lower() in p.illustration_prompt.lower())
         cohesion = (matches / len(pages)) * 100
         assert cohesion == 100.0
 
@@ -543,10 +552,7 @@ class TestThemeCohesion:
             _make_page(3, illustration_prompt="forest trail"),
             _make_page(4, illustration_prompt="beach sunset"),
         ]
-        matches = sum(
-            1 for p in pages
-            if p.illustration_prompt and book_theme.lower() in p.illustration_prompt.lower()
-        )
+        matches = sum(1 for p in pages if p.illustration_prompt and book_theme.lower() in p.illustration_prompt.lower())
         cohesion = (matches / len(pages)) * 100
         assert cohesion == 50.0
 
@@ -555,8 +561,8 @@ class TestThemeCohesion:
 # 15. Volume factory creates new volume with same style
 # ---------------------------------------------------------------------------
 
-class TestVolumeFactory:
 
+class TestVolumeFactory:
     def test_cloned_settings_match_source(self):
         """New volume must inherit line_style, line_weight, complexity, trim_size."""
         source_book = {
@@ -589,8 +595,8 @@ class TestVolumeFactory:
 # 16. Export enforces B&W, single-sided, coloring-safe margins
 # ---------------------------------------------------------------------------
 
-class TestExportEnforcement:
 
+class TestExportEnforcement:
     def test_export_color_mode_is_bw(self):
         """Export must set color_mode to B&W."""
         export = {"color_mode": "B&W", "single_sided": True, "margins": {"inner": 0.75}}
@@ -616,8 +622,8 @@ class TestExportEnforcement:
 # 17. Page count calculation includes coloring + blanks + bonus pages
 # ---------------------------------------------------------------------------
 
-class TestPageCountCalculation:
 
+class TestPageCountCalculation:
     def test_total_pages_with_blanks_and_bonus(self):
         """total = coloring * 2 (for blank backs) + bonus."""
         coloring_count = 20
@@ -651,8 +657,8 @@ class TestPageCountCalculation:
 # 18. Preflight catches all quality issues
 # ---------------------------------------------------------------------------
 
-class TestPreflightChecks:
 
+class TestPreflightChecks:
     def test_preflight_catches_bw_issues(self):
         """Pages with gray-related qa_issues should fail pure_bw check."""
         pages = [
@@ -669,7 +675,12 @@ class TestPreflightChecks:
     def test_preflight_catches_stroke_issues(self):
         """Stroke uniformity issues should be flagged."""
         pages = [
-            _make_page(1, qa_issues=[{"step": "stroke_uniformity", "severity": "warning", "message": "Stroke variation too high"}]),
+            _make_page(
+                1,
+                qa_issues=[
+                    {"step": "stroke_uniformity", "severity": "warning", "message": "Stroke variation too high"}
+                ],
+            ),
         ]
         stroke_issues = []
         for p in pages:
@@ -680,7 +691,9 @@ class TestPreflightChecks:
 
     def test_preflight_catches_speck_issues(self):
         pages = [
-            _make_page(1, qa_issues=[{"step": "speck_removal", "severity": "info", "message": "Found speck artifacts"}]),
+            _make_page(
+                1, qa_issues=[{"step": "speck_removal", "severity": "info", "message": "Found speck artifacts"}]
+            ),
         ]
         speck_issues = []
         for p in pages:
@@ -691,7 +704,9 @@ class TestPreflightChecks:
 
     def test_preflight_catches_open_shape_issues(self):
         pages = [
-            _make_page(1, qa_issues=[{"step": "closed_shapes", "severity": "warning", "message": "Open outline detected"}]),
+            _make_page(
+                1, qa_issues=[{"step": "closed_shapes", "severity": "warning", "message": "Open outline detected"}]
+            ),
         ]
         shape_issues = []
         for p in pages:
@@ -739,8 +754,8 @@ class TestPreflightChecks:
 # Data structure tests
 # ---------------------------------------------------------------------------
 
-class TestDataStructures:
 
+class TestDataStructures:
     def test_severity_enum_values(self):
         assert Severity.INFO.value == "info"
         assert Severity.WARNING.value == "warning"
@@ -769,8 +784,8 @@ class TestDataStructures:
 # Step 1 generate (prompt construction)
 # ---------------------------------------------------------------------------
 
-class TestStep1Generate:
 
+class TestStep1Generate:
     @pytest.mark.asyncio
     async def test_generate_returns_bytes(self):
         """step_1_generate returns bytes (placeholder empty for now)."""

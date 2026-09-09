@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 # ---------- Enums ----------
 
+
 class PlatformType(str, Enum):
     KDP = "kdp"
     INGRAM_SPARK = "ingram_spark"
@@ -59,6 +60,7 @@ class TemplateGenre(str, Enum):
 
 # ---------- Publishing Accounts ----------
 
+
 class PublishingAccountBase(BaseModel):
     platform: PlatformType
     account_name: str = Field(..., min_length=1, max_length=255)
@@ -84,6 +86,7 @@ class PublishingAccount(PublishingAccountBase):
 
 
 # ---------- Export ----------
+
 
 class ChapterInput(BaseModel):
     title: str
@@ -121,6 +124,7 @@ class ExportResponse(BaseModel):
 
 class ExportListResponse(BaseModel):
     """Summary view of an export job for list endpoints."""
+
     id: uuid.UUID
     book_id: uuid.UUID
     format: ExportFormat
@@ -134,6 +138,7 @@ class ExportListResponse(BaseModel):
 
 class ExportDetailResponse(BaseModel):
     """Full detail view of a single export job."""
+
     id: uuid.UUID
     book_id: uuid.UUID
     format: ExportFormat
@@ -149,6 +154,7 @@ class ExportDetailResponse(BaseModel):
 
 
 # ---------- Formatting Templates ----------
+
 
 class TemplateStyleSettings(BaseModel):
     font_family: str = "Georgia"
@@ -191,6 +197,7 @@ class FormattingTemplate(FormattingTemplateBase):
 
 
 # ---------- Book Metadata ----------
+
 
 class PricingInfo(BaseModel):
     currency: str = "USD"
@@ -245,6 +252,7 @@ class BookMetadata(BookMetadataBase):
 
 # ---------- Listings ----------
 
+
 class ListingBase(BaseModel):
     book_id: uuid.UUID
     platform: PlatformType
@@ -276,6 +284,7 @@ class ListingSyncResponse(BaseModel):
 
 
 # ---------- Pricing ----------
+
 
 class BookFormat(str, Enum):
     KINDLE = "kindle"

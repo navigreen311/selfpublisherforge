@@ -3,6 +3,7 @@
 Responsible for sentiment scoring, weakness signal extraction (AI-powered),
 and complaint categorization.
 """
+
 from __future__ import annotations
 
 import logging
@@ -271,19 +272,13 @@ def generate_review_summary(reviews: list[ReviewData]) -> str:
         f"{verified_count} verified purchases ({verified_count * 100 // total}%).",
     ]
     if helpful_reviews > 0:
-        summary_parts.append(
-            f"{helpful_reviews} reviews were marked as especially helpful by readers."
-        )
+        summary_parts.append(f"{helpful_reviews} reviews were marked as especially helpful by readers.")
 
     negative_count = distribution[1] + distribution[2]
     if negative_count > total * 0.3:
-        summary_parts.append(
-            "ALERT: Over 30% of reviews are negative (1-2 stars), indicating significant issues."
-        )
+        summary_parts.append("ALERT: Over 30% of reviews are negative (1-2 stars), indicating significant issues.")
     elif negative_count > total * 0.15:
-        summary_parts.append(
-            "Note: A notable portion of reviews (15-30%) are negative."
-        )
+        summary_parts.append("Note: A notable portion of reviews (15-30%) are negative.")
 
     return " ".join(summary_parts)
 
@@ -374,9 +369,7 @@ def _extract_snippet(text: str, keyword: str, context_chars: int = 100) -> str:
     return snippet
 
 
-def _compute_confidence(
-    frequency: int, total_reviews: int, total_helpful: int
-) -> float:
+def _compute_confidence(frequency: int, total_reviews: int, total_helpful: int) -> float:
     """Compute a confidence score for a weakness signal (0.0 to 1.0)."""
     if total_reviews == 0:
         return 0.0
@@ -420,9 +413,7 @@ def _generate_suggestion(category: WeaknessCategory, keyword: str) -> str:
     return suggestions.get(category, f"Investigate and address the '{keyword}' issue.")
 
 
-def _build_ai_analysis_prompt(
-    review_texts: list[str], book_title: str, book_category: str
-) -> str:
+def _build_ai_analysis_prompt(review_texts: list[str], book_title: str, book_category: str) -> str:
     """Build the LLM prompt for AI-powered review analysis."""
     reviews_block = "\n---\n".join(review_texts)
     return f"""Analyze the following Amazon book reviews for "{book_title}" in the "{book_category}" category.

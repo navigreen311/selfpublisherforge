@@ -148,9 +148,7 @@ async def stream_task_execution(
         SSE-formatted event strings
     """
     # Get task
-    result = await db.execute(
-        select(AgentTask).where(AgentTask.id == task_id)
-    )
+    result = await db.execute(select(AgentTask).where(AgentTask.id == task_id))
     task = result.scalar_one_or_none()
 
     if not task:
@@ -158,9 +156,7 @@ async def stream_task_execution(
         return
 
     # Get agent
-    result = await db.execute(
-        select(Agent).where(Agent.id == task.agent_id)
-    )
+    result = await db.execute(select(Agent).where(Agent.id == task.agent_id))
     agent = result.scalar_one_or_none()
 
     if not agent:

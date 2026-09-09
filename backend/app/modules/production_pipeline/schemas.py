@@ -256,9 +256,7 @@ class StageResponse(BaseModel):
 class StageReorderRequest(BaseModel):
     """Request body for reordering stages."""
 
-    stage_ids: list[uuid.UUID] = Field(
-        ..., description="Ordered list of stage IDs in their new order"
-    )
+    stage_ids: list[uuid.UUID] = Field(..., description="Ordered list of stage IDs in their new order")
 
 
 # ── Checklist Schemas ────────────────────────────────────────────────────

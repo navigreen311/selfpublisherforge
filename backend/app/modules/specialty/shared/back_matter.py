@@ -6,6 +6,7 @@ author bios.
 
 Blueprint refs: 12.2
 """
+
 from __future__ import annotations
 
 import base64
@@ -22,6 +23,7 @@ from app.modules.specialty.models.shared import BookSeries
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BackMatterPage:
     """Rendered back-matter page content."""
@@ -35,6 +37,7 @@ class BackMatterPage:
 # ---------------------------------------------------------------------------
 # QR Code generator
 # ---------------------------------------------------------------------------
+
 
 def generate_qr_code(url: str, box_size: int = 10, border: int = 4) -> str:
     """Generate a QR code SVG for *url* and return base64-encoded SVG data.
@@ -73,7 +76,14 @@ _ALIGNMENT_POSITIONS: dict[int, list[int]] = {
 # Format info bits for EC level L with mask 0-7 (15 bits each, pre-computed
 # with BCH error correction and XOR mask 0x5412)
 _FORMAT_BITS: list[int] = [
-    0x77C4, 0x72F3, 0x7DAA, 0x789D, 0x662F, 0x6318, 0x6C41, 0x6976,
+    0x77C4,
+    0x72F3,
+    0x7DAA,
+    0x789D,
+    0x662F,
+    0x6318,
+    0x6C41,
+    0x6976,
 ]
 
 
@@ -84,10 +94,7 @@ def _pick_version(data_len: int) -> tuple[int, int, int, int, int, int]:
     for v in _QR_VERSIONS:
         if data_len <= v[5] - 2:  # 2 bytes overhead (mode indicator + count)
             return v
-    raise ValueError(
-        f"Data too long for QR versions 1-4 ({data_len} bytes). "
-        "Maximum is 114 characters."
-    )
+    raise ValueError(f"Data too long for QR versions 1-4 ({data_len} bytes). " "Maximum is 114 characters.")
 
 
 def _encode_data_codewords(data: bytes, data_capacity: int) -> list[int]:
@@ -182,6 +189,7 @@ def _rs_encode(data: list[int], n_ec: int) -> list[int]:
 
 # Matrix construction ----------------------------------------------------
 
+
 def _make_matrix(size: int) -> list[list[int | None]]:
     return [[None] * size for _ in range(size)]
 
@@ -190,11 +198,7 @@ def _set_finder_pattern(matrix: list[list[int | None]], row: int, col: int) -> N
     """Place a 7x7 finder pattern with top-left corner at (row, col)."""
     for r in range(7):
         for c in range(7):
-            if (
-                r in (0, 6)
-                or c in (0, 6)
-                or (2 <= r <= 4 and 2 <= c <= 4)
-            ):
+            if r in (0, 6) or c in (0, 6) or (2 <= r <= 4 and 2 <= c <= 4):
                 matrix[row + r][col + c] = 1
             else:
                 matrix[row + r][col + c] = 0
@@ -238,9 +242,7 @@ def _reserve_format_area(matrix: list[list[int | None]], size: int) -> None:
     matrix[size - 8][8] = 1
 
 
-def _place_data_bits(
-    matrix: list[list[int | None]], size: int, data_bits: list[int]
-) -> None:
+def _place_data_bits(matrix: list[list[int | None]], size: int, data_bits: list[int]) -> None:
     """Place data bits into the matrix using the QR upward-zigzag pattern."""
     bit_idx = 0
     # Columns are traversed right-to-left in pairs
@@ -267,8 +269,9 @@ def _place_data_bits(
         col -= 2
 
 
-def _apply_mask(matrix: list[list[int | None]], size: int, mask_id: int,
-                func_pattern: list[list[bool]]) -> list[list[int]]:
+def _apply_mask(
+    matrix: list[list[int | None]], size: int, mask_id: int, func_pattern: list[list[bool]]
+) -> list[list[int]]:
     """Apply mask *mask_id* and return a new int matrix."""
     mask_fns = [
         lambda r, c: (r + c) % 2 == 0,
@@ -335,19 +338,42 @@ def _write_format_info(matrix: list[list[int]], size: int, mask_id: int) -> None
 
     # Around top-left finder
     positions_a = [
-        (8, 0), (8, 1), (8, 2), (8, 3), (8, 4), (8, 5),
-        (8, 7), (8, 8), (7, 8), (5, 8), (4, 8), (3, 8),
-        (2, 8), (1, 8), (0, 8),
+        (8, 0),
+        (8, 1),
+        (8, 2),
+        (8, 3),
+        (8, 4),
+        (8, 5),
+        (8, 7),
+        (8, 8),
+        (7, 8),
+        (5, 8),
+        (4, 8),
+        (3, 8),
+        (2, 8),
+        (1, 8),
+        (0, 8),
     ]
     for i, (r, c) in enumerate(positions_a):
         matrix[r][c] = bits[i]
 
     # Along bottom-left and top-right
     positions_b = [
-        (size - 1, 8), (size - 2, 8), (size - 3, 8), (size - 4, 8),
-        (size - 5, 8), (size - 6, 8), (size - 7, 8),
-        (8, size - 8), (8, size - 7), (8, size - 6), (8, size - 5),
-        (8, size - 4), (8, size - 3), (8, size - 2), (8, size - 1),
+        (size - 1, 8),
+        (size - 2, 8),
+        (size - 3, 8),
+        (size - 4, 8),
+        (size - 5, 8),
+        (size - 6, 8),
+        (size - 7, 8),
+        (8, size - 8),
+        (8, size - 7),
+        (8, size - 6),
+        (8, size - 5),
+        (8, size - 4),
+        (8, size - 3),
+        (8, size - 2),
+        (8, size - 1),
     ]
     for i, (r, c) in enumerate(positions_b):
         matrix[r][c] = bits[i]
@@ -433,9 +459,7 @@ def _qr_encode(text: str) -> list[list[int]]:
     return best_result
 
 
-def _qr_render_svg(
-    matrix: list[list[int]], box_size: int = 10, border: int = 4
-) -> str:
+def _qr_render_svg(matrix: list[list[int]], box_size: int = 10, border: int = 4) -> str:
     """Render a QR module matrix to an SVG string."""
     n = len(matrix)
     total = n + 2 * border
@@ -447,23 +471,19 @@ def _qr_render_svg(
             if matrix[r][c]:
                 x = (c + border) * box_size
                 y = (r + border) * box_size
-                rects.append(
-                    f'<rect x="{x}" y="{y}" '
-                    f'width="{box_size}" height="{box_size}" fill="#000"/>'
-                )
+                rects.append(f'<rect x="{x}" y="{y}" ' f'width="{box_size}" height="{box_size}" fill="#000"/>')
 
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'width="{dim}" height="{dim}" viewBox="0 0 {dim} {dim}">'
-        f'<rect width="{dim}" height="{dim}" fill="#fff"/>'
-        + "".join(rects)
-        + "</svg>"
+        f'<rect width="{dim}" height="{dim}" fill="#fff"/>' + "".join(rects) + "</svg>"
     )
 
 
 # ---------------------------------------------------------------------------
 # Page generators
 # ---------------------------------------------------------------------------
+
 
 async def generate_also_in_series(
     db: AsyncSession,

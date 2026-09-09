@@ -40,6 +40,7 @@ def client():
 # POST /api/v1/publishing/validate — Full validation
 # ===================================================================
 
+
 class TestFullValidation:
     def test_full_validation_all_pass(self, client: TestClient):
         spine = calculate_spine_width(200, PaperType.WHITE)
@@ -158,6 +159,7 @@ class TestFullValidation:
 # POST /api/v1/publishing/validate/print
 # ===================================================================
 
+
 class TestPrintEndpoint:
     def test_valid_print(self, client: TestClient):
         payload = {
@@ -200,6 +202,7 @@ class TestPrintEndpoint:
 # ===================================================================
 # POST /api/v1/publishing/validate/ebook
 # ===================================================================
+
 
 class TestEbookEndpoint:
     def test_valid_ebook(self, client: TestClient):
@@ -248,6 +251,7 @@ class TestEbookEndpoint:
 # ===================================================================
 # POST /api/v1/publishing/validate/cover
 # ===================================================================
+
 
 class TestCoverEndpoint:
     def test_valid_print_cover(self, client: TestClient):
@@ -309,6 +313,7 @@ class TestCoverEndpoint:
 # GET /api/v1/publishing/validate/{id}/results
 # ===================================================================
 
+
 class TestGetResults:
     def test_retrieve_results(self, client: TestClient):
         # First, run a validation
@@ -334,6 +339,7 @@ class TestGetResults:
 # ===================================================================
 # POST /api/v1/publishing/compliance-scan
 # ===================================================================
+
 
 class TestComplianceScanEndpoint:
     def test_clean_scan(self, client: TestClient):
@@ -380,6 +386,7 @@ class TestComplianceScanEndpoint:
 # ===================================================================
 # Edge cases & validation
 # ===================================================================
+
 
 class TestEdgeCases:
     def test_invalid_json_returns_422(self, client: TestClient):

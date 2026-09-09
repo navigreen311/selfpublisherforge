@@ -4,6 +4,7 @@ Canonical audiobook models (AudiobookProject, AudiobookChapter, AudiobookVoice,
 AudiobookPronunciation, AudiobookGenerationJob) live in ``app.models.audiobook``.
 This module defines supplementary models for the mastering/export pipeline.
 """
+
 import enum
 import uuid
 
@@ -146,7 +147,9 @@ class AudiobookExport(BaseModel):
     celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     download_expires_at: Mapped[str | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None,
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )
 
     # Relationships

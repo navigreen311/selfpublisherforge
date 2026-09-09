@@ -151,13 +151,15 @@ def generate_dyslexia_variant(book_data: dict) -> dict:
         if settings["avoid_all_caps"] and text == text.upper() and len(text) > 3:
             page["text_content"] = text.capitalize()
 
-    changes.extend([
-        f"Line spacing multiplied by {settings['line_spacing_multiplier']}x",
-        f"Letter spacing increased by {settings['letter_spacing_increase_pct']}%",
-        f"Text alignment set to {settings['text_align']}",
-        "Italics removed",
-        "All-caps converted to sentence case",
-    ])
+    changes.extend(
+        [
+            f"Line spacing multiplied by {settings['line_spacing_multiplier']}x",
+            f"Letter spacing increased by {settings['letter_spacing_increase_pct']}%",
+            f"Text alignment set to {settings['text_align']}",
+            "Italics removed",
+            "All-caps converted to sentence case",
+        ]
+    )
 
     variant["variant_metadata"] = {
         "variant_type": "dyslexia_friendly",
@@ -203,9 +205,7 @@ def generate_large_print_variant(book_data: dict) -> dict:
         current_size = page.get("text_font_size", 12)
         elem_type = page.get("element_type", "body")
         min_size = (
-            settings["min_heading_font_pt"]
-            if elem_type in ("heading", "title")
-            else settings["min_body_font_pt"]
+            settings["min_heading_font_pt"] if elem_type in ("heading", "title") else settings["min_body_font_pt"]
         )
 
         if current_size < min_size:
@@ -222,23 +222,23 @@ def generate_large_print_variant(book_data: dict) -> dict:
 
         # Line spacing
         original_spacing = page.get("line_spacing", 1.0)
-        page["line_spacing"] = max(
-            original_spacing, settings["line_spacing_multiplier"]
-        )
+        page["line_spacing"] = max(original_spacing, settings["line_spacing_multiplier"])
 
         # Margins
         page["min_margin_inches"] = settings["min_margin_inches"]
 
-    changes.extend([
-        f"Font changed to {settings['font_family']}",
-        f"Minimum body font: {settings['min_body_font_pt']}pt",
-        f"Minimum heading font: {settings['min_heading_font_pt']}pt",
-        f"Contrast ratio enforced: {settings['contrast_ratio_min']}:1 (WCAG {settings['wcag_level']})",
-        f"Font sizes adjusted on {font_adjustments} pages",
-        f"Line spacing minimum: {settings['line_spacing_multiplier']}",
-        f"Margins minimum: {settings['min_margin_inches']}in",
-        "APH guidelines applied",
-    ])
+    changes.extend(
+        [
+            f"Font changed to {settings['font_family']}",
+            f"Minimum body font: {settings['min_body_font_pt']}pt",
+            f"Minimum heading font: {settings['min_heading_font_pt']}pt",
+            f"Contrast ratio enforced: {settings['contrast_ratio_min']}:1 (WCAG {settings['wcag_level']})",
+            f"Font sizes adjusted on {font_adjustments} pages",
+            f"Line spacing minimum: {settings['line_spacing_multiplier']}",
+            f"Margins minimum: {settings['min_margin_inches']}in",
+            "APH guidelines applied",
+        ]
+    )
 
     variant["variant_metadata"] = {
         "variant_type": "large_print",
@@ -298,23 +298,22 @@ def generate_high_contrast_variant(book_data: dict) -> dict:
         # Remove decorative elements
         if settings["remove_decorative_elements"]:
             elements = page.get("elements", [])
-            filtered = [
-                e for e in elements
-                if e.get("type") not in ("decoration", "watermark", "background_pattern")
-            ]
+            filtered = [e for e in elements if e.get("type") not in ("decoration", "watermark", "background_pattern")]
             removed = len(elements) - len(filtered)
             decorative_removed += removed
             page["elements"] = filtered
 
-    changes.extend([
-        f"Background: {settings['background_color']} (pure white)",
-        f"Text: {settings['text_color']} (pure black)",
-        f"Grid lines minimum: {settings['grid_line_min_width_px']}px",
-        "Numbers bolded" if settings["bold_numbers"] else "Numbers unchanged",
-        "Instructions bolded" if settings["bold_instructions"] else "Instructions unchanged",
-        f"Decorative elements removed: {decorative_removed}",
-        f"Border: {settings['border_width_px']}px solid black",
-    ])
+    changes.extend(
+        [
+            f"Background: {settings['background_color']} (pure white)",
+            f"Text: {settings['text_color']} (pure black)",
+            f"Grid lines minimum: {settings['grid_line_min_width_px']}px",
+            "Numbers bolded" if settings["bold_numbers"] else "Numbers unchanged",
+            "Instructions bolded" if settings["bold_instructions"] else "Instructions unchanged",
+            f"Decorative elements removed: {decorative_removed}",
+            f"Border: {settings['border_width_px']}px solid black",
+        ]
+    )
 
     variant["variant_metadata"] = {
         "variant_type": "high_contrast",
@@ -322,17 +321,13 @@ def generate_high_contrast_variant(book_data: dict) -> dict:
         "changes": changes,
         "total_pages_modified": len(variant.get("pages", [])),
         "decorative_elements_removed": decorative_removed,
-        "contrast_ratio": _contrast_ratio(
-            settings["text_color"], settings["background_color"]
-        ),
+        "contrast_ratio": _contrast_ratio(settings["text_color"], settings["background_color"]),
     }
 
     return variant
 
 
-def check_accessibility_compliance(
-    book_data: dict, variant_type: str
-) -> dict:
+def check_accessibility_compliance(book_data: dict, variant_type: str) -> dict:
     """
     Verify that a book meets accessibility standards for the given variant.
 
@@ -362,59 +357,69 @@ def check_accessibility_compliance(
             # Check font
             checks_performed += 1
             if page.get("font_family") != settings["font_family"]:
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "font_family",
-                    "expected": settings["font_family"],
-                    "actual": page.get("font_family", "unknown"),
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "font_family",
+                        "expected": settings["font_family"],
+                        "actual": page.get("font_family", "unknown"),
+                        "severity": "error",
+                    }
+                )
 
             # Check line spacing
             checks_performed += 1
             spacing = page.get("line_spacing", 1.0)
             min_spacing = settings["line_spacing_multiplier"]
             if spacing < min_spacing:
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "line_spacing",
-                    "expected": f">= {min_spacing}",
-                    "actual": spacing,
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "line_spacing",
+                        "expected": f">= {min_spacing}",
+                        "actual": spacing,
+                        "severity": "error",
+                    }
+                )
 
             # Check alignment
             checks_performed += 1
             if page.get("text_align", "left") != settings["text_align"]:
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "text_align",
-                    "expected": settings["text_align"],
-                    "actual": page.get("text_align", "unknown"),
-                    "severity": "warning",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "text_align",
+                        "expected": settings["text_align"],
+                        "actual": page.get("text_align", "unknown"),
+                        "severity": "warning",
+                    }
+                )
 
             # Check background
             checks_performed += 1
             if page.get("background_color", "").upper() != settings["background_color"].upper():
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "background_color",
-                    "expected": settings["background_color"],
-                    "actual": page.get("background_color", "unknown"),
-                    "severity": "warning",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "background_color",
+                        "expected": settings["background_color"],
+                        "actual": page.get("background_color", "unknown"),
+                        "severity": "warning",
+                    }
+                )
 
             # Check italics
             checks_performed += 1
             if settings["avoid_italics"] and page.get("font_style") == "italic":
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "no_italics",
-                    "expected": "normal",
-                    "actual": "italic",
-                    "severity": "warning",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "no_italics",
+                        "expected": "normal",
+                        "actual": "italic",
+                        "severity": "warning",
+                    }
+                )
 
     elif variant_type == "large_print":
         settings = LARGE_PRINT_SETTINGS
@@ -425,18 +430,18 @@ def check_accessibility_compliance(
             font_size = page.get("text_font_size", 12)
             elem_type = page.get("element_type", "body")
             min_size = (
-                settings["min_heading_font_pt"]
-                if elem_type in ("heading", "title")
-                else settings["min_body_font_pt"]
+                settings["min_heading_font_pt"] if elem_type in ("heading", "title") else settings["min_body_font_pt"]
             )
             if font_size < min_size:
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "font_size",
-                    "expected": f">= {min_size}pt",
-                    "actual": f"{font_size}pt",
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "font_size",
+                        "expected": f">= {min_size}pt",
+                        "actual": f"{font_size}pt",
+                        "severity": "error",
+                    }
+                )
 
             # Contrast ratio
             checks_performed += 1
@@ -444,25 +449,29 @@ def check_accessibility_compliance(
             bg_color = page.get("background_color", "#FFFFFF")
             ratio = _contrast_ratio(text_color, bg_color)
             if ratio < settings["contrast_ratio_min"]:
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "contrast_ratio",
-                    "expected": f">= {settings['contrast_ratio_min']}:1",
-                    "actual": f"{ratio}:1",
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "contrast_ratio",
+                        "expected": f">= {settings['contrast_ratio_min']}:1",
+                        "actual": f"{ratio}:1",
+                        "severity": "error",
+                    }
+                )
 
             # Line spacing
             checks_performed += 1
             spacing = page.get("line_spacing", 1.0)
             if spacing < settings["line_spacing_multiplier"]:
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "line_spacing",
-                    "expected": f">= {settings['line_spacing_multiplier']}",
-                    "actual": spacing,
-                    "severity": "warning",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "line_spacing",
+                        "expected": f">= {settings['line_spacing_multiplier']}",
+                        "actual": spacing,
+                        "severity": "warning",
+                    }
+                )
 
     elif variant_type == "high_contrast":
         settings = HIGH_CONTRAST_SETTINGS
@@ -471,70 +480,83 @@ def check_accessibility_compliance(
             # Colour check
             checks_performed += 1
             if page.get("text_color", "").upper() != settings["text_color"].upper():
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "text_color",
-                    "expected": settings["text_color"],
-                    "actual": page.get("text_color", "unknown"),
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "text_color",
+                        "expected": settings["text_color"],
+                        "actual": page.get("text_color", "unknown"),
+                        "severity": "error",
+                    }
+                )
 
             checks_performed += 1
             if page.get("background_color", "").upper() != settings["background_color"].upper():
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "background_color",
-                    "expected": settings["background_color"],
-                    "actual": page.get("background_color", "unknown"),
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "background_color",
+                        "expected": settings["background_color"],
+                        "actual": page.get("background_color", "unknown"),
+                        "severity": "error",
+                    }
+                )
 
             # Grid line width
             checks_performed += 1
             grid_w = page.get("grid_line_width")
             if grid_w is not None and grid_w < settings["grid_line_min_width_px"]:
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "grid_line_width",
-                    "expected": f">= {settings['grid_line_min_width_px']}px",
-                    "actual": f"{grid_w}px",
-                    "severity": "error",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "grid_line_width",
+                        "expected": f">= {settings['grid_line_min_width_px']}px",
+                        "actual": f"{grid_w}px",
+                        "severity": "error",
+                    }
+                )
 
             # Bold numbers
             checks_performed += 1
             if settings["bold_numbers"] and page.get("number_font_weight") != "bold":
-                issues.append({
-                    "page": page_idx + 1,
-                    "check": "bold_numbers",
-                    "expected": "bold",
-                    "actual": page.get("number_font_weight", "normal"),
-                    "severity": "warning",
-                })
+                issues.append(
+                    {
+                        "page": page_idx + 1,
+                        "check": "bold_numbers",
+                        "expected": "bold",
+                        "actual": page.get("number_font_weight", "normal"),
+                        "severity": "warning",
+                    }
+                )
 
             # Decorative elements
             checks_performed += 1
             if settings["remove_decorative_elements"]:
                 decorative = [
-                    e for e in page.get("elements", [])
+                    e
+                    for e in page.get("elements", [])
                     if e.get("type") in ("decoration", "watermark", "background_pattern")
                 ]
                 if decorative:
-                    issues.append({
-                        "page": page_idx + 1,
-                        "check": "decorative_elements",
-                        "expected": "none",
-                        "actual": f"{len(decorative)} found",
-                        "severity": "warning",
-                    })
+                    issues.append(
+                        {
+                            "page": page_idx + 1,
+                            "check": "decorative_elements",
+                            "expected": "none",
+                            "actual": f"{len(decorative)} found",
+                            "severity": "warning",
+                        }
+                    )
     else:
-        issues.append({
-            "page": 0,
-            "check": "variant_type",
-            "expected": "dyslexia_friendly | large_print | high_contrast",
-            "actual": variant_type,
-            "severity": "error",
-        })
+        issues.append(
+            {
+                "page": 0,
+                "check": "variant_type",
+                "expected": "dyslexia_friendly | large_print | high_contrast",
+                "actual": variant_type,
+                "severity": "error",
+            }
+        )
         checks_performed += 1
 
     error_count = sum(1 for i in issues if i["severity"] == "error")

@@ -1,4 +1,5 @@
 """User, ApiKey, and UserSession models."""
+
 import enum
 import uuid
 from datetime import datetime
@@ -48,16 +49,12 @@ class User(BaseModel):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     onboarding_state: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
-    email_verified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Auth-specific columns (registration, password reset, MFA)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     email_verify_token: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
-    email_verify_expires: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    email_verify_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     password_reset_token: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     password_reset_expires: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
@@ -84,6 +81,7 @@ class User(BaseModel):
 
 class OAuthAccount(BaseModel):
     """Stores linked OAuth provider accounts for a user."""
+
     __tablename__ = "oauth_accounts"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -126,12 +124,8 @@ class ApiKey(BaseModel):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     scopes: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
-    last_used_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     organization = relationship("Organization", back_populates="api_keys")
@@ -157,15 +151,9 @@ class UserSession(BaseModel):
     device_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True, default=None)
-    last_active_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
-    revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     user = relationship("User", back_populates="sessions")

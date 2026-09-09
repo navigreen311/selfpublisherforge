@@ -50,6 +50,7 @@ router = APIRouter()
 
 # ---------- Dashboard ----------
 
+
 @router.get(
     "/dashboard",
     response_model=DashboardData,
@@ -67,20 +68,13 @@ async def get_dashboard(
     current_user: dict = Depends(get_current_user),
 ) -> DashboardData:
     """Main analytics dashboard with KPIs, charts, and trends."""
-    period_start = (
-        datetime.combine(start_date, datetime.min.time()).replace(tzinfo=UTC)
-        if start_date else None
-    )
-    period_end = (
-        datetime.combine(end_date, datetime.max.time()).replace(tzinfo=UTC)
-        if end_date else None
-    )
-    return await service.get_dashboard(
-        db, current_user["org_id"], period_start, period_end
-    )
+    period_start = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=UTC) if start_date else None
+    period_end = datetime.combine(end_date, datetime.max.time()).replace(tzinfo=UTC) if end_date else None
+    return await service.get_dashboard(db, current_user["org_id"], period_start, period_end)
 
 
 # ---------- Revenue ----------
+
 
 @router.get(
     "/revenue",
@@ -110,6 +104,7 @@ async def get_revenue(
 
 # ---------- Royalties ----------
 
+
 @router.get(
     "/royalties",
     response_model=PaginatedResponse[RoyaltyRecordResponse],
@@ -124,9 +119,7 @@ async def get_royalties(
     current_user: dict = Depends(get_current_user),
 ) -> PaginatedResponse[RoyaltyRecordResponse]:
     """List royalty records with pagination."""
-    return await service.get_royalties(
-        db, current_user["org_id"], cursor=cursor, limit=limit, platform=platform
-    )
+    return await service.get_royalties(db, current_user["org_id"], cursor=cursor, limit=limit, platform=platform)
 
 
 @router.post(
@@ -141,12 +134,11 @@ async def import_royalties(
     current_user: dict = Depends(get_current_user),
 ) -> RoyaltyImportResponse:
     """Import royalty data from a CSV file (base64-encoded)."""
-    return await service.import_royalty_data(
-        db, current_user["org_id"], request
-    )
+    return await service.import_royalty_data(db, current_user["org_id"], request)
 
 
 # ---------- Portfolio ----------
+
 
 @router.get(
     "/portfolio",
@@ -164,6 +156,7 @@ async def get_portfolio(
 
 # ---------- Reports ----------
 
+
 @router.post(
     "/reports/generate",
     response_model=ReportResponse,
@@ -177,9 +170,7 @@ async def generate_report(
     current_user: dict = Depends(get_current_user),
 ) -> ReportResponse:
     """Generate a custom report (PDF or XLSX)."""
-    return await service.create_report(
-        db, current_user["org_id"], current_user["user_id"], request
-    )
+    return await service.create_report(db, current_user["org_id"], current_user["user_id"], request)
 
 
 @router.get(
@@ -195,9 +186,7 @@ async def list_reports(
     current_user: dict = Depends(get_current_user),
 ) -> PaginatedResponse[ReportResponse]:
     """List generated reports."""
-    return await service.list_reports(
-        db, current_user["org_id"], cursor=cursor, limit=limit
-    )
+    return await service.list_reports(db, current_user["org_id"], cursor=cursor, limit=limit)
 
 
 @router.get(
@@ -211,9 +200,7 @@ async def download_report(
     current_user: dict = Depends(get_current_user),
 ) -> FileResponse:
     """Download a generated report file."""
-    report = await service.get_report_by_id(
-        db, current_user["org_id"], report_id
-    )
+    report = await service.get_report_by_id(db, current_user["org_id"], report_id)
     if not report:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -246,6 +233,7 @@ async def download_report(
 
 # ---------- Events ----------
 
+
 @router.post(
     "/events",
     response_model=AnalyticsEventResponse,
@@ -264,6 +252,7 @@ async def record_event(
 
 # ---------- Trends ----------
 
+
 @router.get(
     "/trends",
     response_model=TrendData,
@@ -279,22 +268,20 @@ async def get_trends(
     current_user: dict = Depends(get_current_user),
 ) -> TrendData:
     """Trend data for key metrics."""
-    period_start = (
-        datetime.combine(start_date, datetime.min.time()).replace(tzinfo=UTC)
-        if start_date else None
-    )
-    period_end = (
-        datetime.combine(end_date, datetime.max.time()).replace(tzinfo=UTC)
-        if end_date else None
-    )
+    period_start = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=UTC) if start_date else None
+    period_end = datetime.combine(end_date, datetime.max.time()).replace(tzinfo=UTC) if end_date else None
     return await service.get_trends(
-        db, current_user["org_id"], metric=metric,
-        period_start=period_start, period_end=period_end,
+        db,
+        current_user["org_id"],
+        metric=metric,
+        period_start=period_start,
+        period_end=period_end,
         aggregation=aggregation,
     )
 
 
 # ---------- Enhanced Dashboard ----------
+
 
 @router.get(
     "/dashboard/enhanced",
@@ -323,6 +310,7 @@ async def get_enhanced_dashboard(
 
 # ---------- Sales Data ----------
 
+
 @router.get(
     "/sales",
     summary="Get sales data",
@@ -344,12 +332,17 @@ async def get_sales(
     from app.modules.analytics.sales_service import get_sales_data
 
     data = await get_sales_data(
-        db, current_user["org_id"], period=period, book_id=book_id, marketplace=marketplace,
+        db,
+        current_user["org_id"],
+        period=period,
+        book_id=book_id,
+        marketplace=marketplace,
     )
     return SuccessResponse(data=data)
 
 
 # ---------- Book Performance ----------
+
 
 @router.get(
     "/books/{book_id}/performance",
@@ -377,6 +370,7 @@ async def get_book_performance(
 
 
 # ---------- Enhanced Report Generation ----------
+
 
 @router.post(
     "/reports/generate/enhanced",
@@ -415,11 +409,13 @@ async def generate_enhanced_report(
     db.add(report)
     await db.flush()
 
-    return SuccessResponse(data={
-        "id": str(report.id),
-        "title": report.title,
-        "type": report.report_type,
-        "format": report.output_format,
-        "status": report.status,
-        "created_at": report.created_at.isoformat() if report.created_at else None,
-    })
+    return SuccessResponse(
+        data={
+            "id": str(report.id),
+            "title": report.title,
+            "type": report.report_type,
+            "format": report.output_format,
+            "status": report.status,
+            "created_at": report.created_at.isoformat() if report.created_at else None,
+        }
+    )

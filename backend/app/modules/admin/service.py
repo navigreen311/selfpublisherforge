@@ -50,9 +50,7 @@ async def list_users(
 
     if request.search:
         search_term = f"%{request.search}%"
-        query = query.where(
-            (User.email.ilike(search_term)) | (User.name.ilike(search_term))
-        )
+        query = query.where((User.email.ilike(search_term)) | (User.name.ilike(search_term)))
 
     if request.tier:
         # Join with organization to filter by tier
@@ -163,6 +161,7 @@ async def deactivate_user(db: AsyncSession, user_id: UUID) -> dict:
 # Platform Statistics
 # ---------------------------------------------------------------------------
 
+
 async def get_platform_stats(db: AsyncSession) -> PlatformStatsResponse:
     """Get platform-wide statistics.
 
@@ -210,6 +209,7 @@ async def get_platform_stats(db: AsyncSession) -> PlatformStatsResponse:
 # Activity Log
 # ---------------------------------------------------------------------------
 
+
 async def get_activity_log(
     db: AsyncSession,
     filters: ActivityLogFilters,
@@ -237,6 +237,7 @@ async def get_activity_log(
 # ---------------------------------------------------------------------------
 # User Management
 # ---------------------------------------------------------------------------
+
 
 async def get_user_detail(db: AsyncSession, user_id: UUID) -> AdminUserDetail:
     """Get detailed user information.
@@ -387,6 +388,7 @@ async def reset_user_password(db: AsyncSession, user_id: UUID) -> dict:
 # Organization Management
 # ---------------------------------------------------------------------------
 
+
 async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
     """Get all organizations with details.
 
@@ -410,10 +412,7 @@ async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
         books_count = 0
 
         # Get owner
-        owner_query = select(User).where(
-            User.organization_id == org.id,
-            User.role.in_(["owner", "admin"])
-        ).limit(1)
+        owner_query = select(User).where(User.organization_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
         owner_result = await db.execute(owner_query)
         owner = owner_result.scalar_one_or_none()
 
@@ -422,7 +421,7 @@ async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
                 id=org.id,
                 name=org.name,
                 slug=org.slug,
-                plan_tier=org.tier.value if hasattr(org, 'tier') else "free",
+                plan_tier=org.tier.value if hasattr(org, "tier") else "free",
                 owner_name=owner.name if owner else "Unknown",
                 member_count=member_count,
                 books_count=books_count,
@@ -464,10 +463,7 @@ async def get_org_detail(db: AsyncSession, org_id: UUID) -> AdminOrgDetail:
     books_count = 0
 
     # Get owner
-    owner_query = select(User).where(
-        User.organization_id == org.id,
-        User.role.in_(["owner", "admin"])
-    ).limit(1)
+    owner_query = select(User).where(User.organization_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
     owner_result = await db.execute(owner_query)
     owner = owner_result.scalar_one_or_none()
 
@@ -475,7 +471,7 @@ async def get_org_detail(db: AsyncSession, org_id: UUID) -> AdminOrgDetail:
         id=org.id,
         name=org.name,
         slug=org.slug,
-        plan_tier=org.tier.value if hasattr(org, 'tier') else "free",
+        plan_tier=org.tier.value if hasattr(org, "tier") else "free",
         owner_name=owner.name if owner else "Unknown",
         member_count=member_count,
         books_count=books_count,
@@ -527,6 +523,7 @@ async def update_org(
 # Billing
 # ---------------------------------------------------------------------------
 
+
 async def get_billing_overview(db: AsyncSession, org_id: UUID) -> BillingOverview:
     """Get billing overview for an organization.
 
@@ -551,7 +548,7 @@ async def get_billing_overview(db: AsyncSession, org_id: UUID) -> BillingOvervie
     if not org:
         raise AppException(status_code=404, code="ORG_NOT_FOUND", message="Organization not found")
 
-    plan_tier = org.tier.value if hasattr(org, 'tier') else "free"
+    plan_tier = org.tier.value if hasattr(org, "tier") else "free"
     plan_prices = {
         "free": 0.0,
         "starter": 29.0,

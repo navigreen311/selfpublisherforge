@@ -128,6 +128,7 @@ def _create_app_no_auth() -> tuple[FastAPI, AsyncMock]:
 # Forgot Password Tests
 # ===========================================================================
 
+
 class TestForgotPassword:
     """Tests for POST /api/v1/auth/forgot-password."""
 
@@ -191,6 +192,7 @@ class TestForgotPassword:
 # ===========================================================================
 # Reset Password Tests
 # ===========================================================================
+
 
 class TestResetPassword:
     """Tests for POST /api/v1/auth/reset-password."""
@@ -309,6 +311,7 @@ class TestResetPassword:
 # MFA Setup Tests
 # ===========================================================================
 
+
 class TestMFASetup:
     """Tests for POST /api/v1/auth/mfa/setup."""
 
@@ -374,6 +377,7 @@ class TestMFASetup:
 # ===========================================================================
 # MFA Verify Tests
 # ===========================================================================
+
 
 class TestMFAVerify:
     """Tests for POST /api/v1/auth/mfa/verify."""
@@ -484,6 +488,7 @@ class TestMFAVerify:
 # MFA Disable Tests
 # ===========================================================================
 
+
 class TestMFADisable:
     """Tests for POST /api/v1/auth/mfa/disable."""
 
@@ -576,6 +581,7 @@ class TestMFADisable:
 # ===========================================================================
 # Verify Email Tests
 # ===========================================================================
+
 
 class TestVerifyEmail:
     """Tests for POST /api/v1/auth/verify-email."""

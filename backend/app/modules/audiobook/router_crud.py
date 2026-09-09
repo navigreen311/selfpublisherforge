@@ -55,9 +55,7 @@ async def list_projects(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await service_crud.list_projects(
-        db, current_user["org_id"], page, per_page, status_filter
-    )
+    return await service_crud.list_projects(db, current_user["org_id"], page, per_page, status_filter)
 
 
 @router.get(
@@ -92,9 +90,7 @@ async def update_project(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await service_crud.update_project(
-        db, project_id, current_user["org_id"], body
-    )
+    result = await service_crud.update_project(db, project_id, current_user["org_id"], body)
     if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -114,9 +110,7 @@ async def delete_project(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    deleted = await service_crud.delete_project(
-        db, project_id, current_user["org_id"]
-    )
+    deleted = await service_crud.delete_project(db, project_id, current_user["org_id"])
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -140,8 +134,6 @@ async def create_project_from_wizard(
     db: AsyncSession = Depends(get_db),
 ):
     return await service_crud.create_project_from_wizard(db, current_user["org_id"], body)
-
-
 
 
 # ── Pause/Resume endpoints ────────────────────────────────────────────────

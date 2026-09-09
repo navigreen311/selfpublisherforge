@@ -66,9 +66,7 @@ class TestCorrelationIDMiddleware:
         app = _make_app(CorrelationIDMiddleware)
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get(
-                "/ping", headers={"X-Request-ID": "my-custom-id"}
-            )
+            resp = await client.get("/ping", headers={"X-Request-ID": "my-custom-id"})
         assert resp.headers["X-Request-ID"] == "my-custom-id"
 
     @pytest.mark.asyncio
@@ -76,9 +74,7 @@ class TestCorrelationIDMiddleware:
         app = _make_app(CorrelationIDMiddleware)
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get(
-                "/ping", headers={"X-Request-ID": "state-check"}
-            )
+            resp = await client.get("/ping", headers={"X-Request-ID": "state-check"})
         body = resp.json()
         assert body["correlation_id"] == "state-check"
 

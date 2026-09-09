@@ -18,6 +18,7 @@ from app.modules.users.service import UserService, _generate_api_key, _role_leve
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _seed_user_and_org(db, email="user@test.com", role="owner", org_name="TestOrg"):
     """Create an organization and a user, return both."""
     from app.models.user import Organization
@@ -48,6 +49,7 @@ async def _seed_user_and_org(db, email="user@test.com", role="owner", org_name="
 async def _seed_session(db, user_id):
     """Create a user session."""
     from sqlalchemy import text as sa_text
+
     session_id = uuid4()
     await db.execute(
         sa_text(
@@ -72,8 +74,8 @@ async def _seed_session(db, user_id):
 # User Profile tests
 # ---------------------------------------------------------------------------
 
-class TestUserProfile:
 
+class TestUserProfile:
     @pytest.mark.asyncio
     async def test_get_user_profile_success(self, db_session):
         _, user = await _seed_user_and_org(db_session)
@@ -116,6 +118,7 @@ class TestUserProfile:
         )
         # Preferences should be merged
         from sqlalchemy import select
+
         result = await db_session.execute(select(User).where(User.id == user.id))
         u = result.scalar_one()
         assert u.preferences["theme"] == "dark"
@@ -126,8 +129,8 @@ class TestUserProfile:
 # Session Management tests
 # ---------------------------------------------------------------------------
 
-class TestSessionManagement:
 
+class TestSessionManagement:
     @pytest.mark.asyncio
     async def test_list_sessions_empty(self, db_session):
         _, user = await _seed_user_and_org(db_session)
@@ -163,8 +166,8 @@ class TestSessionManagement:
 # Organization tests
 # ---------------------------------------------------------------------------
 
-class TestOrganization:
 
+class TestOrganization:
     @pytest.mark.asyncio
     async def test_get_org_success(self, db_session):
         org, _ = await _seed_user_and_org(db_session, org_name="MyOrg")
@@ -227,8 +230,8 @@ class TestOrganization:
 # Member Management tests
 # ---------------------------------------------------------------------------
 
-class TestMemberManagement:
 
+class TestMemberManagement:
     @pytest.mark.asyncio
     async def test_list_members(self, db_session):
         org, user = await _seed_user_and_org(db_session)
@@ -389,9 +392,8 @@ class TestMemberManagement:
 
         # Member should be soft-deleted
         from sqlalchemy import select
-        result = await db_session.execute(
-            select(User).where(User.id == member_id, User.deleted_at.is_(None))
-        )
+
+        result = await db_session.execute(select(User).where(User.id == member_id, User.deleted_at.is_(None)))
         assert result.scalar_one_or_none() is None
 
     @pytest.mark.asyncio
@@ -444,8 +446,8 @@ class TestMemberManagement:
 # API Key tests
 # ---------------------------------------------------------------------------
 
-class TestAPIKeys:
 
+class TestAPIKeys:
     @pytest.mark.asyncio
     async def test_create_api_key_success(self, db_session):
         org, user = await _seed_user_and_org(db_session, role="owner")
@@ -544,8 +546,8 @@ class TestAPIKeys:
 # Helper function tests
 # ---------------------------------------------------------------------------
 
-class TestHelperFunctions:
 
+class TestHelperFunctions:
     def test_role_level(self):
         assert _role_level("owner") == 100
         assert _role_level("admin") == 80

@@ -3,6 +3,7 @@
 Orchestrates analysis, manages alerts, and coordinates between the
 review analyzer, opportunity generator, and gap detector.
 """
+
 from __future__ import annotations
 
 import logging
@@ -239,9 +240,7 @@ class CompetitorFinderService:
         if not analysis:
             raise ValueError(f"Analysis {analysis_id} not found")
 
-        stmt = select(OpportunityBlueprint).where(
-            OpportunityBlueprint.analysis_id == analysis_id
-        )
+        stmt = select(OpportunityBlueprint).where(OpportunityBlueprint.analysis_id == analysis_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -400,9 +399,7 @@ class CompetitorFinderService:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def _get_reviews(
-        self, book_id: UUID, limit: int = 100
-    ) -> list[CompetitorReview]:
+    async def _get_reviews(self, book_id: UUID, limit: int = 100) -> list[CompetitorReview]:
         """Fetch reviews for a book."""
         stmt = (
             select(CompetitorReview)
@@ -413,9 +410,7 @@ class CompetitorFinderService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def _get_analysis(
-        self, analysis_id: UUID, org_id: UUID
-    ) -> CompetitorAnalysis | None:
+    async def _get_analysis(self, analysis_id: UUID, org_id: UUID) -> CompetitorAnalysis | None:
         """Fetch an analysis by ID, scoped to org."""
         stmt = select(CompetitorAnalysis).where(
             CompetitorAnalysis.id == analysis_id,

@@ -124,22 +124,16 @@ class TestUnauthenticatedAccess:
             "GET_snapshots",
         ],
     )
-    async def test_returns_401_without_auth(
-        self, unauthenticated_client: AsyncClient, method: str, path: str, body
-    ):
+    async def test_returns_401_without_auth(self, unauthenticated_client: AsyncClient, method: str, path: str, body):
         if method == "GET":
             resp = await unauthenticated_client.get(path)
         else:
             resp = await unauthenticated_client.post(path, json=body)
 
-        assert resp.status_code in (401, 403), (
-            f"{method} {path} returned {resp.status_code} instead of 401/403"
-        )
+        assert resp.status_code in (401, 403), f"{method} {path} returned {resp.status_code} instead of 401/403"
 
     @pytest.mark.asyncio
-    async def test_invalid_bearer_token_returns_401(
-        self, unauthenticated_client: AsyncClient
-    ):
+    async def test_invalid_bearer_token_returns_401(self, unauthenticated_client: AsyncClient):
         """Supply a bogus bearer token -- should still be rejected."""
         resp = await unauthenticated_client.get(
             f"{BASE}/categories",
@@ -157,29 +151,21 @@ class TestAuthenticatedAccess:
     """Endpoints return success when a valid (mocked) user is present."""
 
     @pytest.mark.asyncio
-    async def test_browse_categories_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
+    async def test_browse_categories_authenticated(self, authenticated_client: AsyncClient):
         resp = await authenticated_client.get(f"{BASE}/categories")
         assert resp.status_code == 200
         data = resp.json()
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
-    async def test_category_analysis_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
-        resp = await authenticated_client.get(
-            f"{BASE}/categories/154606011/analysis"
-        )
+    async def test_category_analysis_authenticated(self, authenticated_client: AsyncClient):
+        resp = await authenticated_client.get(f"{BASE}/categories/154606011/analysis")
         assert resp.status_code == 200
         data = resp.json()
         assert data["category_id"] == "154606011"
 
     @pytest.mark.asyncio
-    async def test_keyword_research_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
+    async def test_keyword_research_authenticated(self, authenticated_client: AsyncClient):
         resp = await authenticated_client.post(
             f"{BASE}/keywords/research",
             json={"keywords": ["self help", "productivity"]},
@@ -189,20 +175,14 @@ class TestAuthenticatedAccess:
         assert "keywords" in data
 
     @pytest.mark.asyncio
-    async def test_keyword_suggestions_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
-        resp = await authenticated_client.get(
-            f"{BASE}/keywords/suggestions", params={"genre": "romance", "limit": 5}
-        )
+    async def test_keyword_suggestions_authenticated(self, authenticated_client: AsyncClient):
+        resp = await authenticated_client.get(f"{BASE}/keywords/suggestions", params={"genre": "romance", "limit": 5})
         assert resp.status_code == 200
         data = resp.json()
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
-    async def test_analyze_niche_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
+    async def test_analyze_niche_authenticated(self, authenticated_client: AsyncClient):
         resp = await authenticated_client.post(
             f"{BASE}/analyze-niche",
             json={"niche": "self-help for millennials"},
@@ -212,9 +192,7 @@ class TestAuthenticatedAccess:
         assert data["niche"] == "self-help for millennials"
 
     @pytest.mark.asyncio
-    async def test_competitors_list_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
+    async def test_competitors_list_authenticated(self, authenticated_client: AsyncClient):
         """GET /competitors does not use get_current_user but should still work."""
         resp = await authenticated_client.get(f"{BASE}/competitors")
         assert resp.status_code == 200
@@ -278,41 +256,25 @@ class TestTrendsAndSnapshotsAuth:
     """After W01, /trends and /snapshots also require get_current_user."""
 
     @pytest.mark.asyncio
-    async def test_trends_requires_auth(
-        self, unauthenticated_client: AsyncClient
-    ):
+    async def test_trends_requires_auth(self, unauthenticated_client: AsyncClient):
         """GET /trends returns 401/403 without auth."""
-        resp = await unauthenticated_client.get(
-            f"{BASE}/trends", params={"keyword": "self help", "days": 30}
-        )
-        assert resp.status_code in (401, 403), (
-            f"GET /trends returned {resp.status_code} instead of 401/403"
-        )
+        resp = await unauthenticated_client.get(f"{BASE}/trends", params={"keyword": "self help", "days": 30})
+        assert resp.status_code in (401, 403), f"GET /trends returned {resp.status_code} instead of 401/403"
 
     @pytest.mark.asyncio
-    async def test_snapshots_requires_auth(
-        self, unauthenticated_client: AsyncClient
-    ):
+    async def test_snapshots_requires_auth(self, unauthenticated_client: AsyncClient):
         """GET /snapshots returns 401/403 without auth."""
         resp = await unauthenticated_client.get(f"{BASE}/snapshots")
-        assert resp.status_code in (401, 403), (
-            f"GET /snapshots returned {resp.status_code} instead of 401/403"
-        )
+        assert resp.status_code in (401, 403), f"GET /snapshots returned {resp.status_code} instead of 401/403"
 
     @pytest.mark.asyncio
-    async def test_trends_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
+    async def test_trends_authenticated(self, authenticated_client: AsyncClient):
         """GET /trends succeeds with auth."""
-        resp = await authenticated_client.get(
-            f"{BASE}/trends", params={"keyword": "self help", "days": 30}
-        )
+        resp = await authenticated_client.get(f"{BASE}/trends", params={"keyword": "self help", "days": 30})
         assert resp.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_snapshots_authenticated(
-        self, authenticated_client: AsyncClient
-    ):
+    async def test_snapshots_authenticated(self, authenticated_client: AsyncClient):
         """GET /snapshots succeeds with auth."""
         resp = await authenticated_client.get(f"{BASE}/snapshots")
         assert resp.status_code == 200

@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class Genre(str, Enum):
     ROMANCE = "romance"
     THRILLER = "thriller"
@@ -46,22 +47,27 @@ class DeviceType(str, Enum):
 # Request schemas
 # ---------------------------------------------------------------------------
 
+
 class ListingAnalyzeRequest(BaseModel):
     """Request to analyze an Amazon listing by ASIN or URL."""
+
     asin: str | None = Field(None, min_length=10, max_length=10, pattern=r"^[A-Z0-9]{10}$")
     url: str | None = Field(None, max_length=500)
     book_id: UUID | None = None
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {"asin": "B09V2KKG1D"},
-            {"url": "https://www.amazon.com/dp/B09V2KKG1D"},
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"asin": "B09V2KKG1D"},
+                {"url": "https://www.amazon.com/dp/B09V2KKG1D"},
+            ]
+        }
+    )
 
 
 class BlurbGenerateRequest(BaseModel):
     """Request to generate optimized blurb variations."""
+
     book_id: UUID | None = None
     current_blurb: str = Field(..., min_length=10, max_length=5000)
     genre: Genre = Genre.OTHER
@@ -73,6 +79,7 @@ class BlurbGenerateRequest(BaseModel):
 
 class ABTestCreateRequest(BaseModel):
     """Request to create an A/B test for blurbs."""
+
     book_id: UUID
     name: str = Field(..., min_length=1, max_length=200)
     variant_a: str = Field(..., min_length=10, max_length=5000)
@@ -82,6 +89,7 @@ class ABTestCreateRequest(BaseModel):
 
 class ABTestUpdateRequest(BaseModel):
     """Request to update an existing A/B test."""
+
     name: str | None = Field(None, min_length=1, max_length=200)
     variant_a: str | None = Field(None, min_length=10, max_length=5000)
     variant_b: str | None = Field(None, min_length=10, max_length=5000)
@@ -91,6 +99,7 @@ class ABTestUpdateRequest(BaseModel):
 
 class LookInsideAnalyzeRequest(BaseModel):
     """Request to analyze the Look Inside preview effectiveness."""
+
     book_id: UUID | None = None
     preview_text: str = Field(..., min_length=50, max_length=20000)
     genre: Genre = Genre.OTHER
@@ -99,6 +108,7 @@ class LookInsideAnalyzeRequest(BaseModel):
 
 class MobileCheckRequest(BaseModel):
     """Request to check listing appearance on mobile."""
+
     title: str = Field(..., min_length=1, max_length=500)
     subtitle: str | None = Field(None, max_length=500)
     blurb: str = Field(..., min_length=10, max_length=5000)
@@ -111,8 +121,10 @@ class MobileCheckRequest(BaseModel):
 # Sub-models for analysis results
 # ---------------------------------------------------------------------------
 
+
 class Recommendation(BaseModel):
     """A single recommendation for improving a listing element."""
+
     area: str
     severity: str = Field(..., pattern=r"^(critical|warning|info)$")
     message: str
@@ -123,6 +135,7 @@ class Recommendation(BaseModel):
 
 class TitleAnalysis(BaseModel):
     """Analysis of the listing title."""
+
     score: float = Field(..., ge=0, le=100)
     length: int
     has_keywords: bool
@@ -133,6 +146,7 @@ class TitleAnalysis(BaseModel):
 
 class BlurbAnalysis(BaseModel):
     """Analysis of the listing blurb/description."""
+
     score: float = Field(..., ge=0, le=100)
     word_count: int
     has_hook: bool
@@ -146,6 +160,7 @@ class BlurbAnalysis(BaseModel):
 
 class KeywordAnalysis(BaseModel):
     """Analysis of keyword usage in the listing."""
+
     score: float = Field(..., ge=0, le=100)
     keywords_found: list[str] = Field(default_factory=list)
     keyword_density: float
@@ -155,6 +170,7 @@ class KeywordAnalysis(BaseModel):
 
 class CategoryAnalysis(BaseModel):
     """Analysis of the listing's category fit."""
+
     score: float = Field(..., ge=0, le=100)
     current_categories: list[str] = Field(default_factory=list)
     suggested_categories: list[str] = Field(default_factory=list)
@@ -163,6 +179,7 @@ class CategoryAnalysis(BaseModel):
 
 class PriceAnalysis(BaseModel):
     """Analysis of the listing's pricing."""
+
     score: float = Field(..., ge=0, le=100)
     current_price: float | None = None
     genre_avg_price: float | None = None
@@ -174,8 +191,10 @@ class PriceAnalysis(BaseModel):
 # Response schemas
 # ---------------------------------------------------------------------------
 
+
 class ListingAnalysis(BaseModel):
     """Full listing analysis response."""
+
     model_config = ConfigDict(from_attributes=True)
 
     asin: str | None = None
@@ -197,6 +216,7 @@ class ListingAnalysis(BaseModel):
 
 class BlurbVariant(BaseModel):
     """A single generated blurb variant."""
+
     variant_id: str
     content: str
     style: str
@@ -207,6 +227,7 @@ class BlurbVariant(BaseModel):
 
 class BlurbGenerateResponse(BaseModel):
     """Response with generated blurb variants."""
+
     original_score: float = Field(..., ge=0, le=100)
     variants: list[BlurbVariant]
     generation_metadata: dict = Field(default_factory=dict)
@@ -214,6 +235,7 @@ class BlurbGenerateResponse(BaseModel):
 
 class ABTestVariantResult(BaseModel):
     """Results for a single A/B test variant."""
+
     variant_label: str
     content: str
     impressions: int = 0
@@ -225,6 +247,7 @@ class ABTestVariantResult(BaseModel):
 
 class ABTestResponse(BaseModel):
     """A/B test configuration and results."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -243,6 +266,7 @@ class ABTestResponse(BaseModel):
 
 class ABTestResultsResponse(BaseModel):
     """Detailed A/B test results with statistical analysis."""
+
     test_id: UUID
     name: str
     status: ABTestStatus
@@ -259,6 +283,7 @@ class ABTestResultsResponse(BaseModel):
 
 class LookInsideSection(BaseModel):
     """Analysis of a section of the Look Inside preview."""
+
     section: str
     score: float = Field(..., ge=0, le=100)
     feedback: str
@@ -267,6 +292,7 @@ class LookInsideSection(BaseModel):
 
 class LookInsideAnalysis(BaseModel):
     """Look Inside preview analysis response."""
+
     overall_score: float = Field(..., ge=0, le=100)
     hook_strength: float = Field(..., ge=0, le=100)
     first_page_impact: float = Field(..., ge=0, le=100)
@@ -278,6 +304,7 @@ class LookInsideAnalysis(BaseModel):
 
 class MobileTruncation(BaseModel):
     """Analysis of text truncation on mobile."""
+
     field: str
     original_length: int
     visible_length: int
@@ -288,6 +315,7 @@ class MobileTruncation(BaseModel):
 
 class MobileCheckResult(BaseModel):
     """Mobile conversion check results."""
+
     overall_score: float = Field(..., ge=0, le=100)
     title_display: MobileTruncation
     subtitle_display: MobileTruncation | None = None
@@ -304,6 +332,7 @@ class MobileCheckResult(BaseModel):
 
 class ConversionScores(BaseModel):
     """Aggregate conversion optimization scores for a book."""
+
     book_id: UUID
     listing_score: float | None = None
     blurb_score: float | None = None
@@ -318,8 +347,10 @@ class ConversionScores(BaseModel):
 # Additional schemas for keyword optimization and A+ content
 # ---------------------------------------------------------------------------
 
+
 class OptimizeKeywordsRequest(BaseModel):
     """Request to optimize backend keywords."""
+
     book_id: UUID | None = None
     current_keywords: list[str] = Field(default_factory=list)
     genre: str = Field(default="other", max_length=100)
@@ -328,6 +359,7 @@ class OptimizeKeywordsRequest(BaseModel):
 
 class KeywordRecommendation(BaseModel):
     """A single keyword recommendation."""
+
     keyword: str
     search_volume: int = 0
     competition: str = "medium"  # low, medium, high
@@ -336,6 +368,7 @@ class KeywordRecommendation(BaseModel):
 
 class OptimizeKeywordsResponse(BaseModel):
     """Response with keyword recommendations."""
+
     recommended: list[KeywordRecommendation] = Field(default_factory=list)
     optimal_seven: list[str] = Field(default_factory=list)
     analysis_notes: str = ""
@@ -343,6 +376,7 @@ class OptimizeKeywordsResponse(BaseModel):
 
 class APlusModuleSpec(BaseModel):
     """A single A+ content module specification."""
+
     module_type: str  # hero_banner, comparison_chart, feature_grid, author_story, social_proof
     title: str
     content: str = ""
@@ -352,6 +386,7 @@ class APlusModuleSpec(BaseModel):
 
 class APlusPlanRequest(BaseModel):
     """Request to generate an A+ content plan."""
+
     book_id: UUID | None = None
     book_title: str = Field(default="", max_length=500)
     genre: str = Field(default="other", max_length=100)
@@ -359,6 +394,7 @@ class APlusPlanRequest(BaseModel):
 
 class APlusPlanResponse(BaseModel):
     """Response with A+ content plan."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID | None = None
@@ -368,6 +404,7 @@ class APlusPlanResponse(BaseModel):
 
 class ListingAnalysisListItem(BaseModel):
     """Summary item for listing analysis list."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -378,6 +415,7 @@ class ListingAnalysisListItem(BaseModel):
 
 class GenerateBlurbEnhancedRequest(BaseModel):
     """Enhanced blurb generation request with style options."""
+
     book_id: UUID | None = None
     title: str = Field(default="", max_length=500)
     selling_points: str = Field(default="", max_length=2000)
@@ -389,6 +427,7 @@ class GenerateBlurbEnhancedRequest(BaseModel):
 
 class BlurbVersionResponse(BaseModel):
     """A single generated blurb version."""
+
     style: str
     html_content: str
     plain_content: str
@@ -398,4 +437,5 @@ class BlurbVersionResponse(BaseModel):
 
 class GenerateBlurbEnhancedResponse(BaseModel):
     """Response with multiple blurb versions."""
+
     versions: list[BlurbVersionResponse] = Field(default_factory=list)

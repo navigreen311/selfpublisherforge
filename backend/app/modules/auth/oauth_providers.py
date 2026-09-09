@@ -18,6 +18,7 @@ from app.core.exceptions import AppException
 @dataclass
 class OAuthTokens:
     """OAuth token response from provider."""
+
     access_token: str
     refresh_token: str | None = None
     expires_in: int | None = None
@@ -27,6 +28,7 @@ class OAuthTokens:
 @dataclass
 class OAuthUserInfo:
     """Normalized user information from OAuth provider."""
+
     provider_user_id: str
     email: str
     name: str
@@ -85,9 +87,7 @@ class GoogleOAuth(OAuthProvider):
     def is_configured(self) -> bool:
         """Check if Google OAuth is configured."""
         return bool(
-            self.settings.GOOGLE_CLIENT_ID
-            and self.settings.GOOGLE_CLIENT_SECRET
-            and self.settings.GOOGLE_REDIRECT_URI
+            self.settings.GOOGLE_CLIENT_ID and self.settings.GOOGLE_CLIENT_SECRET and self.settings.GOOGLE_REDIRECT_URI
         )
 
     def get_authorization_url(self, state: str) -> str:
@@ -230,9 +230,7 @@ class GitHubOAuth(OAuthProvider):
     def is_configured(self) -> bool:
         """Check if GitHub OAuth is configured."""
         return bool(
-            self.settings.GITHUB_CLIENT_ID
-            and self.settings.GITHUB_CLIENT_SECRET
-            and self.settings.GITHUB_REDIRECT_URI
+            self.settings.GITHUB_CLIENT_ID and self.settings.GITHUB_CLIENT_SECRET and self.settings.GITHUB_REDIRECT_URI
         )
 
     def get_authorization_url(self, state: str) -> str:

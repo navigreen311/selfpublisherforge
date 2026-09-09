@@ -62,12 +62,8 @@ class CoverValidator:
                 except ValueError:
                     paper = PaperType.WHITE
                 spine = calculate_spine_width(request.page_count, paper)
-                metadata["expected_width"] = round(
-                    expected_print_cover_width(trim.width, spine), 4
-                )
-                metadata["expected_height"] = round(
-                    expected_print_cover_height(trim.height), 4
-                )
+                metadata["expected_width"] = round(expected_print_cover_width(trim.width, spine), 4)
+                metadata["expected_height"] = round(expected_print_cover_height(trim.height), 4)
                 metadata["spine_width"] = spine
 
         return ValidationResult(
@@ -117,8 +113,7 @@ class CoverValidator:
                     severity=Severity.INFO,
                     rule="cover_dimensions_skipped",
                     message=(
-                        "Trim size or page count not provided; "
-                        "cannot verify cover dimensions match requirements."
+                        "Trim size or page count not provided; " "cannot verify cover dimensions match requirements."
                     ),
                     location="cover_dimensions",
                 )
@@ -155,9 +150,9 @@ class CoverValidator:
                     severity=Severity.ERROR,
                     rule="cover_width",
                     message=(
-                        f"Cover width {req.width_inches}\" does not match the expected "
-                        f"{exp_width:.4f}\" (front + back + spine + bleed). "
-                        f"Difference: {width_diff:.4f}\"."
+                        f'Cover width {req.width_inches}" does not match the expected '
+                        f'{exp_width:.4f}" (front + back + spine + bleed). '
+                        f'Difference: {width_diff:.4f}".'
                     ),
                     location="cover_dimensions",
                     details={"expected": round(exp_width, 4), "actual": req.width_inches},
@@ -170,9 +165,9 @@ class CoverValidator:
                     severity=Severity.ERROR,
                     rule="cover_height",
                     message=(
-                        f"Cover height {req.height_inches}\" does not match the expected "
-                        f"{exp_height:.4f}\" (trim + bleed). "
-                        f"Difference: {height_diff:.4f}\"."
+                        f'Cover height {req.height_inches}" does not match the expected '
+                        f'{exp_height:.4f}" (trim + bleed). '
+                        f'Difference: {height_diff:.4f}".'
                     ),
                     location="cover_dimensions",
                     details={"expected": round(exp_height, 4), "actual": req.height_inches},
@@ -190,7 +185,7 @@ class CoverValidator:
                     severity=Severity.ERROR,
                     rule="cover_safe_zone",
                     message=(
-                        f"Text detected in the bleed/safe zone area ({SAFE_ZONE_INCHES}\" from trim edge). "
+                        f'Text detected in the bleed/safe zone area ({SAFE_ZONE_INCHES}" from trim edge). '
                         "Text in the bleed area may be cut off during trimming."
                     ),
                     location="cover_safe_zone",

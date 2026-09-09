@@ -68,7 +68,7 @@ class PrintValidator:
                     severity=Severity.ERROR,
                     rule="trim_size_valid",
                     message=f"Trim size '{req.trim_size}' is not a supported KDP trim size. "
-                            f"Supported: {', '.join(sorted(TRIM_SIZES.keys()))}",
+                    f"Supported: {', '.join(sorted(TRIM_SIZES.keys()))}",
                     location="trim_size",
                 )
             )
@@ -139,8 +139,8 @@ class PrintValidator:
                     severity=Severity.ERROR,
                     rule="margin_inside",
                     message=(
-                        f"Inside margin {req.inside_margin}\" is below the required "
-                        f"{required_inside}\" for {trim.label} with {req.page_count} pages."
+                        f'Inside margin {req.inside_margin}" is below the required '
+                        f'{required_inside}" for {trim.label} with {req.page_count} pages.'
                     ),
                     location="inside_margin",
                     details={"required": required_inside, "actual": req.inside_margin},
@@ -153,8 +153,8 @@ class PrintValidator:
                     severity=Severity.ERROR,
                     rule="margin_outside",
                     message=(
-                        f"Outside margin {req.outside_margin}\" is below the required "
-                        f"{trim.min_outside_margin}\" for {trim.label}."
+                        f'Outside margin {req.outside_margin}" is below the required '
+                        f'{trim.min_outside_margin}" for {trim.label}.'
                     ),
                     location="outside_margin",
                     details={"required": trim.min_outside_margin, "actual": req.outside_margin},
@@ -167,8 +167,8 @@ class PrintValidator:
                     severity=Severity.ERROR,
                     rule="margin_top",
                     message=(
-                        f"Top margin {req.top_margin}\" is below the required "
-                        f"{trim.min_top_margin}\" for {trim.label}."
+                        f'Top margin {req.top_margin}" is below the required '
+                        f'{trim.min_top_margin}" for {trim.label}.'
                     ),
                     location="top_margin",
                     details={"required": trim.min_top_margin, "actual": req.top_margin},
@@ -181,8 +181,8 @@ class PrintValidator:
                     severity=Severity.ERROR,
                     rule="margin_bottom",
                     message=(
-                        f"Bottom margin {req.bottom_margin}\" is below the required "
-                        f"{trim.min_bottom_margin}\" for {trim.label}."
+                        f'Bottom margin {req.bottom_margin}" is below the required '
+                        f'{trim.min_bottom_margin}" for {trim.label}.'
                     ),
                     location="bottom_margin",
                     details={"required": trim.min_bottom_margin, "actual": req.bottom_margin},
@@ -198,7 +198,7 @@ class PrintValidator:
                 ValidationIssue(
                     severity=Severity.INFO,
                     rule="bleed_enabled",
-                    message=f"Full bleed is enabled. Ensure {BLEED_SIZE}\" bleed on all sides.",
+                    message=f'Full bleed is enabled. Ensure {BLEED_SIZE}" bleed on all sides.',
                     location="bleed",
                     details={"required_bleed": BLEED_SIZE},
                 )
@@ -225,10 +225,7 @@ class PrintValidator:
                 ValidationIssue(
                     severity=Severity.ERROR,
                     rule="image_dpi_print",
-                    message=(
-                        f"Image DPI ({req.image_dpi}) is below the required "
-                        f"{MIN_PRINT_DPI} DPI for print."
-                    ),
+                    message=(f"Image DPI ({req.image_dpi}) is below the required " f"{MIN_PRINT_DPI} DPI for print."),
                     location="images",
                     details={"required": MIN_PRINT_DPI, "actual": req.image_dpi},
                 )

@@ -32,6 +32,7 @@ settings = get_settings()
 # S3 client helper
 # ---------------------------------------------------------------------------
 
+
 def _get_s3_client():
     """Return a boto3 S3 client configured for the current settings."""
     return boto3.client(
@@ -75,6 +76,7 @@ async def check_s3_connectivity() -> bool:
 # ---------------------------------------------------------------------------
 # Service class
 # ---------------------------------------------------------------------------
+
 
 class StorageService:
     """High-level storage operations."""
@@ -145,9 +147,7 @@ class StorageService:
 
     # -- Complete upload ----------------------------------------------------
 
-    async def complete_upload(
-        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> AssetResponse:
+    async def complete_upload(self, *, asset_id: uuid.UUID, org_id: uuid.UUID) -> AssetResponse:
         """Called after S3 upload finishes.
 
         1. Verify the object exists in S3.
@@ -253,18 +253,14 @@ class StorageService:
 
     # -- Get single asset ---------------------------------------------------
 
-    async def get_asset(
-        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> AssetResponse:
+    async def get_asset(self, *, asset_id: uuid.UUID, org_id: uuid.UUID) -> AssetResponse:
         asset = await self._get_asset_or_404(asset_id, org_id)
         download_url = self._generate_download_url(asset.s3_key)  # type: ignore[arg-type]
         return self._to_response(asset, download_url=download_url)
 
     # -- Soft-delete --------------------------------------------------------
 
-    async def delete_asset(
-        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> None:
+    async def delete_asset(self, *, asset_id: uuid.UUID, org_id: uuid.UUID) -> None:
         asset = await self._get_asset_or_404(asset_id, org_id)
         asset.status = AssetStatus.DELETED.value
         asset.deleted_at = datetime.now(UTC)
@@ -397,9 +393,7 @@ class StorageService:
 
     # -- Private helpers ----------------------------------------------------
 
-    async def _get_asset_or_404(
-        self, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> ContentAsset:
+    async def _get_asset_or_404(self, asset_id: uuid.UUID, org_id: uuid.UUID) -> ContentAsset:
         result = await self.db.execute(
             select(ContentAsset)
             .where(ContentAsset.id == asset_id)
@@ -437,9 +431,7 @@ class StorageService:
         )
 
     @staticmethod
-    def _to_response(
-        asset: ContentAsset, *, download_url: str | None = None
-    ) -> AssetResponse:
+    def _to_response(asset: ContentAsset, *, download_url: str | None = None) -> AssetResponse:
         return AssetResponse(
             id=asset.id,
             org_id=asset.org_id,

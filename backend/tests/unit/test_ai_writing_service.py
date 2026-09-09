@@ -73,7 +73,6 @@ async def _seed_chapter(
 
 
 class TestGetManuscript:
-
     @pytest.mark.asyncio
     async def test_get_manuscript_creates_if_missing(self, db_session):
         """If no manuscript exists for a book, one should be created."""
@@ -113,7 +112,6 @@ class TestGetManuscript:
 
 
 class TestListChapters:
-
     @pytest.mark.asyncio
     async def test_list_chapters_empty(self, db_session):
         """Listing chapters for a book with no manuscript creates one and returns empty list."""
@@ -137,7 +135,6 @@ class TestListChapters:
 
 
 class TestGetChapter:
-
     @pytest.mark.asyncio
     async def test_get_chapter_success(self, db_session):
         """Should retrieve a single chapter by ID."""
@@ -160,7 +157,6 @@ class TestGetChapter:
 
 
 class TestCreateChapter:
-
     @pytest.mark.asyncio
     async def test_create_chapter_success(self, db_session):
         """Should create a new chapter and calculate word count."""
@@ -186,7 +182,6 @@ class TestCreateChapter:
 
 
 class TestUpdateChapter:
-
     @pytest.mark.asyncio
     async def test_update_chapter_title(self, db_session):
         """Should update chapter title."""
@@ -194,9 +189,7 @@ class TestUpdateChapter:
         chapter = await _seed_chapter(db_session, manuscript.id)
 
         update = ChapterUpdate(title="Updated Title")
-        result = await service.update_chapter(
-            db_session, manuscript.book_id, chapter.id, update
-        )
+        result = await service.update_chapter(db_session, manuscript.book_id, chapter.id, update)
 
         assert result.title == "Updated Title"
 
@@ -207,9 +200,7 @@ class TestUpdateChapter:
         chapter = await _seed_chapter(db_session, manuscript.id, "Ch", "old content", 1)
 
         update = ChapterUpdate(content="new content with more words here")
-        result = await service.update_chapter(
-            db_session, manuscript.book_id, chapter.id, update
-        )
+        result = await service.update_chapter(db_session, manuscript.book_id, chapter.id, update)
 
         assert result.word_count == 6
 
@@ -226,7 +217,6 @@ class TestUpdateChapter:
 
 
 class TestReorderChapters:
-
     @pytest.mark.asyncio
     async def test_reorder_chapters_success(self, db_session):
         """Should reorder chapters based on provided mapping."""
@@ -236,6 +226,7 @@ class TestReorderChapters:
         ch3 = await _seed_chapter(db_session, manuscript.id, "Third", "c", 3)
 
         from app.modules.ai_writing.schemas import ChapterReorderItem
+
         reorder = ChapterReorderRequest(
             chapters=[
                 ChapterReorderItem(chapter_id=ch3.id, order=1),
@@ -257,7 +248,6 @@ class TestReorderChapters:
 
 
 class TestReadabilityScore:
-
     @pytest.mark.asyncio
     async def test_get_readability_score_empty_manuscript(self, db_session):
         """Should handle empty manuscript gracefully."""
@@ -282,7 +272,6 @@ class TestReadabilityScore:
 
 
 class TestAnalyzeManuscript:
-
     @pytest.mark.asyncio
     async def test_analyze_manuscript_empty(self, db_session):
         """Should handle analysis of empty manuscript."""
@@ -321,7 +310,6 @@ class TestAnalyzeManuscript:
 
 
 class TestGenerateOutline:
-
     @pytest.mark.asyncio
     async def test_generate_outline_success(self, db_session):
         """Should generate outline from AI."""
@@ -373,7 +361,6 @@ class TestGenerateOutline:
 
 
 class TestGenerateOutlineStandalone:
-
     @pytest.mark.asyncio
     async def test_generate_standalone_outline_success(self, db_session):
         """Should generate standalone outline without book_id."""
@@ -417,7 +404,6 @@ class TestGenerateOutlineStandalone:
 
 
 class TestRecordWritingSession:
-
     @pytest.mark.asyncio
     async def test_record_session_success(self, db_session):
         """Should record a writing session and convert minutes to seconds."""

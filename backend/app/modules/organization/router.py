@@ -35,10 +35,7 @@ async def get_organization(
     """
     # Check user belongs to org
     if current_user["org_id"] != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return await service.get_organization(db, org_id)
 
@@ -64,10 +61,7 @@ async def update_organization(
     """
     # Check user belongs to org
     if current_user["org_id"] != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return await service.update_organization(
         db,
@@ -97,10 +91,7 @@ async def list_members(
     """
     # Check user belongs to org
     if current_user["org_id"] != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return await service.list_members(db, org_id)
 
@@ -128,10 +119,7 @@ async def create_invitation(
     """
     # Check user belongs to org
     if current_user["org_id"] != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     # Create invitation
     invitation = await service.create_invitation(
@@ -180,10 +168,7 @@ async def list_invitations(
     """
     # Check user belongs to org
     if current_user["org_id"] != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return await service.list_invitations(db, org_id)
 
@@ -211,29 +196,21 @@ async def remove_member(
     """
     # Check user belongs to org
     if current_user["org_id"] != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     # Prevent removing yourself
     if current_user["user_id"] == user_id:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot remove yourself from the organization"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot remove yourself from the organization"
         )
 
     # Check if removing the last admin/owner
     members = await service.list_members(db, org_id)
-    admin_count = sum(
-        1 for m in members.members
-        if m.role in ["owner", "admin"] and m.user_id != user_id
-    )
+    admin_count = sum(1 for m in members.members if m.role in ["owner", "admin"] and m.user_id != user_id)
 
     if admin_count == 0:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot remove the last admin from the organization"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot remove the last admin from the organization"
         )
 
     await service.remove_member(db, org_id, user_id)

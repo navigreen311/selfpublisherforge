@@ -36,6 +36,7 @@ TestSessionLocal = TestingSessionLocal
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def org_id() -> uuid.UUID:
     return uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -175,6 +176,7 @@ async def seeded_budget(
 # Agent endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestListAgents:
     @pytest.mark.asyncio
     async def test_list_agents_seeds_defaults(self, client: AsyncClient):
@@ -234,9 +236,7 @@ class TestUpdateAgentConfig:
         assert data["max_tokens"] == 8192
 
     @pytest.mark.asyncio
-    async def test_update_permission_level(
-        self, client: AsyncClient, seeded_agent: Agent
-    ):
+    async def test_update_permission_level(self, client: AsyncClient, seeded_agent: Agent):
         resp = await client.patch(
             f"/api/v1/agents/{seeded_agent.id}/config",
             json={"permission_level": "auto_execute_low"},
@@ -248,6 +248,7 @@ class TestUpdateAgentConfig:
 # ---------------------------------------------------------------------------
 # Task endpoints
 # ---------------------------------------------------------------------------
+
 
 class TestCreateTask:
     @pytest.mark.asyncio
@@ -389,6 +390,7 @@ class TestCancelTask:
 # Workflow endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestCreateWorkflow:
     @pytest.mark.asyncio
     async def test_create_workflow(
@@ -456,6 +458,7 @@ class TestListWorkflows:
 # Budget endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestGetBudgets:
     @pytest.mark.asyncio
     async def test_get_budgets(
@@ -497,6 +500,7 @@ class TestUpdateBudgets:
 # Emergency stop
 # ---------------------------------------------------------------------------
 
+
 class TestEmergencyStop:
     @pytest.mark.asyncio
     async def test_emergency_stop(
@@ -529,6 +533,7 @@ class TestEmergencyStop:
 # ---------------------------------------------------------------------------
 # Audit trail
 # ---------------------------------------------------------------------------
+
 
 class TestAuditTrail:
     @pytest.mark.asyncio

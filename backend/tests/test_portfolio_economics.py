@@ -5,6 +5,7 @@ Covers:
 - Audience analyze, personas, also-bought, growth, churn (audience_router)
 - Seasonal calendar, niche seasonality, launch recommendation, events (seasonal_router)
 """
+
 from __future__ import annotations
 
 import uuid
@@ -374,9 +375,7 @@ class TestSeasonalCalendarEndpoint:
 
     @pytest.mark.asyncio
     async def test_seasonal_calendar_success(self, client: AsyncClient) -> None:
-        resp = await client.get(
-            "/api/v1/seasonal/calendar", params={"year": 2025}
-        )
+        resp = await client.get("/api/v1/seasonal/calendar", params={"year": 2025})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["year"] == 2025

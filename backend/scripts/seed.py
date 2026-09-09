@@ -7,6 +7,7 @@ Usage:
     python -m scripts.seed --module users     # Seed only users
     python -m scripts.seed --module projects  # Seed only projects
 """
+
 import argparse
 import asyncio
 import sys
@@ -90,9 +91,7 @@ async def seed_module(module_name: str):
 
         elif module_name == "projects":
             # Need to get org_id first
-            result = await db.execute(
-                text("SELECT id FROM organizations WHERE slug = 'janes-publishing'")
-            )
+            result = await db.execute(text("SELECT id FROM organizations WHERE slug = 'janes-publishing'"))
             row = result.first()
             if not row:
                 print("❌ Jane's org not found. Run 'users' module first.")
@@ -123,9 +122,7 @@ async def seed_module(module_name: str):
 
         elif module_name == "analytics":
             # Get org and book IDs
-            result = await db.execute(
-                text("SELECT id FROM organizations WHERE slug = 'janes-publishing'")
-            )
+            result = await db.execute(text("SELECT id FROM organizations WHERE slug = 'janes-publishing'"))
             row = result.first()
             if not row:
                 print("❌ Jane's org not found.")
@@ -148,9 +145,7 @@ async def seed_module(module_name: str):
             await seed_analytics(db, jane_org_id, book_ids)
 
         elif module_name == "market":
-            result = await db.execute(
-                text("SELECT id FROM organizations WHERE slug = 'janes-publishing'")
-            )
+            result = await db.execute(text("SELECT id FROM organizations WHERE slug = 'janes-publishing'"))
             row = result.first()
             if not row:
                 print("❌ Jane's org not found.")

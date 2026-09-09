@@ -29,9 +29,7 @@ router = APIRouter(
 
 
 class VariationsRequest(BaseModel):
-    count: int = Field(
-        default=4, ge=1, le=8, description="Number of variations to generate"
-    )
+    count: int = Field(default=4, ge=1, le=8, description="Number of variations to generate")
 
 
 class PreviewRequest(BaseModel):
@@ -76,9 +74,7 @@ async def generate_illustration(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await svc.generate_illustration(
-        db, book_id=id, page_id=page_id, org_id=current_user["org_id"]
-    )
+    result = await svc.generate_illustration(db, book_id=id, page_id=page_id, org_id=current_user["org_id"])
     return SuccessResponse(data=result)
 
 
@@ -111,10 +107,7 @@ async def generate_variations(
     response_model=SuccessResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Generate character reference images",
-    description=(
-        "Generate 4 reference images for a character: front view, side view, "
-        "happy face, scared face."
-    ),
+    description=("Generate 4 reference images for a character: front view, side view, " "happy face, scared face."),
 )
 async def generate_character_references(
     id: UUID,
@@ -122,9 +115,7 @@ async def generate_character_references(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await svc.generate_character_references(
-        db, book_id=id, char_id=char_id, org_id=current_user["org_id"]
-    )
+    result = await svc.generate_character_references(db, book_id=id, char_id=char_id, org_id=current_user["org_id"])
     return SuccessResponse(data=result)
 
 
@@ -133,8 +124,7 @@ async def generate_character_references(
     response_model=SuccessResponse,
     summary="Run trademark and content safety check",
     description=(
-        "Scan all illustration prompts and text content for trademark violations "
-        "and content sensitivity issues."
+        "Scan all illustration prompts and text content for trademark violations " "and content sensitivity issues."
     ),
 )
 async def safety_check(
@@ -142,9 +132,7 @@ async def safety_check(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await svc.safety_check(
-        db, book_id=id, org_id=current_user["org_id"]
-    )
+    result = await svc.safety_check(db, book_id=id, org_id=current_user["org_id"])
     return SuccessResponse(data=result)
 
 
@@ -162,9 +150,7 @@ async def run_preflight(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await svc.run_preflight(
-        db, book_id=id, org_id=current_user["org_id"]
-    )
+    result = await svc.run_preflight(db, book_id=id, org_id=current_user["org_id"])
     return SuccessResponse(data=result)
 
 
@@ -199,19 +185,14 @@ async def export_book(
     response_model=SuccessResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Export book as Kindle Package Format (KPF)",
-    description=(
-        "Export the book as a Kindle Package Format file "
-        "for Kindle Fire and iPad."
-    ),
+    description=("Export the book as a Kindle Package Format file " "for Kindle Fire and iPad."),
 )
 async def export_kindle(
     id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await svc.export_book(
-        db, book_id=id, org_id=current_user["org_id"], format="kpf"
-    )
+    result = await svc.export_book(db, book_id=id, org_id=current_user["org_id"], format="kpf")
     return SuccessResponse(data=result)
 
 
@@ -230,9 +211,7 @@ async def device_preview(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await svc.generate_preview(
-        db, book_id=id, org_id=current_user["org_id"], mode=request.mode
-    )
+    result = await svc.generate_preview(db, book_id=id, org_id=current_user["org_id"], mode=request.mode)
     return SuccessResponse(data=result)
 
 
@@ -247,9 +226,7 @@ async def gutter_check(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await svc.check_gutter_collisions(
-        db, book_id=id, org_id=current_user["org_id"]
-    )
+    result = await svc.check_gutter_collisions(db, book_id=id, org_id=current_user["org_id"])
     return SuccessResponse(data=result)
 
 
@@ -257,9 +234,7 @@ async def gutter_check(
     "/{id}/reflow",
     response_model=SuccessResponse,
     summary="Reflow book to a different trim size",
-    description=(
-        "Generate a reflow plan for converting the book between trim sizes."
-    ),
+    description=("Generate a reflow plan for converting the book between trim sizes."),
 )
 async def reflow(
     id: UUID,

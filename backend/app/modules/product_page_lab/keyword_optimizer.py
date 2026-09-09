@@ -82,11 +82,13 @@ def _generate_title_keywords(title: str) -> list[dict]:
     words = [w.lower() for w in title.split() if len(w) > 3]
     suggestions = []
     for word in words[:5]:
-        suggestions.append({
-            "keyword": f"{word} books",
-            "search_volume": random.randint(5000, 30000),
-            "competition": random.choice(["low", "medium"]),
-        })
+        suggestions.append(
+            {
+                "keyword": f"{word} books",
+                "search_volume": random.randint(5000, 30000),
+                "competition": random.choice(["low", "medium"]),
+            }
+        )
     return suggestions
 
 
@@ -147,13 +149,15 @@ async def optimize_keywords(
     for kw in unique_candidates:
         relevance = _calculate_relevance(kw["keyword"], title, genre)
         score = _score_keyword(kw, title, genre)
-        scored.append({
-            "keyword": kw["keyword"],
-            "search_volume": kw["search_volume"],
-            "competition": kw["competition"],
-            "relevance": relevance,
-            "score": score,
-        })
+        scored.append(
+            {
+                "keyword": kw["keyword"],
+                "search_volume": kw["search_volume"],
+                "competition": kw["competition"],
+                "relevance": relevance,
+                "score": score,
+            }
+        )
 
     scored.sort(key=lambda x: x["score"], reverse=True)
 
@@ -183,5 +187,5 @@ async def optimize_keywords(
         "recommended": recommended,
         "optimal_seven": optimal_seven,
         "analysis_notes": f"Analyzed {len(unique_candidates)} candidate keywords for {genre} genre. "
-                         f"Selected top 7 based on relevance x search volume / competition.",
+        f"Selected top 7 based on relevance x search volume / competition.",
     }

@@ -1,4 +1,5 @@
 """PublishingAccount, Listing, UploadValidation, ComplianceScan, and PricingRule models."""
+
 import enum
 import uuid
 from datetime import datetime
@@ -83,7 +84,8 @@ class PublishingAccount(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="publishing_accounts",
+        "Organization",
+        back_populates="publishing_accounts",
         primaryjoin="PublishingAccount.org_id == Organization.id",
         foreign_keys="[PublishingAccount.org_id]",
     )
@@ -117,9 +119,7 @@ class Listing(BaseModel):
         server_default="draft",
     )
     listing_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
-    last_synced: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    last_synced: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     book = relationship("Book", back_populates="listings")

@@ -1,4 +1,5 @@
 """Unit tests for the review analyzer module."""
+
 import uuid
 
 import pytest
@@ -23,6 +24,7 @@ from app.modules.competitor_finder.schemas import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 def _make_review(
     rating: int = 3,
     title: str = "",
@@ -43,6 +45,7 @@ def _make_review(
 # ---------------------------------------------------------------------------
 # compute_sentiment_score
 # ---------------------------------------------------------------------------
+
 
 class TestComputeSentimentScore:
     def test_empty_reviews_returns_neutral(self):
@@ -93,6 +96,7 @@ class TestComputeSentimentScore:
 # ---------------------------------------------------------------------------
 # extract_weakness_signals_heuristic
 # ---------------------------------------------------------------------------
+
 
 class TestExtractWeaknessSignals:
     def test_empty_reviews_returns_empty(self):
@@ -208,6 +212,7 @@ class TestExtractWeaknessSignals:
 # count_strengths
 # ---------------------------------------------------------------------------
 
+
 class TestCountStrengths:
     def test_counts_4_and_5_star_reviews(self):
         reviews = [
@@ -230,6 +235,7 @@ class TestCountStrengths:
 # ---------------------------------------------------------------------------
 # generate_review_summary
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateReviewSummary:
     def test_empty_reviews(self):
@@ -257,6 +263,7 @@ class TestGenerateReviewSummary:
 # analyze_reviews (async)
 # ---------------------------------------------------------------------------
 
+
 class TestAnalyzeReviews:
     @pytest.mark.asyncio
     async def test_returns_analysis_result(self):
@@ -281,6 +288,7 @@ class TestAnalyzeReviews:
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
+
 
 class TestExtractSnippet:
     def test_keyword_in_middle(self):

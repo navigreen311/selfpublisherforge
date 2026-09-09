@@ -148,13 +148,15 @@ def _find_intersections(
                 if intersections == 0:
                     continue
 
-                candidates.append({
-                    "word": word,
-                    "row": new_row,
-                    "col": new_col,
-                    "direction": new_dir,
-                    "intersections": intersections,
-                })
+                candidates.append(
+                    {
+                        "word": word,
+                        "row": new_row,
+                        "col": new_col,
+                        "direction": new_dir,
+                        "intersections": intersections,
+                    }
+                )
 
     return candidates
 
@@ -237,13 +239,15 @@ def _number_grid(
         c = p["col"] - min_col
         key = (r, c)
         num = assigned_numbers.get(key)
-        numbered_placements.append({
-            "word": p["word"],
-            "row": r,
-            "col": c,
-            "direction": p["direction"],
-            "number": num,
-        })
+        numbered_placements.append(
+            {
+                "word": p["word"],
+                "row": r,
+                "col": c,
+                "direction": p["direction"],
+                "number": num,
+            }
+        )
 
     return numbered_placements, across_clues, down_clues
 
@@ -281,9 +285,7 @@ def generate_crossword(
         if clean and len(clean) >= 2:
             sanitized.append(clean)
             # Map sanitized word to clue
-            original_key = next(
-                (k for k in clues if _sanitize_word(k) == clean), None
-            )
+            original_key = next((k for k in clues if _sanitize_word(k) == clean), None)
             if original_key:
                 clue_map[clean] = clues[original_key]
             else:
@@ -311,12 +313,14 @@ def generate_crossword(
         start_col = (max_width - len(first)) // 2
         for i, letter in enumerate(first):
             grid[(start_row, start_col + i)] = letter
-        placed.append({
-            "word": first,
-            "row": start_row,
-            "col": start_col,
-            "direction": ACROSS,
-        })
+        placed.append(
+            {
+                "word": first,
+                "row": start_row,
+                "col": start_col,
+                "direction": ACROSS,
+            }
+        )
 
         # Try to place remaining words
         remaining = sanitized[1:]
@@ -340,12 +344,14 @@ def generate_crossword(
                 for i, letter in enumerate(word):
                     grid[(best_candidate["row"] + i, best_candidate["col"])] = letter
 
-            placed.append({
-                "word": word,
-                "row": best_candidate["row"],
-                "col": best_candidate["col"],
-                "direction": best_candidate["direction"],
-            })
+            placed.append(
+                {
+                    "word": word,
+                    "row": best_candidate["row"],
+                    "col": best_candidate["col"],
+                    "direction": best_candidate["direction"],
+                }
+            )
 
         if len(placed) > best_placed_count:
             best_placed_count = len(placed)
@@ -377,12 +383,8 @@ def generate_crossword(
     actual_height = max_row - min_row + 1
 
     # Build 2D grid (None = black square, letter = white square)
-    grid_2d: list[list[str | None]] = [
-        [None] * actual_width for _ in range(actual_height)
-    ]
-    solution_2d: list[list[str | None]] = [
-        [None] * actual_width for _ in range(actual_height)
-    ]
+    grid_2d: list[list[str | None]] = [[None] * actual_width for _ in range(actual_height)]
+    solution_2d: list[list[str | None]] = [[None] * actual_width for _ in range(actual_height)]
 
     for (r, c), letter in grid.items():
         nr = r - min_row
@@ -409,11 +411,7 @@ def generate_crossword(
     black_square_pct = 1.0 - (filled_cells / total_cells) if total_cells > 0 else 0.0
 
     placed_words_list = [p["word"] for p in placed]
-    avg_word_length = (
-        sum(len(w) for w in placed_words_list) / len(placed_words_list)
-        if placed_words_list
-        else 0
-    )
+    avg_word_length = sum(len(w) for w in placed_words_list) / len(placed_words_list) if placed_words_list else 0
 
     difficulty = calculate_difficulty(
         black_square_pct=black_square_pct,
@@ -426,14 +424,10 @@ def generate_crossword(
         "solution": solution_2d,
         "placements": [(p["word"], p["direction"]) for p in numbered_placements],
     }
-    content_hash = hashlib.sha256(
-        json.dumps(content_data, sort_keys=True, default=str).encode()
-    ).hexdigest()
+    content_hash = hashlib.sha256(json.dumps(content_data, sort_keys=True, default=str).encode()).hexdigest()
 
     # Puzzle grid with numbers
-    numbered_grid: list[list[dict | None]] = [
-        [None] * actual_width for _ in range(actual_height)
-    ]
+    numbered_grid: list[list[dict | None]] = [[None] * actual_width for _ in range(actual_height)]
     number_positions: dict[tuple[int, int], int] = {}
     for p in numbered_placements:
         if p["number"] is not None:

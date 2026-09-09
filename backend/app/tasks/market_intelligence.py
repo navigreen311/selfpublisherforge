@@ -46,6 +46,7 @@ def _run_async(coro):
 # Task: Refresh category data
 # ---------------------------------------------------------------------------
 
+
 @celery_app.task(
     name="app.tasks.market_intelligence.refresh_category_data",
     bind=True,
@@ -76,9 +77,7 @@ def refresh_category_data(self):
             async with session.begin():
                 for node in flat:
                     result = await session.execute(
-                        select(MarketCategory).where(
-                            MarketCategory.amazon_node_id == node["id"]
-                        )
+                        select(MarketCategory).where(MarketCategory.amazon_node_id == node["id"])
                     )
                     existing = result.scalar_one_or_none()
                     if existing:
@@ -129,6 +128,7 @@ def _flatten_category_tree(nodes: list[dict]) -> list[dict]:
 # Task: Update BSR history
 # ---------------------------------------------------------------------------
 
+
 @celery_app.task(
     name="app.tasks.market_intelligence.update_bsr_history",
     bind=True,
@@ -153,20 +153,14 @@ def update_bsr_history(self):
 
         async with async_session() as session:
             async with session.begin():
-                result = await session.execute(
-                    select(CompetitorBook).where(
-                        CompetitorBook.deleted_at.is_(None)
-                    )
-                )
+                result = await session.execute(select(CompetitorBook).where(CompetitorBook.deleted_at.is_(None)))
                 tracked = result.scalars().all()
 
             updated = 0
             for comp in tracked:
                 marketplace = (comp.metadata_json or {}).get("marketplace", "US")
                 try:
-                    product = await client.get_product_detail(
-                        comp.asin, marketplace=marketplace
-                    )
+                    product = await client.get_product_detail(comp.asin, marketplace=marketplace)
                     if product and product.bsr is not None:
                         now_iso = datetime.now(tz=UTC).isoformat()
                         bsr_point = {
@@ -181,9 +175,7 @@ def update_bsr_history(self):
                             comp.bsr_current = product.bsr
                             session.add(comp)
                         updated += 1
-                        logger.debug(
-                            "Updated BSR for %s: %d", comp.asin, product.bsr
-                        )
+                        logger.debug("Updated BSR for %s: %d", comp.asin, product.bsr)
                 except (SQLAlchemyError, ConnectionError) as exc:
                     logger.warning("Failed to update BSR for %s: %s", comp.asin, exc)
 
@@ -207,6 +199,7 @@ def update_bsr_history(self):
 # ---------------------------------------------------------------------------
 # Task: Generate market snapshots
 # ---------------------------------------------------------------------------
+
 
 @celery_app.task(
     name="app.tasks.market_intelligence.generate_market_snapshot",

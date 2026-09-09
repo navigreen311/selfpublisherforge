@@ -137,9 +137,7 @@ class MarketIntelligenceService:
         request: KeywordResearchRequest,
         org_id: uuid.UUID | None = None,
     ) -> KeywordResearchResponse:
-        keyword_data = await self._client.get_keyword_data(
-            request.keywords, marketplace=request.marketplace
-        )
+        keyword_data = await self._client.get_keyword_data(request.keywords, marketplace=request.marketplace)
         return KeywordResearchResponse(
             keywords=keyword_data,
             marketplace=request.marketplace,
@@ -191,9 +189,7 @@ class MarketIntelligenceService:
         )
 
         # 2. Fetch keyword data
-        kw_data = await self._client.get_keyword_data(
-            [request.niche], marketplace=request.marketplace
-        )
+        kw_data = await self._client.get_keyword_data([request.niche], marketplace=request.marketplace)
 
         # 3. Assemble metrics
         bsr_values = [p.bsr for p in products if p.bsr is not None]
@@ -273,9 +269,7 @@ class MarketIntelligenceService:
             return self._map_db_competitor_detail(existing, request.marketplace)
 
         # Fetch from Amazon client
-        product = await self._client.get_product_detail(
-            request.asin, marketplace=request.marketplace
-        )
+        product = await self._client.get_product_detail(request.asin, marketplace=request.marketplace)
         if not product:
             raise AppException(
                 status_code=404,
@@ -283,15 +277,10 @@ class MarketIntelligenceService:
                 message=f"Product {request.asin} not found on Amazon",
             )
 
-        bsr_history = await self._client.get_bsr_history(
-            request.asin, days=30, marketplace=request.marketplace
-        )
+        bsr_history = await self._client.get_bsr_history(request.asin, days=30, marketplace=request.marketplace)
 
         # Serialize BSR history for JSONB storage
-        bsr_history_json = [
-            {"date": pt.date.isoformat(), "bsr": pt.bsr, "price": pt.price}
-            for pt in bsr_history
-        ]
+        bsr_history_json = [{"date": pt.date.isoformat(), "bsr": pt.bsr, "price": pt.price} for pt in bsr_history]
 
         # Create CompetitorBook in DB
         book = CompetitorBook(
@@ -367,9 +356,7 @@ class MarketIntelligenceService:
                 ]
                 change_pct = 0.0
                 if kd.trend_data and kd.trend_data[0] > 0:
-                    change_pct = round(
-                        ((kd.trend_data[-1] - kd.trend_data[0]) / kd.trend_data[0]) * 100, 2
-                    )
+                    change_pct = round(((kd.trend_data[-1] - kd.trend_data[0]) / kd.trend_data[0]) * 100, 2)
                 trends.append(
                     MarketTrend(
                         label=f"Keyword: {keyword}",
@@ -393,9 +380,7 @@ class MarketIntelligenceService:
             )
 
         period_start = now - __import__("datetime").timedelta(days=days)
-        return MarketTrendsResponse(
-            trends=trends, period_start=period_start, period_end=now
-        )
+        return MarketTrendsResponse(trends=trends, period_start=period_start, period_end=now)
 
     async def get_snapshots(
         self,
@@ -442,10 +427,7 @@ class MarketIntelligenceService:
 
     @staticmethod
     def _map_category(raw: dict) -> CategoryNode:
-        children = [
-            MarketIntelligenceService._map_category(c)
-            for c in raw.get("children", [])
-        ]
+        children = [MarketIntelligenceService._map_category(c) for c in raw.get("children", [])]
         return CategoryNode(
             id=raw["id"],
             name=raw["name"],
@@ -548,9 +530,7 @@ class MarketIntelligenceService:
         return gaps
 
     @staticmethod
-    def _map_db_competitor_list_item(
-        book: CompetitorBook, marketplace: str = "US"
-    ) -> CompetitorListItem:
+    def _map_db_competitor_list_item(book: CompetitorBook, marketplace: str = "US") -> CompetitorListItem:
         """Map a CompetitorBook ORM row to a CompetitorListItem schema."""
         # Extract marketplace from metadata_json if available
         meta = book.metadata_json or {}
@@ -569,9 +549,7 @@ class MarketIntelligenceService:
         )
 
     @staticmethod
-    def _map_db_competitor_detail(
-        book: CompetitorBook, marketplace: str = "US"
-    ) -> CompetitorDetail:
+    def _map_db_competitor_detail(book: CompetitorBook, marketplace: str = "US") -> CompetitorDetail:
         """Map a CompetitorBook ORM row to a CompetitorDetail schema."""
         meta = book.metadata_json or {}
         mp = meta.get("marketplace", marketplace)

@@ -1,4 +1,5 @@
 """Integration tests for the Chrome Extension API endpoints."""
+
 from __future__ import annotations
 
 import uuid
@@ -155,9 +156,7 @@ class TestQuickResearch:
         await client.post("/api/v1/extension/extract", json=extract_payload)
 
         # Now query
-        response = await client.get(
-            "/api/v1/extension/quick-research?asin=B0CRESRCH1"
-        )
+        response = await client.get("/api/v1/extension/quick-research?asin=B0CRESRCH1")
         assert response.status_code == 200
         data = response.json()["data"]
         assert data["asin"] == "B0CRESRCH1"
@@ -166,9 +165,7 @@ class TestQuickResearch:
 
     @pytest.mark.asyncio
     async def test_quick_research_with_keywords(self, client: AsyncClient):
-        response = await client.get(
-            "/api/v1/extension/quick-research?keywords=romance&keywords=billionaire"
-        )
+        response = await client.get("/api/v1/extension/quick-research?keywords=romance&keywords=billionaire")
         assert response.status_code == 200
         data = response.json()["data"]
         assert "related_keywords" in data
@@ -182,9 +179,7 @@ class TestQuickResearch:
 
     @pytest.mark.asyncio
     async def test_quick_research_unknown_asin(self, client: AsyncClient):
-        response = await client.get(
-            "/api/v1/extension/quick-research?asin=B0CUNKNOWN"
-        )
+        response = await client.get("/api/v1/extension/quick-research?asin=B0CUNKNOWN")
         assert response.status_code == 200
         data = response.json()["data"]
         assert data["current_bsr"] is None
@@ -196,9 +191,7 @@ class TestQuickResearch:
             "/api/v1/extension/extract",
             json={"data": {"asin": "B0CSALES01", "title": "Sales Test", "bsr": 500}},
         )
-        response = await client.get(
-            "/api/v1/extension/quick-research?asin=B0CSALES01"
-        )
+        response = await client.get("/api/v1/extension/quick-research?asin=B0CSALES01")
         data = response.json()["data"]
         assert data["estimated_daily_sales"] is not None
         assert data["estimated_daily_sales"] > 0

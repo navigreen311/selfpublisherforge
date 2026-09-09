@@ -51,9 +51,7 @@ OTHER_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
 @pytest.fixture
 def mock_refiner():
     """Patch DictationRefiner and return the mock instance."""
-    with patch(
-        "app.services.voiceforge.dictation_refiner.DictationRefiner"
-    ) as mock_cls:
+    with patch("app.services.voiceforge.dictation_refiner.DictationRefiner") as mock_cls:
         refiner = mock_cls.return_value
         refiner.refine_transcript = AsyncMock(
             return_value=MagicMock(
@@ -251,27 +249,21 @@ async def test_update_session_access_denied(db: AsyncSession, user_id: uuid.UUID
 
 
 @pytest.mark.asyncio
-async def test_refine_session(
-    db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner
-):
+async def test_refine_session(db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner):
     """refine_session calls DictationRefiner and persists the result."""
-    row = await _create_db_session(
-        db, user_id, org_id, raw_transcript="this is some raw dictation text"
-    )
+    row = await _create_db_session(db, user_id, org_id, raw_transcript="this is some raw dictation text")
 
     request = RefineSessionRequest(style_profile_id=None)
     result = await refine_session(db, row.id, user_id, request)
 
     assert result.refined_text == "Refined text here."
     assert result.original_length == 6  # "this is some raw dictation text"
-    assert result.refined_length == 3   # "Refined text here."
+    assert result.refined_length == 3  # "Refined text here."
     mock_refiner.refine_transcript.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_refine_session_empty_transcript(
-    db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner
-):
+async def test_refine_session_empty_transcript(db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner):
     """refine_session raises 422 when transcript is empty."""
     row = await _create_db_session(db, user_id, org_id, raw_transcript="")
 
@@ -285,9 +277,7 @@ async def test_refine_session_empty_transcript(
 
 
 @pytest.mark.asyncio
-async def test_refine_session_not_found(
-    db: AsyncSession, user_id: uuid.UUID, mock_refiner
-):
+async def test_refine_session_not_found(db: AsyncSession, user_id: uuid.UUID, mock_refiner):
     """refine_session raises 404 for missing session."""
     request = RefineSessionRequest()
 
@@ -368,12 +358,8 @@ async def test_list_commands_org_isolation(db: AsyncSession, org_id: uuid.UUID):
     """list_commands does not return custom commands from other orgs."""
     other_org = uuid.uuid4()
 
-    await create_command(
-        db, org_id, CommandCreateRequest(trigger_phrase="mine", action="my_action")
-    )
-    await create_command(
-        db, other_org, CommandCreateRequest(trigger_phrase="theirs", action="their_action")
-    )
+    await create_command(db, org_id, CommandCreateRequest(trigger_phrase="mine", action="my_action"))
+    await create_command(db, other_org, CommandCreateRequest(trigger_phrase="theirs", action="their_action"))
 
     result = await list_commands(db, org_id)
 
@@ -418,9 +404,7 @@ async def test_delete_system_command_forbidden(db: AsyncSession, org_id: uuid.UU
     # Find a system command
     from sqlalchemy import select
 
-    result = await db.execute(
-        select(DictationCommand).where(DictationCommand.is_system.is_(True)).limit(1)
-    )
+    result = await db.execute(select(DictationCommand).where(DictationCommand.is_system.is_(True)).limit(1))
     sys_cmd = result.scalar_one()
 
     with pytest.raises(AppException) as exc_info:
@@ -433,9 +417,7 @@ async def test_delete_system_command_forbidden(db: AsyncSession, org_id: uuid.UU
 @pytest.mark.asyncio
 async def test_delete_command_wrong_org(db: AsyncSession, org_id: uuid.UUID):
     """delete_command raises 403 when org_id doesn't match."""
-    created = await create_command(
-        db, org_id, CommandCreateRequest(trigger_phrase="test", action="test_action")
-    )
+    created = await create_command(db, org_id, CommandCreateRequest(trigger_phrase="test", action="test_action"))
 
     other_org = uuid.uuid4()
     with pytest.raises(AppException) as exc_info:

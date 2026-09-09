@@ -93,10 +93,7 @@ class TestKUCalculatorBasic:
         )
         result = calculate_ku_vs_wide(request)
 
-        expected_diff = (
-            result.ku_exclusive.monthly_royalties
-            - result.wide_distribution.monthly_royalties
-        )
+        expected_diff = result.ku_exclusive.monthly_royalties - result.wide_distribution.monthly_royalties
         assert result.difference_monthly == pytest.approx(expected_diff, abs=0.02)
         assert result.difference_annual == pytest.approx(expected_diff * 12, abs=0.25)
 

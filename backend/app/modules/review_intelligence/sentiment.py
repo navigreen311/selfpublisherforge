@@ -180,9 +180,7 @@ def _keyword_sentiment(text: str) -> SentimentAnalysisResult:
     )
 
 
-async def analyze_sentiment_llm(
-    review_text: str, star_rating: float | None = None
-) -> SentimentAnalysisResult:
+async def analyze_sentiment_llm(review_text: str, star_rating: float | None = None) -> SentimentAnalysisResult:
     """Analyze sentiment using LLM (with keyword fallback).
 
     Attempts to call Anthropic API for sophisticated sentiment analysis.
@@ -204,9 +202,7 @@ async def analyze_sentiment_llm(
 
         client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
-        rating_context = (
-            f"\nStar rating: {star_rating}/5" if star_rating is not None else ""
-        )
+        rating_context = f"\nStar rating: {star_rating}/5" if star_rating is not None else ""
 
         prompt = f"""Analyze the sentiment of this book review. Return a JSON object with these fields:
 - "sentiment": one of "positive", "negative", "neutral", "mixed"
@@ -228,7 +224,7 @@ Return ONLY valid JSON, no other text."""
         )
 
         content_block = message.content[0]
-        response_text = content_block.text.strip() if hasattr(content_block, 'text') else str(content_block)  # type: ignore[union-attr]
+        response_text = content_block.text.strip() if hasattr(content_block, "text") else str(content_block)  # type: ignore[union-attr]
         # Parse JSON from LLM response
         result_data = json.loads(response_text)
 
@@ -295,9 +291,7 @@ def extract_themes_from_results(
                 theme_counts[theme_lower]["neutral"] += 1
 
     theme_items = []
-    for theme_name, data in sorted(
-        theme_counts.items(), key=lambda x: x[1]["count"], reverse=True
-    ):
+    for theme_name, data in sorted(theme_counts.items(), key=lambda x: x[1]["count"], reverse=True):
         # Determine dominant sentiment for theme
         if data["positive"] > data["negative"] and data["positive"] > data["neutral"]:
             dominant = SentimentLabel.POSITIVE

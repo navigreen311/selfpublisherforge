@@ -3,6 +3,7 @@
 Analyses competitor covers to extract dominant colours, text placement,
 imagery style, and provides recommendations for a given niche.
 """
+
 from __future__ import annotations
 
 import io
@@ -35,6 +36,7 @@ _ANALYSIS_THUMBNAIL_SIZE = (150, 150)  # resize target for fast processing
 
 class CoverData(TypedDict, total=False):
     """Structured data for a single competitor cover."""
+
     title: str
     cover_url: str
     bsr: int | None  # Best Seller Rank
@@ -46,6 +48,7 @@ class CoverData(TypedDict, total=False):
 
 class TypographyPattern(TypedDict):
     """Typography pattern analysis."""
+
     serif_percentage: float
     sans_serif_percentage: float
     bold_percentage: float
@@ -55,6 +58,7 @@ class TypographyPattern(TypedDict):
 
 class LayoutPattern(TypedDict):
     """Layout pattern analysis."""
+
     centered_title_percentage: float
     top_title_percentage: float
     bottom_title_percentage: float
@@ -63,6 +67,7 @@ class LayoutPattern(TypedDict):
 
 class ImageStyleBreakdown(TypedDict):
     """Image style breakdown."""
+
     photography_percentage: float
     illustration_percentage: float
     abstract_percentage: float
@@ -71,6 +76,7 @@ class ImageStyleBreakdown(TypedDict):
 
 class GenreAnalysisResult(TypedDict):
     """Complete analysis result for analyze_genre_covers."""
+
     top_covers: list[CoverData]
     dominant_colors: list[dict[str, Any]]  # Color name and percentage
     typography_patterns: TypographyPattern
@@ -82,13 +88,13 @@ class GenreAnalysisResult(TypedDict):
 
 class CoverGeneratorPresets(TypedDict):
     """Pre-filled form data for cover generator."""
+
     color_palette: list[str]
     style_keywords: list[str]
     mood: str
     typography_recommendation: str
     layout_recommendation: str
     additional_instructions: str
-
 
 
 # ---------------------------------------------------------------------------
@@ -398,8 +404,7 @@ def _generate_recommendations(
                 )
             elif avg > 7:
                 recommendations.append(
-                    "Competitors have strong covers — ensure your design is equally "
-                    "polished to compete effectively."
+                    "Competitors have strong covers — ensure your design is equally " "polished to compete effectively."
                 )
 
     recommendations.append(

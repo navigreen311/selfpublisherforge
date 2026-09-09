@@ -1,4 +1,5 @@
 """Seed demo chapters and content for books."""
+
 import uuid
 
 from sqlalchemy import select
@@ -54,9 +55,7 @@ async def seed_content(db: AsyncSession, book_ids: dict[str, uuid.UUID]) -> None
         book_id = book_ids[book_title]
 
         # Get the manuscript for this book
-        result = await db.execute(
-            select(Manuscript).where(Manuscript.book_id == book_id)
-        )
+        result = await db.execute(select(Manuscript).where(Manuscript.book_id == book_id))
         manuscript = result.scalar_one_or_none()
 
         if not manuscript:
@@ -64,9 +63,7 @@ async def seed_content(db: AsyncSession, book_ids: dict[str, uuid.UUID]) -> None
             continue
 
         # Check if chapters already exist
-        existing_result = await db.execute(
-            select(Chapter).where(Chapter.manuscript_id == manuscript.id).limit(1)
-        )
+        existing_result = await db.execute(select(Chapter).where(Chapter.manuscript_id == manuscript.id).limit(1))
         if existing_result.scalar_one_or_none():
             print(f"✓ Chapters already exist for {book_title}, skipping")
             continue
@@ -98,10 +95,7 @@ async def seed_content(db: AsyncSession, book_ids: dict[str, uuid.UUID]) -> None
                 word_count=word_count,
                 status=status,
                 content=f"Chapter content for '{chapter_title}'...\n\n"
-                + (
-                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-                    * (word_count // 10)
-                )
+                + ("Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * (word_count // 10))
                 if word_count > 0
                 else "",
                 ai_metrics={

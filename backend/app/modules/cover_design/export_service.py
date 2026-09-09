@@ -42,7 +42,7 @@ BLEED_INCHES = 0.125
 async def export_cover(
     db: AsyncSession,
     cover_id: UUID,
-    format: ExportFormat,  # noqa: A002 — shadows built-in intentionally for API clarity
+    format: ExportFormat,  # noqa: A002 â€” shadows built-in intentionally for API clarity
     include_bleed: bool = False,
 ) -> tuple[bytes, str, str]:
     """Export a cover in the requested format.
@@ -140,7 +140,10 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
         # For now, we use a simplified approach: extract background image if present
         # A full implementation would require fabric.js server-side rendering or conversion
         # For this implementation, we fall through to the image_url
-        logger.info("Editor state found for cover %s, but server-side Fabric.js rendering not yet implemented. Using image_url.", cover.id)
+        logger.info(
+            "Editor state found for cover %s, but server-side Fabric.js rendering not yet implemented. Using image_url.",
+            cover.id,
+        )
 
     # Fallback to downloading from image_url
     if not cover.image_url:
@@ -160,7 +163,7 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
         raise AppException(
             status_code=400,
             code="IMAGE_DOWNLOAD_FAILED",
-            message=f"Failed to download cover image: {exc\!s}",
+            message=f"Failed to download cover image: {exc!s}",
         )
 
     try:
@@ -173,7 +176,7 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
                 img = img.convert("RGBA")
             rgb_img.paste(img, mask=img.split()[3] if img.mode == "RGBA" else None)
             return rgb_img
-        if img.mode \!= "RGB":
+        if img.mode != "RGB":
             img = img.convert("RGB")
         return img
     except (OSError, ValueError) as exc:
@@ -181,7 +184,7 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
         raise AppException(
             status_code=400,
             code="IMAGE_OPEN_FAILED",
-            message=f"Failed to open cover image: {exc\!s}",
+            message=f"Failed to open cover image: {exc!s}",
         )
 
 
@@ -207,7 +210,7 @@ def _resize_with_dpi(img: Image.Image, target_dpi: int, current_dpi: int | None 
     If current_dpi is provided and different from target_dpi, scale the image.
     Otherwise, just set the DPI metadata.
     """
-    if current_dpi and current_dpi \!= target_dpi:
+    if current_dpi and current_dpi != target_dpi:
         # Calculate new dimensions
         scale_factor = target_dpi / current_dpi
         new_width = int(img.width * scale_factor)
@@ -273,10 +276,7 @@ async def _export_pdf(cover: Cover, include_bleed: bool) -> bytes:
         raise AppException(
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
-            message=(
-                "PDF export requires the 'reportlab' library. "
-                "Install it with: pip install reportlab"
-            ),
+            message=("PDF export requires the 'reportlab' library. " "Install it with: pip install reportlab"),
         )
 
     img = await _get_cover_image(cover)

@@ -21,7 +21,9 @@ def upgrade() -> None:
     op.add_column("pipeline_tasks", sa.Column("priority", sa.String(20), server_default="medium", nullable=True))
     op.add_column("pipeline_tasks", sa.Column("checklist", JSONB(), server_default="[]", nullable=True))
     op.add_column("pipeline_tasks", sa.Column("links", JSONB(), server_default="[]", nullable=True))
-    op.add_column("pipeline_tasks", sa.Column("blocked_by", ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=True))
+    op.add_column(
+        "pipeline_tasks", sa.Column("blocked_by", ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=True)
+    )
     op.add_column("pipeline_tasks", sa.Column("metadata_json", JSONB(), server_default="{}", nullable=True))
     op.add_column("pipeline_tasks", sa.Column("order_index", sa.Integer(), server_default="0", nullable=True))
 
@@ -43,7 +45,9 @@ def upgrade() -> None:
     op.create_index("idx_pipeline_stages_pipeline", "pipeline_stages", ["pipeline_id"])
 
     # Add FK from pipeline_tasks.stage_id -> pipeline_stages.id
-    op.create_foreign_key("fk_pipeline_tasks_stage", "pipeline_tasks", "pipeline_stages", ["stage_id"], ["id"], ondelete="SET NULL")
+    op.create_foreign_key(
+        "fk_pipeline_tasks_stage", "pipeline_tasks", "pipeline_stages", ["stage_id"], ["id"], ondelete="SET NULL"
+    )
 
     # Create pipeline_activity table
     op.create_table(

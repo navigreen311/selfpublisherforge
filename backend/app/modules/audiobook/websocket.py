@@ -39,18 +39,14 @@ async def audiobook_progress_ws(
     """Stream audiobook generation progress events via Redis pub/sub."""
     # Authenticate
     if not token:
-        await websocket.close(
-            code=status.WS_1008_POLICY_VIOLATION, reason="Missing token"
-        )
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing token")
         return
     try:
         payload = decode_token(token)
         if not payload.get("sub"):
             raise ValueError("Token missing subject")
     except (ValueError, Exception) as exc:
-        await websocket.close(
-            code=status.WS_1008_POLICY_VIOLATION, reason=str(exc)
-        )
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=str(exc))
         return
 
     await websocket.accept()
@@ -67,9 +63,7 @@ async def audiobook_progress_ws(
     try:
         while True:
             # Check for messages from Redis
-            message = await pubsub.get_message(
-                ignore_subscribe_messages=True, timeout=1.0
-            )
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message and message["type"] == "message":
                 data = message["data"]
                 if isinstance(data, bytes):

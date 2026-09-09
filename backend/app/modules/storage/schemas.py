@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class AssetType(str, Enum):
     MANUSCRIPT = "manuscript"
     IMAGE = "image"
@@ -31,6 +32,7 @@ class AssetStatus(str, Enum):
 # ---------------------------------------------------------------------------
 # Upload
 # ---------------------------------------------------------------------------
+
 
 class UploadRequest(BaseModel):
     """Request body to obtain a presigned upload URL."""
@@ -58,6 +60,7 @@ class UploadCompleteRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Asset CRUD
 # ---------------------------------------------------------------------------
+
 
 class AssetResponse(BaseModel):
     """Public representation of a stored asset."""

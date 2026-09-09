@@ -50,6 +50,7 @@ from app.modules.advertising.schemas import (
 
 try:
     from app.modules.advertising.facebook_ads import FacebookAdsClient
+
     _facebook_client = FacebookAdsClient()
 except (ImportError, ModuleNotFoundError) as e:
     logger.warning("Facebook Ads client not available: %s", e)
@@ -65,6 +66,7 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> AdvertisingService:
 
 
 # ─── Campaign Endpoints ──────────────────────────────────────────────────────
+
 
 @router.get(
     "/campaigns",
@@ -174,6 +176,7 @@ async def update_campaign(
 
 # ─── Performance Endpoints ────────────────────────────────────────────────────
 
+
 @router.get(
     "/campaigns/{campaign_id}/performance",
     response_model=list[AdPerformance],
@@ -212,6 +215,7 @@ async def get_campaign_performance(
 
 # ─── Optimization Endpoint ───────────────────────────────────────────────────
 
+
 @router.post(
     "/campaigns/{campaign_id}/optimize",
     response_model=OptimizationSuggestion,
@@ -242,6 +246,7 @@ async def optimize_campaign(
 
 
 # ─── Keyword Bid Endpoints ───────────────────────────────────────────────────
+
 
 @router.get(
     "/keyword-bids",
@@ -281,6 +286,7 @@ async def update_keyword_bids(
 
 # ─── Creative Endpoints ──────────────────────────────────────────────────────
 
+
 @router.post(
     "/creatives/generate",
     response_model=CreativeGenerateResponse,
@@ -319,6 +325,7 @@ async def list_creatives(
 
 # ─── Dashboard Endpoint ──────────────────────────────────────────────────────
 
+
 @router.get(
     "/dashboard",
     response_model=AdDashboard,
@@ -338,6 +345,7 @@ async def get_dashboard(
 
 
 # ─── Facebook Ads Endpoints ─────────────────────────────────────────────────
+
 
 @router.post(
     "/facebook/campaigns",
@@ -489,6 +497,7 @@ async def get_facebook_campaign_metrics(
     """Get performance metrics for a Facebook Ads campaign."""
     # Validate date format
     from datetime import datetime as dt
+
     for label, value in [("start_date", start_date), ("end_date", end_date)]:
         try:
             dt.strptime(value, "%Y-%m-%d")
@@ -640,6 +649,7 @@ async def create_facebook_audience(
 
 # ─── Enhanced Dashboard Endpoint ────────────────────────────────────────────
 
+
 @router.get(
     "/dashboard/enhanced",
     response_model=SuccessResponse[EnhancedDashboardResponse],
@@ -668,6 +678,7 @@ async def get_enhanced_dashboard(
 
 
 # ─── AI Endpoints ───────────────────────────────────────────────────────────
+
 
 @router.get(
     "/ai/insights",
@@ -708,11 +719,8 @@ async def suggest_keywords_endpoint(
     keywords = await suggest_keywords(db, org_id=current_user["org_id"], book_id=book_id)
 
     from app.modules.advertising.schemas import KeywordSuggestion
-    return SuccessResponse(
-        data=KeywordSuggestionsResponse(
-            keywords=[KeywordSuggestion(**kw) for kw in keywords]
-        )
-    )
+
+    return SuccessResponse(data=KeywordSuggestionsResponse(keywords=[KeywordSuggestion(**kw) for kw in keywords]))
 
 
 @router.post(
@@ -739,6 +747,7 @@ async def optimize_bids_endpoint(
     )
 
     from app.modules.advertising.schemas import BidRecommendation
+
     return SuccessResponse(
         data=BidOptimizationResponse(
             recommendations=[BidRecommendation(**r) for r in result["recommendations"]],
@@ -748,6 +757,7 @@ async def optimize_bids_endpoint(
 
 
 # ─── Search Terms Endpoints ─────────────────────────────────────────────────
+
 
 @router.get(
     "/campaigns/{campaign_id}/search-terms",
@@ -812,6 +822,7 @@ async def negate_search_term_endpoint(
 
 # ─── Daily Metrics Endpoint ─────────────────────────────────────────────────
 
+
 @router.get(
     "/campaigns/{campaign_id}/daily-metrics",
     response_model=SuccessResponse[list[DailyMetricResponse]],
@@ -835,19 +846,22 @@ async def get_daily_metrics_endpoint(
     start_date = datetime.utcnow() - timedelta(days=days)
 
     result = await db.execute(
-        select(AdDailyMetric).where(
+        select(AdDailyMetric)
+        .where(
             and_(
                 AdDailyMetric.campaign_id == campaign_id,
                 AdDailyMetric.date >= start_date,
                 AdDailyMetric.deleted_at.is_(None),
             )
-        ).order_by(AdDailyMetric.date)
+        )
+        .order_by(AdDailyMetric.date)
     )
     metrics = result.scalars().all()
     return SuccessResponse(data=[DailyMetricResponse.model_validate(m) for m in metrics])
 
 
 # ─── Campaign Pause / Resume Endpoints ──────────────────────────────────────
+
 
 @router.post(
     "/campaigns/{campaign_id}/pause",

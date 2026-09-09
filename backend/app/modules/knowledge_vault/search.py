@@ -156,9 +156,7 @@ class KnowledgeSearchService:
         for hit in resp["hits"]["hits"]:
             source = hit["_source"]
             hit_highlight = hit.get("highlight", {})
-            content_snippet = (
-                hit_highlight.get("content", [source.get("content", "")[:200]])[0]
-            )
+            content_snippet = hit_highlight.get("content", [source.get("content", "")[:200]])[0]
             hits.append(
                 {
                     "id": source["entry_id"],

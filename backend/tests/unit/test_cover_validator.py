@@ -67,6 +67,7 @@ def _make_ebook_cover(**overrides) -> CoverValidationRequest:
 # Resolution
 # ===================================================================
 
+
 class TestResolution:
     def test_print_cover_at_min_dpi(self, validator: CoverValidator):
         req = _make_print_cover(dpi=300)
@@ -104,13 +105,13 @@ class TestResolution:
 # Dimensions
 # ===================================================================
 
+
 class TestDimensions:
     def test_correct_dimensions(self, validator: CoverValidator):
         req = _make_print_cover()
         result = validator.validate(req)
         dim_errors = [
-            i for i in result.issues
-            if i.rule in ("cover_width", "cover_height") and i.severity == Severity.ERROR
+            i for i in result.issues if i.rule in ("cover_width", "cover_height") and i.severity == Severity.ERROR
         ]
         assert len(dim_errors) == 0
 
@@ -183,6 +184,7 @@ class TestDimensions:
 # Safe zones
 # ===================================================================
 
+
 class TestSafeZones:
     def test_no_text_in_bleed(self, validator: CoverValidator):
         req = _make_print_cover(has_text_in_bleed=False)
@@ -201,6 +203,7 @@ class TestSafeZones:
 # ===================================================================
 # File format
 # ===================================================================
+
 
 class TestFileFormat:
     def test_print_tiff_accepted(self, validator: CoverValidator):
@@ -244,6 +247,7 @@ class TestFileFormat:
 # Color space
 # ===================================================================
 
+
 class TestColorSpace:
     def test_print_cmyk_passes(self, validator: CoverValidator):
         req = _make_print_cover(color_space="CMYK")
@@ -286,6 +290,7 @@ class TestColorSpace:
 # ===================================================================
 # Overall status
 # ===================================================================
+
 
 class TestOverallStatus:
     def test_perfect_print_cover(self, validator: CoverValidator):

@@ -40,6 +40,7 @@ def _svg_footer() -> str:
 
 # ---- Word Search ----
 
+
 def render_word_search_svg(puzzle_data: dict, show_solution: bool = False) -> str:
     """Render a word search puzzle as SVG.
 
@@ -112,6 +113,7 @@ def render_word_search_svg(puzzle_data: dict, show_solution: bool = False) -> st
 
 
 # ---- Crossword ----
+
 
 def render_crossword_svg(puzzle_data: dict, show_solution: bool = False) -> str:
     """Render a crossword puzzle as SVG.

@@ -18,6 +18,7 @@ T = TypeVar("T")
 # Error envelope
 # ---------------------------------------------------------------------------
 
+
 class ErrorDetail(BaseModel):
     """A single validation or business-rule error."""
 
@@ -60,6 +61,7 @@ class ErrorEnvelope(BaseModel):
 # Success envelope
 # ---------------------------------------------------------------------------
 
+
 class SuccessResponse(BaseModel, Generic[T]):
     """Standard success envelope wrapping a ``data`` payload."""
 
@@ -73,6 +75,7 @@ class SuccessResponse(BaseModel, Generic[T]):
 # ---------------------------------------------------------------------------
 # Bulk action response
 # ---------------------------------------------------------------------------
+
 
 class BulkItemResult(BaseModel):
     """Outcome of a single item within a bulk action."""
@@ -97,6 +100,7 @@ class BulkActionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Pagination wrapper (extends core pagination with envelope)
 # ---------------------------------------------------------------------------
+
 
 class PaginatedMeta(BaseModel):
     """Pagination metadata placed in ``meta`` of a success response."""

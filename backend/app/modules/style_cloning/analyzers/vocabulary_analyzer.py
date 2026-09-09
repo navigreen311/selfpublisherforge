@@ -9,6 +9,7 @@ from typing import TypedDict
 
 class VocabularyRichnessMetrics(TypedDict):
     """Vocabulary richness analysis results."""
+
     type_token_ratio: float
     hapax_legomena_ratio: float
     avg_word_length: float
@@ -20,18 +21,20 @@ class VocabularyRichnessMetrics(TypedDict):
 
 
 # Common stop words (top ~300)
-_STOP_WORDS = frozenset((
-    "the be to of and a in that have i it for not on with he as you do at "
-    "this but his by from they we say her she or an will my one all would "
-    "there their what so up out if about who get which go me when make can "
-    "like time no just him know take people into year your good some could "
-    "them see other than then now look only come its over think also back "
-    "after use two how our work first well way even new want because any "
-    "these give day most us is was are been has had were did does doing "
-    "am being have has having do does doing shall should would may might "
-    "must need dare ought used will can could very said each tell three "
-    "still find long down day made part"
-).split())
+_STOP_WORDS = frozenset(
+    (
+        "the be to of and a in that have i it for not on with he as you do at "
+        "this but his by from they we say her she or an will my one all would "
+        "there their what so up out if about who get which go me when make can "
+        "like time no just him know take people into year your good some could "
+        "them see other than then now look only come its over think also back "
+        "after use two how our work first well way even new want because any "
+        "these give day most us is was are been has had were did does doing "
+        "am being have has having do does doing shall should would may might "
+        "must need dare ought used will can could very said each tell three "
+        "still find long down day made part"
+    ).split()
+)
 
 # Common/frequent words (simplified top 5000 proxy - using word length heuristic)
 # Words 1-4 chars long are considered common, 5-7 intermediate, 8+ advanced
@@ -63,7 +66,7 @@ class VocabularyAnalyzer:
             return True
 
         # Hyphenated technical terms
-        return bool('-' in word and len(word) > 6)
+        return bool("-" in word and len(word) > 6)
 
     def analyze(self, text: str) -> VocabularyRichnessMetrics:
         """Analyze vocabulary richness in the given text.
@@ -109,10 +112,7 @@ class VocabularyAnalyzer:
         # Vocabulary level score (based on word length distribution)
         # 0.0 = very simple (short words), 1.0 = advanced (long words)
         length_counts = Counter(len(w) for w in words_lower)
-        advanced_count = sum(
-            count for length, count in length_counts.items()
-            if length > _INTERMEDIATE_WORD_LENGTH
-        )
+        advanced_count = sum(count for length, count in length_counts.items() if length > _INTERMEDIATE_WORD_LENGTH)
 
         # Normalize to 0-1 scale
         vocab_level_score = min(1.0, advanced_count / max(total_words, 1) * 3)

@@ -296,9 +296,7 @@ class TestComputeRevenueTrend:
         result_mock.all.return_value = []
         mock_db.execute = AsyncMock(return_value=result_mock)
 
-        trend = await compute_revenue_trend(
-            mock_db, org_id, now - timedelta(days=30), now
-        )
+        trend = await compute_revenue_trend(mock_db, org_id, now - timedelta(days=30), now)
 
         assert trend.metric == "revenue"
         assert len(trend.data_points) == 0
@@ -327,9 +325,7 @@ class TestComputeRevenueTrend:
         result_mock.all.return_value = [row1, row2, row3]
         mock_db.execute = AsyncMock(return_value=result_mock)
 
-        trend = await compute_revenue_trend(
-            mock_db, org_id, now - timedelta(days=90), now
-        )
+        trend = await compute_revenue_trend(mock_db, org_id, now - timedelta(days=90), now)
 
         assert len(trend.data_points) == 3
         assert trend.total == Decimal("2250.00")

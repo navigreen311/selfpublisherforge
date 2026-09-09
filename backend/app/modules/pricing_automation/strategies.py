@@ -88,11 +88,7 @@ class CompetitiveMatchStrategy(PricingStrategy):
         undercut_pct = context.parameters.get("undercut_pct", 0.05)
         use_median = context.parameters.get("use_median", False)
 
-        reference_price = (
-            context.competitor_median_price
-            if use_median
-            else context.competitor_avg_price
-        )
+        reference_price = context.competitor_median_price if use_median else context.competitor_avg_price
         adjustments: list[str] = []
 
         if reference_price is None:
@@ -141,17 +137,12 @@ class ValueBasedStrategy(PricingStrategy):
         adjustments: list[str] = []
         base_price = context.competitor_avg_price or context.current_price
 
-        qualifies_for_premium = (
-            context.review_count >= review_threshold
-            and context.review_rating >= rating_threshold
-        )
+        qualifies_for_premium = context.review_count >= review_threshold and context.review_rating >= rating_threshold
 
         if qualifies_for_premium:
             # Scale premium based on how far above thresholds
             review_factor = min(context.review_count / (review_threshold * 5), 1.0)
-            rating_factor = min(
-                (context.review_rating - rating_threshold) / (5.0 - rating_threshold), 1.0
-            )
+            rating_factor = min((context.review_rating - rating_threshold) / (5.0 - rating_threshold), 1.0)
             effective_premium = premium_pct * (0.5 + 0.25 * review_factor + 0.25 * rating_factor)
             target = base_price * (1.0 + effective_premium)
             adjustments.append(
@@ -217,16 +208,13 @@ class PenetrationStrategy(PricingStrategy):
         if active_milestone is None:
             # Below first milestone, use launch price
             target = launch_price
-            adjustments.append(
-                f"Below first milestone; using launch price ${launch_price:.2f}"
-            )
+            adjustments.append(f"Below first milestone; using launch price ${launch_price:.2f}")
             confidence = 0.8
         else:
             target_range = context.max_price - launch_price
             target = launch_price + (target_range * price_pct)
             adjustments.append(
-                f"Milestone reached: {active_milestone['reviews']} reviews -> "
-                f"{price_pct*100:.0f}% of target range"
+                f"Milestone reached: {active_milestone['reviews']} reviews -> " f"{price_pct*100:.0f}% of target range"
             )
             confidence = 0.7
 
@@ -267,7 +255,7 @@ class DynamicStrategy(PricingStrategy):
 
         # Calculate BSR trend: lower BSR = better rank = more sales
         recent = context.bsr_trend[-3:] if len(context.bsr_trend) >= 3 else context.bsr_trend
-        older = context.bsr_trend[:-len(recent)] if len(context.bsr_trend) > len(recent) else recent
+        older = context.bsr_trend[: -len(recent)] if len(context.bsr_trend) > len(recent) else recent
 
         avg_recent = sum(recent) / len(recent)
         avg_older = sum(older) / len(older)
@@ -366,10 +354,7 @@ def get_strategy(strategy_name: str) -> PricingStrategy:
     """
     cls = STRATEGY_MAP.get(strategy_name)
     if cls is None:
-        raise ValueError(
-            f"Unknown pricing strategy '{strategy_name}'. "
-            f"Available: {list(STRATEGY_MAP.keys())}"
-        )
+        raise ValueError(f"Unknown pricing strategy '{strategy_name}'. " f"Available: {list(STRATEGY_MAP.keys())}")
     return cls()
 
 

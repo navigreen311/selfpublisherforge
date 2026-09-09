@@ -2,6 +2,7 @@
 
 Provides publish (Pub/Sub + Streams), subscribe, replay, and dead-letter handling.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -114,10 +115,9 @@ class RedisEventPublisher(EventPublisher):
         """Return (and lazily create) the async Redis client."""
         if self._redis is None:
             if aioredis is None:
-                raise RuntimeError(
-                    "redis package is not installed -- cannot create RedisEventPublisher"
-                )
+                raise RuntimeError("redis package is not installed -- cannot create RedisEventPublisher")
             from app.config import get_settings
+
             url = self._redis_url or get_settings().REDIS_URL
             self._redis = aioredis.Redis.from_url(url)
         return self._redis
@@ -133,9 +133,7 @@ class RedisEventPublisher(EventPublisher):
             channel = f"events:{event.event_type.value}"
             payload = event.model_dump_json()
             await redis_client.publish(channel, payload)
-            logger.debug(
-                "Published event %s to channel %s", event.event_type, channel
-            )
+            logger.debug("Published event %s to channel %s", event.event_type, channel)
         except Exception as e:
             logger.error(
                 "Failed to publish event %s: %s",

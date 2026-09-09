@@ -192,10 +192,23 @@ def downgrade() -> None:
     # ─────────────────────────────────────────────────────────────────────
 
     columns_to_drop_agent_tasks = [
-        "book_id", "task_type", "instructions", "execution_mode", "max_tokens",
-        "output", "output_format", "steps", "tokens_used", "cost",
-        "execution_time_seconds", "rating", "error_message", "approved_at",
-        "applied_to", "started_at", "completed_at"
+        "book_id",
+        "task_type",
+        "instructions",
+        "execution_mode",
+        "max_tokens",
+        "output",
+        "output_format",
+        "steps",
+        "tokens_used",
+        "cost",
+        "execution_time_seconds",
+        "rating",
+        "error_message",
+        "approved_at",
+        "applied_to",
+        "started_at",
+        "completed_at",
     ]
 
     for col_name in columns_to_drop_agent_tasks:
@@ -216,9 +229,15 @@ def downgrade() -> None:
     # ─────────────────────────────────────────────────────────────────────
 
     columns_to_drop_agents = [
-        "icon", "system_prompt", "temperature", "default_execution_mode",
-        "task_types", "context_sources", "budget_per_task", "monthly_budget",
-        "is_system"
+        "icon",
+        "system_prompt",
+        "temperature",
+        "default_execution_mode",
+        "task_types",
+        "context_sources",
+        "budget_per_task",
+        "monthly_budget",
+        "is_system",
     ]
 
     for col_name in columns_to_drop_agents:

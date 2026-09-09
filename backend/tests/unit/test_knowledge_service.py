@@ -16,6 +16,7 @@ from app.modules.knowledge_vault.service import KnowledgeService
 
 # ── Fixtures ─────────────────────────────────────────────────────
 
+
 def _make_entry(**overrides):
     """Create a mock KnowledgeEntry-like object."""
     defaults = {
@@ -85,6 +86,7 @@ def service(mock_db, mock_search):
 
 # ── Tests: create_entry ─────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_create_entry_basic(service, mock_db, mock_search, org_id):
     """Creating an entry should add to DB, flush, and index in ES."""
@@ -120,6 +122,7 @@ async def test_create_entry_es_failure_does_not_raise(service, mock_db, mock_sea
 
 # ── Tests: get_entry ─────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_get_entry_found(service, mock_db, org_id):
     """get_entry returns the entry when it exists."""
@@ -145,6 +148,7 @@ async def test_get_entry_not_found(service, mock_db, org_id):
 
 
 # ── Tests: delete_entry (soft delete) ────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_delete_entry_sets_deleted_at(service, mock_db, mock_search, org_id):
@@ -173,6 +177,7 @@ async def test_delete_entry_not_found(service, mock_db, org_id):
 
 
 # ── Tests: update_entry ──────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_update_entry_applies_changes(service, mock_db, mock_search, org_id):
@@ -204,6 +209,7 @@ async def test_update_entry_not_found(service, mock_db, org_id):
 
 
 # ── Tests: full_text_search ──────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_full_text_search_delegates_to_es(service, mock_search, org_id):
@@ -240,13 +246,16 @@ async def test_full_text_search_delegates_to_es(service, mock_search, org_id):
 
 # ── Tests: import_entry ──────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_import_from_url(service, mock_db, mock_search, org_id):
     """Importing from a URL should extract content and create an entry."""
     mock_db.refresh = AsyncMock(side_effect=lambda e: setattr(e, "id", uuid.uuid4()))
 
-    with patch("app.modules.knowledge_vault.importer.extract_from_url", new_callable=AsyncMock) as mock_extract, \
-         patch("app.modules.knowledge_vault.importer.extract_key_facts", new_callable=AsyncMock) as mock_facts:
+    with (
+        patch("app.modules.knowledge_vault.importer.extract_from_url", new_callable=AsyncMock) as mock_extract,
+        patch("app.modules.knowledge_vault.importer.extract_key_facts", new_callable=AsyncMock) as mock_facts,
+    ):
         mock_extract.return_value = {
             "title": "Great Article",
             "content": "Article body text.",
@@ -278,6 +287,7 @@ async def test_import_without_source_raises(service, org_id):
 
 
 # ── Tests: summarize_entry ───────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_summarize_entry_returns_summary(service, mock_db, org_id):
@@ -313,6 +323,7 @@ async def test_summarize_entry_not_found(service, mock_db, org_id):
 
 
 # ── Tests: schemas validation ────────────────────────────────────
+
 
 def test_create_entry_schema_validates_source_type():
     """CreateEntryRequest should reject invalid source_type."""

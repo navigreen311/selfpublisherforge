@@ -4,6 +4,7 @@ Covers: photo upload, CRUD, filtering, generation with references.
 
 ~12 test cases.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -24,14 +25,22 @@ class TestPhotoCRUD:
         """Upload a photo and verify metadata is returned."""
         mock_service = AsyncMock()
         mock_service.upload_photo.return_value = {
-            "id": str(PHOTO_ID), "filename": "reference_01.jpg",
-            "mime_type": "image/jpeg", "size_bytes": 245760,
-            "width": 1920, "height": 1080, "usage_type": "reference",
-            "book_id": str(BOOK_ID), "org_id": str(ORG_ID),
+            "id": str(PHOTO_ID),
+            "filename": "reference_01.jpg",
+            "mime_type": "image/jpeg",
+            "size_bytes": 245760,
+            "width": 1920,
+            "height": 1080,
+            "usage_type": "reference",
+            "book_id": str(BOOK_ID),
+            "org_id": str(ORG_ID),
         }
         result = await mock_service.upload_photo(
-            org_id=ORG_ID, book_id=BOOK_ID, filename="reference_01.jpg",
-            content_type="image/jpeg", size_bytes=245760,
+            org_id=ORG_ID,
+            book_id=BOOK_ID,
+            filename="reference_01.jpg",
+            content_type="image/jpeg",
+            size_bytes=245760,
         )
         assert result["filename"] == "reference_01.jpg"
         assert result["mime_type"] == "image/jpeg"
@@ -43,7 +52,10 @@ class TestPhotoCRUD:
         mock_service = AsyncMock()
         photos = [{"id": str(uuid.uuid4()), "filename": f"photo_{i}.jpg"} for i in range(8)]
         mock_service.list_photos.return_value = {
-            "items": photos[:3], "total": 8, "page": 1, "page_size": 3,
+            "items": photos[:3],
+            "total": 8,
+            "page": 1,
+            "page_size": 3,
         }
         result = await mock_service.list_photos(org_id=ORG_ID, page=1, page_size=3)
         assert len(result["items"]) == 3
@@ -54,7 +66,8 @@ class TestPhotoCRUD:
         """Filter photos by usage type (reference, texture, background)."""
         mock_service = AsyncMock()
         mock_service.list_photos.return_value = {
-            "items": [{"id": str(PHOTO_ID), "usage_type": "reference"}], "total": 1,
+            "items": [{"id": str(PHOTO_ID), "usage_type": "reference"}],
+            "total": 1,
         }
         result = await mock_service.list_photos(org_id=ORG_ID, usage_type="reference")
         assert all(p["usage_type"] == "reference" for p in result["items"])
@@ -64,7 +77,8 @@ class TestPhotoCRUD:
         """Filter photos by associated book ID."""
         mock_service = AsyncMock()
         mock_service.list_photos.return_value = {
-            "items": [{"id": str(PHOTO_ID), "book_id": str(BOOK_ID)}], "total": 1,
+            "items": [{"id": str(PHOTO_ID), "book_id": str(BOOK_ID)}],
+            "total": 1,
         }
         result = await mock_service.list_photos(org_id=ORG_ID, book_id=BOOK_ID)
         assert all(p["book_id"] == str(BOOK_ID) for p in result["items"])
@@ -74,8 +88,10 @@ class TestPhotoCRUD:
         """Get a single photo by ID with full metadata."""
         mock_service = AsyncMock()
         mock_service.get_photo.return_value = {
-            "id": str(PHOTO_ID), "filename": "reference_01.jpg",
-            "mime_type": "image/jpeg", "tags": ["landscape", "mountains"],
+            "id": str(PHOTO_ID),
+            "filename": "reference_01.jpg",
+            "mime_type": "image/jpeg",
+            "tags": ["landscape", "mountains"],
         }
         result = await mock_service.get_photo(photo_id=PHOTO_ID)
         assert result["id"] == str(PHOTO_ID)
@@ -86,10 +102,14 @@ class TestPhotoCRUD:
         """Update photo metadata (tags, usage_type)."""
         mock_service = AsyncMock()
         mock_service.update_photo.return_value = {
-            "id": str(PHOTO_ID), "usage_type": "texture", "tags": ["pattern", "fabric"],
+            "id": str(PHOTO_ID),
+            "usage_type": "texture",
+            "tags": ["pattern", "fabric"],
         }
         result = await mock_service.update_photo(
-            photo_id=PHOTO_ID, usage_type="texture", tags=["pattern", "fabric"],
+            photo_id=PHOTO_ID,
+            usage_type="texture",
+            tags=["pattern", "fabric"],
         )
         assert result["usage_type"] == "texture"
         assert "pattern" in result["tags"]
@@ -112,10 +132,13 @@ class TestPhotoGeneration:
         mock_service = AsyncMock()
         mock_service.generate_with_references.return_value = {
             "generated_image_url": "https://example.com/generated/img_001.png",
-            "reference_ids": [str(PHOTO_ID)], "prompt": "A mountain landscape at sunset",
+            "reference_ids": [str(PHOTO_ID)],
+            "prompt": "A mountain landscape at sunset",
         }
         result = await mock_service.generate_with_references(
-            reference_ids=[PHOTO_ID], prompt="A mountain landscape at sunset", style_influence=0.7,
+            reference_ids=[PHOTO_ID],
+            prompt="A mountain landscape at sunset",
+            style_influence=0.7,
         )
         assert "generated_image_url" in result
         assert len(result["reference_ids"]) == 1
@@ -130,7 +153,8 @@ class TestPhotoGeneration:
             "reference_ids": [str(rid) for rid in ref_ids],
         }
         result = await mock_service.generate_with_references(
-            reference_ids=ref_ids, prompt="A cozy cabin in the woods",
+            reference_ids=ref_ids,
+            prompt="A cozy cabin in the woods",
         )
         assert len(result["reference_ids"]) == 3
 
@@ -153,8 +177,11 @@ class TestPhotoValidation:
         mock_service.upload_photo.side_effect = Exception("Invalid MIME type: application/pdf")
         with pytest.raises(Exception, match="Invalid MIME type"):
             await mock_service.upload_photo(
-                org_id=ORG_ID, book_id=BOOK_ID, filename="doc.pdf",
-                content_type="application/pdf", size_bytes=1024,
+                org_id=ORG_ID,
+                book_id=BOOK_ID,
+                filename="doc.pdf",
+                content_type="application/pdf",
+                size_bytes=1024,
             )
 
     @pytest.mark.asyncio
@@ -164,6 +191,9 @@ class TestPhotoValidation:
         mock_service.upload_photo.side_effect = Exception("File size exceeds maximum")
         with pytest.raises(Exception, match="exceeds maximum"):
             await mock_service.upload_photo(
-                org_id=ORG_ID, book_id=BOOK_ID, filename="huge.jpg",
-                content_type="image/jpeg", size_bytes=100 * 1024 * 1024,
+                org_id=ORG_ID,
+                book_id=BOOK_ID,
+                filename="huge.jpg",
+                content_type="image/jpeg",
+                size_bytes=100 * 1024 * 1024,
             )

@@ -84,7 +84,7 @@ class AdCreativeGenerator:
             variations = self._generate_with_templates(request, constraints)
 
         return CreativeGenerateResponse(
-            variations=variations[:request.num_variations],
+            variations=variations[: request.num_variations],
             platform=platform,
             book_title=request.book_title,
         )
@@ -176,18 +176,20 @@ Respond ONLY with the JSON array, no other text."""
 
             creatives = []
             for item in data:
-                headline = item.get("headline", "")[:constraints["headline_max_length"]]
-                body_text = item.get("body_text", "")[:constraints["body_max_length"]]
+                headline = item.get("headline", "")[: constraints["headline_max_length"]]
+                body_text = item.get("body_text", "")[: constraints["body_max_length"]]
                 cta = item.get("call_to_action", constraints["cta_options"][0])
                 if cta not in constraints["cta_options"]:
                     cta = constraints["cta_options"][0]
 
-                creatives.append(GeneratedCreative(
-                    headline=headline,
-                    body_text=body_text,
-                    call_to_action=cta,
-                    reasoning=item.get("reasoning", ""),
-                ))
+                creatives.append(
+                    GeneratedCreative(
+                        headline=headline,
+                        body_text=body_text,
+                        call_to_action=cta,
+                        reasoning=item.get("reasoning", ""),
+                    )
+                )
 
             return creatives
         except (json.JSONDecodeError, KeyError, IndexError) as e:
@@ -259,7 +261,7 @@ Respond ONLY with the JSON array, no other text."""
             ),
         ]
 
-        return templates[:request.num_variations]
+        return templates[: request.num_variations]
 
 
 def _truncate(text: str, max_length: int) -> str:

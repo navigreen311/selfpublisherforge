@@ -1,4 +1,5 @@
 """Settings API router."""
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -103,9 +104,7 @@ async def update_org_settings(
     db: AsyncSession = Depends(get_db),
 ):
     """Update organization settings (admin/owner only)."""
-    return await service.update_org_settings(
-        db, current_user["org_id"], data.model_dump(exclude_unset=True)
-    )
+    return await service.update_org_settings(db, current_user["org_id"], data.model_dump(exclude_unset=True))
 
 
 @router.post("/security/change-password")
@@ -115,9 +114,7 @@ async def change_password(
     db: AsyncSession = Depends(get_db),
 ):
     """Change user password."""
-    return await service.change_password(
-        db, current_user["user_id"], data.current_password, data.new_password
-    )
+    return await service.change_password(db, current_user["user_id"], data.current_password, data.new_password)
 
 
 @router.post("/security/enable-2fa", response_model=Enable2FAResponse)
@@ -191,9 +188,7 @@ async def create_api_key(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new API key (admin/owner only)."""
-    return await service.create_api_key(
-        db, current_user["user_id"], current_user["org_id"], data.model_dump()
-    )
+    return await service.create_api_key(db, current_user["user_id"], current_user["org_id"], data.model_dump())
 
 
 @router.delete("/api-keys/{key_id}")
@@ -243,9 +238,7 @@ async def update_webhook(
     db: AsyncSession = Depends(get_db),
 ):
     """Update a webhook (admin/owner only)."""
-    return await service.update_webhook(
-        db, current_user["org_id"], webhook_id, data.model_dump(exclude_unset=True)
-    )
+    return await service.update_webhook(db, current_user["org_id"], webhook_id, data.model_dump(exclude_unset=True))
 
 
 @router.delete("/webhooks/{webhook_id}")
@@ -284,6 +277,4 @@ async def update_notification_prefs(
     db: AsyncSession = Depends(get_db),
 ):
     """Update notification preferences."""
-    return await service.update_notification_prefs(
-        db, current_user["user_id"], data.model_dump(exclude_unset=True)
-    )
+    return await service.update_notification_prefs(db, current_user["user_id"], data.model_dump(exclude_unset=True))

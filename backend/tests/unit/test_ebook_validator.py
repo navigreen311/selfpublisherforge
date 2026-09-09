@@ -44,6 +44,7 @@ def _make_request(**overrides) -> EbookValidationRequest:
 # TOC validation
 # ===================================================================
 
+
 class TestTOC:
     def test_both_toc_present(self, validator: EbookValidator):
         req = _make_request(has_ncx_toc=True, has_html_toc=True)
@@ -75,6 +76,7 @@ class TestTOC:
 # ===================================================================
 # Image validation
 # ===================================================================
+
 
 class TestImages:
     def test_valid_images(self, validator: EbookValidator):
@@ -158,6 +160,7 @@ class TestImages:
 # Link validation
 # ===================================================================
 
+
 class TestLinks:
     def test_valid_internal_links(self, validator: EbookValidator):
         links = [
@@ -204,6 +207,7 @@ class TestLinks:
 # Prohibited elements
 # ===================================================================
 
+
 class TestProhibitedElements:
     def test_no_javascript(self, validator: EbookValidator):
         req = _make_request(has_javascript=False)
@@ -236,6 +240,7 @@ class TestProhibitedElements:
 # Font size
 # ===================================================================
 
+
 class TestFontSize:
     def test_adequate_font_size(self, validator: EbookValidator):
         req = _make_request(min_font_size_pt=12.0)
@@ -267,6 +272,7 @@ class TestFontSize:
 # File size
 # ===================================================================
 
+
 class TestFileSize:
     def test_valid_file_size(self, validator: EbookValidator):
         req = _make_request(file_size_bytes=100 * 1024 * 1024)
@@ -291,6 +297,7 @@ class TestFileSize:
 # ===================================================================
 # Overall status
 # ===================================================================
+
 
 class TestOverallStatus:
     def test_passes_when_all_valid(self, validator: EbookValidator):

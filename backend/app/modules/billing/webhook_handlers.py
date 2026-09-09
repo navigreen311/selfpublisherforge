@@ -55,13 +55,9 @@ async def handle_subscription_upgrade(
     current_period_end = None
 
     if subscription.get("current_period_start"):
-        current_period_start = datetime.fromtimestamp(
-            subscription["current_period_start"], tz=UTC
-        )
+        current_period_start = datetime.fromtimestamp(subscription["current_period_start"], tz=UTC)
     if subscription.get("current_period_end"):
-        current_period_end = datetime.fromtimestamp(
-            subscription["current_period_end"], tz=UTC
-        )
+        current_period_end = datetime.fromtimestamp(subscription["current_period_end"], tz=UTC)
 
     await _update_org(
         db,
@@ -95,22 +91,26 @@ async def handle_subscription_upgrade(
         new_limits = get_plan_limits(new_tier)
         await create_notification(
             db,
-            payload=type('Payload', (), {
-                'user_id': user_id,
-                'org_id': org_id,
-                'type': NotificationType.SUCCESS,
-                'title': f'Upgraded to {new_tier.value.title()} Plan',
-                'message': (
-                    f'Your subscription has been upgraded. You now have access to '
-                    f'{new_limits.max_projects or "unlimited"} projects and '
-                    f'{new_limits.ai_generations_per_day} AI generations per day.'
-                ),
-                'data': {
-                    'tier': new_tier.value,
-                    'max_projects': new_limits.max_projects,
-                    'ai_generations_per_day': new_limits.ai_generations_per_day,
+            payload=type(
+                "Payload",
+                (),
+                {
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "type": NotificationType.SUCCESS,
+                    "title": f"Upgraded to {new_tier.value.title()} Plan",
+                    "message": (
+                        f'Your subscription has been upgraded. You now have access to '
+                        f'{new_limits.max_projects or "unlimited"} projects and '
+                        f'{new_limits.ai_generations_per_day} AI generations per day.'
+                    ),
+                    "data": {
+                        "tier": new_tier.value,
+                        "max_projects": new_limits.max_projects,
+                        "ai_generations_per_day": new_limits.ai_generations_per_day,
+                    },
                 },
-            })(),
+            )(),
             recipient_email=user_email,
         )
 
@@ -142,9 +142,7 @@ async def handle_subscription_downgrade(
     current_period_end = None
 
     if subscription.get("current_period_end"):
-        current_period_end = datetime.fromtimestamp(
-            subscription["current_period_end"], tz=UTC
-        )
+        current_period_end = datetime.fromtimestamp(subscription["current_period_end"], tz=UTC)
 
     # If cancel_at_period_end, keep current tier until period ends
     tier_to_set = old_tier.value if cancel_at_period_end else new_tier.value
@@ -181,7 +179,7 @@ async def handle_subscription_downgrade(
         old_limits = get_plan_limits(old_tier)
         new_limits = get_plan_limits(new_tier)
 
-        message = f'Your subscription will be downgraded to {new_tier.value.title()} plan'
+        message = f"Your subscription will be downgraded to {new_tier.value.title()} plan"
         if cancel_at_period_end and current_period_end:
             message += f' on {current_period_end.strftime("%B %d, %Y")}'
         message += (
@@ -191,18 +189,22 @@ async def handle_subscription_downgrade(
 
         await create_notification(
             db,
-            payload=type('Payload', (), {
-                'user_id': user_id,
-                'org_id': org_id,
-                'type': NotificationType.WARNING,
-                'title': 'Subscription Downgrade Scheduled',
-                'message': message,
-                'data': {
-                    'old_tier': old_tier.value,
-                    'new_tier': new_tier.value,
-                    'effective_date': current_period_end.isoformat() if current_period_end else None,
+            payload=type(
+                "Payload",
+                (),
+                {
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "type": NotificationType.WARNING,
+                    "title": "Subscription Downgrade Scheduled",
+                    "message": message,
+                    "data": {
+                        "old_tier": old_tier.value,
+                        "new_tier": new_tier.value,
+                        "effective_date": current_period_end.isoformat() if current_period_end else None,
+                    },
                 },
-            })(),
+            )(),
             recipient_email=user_email,
         )
 
@@ -294,18 +296,22 @@ async def handle_payment_failure(
 
         await create_notification(
             db,
-            payload=type('Payload', (), {
-                'user_id': user_id,
-                'org_id': org_id,
-                'type': notif_type,
-                'title': title,
-                'message': message,
-                'data': {
-                    'invoice_id': invoice.get("id"),
-                    'attempt_count': attempt_count,
-                    'amount_due': invoice.get("amount_due"),
+            payload=type(
+                "Payload",
+                (),
+                {
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "type": notif_type,
+                    "title": title,
+                    "message": message,
+                    "data": {
+                        "invoice_id": invoice.get("id"),
+                        "attempt_count": attempt_count,
+                        "amount_due": invoice.get("amount_due"),
+                    },
                 },
-            })(),
+            )(),
             recipient_email=user_email,
         )
 
@@ -358,19 +364,23 @@ async def handle_subscription_canceled(
     if user_id:
         await create_notification(
             db,
-            payload=type('Payload', (), {
-                'user_id': user_id,
-                'org_id': org_id,
-                'type': NotificationType.INFO,
-                'title': 'Subscription Canceled',
-                'message': (
-                    'Your subscription has been canceled. Your account has been moved to the Free tier. '
-                    'All your data has been preserved and you can resubscribe at any time.'
-                ),
-                'data': {
-                    'subscription_id': subscription.get("id"),
+            payload=type(
+                "Payload",
+                (),
+                {
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "type": NotificationType.INFO,
+                    "title": "Subscription Canceled",
+                    "message": (
+                        "Your subscription has been canceled. Your account has been moved to the Free tier. "
+                        "All your data has been preserved and you can resubscribe at any time."
+                    ),
+                    "data": {
+                        "subscription_id": subscription.get("id"),
+                    },
                 },
-            })(),
+            )(),
             recipient_email=user_email,
         )
 
@@ -406,17 +416,21 @@ async def handle_trial_will_end(
 
         await create_notification(
             db,
-            payload=type('Payload', (), {
-                'user_id': user_id,
-                'org_id': org_id,
-                'type': NotificationType.WARNING,
-                'title': title,
-                'message': message,
-                'data': {
-                    'days_remaining': days_remaining,
-                    'subscription_id': subscription.get("id"),
+            payload=type(
+                "Payload",
+                (),
+                {
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "type": NotificationType.WARNING,
+                    "title": title,
+                    "message": message,
+                    "data": {
+                        "days_remaining": days_remaining,
+                        "subscription_id": subscription.get("id"),
+                    },
                 },
-            })(),
+            )(),
             recipient_email=user_email,
         )
 
@@ -484,9 +498,7 @@ async def is_event_processed(
     Returns True if the event ID exists in billing_events table.
     """
     result = await db.execute(
-        text(
-            "SELECT 1 FROM billing_events WHERE stripe_event_id = :event_id LIMIT 1"
-        ),
+        text("SELECT 1 FROM billing_events WHERE stripe_event_id = :event_id LIMIT 1"),
         {"event_id": stripe_event_id},
     )
     return result.scalar_one_or_none() is not None

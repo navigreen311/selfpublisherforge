@@ -22,6 +22,7 @@ PREFIX = f"{settings.API_V1_PREFIX}/orgs"
 # Helper Functions
 # ---------------------------------------------------------------------------
 
+
 async def _create_org(db: AsyncSession, name: str = "Test Org") -> Organization:
     """Create a test organization."""
     org = Organization(
@@ -77,6 +78,7 @@ def _auth_headers(token: str) -> dict:
 # ---------------------------------------------------------------------------
 # Unauthenticated Access Tests
 # ---------------------------------------------------------------------------
+
 
 class TestUnauthenticatedAccess:
     """Verify unauthenticated users cannot access organization endpoints."""
@@ -135,6 +137,7 @@ class TestUnauthenticatedAccess:
 # Cross-Organization Access Tests
 # ---------------------------------------------------------------------------
 
+
 class TestCrossOrganizationAccess:
     """Verify users cannot access data from other organizations."""
 
@@ -182,6 +185,7 @@ class TestCrossOrganizationAccess:
 # ---------------------------------------------------------------------------
 # Role-Based Access Control Tests
 # ---------------------------------------------------------------------------
+
 
 class TestRoleBasedAccess:
     """Verify role-based access control on organization endpoints."""
@@ -278,6 +282,7 @@ class TestRoleBasedAccess:
 # ---------------------------------------------------------------------------
 # Authorized Access Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAuthorizedAccess:
     """Verify authorized users can access their organization's data."""

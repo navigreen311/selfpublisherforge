@@ -148,20 +148,16 @@ def generate_safe_zone_heatmap(page_data: dict, trim_size: str) -> dict:
         in_safe = (
             elem_rect["x"] >= safe_rect["x"]
             and elem_rect["y"] >= safe_rect["y"]
-            and elem_rect["x"] + elem_rect["width"]
-            <= safe_rect["x"] + safe_rect["width"]
-            and elem_rect["y"] + elem_rect["height"]
-            <= safe_rect["y"] + safe_rect["height"]
+            and elem_rect["x"] + elem_rect["width"] <= safe_rect["x"] + safe_rect["width"]
+            and elem_rect["y"] + elem_rect["height"] <= safe_rect["y"] + safe_rect["height"]
         )
 
         in_gutter = _rect_overlap(elem_rect, gutter_rect)
         in_bleed = not (
             elem_rect["x"] >= zones["trim_line"]["x"]
             and elem_rect["y"] >= zones["trim_line"]["y"]
-            and elem_rect["x"] + elem_rect["width"]
-            <= zones["trim_line"]["x"] + zones["trim_line"]["width"]
-            and elem_rect["y"] + elem_rect["height"]
-            <= zones["trim_line"]["y"] + zones["trim_line"]["height"]
+            and elem_rect["x"] + elem_rect["width"] <= zones["trim_line"]["x"] + zones["trim_line"]["width"]
+            and elem_rect["y"] + elem_rect["height"] <= zones["trim_line"]["y"] + zones["trim_line"]["height"]
         )
 
         zone = "safe" if in_safe else "gutter" if in_gutter else "bleed" if in_bleed else "trim"
@@ -186,8 +182,7 @@ def generate_safe_zone_heatmap(page_data: dict, trim_size: str) -> dict:
                         f"and may be cut off or hidden in the fold."
                     ),
                     "suggestion": (
-                        f"Move {elem.get('type', 'element')} at least "
-                        f"{_SAFE_MARGIN}in from the trim edge."
+                        f"Move {elem.get('type', 'element')} at least " f"{_SAFE_MARGIN}in from the trim edge."
                     ),
                 }
             )
@@ -273,11 +268,7 @@ def check_gutter_collision(page_data: dict, spine_width: float) -> list[dict]:
                 "min_safe_distance_inches": round(min_safe_px / dpi, 3),
                 "collision": is_collision,
                 "severity": (
-                    "critical"
-                    if is_collision and elem_type == "face"
-                    else "warning"
-                    if is_collision
-                    else "ok"
+                    "critical" if is_collision and elem_type == "face" else "warning" if is_collision else "ok"
                 ),
                 "auto_shift_suggestion": (
                     {
@@ -374,8 +365,7 @@ def auto_reflow(book_data: dict, target_trim_size: str) -> dict:
 
                 if scaled_font < 12:
                     warnings.append(
-                        f"Page {page_idx + 1}: text font scaled to "
-                        f"{scaled_font}px, clamped to 12px minimum."
+                        f"Page {page_idx + 1}: text font scaled to " f"{scaled_font}px, clamped to 12px minimum."
                     )
 
             # Safe-zone check on reflowed element
@@ -383,9 +373,7 @@ def auto_reflow(book_data: dict, target_trim_size: str) -> dict:
             if new_elem["x"] < safe_margin_px or new_elem["y"] < safe_margin_px:
                 new_elem["x"] = max(new_elem["x"], round(safe_margin_px))
                 new_elem["y"] = max(new_elem["y"], round(safe_margin_px))
-                warnings.append(
-                    f"Page {page_idx + 1}: {elem_type} repositioned into safe zone."
-                )
+                warnings.append(f"Page {page_idx + 1}: {elem_type} repositioned into safe zone.")
 
             new_elements.append(new_elem)
             changes_count += 1

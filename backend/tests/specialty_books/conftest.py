@@ -3,6 +3,7 @@
 Uses an in-memory SQLite database and does NOT import app.main,
 avoiding the chain of router imports that may fail on feature branches.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -18,6 +19,7 @@ from sqlalchemy.ext.compiler import compiles
 # ---------------------------------------------------------------------------
 # SQLite type compilation overrides (must be registered before create_all)
 # ---------------------------------------------------------------------------
+
 
 @compiles(JSONB, "sqlite")
 def _jsonb_sqlite(type_, compiler, **kw):
@@ -49,6 +51,7 @@ except (ImportError, ModuleNotFoundError):
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def org_id() -> uuid.UUID:

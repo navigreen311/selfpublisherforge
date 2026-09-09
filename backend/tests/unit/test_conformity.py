@@ -52,6 +52,7 @@ VERY_DIFFERENT_TEXT = (
 # Build a reference fingerprint
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def reference_fingerprint() -> VoiceFingerprint:
     seg = ingest_text(REFERENCE_TEXT)
@@ -63,8 +64,8 @@ def reference_fingerprint() -> VoiceFingerprint:
 # Similarity helper tests
 # ===================================================================
 
-class TestSimilarityHelpers:
 
+class TestSimilarityHelpers:
     def test_ratio_similarity_identical(self):
         assert _ratio_similarity(0.5, 0.5) == 1.0
 
@@ -98,8 +99,8 @@ class TestSimilarityHelpers:
 # Conformity check tests
 # ===================================================================
 
-class TestConformityCheck:
 
+class TestConformityCheck:
     def test_identical_text_scores_high(self, reference_fingerprint: VoiceFingerprint):
         """Checking the reference text against its own fingerprint should score very high."""
         result = check_conformity(reference_fingerprint, REFERENCE_TEXT)
@@ -154,23 +155,19 @@ class TestConformityCheck:
 # Edge case tests
 # ===================================================================
 
-class TestConformityEdgeCases:
 
+class TestConformityEdgeCases:
     def test_very_short_text(self, reference_fingerprint: VoiceFingerprint):
         """Even very short text should return a valid result."""
         result = check_conformity(reference_fingerprint, "Hello there my friend.")
         assert 0.0 <= result.overall_score <= 100.0
 
-    def test_text_with_no_dialogue_against_no_dialogue_profile(
-        self, reference_fingerprint: VoiceFingerprint
-    ):
+    def test_text_with_no_dialogue_against_no_dialogue_profile(self, reference_fingerprint: VoiceFingerprint):
         """Both reference and sample have no dialogue — dialogue score should be high."""
         result = check_conformity(reference_fingerprint, SIMILAR_TEXT)
         assert result.dialogue_score >= 80.0
 
-    def test_text_with_dialogue_against_no_dialogue_profile(
-        self, reference_fingerprint: VoiceFingerprint
-    ):
+    def test_text_with_dialogue_against_no_dialogue_profile(self, reference_fingerprint: VoiceFingerprint):
         """Dialogue text against non-dialogue profile."""
         dialogue_text = (
             '"Hello," she said. "How are you?" He replied, "I am fine." '

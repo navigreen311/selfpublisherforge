@@ -30,6 +30,7 @@ router = APIRouter()
 # GET /plans -- public (no auth required)
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/plans",
     response_model=list[PlanInfo],
@@ -44,6 +45,7 @@ async def list_plans() -> list[PlanInfo]:
 # ---------------------------------------------------------------------------
 # GET /subscription
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/subscription",
@@ -62,6 +64,7 @@ async def get_subscription(
 # ---------------------------------------------------------------------------
 # POST /subscribe -- creates a Stripe Checkout session
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/subscribe",
@@ -87,6 +90,7 @@ async def create_checkout(
 # POST /portal -- creates a Stripe billing portal session
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/portal",
     response_model=PortalResponse,
@@ -110,6 +114,7 @@ async def create_portal(
 # POST /webhook -- Stripe webhook handler (no auth, uses signature)
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/webhook",
     summary="Stripe webhook",
@@ -129,6 +134,7 @@ async def stripe_webhook(
 # GET /usage
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/usage",
     response_model=UsageStats,
@@ -146,6 +152,7 @@ async def get_usage(
 # ---------------------------------------------------------------------------
 # GET /invoices
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/invoices",

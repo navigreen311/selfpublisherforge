@@ -24,6 +24,7 @@ from app.modules.realtime.router import _authenticate_ws
 # Tests — Valid Token Authentication
 # ---------------------------------------------------------------------------
 
+
 def test_authenticate_ws_with_valid_token() -> None:
     """Test valid JWT token is accepted."""
     token = create_access_token(
@@ -65,6 +66,7 @@ def test_authenticate_ws_with_minimal_claims() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Token Rejection Cases
 # ---------------------------------------------------------------------------
+
 
 def test_authenticate_ws_rejects_missing_token() -> None:
     """Test missing token raises ValueError."""
@@ -124,6 +126,7 @@ def test_authenticate_ws_rejects_wrong_signature() -> None:
 # Tests — WebSocket Closure on Auth Failure
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_ws_handler_closes_on_missing_token() -> None:
     """Test WebSocket handler closes connection when token missing."""
@@ -134,10 +137,7 @@ async def test_ws_handler_closes_on_missing_token() -> None:
 
     await _ws_handler(mock_ws, WSChannel.WRITING, "book-1", token=None)
 
-    mock_ws.close.assert_called_once_with(
-        code=status.WS_1008_POLICY_VIOLATION,
-        reason="Missing authentication token"
-    )
+    mock_ws.close.assert_called_once_with(code=status.WS_1008_POLICY_VIOLATION, reason="Missing authentication token")
 
 
 @pytest.mark.asyncio
@@ -177,6 +177,7 @@ async def test_ws_handler_closes_on_expired_token() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Token Payload Validation
 # ---------------------------------------------------------------------------
+
 
 def test_authenticate_ws_preserves_all_claims() -> None:
     """Test all token claims are preserved in payload."""
@@ -227,6 +228,7 @@ def test_authenticate_ws_with_role() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Edge Cases
 # ---------------------------------------------------------------------------
+
 
 def test_authenticate_ws_with_unicode_subject() -> None:
     """Test token with unicode characters in subject."""
@@ -293,6 +295,7 @@ def test_authenticate_ws_with_jwt_injection_attempt() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Token Refresh During Session (Future Enhancement)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_token_refresh_message_handling() -> None:

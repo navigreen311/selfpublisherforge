@@ -28,14 +28,15 @@ OPPOSITE_WALL = {
 
 # Direction deltas: (row_delta, col_delta, wall_to_remove)
 DIRECTIONS = [
-    (-1, 0, WALL_TOP),     # Up
-    (0, 1, WALL_RIGHT),    # Right
-    (1, 0, WALL_BOTTOM),   # Down
-    (0, -1, WALL_LEFT),    # Left
+    (-1, 0, WALL_TOP),  # Up
+    (0, 1, WALL_RIGHT),  # Right
+    (1, 0, WALL_BOTTOM),  # Down
+    (0, -1, WALL_LEFT),  # Left
 ]
 
 
 # --- Shape boundary functions ---
+
 
 def _rect_mask(row: int, col: int, width: int, height: int) -> bool:
     """Rectangle: all cells are valid."""
@@ -84,7 +85,7 @@ def _star_mask(row: int, col: int, width: int, height: int) -> bool:
     # Angle to nearest star point
     sector = 2 * math.pi / n
     half_sector = sector / 2
-    relative_angle = ((angle + math.pi / 2) % sector)
+    relative_angle = (angle + math.pi / 2) % sector
 
     if relative_angle < half_sector:
         t = relative_angle / half_sector
@@ -100,7 +101,7 @@ def _christmas_tree_mask(row: int, col: int, width: int, height: int) -> bool:
     cx = (width - 1) / 2.0
     # Normalize
     ny = row / (height - 1)  # 0=top, 1=bottom
-    nx = col / (width - 1)   # 0=left, 1=right
+    nx = col / (width - 1)  # 0=left, 1=right
 
     # Trunk: bottom 15%, center 20% width
     if ny > 0.85:
@@ -369,18 +370,13 @@ def generate_maze(
         random.seed(seed)
 
     if shape not in SHAPE_MASKS:
-        raise ValueError(
-            f"Unknown shape '{shape}'. "
-            f"Options: {', '.join(SHAPE_MASKS.keys())}"
-        )
+        raise ValueError(f"Unknown shape '{shape}'. " f"Options: {', '.join(SHAPE_MASKS.keys())}")
 
     walls, active = _build_grid(width, height, shape)
     visited = [[False] * width for _ in range(height)]
 
     # Find a starting cell within the active region
-    active_cells = [
-        (r, c) for r in range(height) for c in range(width) if active[r][c]
-    ]
+    active_cells = [(r, c) for r in range(height) for c in range(width) if active[r][c]]
     if not active_cells:
         raise ValueError("No active cells for the given shape and dimensions")
 
@@ -410,12 +406,7 @@ def generate_maze(
                     continue
                 for dr, dc, wall in DIRECTIONS:
                     nr, nc = r + dr, c + dc
-                    if (
-                        0 <= nr < height
-                        and 0 <= nc < width
-                        and active[nr][nc]
-                        and (walls[r][c] & wall)
-                    ):
+                    if 0 <= nr < height and 0 <= nc < width and active[nr][nc] and (walls[r][c] & wall):
                         # Check if they're in different regions
                         # Simple check: try removing wall and solving
                         walls[r][c] &= ~wall
@@ -451,9 +442,7 @@ def generate_maze(
         "exit": list(exit_cell),
         "shape": shape,
     }
-    content_hash = hashlib.sha256(
-        json.dumps(content_data, sort_keys=True).encode()
-    ).hexdigest()
+    content_hash = hashlib.sha256(json.dumps(content_data, sort_keys=True).encode()).hexdigest()
 
     return {
         "grid": grid_data,
@@ -576,8 +565,7 @@ def render_to_svg(
                 x = padding + c * cell_size
                 y = padding + r * cell_size
                 parts.append(
-                    f'<rect x="{x}" y="{y}" width="{cell_size}" height="{cell_size}" '
-                    f'fill="#EEEEEE" stroke="none"/>'
+                    f'<rect x="{x}" y="{y}" width="{cell_size}" height="{cell_size}" ' f'fill="#EEEEEE" stroke="none"/>'
                 )
                 continue
 
@@ -613,10 +601,7 @@ def render_to_svg(
     ex = padding + ec * cell_size + cell_size // 2
     ey = padding + er * cell_size + cell_size // 2
     marker_r = cell_size // 4
-    parts.append(
-        f'<circle cx="{ex}" cy="{ey}" r="{marker_r}" '
-        f'fill="{entrance_color}" opacity="0.8"/>'
-    )
+    parts.append(f'<circle cx="{ex}" cy="{ey}" r="{marker_r}" ' f'fill="{entrance_color}" opacity="0.8"/>')
     parts.append(
         f'<text x="{ex}" y="{ey + 4}" text-anchor="middle" '
         f'font-family="Arial" font-size="{marker_r}" '
@@ -626,10 +611,7 @@ def render_to_svg(
     xr, xc = exit_cell
     xx = padding + xc * cell_size + cell_size // 2
     xy = padding + xr * cell_size + cell_size // 2
-    parts.append(
-        f'<circle cx="{xx}" cy="{xy}" r="{marker_r}" '
-        f'fill="{exit_color}" opacity="0.8"/>'
-    )
+    parts.append(f'<circle cx="{xx}" cy="{xy}" r="{marker_r}" ' f'fill="{exit_color}" opacity="0.8"/>')
     parts.append(
         f'<text x="{xx}" y="{xy + 4}" text-anchor="middle" '
         f'font-family="Arial" font-size="{marker_r}" '

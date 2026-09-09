@@ -2,6 +2,7 @@
 
 Covers schemas, service helpers, and router configuration.
 """
+
 from __future__ import annotations
 
 import uuid

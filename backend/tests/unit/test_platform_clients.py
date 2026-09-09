@@ -55,6 +55,7 @@ skip_d2d = pytest.mark.skipif(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_httpx_response(
     status_code: int = 200,
     json_data: dict | list | None = None,
@@ -174,9 +175,7 @@ class TestIngramSparkFetchRoyalties:
         client = IngramSparkClient(api_key="k", api_secret="s")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=payload)
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -193,9 +192,7 @@ class TestIngramSparkFetchRoyalties:
         client = IngramSparkClient(api_key="k", api_secret="s")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=payload)
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -211,9 +208,7 @@ class TestIngramSparkFetchRoyalties:
         client = IngramSparkClient(api_key="k", api_secret="s")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=[])
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -245,9 +240,10 @@ class TestIngramSparkRetry:
                 return fail_resp
             return ok_resp
 
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect
-        ), patch("asyncio.sleep", new_callable=AsyncMock):
+        with (
+            patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -274,9 +270,10 @@ class TestIngramSparkRetry:
                 return fail_resp
             return ok_resp
 
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect
-        ), patch("asyncio.sleep", new_callable=AsyncMock):
+        with (
+            patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -295,9 +292,10 @@ class TestIngramSparkAuthError:
         client = IngramSparkClient(api_key="k", api_secret="s")
 
         mock_resp = _make_httpx_response(status_code=401, text="Unauthorized")
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ), pytest.raises(IngramSparkError) as exc_info:
+        with (
+            patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp),
+            pytest.raises(IngramSparkError) as exc_info,
+        ):
             await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -375,9 +373,7 @@ class TestD2DFetchRoyalties:
         client = D2DClient(api_key="k")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=payload)
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -393,9 +389,7 @@ class TestD2DFetchRoyalties:
         client = D2DClient(api_key="k")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=[])
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -410,9 +404,7 @@ class TestD2DFetchRoyalties:
         client = D2DClient(api_key="k")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=payload)
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -432,9 +424,7 @@ class TestD2DFetchBookList:
         client = D2DClient(api_key="k")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=payload)
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_book_list()
 
         assert isinstance(result, list)
@@ -447,9 +437,7 @@ class TestD2DFetchBookList:
         client = D2DClient(api_key="k")
 
         mock_resp = _make_httpx_response(status_code=200, json_data=payload)
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ):
+        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp):
             result = await client.fetch_book_list()
 
         for book in result:
@@ -479,9 +467,10 @@ class TestD2DRetry:
                 return fail_resp
             return ok_resp
 
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect
-        ), patch("asyncio.sleep", new_callable=AsyncMock):
+        with (
+            patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -508,9 +497,10 @@ class TestD2DRetry:
                 return fail_resp
             return ok_resp
 
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect
-        ), patch("asyncio.sleep", new_callable=AsyncMock):
+        with (
+            patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, side_effect=_side_effect),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
             result = await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -529,9 +519,10 @@ class TestD2DAuthError:
         client = D2DClient(api_key="k")
 
         mock_resp = _make_httpx_response(status_code=401, text="Unauthorized")
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ), pytest.raises(D2DError) as exc_info:
+        with (
+            patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp),
+            pytest.raises(D2DError) as exc_info,
+        ):
             await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),
@@ -545,9 +536,10 @@ class TestD2DAuthError:
         client = D2DClient(api_key="k")
 
         mock_resp = _make_httpx_response(status_code=403, text="Forbidden")
-        with patch.object(
-            httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp
-        ), pytest.raises(D2DError) as exc_info:
+        with (
+            patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock, return_value=mock_resp),
+            pytest.raises(D2DError) as exc_info,
+        ):
             await client.fetch_royalties(
                 start_date=date(2024, 1, 1),
                 end_date=date(2024, 1, 31),

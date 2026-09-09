@@ -118,6 +118,7 @@ async def client(db_session: AsyncSession):
 # POST /analyze
 # ===========================================================================
 
+
 class TestAnalyzeListing:
     """Tests for POST /api/v1/product-page/analyze."""
 
@@ -180,6 +181,7 @@ class TestAnalyzeListing:
 # ===========================================================================
 # POST /blurb/generate
 # ===========================================================================
+
 
 class TestBlurbGenerate:
     """Tests for POST /api/v1/product-page/blurb/generate."""
@@ -248,6 +250,7 @@ class TestBlurbGenerate:
 # POST /blurb/ab-test  &  GET /blurb/ab-test/{id}
 # ===========================================================================
 
+
 class TestABTest:
     """Tests for A/B test creation and retrieval."""
 
@@ -305,6 +308,7 @@ class TestABTest:
 # ===========================================================================
 # POST /look-inside/analyze
 # ===========================================================================
+
 
 class TestLookInsideAnalysis:
     """Tests for POST /api/v1/product-page/look-inside/analyze."""
@@ -380,6 +384,7 @@ class TestLookInsideAnalysis:
 # POST /mobile-check
 # ===========================================================================
 
+
 class TestMobileCheck:
     """Tests for POST /api/v1/product-page/mobile-check."""
 
@@ -435,6 +440,7 @@ class TestMobileCheck:
 # ===========================================================================
 # GET /scores/{book_id}
 # ===========================================================================
+
 
 class TestConversionScores:
     """Tests for GET /api/v1/product-page/scores/{book_id}."""

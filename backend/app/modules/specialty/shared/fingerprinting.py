@@ -11,6 +11,7 @@ types:
 
 Blueprint refs: 7.1, 7.3, 7.4
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -29,6 +30,7 @@ from app.modules.specialty.models.shared import ContentFingerprint
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class FingerprintResult:
@@ -53,6 +55,7 @@ class DuplicateGuardrailResult:
 # ---------------------------------------------------------------------------
 # Internal fingerprint generators
 # ---------------------------------------------------------------------------
+
 
 def _average_hash(image_bytes: bytes, hash_size: int = 8) -> str:
     """Compute a simplified average-hash (aHash) for an image.
@@ -128,6 +131,7 @@ def _ngram_fingerprint(text: str, n: int = 3) -> str:
 # Comparison helpers
 # ---------------------------------------------------------------------------
 
+
 def _hamming_distance(hex_a: str, hex_b: str) -> float:
     """Normalised Hamming distance between two hex hash strings (0.0-1.0).
 
@@ -173,6 +177,7 @@ def _cosine_similarity(vec_a: dict[str, int], vec_b: dict[str, int]) -> float:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def generate_fingerprint(
     content_type: str,
     content_data: Any,
@@ -213,9 +218,7 @@ def generate_fingerprint(
     if content_type == "word_lists":
         vec = _jaccard_vector(content_data)
         # Use a hash of the sorted word list as the canonical fingerprint
-        fp = hashlib.sha256(
-            json.dumps(vec, sort_keys=True).encode()
-        ).hexdigest()
+        fp = hashlib.sha256(json.dumps(vec, sort_keys=True).encode()).hexdigest()
         return FingerprintResult(
             content_type=content_type,
             fingerprint=fp,
@@ -242,10 +245,7 @@ def compare_fingerprints(
     is chosen based on the content type of *fp1*.
     """
     if fp1.content_type != fp2.content_type:
-        raise ValueError(
-            f"Cannot compare different content types: "
-            f"{fp1.content_type!r} vs {fp2.content_type!r}"
-        )
+        raise ValueError(f"Cannot compare different content types: " f"{fp1.content_type!r} vs {fp2.content_type!r}")
 
     if fp1.content_type == "images":
         # Hamming distance gives dissimilarity; invert for similarity
@@ -354,26 +354,19 @@ def check_anti_duplicate_guardrails(
         threshold = 0.85
         if unique_ratio < threshold:
             violations.append(
-                f"Coloring book has {unique_ratio:.0%} unique pages "
-                f"(minimum {threshold:.0%} required)"
+                f"Coloring book has {unique_ratio:.0%} unique pages " f"(minimum {threshold:.0%} required)"
             )
     elif book_type == "puzzle":
         threshold = 1.0
         if unique_ratio < threshold:
-            violations.append(
-                f"Puzzle book has {unique_ratio:.0%} unique grids "
-                f"(100% unique grids required)"
-            )
+            violations.append(f"Puzzle book has {unique_ratio:.0%} unique grids " f"(100% unique grids required)")
     else:
         # Children's books -- no specific page uniqueness threshold
         threshold = 0.0
 
     # Word overlap check (applies to all types with word-based content)
     if word_overlap_ratio > 0.30:
-        violations.append(
-            f"Word overlap between volumes is {word_overlap_ratio:.0%} "
-            f"(maximum 30% allowed)"
-        )
+        violations.append(f"Word overlap between volumes is {word_overlap_ratio:.0%} " f"(maximum 30% allowed)")
 
     passed = len(violations) == 0
     return DuplicateGuardrailResult(
@@ -387,6 +380,7 @@ def check_anti_duplicate_guardrails(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _row_to_fingerprint_result(row: ContentFingerprint) -> FingerprintResult | None:
     """Convert a DB row back into a FingerprintResult for comparison."""
@@ -412,9 +406,7 @@ def _row_to_fingerprint_result(row: ContentFingerprint) -> FingerprintResult | N
         if not row.jaccard_vector:
             return None
         words = row.jaccard_vector.get("words", [])
-        fp = hashlib.sha256(
-            json.dumps(row.jaccard_vector, sort_keys=True).encode()
-        ).hexdigest()
+        fp = hashlib.sha256(json.dumps(row.jaccard_vector, sort_keys=True).encode()).hexdigest()
         return FingerprintResult(
             content_type=ct,
             fingerprint=fp,

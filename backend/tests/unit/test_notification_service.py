@@ -319,9 +319,7 @@ class TestMaybeSendEmail:
             "app.modules.notifications.service.send_template_email",
             new_callable=AsyncMock,
         ) as mock_send:
-            await create_notification(
-                mock_db, payload, recipient_email="user@example.com"
-            )
+            await create_notification(mock_db, payload, recipient_email="user@example.com")
             mock_send.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -356,9 +354,7 @@ class TestMaybeSendEmail:
             side_effect=smtplib.SMTPException("Connection failed"),
         ):
             # Should not raise -- email errors are best-effort
-            notification = await create_notification(
-                mock_db, payload, recipient_email="user@example.com"
-            )
+            notification = await create_notification(mock_db, payload, recipient_email="user@example.com")
             assert notification.title == "Done"
 
     @pytest.mark.asyncio
@@ -391,9 +387,7 @@ class TestMaybeSendEmail:
             new_callable=AsyncMock,
             side_effect=ValueError("bad template param"),
         ):
-            notification = await create_notification(
-                mock_db, payload, recipient_email="user@example.com"
-            )
+            notification = await create_notification(mock_db, payload, recipient_email="user@example.com")
             assert notification.title == "Published"
 
 
@@ -527,9 +521,7 @@ class TestPreferenceService:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        enabled = await is_preference_enabled(
-            mock_db, uuid.uuid4(), NotificationChannel.EMAIL, "marketing"
-        )
+        enabled = await is_preference_enabled(mock_db, uuid.uuid4(), NotificationChannel.EMAIL, "marketing")
         assert enabled is True
 
     @pytest.mark.asyncio
@@ -542,9 +534,7 @@ class TestPreferenceService:
         mock_result.scalar_one_or_none.return_value = False
         mock_db.execute.return_value = mock_result
 
-        enabled = await is_preference_enabled(
-            mock_db, uuid.uuid4(), NotificationChannel.EMAIL, "marketing"
-        )
+        enabled = await is_preference_enabled(mock_db, uuid.uuid4(), NotificationChannel.EMAIL, "marketing")
         assert enabled is False
 
     @pytest.mark.asyncio
@@ -557,9 +547,7 @@ class TestPreferenceService:
         mock_result.scalar_one_or_none.return_value = True
         mock_db.execute.return_value = mock_result
 
-        enabled = await is_preference_enabled(
-            mock_db, uuid.uuid4(), NotificationChannel.EMAIL, "team_invite"
-        )
+        enabled = await is_preference_enabled(mock_db, uuid.uuid4(), NotificationChannel.EMAIL, "team_invite")
         assert enabled is True
 
 
@@ -585,9 +573,7 @@ class TestListNotifications:
         mock_result.scalars.return_value = mock_scalars
         mock_db.execute.return_value = mock_result
 
-        result_items, next_cursor, has_more = await list_notifications(
-            mock_db, uuid.uuid4(), limit=20
-        )
+        result_items, next_cursor, has_more = await list_notifications(mock_db, uuid.uuid4(), limit=20)
         assert len(result_items) == 3
         assert has_more is False
         assert next_cursor is None
@@ -607,9 +593,7 @@ class TestListNotifications:
         mock_result.scalars.return_value = mock_scalars
         mock_db.execute.return_value = mock_result
 
-        result_items, next_cursor, has_more = await list_notifications(
-            mock_db, uuid.uuid4(), limit=3
-        )
+        result_items, next_cursor, has_more = await list_notifications(mock_db, uuid.uuid4(), limit=3)
         assert len(result_items) == 3
         assert has_more is True
         assert next_cursor is not None
@@ -632,9 +616,7 @@ class TestDirectEmailHelpers:
             new_callable=AsyncMock,
         ) as mock_send:
             mock_send.return_value = True
-            result = await send_welcome_email(
-                "user@example.com", name="Alice", dashboard_url="https://app.test"
-            )
+            result = await send_welcome_email("user@example.com", name="Alice", dashboard_url="https://app.test")
             assert result is True
             mock_send.assert_awaited_once()
             call_kwargs = mock_send.call_args.kwargs
@@ -773,9 +755,20 @@ class TestBuildEmail:
 
     def test_default_context_has_all_common_keys(self):
         """_DEFAULT_CONTEXT should provide fallback values for common placeholders."""
-        required_keys = {"name", "dashboard_url", "reset_url", "invite_url",
-                         "download_url", "preferences_url", "org_name", "role",
-                         "report_name", "expiry_hours", "expiry_days", "year"}
+        required_keys = {
+            "name",
+            "dashboard_url",
+            "reset_url",
+            "invite_url",
+            "download_url",
+            "preferences_url",
+            "org_name",
+            "role",
+            "report_name",
+            "expiry_hours",
+            "expiry_days",
+            "year",
+        }
         assert required_keys.issubset(set(_DEFAULT_CONTEXT.keys()))
 
     def test_wrap_template_returns_html_string(self):
@@ -847,9 +840,7 @@ class TestSendEmailSMTP:
         mock_settings.return_value = settings
 
         mock_server = MagicMock()
-        mock_server.login.side_effect = smtplib.SMTPAuthenticationError(
-            535, b"Authentication failed"
-        )
+        mock_server.login.side_effect = smtplib.SMTPAuthenticationError(535, b"Authentication failed")
         mock_smtp_cls.return_value.__enter__ = MagicMock(return_value=mock_server)
         mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
 

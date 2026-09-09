@@ -203,13 +203,17 @@ def batch_notification_delivery_task(
         except (KeyError, TypeError) as exc:
             logger.error(
                 "Invalid notification payload for user %s: %s",
-                entry.get("user_id"), exc, exc_info=True,
+                entry.get("user_id"),
+                exc,
+                exc_info=True,
             )
             failed += 1
         except (ConnectionError, OSError) as exc:
             logger.error(
                 "Broker connection error queueing notification for user %s: %s",
-                entry.get("user_id"), exc, exc_info=True,
+                entry.get("user_id"),
+                exc,
+                exc_info=True,
             )
             failed += 1
 

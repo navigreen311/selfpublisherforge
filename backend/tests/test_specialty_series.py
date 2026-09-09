@@ -109,17 +109,21 @@ async def test_create_series_with_branding():
         mock_instance = _make_series_obj()
         MockSeries.return_value = mock_instance
 
-        result = await create_series(db, ORG_ID, {
-            "name": "Animal Adventures",
-            "book_type": "coloring",
-            "naming_format": "{Series Name} Vol. {N}: {Subtitle}",
-            "branding_config": {
-                "title_font": "Montserrat",
-                "volume_badge_style": "circle",
-                "spine_layout": "horizontal",
+        result = await create_series(
+            db,
+            ORG_ID,
+            {
+                "name": "Animal Adventures",
+                "book_type": "coloring",
+                "naming_format": "{Series Name} Vol. {N}: {Subtitle}",
+                "branding_config": {
+                    "title_font": "Montserrat",
+                    "volume_badge_style": "circle",
+                    "spine_layout": "horizontal",
+                },
+                "branding_locked": False,
             },
-            "branding_locked": False,
-        })
+        )
 
     assert result["name"] == "Animal Adventures"
     assert result["branding_config"]["title_font"] == "Montserrat"
@@ -139,9 +143,14 @@ async def test_branding_lock_prevents_changes():
     db.execute = AsyncMock(return_value=_mock_scalar_one_or_none(locked_series))
 
     with pytest.raises(ValueError, match="Branding is locked"):
-        await update_series_branding(db, SERIES_ID, ORG_ID, {
-            "title_font": "NewFont",
-        })
+        await update_series_branding(
+            db,
+            SERIES_ID,
+            ORG_ID,
+            {
+                "title_font": "NewFont",
+            },
+        )
 
 
 # ── 3. Coherence Check Detects Inconsistencies ──────────────────────────────
@@ -227,15 +236,22 @@ async def test_back_matter_generates_all_types():
         MockBM.return_value = mock_record
 
         templates = [
-            {"template_type": "also_in_series", "series_name": "My Series", "volumes": [
-                {"title": "Vol 1"}, {"title": "Vol 2"},
-            ]},
-            {"template_type": "about_series", "series_name": "My Series",
-             "series_description": "A great series about animals."},
+            {
+                "template_type": "also_in_series",
+                "series_name": "My Series",
+                "volumes": [
+                    {"title": "Vol 1"},
+                    {"title": "Vol 2"},
+                ],
+            },
+            {
+                "template_type": "about_series",
+                "series_name": "My Series",
+                "series_description": "A great series about animals.",
+            },
             {"template_type": "email_cta", "cta_url": "https://example.com/signup"},
             {"template_type": "review_request"},
-            {"template_type": "about_author", "author_name": "Jane Doe",
-             "author_bio": "Jane writes coloring books."},
+            {"template_type": "about_author", "author_name": "Jane Doe", "author_bio": "Jane writes coloring books."},
         ]
 
         result = await generate_back_matter(db, "coloring", BOOK_ID_1, ORG_ID, templates)
@@ -297,15 +313,19 @@ async def test_bundle_combines_volumes():
         mock_bundle.created_at = datetime(2026, 1, 1, tzinfo=UTC)
         MockBundle.return_value = mock_bundle
 
-        result = await create_bundle(db, ORG_ID, {
-            "title": "Animals Complete Collection",
-            "book_type": "coloring",
-            "volume_ids": [BOOK_ID_1, BOOK_ID_2],
-            "volume_page_counts": [
-                {"title": "Animals Vol. 1", "page_count": 30},
-                {"title": "Animals Vol. 2", "page_count": 30},
-            ],
-        })
+        result = await create_bundle(
+            db,
+            ORG_ID,
+            {
+                "title": "Animals Complete Collection",
+                "book_type": "coloring",
+                "volume_ids": [BOOK_ID_1, BOOK_ID_2],
+                "volume_page_counts": [
+                    {"title": "Animals Vol. 1", "page_count": 30},
+                    {"title": "Animals Vol. 2", "page_count": 30},
+                ],
+            },
+        )
 
     assert result["title"] == "Animals Complete Collection"
     assert result["total_pages"] == 61
@@ -338,16 +358,20 @@ async def test_bundle_section_dividers():
 
         MockBundle.side_effect = capture_init
 
-        await create_bundle(db, ORG_ID, {
-            "title": "Big Bundle",
-            "book_type": "puzzle",
-            "volume_ids": [BOOK_ID_1, BOOK_ID_2],
-            "volume_page_counts": [
-                {"title": "Puzzles Vol. 1", "page_count": 50},
-                {"title": "Puzzles Vol. 2", "page_count": 50},
-            ],
-            "config": {"combined_answers": True},
-        })
+        await create_bundle(
+            db,
+            ORG_ID,
+            {
+                "title": "Big Bundle",
+                "book_type": "puzzle",
+                "volume_ids": [BOOK_ID_1, BOOK_ID_2],
+                "volume_page_counts": [
+                    {"title": "Puzzles Vol. 1", "page_count": 50},
+                    {"title": "Puzzles Vol. 2", "page_count": 50},
+                ],
+                "config": {"combined_answers": True},
+            },
+        )
 
     assert len(captured_config["section_dividers"]) == 1
     assert captured_config["section_dividers"][0]["title"] == "Puzzles Vol. 2"
@@ -369,10 +393,15 @@ async def test_isbn_add_to_pool():
         mock_record.status = "available"
         MockISBN.return_value = mock_record
 
-        result = await manage_isbn(db, ORG_ID, "add_to_pool", {
-            "isbns": ["9781234567897"],
-            "publisher_name": "Green Companies LLC",
-        })
+        result = await manage_isbn(
+            db,
+            ORG_ID,
+            "add_to_pool",
+            {
+                "isbns": ["9781234567897"],
+                "publisher_name": "Green Companies LLC",
+            },
+        )
 
     assert result["count"] == 1
     assert result["added"][0]["isbn"] == "9781234567897"
@@ -393,11 +422,16 @@ async def test_isbn_assignment():
 
     db.execute = AsyncMock(return_value=_mock_scalar_one_or_none(isbn_record))
 
-    result = await manage_isbn(db, ORG_ID, "assign", {
-        "isbn": "9781234567897",
-        "book_type": "coloring",
-        "book_id": BOOK_ID_1,
-    })
+    result = await manage_isbn(
+        db,
+        ORG_ID,
+        "assign",
+        {
+            "isbn": "9781234567897",
+            "book_type": "coloring",
+            "book_id": BOOK_ID_1,
+        },
+    )
 
     assert result["isbn"] == "9781234567897"
     assert result["status"] == "assigned"
@@ -449,7 +483,12 @@ async def test_kdp_preflight_pass():
         MockPF.return_value = mock_pf
 
         result = await run_distributor_preflight(
-            db, "coloring", BOOK_ID_1, ORG_ID, "kdp", page_count=30,
+            db,
+            "coloring",
+            BOOK_ID_1,
+            ORG_ID,
+            "kdp",
+            page_count=30,
         )
 
     assert result["distributor"] == "kdp"
@@ -469,7 +508,12 @@ async def test_kdp_preflight_fail_page_count():
         MockPF.return_value = mock_pf
 
         result = await run_distributor_preflight(
-            db, "coloring", BOOK_ID_1, ORG_ID, "kdp", page_count=10,
+            db,
+            "coloring",
+            BOOK_ID_1,
+            ORG_ID,
+            "kdp",
+            page_count=10,
         )
 
     assert result["status"] == "FAILED"
@@ -492,7 +536,12 @@ async def test_ingram_preflight_has_pdfx1a_check():
         MockPF.return_value = mock_pf
 
         result = await run_distributor_preflight(
-            db, "coloring", BOOK_ID_1, ORG_ID, "ingram_spark", page_count=50,
+            db,
+            "coloring",
+            BOOK_ID_1,
+            ORG_ID,
+            "ingram_spark",
+            page_count=50,
         )
 
     check_names = [c["name"] for c in result["checks"]]
@@ -516,7 +565,12 @@ async def test_bn_preflight_has_isbn_check():
         MockPF.return_value = mock_pf
 
         result = await run_distributor_preflight(
-            db, "coloring", BOOK_ID_1, ORG_ID, "bn_press", page_count=50,
+            db,
+            "coloring",
+            BOOK_ID_1,
+            ORG_ID,
+            "bn_press",
+            page_count=50,
         )
 
     check_names = [c["name"] for c in result["checks"]]
@@ -533,7 +587,10 @@ async def test_review_feedback_maps_complaints():
     db = _make_mock_db()
 
     result = await process_review_feedback(
-        db, "coloring", BOOK_ID_1, ORG_ID,
+        db,
+        "coloring",
+        BOOK_ID_1,
+        ORG_ID,
         ["pages thin", "colors washed", "text too small"],
     )
 
@@ -558,7 +615,10 @@ async def test_review_feedback_handles_unknown_complaint():
     db = _make_mock_db()
 
     result = await process_review_feedback(
-        db, "puzzle", BOOK_ID_1, ORG_ID,
+        db,
+        "puzzle",
+        BOOK_ID_1,
+        ORG_ID,
         ["completely random nonsensical complaint xyz"],
     )
 
@@ -572,7 +632,10 @@ async def test_review_feedback_puzzle_complaints():
     db = _make_mock_db()
 
     result = await process_review_feedback(
-        db, "puzzle", BOOK_ID_1, ORG_ID,
+        db,
+        "puzzle",
+        BOOK_ID_1,
+        ORG_ID,
         ["puzzles too easy", "answers wrong"],
     )
 

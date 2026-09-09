@@ -1,4 +1,5 @@
 """Manuscript, Chapter, ChapterVersion, StyleProfile, WritingSession, EditorSettings, and ContentAsset models."""
+
 import enum
 import uuid
 from datetime import datetime
@@ -123,6 +124,7 @@ class Chapter(BaseModel):
 
 class ChapterVersion(BaseModel):
     """Immutable snapshot of a chapter's content at a point in time."""
+
     __tablename__ = "chapter_versions"
 
     chapter_id: Mapped[uuid.UUID] = mapped_column(
@@ -172,7 +174,8 @@ class StyleProfile(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="style_profiles",
+        "Organization",
+        back_populates="style_profiles",
         primaryjoin="StyleProfile.org_id == Organization.id",
         foreign_keys="[StyleProfile.org_id]",
     )
@@ -220,10 +223,14 @@ class WritingSession(BaseModel):
     duration_seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     ai_assists_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
     ended_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None,
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
@@ -243,6 +250,7 @@ class WritingSession(BaseModel):
 
 class EditorSettings(BaseModel):
     """Per-user editor configuration for the Writing Studio."""
+
     __tablename__ = "editor_settings"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -251,22 +259,34 @@ class EditorSettings(BaseModel):
         unique=True,
     )
     font_family: Mapped[str] = mapped_column(
-        String(100), default="Georgia", server_default="Georgia",
+        String(100),
+        default="Georgia",
+        server_default="Georgia",
     )
     font_size: Mapped[int] = mapped_column(
-        Integer, default=16, server_default="16",
+        Integer,
+        default=16,
+        server_default="16",
     )
     theme: Mapped[str] = mapped_column(
-        String(20), default="light", server_default="light",
+        String(20),
+        default="light",
+        server_default="light",
     )
     line_height: Mapped[float] = mapped_column(
-        Float, default=1.8, server_default="1.8",
+        Float,
+        default=1.8,
+        server_default="1.8",
     )
     show_ai_panel: Mapped[bool] = mapped_column(
-        Boolean, default=True, server_default="true",
+        Boolean,
+        default=True,
+        server_default="true",
     )
     show_chapter_panel: Mapped[bool] = mapped_column(
-        Boolean, default=True, server_default="true",
+        Boolean,
+        default=True,
+        server_default="true",
     )
     style_profile_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("style_profiles.id", ondelete="SET NULL"),
@@ -274,25 +294,31 @@ class EditorSettings(BaseModel):
         default=None,
     )
     tone_preference: Mapped[str] = mapped_column(
-        String(50), default="match_profile", server_default="match_profile",
+        String(50),
+        default="match_profile",
+        server_default="match_profile",
     )
     length_preference: Mapped[str] = mapped_column(
-        String(20), default="medium", server_default="medium",
+        String(20),
+        default="medium",
+        server_default="medium",
     )
     auto_save_interval_seconds: Mapped[int] = mapped_column(
-        Integer, default=2, server_default="2",
+        Integer,
+        default=2,
+        server_default="2",
     )
     daily_word_goal: Mapped[int] = mapped_column(
-        Integer, default=1000, server_default="1000",
+        Integer,
+        default=1000,
+        server_default="1000",
     )
 
     # Relationships
     user = relationship("User")
     style_profile = relationship("StyleProfile")
 
-    __table_args__ = (
-        Index("ix_editor_settings_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
-    )
+    __table_args__ = (Index("ix_editor_settings_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),)
 
 
 class ContentAsset(TenantModel):
@@ -306,9 +332,7 @@ class ContentAsset(TenantModel):
     file_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
-    metadata_: Mapped[dict | None] = mapped_column(
-        "metadata", JSONB, nullable=True, default=None
-    )
+    metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, default=None)
     # Storage-service columns
     file_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     content_type: Mapped[str | None] = mapped_column(String(127), nullable=True, default=None)
@@ -318,7 +342,8 @@ class ContentAsset(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="content_assets",
+        "Organization",
+        back_populates="content_assets",
         primaryjoin="ContentAsset.org_id == Organization.id",
         foreign_keys="[ContentAsset.org_id]",
     )

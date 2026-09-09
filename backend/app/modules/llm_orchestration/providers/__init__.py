@@ -24,8 +24,10 @@ __all__ = [
 def __getattr__(name: str):
     if name == "AnthropicProvider":
         from app.modules.llm_orchestration.providers.anthropic import AnthropicProvider
+
         return AnthropicProvider
     if name == "OpenAIProvider":
         from app.modules.llm_orchestration.providers.openai import OpenAIProvider
+
         return OpenAIProvider
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

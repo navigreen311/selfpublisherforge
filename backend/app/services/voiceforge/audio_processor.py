@@ -254,7 +254,9 @@ class AudioProcessor:
 
         logger.info(
             "Applying compression to %s (ratio=%.1f, threshold=%.1f dB)",
-            audio_path, ratio, threshold_db,
+            audio_path,
+            ratio,
+            threshold_db,
         )
 
         data, rate = sf.read(str(audio_path))
@@ -330,7 +332,9 @@ class AudioProcessor:
 
         logger.info(
             "Adding room tone to %s (head=%.2fs, tail=%.2fs)",
-            audio_path, head_seconds, tail_seconds,
+            audio_path,
+            head_seconds,
+            tail_seconds,
         )
 
         data, rate = sf.read(str(audio_path))
@@ -509,7 +513,8 @@ class AudioProcessor:
         else:
             logger.warning(
                 "ACX validation FAILED (score=%d, fixable=%s)",
-                result.score, auto_fixable,
+                result.score,
+                auto_fixable,
             )
 
         return result
@@ -533,7 +538,7 @@ class AudioProcessor:
         peak_db = 20.0 * np.log10(peak) if peak > 0 else -100.0
 
         # RMS
-        rms = float(np.sqrt(np.mean(data ** 2)))
+        rms = float(np.sqrt(np.mean(data**2)))
         rms_db = 20.0 * np.log10(rms) if rms > 0 else -100.0
 
         # Noise floor: average RMS of the quietest 10 % of 100 ms frames
@@ -541,7 +546,7 @@ class AudioProcessor:
         num_full_frames = len(data) // frame_size
         if num_full_frames > 0:
             frames = data[: num_full_frames * frame_size].reshape(num_full_frames, frame_size)
-            frame_rms_vals = np.sqrt(np.mean(frames ** 2, axis=1))
+            frame_rms_vals = np.sqrt(np.mean(frames**2, axis=1))
             frame_rms_sorted = np.sort(frame_rms_vals)
             n_quiet = max(1, len(frame_rms_sorted) // 10)
             noise_rms = float(np.mean(frame_rms_sorted[:n_quiet]))
@@ -590,22 +595,26 @@ class AudioProcessor:
             elif not is_silent and silence_start is not None:
                 duration_samples = i - silence_start
                 if duration_samples >= min_samples:
-                    segments.append(SilenceSegment(
-                        start_seconds=silence_start / rate,
-                        end_seconds=i / rate,
-                        duration_seconds=duration_samples / rate,
-                    ))
+                    segments.append(
+                        SilenceSegment(
+                            start_seconds=silence_start / rate,
+                            end_seconds=i / rate,
+                            duration_seconds=duration_samples / rate,
+                        )
+                    )
                 silence_start = None
 
         # Handle trailing silence
         if silence_start is not None:
             duration_samples = len(data) - silence_start
             if duration_samples >= min_samples:
-                segments.append(SilenceSegment(
-                    start_seconds=silence_start / rate,
-                    end_seconds=len(data) / rate,
-                    duration_seconds=duration_samples / rate,
-                ))
+                segments.append(
+                    SilenceSegment(
+                        start_seconds=silence_start / rate,
+                        end_seconds=len(data) / rate,
+                        duration_seconds=duration_samples / rate,
+                    )
+                )
 
         logger.info("Detected %d silence segments in %s", len(segments), audio_path)
         return segments
@@ -797,7 +806,7 @@ class AudioProcessor:
             data, rate = sf.read(str(path))
             data = self._ensure_mono(data)
             duration = len(data) / rate
-            rms = float(np.sqrt(np.mean(data ** 2)))
+            rms = float(np.sqrt(np.mean(data**2)))
             peak = float(np.max(np.abs(data)))
         except Exception:
             logger.warning("Could not read processed file %s for metrics; using defaults.", path)

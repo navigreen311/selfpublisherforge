@@ -77,9 +77,7 @@ def detect_trend(data_points: list[VelocityDataPoint]) -> VelocityTrend:
     return VelocityTrend.STABLE
 
 
-def detect_anomalies(
-    data_points: list[VelocityDataPoint], z_threshold: float = 2.0
-) -> list[dict]:
+def detect_anomalies(data_points: list[VelocityDataPoint], z_threshold: float = 2.0) -> list[dict]:
     """Detect anomalies in review velocity using modified z-score method.
 
     Uses the median and MAD (Median Absolute Deviation) instead of mean/stdev
@@ -173,15 +171,9 @@ async def compute_velocity_from_reviews(
         stmt = select(
             func.count(BookReview.id).label("review_count"),
             func.avg(BookReview.star_rating).label("avg_rating"),
-            func.count(
-                func.nullif(BookReview.sentiment == "positive", False)
-            ).label("positive_count"),
-            func.count(
-                func.nullif(BookReview.sentiment == "neutral", False)
-            ).label("neutral_count"),
-            func.count(
-                func.nullif(BookReview.sentiment == "negative", False)
-            ).label("negative_count"),
+            func.count(func.nullif(BookReview.sentiment == "positive", False)).label("positive_count"),
+            func.count(func.nullif(BookReview.sentiment == "neutral", False)).label("neutral_count"),
+            func.count(func.nullif(BookReview.sentiment == "negative", False)).label("negative_count"),
         ).where(
             and_(
                 BookReview.org_id == org_id,

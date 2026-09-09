@@ -1,4 +1,5 @@
 """Pydantic schemas for Coloring Book quality pipeline and batch generation."""
+
 from __future__ import annotations
 
 from datetime import datetime

@@ -57,6 +57,7 @@ def _build_settings(monkeypatch, extra_env: dict[str, str] | None = None) -> Set
 
     # Clear lru_cache so Settings() reads fresh env
     from app.config import get_settings
+
     get_settings.cache_clear()
 
     return Settings()
@@ -113,9 +114,7 @@ class TestProductionModePlaceholderRejection:
         list(PLACEHOLDER_SECRETS.items()),
         ids=list(PLACEHOLDER_SECRETS.keys()),
     )
-    def test_single_placeholder_raises_in_production(
-        self, monkeypatch, secret_name: str, placeholder_value: str
-    ):
+    def test_single_placeholder_raises_in_production(self, monkeypatch, secret_name: str, placeholder_value: str):
         """Each individual placeholder must be caught when all others are real."""
         monkeypatch.setenv("ENVIRONMENT", "production")
 
@@ -143,9 +142,7 @@ class TestProductionModePlaceholderRejection:
 
         error_msg = str(exc_info.value)
         for secret_name in PLACEHOLDER_SECRETS:
-            assert secret_name in error_msg, (
-                f"Expected '{secret_name}' to appear in the error message"
-            )
+            assert secret_name in error_msg, f"Expected '{secret_name}' to appear in the error message"
 
 
 # ---------------------------------------------------------------------------
@@ -227,8 +224,7 @@ class TestProductionOptionalWarnings:
 
         user_warnings = [w for w in caught if issubclass(w.category, UserWarning)]
         assert len(user_warnings) == 0, (
-            f"Expected no UserWarnings but got: "
-            f"{[str(w.message) for w in user_warnings]}"
+            f"Expected no UserWarnings but got: " f"{[str(w.message) for w in user_warnings]}"
         )
 
     def test_warning_mentions_unavailable_features(self, monkeypatch):

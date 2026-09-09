@@ -62,12 +62,16 @@ class TestPrintCostCalculation:
         assert any("exceeds KDP maximum" in w for w in result["warnings"])
 
     def test_ink_coverage_adjustment_applied(self) -> None:
-        result = calculate_print_cost(page_count=100, interior_type="standard_color", trim_size="8.5x11", ink_coverage_pct=70.0)
+        result = calculate_print_cost(
+            page_count=100, interior_type="standard_color", trim_size="8.5x11", ink_coverage_pct=70.0
+        )
         assert result["ink_cost_adjustment"] > 0.0
         assert result["total_cost"] > result["base_cost"]
 
     def test_category_norm_recommendation(self) -> None:
-        result = calculate_print_cost(page_count=50, interior_type="black_white", trim_size="8.5x11", category="adult_coloring")
+        result = calculate_print_cost(
+            page_count=50, interior_type="black_white", trim_size="8.5x11", category="adult_coloring"
+        )
         assert result["recommended_price"] is not None
         assert 7.0 <= result["recommended_price"] <= 15.0
 
@@ -82,10 +86,12 @@ class TestInkCoverage:
         assert result["average"] == 70.0
 
     def test_ink_coverage_from_precomputed(self) -> None:
-        result = analyze_ink_coverage([
-            {"page_num": 1, "coverage_pct": 45.0},
-            {"page_num": 2, "coverage_pct": 55.0},
-        ])
+        result = analyze_ink_coverage(
+            [
+                {"page_num": 1, "coverage_pct": 45.0},
+                {"page_num": 2, "coverage_pct": 55.0},
+            ]
+        )
         assert result["per_page"][0]["coverage_pct"] == 45.0
         assert result["per_page"][1]["coverage_pct"] == 55.0
         assert result["average"] == 50.0
@@ -187,17 +193,28 @@ class TestPrintSpecValidation:
     @pytest.mark.asyncio
     async def test_valid_specs_pass(self) -> None:
         result = await validate_print_specs(
-            db=None, book_type="coloring", book_id=uuid.uuid4(), org_id=uuid.uuid4(),
-            dpi=300, margins={"top": 0.25, "bottom": 0.25, "outside": 0.375, "gutter": 0.625},
-            trim_size="8.5x11", page_count=100, file_size_mb=50.0,
+            db=None,
+            book_type="coloring",
+            book_id=uuid.uuid4(),
+            org_id=uuid.uuid4(),
+            dpi=300,
+            margins={"top": 0.25, "bottom": 0.25, "outside": 0.375, "gutter": 0.625},
+            trim_size="8.5x11",
+            page_count=100,
+            file_size_mb=50.0,
         )
         assert result["all_passed"] is True
 
     @pytest.mark.asyncio
     async def test_invalid_dpi_fails(self) -> None:
         result = await validate_print_specs(
-            db=None, book_type="childrens", book_id=uuid.uuid4(), org_id=uuid.uuid4(),
-            dpi=150, trim_size="8.5x11", page_count=32,
+            db=None,
+            book_type="childrens",
+            book_id=uuid.uuid4(),
+            org_id=uuid.uuid4(),
+            dpi=150,
+            trim_size="8.5x11",
+            page_count=32,
         )
         dpi_check = next(c for c in result["checks"] if c["name"] == "dpi_check")
         assert dpi_check["passed"] is False
@@ -205,9 +222,14 @@ class TestPrintSpecValidation:
     @pytest.mark.asyncio
     async def test_margin_violations_caught(self) -> None:
         result = await validate_print_specs(
-            db=None, book_type="puzzle", book_id=uuid.uuid4(), org_id=uuid.uuid4(),
-            dpi=300, margins={"top": 0.1, "bottom": 0.1, "outside": 0.2, "gutter": 0.3},
-            trim_size="6x9", page_count=100,
+            db=None,
+            book_type="puzzle",
+            book_id=uuid.uuid4(),
+            org_id=uuid.uuid4(),
+            dpi=300,
+            margins={"top": 0.1, "bottom": 0.1, "outside": 0.2, "gutter": 0.3},
+            trim_size="6x9",
+            page_count=100,
         )
         failed = [c for c in result["checks"] if not c["passed"]]
         margin_fails = [c for c in failed if c["name"].startswith("margin_")]
@@ -216,8 +238,13 @@ class TestPrintSpecValidation:
     @pytest.mark.asyncio
     async def test_page_count_below_minimum_fails(self) -> None:
         result = await validate_print_specs(
-            db=None, book_type="coloring", book_id=uuid.uuid4(), org_id=uuid.uuid4(),
-            dpi=300, trim_size="8.5x11", page_count=10,
+            db=None,
+            book_type="coloring",
+            book_id=uuid.uuid4(),
+            org_id=uuid.uuid4(),
+            dpi=300,
+            trim_size="8.5x11",
+            page_count=10,
         )
         pc_check = next(c for c in result["checks"] if c["name"] == "page_count")
         assert pc_check["passed"] is False
@@ -225,8 +252,13 @@ class TestPrintSpecValidation:
     @pytest.mark.asyncio
     async def test_page_count_above_maximum_fails(self) -> None:
         result = await validate_print_specs(
-            db=None, book_type="puzzle", book_id=uuid.uuid4(), org_id=uuid.uuid4(),
-            dpi=300, trim_size="6x9", page_count=900,
+            db=None,
+            book_type="puzzle",
+            book_id=uuid.uuid4(),
+            org_id=uuid.uuid4(),
+            dpi=300,
+            trim_size="6x9",
+            page_count=900,
         )
         pc_check = next(c for c in result["checks"] if c["name"] == "page_count")
         assert pc_check["passed"] is False
@@ -234,8 +266,13 @@ class TestPrintSpecValidation:
     @pytest.mark.asyncio
     async def test_invalid_trim_size_fails(self) -> None:
         result = await validate_print_specs(
-            db=None, book_type="childrens", book_id=uuid.uuid4(), org_id=uuid.uuid4(),
-            dpi=300, trim_size="4x4", page_count=32,
+            db=None,
+            book_type="childrens",
+            book_id=uuid.uuid4(),
+            org_id=uuid.uuid4(),
+            dpi=300,
+            trim_size="4x4",
+            page_count=32,
         )
         trim_check = next(c for c in result["checks"] if c["name"] == "trim_size")
         assert trim_check["passed"] is False

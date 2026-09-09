@@ -145,9 +145,7 @@ class _WorkingGrid:
         return (min(rows), min(cols), max(rows), max(cols))
 
 
-def _find_placements(
-    grid: _WorkingGrid, word: str
-) -> list[tuple[int, int, str, int]]:
+def _find_placements(grid: _WorkingGrid, word: str) -> list[tuple[int, int, str, int]]:
     """Find all valid placements for *word*, returning (row, col, direction, intersections)."""
     candidates: list[tuple[int, int, str, int]] = []
 
@@ -209,9 +207,7 @@ def _difficulty_score(
     black_squares = total_cells - filled_cells
     black_density = black_squares / total_cells if total_cells > 0 else 0
 
-    avg_word_len = (
-        sum(len(pw.word) for pw in placed) / len(placed) if placed else 0
-    )
+    avg_word_len = sum(len(pw.word) for pw in placed) / len(placed) if placed else 0
     # Normalise avg word length: 3=0, 15=100
     word_len_score = min(100, max(0, (avg_word_len - 3) / 12 * 100))
 

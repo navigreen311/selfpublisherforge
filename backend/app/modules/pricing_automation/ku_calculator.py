@@ -31,15 +31,8 @@ def calculate_ku_vs_wide(request: KUCalculatorRequest) -> KUCalculatorResponse:
     """
 
     # ── KU Exclusive Revenue ──
-    ku_page_revenue = (
-        request.book_page_count
-        * request.estimated_ku_reads_per_month
-        * request.ku_page_rate
-    )
-    ku_paid_sales_revenue = (
-        request.amazon_price
-        * request.amazon_monthly_sales
-    )
+    ku_page_revenue = request.book_page_count * request.estimated_ku_reads_per_month * request.ku_page_rate
+    ku_paid_sales_revenue = request.amazon_price * request.amazon_monthly_sales
     ku_paid_royalties = ku_paid_sales_revenue * request.amazon_royalty_rate
     ku_total_monthly_royalties = ku_page_revenue + ku_paid_royalties
     ku_total_monthly_revenue = ku_page_revenue + ku_paid_sales_revenue
@@ -72,11 +65,7 @@ def calculate_ku_vs_wide(request: KUCalculatorRequest) -> KUCalculatorResponse:
 
     # ── Recommendation ──
     if diff_monthly > 0:
-        margin_pct = (
-            (diff_monthly / wide_total_monthly_royalties * 100)
-            if wide_total_monthly_royalties > 0
-            else 100.0
-        )
+        margin_pct = (diff_monthly / wide_total_monthly_royalties * 100) if wide_total_monthly_royalties > 0 else 100.0
         if margin_pct > 50:
             recommendation = (
                 f"Strongly recommend KU Exclusive. KU earns ${diff_monthly:.2f}/mo "
@@ -95,11 +84,7 @@ def calculate_ku_vs_wide(request: KUCalculatorRequest) -> KUCalculatorResponse:
             )
     elif diff_monthly < 0:
         abs_diff = abs(diff_monthly)
-        margin_pct = (
-            (abs_diff / ku_total_monthly_royalties * 100)
-            if ku_total_monthly_royalties > 0
-            else 100.0
-        )
+        margin_pct = (abs_diff / ku_total_monthly_royalties * 100) if ku_total_monthly_royalties > 0 else 100.0
         if margin_pct > 50:
             recommendation = (
                 f"Strongly recommend Wide Distribution. Wide earns ${abs_diff:.2f}/mo "
@@ -171,4 +156,5 @@ def _breakeven_ku_reads(
     if per_read_revenue <= 0:
         return 0
     import math
+
     return math.ceil(revenue_gap / per_read_revenue)

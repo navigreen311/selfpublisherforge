@@ -6,6 +6,7 @@ and themes.
 
 Blueprint refs: 6.5
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,6 +15,7 @@ from typing import Any
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Template:
@@ -43,7 +45,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "page_layout",
         "book_type": "childrens",
         "description": "Full-page illustration with optional text overlay. "
-                       "Ideal for dramatic moments and wordless spreads.",
+        "Ideal for dramatic moments and wordless spreads.",
         "preview_url": None,
         "config": {
             "layout": "full_bleed",
@@ -58,7 +60,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "page_layout",
         "book_type": "childrens",
         "description": "Classic picture book layout with illustration on top "
-                       "and text below. Most commonly used format.",
+        "and text below. Most commonly used format.",
         "preview_url": None,
         "config": {
             "layout": "image_top_text_bottom",
@@ -73,7 +75,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "page_layout",
         "book_type": "childrens",
         "description": "Image on one side, text on the other. Works well "
-                       "for landscape spreads and dialogue-heavy pages.",
+        "for landscape spreads and dialogue-heavy pages.",
         "preview_url": None,
         "config": {
             "layout": "side_by_side",
@@ -87,7 +89,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "page_layout",
         "book_type": "coloring",
         "description": "Standard coloring book page with blank back. "
-                       "Ensures markers and paints don't bleed through.",
+        "Ensures markers and paints don't bleed through.",
         "preview_url": None,
         "config": {
             "layout": "single_sided",
@@ -101,8 +103,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "name": "Bordered Coloring Page",
         "category": "page_layout",
         "book_type": "coloring",
-        "description": "Coloring page with decorative border frame. "
-                       "Adds a finished look to each page.",
+        "description": "Coloring page with decorative border frame. " "Adds a finished look to each page.",
         "preview_url": None,
         "config": {
             "layout": "bordered",
@@ -117,7 +118,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "page_layout",
         "book_type": "puzzle",
         "description": "Standard layout with one puzzle per page. "
-                       "Title, instructions, and puzzle grid with ample writing space.",
+        "Title, instructions, and puzzle grid with ample writing space.",
         "preview_url": None,
         "config": {
             "layout": "single_puzzle",
@@ -131,8 +132,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "name": "Two Puzzles Per Page",
         "category": "page_layout",
         "book_type": "puzzle",
-        "description": "Compact layout with two puzzles per page. "
-                       "Good for smaller puzzle types or travel editions.",
+        "description": "Compact layout with two puzzles per page. " "Good for smaller puzzle types or travel editions.",
         "preview_url": None,
         "config": {
             "layout": "double_puzzle",
@@ -141,7 +141,6 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         },
         "tags": ["puzzle", "compact", "double"],
     },
-
     # -----------------------------------------------------------------------
     # Theme Packs
     # -----------------------------------------------------------------------
@@ -151,7 +150,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": None,
         "description": "Safari animals, ocean creatures, forest animals, "
-                       "farm animals, and birds. 50+ themed word lists included.",
+        "farm animals, and birds. 50+ themed word lists included.",
         "preview_url": None,
         "config": {
             "themes": ["safari", "ocean", "forest", "farm", "birds", "insects"],
@@ -166,7 +165,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": None,
         "description": "Dragons, castles, wizards, fairies, and enchanted forests. "
-                       "Non-trademarked fantasy themes suitable for all ages.",
+        "Non-trademarked fantasy themes suitable for all ages.",
         "preview_url": None,
         "config": {
             "themes": ["dragons", "castles", "wizards", "fairies", "enchanted_forest"],
@@ -181,7 +180,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": None,
         "description": "Spring flowers, summer beach, autumn leaves, winter snow. "
-                       "Seasonal illustrations and themed vocabulary.",
+        "Seasonal illustrations and themed vocabulary.",
         "preview_url": None,
         "config": {
             "themes": ["spring", "summer", "autumn", "winter", "garden", "mountains"],
@@ -196,7 +195,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": None,
         "description": "Planets, rockets, astronauts, aliens, and galaxies. "
-                       "Science-themed vocabulary for educational puzzle books.",
+        "Science-themed vocabulary for educational puzzle books.",
         "preview_url": None,
         "config": {
             "themes": ["planets", "rockets", "astronauts", "aliens", "galaxies", "robots"],
@@ -211,7 +210,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": None,
         "description": "Cupcakes, fruits, vegetables, baking, and kitchen items. "
-                       "Popular coloring book theme with broad appeal.",
+        "Popular coloring book theme with broad appeal.",
         "preview_url": None,
         "config": {
             "themes": ["cupcakes", "fruits", "vegetables", "baking", "kitchen"],
@@ -225,7 +224,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": None,
         "description": "Christmas, Halloween, Easter, Valentine's Day, Thanksgiving. "
-                       "Seasonal auto-theming for timely releases.",
+        "Seasonal auto-theming for timely releases.",
         "preview_url": None,
         "config": {
             "themes": ["christmas", "halloween", "easter", "valentines", "thanksgiving"],
@@ -240,7 +239,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": "coloring",
         "description": "Geometric mandalas, repeating patterns, and zentangle designs. "
-                       "Top-selling adult coloring book category.",
+        "Top-selling adult coloring book category.",
         "preview_url": None,
         "config": {
             "themes": ["mandala", "geometric", "zentangle", "repeating_pattern"],
@@ -254,7 +253,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "theme_pack",
         "book_type": "coloring",
         "description": "Abstract geometric shapes, tessellations, and optical illusions. "
-                       "Modern aesthetic for teen and adult audiences.",
+        "Modern aesthetic for teen and adult audiences.",
         "preview_url": None,
         "config": {
             "themes": ["geometric", "tessellation", "optical_illusion", "abstract"],
@@ -262,7 +261,6 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         },
         "tags": ["geometric", "abstract", "modern", "coloring"],
     },
-
     # -----------------------------------------------------------------------
     # Style Packs
     # -----------------------------------------------------------------------
@@ -272,7 +270,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "style_pack",
         "book_type": "childrens",
         "description": "Soft watercolor illustration style with gentle edges and "
-                       "dreamy color palettes. Perfect for bedtime stories.",
+        "dreamy color palettes. Perfect for bedtime stories.",
         "preview_url": None,
         "config": {
             "illustration_style": "watercolor",
@@ -288,7 +286,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "style_pack",
         "book_type": "childrens",
         "description": "Bright, bold cartoon style with thick outlines and "
-                       "vivid colors. Great for action-oriented stories.",
+        "vivid colors. Great for action-oriented stories.",
         "preview_url": None,
         "config": {
             "illustration_style": "cartoon",
@@ -304,7 +302,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "style_pack",
         "book_type": "coloring",
         "description": "Crisp, uniform line weight with closed shapes for easy coloring. "
-                       "Best for younger audiences.",
+        "Best for younger audiences.",
         "preview_url": None,
         "config": {
             "line_style": "clean",
@@ -320,7 +318,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "style_pack",
         "book_type": "coloring",
         "description": "Highly detailed realistic illustrations with fine line work. "
-                       "Designed for advanced adult colorists.",
+        "Designed for advanced adult colorists.",
         "preview_url": None,
         "config": {
             "line_style": "fine",
@@ -336,7 +334,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "style_pack",
         "book_type": "puzzle",
         "description": "Enlarged grids, larger fonts, and increased spacing for "
-                       "readers who need larger print. APH-compliant.",
+        "readers who need larger print. APH-compliant.",
         "preview_url": None,
         "config": {
             "scale": 1.5,
@@ -353,7 +351,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         "category": "style_pack",
         "book_type": "puzzle",
         "description": "Playful fonts, colorful headers, and illustrated decorations "
-                       "around puzzle grids. Fun and engaging for ages 5-10.",
+        "around puzzle grids. Fun and engaging for ages 5-10.",
         "preview_url": None,
         "config": {
             "font_family": "rounded_sans",
@@ -370,6 +368,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def get_templates(
     book_type: str | None = None,
@@ -396,15 +395,17 @@ def get_templates(
         if category and t["category"] != category:
             continue
 
-        results.append(Template(
-            id=t["id"],
-            name=t["name"],
-            category=t["category"],
-            book_type=t["book_type"],
-            description=t["description"],
-            preview_url=t.get("preview_url"),
-            config=t["config"],
-            tags=t.get("tags", []),
-        ))
+        results.append(
+            Template(
+                id=t["id"],
+                name=t["name"],
+                category=t["category"],
+                book_type=t["book_type"],
+                description=t["description"],
+                preview_url=t.get("preview_url"),
+                config=t["config"],
+                tags=t.get("tags", []),
+            )
+        )
 
     return results

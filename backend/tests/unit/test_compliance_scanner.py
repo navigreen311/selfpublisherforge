@@ -35,6 +35,7 @@ def _make_request(**overrides) -> ComplianceScanRequest:
 # Trademark checks
 # ===================================================================
 
+
 class TestTrademarks:
     def test_clean_title(self, scanner: ComplianceScanner):
         req = _make_request(title="My Great Book")
@@ -90,6 +91,7 @@ class TestTrademarks:
 # Content policy
 # ===================================================================
 
+
 class TestContentPolicy:
     def test_clean_content(self, scanner: ComplianceScanner):
         req = _make_request(content_sample="A beautiful story about nature.")
@@ -98,17 +100,13 @@ class TestContentPolicy:
         assert len(policy_issues) == 0
 
     def test_public_domain_original_claim(self, scanner: ComplianceScanner):
-        req = _make_request(
-            content_sample="This public domain work is presented as an original publication."
-        )
+        req = _make_request(content_sample="This public domain work is presented as an original publication.")
         result = scanner.scan(req)
         policy_issues = [i for i in result.issues if i.rule == "content_policy"]
         assert len(policy_issues) > 0
 
     def test_empty_content_skips(self, scanner: ComplianceScanner):
-        req = _make_request(
-            title="", subtitle="", description="", content_sample=""
-        )
+        req = _make_request(title="", subtitle="", description="", content_sample="")
         result = scanner.scan(req)
         policy_issues = [i for i in result.issues if i.rule == "content_policy"]
         assert len(policy_issues) == 0
@@ -118,14 +116,12 @@ class TestContentPolicy:
 # Description HTML compliance
 # ===================================================================
 
+
 class TestDescriptionHTML:
     def test_clean_html(self, scanner: ComplianceScanner):
         req = _make_request(description="<p>A <b>great</b> book with <em>exciting</em> content.</p>")
         result = scanner.scan(req)
-        html_issues = [
-            i for i in result.issues
-            if i.rule.startswith("description_html")
-        ]
+        html_issues = [i for i in result.issues if i.rule.startswith("description_html")]
         assert len(html_issues) == 0
 
     def test_script_tag_error(self, scanner: ComplianceScanner):
@@ -179,6 +175,7 @@ class TestDescriptionHTML:
 # Keyword checks
 # ===================================================================
 
+
 class TestKeywords:
     def test_valid_keywords(self, scanner: ComplianceScanner):
         req = _make_request(keywords=["fiction", "adventure", "romance"])
@@ -222,6 +219,7 @@ class TestKeywords:
 # ===================================================================
 # Overall status
 # ===================================================================
+
 
 class TestOverallStatus:
     def test_passes_when_clean(self, scanner: ComplianceScanner):

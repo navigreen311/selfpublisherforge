@@ -8,6 +8,7 @@ print-cost estimation are consistent across the platform.
 
 Blueprint refs: 12.1 - 12.5
 """
+
 from __future__ import annotations
 
 import math
@@ -35,9 +36,9 @@ SPINE_WIDTH_PER_PAGE_IN = 0.002252
 
 # Estimated file sizes per page at 300 DPI (MB)
 _FILE_SIZE_ESTIMATES_MB: dict[str, float] = {
-    "childrens": 2.5,   # full-color illustrations
-    "coloring": 0.8,    # B&W line art
-    "puzzles": 0.3,     # text-heavy layout
+    "childrens": 2.5,  # full-color illustrations
+    "coloring": 0.8,  # B&W line art
+    "puzzles": 0.3,  # text-heavy layout
 }
 
 # Estimated print cost per page (USD) by interior type
@@ -54,6 +55,7 @@ _PRINT_COST_BASE: float = 0.85
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _parse_trim_size(trim_size: str) -> tuple[float, float]:
     """Parse a trim size string like '8.5x11' into (width_in, height_in)."""
     parts = trim_size.split("x")
@@ -68,7 +70,9 @@ def _in_to_px(inches: float, dpi: int = DPI) -> int:
 
 
 def _crop_mark_positions(
-    trim_w: float, trim_h: float, bleed: float = BLEED_IN,
+    trim_w: float,
+    trim_h: float,
+    bleed: float = BLEED_IN,
 ) -> list[dict[str, Any]]:
     """Calculate crop mark positions at the four corners of the trim area.
 
@@ -85,18 +89,21 @@ def _crop_mark_positions(
         ("bottom_right", bleed + trim_w, bleed + trim_h),
     ]
     for name, x, y in corners:
-        marks.append({
-            "corner": name,
-            "x_in": round(x, 4),
-            "y_in": round(y, 4),
-            "mark_length_in": mark_length,
-            "orientation": "cross",
-        })
+        marks.append(
+            {
+                "corner": name,
+                "x_in": round(x, 4),
+                "y_in": round(y, 4),
+                "mark_length_in": mark_length,
+                "orientation": "cross",
+            }
+        )
     return marks
 
 
 def _registration_marks(
-    full_w: float, full_h: float,
+    full_w: float,
+    full_h: float,
 ) -> list[dict[str, Any]]:
     """Place registration marks (circles + crosshairs) for CMYK plate alignment.
 
@@ -123,6 +130,7 @@ def _get_book_field(book: Any, field: str, default: Any = None) -> Any:
 # ---------------------------------------------------------------------------
 # 1. generate_pdf_manifest
 # ---------------------------------------------------------------------------
+
 
 def generate_pdf_manifest(
     book_type: str,
@@ -176,14 +184,16 @@ def generate_pdf_manifest(
 
     for fm in front_matter:
         page_seq += 1
-        ordered_pages.append({
-            "sequence": page_seq,
-            "section": "front_matter",
-            "type": fm.get("type", "front_matter"),
-            "label": fm.get("label", f"Front Matter {page_seq}"),
-            "content": fm.get("content"),
-            "is_blank": False,
-        })
+        ordered_pages.append(
+            {
+                "sequence": page_seq,
+                "section": "front_matter",
+                "type": fm.get("type", "front_matter"),
+                "label": fm.get("label", f"Front Matter {page_seq}"),
+                "content": fm.get("content"),
+                "is_blank": False,
+            }
+        )
 
     # Content pages
     single_sided = book_type == "coloring" or book_data.get("single_sided", False)
@@ -207,13 +217,15 @@ def generate_pdf_manifest(
         # Insert blank back for single-sided books (coloring)
         if single_sided:
             page_seq += 1
-            ordered_pages.append({
-                "sequence": page_seq,
-                "section": "content",
-                "type": "blank_back",
-                "label": "Blank",
-                "is_blank": True,
-            })
+            ordered_pages.append(
+                {
+                    "sequence": page_seq,
+                    "section": "content",
+                    "type": "blank_back",
+                    "label": "Blank",
+                    "is_blank": True,
+                }
+            )
 
     # Answer key section (puzzles)
     answer_key_position = book_data.get("answer_key_position", "back_of_book")
@@ -223,44 +235,47 @@ def generate_pdf_manifest(
         puzzle_count = book_data.get("puzzle_count", len(pages_input))
         if not answer_pages_data:
             answers_needed = max(1, math.ceil(puzzle_count / 4))
-            answer_pages_data = [
-                {"type": "answer_key", "label": f"Answer Key {i + 1}"}
-                for i in range(answers_needed)
-            ]
+            answer_pages_data = [{"type": "answer_key", "label": f"Answer Key {i + 1}"} for i in range(answers_needed)]
 
         # Insert answer key separator page
         page_seq += 1
-        ordered_pages.append({
-            "sequence": page_seq,
-            "section": "answer_key",
-            "type": "answer_key_header",
-            "label": "Answer Key",
-            "is_blank": False,
-        })
+        ordered_pages.append(
+            {
+                "sequence": page_seq,
+                "section": "answer_key",
+                "type": "answer_key_header",
+                "label": "Answer Key",
+                "is_blank": False,
+            }
+        )
 
         for ak in answer_pages_data:
             page_seq += 1
-            ordered_pages.append({
-                "sequence": page_seq,
-                "section": "answer_key",
-                "type": "answer_key",
-                "label": ak.get("label", f"Answers {page_seq}"),
-                "content": ak.get("content"),
-                "is_blank": False,
-            })
+            ordered_pages.append(
+                {
+                    "sequence": page_seq,
+                    "section": "answer_key",
+                    "type": "answer_key",
+                    "label": ak.get("label", f"Answers {page_seq}"),
+                    "content": ak.get("content"),
+                    "is_blank": False,
+                }
+            )
 
     # Back matter
     back_matter = book_data.get("back_matter", [])
     for bm in back_matter:
         page_seq += 1
-        ordered_pages.append({
-            "sequence": page_seq,
-            "section": "back_matter",
-            "type": bm.get("type", "back_matter"),
-            "label": bm.get("label", f"Back Matter {page_seq}"),
-            "content": bm.get("content"),
-            "is_blank": False,
-        })
+        ordered_pages.append(
+            {
+                "sequence": page_seq,
+                "section": "back_matter",
+                "type": bm.get("type", "back_matter"),
+                "label": bm.get("label", f"Back Matter {page_seq}"),
+                "content": bm.get("content"),
+                "is_blank": False,
+            }
+        )
 
     # ----- Margins -----
     if book_type == "coloring":
@@ -316,6 +331,7 @@ def generate_pdf_manifest(
 # ---------------------------------------------------------------------------
 # 2. generate_pdfx1a_manifest
 # ---------------------------------------------------------------------------
+
 
 def generate_pdfx1a_manifest(
     book_type: str,
@@ -391,6 +407,7 @@ def generate_pdfx1a_manifest(
 # 3. generate_png_pages
 # ---------------------------------------------------------------------------
 
+
 def generate_png_pages(
     book_type: str,
     book_data: dict[str, Any],
@@ -430,25 +447,24 @@ def generate_png_pages(
     result: list[dict[str, Any]] = []
     for page in ordered_pages:
         seq = page["sequence"]
-        storage_path = (
-            f"exports/{book_type}/{book_id}/pages/"
-            f"page_{seq:04d}.png"
+        storage_path = f"exports/{book_type}/{book_id}/pages/" f"page_{seq:04d}.png"
+        result.append(
+            {
+                "sequence": seq,
+                "section": page["section"],
+                "type": page["type"],
+                "label": page["label"],
+                "is_blank": page["is_blank"],
+                "dimensions": {
+                    "width_px": width_px,
+                    "height_px": height_px,
+                    "dpi": DPI,
+                },
+                "color_mode": "Grayscale" if book_type == "coloring" else "CMYK",
+                "storage_path": storage_path,
+                "source_image_url": page.get("image_url"),
+            }
         )
-        result.append({
-            "sequence": seq,
-            "section": page["section"],
-            "type": page["type"],
-            "label": page["label"],
-            "is_blank": page["is_blank"],
-            "dimensions": {
-                "width_px": width_px,
-                "height_px": height_px,
-                "dpi": DPI,
-            },
-            "color_mode": "Grayscale" if book_type == "coloring" else "CMYK",
-            "storage_path": storage_path,
-            "source_image_url": page.get("image_url"),
-        })
 
     return result
 
@@ -456,6 +472,7 @@ def generate_png_pages(
 # ---------------------------------------------------------------------------
 # 4. calculate_export_metadata
 # ---------------------------------------------------------------------------
+
 
 def calculate_export_metadata(
     book_type: str,

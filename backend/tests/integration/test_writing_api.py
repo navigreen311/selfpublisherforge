@@ -33,6 +33,7 @@ def _override_current_user():
 
 class FakeChapter:
     """Mimics the Chapter ORM model for service return values."""
+
     def __init__(self, **kwargs):
         self.id = kwargs.get("id", uuid.uuid4())
         self.book_id = kwargs.get("book_id", BOOK_ID)
@@ -64,6 +65,7 @@ def async_client(override_deps):
 # ---------------------------------------------------------------------------
 # Manuscript & chapter endpoints
 # ---------------------------------------------------------------------------
+
 
 class TestManuscriptEndpoints:
     @pytest.mark.asyncio
@@ -124,9 +126,7 @@ class TestManuscriptEndpoints:
             updated_at=datetime.now(UTC),
         )
         with patch.object(service, "get_chapter", new_callable=AsyncMock, return_value=mock_chapter):
-            resp = await async_client.get(
-                f"/api/v1/books/{BOOK_ID}/manuscript/chapters/{CHAPTER_ID}"
-            )
+            resp = await async_client.get(f"/api/v1/books/{BOOK_ID}/manuscript/chapters/{CHAPTER_ID}")
             assert resp.status_code == 200
             assert resp.json()["title"] == "Chapter 1"
 
@@ -135,9 +135,7 @@ class TestManuscriptEndpoints:
         from app.modules.ai_writing import service
 
         with patch.object(service, "get_chapter", new_callable=AsyncMock, return_value=None):
-            resp = await async_client.get(
-                f"/api/v1/books/{BOOK_ID}/manuscript/chapters/{uuid.uuid4()}"
-            )
+            resp = await async_client.get(f"/api/v1/books/{BOOK_ID}/manuscript/chapters/{uuid.uuid4()}")
             assert resp.status_code == 404
 
     @pytest.mark.asyncio
@@ -206,12 +204,24 @@ class TestManuscriptEndpoints:
         ch2_id = uuid.uuid4()
         mock_chapters = [
             ChapterContent(
-                id=ch1_id, book_id=BOOK_ID, title="Ch 1", content="", order=2,
-                word_count=0, created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
+                id=ch1_id,
+                book_id=BOOK_ID,
+                title="Ch 1",
+                content="",
+                order=2,
+                word_count=0,
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
             ChapterContent(
-                id=ch2_id, book_id=BOOK_ID, title="Ch 2", content="", order=1,
-                word_count=0, created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
+                id=ch2_id,
+                book_id=BOOK_ID,
+                title="Ch 2",
+                content="",
+                order=1,
+                word_count=0,
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ),
         ]
         with patch.object(service, "reorder_chapters", new_callable=AsyncMock, return_value=mock_chapters):
@@ -231,6 +241,7 @@ class TestManuscriptEndpoints:
 # ---------------------------------------------------------------------------
 # Analysis / Readability
 # ---------------------------------------------------------------------------
+
 
 class TestAnalysisEndpoints:
     @pytest.mark.asyncio
@@ -282,9 +293,7 @@ class TestAnalysisEndpoints:
             reading_level="High School",
         )
         with patch.object(service, "get_readability_score", new_callable=AsyncMock, return_value=mock_score):
-            resp = await async_client.get(
-                f"/api/v1/books/{BOOK_ID}/manuscript/readability-score"
-            )
+            resp = await async_client.get(f"/api/v1/books/{BOOK_ID}/manuscript/readability-score")
             assert resp.status_code == 200
             data = resp.json()
             assert data["reading_level"] == "High School"
@@ -293,6 +302,7 @@ class TestAnalysisEndpoints:
 # ---------------------------------------------------------------------------
 # Generation endpoint
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateEndpoint:
     @pytest.mark.asyncio
@@ -353,6 +363,7 @@ class TestGenerateEndpoint:
 # Outline endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestOutlineEndpoint:
     @pytest.mark.asyncio
     async def test_generate_outline(self, async_client):
@@ -384,6 +395,7 @@ class TestOutlineEndpoint:
 # ---------------------------------------------------------------------------
 # Writing sessions
 # ---------------------------------------------------------------------------
+
 
 class TestWritingSessionEndpoint:
     @pytest.mark.asyncio
@@ -420,6 +432,7 @@ class TestWritingSessionEndpoint:
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
+
 
 class TestRequestValidation:
     @pytest.mark.asyncio

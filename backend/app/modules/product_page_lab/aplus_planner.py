@@ -75,9 +75,7 @@ async def generate_aplus_plan(
     modules = []
     for template in DEFAULT_MODULES:
         module = dict(template)
-        module["ai_copy"] = _generate_module_copy(
-            module["module_type"], book_title or "Your Book", genre
-        )
+        module["ai_copy"] = _generate_module_copy(module["module_type"], book_title or "Your Book", genre)
         modules.append(module)
 
     # Persist to DB
@@ -105,19 +103,21 @@ async def generate_aplus_plan(
     }
 
 
-async def get_aplus_plans(
-    db: AsyncSession, org_id: uuid.UUID
-) -> list[dict]:
+async def get_aplus_plans(db: AsyncSession, org_id: uuid.UUID) -> list[dict]:
     """List all A+ plans for an organization."""
     try:
         from sqlalchemy import select
 
         from app.modules.product_page_lab.models import APlusPlan
 
-        stmt = select(APlusPlan).where(
-            APlusPlan.org_id == org_id,
-            APlusPlan.deleted_at.is_(None),
-        ).order_by(APlusPlan.created_at.desc())
+        stmt = (
+            select(APlusPlan)
+            .where(
+                APlusPlan.org_id == org_id,
+                APlusPlan.deleted_at.is_(None),
+            )
+            .order_by(APlusPlan.created_at.desc())
+        )
         result = await db.execute(stmt)
         plans = result.scalars().all()
         return [
@@ -134,9 +134,7 @@ async def get_aplus_plans(
         return []
 
 
-async def get_aplus_plan(
-    db: AsyncSession, plan_id: uuid.UUID, org_id: uuid.UUID
-) -> dict | None:
+async def get_aplus_plan(db: AsyncSession, plan_id: uuid.UUID, org_id: uuid.UUID) -> dict | None:
     """Get a single A+ plan by ID."""
     try:
         from sqlalchemy import select

@@ -4,6 +4,7 @@ Provides region detection, palette management, and media-specific simulation
 for coloring book pages. The heavy image processing returns structured data
 that can drive either server-side rendering or client-side canvas compositing.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -126,9 +127,7 @@ class SimulationResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "regions": self.regions,
-            "color_assignments": {
-                str(k): v for k, v in self.color_assignments.items()
-            },
+            "color_assignments": {str(k): v for k, v in self.color_assignments.items()},
             "media_characteristics": self.media_characteristics,
             "palette_used": self.palette_used,
             "composite_instructions": self.composite_instructions,
@@ -360,8 +359,7 @@ def _normalize_media_type(media_type: str) -> MediaType:
     normalized = MEDIA_TYPE_ALIASES.get(media_type)
     if normalized is None:
         raise ValueError(
-            f"Invalid media_type '{media_type}'. "
-            f"Must be one of: {', '.join(sorted(VALID_MEDIA_TYPES))}"
+            f"Invalid media_type '{media_type}'. " f"Must be one of: {', '.join(sorted(VALID_MEDIA_TYPES))}"
         )
     return normalized
 
@@ -393,37 +391,43 @@ def _build_composite_instructions(
 
         # Media-specific rendering parameters
         if characteristics.media_type == "marker":
-            instruction.update({
-                "fill_type": "solid",
-                "edge_bleed_px": 2,
-                "transparency_variation": 0.05,
-                "texture_overlay": None,
-                "stroke_pattern": None,
-            })
+            instruction.update(
+                {
+                    "fill_type": "solid",
+                    "edge_bleed_px": 2,
+                    "transparency_variation": 0.05,
+                    "texture_overlay": None,
+                    "stroke_pattern": None,
+                }
+            )
         elif characteristics.media_type == "crayon":
-            instruction.update({
-                "fill_type": "textured",
-                "edge_bleed_px": 0,
-                "transparency_variation": 0.25,
-                "texture_overlay": "grain_noise",
-                "texture_scale": 1.5,
-                "texture_rotation_deg": random.uniform(0, 360),
-                "stroke_pattern": "random_directional",
-                "coverage_gaps_pct": 15,
-            })
+            instruction.update(
+                {
+                    "fill_type": "textured",
+                    "edge_bleed_px": 0,
+                    "transparency_variation": 0.25,
+                    "texture_overlay": "grain_noise",
+                    "texture_scale": 1.5,
+                    "texture_rotation_deg": random.uniform(0, 360),
+                    "stroke_pattern": "random_directional",
+                    "coverage_gaps_pct": 15,
+                }
+            )
         elif characteristics.media_type == "colored_pencil":
-            instruction.update({
-                "fill_type": "hatched",
-                "edge_bleed_px": 0,
-                "transparency_variation": 0.15,
-                "texture_overlay": "paper_tooth",
-                "texture_scale": 0.8,
-                "stroke_pattern": "directional_hatching",
-                "stroke_angle_deg": random.uniform(30, 60),
-                "stroke_spacing_px": 3,
-                "layer_count": 2,
-                "pressure_variation": 0.3,
-            })
+            instruction.update(
+                {
+                    "fill_type": "hatched",
+                    "edge_bleed_px": 0,
+                    "transparency_variation": 0.15,
+                    "texture_overlay": "paper_tooth",
+                    "texture_scale": 0.8,
+                    "stroke_pattern": "directional_hatching",
+                    "stroke_angle_deg": random.uniform(30, 60),
+                    "stroke_spacing_px": 3,
+                    "layer_count": 2,
+                    "pressure_variation": 0.3,
+                }
+            )
 
         instructions.append(instruction)
 
@@ -515,9 +519,7 @@ def simulate_coloring(
             color_assignments[region["id"]] = swatch.hex
 
     # Step 3: Build media-specific composite instructions
-    composite_instructions = _build_composite_instructions(
-        regions, color_assignments, characteristics
-    )
+    composite_instructions = _build_composite_instructions(regions, color_assignments, characteristics)
 
     # Step 4: Package result
     result = SimulationResult(

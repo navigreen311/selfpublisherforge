@@ -72,9 +72,7 @@ class WorkflowEngine:
     ) -> AgentWorkflow:
         """Resume a paused or partially-completed workflow."""
         if workflow.status not in (WorkflowStatus.PAUSED, WorkflowStatus.RUNNING):
-            raise ValueError(
-                f"Cannot resume workflow in status '{workflow.status.value}'"
-            )
+            raise ValueError(f"Cannot resume workflow in status '{workflow.status.value}'")
         workflow.status = WorkflowStatus.RUNNING
         await self.db.flush()
         return await self._run_steps(workflow, user_role=user_role, ip_address=ip_address)
@@ -180,9 +178,7 @@ class WorkflowEngine:
                     workflow.steps = steps
                     workflow.context = context
                     workflow.status = WorkflowStatus.FAILED
-                    workflow.error_message = (
-                        f"Step {idx + 1} failed: {task.error_message}"
-                    )
+                    workflow.error_message = f"Step {idx + 1} failed: {task.error_message}"
                     workflow.completed_at = datetime.now(UTC)
                     await self.db.flush()
 

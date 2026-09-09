@@ -38,6 +38,7 @@ from app.modules.marketing.service import MarketingService
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def org_id():
     return uuid.uuid4()
@@ -72,6 +73,7 @@ def service(mock_db):
 # ===========================================================================
 # Tests: Launch Plans
 # ===========================================================================
+
 
 class TestCreateLaunchPlan:
     """Tests for MarketingService.create_launch_plan."""
@@ -227,6 +229,7 @@ class TestUpdateLaunchPlan:
 # Tests: Email Sequences
 # ===========================================================================
 
+
 class TestCreateEmailSequence:
     """Tests for MarketingService.create_email_sequence."""
 
@@ -342,6 +345,7 @@ class TestTriggerEmailSend:
 # Tests: Social Posts
 # ===========================================================================
 
+
 class TestCreateSocialPost:
     """Tests for MarketingService.create_social_post."""
 
@@ -438,6 +442,7 @@ class TestGetSocialCalendar:
 # ===========================================================================
 # Tests: ARC Campaigns
 # ===========================================================================
+
 
 class TestCreateARCCampaign:
     """Tests for MarketingService.create_arc_campaign."""

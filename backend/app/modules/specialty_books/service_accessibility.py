@@ -79,9 +79,7 @@ def calculate_contrast_ratio(color1: str, color2: str) -> float:
     return (lighter + 0.05) / (darker + 0.05)
 
 
-def _build_variant_settings(
-    variant_type: str, overrides: dict[str, Any] | None = None
-) -> dict[str, Any]:
+def _build_variant_settings(variant_type: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Build the settings dict for an accessibility variant."""
     if variant_type == VARIANT_DYSLEXIA:
         settings: dict[str, Any] = {
@@ -128,8 +126,12 @@ async def _store_accessibility_variant(
     bt = source_book_type.value if hasattr(source_book_type, "value") else source_book_type
     vt = variant_type.value if hasattr(variant_type, "value") else variant_type
     variant = AccessibilityVariant(
-        org_id=org_id, source_book_type=bt, source_book_id=source_book_id,
-        variant_type=vt, variant_book_id=variant_book_id, settings=settings,
+        org_id=org_id,
+        source_book_type=bt,
+        source_book_id=source_book_id,
+        variant_type=vt,
+        variant_book_id=variant_book_id,
+        settings=settings,
     )
     db.add(variant)
     await db.flush()
@@ -140,7 +142,10 @@ async def _store_accessibility_variant(
 
 
 async def generate_dyslexia_friendly(
-    db: AsyncSession, book_type: str, book_id: uuid.UUID, org_id: uuid.UUID,
+    db: AsyncSession,
+    book_type: str,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
 ) -> dict[str, Any]:
     """Create a dyslexia-friendly variant.
 
@@ -151,14 +156,21 @@ async def generate_dyslexia_friendly(
     variant_book_id = uuid.uuid4()
     settings = _build_variant_settings(VARIANT_DYSLEXIA)
     variant = await _store_accessibility_variant(
-        db, source_book_type=book_type, source_book_id=book_id,
-        variant_type=VARIANT_DYSLEXIA, variant_book_id=variant_book_id,
-        org_id=org_id, settings=settings,
+        db,
+        source_book_type=book_type,
+        source_book_id=book_id,
+        variant_type=VARIANT_DYSLEXIA,
+        variant_book_id=variant_book_id,
+        org_id=org_id,
+        settings=settings,
     )
     return {
-        "variant_id": variant.id, "source_book_type": book_type,
-        "source_book_id": book_id, "variant_type": VARIANT_DYSLEXIA,
-        "variant_book_id": variant_book_id, "settings": settings,
+        "variant_id": variant.id,
+        "source_book_type": book_type,
+        "source_book_id": book_id,
+        "variant_type": VARIANT_DYSLEXIA,
+        "variant_book_id": variant_book_id,
+        "settings": settings,
         "created_at": variant.created_at,
     }
 
@@ -167,7 +179,10 @@ async def generate_dyslexia_friendly(
 
 
 async def generate_large_print(
-    db: AsyncSession, book_type: str, book_id: uuid.UUID, org_id: uuid.UUID,
+    db: AsyncSession,
+    book_type: str,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
     settings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create a Large Print variant following APH guidelines.
@@ -185,14 +200,21 @@ async def generate_large_print(
     variant_settings["actual_contrast_ratio"] = round(actual_contrast, 2)
     variant_settings["wcag_aaa_met"] = actual_contrast >= WCAG_AAA_CONTRAST
     variant = await _store_accessibility_variant(
-        db, source_book_type=book_type, source_book_id=book_id,
-        variant_type=VARIANT_LARGE_PRINT, variant_book_id=variant_book_id,
-        org_id=org_id, settings=variant_settings,
+        db,
+        source_book_type=book_type,
+        source_book_id=book_id,
+        variant_type=VARIANT_LARGE_PRINT,
+        variant_book_id=variant_book_id,
+        org_id=org_id,
+        settings=variant_settings,
     )
     return {
-        "variant_id": variant.id, "source_book_type": book_type,
-        "source_book_id": book_id, "variant_type": VARIANT_LARGE_PRINT,
-        "variant_book_id": variant_book_id, "settings": variant_settings,
+        "variant_id": variant.id,
+        "source_book_type": book_type,
+        "source_book_id": book_id,
+        "variant_type": VARIANT_LARGE_PRINT,
+        "variant_book_id": variant_book_id,
+        "settings": variant_settings,
         "created_at": variant.created_at,
     }
 
@@ -201,7 +223,10 @@ async def generate_large_print(
 
 
 async def generate_high_contrast(
-    db: AsyncSession, book_type: str, book_id: uuid.UUID, org_id: uuid.UUID,
+    db: AsyncSession,
+    book_type: str,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
 ) -> dict[str, Any]:
     """Create a high-contrast variant.
 
@@ -212,18 +237,26 @@ async def generate_high_contrast(
     variant_book_id = uuid.uuid4()
     settings = _build_variant_settings(VARIANT_HIGH_CONTRAST)
     actual_contrast = calculate_contrast_ratio(
-        settings["foreground_color"], settings["background_color"],
+        settings["foreground_color"],
+        settings["background_color"],
     )
     settings["actual_contrast_ratio"] = round(actual_contrast, 2)
     variant = await _store_accessibility_variant(
-        db, source_book_type=book_type, source_book_id=book_id,
-        variant_type=VARIANT_HIGH_CONTRAST, variant_book_id=variant_book_id,
-        org_id=org_id, settings=settings,
+        db,
+        source_book_type=book_type,
+        source_book_id=book_id,
+        variant_type=VARIANT_HIGH_CONTRAST,
+        variant_book_id=variant_book_id,
+        org_id=org_id,
+        settings=settings,
     )
     return {
-        "variant_id": variant.id, "source_book_type": book_type,
-        "source_book_id": book_id, "variant_type": VARIANT_HIGH_CONTRAST,
-        "variant_book_id": variant_book_id, "settings": settings,
+        "variant_id": variant.id,
+        "source_book_type": book_type,
+        "source_book_id": book_id,
+        "variant_type": VARIANT_HIGH_CONTRAST,
+        "variant_book_id": variant_book_id,
+        "settings": settings,
         "created_at": variant.created_at,
     }
 
@@ -232,7 +265,10 @@ async def generate_high_contrast(
 
 
 async def check_accessibility_compliance(
-    db: AsyncSession, book_type: str, book_id: uuid.UUID, org_id: uuid.UUID,
+    db: AsyncSession,
+    book_type: str,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
     standard: str = "WCAG_AA",
 ) -> dict[str, Any]:
     """Check a book against WCAG AA or AAA accessibility standards."""
@@ -252,29 +288,56 @@ async def check_accessibility_compliance(
     checks: list[dict[str, Any]] = []
     default_fg, default_bg = "#000000", "#FFFFFF"
     contrast = calculate_contrast_ratio(default_fg, default_bg)
-    checks.append({"name": "contrast_ratio", "standard": standard_label,
-        "required": contrast_threshold, "actual": round(contrast, 2),
-        "passed": contrast >= contrast_threshold,
-        "details": f"Foreground {default_fg} on background {default_bg}"})
+    checks.append(
+        {
+            "name": "contrast_ratio",
+            "standard": standard_label,
+            "required": contrast_threshold,
+            "actual": round(contrast, 2),
+            "passed": contrast >= contrast_threshold,
+            "details": f"Foreground {default_fg} on background {default_bg}",
+        }
+    )
     simulated_font_size = 12
-    checks.append({"name": "font_size_minimum", "standard": standard_label,
-        "required": min_font, "actual": simulated_font_size,
-        "passed": simulated_font_size >= min_font,
-        "details": f"Minimum font size check ({min_font}pt required)"})
+    checks.append(
+        {
+            "name": "font_size_minimum",
+            "standard": standard_label,
+            "required": min_font,
+            "actual": simulated_font_size,
+            "passed": simulated_font_size >= min_font,
+            "details": f"Minimum font size check ({min_font}pt required)",
+        }
+    )
     simulated_line_spacing = 1.15
-    checks.append({"name": "line_spacing", "standard": standard_label,
-        "required": min_line_spacing, "actual": simulated_line_spacing,
-        "passed": simulated_line_spacing >= min_line_spacing,
-        "details": f"Minimum line spacing {min_line_spacing}x required"})
-    checks.append({"name": "large_text_contrast", "standard": standard_label,
-        "required": large_text_contrast, "actual": round(contrast, 2),
-        "passed": contrast >= large_text_contrast,
-        "details": "Contrast for large text (>=18pt or >=14pt bold)"})
+    checks.append(
+        {
+            "name": "line_spacing",
+            "standard": standard_label,
+            "required": min_line_spacing,
+            "actual": simulated_line_spacing,
+            "passed": simulated_line_spacing >= min_line_spacing,
+            "details": f"Minimum line spacing {min_line_spacing}x required",
+        }
+    )
+    checks.append(
+        {
+            "name": "large_text_contrast",
+            "standard": standard_label,
+            "required": large_text_contrast,
+            "actual": round(contrast, 2),
+            "passed": contrast >= large_text_contrast,
+            "details": "Contrast for large text (>=18pt or >=14pt bold)",
+        }
+    )
     overall_passed = all(c["passed"] for c in checks)
     report: dict[str, Any] = {
-        "book_type": book_type, "book_id": book_id,
-        "standard": standard_label, "overall_passed": overall_passed,
-        "checks": checks, "total_checks": len(checks),
+        "book_type": book_type,
+        "book_id": book_id,
+        "standard": standard_label,
+        "overall_passed": overall_passed,
+        "checks": checks,
+        "total_checks": len(checks),
         "passed_checks": sum(1 for c in checks if c["passed"]),
         "failed_checks": sum(1 for c in checks if not c["passed"]),
         "recommendations": [],

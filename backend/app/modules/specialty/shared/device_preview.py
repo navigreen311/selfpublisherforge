@@ -107,9 +107,7 @@ DEVICE_SPECS: dict[str, dict[str, Any]] = {
 # ---------------------------------------------------------------------------
 
 
-def _compute_scale(
-    source_w: int, source_h: int, target_w: int, target_h: int
-) -> dict:
+def _compute_scale(source_w: int, source_h: int, target_w: int, target_h: int) -> dict:
     """Compute scaling info to fit source dimensions within target."""
     scale_x = target_w / source_w if source_w else 1.0
     scale_y = target_h / source_h if source_h else 1.0
@@ -130,9 +128,7 @@ def _compute_scale(
     }
 
 
-def _compute_text_readability(
-    font_size: int, scale_factor: float, dpi: int
-) -> dict:
+def _compute_text_readability(font_size: int, scale_factor: float, dpi: int) -> dict:
     """Evaluate whether text will be readable on the target device."""
     scaled_size = font_size * scale_factor
     # Convert px to physical points at device DPI
@@ -186,10 +182,7 @@ def generate_preview(page_data: dict, device: str) -> dict:
         If *device* is not a recognised device key.
     """
     if device not in DEVICE_SPECS:
-        raise ValueError(
-            f"Unknown device '{device}'. "
-            f"Valid devices: {', '.join(DEVICE_SPECS.keys())}"
-        )
+        raise ValueError(f"Unknown device '{device}'. " f"Valid devices: {', '.join(DEVICE_SPECS.keys())}")
 
     spec = DEVICE_SPECS[device]
     source_w = page_data.get("width", 1024)
@@ -201,9 +194,7 @@ def generate_preview(page_data: dict, device: str) -> dict:
 
     # Text readability check
     font_size = page_data.get("text_font_size", 18)
-    readability = _compute_text_readability(
-        font_size, scaling["scale_factor"], spec["dpi"]
-    )
+    readability = _compute_text_readability(font_size, scaling["scale_factor"], spec["dpi"])
 
     # Grayscale conversion needed?
     is_grayscale = spec.get("grayscale", False)
@@ -268,10 +259,7 @@ def generate_all_previews(page_data: dict) -> dict:
         if readability["is_readable"]:
             readable_on.append(device_key)
         else:
-            warnings.append(
-                f"Text not readable on {preview['device_name']} "
-                f"({readability['physical_size_pt']}pt)"
-            )
+            warnings.append(f"Text not readable on {preview['device_name']} " f"({readability['physical_size_pt']}pt)")
         if readability["needs_text_popup"]:
             popup_needed.append(device_key)
 

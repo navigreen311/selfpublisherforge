@@ -39,18 +39,14 @@ def _generate_opf(book_type: str, book_data: dict, pages: list) -> str:
     for idx, page in enumerate(pages):
         page_id = f"page{idx:04d}"
         manifest_items.append(
-            f'    <item id="{page_id}" href="pages/{page_id}.xhtml" '
-            f'media-type="application/xhtml+xml" />'
+            f'    <item id="{page_id}" href="pages/{page_id}.xhtml" ' f'media-type="application/xhtml+xml" />'
         )
         spine_items.append(f'    <itemref idref="{page_id}" />')
         if page.get("image_url"):
             img_id = f"img{idx:04d}"
             ext = page["image_url"].rsplit(".", 1)[-1] if "." in page["image_url"] else "png"
             media = f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}"
-            manifest_items.append(
-                f'    <item id="{img_id}" href="images/{img_id}.{ext}" '
-                f'media-type="{media}" />'
-            )
+            manifest_items.append(f'    <item id="{img_id}" href="images/{img_id}.{ext}" ' f'media-type="{media}" />')
 
     manifest_block = "\n".join(manifest_items)
     spine_block = "\n".join(spine_items)
@@ -76,9 +72,7 @@ def _generate_opf(book_type: str, book_data: dict, pages: list) -> str:
 </package>"""
 
 
-def _build_page_xhtml(
-    page: dict, idx: int, viewport_w: int, viewport_h: int
-) -> str:
+def _build_page_xhtml(page: dict, idx: int, viewport_w: int, viewport_h: int) -> str:
     """Build a single fixed-layout XHTML page."""
     text = page.get("text_content", "")
     img_tag = ""
@@ -238,8 +232,7 @@ def generate_fixed_epub(book_type: str, book_data: dict) -> bytes:
 
         # Navigation document (EPUB 3 requirement)
         nav_items = "\n".join(
-            f'      <li><a href="pages/page{i:04d}.xhtml">Page {i + 1}</a></li>'
-            for i in range(len(pages))
+            f'      <li><a href="pages/page{i:04d}.xhtml">Page {i + 1}</a></li>' for i in range(len(pages))
         )
         nav_doc = f"""<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
@@ -300,9 +293,7 @@ def create_read_order(pages: list[dict]) -> list[dict]:
         if page.get("image_url") or layout not in ("text_only",):
             alt = page.get("image_alt", f"Illustration for page {idx + 1}")
             img_sort = 1 if position == "top" else 0
-            text_regions.append(
-                {"type": "image_alt", "content": alt, "sort_key": img_sort}
-            )
+            text_regions.append({"type": "image_alt", "content": alt, "sort_key": img_sort})
 
         # Sort regions for logical reading order (top-to-bottom)
         text_regions.sort(key=lambda r: r["sort_key"])

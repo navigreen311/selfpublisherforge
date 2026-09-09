@@ -28,6 +28,7 @@ from app.modules.advertising.models import AdCreative, Campaign  # noqa: F401
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class LaunchPlanStatus(str, PyEnum):
     DRAFT = "draft"
     ACTIVE = "active"
@@ -105,6 +106,7 @@ class ARCRecipientStatus(str, PyEnum):
 # Models
 # ---------------------------------------------------------------------------
 
+
 class LaunchPlan(TenantModel):
     """Top-level launch plan for a book."""
 
@@ -135,7 +137,9 @@ class LaunchPlan(TenantModel):
     # Relationships
     book = relationship("Book", back_populates="launch_plans")
     phases: Mapped[list["LaunchPhase"]] = relationship(
-        "LaunchPhase", back_populates="launch_plan", cascade="all, delete-orphan",
+        "LaunchPhase",
+        back_populates="launch_plan",
+        cascade="all, delete-orphan",
         order_by="LaunchPhase.order_index",
     )
 
@@ -146,7 +150,10 @@ class LaunchPhase(BaseModel):
     __tablename__ = "launch_phases"
 
     launch_plan_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     phase_type: Mapped[LaunchPhaseType] = mapped_column(
         Enum(LaunchPhaseType, name="launch_phase_type", create_constraint=False),
@@ -161,7 +168,9 @@ class LaunchPhase(BaseModel):
     # Relationships
     launch_plan: Mapped["LaunchPlan"] = relationship("LaunchPlan", back_populates="phases")
     tasks: Mapped[list["PhaseTask"]] = relationship(
-        "PhaseTask", back_populates="phase", cascade="all, delete-orphan",
+        "PhaseTask",
+        back_populates="phase",
+        cascade="all, delete-orphan",
         order_by="PhaseTask.order_index",
     )
 
@@ -172,7 +181,10 @@ class PhaseTask(BaseModel):
     __tablename__ = "phase_tasks"
 
     phase_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("launch_phases.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("launch_phases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -195,7 +207,10 @@ class EmailSequence(TenantModel):
     __tablename__ = "email_sequences"
 
     launch_plan_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="SET NULL"), nullable=True, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -216,12 +231,15 @@ class EmailSequence(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="email_sequences",
+        "Organization",
+        back_populates="email_sequences",
         primaryjoin="EmailSequence.org_id == Organization.id",
         foreign_keys="[EmailSequence.org_id]",
     )
     emails: Mapped[list["EmailTemplate"]] = relationship(
-        "EmailTemplate", back_populates="sequence", cascade="all, delete-orphan",
+        "EmailTemplate",
+        back_populates="sequence",
+        cascade="all, delete-orphan",
         order_by="EmailTemplate.order_index",
     )
 
@@ -232,7 +250,10 @@ class EmailTemplate(BaseModel):
     __tablename__ = "email_templates"
 
     sequence_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("email_sequences.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("email_sequences.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     template_type: Mapped[EmailTemplateType] = mapped_column(
         Enum(EmailTemplateType, name="email_template_type", create_constraint=False),
@@ -270,7 +291,8 @@ class ReaderPanel(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="reader_panels",
+        "Organization",
+        back_populates="reader_panels",
         primaryjoin="ReaderPanel.org_id == Organization.id",
         foreign_keys="[ReaderPanel.org_id]",
     )
@@ -290,7 +312,10 @@ class SocialPost(TenantModel):
     __tablename__ = "social_posts"
 
     launch_plan_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="SET NULL"), nullable=True, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     platform: Mapped[SocialPlatform] = mapped_column(
         Enum(SocialPlatform, name="social_platform", create_constraint=False),
@@ -317,7 +342,10 @@ class ARCCampaign(TenantModel):
     __tablename__ = "arc_campaigns"
 
     launch_plan_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="SET NULL"), nullable=True, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     book_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -338,7 +366,9 @@ class ARCCampaign(TenantModel):
 
     # Relationships
     recipients: Mapped[list["ARCRecipient"]] = relationship(
-        "ARCRecipient", back_populates="campaign", cascade="all, delete-orphan",
+        "ARCRecipient",
+        back_populates="campaign",
+        cascade="all, delete-orphan",
     )
 
 
@@ -348,7 +378,10 @@ class ARCRecipient(BaseModel):
     __tablename__ = "arc_recipients"
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("arc_campaigns.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("arc_campaigns.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(300), nullable=False)
     email: Mapped[str] = mapped_column(String(500), nullable=False)

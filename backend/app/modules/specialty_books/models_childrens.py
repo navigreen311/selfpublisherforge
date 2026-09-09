@@ -50,9 +50,7 @@ class ChildrensBookPage(BaseModel):
 
     __tablename__ = "childrens_book_pages"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True
-    )
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True)
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
     page_type: Mapped[str | None] = mapped_column(String(20), default="spread")
     layout: Mapped[str | None] = mapped_column(String(50), default="text_bottom")
@@ -77,9 +75,7 @@ class ChildrensBookCharacter(BaseModel):
 
     __tablename__ = "childrens_book_characters"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True
-    )
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     species: Mapped[str | None] = mapped_column(String(100), default="human")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

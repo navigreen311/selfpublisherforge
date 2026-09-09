@@ -47,6 +47,7 @@ from app.modules.style_cloning.schemas import (
 # ORM -> Response conversion
 # ---------------------------------------------------------------------------
 
+
 def _to_response(profile: StyleProfile) -> ProfileResponse:
     """Convert an ORM StyleProfile instance to a ProfileResponse schema."""
     # Reconstruct StyleCard from the stored dict if present
@@ -73,6 +74,7 @@ def _to_response(profile: StyleProfile) -> ProfileResponse:
 # ---------------------------------------------------------------------------
 # Pipeline orchestration
 # ---------------------------------------------------------------------------
+
 
 def _run_analysis(profile: StyleProfile) -> None:
     """Run the full NLP pipeline on accumulated samples.
@@ -142,6 +144,7 @@ def _run_analysis(profile: StyleProfile) -> None:
 # ---------------------------------------------------------------------------
 # Public service functions
 # ---------------------------------------------------------------------------
+
 
 async def create_profile(
     db: AsyncSession,

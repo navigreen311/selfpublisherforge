@@ -158,9 +158,7 @@ class TestAppExceptionHandler:
     async def test_includes_details_when_present(self) -> None:
         request = _make_request()
         details = [{"field": "email", "issue": "invalid format"}]
-        exc = AppException(
-            status_code=422, code="VALIDATION_ERROR", message="Invalid", details=details
-        )
+        exc = AppException(status_code=422, code="VALIDATION_ERROR", message="Invalid", details=details)
         response = await app_exception_handler(request, exc)
         import json
 
@@ -244,9 +242,7 @@ class TestValidationExceptionHandler:
     async def test_handles_empty_loc(self) -> None:
         """When loc is empty, field should be an empty string."""
         request = _make_request()
-        exc = RequestValidationError(
-            errors=[{"loc": (), "msg": "general error", "type": "value_error"}]
-        )
+        exc = RequestValidationError(errors=[{"loc": (), "msg": "general error", "type": "value_error"}])
         response = await validation_exception_handler(request, exc)
         import json
 
@@ -257,9 +253,7 @@ class TestValidationExceptionHandler:
     async def test_response_is_json_not_html(self) -> None:
         """Validation errors must return JSON, not HTML (especially for API routes)."""
         request = _make_request()
-        exc = RequestValidationError(
-            errors=[{"loc": ("query", "page"), "msg": "not int", "type": "type_error"}]
-        )
+        exc = RequestValidationError(errors=[{"loc": ("query", "page"), "msg": "not int", "type": "type_error"}])
         response = await validation_exception_handler(request, exc)
         content_type = dict(response.headers).get("content-type", "")
         assert "application/json" in content_type

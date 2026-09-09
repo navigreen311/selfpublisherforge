@@ -172,16 +172,12 @@ class TestTrademarkSafety:
         assert len(violations) == 0
 
     def test_style_of_artist_detected(self):
-        violations = check_trademark_safety(
-            "Draw a cat in the style of Pablo Picasso", "prompt"
-        )
+        violations = check_trademark_safety("Draw a cat in the style of Pablo Picasso", "prompt")
         assert len(violations) >= 1
         assert any(v["type"] == "style_imitation" for v in violations)
 
     def test_style_of_artist_captures_name(self):
-        violations = check_trademark_safety(
-            "Watercolor landscape in the style of Bob Ross", "prompt"
-        )
+        violations = check_trademark_safety("Watercolor landscape in the style of Bob Ross", "prompt")
         style_violations = [v for v in violations if v["type"] == "style_imitation"]
         assert len(style_violations) >= 1
         assert style_violations[0]["artist"] == "Bob Ross"
@@ -222,16 +218,12 @@ class TestContentSensitivity:
         assert all(i["severity"] == "block" for i in mature)
 
     def test_detects_stereotypes(self):
-        issues = check_content_sensitivity(
-            "The savage people lived in primitive tribes", "6-8"
-        )
+        issues = check_content_sensitivity("The savage people lived in primitive tribes", "6-8")
         stereo = [i for i in issues if i["type"] == "stereotypes"]
         assert len(stereo) >= 1
 
     def test_clean_text_passes(self):
-        issues = check_content_sensitivity(
-            "The bunny hopped across the sunny meadow and found a carrot", "3-5"
-        )
+        issues = check_content_sensitivity("The bunny hopped across the sunny meadow and found a carrot", "3-5")
         assert len(issues) == 0
 
     def test_advanced_vocabulary_for_young_children(self):

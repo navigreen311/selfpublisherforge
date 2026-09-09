@@ -6,6 +6,7 @@ and export page-count calculations.
 
 Puzzle generation *algorithms* are NOT tested here (covered by another agent).
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -29,6 +30,7 @@ from app.modules.specialty.puzzles import service
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_book(**overrides: Any) -> SimpleNamespace:
     """Create a lightweight PuzzleBook-like object for testing."""
@@ -334,19 +336,26 @@ async def test_generate_large_print_scales_grid_sizes():
     scale = 150
     scale_factor = scale / 100.0
 
-    with patch(
-        "app.modules.specialty.puzzles.service._get_book_or_404",
-        new_callable=AsyncMock,
-        return_value=book,
-    ), patch(
-        "app.modules.specialty.puzzles.service.PuzzleBook",
-        return_value=lp_book,
-    ), patch(
-        "app.modules.specialty.puzzles.service.Puzzle",
-        side_effect=lambda **kw: SimpleNamespace(**kw),
-    ), patch(
-        "app.modules.specialty.puzzles.service.select",
-        return_value=MagicMock(where=MagicMock(return_value=MagicMock(order_by=MagicMock(return_value="fake_stmt")))),
+    with (
+        patch(
+            "app.modules.specialty.puzzles.service._get_book_or_404",
+            new_callable=AsyncMock,
+            return_value=book,
+        ),
+        patch(
+            "app.modules.specialty.puzzles.service.PuzzleBook",
+            return_value=lp_book,
+        ),
+        patch(
+            "app.modules.specialty.puzzles.service.Puzzle",
+            side_effect=lambda **kw: SimpleNamespace(**kw),
+        ),
+        patch(
+            "app.modules.specialty.puzzles.service.select",
+            return_value=MagicMock(
+                where=MagicMock(return_value=MagicMock(order_by=MagicMock(return_value="fake_stmt")))
+            ),
+        ),
     ):
         result = await service.generate_large_print(db, book.org_id, book.id, scale)
 
@@ -418,12 +427,27 @@ async def test_quality_check_detects_duplicate_content_hashes():
     book = _make_book()
     shared_hash = "deadbeef" * 8  # 64 hex chars
     puzzles = [
-        _make_puzzle(book_id=book.id, puzzle_number=1, content_hash=shared_hash,
-                     word_list=["alpha", "beta"], difficulty=Difficulty.easy),
-        _make_puzzle(book_id=book.id, puzzle_number=2, content_hash=shared_hash,
-                     word_list=["gamma", "delta"], difficulty=Difficulty.medium),
-        _make_puzzle(book_id=book.id, puzzle_number=3, content_hash="unique123",
-                     word_list=["epsilon"], difficulty=Difficulty.hard),
+        _make_puzzle(
+            book_id=book.id,
+            puzzle_number=1,
+            content_hash=shared_hash,
+            word_list=["alpha", "beta"],
+            difficulty=Difficulty.easy,
+        ),
+        _make_puzzle(
+            book_id=book.id,
+            puzzle_number=2,
+            content_hash=shared_hash,
+            word_list=["gamma", "delta"],
+            difficulty=Difficulty.medium,
+        ),
+        _make_puzzle(
+            book_id=book.id,
+            puzzle_number=3,
+            content_hash="unique123",
+            word_list=["epsilon"],
+            difficulty=Difficulty.hard,
+        ),
     ]
     db = _mock_db_with_book_and_puzzles(book, puzzles)
 
@@ -442,19 +466,22 @@ async def test_quality_check_enforces_max_word_overlap():
     shared_words = ["apple", "banana", "cherry", "date"]
     puzzles = [
         _make_puzzle(
-            book_id=book.id, puzzle_number=1,
+            book_id=book.id,
+            puzzle_number=1,
             content_hash="hash1",
             word_list=shared_words + ["elderberry"],
             difficulty=Difficulty.easy,
         ),
         _make_puzzle(
-            book_id=book.id, puzzle_number=2,
+            book_id=book.id,
+            puzzle_number=2,
             content_hash="hash2",
             word_list=shared_words + ["fig"],
             difficulty=Difficulty.medium,
         ),
         _make_puzzle(
-            book_id=book.id, puzzle_number=3,
+            book_id=book.id,
+            puzzle_number=3,
             content_hash="hash3",
             word_list=["grape", "honeydew", "kiwi"],
             difficulty=Difficulty.hard,
@@ -481,10 +508,7 @@ async def test_export_book_calculates_correct_page_counts():
     """Export returns metadata with total_pages and puzzle_count."""
     book = _make_book(has_toc=True)
     num_puzzles = 10
-    puzzles = [
-        _make_puzzle(book_id=book.id, puzzle_number=i)
-        for i in range(1, num_puzzles + 1)
-    ]
+    puzzles = [_make_puzzle(book_id=book.id, puzzle_number=i) for i in range(1, num_puzzles + 1)]
     db = _mock_db_with_book_and_puzzles(book, puzzles)
 
     result = await service.export_book(db, book.org_id, book.id, "pdf")

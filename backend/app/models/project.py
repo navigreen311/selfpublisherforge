@@ -1,4 +1,5 @@
 """Project, Book, Series, PenName, and BookVersion models."""
+
 import datetime
 import enum
 import uuid
@@ -97,7 +98,8 @@ class Project(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="projects",
+        "Organization",
+        back_populates="projects",
         primaryjoin="Project.org_id == Organization.id",
         foreign_keys="[Project.org_id]",
     )
@@ -135,9 +137,7 @@ class Book(BaseModel):
         default=BookStatus.DRAFT,
         server_default="draft",
     )
-    metadata_: Mapped[dict | None] = mapped_column(
-        "metadata", JSONB, nullable=True, default=None
-    )
+    metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, default=None)
 
     # Relationships
     project = relationship("Project", back_populates="books")
@@ -147,17 +147,23 @@ class Book(BaseModel):
     upload_validations = relationship("UploadValidation", back_populates="book", lazy="selectin")
     compliance_scans = relationship("ComplianceScan", back_populates="book", lazy="selectin")
     pricing_rules = relationship(
-        "PricingRule", back_populates="book", lazy="selectin",
+        "PricingRule",
+        back_populates="book",
+        lazy="selectin",
         primaryjoin="Book.id == foreign(PricingRule.book_id)",
     )
     campaigns = relationship(
-        "Campaign", back_populates="book", lazy="selectin",
+        "Campaign",
+        back_populates="book",
+        lazy="selectin",
         primaryjoin="Book.id == foreign(Campaign.book_id)",
     )
     launch_plans = relationship("LaunchPlan", back_populates="book", lazy="selectin")
     writing_sessions = relationship("WritingSession", back_populates="book", lazy="selectin")
     royalty_records = relationship(
-        "RoyaltyRecord", back_populates="book", lazy="selectin",
+        "RoyaltyRecord",
+        back_populates="book",
+        lazy="selectin",
         primaryjoin="Book.id == foreign(RoyaltyRecord.book_id)",
     )
 
@@ -184,7 +190,8 @@ class Series(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="series",
+        "Organization",
+        back_populates="series",
         primaryjoin="Series.org_id == Organization.id",
         foreign_keys="[Series.org_id]",
     )
@@ -208,7 +215,8 @@ class PenName(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="pen_names",
+        "Organization",
+        back_populates="pen_names",
         primaryjoin="PenName.org_id == Organization.id",
         foreign_keys="[PenName.org_id]",
     )
@@ -244,6 +252,4 @@ class BookVersion(BaseModel):
     book = relationship("Book", back_populates="book_versions")
     created_by_user = relationship("User", back_populates="book_versions")
 
-    __table_args__ = (
-        Index("ix_book_versions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
-    )
+    __table_args__ = (Index("ix_book_versions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),)

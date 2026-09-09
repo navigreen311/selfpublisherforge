@@ -1,4 +1,5 @@
 """SQLAlchemy models for Cookbooks."""
+
 from __future__ import annotations
 
 import uuid
@@ -71,22 +72,12 @@ class Cookbook(TenantModel):
     )
 
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
-    trim_size: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="8x10"
-    )
+    trim_size: Mapped[str] = mapped_column(String(20), nullable=False, default="8x10")
 
-    include_nutrition: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
-    include_meal_plans: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    include_shopping_lists: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    include_index: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
+    include_nutrition: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    include_meal_plans: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    include_shopping_lists: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    include_index: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     include_conversion_charts: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
@@ -195,9 +186,7 @@ class Recipe(BaseModel):
     scaling_factor: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     # Relationships
-    chapter: Mapped[CookbookChapter] = relationship(
-        "CookbookChapter", back_populates="recipes"
-    )
+    chapter: Mapped[CookbookChapter] = relationship("CookbookChapter", back_populates="recipes")
 
 
 class MealPlan(BaseModel):

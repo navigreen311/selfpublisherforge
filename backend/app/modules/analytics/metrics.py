@@ -97,18 +97,15 @@ async def compute_portfolio_metrics(
         as_of = datetime.now(UTC)
 
     # Total revenue & units
-    totals_query = (
-        select(
-            func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("total_revenue"),
-            func.coalesce(func.sum(RoyaltyRecord.gross_revenue), 0).label("gross_revenue"),
-            func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("total_units"),
-            func.count(func.distinct(RoyaltyRecord.title)).label("total_books"),
-        )
-        .where(
-            and_(
-                RoyaltyRecord.org_id == org_id,
-                RoyaltyRecord.deleted_at.is_(None),
-            )
+    totals_query = select(
+        func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("total_revenue"),
+        func.coalesce(func.sum(RoyaltyRecord.gross_revenue), 0).label("gross_revenue"),
+        func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("total_units"),
+        func.count(func.distinct(RoyaltyRecord.title)).label("total_books"),
+    ).where(
+        and_(
+            RoyaltyRecord.org_id == org_id,
+            RoyaltyRecord.deleted_at.is_(None),
         )
     )
     result = await db.execute(totals_query)
@@ -145,10 +142,7 @@ async def compute_portfolio_metrics(
         .group_by(RoyaltyRecord.platform)
     )
     platform_result = await db.execute(platform_query)
-    platform_breakdown = {
-        row.platform: Decimal(str(row.revenue))
-        for row in platform_result.all()
-    }
+    platform_breakdown = {row.platform: Decimal(str(row.revenue)) for row in platform_result.all()}
 
     # Format breakdown
     format_query = (
@@ -167,8 +161,7 @@ async def compute_portfolio_metrics(
     )
     format_result = await db.execute(format_query)
     format_breakdown = {
-        row.format_type: {"revenue": Decimal(str(row.revenue)), "units": int(row.units)}
-        for row in format_result.all()
+        row.format_type: {"revenue": Decimal(str(row.revenue)), "units": int(row.units)} for row in format_result.all()
     }
 
     # Top books by revenue
@@ -224,19 +217,16 @@ async def compute_kpis(
     prev_end = period_start
 
     async def _period_totals(start: datetime, end: datetime):
-        query = (
-            select(
-                func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("revenue"),
-                func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("units"),
-                func.count(RoyaltyRecord.id).label("records"),
-            )
-            .where(
-                and_(
-                    RoyaltyRecord.org_id == org_id,
-                    RoyaltyRecord.period_start >= start,
-                    RoyaltyRecord.period_end <= end,
-                    RoyaltyRecord.deleted_at.is_(None),
-                )
+        query = select(
+            func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("revenue"),
+            func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("units"),
+            func.count(RoyaltyRecord.id).label("records"),
+        ).where(
+            and_(
+                RoyaltyRecord.org_id == org_id,
+                RoyaltyRecord.period_start >= start,
+                RoyaltyRecord.period_end <= end,
+                RoyaltyRecord.deleted_at.is_(None),
             )
         )
         result = await db.execute(query)

@@ -13,6 +13,7 @@ from enum import Enum
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class PaperType(str, Enum):
     WHITE = "white"
     CREAM = "cream"
@@ -38,9 +39,11 @@ class CoverType(str, Enum):
 # Trim-size definitions
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class TrimSize:
     """KDP trim size with associated margin requirements (inches)."""
+
     width: float
     height: float
     min_inside_margin: float
@@ -54,76 +57,112 @@ class TrimSize:
 # Inside margins scale with page count; these are base minimums.
 TRIM_SIZES: dict[str, TrimSize] = {
     "5x8": TrimSize(
-        width=5.0, height=8.0,
-        min_inside_margin=0.375, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="5\" x 8\"",
+        width=5.0,
+        height=8.0,
+        min_inside_margin=0.375,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='5" x 8"',
     ),
     "5.06x7.81": TrimSize(
-        width=5.06, height=7.81,
-        min_inside_margin=0.375, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="5.06\" x 7.81\"",
+        width=5.06,
+        height=7.81,
+        min_inside_margin=0.375,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='5.06" x 7.81"',
     ),
     "5.25x8": TrimSize(
-        width=5.25, height=8.0,
-        min_inside_margin=0.375, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="5.25\" x 8\"",
+        width=5.25,
+        height=8.0,
+        min_inside_margin=0.375,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='5.25" x 8"',
     ),
     "5.5x8.5": TrimSize(
-        width=5.5, height=8.5,
-        min_inside_margin=0.375, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="5.5\" x 8.5\"",
+        width=5.5,
+        height=8.5,
+        min_inside_margin=0.375,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='5.5" x 8.5"',
     ),
     "6x9": TrimSize(
-        width=6.0, height=9.0,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="6\" x 9\"",
+        width=6.0,
+        height=9.0,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='6" x 9"',
     ),
     "6.14x9.21": TrimSize(
-        width=6.14, height=9.21,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="6.14\" x 9.21\"",
+        width=6.14,
+        height=9.21,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='6.14" x 9.21"',
     ),
     "6.69x9.61": TrimSize(
-        width=6.69, height=9.61,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="6.69\" x 9.61\"",
+        width=6.69,
+        height=9.61,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='6.69" x 9.61"',
     ),
     "7x10": TrimSize(
-        width=7.0, height=10.0,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="7\" x 10\"",
+        width=7.0,
+        height=10.0,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='7" x 10"',
     ),
     "7.44x9.69": TrimSize(
-        width=7.44, height=9.69,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="7.44\" x 9.69\"",
+        width=7.44,
+        height=9.69,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='7.44" x 9.69"',
     ),
     "7.5x9.25": TrimSize(
-        width=7.5, height=9.25,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="7.5\" x 9.25\"",
+        width=7.5,
+        height=9.25,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='7.5" x 9.25"',
     ),
     "8x10": TrimSize(
-        width=8.0, height=10.0,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="8\" x 10\"",
+        width=8.0,
+        height=10.0,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='8" x 10"',
     ),
     "8.5x11": TrimSize(
-        width=8.5, height=11.0,
-        min_inside_margin=0.5, min_outside_margin=0.25,
-        min_top_margin=0.25, min_bottom_margin=0.25,
-        label="8.5\" x 11\"",
+        width=8.5,
+        height=11.0,
+        min_inside_margin=0.5,
+        min_outside_margin=0.25,
+        min_top_margin=0.25,
+        min_bottom_margin=0.25,
+        label='8.5" x 11"',
     ),
 }
 
@@ -131,6 +170,7 @@ TRIM_SIZES: dict[str, TrimSize] = {
 # ---------------------------------------------------------------------------
 # Inside margin page-count scaling (KDP rules)
 # ---------------------------------------------------------------------------
+
 
 def get_inside_margin(base_margin: float, page_count: int) -> float:
     """Return the required inside (gutter) margin based on page count.
@@ -203,6 +243,7 @@ ALLOWED_EBOOK_COVER_FORMATS: set[str] = {"JPEG", "JPG"}
 # Cover dimension rules
 # ---------------------------------------------------------------------------
 
+
 def expected_print_cover_width(trim_width: float, spine_width: float) -> float:
     """Full wrap cover width = front + spine + back + bleed on both edges."""
     return (trim_width * 2) + spine_width + (BLEED_SIZE * 2)
@@ -248,6 +289,7 @@ DISALLOWED_EBOOK_ELEMENTS: list[str] = [
 # ---------------------------------------------------------------------------
 # Compliance / policy rules
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ComplianceRule:
@@ -303,6 +345,21 @@ DESCRIPTION_DISALLOWED_HTML: list[str] = [
 ]
 
 DESCRIPTION_ALLOWED_HTML_TAGS: set[str] = {
-    "b", "i", "u", "br", "p", "h1", "h2", "h3", "h4", "h5", "h6",
-    "ol", "ul", "li", "em", "strong", "a",
+    "b",
+    "i",
+    "u",
+    "br",
+    "p",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ol",
+    "ul",
+    "li",
+    "em",
+    "strong",
+    "a",
 }

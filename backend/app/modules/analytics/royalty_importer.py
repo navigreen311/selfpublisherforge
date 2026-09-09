@@ -131,25 +131,27 @@ def parse_kdp_csv(csv_text: str) -> list[dict[str, Any]]:
             else:
                 period_end = period_date.replace(month=period_date.month + 1)
 
-            records.append({
-                "platform": Platform.KDP.value,
-                "marketplace": marketplace,
-                "title": title,
-                "asin": (row.get("ASIN", row.get("asin", "")) or "").strip() or None,
-                "isbn": (row.get("ISBN", row.get("isbn", "")) or "").strip() or None,
-                "format_type": _infer_format(row.get("Royalty Type", row.get("royalty_type", ""))),
-                "units_sold": units_sold,
-                "units_refunded": units_refunded,
-                "net_units": net_units,
-                "list_price": list_price,
-                "royalty_rate": Decimal("0.70"),
-                "gross_revenue": list_price * net_units,
-                "net_revenue": royalty,
-                "currency": currency,
-                "period_start": period_date,
-                "period_end": period_end,
-                "raw_data": dict(row),
-            })
+            records.append(
+                {
+                    "platform": Platform.KDP.value,
+                    "marketplace": marketplace,
+                    "title": title,
+                    "asin": (row.get("ASIN", row.get("asin", "")) or "").strip() or None,
+                    "isbn": (row.get("ISBN", row.get("isbn", "")) or "").strip() or None,
+                    "format_type": _infer_format(row.get("Royalty Type", row.get("royalty_type", ""))),
+                    "units_sold": units_sold,
+                    "units_refunded": units_refunded,
+                    "net_units": net_units,
+                    "list_price": list_price,
+                    "royalty_rate": Decimal("0.70"),
+                    "gross_revenue": list_price * net_units,
+                    "net_revenue": royalty,
+                    "currency": currency,
+                    "period_start": period_date,
+                    "period_end": period_end,
+                    "raw_data": dict(row),
+                }
+            )
         except (KeyError, ValueError, TypeError, InvalidOperation, AttributeError) as exc:
             logger.warning("KDP CSV row %d parse error: %s", i, exc, exc_info=True)
             errors.append(f"Row {i}: {exc}")
@@ -192,25 +194,27 @@ def parse_ingram_spark_csv(csv_text: str) -> list[dict[str, Any]]:
             else:
                 period_end = period_date.replace(month=period_date.month + 1)
 
-            records.append({
-                "platform": Platform.INGRAM_SPARK.value,
-                "marketplace": "IngramSpark",
-                "title": title,
-                "asin": None,
-                "isbn": (row.get("ISBN", row.get("isbn", "")) or "").strip() or None,
-                "format_type": _infer_format(row.get("Format", row.get("format", ""))),
-                "units_sold": units_sold,
-                "units_refunded": units_refunded,
-                "net_units": net_units,
-                "list_price": Decimal("0.00"),
-                "royalty_rate": Decimal("0.00"),
-                "gross_revenue": compensation,
-                "net_revenue": compensation,
-                "currency": currency,
-                "period_start": period_date,
-                "period_end": period_end,
-                "raw_data": dict(row),
-            })
+            records.append(
+                {
+                    "platform": Platform.INGRAM_SPARK.value,
+                    "marketplace": "IngramSpark",
+                    "title": title,
+                    "asin": None,
+                    "isbn": (row.get("ISBN", row.get("isbn", "")) or "").strip() or None,
+                    "format_type": _infer_format(row.get("Format", row.get("format", ""))),
+                    "units_sold": units_sold,
+                    "units_refunded": units_refunded,
+                    "net_units": net_units,
+                    "list_price": Decimal("0.00"),
+                    "royalty_rate": Decimal("0.00"),
+                    "gross_revenue": compensation,
+                    "net_revenue": compensation,
+                    "currency": currency,
+                    "period_start": period_date,
+                    "period_end": period_end,
+                    "raw_data": dict(row),
+                }
+            )
         except (KeyError, ValueError, TypeError, InvalidOperation, AttributeError) as exc:
             logger.warning("IngramSpark CSV row %d parse error: %s", i, exc, exc_info=True)
             continue
@@ -247,25 +251,27 @@ def parse_d2d_csv(csv_text: str) -> list[dict[str, Any]]:
             else:
                 period_end = period_date.replace(month=period_date.month + 1)
 
-            records.append({
-                "platform": Platform.DRAFT2DIGITAL.value,
-                "marketplace": row.get("Channel", row.get("channel", "D2D")).strip() or "D2D",
-                "title": title,
-                "asin": None,
-                "isbn": (row.get("ISBN", row.get("isbn", "")) or "").strip() or None,
-                "format_type": "ebook",
-                "units_sold": units,
-                "units_refunded": 0,
-                "net_units": units,
-                "list_price": Decimal("0.00"),
-                "royalty_rate": Decimal("0.60"),
-                "gross_revenue": payout,
-                "net_revenue": payout,
-                "currency": currency,
-                "period_start": period_date,
-                "period_end": period_end,
-                "raw_data": dict(row),
-            })
+            records.append(
+                {
+                    "platform": Platform.DRAFT2DIGITAL.value,
+                    "marketplace": row.get("Channel", row.get("channel", "D2D")).strip() or "D2D",
+                    "title": title,
+                    "asin": None,
+                    "isbn": (row.get("ISBN", row.get("isbn", "")) or "").strip() or None,
+                    "format_type": "ebook",
+                    "units_sold": units,
+                    "units_refunded": 0,
+                    "net_units": units,
+                    "list_price": Decimal("0.00"),
+                    "royalty_rate": Decimal("0.60"),
+                    "gross_revenue": payout,
+                    "net_revenue": payout,
+                    "currency": currency,
+                    "period_start": period_date,
+                    "period_end": period_end,
+                    "raw_data": dict(row),
+                }
+            )
         except (KeyError, ValueError, TypeError, InvalidOperation, AttributeError) as exc:
             logger.warning("D2D CSV row %d parse error: %s", i, exc, exc_info=True)
             continue

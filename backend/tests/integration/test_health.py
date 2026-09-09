@@ -92,7 +92,9 @@ class TestHealthReady:
         with (
             patch("app.api.v1.health.get_db", return_value=_async_gen(mock_db)),
             patch("app.api.v1.health._check_db", return_value={"status": "healthy"}),
-            patch("app.api.v1.health._check_redis", return_value={"status": "unhealthy", "error": "Connection refused"}),
+            patch(
+                "app.api.v1.health._check_redis", return_value={"status": "unhealthy", "error": "Connection refused"}
+            ),
             patch("app.api.v1.health._check_elasticsearch", return_value={"status": "healthy"}),
         ):
             resp = await client.get("/health/ready")
@@ -117,7 +119,11 @@ class TestHealthDetailed:
     async def test_authenticated_admin_returns_200(self, test_app: FastAPI) -> None:
         """An admin user should get the full report."""
         mock_db = AsyncMock()
-        admin_user = {"user_id": "00000000-0000-0000-0000-000000000001", "org_id": "00000000-0000-0000-0000-000000000002", "role": "admin"}
+        admin_user = {
+            "user_id": "00000000-0000-0000-0000-000000000001",
+            "org_id": "00000000-0000-0000-0000-000000000002",
+            "role": "admin",
+        }
 
         from app.core.dependencies import require_role
 

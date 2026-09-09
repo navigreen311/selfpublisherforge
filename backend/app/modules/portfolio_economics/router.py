@@ -1,4 +1,5 @@
 """FastAPI router for Portfolio Economics, Audience DNA, and Seasonal Calendar endpoints."""
+
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
@@ -63,6 +64,7 @@ seasonal_router = APIRouter(prefix="/seasonal", tags=["seasonal"])
 
 
 # ─── Portfolio Endpoints ─────────────────────────────────────────────────────
+
 
 @portfolio_router.get(
     "",
@@ -139,17 +141,19 @@ async def get_portfolio_overview(
         monthly = monthly_by_book.get(book.id)
         metadata = book.metadata_ or {}
 
-        book_data_list.append({
-            "book_id": book.id,
-            "title": book.title,
-            "genre": metadata.get("genre", "Unknown"),
-            "monthly_revenue": float(monthly.monthly_revenue) if monthly else 0.0,
-            "monthly_units": int(monthly.monthly_units) if monthly else 0,
-            "total_revenue": float(totals.total_revenue) if totals else 0.0,
-            "total_investment": float(metadata.get("production_cost", 0)),
-            "launch_date": metadata.get("launch_date"),
-            "status": "active" if book.status == BookStatus.PUBLISHED else book.status.value,
-        })
+        book_data_list.append(
+            {
+                "book_id": book.id,
+                "title": book.title,
+                "genre": metadata.get("genre", "Unknown"),
+                "monthly_revenue": float(monthly.monthly_revenue) if monthly else 0.0,
+                "monthly_units": int(monthly.monthly_units) if monthly else 0,
+                "total_revenue": float(totals.total_revenue) if totals else 0.0,
+                "total_investment": float(metadata.get("production_cost", 0)),
+                "launch_date": metadata.get("launch_date"),
+                "status": "active" if book.status == BookStatus.PUBLISHED else book.status.value,
+            }
+        )
 
     overview = build_portfolio_overview(org_id, book_data_list)
     return SuccessResponse(data=overview)
@@ -287,16 +291,18 @@ async def get_recommendations(
         monthly = monthly_by_book.get(book.id)
         metadata = book.metadata_ or {}
 
-        book_data_list.append({
-            "book_id": book.id,
-            "title": book.title,
-            "genre": metadata.get("genre", "Unknown"),
-            "monthly_revenue": float(monthly.monthly_revenue) if monthly else 0.0,
-            "monthly_units": int(monthly.monthly_units) if monthly else 0,
-            "total_revenue": float(totals.total_revenue) if totals else 0.0,
-            "total_investment": float(metadata.get("production_cost", 0)),
-            "status": "active" if book.status == BookStatus.PUBLISHED else book.status.value,
-        })
+        book_data_list.append(
+            {
+                "book_id": book.id,
+                "title": book.title,
+                "genre": metadata.get("genre", "Unknown"),
+                "monthly_revenue": float(monthly.monthly_revenue) if monthly else 0.0,
+                "monthly_units": int(monthly.monthly_units) if monthly else 0,
+                "total_revenue": float(totals.total_revenue) if totals else 0.0,
+                "total_investment": float(metadata.get("production_cost", 0)),
+                "status": "active" if book.status == BookStatus.PUBLISHED else book.status.value,
+            }
+        )
 
     overview = build_portfolio_overview(org_id, book_data_list)
     recommendations = generate_portfolio_recommendations(overview)
@@ -304,6 +310,7 @@ async def get_recommendations(
 
 
 # ─── Audience DNA Endpoints ──────────────────────────────────────────────────
+
 
 @audience_router.post(
     "/analyze",
@@ -378,6 +385,7 @@ async def churn_prediction(request: ChurnPredictionRequest):
 
 
 # ─── Seasonal Calendar Endpoints ─────────────────────────────────────────────
+
 
 @seasonal_router.get(
     "/calendar",

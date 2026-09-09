@@ -133,9 +133,7 @@ class KnowledgeService:
         total_result = await self.db.execute(count_stmt)
         total_count = total_result.scalar()
 
-        next_cursor = (
-            items[-1].created_at.isoformat() if has_more and items else None
-        )
+        next_cursor = items[-1].created_at.isoformat() if has_more and items else None
 
         return {
             "items": items,
@@ -144,9 +142,7 @@ class KnowledgeService:
             "total_count": total_count,
         }
 
-    async def update_entry(
-        self, org_id: UUID, entry_id: UUID, payload: UpdateEntryRequest
-    ) -> KnowledgeEntry | None:
+    async def update_entry(self, org_id: UUID, entry_id: UUID, payload: UpdateEntryRequest) -> KnowledgeEntry | None:
         entry = await self.get_entry(org_id, entry_id)
         if not entry:
             return None
@@ -317,9 +313,7 @@ class KnowledgeService:
 
     # ── AI Summarize ─────────────────────────────────────────────
 
-    async def summarize_entry(
-        self, org_id: UUID, entry_id: UUID
-    ) -> dict[str, Any] | None:
+    async def summarize_entry(self, org_id: UUID, entry_id: UUID) -> dict[str, Any] | None:
         entry = await self.get_entry(org_id, entry_id)
         if not entry:
             return None

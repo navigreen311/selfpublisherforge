@@ -119,6 +119,7 @@ def _mock_db() -> AsyncMock:
 # TestCreateProfile
 # ===================================================================
 
+
 class TestCreateProfile:
     """Tests for service.create_profile."""
 
@@ -132,6 +133,7 @@ class TestCreateProfile:
         fields (id, timestamps) and column defaults (word_count, etc.) are
         present on the object after refresh.
         """
+
         async def _refresh_side_effect(obj, *args, **kwargs):
             if not hasattr(obj, "id") or obj.id is None:
                 obj.id = uuid.uuid4()
@@ -145,6 +147,7 @@ class TestCreateProfile:
                 obj.sample_count = 0
             if obj.confidence is None:
                 obj.confidence = 0.0
+
         return _refresh_side_effect
 
     @pytest.mark.asyncio
@@ -157,6 +160,7 @@ class TestCreateProfile:
         db.refresh.side_effect = self._make_refresh(org_id)
 
         from app.modules.style_cloning.service import create_profile
+
         result = await create_profile(db, org_id, request)
 
         db.add.assert_called_once()
@@ -177,6 +181,7 @@ class TestCreateProfile:
         db.refresh.side_effect = self._make_refresh(org_id)
 
         from app.modules.style_cloning.service import create_profile
+
         result = await create_profile(db, org_id, request)
 
         assert result.status == ProfileStatus.pending
@@ -196,6 +201,7 @@ class TestCreateProfile:
         db.refresh.side_effect = self._make_refresh(org_id)
 
         from app.modules.style_cloning.service import create_profile
+
         result = await create_profile(db, org_id, request)
 
         assert result.status == ProfileStatus.ready
@@ -217,6 +223,7 @@ class TestCreateProfile:
         db.refresh.side_effect = self._make_refresh(org_id)
 
         from app.modules.style_cloning.service import create_profile
+
         result = await create_profile(db, org_id, request)
 
         assert result.description == "A detailed test profile"
@@ -232,6 +239,7 @@ class TestCreateProfile:
         db.refresh.side_effect = self._make_refresh(org_id)
 
         from app.modules.style_cloning.service import create_profile
+
         result = await create_profile(db, org_id, request)
 
         assert result.status == ProfileStatus.pending
@@ -240,6 +248,7 @@ class TestCreateProfile:
 # ===================================================================
 # TestListProfiles
 # ===================================================================
+
 
 class TestListProfiles:
     """Tests for service.list_profiles."""
@@ -255,6 +264,7 @@ class TestListProfiles:
         db.execute.return_value = _make_scalars_result([profile_a, profile_b])
 
         from app.modules.style_cloning.service import list_profiles
+
         result = await list_profiles(db, org_id)
 
         assert isinstance(result, ProfileListResponse)
@@ -271,6 +281,7 @@ class TestListProfiles:
         db.execute.return_value = _make_scalars_result([])
 
         from app.modules.style_cloning.service import list_profiles
+
         result = await list_profiles(db, org_id)
 
         assert result.total == 0
@@ -290,6 +301,7 @@ class TestListProfiles:
         db.execute.return_value = _make_scalars_result([active_profile])
 
         from app.modules.style_cloning.service import list_profiles
+
         result = await list_profiles(db, org_id)
 
         assert result.total == 1
@@ -300,6 +312,7 @@ class TestListProfiles:
 # TestGetProfile
 # ===================================================================
 
+
 class TestGetProfile:
     """Tests for service.get_profile."""
 
@@ -308,14 +321,13 @@ class TestGetProfile:
         """get_profile should return a profile when found."""
         org_id = uuid.uuid4()
         profile_id = uuid.uuid4()
-        profile = _make_mock_profile(
-            profile_id=profile_id, org_id=org_id, name="Found Me"
-        )
+        profile = _make_mock_profile(profile_id=profile_id, org_id=org_id, name="Found Me")
 
         db = _mock_db()
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import get_profile
+
         result = await get_profile(db, profile_id, org_id)
 
         assert result is not None
@@ -330,6 +342,7 @@ class TestGetProfile:
         db.execute.return_value = _make_scalar_one_result(None)
 
         from app.modules.style_cloning.service import get_profile
+
         result = await get_profile(db, uuid.uuid4(), uuid.uuid4())
 
         assert result is None
@@ -344,6 +357,7 @@ class TestGetProfile:
         db.execute.return_value = _make_scalar_one_result(None)
 
         from app.modules.style_cloning.service import get_profile
+
         result = await get_profile(db, uuid.uuid4(), uuid.uuid4())
 
         assert result is None
@@ -366,6 +380,7 @@ class TestGetProfile:
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import get_profile
+
         result = await get_profile(db, profile_id, org_id)
 
         assert result is not None
@@ -378,6 +393,7 @@ class TestGetProfile:
 # TestDeleteProfile
 # ===================================================================
 
+
 class TestDeleteProfile:
     """Tests for service.delete_profile."""
 
@@ -386,14 +402,13 @@ class TestDeleteProfile:
         """delete_profile should set deleted_at, not remove the record."""
         org_id = uuid.uuid4()
         profile_id = uuid.uuid4()
-        profile = _make_mock_profile(
-            profile_id=profile_id, org_id=org_id, name="Delete Me"
-        )
+        profile = _make_mock_profile(profile_id=profile_id, org_id=org_id, name="Delete Me")
 
         db = _mock_db()
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import delete_profile
+
         result = await delete_profile(db, profile_id, org_id)
 
         assert result is True
@@ -408,6 +423,7 @@ class TestDeleteProfile:
         db.execute.return_value = _make_scalar_one_result(None)
 
         from app.modules.style_cloning.service import delete_profile
+
         result = await delete_profile(db, uuid.uuid4(), uuid.uuid4())
 
         assert result is False
@@ -419,15 +435,14 @@ class TestDeleteProfile:
         org_id = uuid.uuid4()
         profile_id = uuid.uuid4()
         old_updated = datetime(2024, 1, 1, tzinfo=UTC)
-        profile = _make_mock_profile(
-            profile_id=profile_id, org_id=org_id, name="Timestamp Check"
-        )
+        profile = _make_mock_profile(profile_id=profile_id, org_id=org_id, name="Timestamp Check")
         profile.updated_at = old_updated
 
         db = _mock_db()
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import delete_profile
+
         await delete_profile(db, profile_id, org_id)
 
         assert profile.updated_at != old_updated
@@ -437,6 +452,7 @@ class TestDeleteProfile:
 # ===================================================================
 # TestGetFingerprint
 # ===================================================================
+
 
 class TestGetFingerprint:
     """Tests for service.get_fingerprint."""
@@ -458,6 +474,7 @@ class TestGetFingerprint:
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import get_fingerprint
+
         result = await get_fingerprint(db, profile_id, org_id)
 
         assert result is not None
@@ -482,6 +499,7 @@ class TestGetFingerprint:
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import get_fingerprint
+
         result = await get_fingerprint(db, profile_id, org_id)
 
         assert result is None
@@ -493,6 +511,7 @@ class TestGetFingerprint:
         db.execute.return_value = _make_scalar_one_result(None)
 
         from app.modules.style_cloning.service import get_fingerprint
+
         result = await get_fingerprint(db, uuid.uuid4(), uuid.uuid4())
 
         assert result is None
@@ -513,6 +532,7 @@ class TestGetFingerprint:
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import get_fingerprint
+
         result = await get_fingerprint(db, profile_id, org_id)
 
         assert result is not None
@@ -527,6 +547,7 @@ class TestGetFingerprint:
 # ===================================================================
 # TestAnalyzeProfile
 # ===================================================================
+
 
 class TestAnalyzeProfile:
     """Tests for service.analyze_profile."""
@@ -553,6 +574,7 @@ class TestAnalyzeProfile:
         db.refresh.side_effect = _refresh_side_effect
 
         from app.modules.style_cloning.service import analyze_profile
+
         result = await analyze_profile(db, profile_id, org_id, [SAMPLE_TEXT])
 
         assert result is not None
@@ -577,6 +599,7 @@ class TestAnalyzeProfile:
         db.refresh.side_effect = AsyncMock()
 
         from app.modules.style_cloning.service import analyze_profile
+
         result = await analyze_profile(db, profile_id, org_id, [SAMPLE_TEXT])
 
         assert result is not None
@@ -590,6 +613,7 @@ class TestAnalyzeProfile:
         db.execute.return_value = _make_scalar_one_result(None)
 
         from app.modules.style_cloning.service import analyze_profile
+
         result = await analyze_profile(db, uuid.uuid4(), uuid.uuid4(), [SAMPLE_TEXT])
 
         assert result is None
@@ -599,6 +623,7 @@ class TestAnalyzeProfile:
 # ===================================================================
 # TestConformityCheck
 # ===================================================================
+
 
 class TestConformityCheck:
     """Tests for service.conformity_check."""
@@ -620,6 +645,7 @@ class TestConformityCheck:
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import conformity_check
+
         result = await conformity_check(db, profile_id, org_id, SAMPLE_TEXT)
 
         assert result is not None
@@ -636,9 +662,8 @@ class TestConformityCheck:
         db.execute.return_value = _make_scalar_one_result(None)
 
         from app.modules.style_cloning.service import conformity_check
-        result = await conformity_check(
-            db, uuid.uuid4(), uuid.uuid4(), "Some text."
-        )
+
+        result = await conformity_check(db, uuid.uuid4(), uuid.uuid4(), "Some text.")
 
         assert result is None
 
@@ -658,6 +683,7 @@ class TestConformityCheck:
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import conformity_check
+
         result = await conformity_check(db, profile_id, org_id, "Some text.")
 
         assert result is None
@@ -678,6 +704,7 @@ class TestConformityCheck:
         db.execute.return_value = _make_scalar_one_result(profile)
 
         from app.modules.style_cloning.service import conformity_check
+
         result = await conformity_check(db, profile_id, org_id, SAMPLE_TEXT)
 
         assert result is not None
@@ -692,6 +719,7 @@ class TestConformityCheck:
 # ===================================================================
 # TestToResponse (internal helper)
 # ===================================================================
+
 
 class TestToResponse:
     """Tests for the internal _to_response conversion helper."""
@@ -752,6 +780,7 @@ class TestToResponse:
 # ===================================================================
 # TestRunAnalysis (internal pipeline helper)
 # ===================================================================
+
 
 class TestRunAnalysis:
     """Tests for the internal _run_analysis pipeline helper."""

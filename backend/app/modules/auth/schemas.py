@@ -8,6 +8,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 # Requests
 # ---------------------------------------------------------------------------
 
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
@@ -76,6 +77,7 @@ class MFADisableRequest(BaseModel):
 # Responses
 # ---------------------------------------------------------------------------
 
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -91,6 +93,7 @@ class MFASetupResponse(BaseModel):
 
 class MFARequiredResponse(BaseModel):
     """Returned when login credentials are valid but MFA verification is needed."""
+
     mfa_required: bool = True
     mfa_token: str  # short-lived token to pass back with the TOTP code
 
@@ -109,13 +112,16 @@ class UserResponse(BaseModel):
 # OAuth
 # ---------------------------------------------------------------------------
 
+
 class OAuthAuthorizationURL(BaseModel):
     """Response containing the OAuth provider authorization URL."""
+
     authorization_url: str
     provider: str
 
 
 class OAuthCallbackRequest(BaseModel):
     """Query parameters from the OAuth callback."""
+
     code: str
     state: str | None = None

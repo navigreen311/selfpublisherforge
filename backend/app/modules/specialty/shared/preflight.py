@@ -11,6 +11,7 @@ Usage::
         for blocker in report["blockers"]:
             print(blocker["name"], blocker["details"])
 """
+
 from __future__ import annotations
 
 import math
@@ -44,19 +45,49 @@ MAX_INK_DENSITY_PERCENT = 300
 
 # Trademarked terms that must not appear in prompts or text
 _TRADEMARK_BLOCKLIST: list[str] = [
-    "disney", "pixar", "peppa pig", "bluey", "paw patrol", "marvel",
-    "frozen", "cocomelon", "sesame street", "pokemon", "pokémon",
-    "hello kitty", "spongebob", "barbie", "lego", "transformers",
-    "harry potter", "winnie the pooh", "mickey mouse", "spider-man",
-    "spiderman", "batman", "superman", "in the style of",
+    "disney",
+    "pixar",
+    "peppa pig",
+    "bluey",
+    "paw patrol",
+    "marvel",
+    "frozen",
+    "cocomelon",
+    "sesame street",
+    "pokemon",
+    "pokémon",
+    "hello kitty",
+    "spongebob",
+    "barbie",
+    "lego",
+    "transformers",
+    "harry potter",
+    "winnie the pooh",
+    "mickey mouse",
+    "spider-man",
+    "spiderman",
+    "batman",
+    "superman",
+    "in the style of",
 ]
 
 # Words / patterns flagged during content sensitivity checks
 _SENSITIVITY_PATTERNS: list[str] = [
-    r"\bgun\b", r"\bknife\b", r"\bknives\b", r"\bweapon\b",
-    r"\bkill(?:ed|ing|s)?\b", r"\bblood\b", r"\bdeath\b", r"\bdie[ds]?\b",
-    r"\bviolence\b", r"\bnaked\b", r"\bnude\b", r"\bdrug\b",
-    r"\balcohol\b", r"\bcigarette\b", r"\bsmoking\b",
+    r"\bgun\b",
+    r"\bknife\b",
+    r"\bknives\b",
+    r"\bweapon\b",
+    r"\bkill(?:ed|ing|s)?\b",
+    r"\bblood\b",
+    r"\bdeath\b",
+    r"\bdie[ds]?\b",
+    r"\bviolence\b",
+    r"\bnaked\b",
+    r"\bnude\b",
+    r"\bdrug\b",
+    r"\balcohol\b",
+    r"\bcigarette\b",
+    r"\bsmoking\b",
 ]
 
 # Children's age-band language limits (max sentence words)
@@ -76,6 +107,7 @@ SEVERITY_INFO = "info"
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PreflightCheck:
@@ -119,6 +151,7 @@ class PreflightReport:
 # Internal check helpers
 # ---------------------------------------------------------------------------
 
+
 def _add_check(report: PreflightReport, check: PreflightCheck) -> None:
     """Append *check* and update report-level aggregation."""
     report.checks.append(check)
@@ -143,18 +176,24 @@ def _check_dpi(book_data: dict[str, Any], report: PreflightReport) -> None:
             low_dpi_pages.append(page.get("page_number", 0))
 
     if low_dpi_pages:
-        _add_check(report, PreflightCheck(
-            name="dpi_check",
-            status="failed",
-            details=f"Pages with DPI below {MIN_DPI}: {low_dpi_pages}",
-            severity=SEVERITY_BLOCKER,
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="dpi_check",
+                status="failed",
+                details=f"Pages with DPI below {MIN_DPI}: {low_dpi_pages}",
+                severity=SEVERITY_BLOCKER,
+            ),
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="dpi_check",
-            status="passed",
-            details=f"All pages meet minimum {MIN_DPI} DPI requirement.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="dpi_check",
+                status="passed",
+                details=f"All pages meet minimum {MIN_DPI} DPI requirement.",
+            ),
+        )
 
 
 def _check_margins(book_data: dict[str, Any], report: PreflightReport) -> None:
@@ -170,21 +209,24 @@ def _check_margins(book_data: dict[str, Any], report: PreflightReport) -> None:
                 break
 
     if bad_pages:
-        _add_check(report, PreflightCheck(
-            name="margin_bleed_check",
-            status="failed",
-            details=(
-                f"Pages with margins below {MIN_BLEED_MARGIN}in bleed: "
-                f"{bad_pages}"
+        _add_check(
+            report,
+            PreflightCheck(
+                name="margin_bleed_check",
+                status="failed",
+                details=(f"Pages with margins below {MIN_BLEED_MARGIN}in bleed: " f"{bad_pages}"),
+                severity=SEVERITY_BLOCKER,
             ),
-            severity=SEVERITY_BLOCKER,
-        ))
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="margin_bleed_check",
-            status="passed",
-            details=f"All pages have at least {MIN_BLEED_MARGIN}in bleed margins.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="margin_bleed_check",
+                status="passed",
+                details=f"All pages have at least {MIN_BLEED_MARGIN}in bleed margins.",
+            ),
+        )
 
 
 def _check_gutter_safety(book_data: dict[str, Any], report: PreflightReport) -> None:
@@ -197,21 +239,24 @@ def _check_gutter_safety(book_data: dict[str, Any], report: PreflightReport) -> 
             violations.append(page.get("page_number", 0))
 
     if violations:
-        _add_check(report, PreflightCheck(
-            name="gutter_safety_check",
-            status="failed",
-            details=(
-                f"Content within {GUTTER_SAFETY_INCHES}in of spine on pages: "
-                f"{violations}"
+        _add_check(
+            report,
+            PreflightCheck(
+                name="gutter_safety_check",
+                status="failed",
+                details=(f"Content within {GUTTER_SAFETY_INCHES}in of spine on pages: " f"{violations}"),
+                severity=SEVERITY_BLOCKER,
             ),
-            severity=SEVERITY_BLOCKER,
-        ))
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="gutter_safety_check",
-            status="passed",
-            details=f"No content within {GUTTER_SAFETY_INCHES}in of the spine.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="gutter_safety_check",
+                status="passed",
+                details=f"No content within {GUTTER_SAFETY_INCHES}in of the spine.",
+            ),
+        )
 
 
 def calculate_spine_width(page_count: int, interior_type: str = "bw") -> float:
@@ -241,11 +286,14 @@ def _check_spine_width(book_data: dict[str, Any], report: PreflightReport) -> No
     page_count = book_data.get("page_count", 0)
     interior_type = book_data.get("interior_type", "bw")
     spine = calculate_spine_width(page_count, interior_type)
-    _add_check(report, PreflightCheck(
-        name="spine_width_calculation",
-        status="passed",
-        details=f"Spine width: {spine}in ({page_count} pages, {interior_type} interior).",
-    ))
+    _add_check(
+        report,
+        PreflightCheck(
+            name="spine_width_calculation",
+            status="passed",
+            details=f"Spine width: {spine}in ({page_count} pages, {interior_type} interior).",
+        ),
+    )
 
 
 def _check_page_count(book_data: dict[str, Any], report: PreflightReport) -> None:
@@ -257,40 +305,45 @@ def _check_page_count(book_data: dict[str, Any], report: PreflightReport) -> Non
         issues.append(f"Page count ({page_count}) must be a multiple of 2.")
 
     if page_count < KDP_MIN_PAGES:
-        issues.append(
-            f"Page count ({page_count}) is below KDP minimum of {KDP_MIN_PAGES}."
-        )
+        issues.append(f"Page count ({page_count}) is below KDP minimum of {KDP_MIN_PAGES}.")
 
     if page_count > KDP_MAX_PAGES:
-        issues.append(
-            f"Page count ({page_count}) exceeds KDP maximum of {KDP_MAX_PAGES}."
-        )
+        issues.append(f"Page count ({page_count}) exceeds KDP maximum of {KDP_MAX_PAGES}.")
 
     if issues:
-        _add_check(report, PreflightCheck(
-            name="page_count_check",
-            status="failed",
-            details=" ".join(issues),
-            severity=SEVERITY_BLOCKER,
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="page_count_check",
+                status="failed",
+                details=" ".join(issues),
+                severity=SEVERITY_BLOCKER,
+            ),
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="page_count_check",
-            status="passed",
-            details=f"Page count ({page_count}) is valid for KDP.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="page_count_check",
+                status="passed",
+                details=f"Page count ({page_count}) is valid for KDP.",
+            ),
+        )
 
 
 def _check_font_licensing(book_data: dict[str, Any], report: PreflightReport) -> None:
     """Verify all fonts are cleared for commercial print use."""
     fonts = book_data.get("fonts", [])
     if not fonts:
-        _add_check(report, PreflightCheck(
-            name="font_licensing_check",
-            status="warning",
-            details="No font information provided. Verify fonts are print-safe.",
-            severity=SEVERITY_WARNING,
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="font_licensing_check",
+                status="warning",
+                details="No font information provided. Verify fonts are print-safe.",
+                severity=SEVERITY_WARNING,
+            ),
+        )
         return
 
     unsafe_fonts: list[str] = []
@@ -303,23 +356,27 @@ def _check_font_licensing(book_data: dict[str, Any], report: PreflightReport) ->
             unsafe_fonts.append(font)
 
     if unsafe_fonts:
-        _add_check(report, PreflightCheck(
-            name="font_licensing_check",
-            status="failed",
-            details=f"Fonts not cleared for commercial print: {unsafe_fonts}",
-            severity=SEVERITY_BLOCKER,
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="font_licensing_check",
+                status="failed",
+                details=f"Fonts not cleared for commercial print: {unsafe_fonts}",
+                severity=SEVERITY_BLOCKER,
+            ),
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="font_licensing_check",
-            status="passed",
-            details="All fonts are cleared for commercial print use.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="font_licensing_check",
+                status="passed",
+                details="All fonts are cleared for commercial print use.",
+            ),
+        )
 
 
-def _check_trademark_safety(
-    book_data: dict[str, Any], report: PreflightReport
-) -> None:
+def _check_trademark_safety(book_data: dict[str, Any], report: PreflightReport) -> None:
     """Scan text and prompts for trademarked terms."""
     text_fields: list[str] = []
 
@@ -337,28 +394,30 @@ def _check_trademark_safety(
             text_fields.append(val)
 
     combined = " ".join(text_fields).lower()
-    found: list[str] = [
-        term for term in _TRADEMARK_BLOCKLIST if term in combined
-    ]
+    found: list[str] = [term for term in _TRADEMARK_BLOCKLIST if term in combined]
 
     if found:
-        _add_check(report, PreflightCheck(
-            name="trademark_safety_check",
-            status="failed",
-            details=f"Trademarked terms detected: {found}",
-            severity=SEVERITY_BLOCKER,
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="trademark_safety_check",
+                status="failed",
+                details=f"Trademarked terms detected: {found}",
+                severity=SEVERITY_BLOCKER,
+            ),
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="trademark_safety_check",
-            status="passed",
-            details="No trademarked terms detected in text or prompts.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="trademark_safety_check",
+                status="passed",
+                details="No trademarked terms detected in text or prompts.",
+            ),
+        )
 
 
-def _check_content_sensitivity(
-    book_data: dict[str, Any], report: PreflightReport
-) -> None:
+def _check_content_sensitivity(book_data: dict[str, Any], report: PreflightReport) -> None:
     """Flag potentially inappropriate content for the target audience."""
     text_fields: list[str] = []
     for page in book_data.get("pages", []):
@@ -378,23 +437,27 @@ def _check_content_sensitivity(
             flagged.extend(matches)
 
     if flagged:
-        _add_check(report, PreflightCheck(
-            name="content_sensitivity_check",
-            status="warning",
-            details=f"Potentially sensitive terms found: {list(set(flagged))}",
-            severity=SEVERITY_WARNING,
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="content_sensitivity_check",
+                status="warning",
+                details=f"Potentially sensitive terms found: {list(set(flagged))}",
+                severity=SEVERITY_WARNING,
+            ),
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="content_sensitivity_check",
-            status="passed",
-            details="No sensitive content flags raised.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="content_sensitivity_check",
+                status="passed",
+                details="No sensitive content flags raised.",
+            ),
+        )
 
 
-def _check_language_level(
-    book_data: dict[str, Any], report: PreflightReport
-) -> None:
+def _check_language_level(book_data: dict[str, Any], report: PreflightReport) -> None:
     """For children's books, verify text meets age-band language rules."""
     age_range = book_data.get("age_range")
     if not age_range:
@@ -420,35 +483,38 @@ def _check_language_level(
             max_sw = rules["max_sentence_words"]
             if max_sw and len(words) > max_sw:
                 violations.append(
-                    f"Page {page_num}: sentence with {len(words)} words "
-                    f"(max {max_sw} for {age_range})"
+                    f"Page {page_num}: sentence with {len(words)} words " f"(max {max_sw} for {age_range})"
                 )
             max_wl = rules["max_word_length"]
             if max_wl:
                 for word in words:
                     if len(word) > max_wl:
                         violations.append(
-                            f"Page {page_num}: word '{word}' has {len(word)} "
-                            f"letters (max {max_wl} for {age_range})"
+                            f"Page {page_num}: word '{word}' has {len(word)} " f"letters (max {max_wl} for {age_range})"
                         )
 
     if violations:
-        _add_check(report, PreflightCheck(
-            name="language_level_check",
-            status="warning",
-            details=(
-                f"{len(violations)} language-level violation(s) for "
-                f"age range '{age_range}'. First 5: "
-                + "; ".join(violations[:5])
+        _add_check(
+            report,
+            PreflightCheck(
+                name="language_level_check",
+                status="warning",
+                details=(
+                    f"{len(violations)} language-level violation(s) for "
+                    f"age range '{age_range}'. First 5: " + "; ".join(violations[:5])
+                ),
+                severity=SEVERITY_WARNING,
             ),
-            severity=SEVERITY_WARNING,
-        ))
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="language_level_check",
-            status="passed",
-            details=f"Text meets language requirements for age range '{age_range}'.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="language_level_check",
+                status="passed",
+                details=f"Text meets language requirements for age range '{age_range}'.",
+            ),
+        )
 
 
 def _check_grayscale(book_data: dict[str, Any], report: PreflightReport) -> None:
@@ -464,26 +530,33 @@ def _check_grayscale(book_data: dict[str, Any], report: PreflightReport) -> None
             color_pages.append(page.get("page_number", 0))
 
     if color_pages:
-        _add_check(report, PreflightCheck(
-            name="grayscale_verification",
-            status="failed",
-            details=(
-                f"Color pixels detected in B&W interior on pages: {color_pages}. "
-                "Convert to grayscale before export."
+        _add_check(
+            report,
+            PreflightCheck(
+                name="grayscale_verification",
+                status="failed",
+                details=(
+                    f"Color pixels detected in B&W interior on pages: {color_pages}. "
+                    "Convert to grayscale before export."
+                ),
+                severity=SEVERITY_BLOCKER,
             ),
-            severity=SEVERITY_BLOCKER,
-        ))
+        )
     else:
-        _add_check(report, PreflightCheck(
-            name="grayscale_verification",
-            status="passed",
-            details="All pages verified as grayscale for B&W interior.",
-        ))
+        _add_check(
+            report,
+            PreflightCheck(
+                name="grayscale_verification",
+                status="passed",
+                details="All pages verified as grayscale for B&W interior.",
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------
 # Look Inside Simulator Data
 # ---------------------------------------------------------------------------
+
 
 def _extract_look_inside_data(book_data: dict[str, Any]) -> dict[str, Any]:
     """Extract data for the first ~10% of pages (Amazon Look Inside preview).
@@ -496,18 +569,18 @@ def _extract_look_inside_data(book_data: dict[str, Any]) -> dict[str, Any]:
         return {"preview_page_count": 0, "pages": [], "hook_score": 0}
 
     preview_count = max(1, math.ceil(len(pages) * 0.10))
-    preview_pages = sorted(pages, key=lambda p: p.get("page_number", 0))[
-        :preview_count
-    ]
+    preview_pages = sorted(pages, key=lambda p: p.get("page_number", 0))[:preview_count]
 
     preview_info: list[dict[str, Any]] = []
     for page in preview_pages:
-        preview_info.append({
-            "page_number": page.get("page_number"),
-            "has_illustration": bool(page.get("illustration_url")),
-            "text_excerpt": (page.get("text_content", "") or "")[:200],
-            "layout": page.get("layout"),
-        })
+        preview_info.append(
+            {
+                "page_number": page.get("page_number"),
+                "has_illustration": bool(page.get("illustration_url")),
+                "text_excerpt": (page.get("text_content", "") or "")[:200],
+                "layout": page.get("layout"),
+            }
+        )
 
     # Simple hook score heuristic
     hook_score = 50.0
@@ -535,6 +608,7 @@ def _extract_look_inside_data(book_data: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def run_preflight(book_type: str, book_data: dict[str, Any]) -> dict[str, Any]:
     """Run the full Print Production Preflight v2 suite.

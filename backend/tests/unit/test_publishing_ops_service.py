@@ -336,6 +336,7 @@ class TestCreateAccount:
         assert result.platform == PlatformType.SMASHWORDS
         # The DB model should have been added with KDP as fallback
         from app.models.publishing import PublishingPlatform
+
         assert added_objects[0].platform == PublishingPlatform.KDP
 
 
@@ -1033,6 +1034,7 @@ class TestSyncListing:
         # The fallback path should update last_synced and status
         assert row.last_synced is not None
         from app.models.publishing import ListingStatus as ListingStatusEnum
+
         assert row.status == ListingStatusEnum.LIVE
         db.flush.assert_awaited_once()
 

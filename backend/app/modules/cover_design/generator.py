@@ -7,6 +7,7 @@ upload to S3).
 Enhanced with support for multiple formats (ebook, paperback, audiobook),
 variable variations, art style presets, reference images, and spine calculation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -36,6 +37,7 @@ settings = get_settings()
 
 class CoverFormat:
     """Cover format types."""
+
     EBOOK = "ebook"
     PAPERBACK = "paperback"
     AUDIOBOOK = "audiobook"
@@ -43,6 +45,7 @@ class CoverFormat:
 
 class ArtStyle:
     """Art style presets for cover generation."""
+
     MINIMAL = "minimal"
     PHOTOGRAPHIC = "photographic"
     ILLUSTRATED = "illustrated"
@@ -155,7 +158,6 @@ def get_paperback_dimensions(
         dpi=dpi,
         bleed_px=bleed_px,
     )
-
 
 
 # ---------------------------------------------------------------------------
@@ -296,48 +298,37 @@ _GENRE_PROMPT_FRAGMENTS: dict[CoverGenre, str] = {
         "Space vistas, technology, futuristic cityscapes."
     ),
     CoverGenre.FANTASY: (
-        "Epic, magical. Rich jewel tones. Ornate typography. "
-        "Landscapes, mythical creatures, magical elements."
+        "Epic, magical. Rich jewel tones. Ornate typography. " "Landscapes, mythical creatures, magical elements."
     ),
     CoverGenre.HORROR: (
-        "Dark, unsettling. Very limited palette â€” blacks, reds, greys. "
-        "Distressed fonts. Creepy imagery."
+        "Dark, unsettling. Very limited palette â€” blacks, reds, greys. " "Distressed fonts. Creepy imagery."
     ),
     CoverGenre.LITERARY_FICTION: (
-        "Artistic, understated. Sophisticated design with thoughtful typography. "
-        "Abstract or metaphorical imagery."
+        "Artistic, understated. Sophisticated design with thoughtful typography. " "Abstract or metaphorical imagery."
     ),
     CoverGenre.NONFICTION: (
-        "Professional, authoritative. Clean layout, strong typography. "
-        "Solid backgrounds or subtle patterns."
+        "Professional, authoritative. Clean layout, strong typography. " "Solid backgrounds or subtle patterns."
     ),
     CoverGenre.SELF_HELP: (
         "Uplifting, accessible. Warm, bright colours. Clear, friendly fonts. "
         "Nature imagery or abstract positive symbols."
     ),
     CoverGenre.BUSINESS: (
-        "Corporate, polished. Navy, charcoal, gold accents. "
-        "Authoritative serif or clean sans-serif fonts."
+        "Corporate, polished. Navy, charcoal, gold accents. " "Authoritative serif or clean sans-serif fonts."
     ),
     CoverGenre.CHILDRENS: (
         "Bright, playful, illustrated. Bold primary colours. "
         "Fun rounded fonts. Cartoon or watercolour illustration style."
     ),
     CoverGenre.YOUNG_ADULT: (
-        "Trendy, bold. Eye-catching colours and modern typography. "
-        "Stylish imagery that appeals to teens."
+        "Trendy, bold. Eye-catching colours and modern typography. " "Stylish imagery that appeals to teens."
     ),
     CoverGenre.MEMOIR: (
         "Personal, textured. Warm or muted tones. Handwritten or serif fonts. "
         "Personal photography or intimate illustration."
     ),
-    CoverGenre.COOKBOOK: (
-        "Appetising, clean. Warm colours. Space for food photography. "
-        "Clean, readable fonts."
-    ),
-    CoverGenre.OTHER: (
-        "Clean, professional book cover with balanced composition."
-    ),
+    CoverGenre.COOKBOOK: ("Appetising, clean. Warm colours. Space for food photography. " "Clean, readable fonts."),
+    CoverGenre.OTHER: ("Clean, professional book cover with balanced composition."),
 }
 
 

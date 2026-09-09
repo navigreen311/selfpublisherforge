@@ -92,6 +92,7 @@ async def client(test_app):
 
 # ── Tests: POST /api/v1/knowledge ────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_create_entry_success(client):
     """POST /api/v1/knowledge should create an entry and return 201."""
@@ -130,6 +131,7 @@ async def test_create_entry_validation_error(client):
 
 # ── Tests: GET /api/v1/knowledge ─────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_list_entries_success(client):
     """GET /api/v1/knowledge should return paginated entries."""
@@ -154,6 +156,7 @@ async def test_list_entries_success(client):
 
 
 # ── Tests: GET /api/v1/knowledge/{id} ────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_get_entry_success(client):
@@ -186,6 +189,7 @@ async def test_get_entry_not_found(client):
 
 
 # ── Tests: PUT /api/v1/knowledge/{id} ────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_update_entry_success(client):
@@ -224,6 +228,7 @@ async def test_update_entry_not_found(client):
 
 # ── Tests: DELETE /api/v1/knowledge/{id} ─────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_delete_entry_success(client):
     """DELETE /api/v1/knowledge/{id} should return 204."""
@@ -251,6 +256,7 @@ async def test_delete_entry_not_found(client):
 
 
 # ── Tests: POST /api/v1/knowledge/search ─────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_search_entries_success(client):
@@ -298,6 +304,7 @@ async def test_search_entries_empty_query(client):
 
 # ── Tests: POST /api/v1/knowledge/import ─────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_import_from_url_success(client):
     """POST /api/v1/knowledge/import with URL should return 201."""
@@ -336,6 +343,7 @@ async def test_import_no_source_returns_400(client):
 
 # ── Tests: POST /api/v1/knowledge/{id}/summarize ────────────────
 
+
 @pytest.mark.asyncio
 async def test_summarize_entry_success(client):
     """POST /api/v1/knowledge/{id}/summarize should return summary."""
@@ -373,6 +381,7 @@ async def test_summarize_entry_not_found(client):
 
 # ── Tests: GET /api/v1/knowledge/tags ────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_list_tags_success(client):
     """GET /api/v1/knowledge/tags should return tags and counts."""
@@ -393,6 +402,7 @@ async def test_list_tags_success(client):
 
 
 # ── Tests: GET /api/v1/knowledge/suggestions ─────────────────────
+
 
 @pytest.mark.asyncio
 async def test_suggestions_success(client):

@@ -36,6 +36,7 @@ router = APIRouter()
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "",
     response_model=ProfileResponse,
@@ -225,9 +226,7 @@ async def generate_sample(
 
         if not response.succeeded:
             error_detail = response.metadata.get("error", "LLM generation failed")
-            logger.error(
-                "LLM generation failed for profile %s: %s", profile_id, error_detail
-            )
+            logger.error("LLM generation failed for profile %s: %s", profile_id, error_detail)
             raise HTTPException(
                 status_code=502,
                 detail=f"Text generation failed: {error_detail}",

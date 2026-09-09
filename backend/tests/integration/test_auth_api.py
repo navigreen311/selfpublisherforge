@@ -19,6 +19,7 @@ VALID_PASSWORD = "StrongP@ss1"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _register(client: AsyncClient, email: str = "api@test.com") -> dict:
     """Register a user and return the full response JSON."""
     resp = await client.post(
@@ -46,8 +47,8 @@ async def _login(client: AsyncClient, email: str = "api@test.com", password: str
 # Registration
 # ---------------------------------------------------------------------------
 
-class TestRegisterEndpoint:
 
+class TestRegisterEndpoint:
     @pytest.mark.asyncio
     async def test_register_success(self, client: AsyncClient):
         data = await _register(client, email="reg1@test.com")
@@ -86,8 +87,8 @@ class TestRegisterEndpoint:
 # Login
 # ---------------------------------------------------------------------------
 
-class TestLoginEndpoint:
 
+class TestLoginEndpoint:
     @pytest.mark.asyncio
     async def test_login_success(self, client: AsyncClient):
         await _register(client, email="login1@test.com")
@@ -111,8 +112,8 @@ class TestLoginEndpoint:
 # Token refresh
 # ---------------------------------------------------------------------------
 
-class TestRefreshEndpoint:
 
+class TestRefreshEndpoint:
     @pytest.mark.asyncio
     async def test_refresh_success(self, client: AsyncClient):
         reg = await _register(client, email="ref@test.com")
@@ -140,8 +141,8 @@ class TestRefreshEndpoint:
 # Logout
 # ---------------------------------------------------------------------------
 
-class TestLogoutEndpoint:
 
+class TestLogoutEndpoint:
     @pytest.mark.asyncio
     async def test_logout_success(self, client: AsyncClient):
         reg = await _register(client, email="lo@test.com")
@@ -164,8 +165,8 @@ class TestLogoutEndpoint:
 # Forgot / Reset Password
 # ---------------------------------------------------------------------------
 
-class TestPasswordResetEndpoints:
 
+class TestPasswordResetEndpoints:
     @pytest.mark.asyncio
     async def test_forgot_password_always_200(self, client: AsyncClient):
         # Should return 200 even for non-existent email
@@ -188,8 +189,8 @@ class TestPasswordResetEndpoints:
 # Email verification
 # ---------------------------------------------------------------------------
 
-class TestEmailVerificationEndpoint:
 
+class TestEmailVerificationEndpoint:
     @pytest.mark.asyncio
     async def test_verify_email_bad_token(self, client: AsyncClient):
         resp = await client.post(
@@ -203,8 +204,8 @@ class TestEmailVerificationEndpoint:
 # MFA endpoints (require auth)
 # ---------------------------------------------------------------------------
 
-class TestMFAEndpoints:
 
+class TestMFAEndpoints:
     async def _auth_headers(self, client: AsyncClient, email: str = "mfa-api@test.com") -> dict:
         reg = await _register(client, email=email)
         token = reg["tokens"]["access_token"]

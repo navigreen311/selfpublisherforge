@@ -40,6 +40,7 @@ def _generate_api_key() -> tuple[str, str]:
 
 # ─── Service Class ────────────────────────────────────────────────────────────
 
+
 class UserService:
     """Stateless service; every method receives a db session."""
 
@@ -53,9 +54,7 @@ class UserService:
 
         from app.models.user import User
 
-        result = await db.execute(
-            select(User).where(User.id == user_id, User.deleted_at.is_(None))
-        )
+        result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
         user = result.scalar_one_or_none()
         if not user:
             raise AppException(
@@ -242,10 +241,7 @@ class UserService:
 
         # Check duplicate pending invites
         existing = await db.execute(
-            sa_text(
-                "SELECT id FROM invitations "
-                "WHERE org_id = :oid AND email = :email AND status = 'pending'"
-            ),
+            sa_text("SELECT id FROM invitations " "WHERE org_id = :oid AND email = :email AND status = 'pending'"),
             {"oid": org_id, "email": email},
         )
         if existing.first():
@@ -349,9 +345,7 @@ class UserService:
 
         # Check target role — can't remove someone of equal/higher rank
         target_result = await db.execute(
-            sa_text(
-                "SELECT role FROM users WHERE id = :uid AND org_id = :oid AND deleted_at IS NULL"
-            ),
+            sa_text("SELECT role FROM users WHERE id = :uid AND org_id = :oid AND deleted_at IS NULL"),
             {"uid": target_user_id, "oid": org_id},
         )
         target_row = target_result.mappings().first()
@@ -369,10 +363,7 @@ class UserService:
             )
 
         await db.execute(
-            sa_text(
-                "UPDATE users SET deleted_at = :now, updated_at = :now "
-                "WHERE id = :uid AND org_id = :oid"
-            ),
+            sa_text("UPDATE users SET deleted_at = :now, updated_at = :now " "WHERE id = :uid AND org_id = :oid"),
             {
                 "now": datetime.now(UTC),
                 "uid": target_user_id,
@@ -490,4 +481,3 @@ class UserService:
                 code="API_KEY_NOT_FOUND",
                 message="API key not found or already revoked",
             )
-

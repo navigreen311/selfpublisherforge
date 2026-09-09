@@ -19,21 +19,21 @@ from app.modules.portfolio_economics.schemas import (
 DEFAULT_MONTHLY_DECAY_RATE = 0.05  # 5% monthly decline in organic sales
 
 # Promotion boost parameters
-PROMOTION_BOOST_MULTIPLIER = 2.5   # Spike during promotion month
-PROMOTION_FREQUENCY_MONTHS = 3     # How often promotions occur
-PROMOTION_TAIL_MONTHS = 1          # How long the tail effect lasts
-PROMOTION_TAIL_MULTIPLIER = 1.3    # Multiplier during tail period
+PROMOTION_BOOST_MULTIPLIER = 2.5  # Spike during promotion month
+PROMOTION_FREQUENCY_MONTHS = 3  # How often promotions occur
+PROMOTION_TAIL_MONTHS = 1  # How long the tail effect lasts
+PROMOTION_TAIL_MULTIPLIER = 1.3  # Multiplier during tail period
 
 # Series read-through parameters
-SERIES_READ_THROUGH_BASE = 0.65    # % of book 1 buyers who buy book 2
-SERIES_READ_THROUGH_DECAY = 0.85   # Each subsequent book retains this % of previous
+SERIES_READ_THROUGH_BASE = 0.65  # % of book 1 buyers who buy book 2
+SERIES_READ_THROUGH_DECAY = 0.85  # Each subsequent book retains this % of previous
 
 # New book launch parameters
-NEW_BOOK_LAUNCH_MULTIPLIER = 3.0   # Initial sales spike for new release
-NEW_BOOK_LAUNCH_DECAY_MONTHS = 3   # Months until new book settles to baseline
+NEW_BOOK_LAUNCH_MULTIPLIER = 3.0  # Initial sales spike for new release
+NEW_BOOK_LAUNCH_DECAY_MONTHS = 3  # Months until new book settles to baseline
 
 # Floor on monthly revenue -- books never fully die
-REVENUE_FLOOR_MULTIPLIER = 0.15    # Minimum 15% of peak revenue
+REVENUE_FLOOR_MULTIPLIER = 0.15  # Minimum 15% of peak revenue
 
 
 PERIOD_MONTHS: dict[ProjectionPeriod, int] = {
@@ -145,19 +145,19 @@ def calculate_backlist_projection(
             for release in range(new_books_per_year):
                 release_month = year * 12 + (release * release_interval) + release_interval
                 if release_month < months:
-                    cohorts.append({
-                        "label": f"new_book_y{year + 1}_r{release + 1}",
-                        "start_month": release_month,
-                        "base_monthly_revenue": new_book_monthly_revenue,
-                    })
+                    cohorts.append(
+                        {
+                            "label": f"new_book_y{year + 1}_r{release + 1}",
+                            "start_month": release_month,
+                            "base_monthly_revenue": new_book_monthly_revenue,
+                        }
+                    )
 
     # Series read-through bonus (applied monthly to book 1 revenue)
     series_bonus = 0.0
     if is_series and num_books > 1:
         book1_monthly_units = max(1, int(current_monthly_revenue / avg_price / num_books))
-        series_bonus = _calculate_series_read_through(
-            num_books, book1_monthly_units, avg_price, royalty_rate
-        )
+        series_bonus = _calculate_series_read_through(num_books, book1_monthly_units, avg_price, royalty_rate)
 
     for month in range(1, months + 1):
         month_revenue = 0.0
@@ -191,31 +191,28 @@ def calculate_backlist_projection(
 
         # Add series read-through bonus (decays more slowly)
         if series_bonus > 0:
-            decayed_bonus = _apply_decay(
-                series_bonus, month, monthly_decay_rate * 0.5
-            )
+            decayed_bonus = _apply_decay(series_bonus, month, monthly_decay_rate * 0.5)
             month_revenue += decayed_bonus
 
         month_royalty = month_revenue * royalty_rate
         cumulative_revenue += month_revenue
         cumulative_royalty += month_royalty
 
-        monthly_projections.append({
-            "month": month,
-            "revenue": round(month_revenue, 2),
-            "royalty": round(month_royalty, 2),
-            "cumulative_revenue": round(cumulative_revenue, 2),
-            "cumulative_royalty": round(cumulative_royalty, 2),
-        })
+        monthly_projections.append(
+            {
+                "month": month,
+                "revenue": round(month_revenue, 2),
+                "royalty": round(month_royalty, 2),
+                "cumulative_revenue": round(cumulative_revenue, 2),
+                "cumulative_royalty": round(cumulative_royalty, 2),
+            }
+        )
 
     average_monthly = cumulative_revenue / months if months > 0 else 0.0
 
     # Compounding factor: how much more revenue we get vs. simple linear projection
     linear_projection = current_monthly_revenue * months
-    compounding_factor = (
-        cumulative_revenue / linear_projection
-        if linear_projection > 0 else 1.0
-    )
+    compounding_factor = cumulative_revenue / linear_projection if linear_projection > 0 else 1.0
 
     assumptions = {
         "monthly_decay_rate": monthly_decay_rate,

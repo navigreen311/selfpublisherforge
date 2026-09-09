@@ -94,11 +94,10 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
 # Agent CRUD
 # ---------------------------------------------------------------------------
 
+
 async def ensure_default_agents(db: AsyncSession, org_id: uuid.UUID) -> list[Agent]:
     """Ensure default agents exist for the org. Seed if needed."""
-    result = await db.execute(
-        select(Agent).where(Agent.org_id == org_id, Agent.deleted_at.is_(None))
-    )
+    result = await db.execute(select(Agent).where(Agent.org_id == org_id, Agent.deleted_at.is_(None)))
     agents = list(result.scalars().all())
 
     if agents:
@@ -178,6 +177,7 @@ async def update_agent_config(
 # Task management
 # ---------------------------------------------------------------------------
 
+
 async def create_task(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -226,9 +226,7 @@ async def list_tasks(
     """List tasks with optional filters. Returns (items, next_cursor, has_more, total)."""
     # Count
     count_q = (
-        select(func.count())
-        .select_from(AgentTask)
-        .where(AgentTask.org_id == org_id, AgentTask.deleted_at.is_(None))
+        select(func.count()).select_from(AgentTask).where(AgentTask.org_id == org_id, AgentTask.deleted_at.is_(None))
     )
     if status:
         count_q = count_q.where(AgentTask.status == status)
@@ -415,6 +413,7 @@ async def cancel_task(
 # Workflow management
 # ---------------------------------------------------------------------------
 
+
 async def create_workflow(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -525,11 +524,10 @@ async def get_workflow(
 # Budget management
 # ---------------------------------------------------------------------------
 
+
 async def get_budgets(db: AsyncSession, org_id: uuid.UUID) -> list[AgentBudget]:
     """Get all budget records for the org."""
-    result = await db.execute(
-        select(AgentBudget).where(AgentBudget.org_id == org_id)
-    )
+    result = await db.execute(select(AgentBudget).where(AgentBudget.org_id == org_id))
     return list(result.scalars().all())
 
 
@@ -583,6 +581,7 @@ async def update_budget(
 # ---------------------------------------------------------------------------
 # Execute task (sync entry point)
 # ---------------------------------------------------------------------------
+
 
 async def execute_task(
     db: AsyncSession,

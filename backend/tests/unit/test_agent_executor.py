@@ -26,6 +26,7 @@ from app.modules.agent_system.models import (
 # Helpers – fake LLM responses used by multiple test classes
 # ---------------------------------------------------------------------------
 
+
 def _make_fake_llm_response(*, content: str = "Generated text.", total_tokens: int = 42, model_id: str = "test-model"):
     """Return a mock object that behaves like an ``LLMResponse``."""
     resp = MagicMock()
@@ -38,7 +39,9 @@ def _make_fake_llm_response(*, content: str = "Generated text.", total_tokens: i
     return resp
 
 
-def _make_fake_call_llm_result(*, text: str = "Generated text.", tokens_used: int = 42, cost_usd: float = 0.000126, model: str = "test-model"):
+def _make_fake_call_llm_result(
+    *, text: str = "Generated text.", tokens_used: int = 42, cost_usd: float = 0.000126, model: str = "test-model"
+):
     """Return a dict matching the shape produced by ``_call_llm``."""
     return {
         "text": text,
@@ -51,6 +54,7 @@ def _make_fake_call_llm_result(*, text: str = "Generated text.", tokens_used: in
 # ---------------------------------------------------------------------------
 # LLM stub tests
 # ---------------------------------------------------------------------------
+
 
 class TestCallLLM:
     @pytest.mark.asyncio

@@ -27,7 +27,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.UniqueConstraint("org_id", "book_id", "date", "marketplace", "format", name="uq_sales_data_org_book_date_mp_fmt"),
+        sa.UniqueConstraint(
+            "org_id", "book_id", "date", "marketplace", "format", name="uq_sales_data_org_book_date_mp_fmt"
+        ),
     )
 
     # --- bsr_tracking table ---

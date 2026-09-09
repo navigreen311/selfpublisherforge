@@ -234,7 +234,7 @@ def _basic_ssml_conversion(text: str, pronunciation_dict: dict[str, str]) -> str
         ssml_parts.append(f"<p>{para}</p>")
 
     ssml_body = '\n<break time="500ms"/>\n'.join(ssml_parts)
-    ssml_text = f'<speak>\n{ssml_body}\n</speak>'
+    ssml_text = f"<speak>\n{ssml_body}\n</speak>"
 
     # Apply pronunciation dictionary
     for word, phoneme in pronunciation_dict.items():

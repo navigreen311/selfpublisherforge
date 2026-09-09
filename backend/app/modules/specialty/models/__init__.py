@@ -1,4 +1,5 @@
 """Specialty Books models - re-export all models."""
+
 from app.modules.specialty.models.childrens import (
     ChildrensBook,
     ChildrensBookCharacter,

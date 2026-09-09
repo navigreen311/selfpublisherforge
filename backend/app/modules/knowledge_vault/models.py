@@ -1,6 +1,5 @@
 """Knowledge Vault database models."""
 
-
 from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -17,7 +16,9 @@ class KnowledgeEntry(TenantModel):
     content: str = Column(Text, nullable=False, default="")  # type: ignore[assignment]
     source_url: str | None = Column(String(2048), nullable=True)  # type: ignore[assignment]
     source_type: str = Column(  # type: ignore[assignment]
-        String(20), nullable=False, default="manual",
+        String(20),
+        nullable=False,
+        default="manual",
         comment="manual | url | file | clip",
     )
     tags: list[str] = Column(ARRAY(String(100)), nullable=False, server_default="{}")  # type: ignore[assignment]
@@ -53,7 +54,9 @@ class KnowledgeAttachment(TenantModel):
 
     __tablename__ = "knowledge_attachments"
 
-    entry_id = Column(PG_UUID(as_uuid=True), ForeignKey("knowledge_entries.id", ondelete="CASCADE"), nullable=False, index=True)  # type: ignore[assignment]
+    entry_id = Column(
+        PG_UUID(as_uuid=True), ForeignKey("knowledge_entries.id", ondelete="CASCADE"), nullable=False, index=True
+    )  # type: ignore[assignment]
     file_name: str = Column(String(500), nullable=False)  # type: ignore[assignment]
     file_url: str = Column(String(2048), nullable=False)  # type: ignore[assignment]
     file_size: int | None = Column(Integer, nullable=True)  # type: ignore[assignment]

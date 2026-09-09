@@ -148,10 +148,12 @@ class ARCManager:
                 and_(
                     ARCCampaign.org_id == org_id,
                     ARCCampaign.deleted_at.is_(None),
-                    ARCRecipient.status.in_([
-                        ARCRecipientStatus.SENT,
-                        ARCRecipientStatus.DELIVERED,
-                    ]),
+                    ARCRecipient.status.in_(
+                        [
+                            ARCRecipientStatus.SENT,
+                            ARCRecipientStatus.DELIVERED,
+                        ]
+                    ),
                     ARCRecipient.sent_at <= cutoff,
                 )
             )
@@ -194,9 +196,7 @@ class ARCManager:
             "sent_copies": campaign.sent_copies,
             "reviews_received": campaign.reviews_received,
             "review_rate": (
-                campaign.reviews_received / campaign.sent_copies * 100
-                if campaign.sent_copies > 0
-                else 0.0
+                campaign.reviews_received / campaign.sent_copies * 100 if campaign.sent_copies > 0 else 0.0
             ),
             "recipient_status_breakdown": status_counts,
             "deadline": campaign.deadline.isoformat() if campaign.deadline else None,
@@ -206,9 +206,7 @@ class ARCManager:
     # Private helpers
     # ------------------------------------------------------------------
 
-    async def _get_campaign(
-        self, campaign_id: UUID, org_id: UUID
-    ) -> ARCCampaign | None:
+    async def _get_campaign(self, campaign_id: UUID, org_id: UUID) -> ARCCampaign | None:
         stmt = (
             select(ARCCampaign)
             .options(selectinload(ARCCampaign.recipients))
@@ -223,9 +221,7 @@ class ARCManager:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def _get_recipient(
-        self, campaign_id: UUID, org_id: UUID, recipient_id: UUID
-    ) -> ARCRecipient | None:
+    async def _get_recipient(self, campaign_id: UUID, org_id: UUID, recipient_id: UUID) -> ARCRecipient | None:
         stmt = (
             select(ARCRecipient)
             .join(ARCCampaign, ARCRecipient.campaign_id == ARCCampaign.id)
@@ -242,7 +238,9 @@ class ARCManager:
         return result.scalar_one_or_none()
 
     async def export_campaign_csv(
-        self, campaign_id: UUID, org_id: UUID,
+        self,
+        campaign_id: UUID,
+        org_id: UUID,
     ) -> str:
         """Export campaign recipients as CSV string."""
         import csv
@@ -267,11 +265,13 @@ class ARCManager:
         writer = csv.writer(output)
         writer.writerow(["Name", "Email", "Status", "Sent At", "Review URL"])
         for r in recipients:
-            writer.writerow([
-                r.name,
-                r.email,
-                str(r.status),
-                r.sent_at.isoformat() if r.sent_at else "",
-                r.review_url or "",
-            ])
+            writer.writerow(
+                [
+                    r.name,
+                    r.email,
+                    str(r.status),
+                    r.sent_at.isoformat() if r.sent_at else "",
+                    r.review_url or "",
+                ]
+            )
         return output.getvalue()

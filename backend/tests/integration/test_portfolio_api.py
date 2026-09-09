@@ -1,4 +1,5 @@
 """Integration tests for Portfolio Economics, Audience DNA, and Seasonal Calendar API endpoints."""
+
 import uuid
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -12,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.main import create_app
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def org_id():
@@ -83,6 +85,7 @@ async def client(mock_db, mock_user):
 
 
 # ─── Portfolio Endpoints ─────────────────────────────────────────────────────
+
 
 class TestPortfolioOverview:
     @pytest.mark.asyncio
@@ -295,6 +298,7 @@ class TestPortfolioRecommendations:
 
 # ─── Audience DNA Endpoints ──────────────────────────────────────────────────
 
+
 class TestAudienceAnalyze:
     @pytest.mark.asyncio
     async def test_analyze_audience(self, client):
@@ -423,6 +427,7 @@ class TestChurnPrediction:
 
 
 # ─── Seasonal Calendar Endpoints ─────────────────────────────────────────────
+
 
 class TestSeasonalCalendar:
     @pytest.mark.asyncio

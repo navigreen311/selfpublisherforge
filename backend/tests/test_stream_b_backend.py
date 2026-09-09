@@ -115,9 +115,7 @@ class TestProjectsEndpoints:
         from app.modules.projects.schemas import ProjectListResponse
 
         with patch("app.modules.projects.router.service") as mock_service:
-            mock_service.list_projects = AsyncMock(
-                return_value=ProjectListResponse(projects=[], total=0)
-            )
+            mock_service.list_projects = AsyncMock(return_value=ProjectListResponse(projects=[], total=0))
             resp = await client.get(
                 "/api/v1/projects/",
                 params={"book_type": "cookbook", "sort": "-created_at"},
@@ -180,9 +178,7 @@ class TestProjectsEndpoints:
             book_type=None,
             status="draft",
             organization_id=org_id,
-            linked_modules=[
-                ProjectModuleProgress(module_type="books", status="linked", count=1)
-            ],
+            linked_modules=[ProjectModuleProgress(module_type="books", status="linked", count=1)],
             created_at=now,
             updated_at=now,
         )
@@ -253,9 +249,7 @@ class TestSearch:
         )
         with patch("app.modules.search.router.service") as mock_service:
             mock_service.search = AsyncMock(return_value=payload)
-            resp = await client.get(
-                "/api/v1/search", params={"q": "keto", "types": "projects"}
-            )
+            resp = await client.get("/api/v1/search", params={"q": "keto", "types": "projects"})
             assert resp.status_code == 200
             body = resp.json()
             assert body["total_count"] == 1

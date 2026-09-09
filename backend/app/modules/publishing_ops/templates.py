@@ -43,8 +43,7 @@ def _builtin(
 ROMANCE_TEMPLATE = _builtin(
     name="Romance Standard",
     genre=TemplateGenre.ROMANCE,
-    description="Elegant serif layout with generous margins and drop caps, "
-    "ideal for romance and women's fiction.",
+    description="Elegant serif layout with generous margins and drop caps, " "ideal for romance and women's fiction.",
     trim_size=TrimSize.SIZE_5_5x8_5,
     style=TemplateStyleSettings(
         font_family="Garamond",
@@ -198,8 +197,7 @@ LITERARY_TEMPLATE = _builtin(
 MEMOIR_TEMPLATE = _builtin(
     name="Memoir / Biography",
     genre=TemplateGenre.MEMOIR,
-    description="Warm, inviting layout for memoir and biography with generous "
-    "leading and readable serif type.",
+    description="Warm, inviting layout for memoir and biography with generous " "leading and readable serif type.",
     trim_size=TrimSize.SIZE_5_5x8_5,
     style=TemplateStyleSettings(
         font_family="Garamond",

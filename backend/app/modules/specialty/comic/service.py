@@ -5,6 +5,7 @@ plus AI-powered script generation, panel art generation, layout
 templates, character expression/pose/costume management, and
 export/preflight.
 """
+
 from __future__ import annotations
 
 import json
@@ -64,24 +65,30 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
         return response.content
     except Exception:
         logger.warning("LLM orchestration unavailable; returning structured fallback", exc_info=True)
-        return json.dumps({
-            "status": "service_unavailable",
-            "message": (
-                "The AI text-generation service is currently unavailable. "
-                "A manual template has been provided below."
-            ),
-            "template": {
-                "pages": [
-                    {
-                        "page_number": i,
-                        "panels": [
-                            {"panel_number": 1, "description": f"[Enter panel description for page {i}]", "dialogue": "[Enter dialogue]"},
-                        ],
-                    }
-                    for i in range(1, 6)
-                ],
-            },
-        })
+        return json.dumps(
+            {
+                "status": "service_unavailable",
+                "message": (
+                    "The AI text-generation service is currently unavailable. "
+                    "A manual template has been provided below."
+                ),
+                "template": {
+                    "pages": [
+                        {
+                            "page_number": i,
+                            "panels": [
+                                {
+                                    "panel_number": 1,
+                                    "description": f"[Enter panel description for page {i}]",
+                                    "dialogue": "[Enter dialogue]",
+                                },
+                            ],
+                        }
+                        for i in range(1, 6)
+                    ],
+                },
+            }
+        )
 
 
 async def _llm_generate_image(prompt: str) -> dict[str, str]:
@@ -267,9 +274,7 @@ def _costume_to_dict(costume: CharacterCostume) -> dict[str, Any]:
     }
 
 
-async def _get_comic_or_404(
-    db: AsyncSession, org_id: UUID, comic_id: UUID
-) -> Comic:
+async def _get_comic_or_404(db: AsyncSession, org_id: UUID, comic_id: UUID) -> Comic:
     stmt = select(Comic).where(
         Comic.id == comic_id,
         Comic.org_id == org_id,
@@ -282,9 +287,7 @@ async def _get_comic_or_404(
     return comic
 
 
-async def _get_page_or_404(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, page_id: UUID
-) -> ComicPage:
+async def _get_page_or_404(db: AsyncSession, org_id: UUID, comic_id: UUID, page_id: UUID) -> ComicPage:
     stmt = select(ComicPage).where(
         ComicPage.id == page_id,
         ComicPage.comic_id == comic_id,
@@ -297,9 +300,7 @@ async def _get_page_or_404(
     return page
 
 
-async def _get_panel_or_404(
-    db: AsyncSession, org_id: UUID, page_id: UUID, panel_id: UUID
-) -> ComicPanel:
+async def _get_panel_or_404(db: AsyncSession, org_id: UUID, page_id: UUID, panel_id: UUID) -> ComicPanel:
     stmt = select(ComicPanel).where(
         ComicPanel.id == panel_id,
         ComicPanel.page_id == page_id,
@@ -312,9 +313,7 @@ async def _get_panel_or_404(
     return panel
 
 
-async def _get_bubble_or_404(
-    db: AsyncSession, org_id: UUID, panel_id: UUID, bubble_id: UUID
-) -> ComicBubble:
+async def _get_bubble_or_404(db: AsyncSession, org_id: UUID, panel_id: UUID, bubble_id: UUID) -> ComicBubble:
     stmt = select(ComicBubble).where(
         ComicBubble.id == bubble_id,
         ComicBubble.panel_id == panel_id,
@@ -327,9 +326,7 @@ async def _get_bubble_or_404(
     return bubble
 
 
-async def _get_character_or_404(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, char_id: UUID
-) -> ComicCharacter:
+async def _get_character_or_404(db: AsyncSession, org_id: UUID, comic_id: UUID, char_id: UUID) -> ComicCharacter:
     stmt = select(ComicCharacter).where(
         ComicCharacter.id == char_id,
         ComicCharacter.comic_id == comic_id,
@@ -349,25 +346,37 @@ async def _get_character_or_404(
 
 async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
     """Get comic book statistics for the org."""
-    total_stmt = select(func.count()).select_from(Comic).where(
-        Comic.org_id == org_id,
-        Comic.deleted_at.is_(None),
+    total_stmt = (
+        select(func.count())
+        .select_from(Comic)
+        .where(
+            Comic.org_id == org_id,
+            Comic.deleted_at.is_(None),
+        )
     )
     total_result = await db.execute(total_stmt)
     total_comics = total_result.scalar() or 0
 
-    in_progress_stmt = select(func.count()).select_from(Comic).where(
-        Comic.org_id == org_id,
-        Comic.deleted_at.is_(None),
-        Comic.status == BookStatus.in_progress,
+    in_progress_stmt = (
+        select(func.count())
+        .select_from(Comic)
+        .where(
+            Comic.org_id == org_id,
+            Comic.deleted_at.is_(None),
+            Comic.status == BookStatus.in_progress,
+        )
     )
     in_progress_result = await db.execute(in_progress_stmt)
     in_progress = in_progress_result.scalar() or 0
 
-    published_stmt = select(func.count()).select_from(Comic).where(
-        Comic.org_id == org_id,
-        Comic.deleted_at.is_(None),
-        Comic.status == BookStatus.published,
+    published_stmt = (
+        select(func.count())
+        .select_from(Comic)
+        .where(
+            Comic.org_id == org_id,
+            Comic.deleted_at.is_(None),
+            Comic.status == BookStatus.published,
+        )
     )
     published_result = await db.execute(published_stmt)
     published = published_result.scalar() or 0
@@ -376,9 +385,13 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
         Comic.org_id == org_id,
         Comic.deleted_at.is_(None),
     )
-    pages_stmt = select(func.count()).select_from(ComicPage).where(
-        ComicPage.comic_id.in_(comic_ids_stmt),
-        ComicPage.deleted_at.is_(None),
+    pages_stmt = (
+        select(func.count())
+        .select_from(ComicPage)
+        .where(
+            ComicPage.comic_id.in_(comic_ids_stmt),
+            ComicPage.deleted_at.is_(None),
+        )
     )
     pages_result = await db.execute(pages_stmt)
     pages_created = pages_result.scalar() or 0
@@ -387,9 +400,13 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
         ComicPage.comic_id.in_(comic_ids_stmt),
         ComicPage.deleted_at.is_(None),
     )
-    panels_stmt = select(func.count()).select_from(ComicPanel).where(
-        ComicPanel.page_id.in_(page_ids_stmt),
-        ComicPanel.deleted_at.is_(None),
+    panels_stmt = (
+        select(func.count())
+        .select_from(ComicPanel)
+        .where(
+            ComicPanel.page_id.in_(page_ids_stmt),
+            ComicPanel.deleted_at.is_(None),
+        )
     )
     panels_result = await db.execute(panels_stmt)
     panels_created = panels_result.scalar() or 0
@@ -423,9 +440,13 @@ async def list_comics(
         Comic.org_id == org_id,
         Comic.deleted_at.is_(None),
     )
-    count_stmt = select(func.count()).select_from(Comic).where(
-        Comic.org_id == org_id,
-        Comic.deleted_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(Comic)
+        .where(
+            Comic.org_id == org_id,
+            Comic.deleted_at.is_(None),
+        )
     )
 
     if status_filter:
@@ -455,9 +476,7 @@ async def list_comics(
     }
 
 
-async def create_comic(
-    db: AsyncSession, org_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def create_comic(db: AsyncSession, org_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Create a new comic book."""
     comic = Comic(
         org_id=org_id,
@@ -492,9 +511,7 @@ async def create_comic(
     return _comic_to_dict(comic)
 
 
-async def get_comic(
-    db: AsyncSession, org_id: UUID, comic_id: UUID
-) -> dict[str, Any]:
+async def get_comic(db: AsyncSession, org_id: UUID, comic_id: UUID) -> dict[str, Any]:
     """Get comic detail with pages and characters."""
     comic = await _get_comic_or_404(db, org_id, comic_id)
     result = _comic_to_dict(comic)
@@ -506,17 +523,34 @@ async def get_comic(
     return result
 
 
-async def update_comic(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def update_comic(db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Update a comic book."""
     comic = await _get_comic_or_404(db, org_id, comic_id)
     allowed = {
-        "title", "subtitle", "author", "artist", "letterer", "colorist",
-        "format", "art_style", "color_mode", "ink_style", "pacing",
-        "status", "genre", "premise", "script_text", "trim_size",
-        "page_count", "target_audience", "border_style", "gutter_style",
-        "content_rating", "violence_level", "language_level", "safety_settings",
+        "title",
+        "subtitle",
+        "author",
+        "artist",
+        "letterer",
+        "colorist",
+        "format",
+        "art_style",
+        "color_mode",
+        "ink_style",
+        "pacing",
+        "status",
+        "genre",
+        "premise",
+        "script_text",
+        "trim_size",
+        "page_count",
+        "target_audience",
+        "border_style",
+        "gutter_style",
+        "content_rating",
+        "violence_level",
+        "language_level",
+        "safety_settings",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -526,9 +560,7 @@ async def update_comic(
     return _comic_to_dict(comic)
 
 
-async def delete_comic(
-    db: AsyncSession, org_id: UUID, comic_id: UUID
-) -> bool:
+async def delete_comic(db: AsyncSession, org_id: UUID, comic_id: UUID) -> bool:
     """Soft-delete a comic book."""
     comic = await _get_comic_or_404(db, org_id, comic_id)
     comic.deleted_at = datetime.now(UTC)
@@ -541,9 +573,7 @@ async def delete_comic(
 # ---------------------------------------------------------------------------
 
 
-async def list_pages(
-    db: AsyncSession, org_id: UUID, comic_id: UUID
-) -> list[dict[str, Any]]:
+async def list_pages(db: AsyncSession, org_id: UUID, comic_id: UUID) -> list[dict[str, Any]]:
     """List all pages for a comic, ordered by page_number."""
     await _get_comic_or_404(db, org_id, comic_id)
     stmt = (
@@ -558,9 +588,7 @@ async def list_pages(
     return [_page_to_dict(p) for p in result.scalars().all()]
 
 
-async def create_page(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def create_page(db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Create a new page in a comic."""
     await _get_comic_or_404(db, org_id, comic_id)
 
@@ -588,16 +616,16 @@ async def create_page(
     await db.refresh(page)
 
     # Update comic page count
-    count_stmt = select(func.count()).select_from(ComicPage).where(
-        ComicPage.comic_id == comic_id,
-        ComicPage.deleted_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(ComicPage)
+        .where(
+            ComicPage.comic_id == comic_id,
+            ComicPage.deleted_at.is_(None),
+        )
     )
     count_result = await db.execute(count_stmt)
-    await db.execute(
-        update(Comic)
-        .where(Comic.id == comic_id)
-        .values(page_count=count_result.scalar() or 0)
-    )
+    await db.execute(update(Comic).where(Comic.id == comic_id).values(page_count=count_result.scalar() or 0))
 
     return _page_to_dict(page)
 
@@ -608,8 +636,13 @@ async def update_page(
     """Update a comic page."""
     page = await _get_page_or_404(db, org_id, comic_id, page_id)
     allowed = {
-        "page_number", "page_type", "script_text", "thumbnail_url",
-        "full_art_url", "layout_template", "panel_count",
+        "page_number",
+        "page_type",
+        "script_text",
+        "thumbnail_url",
+        "full_art_url",
+        "layout_template",
+        "panel_count",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -619,9 +652,7 @@ async def update_page(
     return _page_to_dict(page)
 
 
-async def delete_page(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, page_id: UUID
-) -> bool:
+async def delete_page(db: AsyncSession, org_id: UUID, comic_id: UUID, page_id: UUID) -> bool:
     """Delete a comic page."""
     page = await _get_page_or_404(db, org_id, comic_id, page_id)
     page.deleted_at = datetime.now(UTC)
@@ -629,9 +660,7 @@ async def delete_page(
     return True
 
 
-async def reorder_pages(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, page_ids: list[UUID]
-) -> list[dict[str, Any]]:
+async def reorder_pages(db: AsyncSession, org_id: UUID, comic_id: UUID, page_ids: list[UUID]) -> list[dict[str, Any]]:
     """Reorder pages by providing the desired order of page IDs."""
     await _get_comic_or_404(db, org_id, comic_id)
     for idx, pid in enumerate(page_ids, start=1):
@@ -652,9 +681,7 @@ async def reorder_pages(
 # ---------------------------------------------------------------------------
 
 
-async def list_panels(
-    db: AsyncSession, org_id: UUID, page_id: UUID
-) -> list[dict[str, Any]]:
+async def list_panels(db: AsyncSession, org_id: UUID, page_id: UUID) -> list[dict[str, Any]]:
     """List all panels for a page."""
     stmt = (
         select(ComicPanel)
@@ -668,9 +695,7 @@ async def list_panels(
     return [_panel_to_dict(p) for p in result.scalars().all()]
 
 
-async def create_panel(
-    db: AsyncSession, org_id: UUID, page_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def create_panel(db: AsyncSession, org_id: UUID, page_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Create a new panel on a page."""
     if "panel_order" not in payload:
         max_stmt = select(func.max(ComicPanel.panel_order)).where(
@@ -706,9 +731,18 @@ async def update_panel(
     """Update a panel."""
     panel = await _get_panel_or_404(db, org_id, page_id, panel_id)
     allowed = {
-        "panel_order", "panel_type", "description", "art_prompt",
-        "art_url", "art_seed", "x", "y", "width", "height",
-        "border_style", "background_color",
+        "panel_order",
+        "panel_type",
+        "description",
+        "art_prompt",
+        "art_url",
+        "art_seed",
+        "x",
+        "y",
+        "width",
+        "height",
+        "border_style",
+        "background_color",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -718,9 +752,7 @@ async def update_panel(
     return _panel_to_dict(panel)
 
 
-async def delete_panel(
-    db: AsyncSession, org_id: UUID, page_id: UUID, panel_id: UUID
-) -> bool:
+async def delete_panel(db: AsyncSession, org_id: UUID, page_id: UUID, panel_id: UUID) -> bool:
     """Delete a panel."""
     panel = await _get_panel_or_404(db, org_id, page_id, panel_id)
     panel.deleted_at = datetime.now(UTC)
@@ -733,9 +765,7 @@ async def delete_panel(
 # ---------------------------------------------------------------------------
 
 
-async def list_bubbles(
-    db: AsyncSession, org_id: UUID, panel_id: UUID
-) -> list[dict[str, Any]]:
+async def list_bubbles(db: AsyncSession, org_id: UUID, panel_id: UUID) -> list[dict[str, Any]]:
     """List all bubbles for a panel."""
     stmt = (
         select(ComicBubble)
@@ -749,9 +779,7 @@ async def list_bubbles(
     return [_bubble_to_dict(b) for b in result.scalars().all()]
 
 
-async def create_bubble(
-    db: AsyncSession, org_id: UUID, panel_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def create_bubble(db: AsyncSession, org_id: UUID, panel_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Create a new bubble in a panel."""
     bubble = ComicBubble(
         panel_id=panel_id,
@@ -777,8 +805,15 @@ async def update_bubble(
     """Update a bubble."""
     bubble = await _get_bubble_or_404(db, org_id, panel_id, bubble_id)
     allowed = {
-        "bubble_order", "bubble_type", "text", "character_name",
-        "font", "font_size", "x", "y", "tail_direction",
+        "bubble_order",
+        "bubble_type",
+        "text",
+        "character_name",
+        "font",
+        "font_size",
+        "x",
+        "y",
+        "tail_direction",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -788,9 +823,7 @@ async def update_bubble(
     return _bubble_to_dict(bubble)
 
 
-async def delete_bubble(
-    db: AsyncSession, org_id: UUID, panel_id: UUID, bubble_id: UUID
-) -> bool:
+async def delete_bubble(db: AsyncSession, org_id: UUID, panel_id: UUID, bubble_id: UUID) -> bool:
     """Delete a bubble."""
     bubble = await _get_bubble_or_404(db, org_id, panel_id, bubble_id)
     bubble.deleted_at = datetime.now(UTC)
@@ -803,9 +836,7 @@ async def delete_bubble(
 # ---------------------------------------------------------------------------
 
 
-async def get_script(
-    db: AsyncSession, org_id: UUID, comic_id: UUID
-) -> dict[str, Any]:
+async def get_script(db: AsyncSession, org_id: UUID, comic_id: UUID) -> dict[str, Any]:
     """Get the full script for a comic (assembled from all pages/panels/bubbles)."""
     comic = await _get_comic_or_404(db, org_id, comic_id)
     pages = await list_pages(db, org_id, comic_id)
@@ -819,25 +850,29 @@ async def get_script(
         for panel_data in panels:
             p_id = UUID(panel_data["id"])
             bubbles = await list_bubbles(db, org_id, p_id)
-            panel_scripts.append({
-                "panel_number": panel_data["panel_order"],
-                "description": panel_data["description"],
-                "art_prompt": panel_data["art_prompt"],
-                "dialogue": [
-                    {
-                        "character": b["character_name"],
-                        "type": b["bubble_type"],
-                        "text": b["text"],
-                    }
-                    for b in bubbles
-                ],
-            })
+            panel_scripts.append(
+                {
+                    "panel_number": panel_data["panel_order"],
+                    "description": panel_data["description"],
+                    "art_prompt": panel_data["art_prompt"],
+                    "dialogue": [
+                        {
+                            "character": b["character_name"],
+                            "type": b["bubble_type"],
+                            "text": b["text"],
+                        }
+                        for b in bubbles
+                    ],
+                }
+            )
 
-        script_pages.append({
-            "page_number": page_data["page_number"],
-            "notes": page_data.get("notes"),
-            "panels": panel_scripts,
-        })
+        script_pages.append(
+            {
+                "page_number": page_data["page_number"],
+                "notes": page_data.get("notes"),
+                "panels": panel_scripts,
+            }
+        )
 
     return {
         "comic_id": str(comic_id),
@@ -847,9 +882,7 @@ async def get_script(
     }
 
 
-async def update_script(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def update_script(db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Update the full comic script text."""
     comic = await _get_comic_or_404(db, org_id, comic_id)
     comic.script_text = payload.get("script_text", comic.script_text)
@@ -862,9 +895,7 @@ async def update_script(
     }
 
 
-async def generate_script(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def generate_script(db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """AI-generate a comic script from premise, genre, characters.
 
     # TODO: integrate with LLM service
@@ -878,10 +909,10 @@ async def generate_script(
     target_pages = payload.get("target_pages", 22)
     tone = payload.get("tone", "dramatic")
 
-    char_descriptions = "\n".join(
-        f"- {c['name']}: {c.get('description', '')} {c.get('visual_description', '')}"
-        for c in characters
-    ) or "No characters defined yet."
+    char_descriptions = (
+        "\n".join(f"- {c['name']}: {c.get('description', '')} {c.get('visual_description', '')}" for c in characters)
+        or "No characters defined yet."
+    )
 
     system_prompt = (
         f"You are a professional comic book writer. Genre: {genre}. Tone: {tone}.\n"
@@ -966,9 +997,7 @@ async def expand_panel(
     }
 
 
-async def generate_next_page(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def generate_next_page(db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """AI-generate the next page's script based on story so far.
 
     # TODO: integrate with LLM service
@@ -1007,16 +1036,16 @@ async def generate_next_page(
     await db.refresh(page)
 
     # Update comic page count
-    count_stmt = select(func.count()).select_from(ComicPage).where(
-        ComicPage.comic_id == comic_id,
-        ComicPage.deleted_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(ComicPage)
+        .where(
+            ComicPage.comic_id == comic_id,
+            ComicPage.deleted_at.is_(None),
+        )
     )
     count_result = await db.execute(count_stmt)
-    await db.execute(
-        update(Comic)
-        .where(Comic.id == comic_id)
-        .values(page_count=count_result.scalar() or 0)
-    )
+    await db.execute(update(Comic).where(Comic.id == comic_id).values(page_count=count_result.scalar() or 0))
 
     return {
         "comic_id": str(comic_id),
@@ -1032,9 +1061,7 @@ async def generate_next_page(
 # ---------------------------------------------------------------------------
 
 
-async def list_characters(
-    db: AsyncSession, org_id: UUID, comic_id: UUID
-) -> list[dict[str, Any]]:
+async def list_characters(db: AsyncSession, org_id: UUID, comic_id: UUID) -> list[dict[str, Any]]:
     """List all characters for a comic."""
     await _get_comic_or_404(db, org_id, comic_id)
     stmt = (
@@ -1049,9 +1076,7 @@ async def list_characters(
     return [_char_to_dict(c) for c in result.scalars().all()]
 
 
-async def create_character(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def create_character(db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Create a character for a comic."""
     await _get_comic_or_404(db, org_id, comic_id)
     char = ComicCharacter(
@@ -1077,8 +1102,14 @@ async def update_character(
     """Update a character."""
     char = await _get_character_or_404(db, org_id, comic_id, char_id)
     allowed = {
-        "name", "role", "description", "visual_description",
-        "reference_images", "auto_append", "default_costume", "color_palette",
+        "name",
+        "role",
+        "description",
+        "visual_description",
+        "reference_images",
+        "auto_append",
+        "default_costume",
+        "color_palette",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -1088,9 +1119,7 @@ async def update_character(
     return _char_to_dict(char)
 
 
-async def delete_character(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, char_id: UUID
-) -> bool:
+async def delete_character(db: AsyncSession, org_id: UUID, comic_id: UUID, char_id: UUID) -> bool:
     """Delete a character."""
     char = await _get_character_or_404(db, org_id, comic_id, char_id)
     char.deleted_at = datetime.now(UTC)
@@ -1098,9 +1127,7 @@ async def delete_character(
     return True
 
 
-async def add_expression(
-    db: AsyncSession, org_id: UUID, char_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def add_expression(db: AsyncSession, org_id: UUID, char_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Add an expression to a character."""
     # Verify character exists
     stmt = select(ComicCharacter).where(
@@ -1124,9 +1151,7 @@ async def add_expression(
     return _expression_to_dict(expr)
 
 
-async def add_pose(
-    db: AsyncSession, org_id: UUID, char_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def add_pose(db: AsyncSession, org_id: UUID, char_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Add a pose to a character."""
     stmt = select(ComicCharacter).where(
         ComicCharacter.id == char_id,
@@ -1149,9 +1174,7 @@ async def add_pose(
     return _pose_to_dict(pose)
 
 
-async def add_costume(
-    db: AsyncSession, org_id: UUID, char_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def add_costume(db: AsyncSession, org_id: UUID, char_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Add a costume to a character."""
     stmt = select(ComicCharacter).where(
         ComicCharacter.id == char_id,
@@ -1191,10 +1214,7 @@ async def generate_character_references(
     reference_urls: list[str] = []
 
     for view in views:
-        prompt = (
-            f"{base_desc}, {view}, {style} comic art style, "
-            f"character reference sheet, white background"
-        )
+        prompt = f"{base_desc}, {view}, {style} comic art style, " f"character reference sheet, white background"
         result = await _llm_generate_image(prompt)
         reference_urls.append(result.get("image_url", ""))
 
@@ -1216,76 +1236,123 @@ async def generate_character_references(
 
 
 LAYOUT_TEMPLATES: list[dict[str, Any]] = [
-    {"id": "grid-2x2", "name": "2x2 Grid", "panels": 4, "description": "Four equal panels",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.5},
-         {"x": 0.5, "y": 0.0, "w": 0.5, "h": 0.5},
-         {"x": 0.0, "y": 0.5, "w": 0.5, "h": 0.5},
-         {"x": 0.5, "y": 0.5, "w": 0.5, "h": 0.5},
-     ]},
-    {"id": "grid-2x3", "name": "2x3 Grid", "panels": 6, "description": "Six equal panels",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.333},
-         {"x": 0.5, "y": 0.0, "w": 0.5, "h": 0.333},
-         {"x": 0.0, "y": 0.333, "w": 0.5, "h": 0.333},
-         {"x": 0.5, "y": 0.333, "w": 0.5, "h": 0.333},
-         {"x": 0.0, "y": 0.666, "w": 0.5, "h": 0.334},
-         {"x": 0.5, "y": 0.666, "w": 0.5, "h": 0.334},
-     ]},
-    {"id": "grid-3x3", "name": "3x3 Grid", "panels": 9, "description": "Nine equal panels",
-     "positions": [
-         {"x": c / 3, "y": r / 3, "w": 1 / 3, "h": 1 / 3}
-         for r in range(3) for c in range(3)
-     ]},
-    {"id": "hero-top", "name": "Hero Top", "panels": 4, "description": "Large panel on top, 3 small below",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.5},
-         {"x": 0.0, "y": 0.5, "w": 0.333, "h": 0.5},
-         {"x": 0.333, "y": 0.5, "w": 0.333, "h": 0.5},
-         {"x": 0.666, "y": 0.5, "w": 0.334, "h": 0.5},
-     ]},
-    {"id": "hero-bottom", "name": "Hero Bottom", "panels": 4, "description": "3 small on top, large panel below",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 0.333, "h": 0.5},
-         {"x": 0.333, "y": 0.0, "w": 0.333, "h": 0.5},
-         {"x": 0.666, "y": 0.0, "w": 0.334, "h": 0.5},
-         {"x": 0.0, "y": 0.5, "w": 1.0, "h": 0.5},
-     ]},
-    {"id": "splash", "name": "Full Splash", "panels": 1, "description": "Single full-page panel",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0},
-     ]},
-    {"id": "widescreen", "name": "Widescreen", "panels": 3, "description": "Three horizontal strips",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.333},
-         {"x": 0.0, "y": 0.333, "w": 1.0, "h": 0.333},
-         {"x": 0.0, "y": 0.666, "w": 1.0, "h": 0.334},
-     ]},
-    {"id": "manga-4", "name": "Manga 4-Panel", "panels": 4, "description": "Traditional manga yonkoma",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.25},
-         {"x": 0.0, "y": 0.25, "w": 1.0, "h": 0.25},
-         {"x": 0.0, "y": 0.5, "w": 1.0, "h": 0.25},
-         {"x": 0.0, "y": 0.75, "w": 1.0, "h": 0.25},
-     ]},
-    {"id": "action-dynamic", "name": "Dynamic Action", "panels": 5, "description": "Mixed sizes for action sequences",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 0.6, "h": 0.5},
-         {"x": 0.6, "y": 0.0, "w": 0.4, "h": 0.25},
-         {"x": 0.6, "y": 0.25, "w": 0.4, "h": 0.25},
-         {"x": 0.0, "y": 0.5, "w": 0.4, "h": 0.5},
-         {"x": 0.4, "y": 0.5, "w": 0.6, "h": 0.5},
-     ]},
-    {"id": "dialogue-heavy", "name": "Dialogue Heavy", "panels": 7, "description": "Many small panels for conversation",
-     "positions": [
-         {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.285},
-         {"x": 0.5, "y": 0.0, "w": 0.5, "h": 0.285},
-         {"x": 0.0, "y": 0.285, "w": 0.333, "h": 0.285},
-         {"x": 0.333, "y": 0.285, "w": 0.333, "h": 0.285},
-         {"x": 0.666, "y": 0.285, "w": 0.334, "h": 0.285},
-         {"x": 0.0, "y": 0.57, "w": 0.5, "h": 0.43},
-         {"x": 0.5, "y": 0.57, "w": 0.5, "h": 0.43},
-     ]},
+    {
+        "id": "grid-2x2",
+        "name": "2x2 Grid",
+        "panels": 4,
+        "description": "Four equal panels",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.5},
+            {"x": 0.5, "y": 0.0, "w": 0.5, "h": 0.5},
+            {"x": 0.0, "y": 0.5, "w": 0.5, "h": 0.5},
+            {"x": 0.5, "y": 0.5, "w": 0.5, "h": 0.5},
+        ],
+    },
+    {
+        "id": "grid-2x3",
+        "name": "2x3 Grid",
+        "panels": 6,
+        "description": "Six equal panels",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.333},
+            {"x": 0.5, "y": 0.0, "w": 0.5, "h": 0.333},
+            {"x": 0.0, "y": 0.333, "w": 0.5, "h": 0.333},
+            {"x": 0.5, "y": 0.333, "w": 0.5, "h": 0.333},
+            {"x": 0.0, "y": 0.666, "w": 0.5, "h": 0.334},
+            {"x": 0.5, "y": 0.666, "w": 0.5, "h": 0.334},
+        ],
+    },
+    {
+        "id": "grid-3x3",
+        "name": "3x3 Grid",
+        "panels": 9,
+        "description": "Nine equal panels",
+        "positions": [{"x": c / 3, "y": r / 3, "w": 1 / 3, "h": 1 / 3} for r in range(3) for c in range(3)],
+    },
+    {
+        "id": "hero-top",
+        "name": "Hero Top",
+        "panels": 4,
+        "description": "Large panel on top, 3 small below",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.5},
+            {"x": 0.0, "y": 0.5, "w": 0.333, "h": 0.5},
+            {"x": 0.333, "y": 0.5, "w": 0.333, "h": 0.5},
+            {"x": 0.666, "y": 0.5, "w": 0.334, "h": 0.5},
+        ],
+    },
+    {
+        "id": "hero-bottom",
+        "name": "Hero Bottom",
+        "panels": 4,
+        "description": "3 small on top, large panel below",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 0.333, "h": 0.5},
+            {"x": 0.333, "y": 0.0, "w": 0.333, "h": 0.5},
+            {"x": 0.666, "y": 0.0, "w": 0.334, "h": 0.5},
+            {"x": 0.0, "y": 0.5, "w": 1.0, "h": 0.5},
+        ],
+    },
+    {
+        "id": "splash",
+        "name": "Full Splash",
+        "panels": 1,
+        "description": "Single full-page panel",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0},
+        ],
+    },
+    {
+        "id": "widescreen",
+        "name": "Widescreen",
+        "panels": 3,
+        "description": "Three horizontal strips",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.333},
+            {"x": 0.0, "y": 0.333, "w": 1.0, "h": 0.333},
+            {"x": 0.0, "y": 0.666, "w": 1.0, "h": 0.334},
+        ],
+    },
+    {
+        "id": "manga-4",
+        "name": "Manga 4-Panel",
+        "panels": 4,
+        "description": "Traditional manga yonkoma",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.25},
+            {"x": 0.0, "y": 0.25, "w": 1.0, "h": 0.25},
+            {"x": 0.0, "y": 0.5, "w": 1.0, "h": 0.25},
+            {"x": 0.0, "y": 0.75, "w": 1.0, "h": 0.25},
+        ],
+    },
+    {
+        "id": "action-dynamic",
+        "name": "Dynamic Action",
+        "panels": 5,
+        "description": "Mixed sizes for action sequences",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 0.6, "h": 0.5},
+            {"x": 0.6, "y": 0.0, "w": 0.4, "h": 0.25},
+            {"x": 0.6, "y": 0.25, "w": 0.4, "h": 0.25},
+            {"x": 0.0, "y": 0.5, "w": 0.4, "h": 0.5},
+            {"x": 0.4, "y": 0.5, "w": 0.6, "h": 0.5},
+        ],
+    },
+    {
+        "id": "dialogue-heavy",
+        "name": "Dialogue Heavy",
+        "panels": 7,
+        "description": "Many small panels for conversation",
+        "positions": [
+            {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.285},
+            {"x": 0.5, "y": 0.0, "w": 0.5, "h": 0.285},
+            {"x": 0.0, "y": 0.285, "w": 0.333, "h": 0.285},
+            {"x": 0.333, "y": 0.285, "w": 0.333, "h": 0.285},
+            {"x": 0.666, "y": 0.285, "w": 0.334, "h": 0.285},
+            {"x": 0.0, "y": 0.57, "w": 0.5, "h": 0.43},
+            {"x": 0.5, "y": 0.57, "w": 0.5, "h": 0.43},
+        ],
+    },
 ]
 
 
@@ -1353,9 +1420,7 @@ async def apply_layout_template(
 # ---------------------------------------------------------------------------
 
 
-async def export_comic(
-    db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def export_comic(db: AsyncSession, org_id: UUID, comic_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Generate export file (PDF / CBZ / print-ready)."""
     from app.modules.specialty.shared.export_engine import (
         calculate_export_metadata,
@@ -1383,10 +1448,12 @@ async def export_comic(
         # CBZ is a ZIP of page images
         page_images: list[dict[str, Any]] = []
         for p in pages:
-            page_images.append({
-                "page_number": p["page_number"],
-                "image_url": p.get("full_art_url", ""),
-            })
+            page_images.append(
+                {
+                    "page_number": p["page_number"],
+                    "image_url": p.get("full_art_url", ""),
+                }
+            )
         return {
             "comic_id": str(comic_id),
             "export_id": export_id,
@@ -1423,9 +1490,7 @@ async def export_comic(
     }
 
 
-async def run_preflight(
-    db: AsyncSession, org_id: UUID, comic_id: UUID
-) -> dict[str, Any]:
+async def run_preflight(db: AsyncSession, org_id: UUID, comic_id: UUID) -> dict[str, Any]:
     """Run full preflight check (resolution, bleed, gutter, text legibility)."""
     comic = await _get_comic_or_404(db, org_id, comic_id)
     pages = await list_pages(db, org_id, comic_id)
@@ -1435,19 +1500,25 @@ async def run_preflight(
     # 1. Page count check
     page_count = len(pages)
     valid_count = page_count > 0
-    checks.append({
-        "check": "page_count",
-        "passed": valid_count,
-        "detail": f"{page_count} pages" + ("" if valid_count else " (comic must have at least 1 page)"),
-    })
+    checks.append(
+        {
+            "check": "page_count",
+            "passed": valid_count,
+            "detail": f"{page_count} pages" + ("" if valid_count else " (comic must have at least 1 page)"),
+        }
+    )
 
     # 2. DPI check (300+ required for print)
     low_dpi_pages = [p for p in pages if (p.get("dpi") or 300) < 300]
-    checks.append({
-        "check": "dpi_minimum",
-        "passed": len(low_dpi_pages) == 0,
-        "detail": f"{len(low_dpi_pages)} pages below 300 DPI" if low_dpi_pages else "All pages meet 300 DPI minimum",
-    })
+    checks.append(
+        {
+            "check": "dpi_minimum",
+            "passed": len(low_dpi_pages) == 0,
+            "detail": f"{len(low_dpi_pages)} pages below 300 DPI"
+            if low_dpi_pages
+            else "All pages meet 300 DPI minimum",
+        }
+    )
 
     # 3. Panels check — every page should have at least one panel
     pages_without_panels: list[int] = []
@@ -1456,12 +1527,16 @@ async def run_preflight(
         panels = await list_panels(db, org_id, page_id)
         if not panels:
             pages_without_panels.append(p["page_number"])
-    checks.append({
-        "check": "panels_complete",
-        "passed": len(pages_without_panels) == 0,
-        "detail": f"{len(pages_without_panels)} pages missing panels" if pages_without_panels else "All pages have panels",
-        "pages": pages_without_panels,
-    })
+    checks.append(
+        {
+            "check": "panels_complete",
+            "passed": len(pages_without_panels) == 0,
+            "detail": f"{len(pages_without_panels)} pages missing panels"
+            if pages_without_panels
+            else "All pages have panels",
+            "pages": pages_without_panels,
+        }
+    )
 
     # 4. Panel art check — panels should have images or art prompts
     panels_without_art: list[dict[str, Any]] = []
@@ -1470,15 +1545,21 @@ async def run_preflight(
         panels = await list_panels(db, org_id, page_id)
         for panel in panels:
             if not panel.get("art_url") and not panel.get("art_prompt"):
-                panels_without_art.append({
-                    "page": p["page_number"],
-                    "panel": panel["panel_order"],
-                })
-    checks.append({
-        "check": "panel_art",
-        "passed": len(panels_without_art) == 0,
-        "detail": f"{len(panels_without_art)} panels missing art/prompts" if panels_without_art else "All panels have art or prompts",
-    })
+                panels_without_art.append(
+                    {
+                        "page": p["page_number"],
+                        "panel": panel["panel_order"],
+                    }
+                )
+    checks.append(
+        {
+            "check": "panel_art",
+            "passed": len(panels_without_art) == 0,
+            "detail": f"{len(panels_without_art)} panels missing art/prompts"
+            if panels_without_art
+            else "All panels have art or prompts",
+        }
+    )
 
     # 5. Gutter safety (text near spine)
     gutter_issues: list[dict[str, Any]] = []
@@ -1490,23 +1571,29 @@ async def run_preflight(
         for panel in panels:
             # Check if panel is near the gutter edge
             if is_recto and panel.get("x", 0) < 0.05:
-                gutter_issues.append({
-                    "page": pn,
-                    "panel": panel["panel_order"],
-                    "detail": "Panel starts very close to gutter on recto page",
-                })
+                gutter_issues.append(
+                    {
+                        "page": pn,
+                        "panel": panel["panel_order"],
+                        "detail": "Panel starts very close to gutter on recto page",
+                    }
+                )
             elif not is_recto and (panel.get("x", 0) + panel.get("width", 0)) > 0.95:
-                gutter_issues.append({
-                    "page": pn,
-                    "panel": panel["panel_order"],
-                    "detail": "Panel extends very close to gutter on verso page",
-                })
-    checks.append({
-        "check": "gutter_safety",
-        "passed": len(gutter_issues) == 0,
-        "detail": f"{len(gutter_issues)} gutter collision(s)" if gutter_issues else "No gutter collisions detected",
-        "issues": gutter_issues,
-    })
+                gutter_issues.append(
+                    {
+                        "page": pn,
+                        "panel": panel["panel_order"],
+                        "detail": "Panel extends very close to gutter on verso page",
+                    }
+                )
+    checks.append(
+        {
+            "check": "gutter_safety",
+            "passed": len(gutter_issues) == 0,
+            "detail": f"{len(gutter_issues)} gutter collision(s)" if gutter_issues else "No gutter collisions detected",
+            "issues": gutter_issues,
+        }
+    )
 
     # 6. Bubble text legibility — check for empty bubbles
     empty_bubbles: list[dict[str, Any]] = []
@@ -1518,25 +1605,31 @@ async def run_preflight(
             bubbles = await list_bubbles(db, org_id, p_id)
             for bubble in bubbles:
                 if not bubble.get("text"):
-                    empty_bubbles.append({
-                        "page": p["page_number"],
-                        "panel": panel["panel_order"],
-                        "bubble_type": bubble.get("bubble_type"),
-                    })
-    checks.append({
-        "check": "text_legibility",
-        "passed": len(empty_bubbles) == 0,
-        "detail": f"{len(empty_bubbles)} empty bubble(s)" if empty_bubbles else "All bubbles contain text",
-    })
+                    empty_bubbles.append(
+                        {
+                            "page": p["page_number"],
+                            "panel": panel["panel_order"],
+                            "bubble_type": bubble.get("bubble_type"),
+                        }
+                    )
+    checks.append(
+        {
+            "check": "text_legibility",
+            "passed": len(empty_bubbles) == 0,
+            "detail": f"{len(empty_bubbles)} empty bubble(s)" if empty_bubbles else "All bubbles contain text",
+        }
+    )
 
     # 7. Bleed check — trim size should be standard
     valid_trims = {"6.625x10.25", "6.875x10.5", "7x10", "8.5x11", "5.5x8.5"}
     trim_ok = (comic.trim_size or "") in valid_trims
-    checks.append({
-        "check": "trim_size",
-        "passed": trim_ok,
-        "detail": f"Trim size '{comic.trim_size}'" + ("" if trim_ok else " is non-standard"),
-    })
+    checks.append(
+        {
+            "check": "trim_size",
+            "passed": trim_ok,
+            "detail": f"Trim size '{comic.trim_size}'" + ("" if trim_ok else " is non-standard"),
+        }
+    )
 
     all_passed = all(c["passed"] for c in checks)
 

@@ -60,6 +60,7 @@ def _ensure_stripe_configured() -> None:
     stripe.api_key = key
     _stripe_configured = True
 
+
 # ---------------------------------------------------------------------------
 # Mapping: PlanTier -> Stripe Price ID (read from settings)
 # ---------------------------------------------------------------------------
@@ -316,9 +317,7 @@ async def handle_webhook_event(
     """
     _ensure_stripe_configured()
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
     except stripe.SignatureVerificationError:
         raise AppException(
             status_code=400,
@@ -414,13 +413,9 @@ async def _handle_subscription_event(
         current_period_start = None
         current_period_end = None
         if subscription.get("current_period_start"):
-            current_period_start = datetime.fromtimestamp(
-                subscription["current_period_start"], tz=UTC
-            )
+            current_period_start = datetime.fromtimestamp(subscription["current_period_start"], tz=UTC)
         if subscription.get("current_period_end"):
-            current_period_end = datetime.fromtimestamp(
-                subscription["current_period_end"], tz=UTC
-            )
+            current_period_end = datetime.fromtimestamp(subscription["current_period_end"], tz=UTC)
 
         await _update_org(
             db,
@@ -455,13 +450,9 @@ async def _handle_subscription_event(
         current_period_start = None
         current_period_end = None
         if subscription.get("current_period_start"):
-            current_period_start = datetime.fromtimestamp(
-                subscription["current_period_start"], tz=UTC
-            )
+            current_period_start = datetime.fromtimestamp(subscription["current_period_start"], tz=UTC)
         if subscription.get("current_period_end"):
-            current_period_end = datetime.fromtimestamp(
-                subscription["current_period_end"], tz=UTC
-            )
+            current_period_end = datetime.fromtimestamp(subscription["current_period_end"], tz=UTC)
 
         await _update_org(
             db,
@@ -561,9 +552,7 @@ async def _get_org_row(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
     from sqlalchemy import text
 
     row = await db.execute(
-        text(
-            "SELECT * FROM organizations WHERE id = :org_id AND deleted_at IS NULL LIMIT 1"
-        ),
+        text("SELECT * FROM organizations WHERE id = :org_id AND deleted_at IS NULL LIMIT 1"),
         {"org_id": str(org_id)},
     )
     result = row.mappings().first()
@@ -605,9 +594,7 @@ async def _org_id_from_customer(
     from sqlalchemy import text
 
     row = await db.execute(
-        text(
-            "SELECT id FROM organizations WHERE stripe_customer_id = :cid AND deleted_at IS NULL LIMIT 1"
-        ),
+        text("SELECT id FROM organizations WHERE stripe_customer_id = :cid AND deleted_at IS NULL LIMIT 1"),
         {"cid": customer_id},
     )
     result = row.mappings().first()

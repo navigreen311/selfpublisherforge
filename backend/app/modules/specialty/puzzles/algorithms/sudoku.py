@@ -31,16 +31,16 @@ from .utils import (
 # Size configurations: (grid_size, box_rows, box_cols)
 # ---------------------------------------------------------------------------
 _SIZE_CONFIG: dict[int, tuple[int, int]] = {
-    4: (2, 2),   # 2x2 boxes
-    6: (2, 3),   # 2x3 boxes
-    9: (3, 3),   # 3x3 boxes
+    4: (2, 2),  # 2x2 boxes
+    6: (2, 3),  # 2x3 boxes
+    9: (3, 3),  # 3x3 boxes
 }
 
 # Given-count ranges per difficulty (for 9x9). Scaled proportionally for others.
 _DIFFICULTY_RANGES_9: dict[str, tuple[int, int]] = {
-    "easy":   (36, 45),
+    "easy": (36, 45),
     "medium": (27, 35),
-    "hard":   (22, 26),
+    "hard": (22, 26),
 }
 
 
@@ -48,13 +48,15 @@ _DIFFICULTY_RANGES_9: dict[str, tuple[int, int]] = {
 # Core helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_box(row: int, col: int, box_rows: int, box_cols: int) -> int:
     """Return the box index for the given cell."""
     return (row // box_rows) * (box_rows) + (col // box_cols)
 
 
-def _valid_placement(grid: list[list[int]], row: int, col: int,
-                     num: int, size: int, box_rows: int, box_cols: int) -> bool:
+def _valid_placement(
+    grid: list[list[int]], row: int, col: int, num: int, size: int, box_rows: int, box_cols: int
+) -> bool:
     """Check whether *num* can be placed at (row, col)."""
     # Row check
     if num in grid[row]:
@@ -73,8 +75,7 @@ def _valid_placement(grid: list[list[int]], row: int, col: int,
     return True
 
 
-def _candidates(grid: list[list[int]], row: int, col: int,
-                size: int, box_rows: int, box_cols: int) -> list[int]:
+def _candidates(grid: list[list[int]], row: int, col: int, size: int, box_rows: int, box_cols: int) -> list[int]:
     """Return a list of valid candidates for (row, col)."""
     cands = []
     for num in range(1, size + 1):
@@ -87,8 +88,8 @@ def _candidates(grid: list[list[int]], row: int, col: int,
 # Solution generation
 # ---------------------------------------------------------------------------
 
-def _fill_diagonal_boxes(grid: list[list[int]], size: int,
-                         box_rows: int, box_cols: int) -> None:
+
+def _fill_diagonal_boxes(grid: list[list[int]], size: int, box_rows: int, box_cols: int) -> None:
     """
     Fill the diagonal boxes (they share no row/col constraints).
 
@@ -112,8 +113,7 @@ def _fill_diagonal_boxes(grid: list[list[int]], size: int,
                 idx += 1
 
 
-def _fill_remaining(grid: list[list[int]], size: int,
-                    box_rows: int, box_cols: int) -> bool:
+def _fill_remaining(grid: list[list[int]], size: int, box_rows: int, box_cols: int) -> bool:
     """Fill non-diagonal cells using backtracking. Returns True on success."""
     for r in range(size):
         for c in range(size):
@@ -129,8 +129,7 @@ def _fill_remaining(grid: list[list[int]], size: int,
     return True
 
 
-def _generate_full_solution(size: int, box_rows: int,
-                            box_cols: int) -> list[list[int]]:
+def _generate_full_solution(size: int, box_rows: int, box_cols: int) -> list[list[int]]:
     """
     Generate a complete valid Sudoku grid.
 
@@ -153,8 +152,8 @@ def _generate_full_solution(size: int, box_rows: int,
 # Unique-solution verification
 # ---------------------------------------------------------------------------
 
-def verify_unique_solution(grid: list[list[int]],
-                           size: int | None = None) -> bool:
+
+def verify_unique_solution(grid: list[list[int]], size: int | None = None) -> bool:
     """
     Solve *grid* exhaustively and return True only if exactly 1 solution exists.
 
@@ -206,8 +205,9 @@ _TECHNIQUE_ORDER = [
 ]
 
 
-def _detect_techniques(grid: list[list[int]], solution: list[list[int]],
-                        size: int, box_rows: int, box_cols: int) -> list[str]:
+def _detect_techniques(
+    grid: list[list[int]], solution: list[list[int]], size: int, box_rows: int, box_cols: int
+) -> list[str]:
     """
     Detect which solving techniques are required for a puzzle.
 
@@ -216,9 +216,7 @@ def _detect_techniques(grid: list[list[int]], solution: list[list[int]],
     """
     work = copy.deepcopy(grid)
     # Build candidate sets
-    cand: list[list[set[int]]] = [
-        [set() for _ in range(size)] for _ in range(size)
-    ]
+    cand: list[list[set[int]]] = [[set() for _ in range(size)] for _ in range(size)]
     for r in range(size):
         for c in range(size):
             if work[r][c] == 0:
@@ -367,9 +365,8 @@ def _detect_techniques(grid: list[list[int]], solution: list[list[int]],
 # Difficulty calculation
 # ---------------------------------------------------------------------------
 
-def calculate_difficulty(givens_count: int,
-                         techniques_required: list[str],
-                         size: int = 9) -> float:
+
+def calculate_difficulty(givens_count: int, techniques_required: list[str], size: int = 9) -> float:
     """
     Calculate a difficulty score from 0 to 100.
 
@@ -404,6 +401,7 @@ def calculate_difficulty(givens_count: int,
 # ---------------------------------------------------------------------------
 # Puzzle generation (remove numbers with uniqueness verification)
 # ---------------------------------------------------------------------------
+
 
 def _target_givens(size: int, difficulty: str) -> int:
     """Return a random target given-count for the requested difficulty."""
@@ -491,9 +489,10 @@ def generate_sudoku(size: int = 9, difficulty: str = "medium") -> dict[str, Any]
 # SVG rendering
 # ---------------------------------------------------------------------------
 
-def render_sudoku_svg(grid: list[list[int]], solution: list[list[int]],
-                      size: int, box_rows: int, box_cols: int,
-                      cell_size: int = 50) -> str:
+
+def render_sudoku_svg(
+    grid: list[list[int]], solution: list[list[int]], size: int, box_rows: int, box_cols: int, cell_size: int = 50
+) -> str:
     """Render the puzzle grid to SVG."""
     padding = 20
     total = size * cell_size + 2 * padding
@@ -528,8 +527,7 @@ def render_sudoku_svg(grid: list[list[int]], solution: list[list[int]],
             if grid[r][c] != 0:
                 cx = padding + c * cell_size + cell_size // 2
                 cy = padding + r * cell_size + cell_size // 2
-                parts.append(svg_text(cx, cy, str(grid[r][c]), font_size,
-                                      font_weight="bold"))
+                parts.append(svg_text(cx, cy, str(grid[r][c]), font_size, font_weight="bold"))
 
     parts.append(svg_footer())
     return "".join(parts)

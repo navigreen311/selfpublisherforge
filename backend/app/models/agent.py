@@ -5,6 +5,7 @@ This file re-exports them so that legacy imports
 (``from app.models.agent import Agent``) continue to work without
 registering duplicate classes in SQLAlchemy's declarative base.
 """
+
 import enum
 
 # ── Re-exports from the canonical module ──────────────────────────────

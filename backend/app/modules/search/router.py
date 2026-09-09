@@ -18,8 +18,7 @@ router = APIRouter()
     response_model=SearchResponse,
     summary="Global search",
     description=(
-        "Aggregated search across projects, books, chapters, recipes, and "
-        "reviews for the current organization."
+        "Aggregated search across projects, books, chapters, recipes, and " "reviews for the current organization."
     ),
 )
 async def search(
@@ -27,8 +26,7 @@ async def search(
     types: str | None = Query(
         None,
         description=(
-            "Comma-separated list of types to include "
-            "(projects,books,recipes,chapters,reviews). Defaults to all."
+            "Comma-separated list of types to include " "(projects,books,recipes,chapters,reviews). Defaults to all."
         ),
     ),
     current_user: dict = Depends(get_current_user),

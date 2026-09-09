@@ -346,12 +346,14 @@ def _build_ncx(page_count: int, title: str) -> dict[str, Any]:
     """Build NCX navigation data."""
     nav_points = []
     for i in range(1, page_count + 1):
-        nav_points.append({
-            "id": f"navpoint-{i}",
-            "play_order": i,
-            "label": f"Page {i}",
-            "content_src": f"page_{i:04d}.xhtml",
-        })
+        nav_points.append(
+            {
+                "id": f"navpoint-{i}",
+                "play_order": i,
+                "label": f"Page {i}",
+                "content_src": f"page_{i:04d}.xhtml",
+            }
+        )
     return {
         "title": title,
         "nav_points": nav_points,
@@ -367,17 +369,19 @@ def _build_text_popups(page_number: int, text_content: str) -> list[dict[str, An
     popups = []
     total = max(len(sentences), 1)
     for idx, sentence in enumerate(sentences):
-        popups.append({
-            "region_id": f"popup_p{page_number}_{idx}",
-            "text": sentence + "." if not sentence.endswith(".") else sentence,
-            "bounds": {
-                "x": 0.05,
-                "y": round(0.1 + (0.8 * idx / total), 4),
-                "width": 0.9,
-                "height": round(0.8 / total, 4),
-            },
-            "tappable": True,
-        })
+        popups.append(
+            {
+                "region_id": f"popup_p{page_number}_{idx}",
+                "text": sentence + "." if not sentence.endswith(".") else sentence,
+                "bounds": {
+                    "x": 0.05,
+                    "y": round(0.1 + (0.8 * idx / total), 4),
+                    "width": 0.9,
+                    "height": round(0.8 / total, 4),
+                },
+                "tappable": True,
+            }
+        )
     return popups
 
 
@@ -666,9 +670,7 @@ async def generate_device_preview(
         for page in pages_data:
             pnum = page.get("page_number", 1)
             gs_suffix = "_gs" if is_grayscale else ""
-            preview_url = (
-                f"/previews/{org_id}/{book_id}/{dev.value}/page_{pnum:04d}{gs_suffix}.png"
-            )
+            preview_url = f"/previews/{org_id}/{book_id}/{dev.value}/page_{pnum:04d}{gs_suffix}.png"
             page_previews.append(
                 DevicePreviewPage(
                     page_number=pnum,

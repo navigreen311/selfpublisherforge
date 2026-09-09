@@ -66,6 +66,7 @@ def _mock_s3_client() -> MagicMock:
 # App fixture with overridden deps
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture
 async def client():
     """Yield an async test client with DB and auth overridden."""
@@ -87,6 +88,7 @@ async def client():
 # ---------------------------------------------------------------------------
 # Helper to patch S3 client inside the service
 # ---------------------------------------------------------------------------
+
 
 def _patch_s3():
     return patch(

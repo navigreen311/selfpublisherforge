@@ -126,86 +126,106 @@ class TestModelImports:
 
     def test_import_organization_model(self):
         from app.models.organization import Organization
+
         assert Organization is not None
 
     def test_import_user_model(self):
         from app.models.user import ApiKey, User, UserSession
+
         assert User is not None
         assert ApiKey is not None
         assert UserSession is not None
 
     def test_import_project_model(self):
         from app.models.project import Book, Project
+
         assert Project is not None
         assert Book is not None
 
     def test_import_content_model(self):
         from app.models.content import Manuscript
+
         assert Manuscript is not None
 
     def test_import_market_model(self):
         from app.models.market import MarketCategory
+
         assert MarketCategory is not None
 
     def test_import_publishing_model(self):
         from app.models.publishing import PublishingAccount
+
         assert PublishingAccount is not None
 
     def test_import_marketing_model(self):
         from app.models.marketing import Campaign
+
         assert Campaign is not None
 
     def test_import_agent_model(self):
         from app.models.agent import Agent
+
         assert Agent is not None
 
     def test_import_analytics_model(self):
         from app.models.analytics import AnalyticsEvent
+
         assert AnalyticsEvent is not None
 
     def test_import_notification_models(self):
         from app.modules.notifications.models import Notification, NotificationPreference
+
         assert Notification is not None
         assert NotificationPreference is not None
 
     def test_import_knowledge_vault_models(self):
         from app.modules.knowledge_vault.models import KnowledgeEntry
+
         assert KnowledgeEntry is not None
 
     def test_import_production_pipeline_models(self):
         from app.modules.production_pipeline.models import Pipeline
+
         assert Pipeline is not None
 
     def test_import_pricing_automation_models(self):
         from app.modules.pricing_automation.models import PricingRule
+
         assert PricingRule is not None
 
     def test_import_product_page_lab_models(self):
         from app.modules.product_page_lab.models import ABTest
+
         assert ABTest is not None
 
     def test_import_cover_design_models(self):
         from app.modules.cover_design.models import Cover
+
         assert Cover is not None
 
     def test_import_advertising_models(self):
         from app.modules.advertising.models import Campaign
+
         assert Campaign is not None
 
     def test_import_agent_system_models(self):
         from app.modules.agent_system.models import Agent
+
         assert Agent is not None
 
     def test_import_analytics_module_models(self):
         from app.modules.analytics.models import AnalyticsEvent
+
         assert AnalyticsEvent is not None
 
     def test_import_review_intelligence_models(self):
         from app.modules.review_intelligence.models import BookReview
+
         assert BookReview is not None
 
     def test_import_competitor_finder_models(self):
         from app.modules.competitor_finder.models import CompetitorAnalysis
+
         assert CompetitorAnalysis is not None
 
 
@@ -219,6 +239,7 @@ class TestSchemaImports:
 
     def test_import_common_schemas(self):
         from app.schemas.common import HealthResponse, MessageResponse
+
         assert MessageResponse is not None
         assert HealthResponse is not None
 
@@ -227,11 +248,13 @@ class TestSchemaImports:
             RegisterRequest,
             TokenResponse,
         )
+
         assert RegisterRequest is not None
         assert TokenResponse is not None
 
     def test_import_users_schemas(self):
         from app.modules.users.schemas import UserProfile
+
         assert UserProfile is not None
 
     def test_import_billing_schemas(self):
@@ -439,11 +462,13 @@ class TestCoreImports:
 
     def test_import_config(self):
         from app.config import Settings, get_settings
+
         assert get_settings is not None
         assert Settings is not None
 
     def test_import_database(self):
         from app.database import Base, BaseModel
+
         assert Base is not None
         assert BaseModel is not None
 
@@ -451,14 +476,17 @@ class TestCoreImports:
         from app.core.security import (
             hash_password,
         )
+
         assert hash_password is not None
 
     def test_import_core_dependencies(self):
         from app.core.dependencies import get_current_user
+
         assert get_current_user is not None
 
     def test_import_core_exceptions(self):
         from app.core.exceptions import AppException
+
         assert AppException is not None
 
     def test_import_llm_orchestration(self):
@@ -466,5 +494,6 @@ class TestCoreImports:
             LLMOrchestrator,
             TaskType,
         )
+
         assert LLMOrchestrator is not None
         assert TaskType is not None

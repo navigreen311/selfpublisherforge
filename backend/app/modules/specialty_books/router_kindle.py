@@ -50,17 +50,13 @@ class KindleExportRequest(BaseModel):
 class DevicePreviewRequest(BaseModel):
     """Request body for device preview generation."""
 
-    device: KindleDevice | None = Field(
-        None, description="Specific device, or null for all 6 devices"
-    )
+    device: KindleDevice | None = Field(None, description="Specific device, or null for all 6 devices")
 
 
 class ReadAloudSyncRequest(BaseModel):
     """Request body for read-aloud sync generation."""
 
-    highlight_mode: HighlightMode = Field(
-        HighlightMode.SENTENCE, description="word or sentence highlighting"
-    )
+    highlight_mode: HighlightMode = Field(HighlightMode.SENTENCE, description="word or sentence highlighting")
 
 
 # ── Response Wrappers ────────────────────────────────────────────────────
@@ -161,6 +157,4 @@ async def read_aloud_sync(
 ) -> ReadAloudSyncResponse:
     _validate_book_type(book_type)
     org_id = current_user["org_id"]
-    return await generate_read_aloud_sync(
-        db, book_type, book_id, org_id, body.highlight_mode
-    )
+    return await generate_read_aloud_sync(db, book_type, book_id, org_id, body.highlight_mode)

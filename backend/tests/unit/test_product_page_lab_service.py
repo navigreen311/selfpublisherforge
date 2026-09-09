@@ -240,7 +240,9 @@ class TestListABTests:
         await _seed_ab_test(db_session, name="Running", status=ABTestStatus.RUNNING.value)
 
         results = await service.list_ab_tests(
-            ORG_ID, db_session, status=ABTestStatus.RUNNING,
+            ORG_ID,
+            db_session,
+            status=ABTestStatus.RUNNING,
         )
         assert len(results) == 1
         assert results[0].name == "Running"
@@ -370,8 +372,8 @@ class TestGetTestResults:
         )
         result = await service.get_ab_test(ab.id, db_session)
 
-        assert result.variant_a.click_through_rate == 5.0   # 50/1000 * 100
-        assert result.variant_b.click_through_rate == 7.5   # 75/1000 * 100
+        assert result.variant_a.click_through_rate == 5.0  # 50/1000 * 100
+        assert result.variant_b.click_through_rate == 7.5  # 75/1000 * 100
 
     @pytest.mark.asyncio
     async def test_winner_determination_variant_b(self, db_session):
@@ -380,9 +382,9 @@ class TestGetTestResults:
             db_session,
             status=ABTestStatus.COMPLETED.value,
             variant_a_impressions=500,
-            variant_a_clicks=25,   # 5% CTR
+            variant_a_clicks=25,  # 5% CTR
             variant_b_impressions=500,
-            variant_b_clicks=50,   # 10% CTR
+            variant_b_clicks=50,  # 10% CTR
             completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
@@ -398,9 +400,9 @@ class TestGetTestResults:
             db_session,
             status=ABTestStatus.COMPLETED.value,
             variant_a_impressions=500,
-            variant_a_clicks=60,   # 12% CTR
+            variant_a_clicks=60,  # 12% CTR
             variant_b_impressions=500,
-            variant_b_clicks=25,   # 5% CTR
+            variant_b_clicks=25,  # 5% CTR
             completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
@@ -521,6 +523,7 @@ class TestGetDetailedResults:
         # Use naive datetimes because SQLite strips timezone info,
         # and the service uses datetime.now(timezone.utc) for comparisons.
         from unittest.mock import patch as _patch
+
         now_utc = datetime.now(UTC)
         started = now_utc - timedelta(days=7)
 
@@ -586,8 +589,8 @@ class TestGenerateBlurbVariants:
         """Should return the requested number of blurb variants."""
         request = BlurbGenerateRequest(
             current_blurb="A gripping thriller about a detective who discovers a dark secret in a small town. "
-                          "She must confront her own past to solve the case. "
-                          "Buy now to find out the shocking truth.",
+            "She must confront her own past to solve the case. "
+            "Buy now to find out the shocking truth.",
             genre=Genre.THRILLER,
             num_variants=3,
         )
@@ -600,8 +603,8 @@ class TestGenerateBlurbVariants:
         """Every variant should have non-empty content."""
         request = BlurbGenerateRequest(
             current_blurb="A heartwarming romance about finding love when you least expect it. "
-                          "Two strangers meet in Paris and their lives are changed forever. "
-                          "Scroll up and grab your copy today!",
+            "Two strangers meet in Paris and their lives are changed forever. "
+            "Scroll up and grab your copy today!",
             genre=Genre.ROMANCE,
             num_variants=2,
         )
@@ -618,8 +621,8 @@ class TestGenerateBlurbVariants:
         """Response should include a score for the original blurb."""
         request = BlurbGenerateRequest(
             current_blurb="A compelling mystery where nothing is as it seems. "
-                          "Discover the truth behind the disappearance that "
-                          "shook a quiet community. Read now!",
+            "Discover the truth behind the disappearance that "
+            "shook a quiet community. Read now!",
             genre=Genre.MYSTERY,
             num_variants=1,
         )
@@ -633,8 +636,8 @@ class TestGenerateBlurbVariants:
         """generation_metadata should indicate the generation method."""
         request = BlurbGenerateRequest(
             current_blurb="An epic fantasy adventure that will transport you to another world. "
-                          "Join the hero on a quest that will determine the fate of kingdoms. "
-                          "Get your copy today!",
+            "Join the hero on a quest that will determine the fate of kingdoms. "
+            "Get your copy today!",
             genre=Genre.FANTASY,
             num_variants=1,
         )
@@ -659,9 +662,9 @@ class TestAnalyzeListing:
         result = await service.analyze_listing_with_data(
             title="The Secret Garden: A Captivating Journey of Discovery",
             blurb="Discover the untold story of a hidden garden that changes everything. "
-                  "A heartwarming tale of love, loss, and redemption. "
-                  "- Beautiful prose\n- Compelling characters\n"
-                  "<b>Buy now</b> and start reading!",
+            "A heartwarming tale of love, loss, and redemption. "
+            "- Beautiful prose\n- Compelling characters\n"
+            "<b>Buy now</b> and start reading!",
             keywords=["garden", "discovery", "heartwarming"],
             genre="literary_fiction",
             price=4.99,
@@ -688,6 +691,7 @@ class TestAnalyzeListing:
         """analyze_amazon_listing should extract ASIN from a URL."""
         # Seed a Book with matching ASIN so the DB lookup succeeds
         from app.models.project import Book, BookFormat, BookStatus, Project, ProjectStatus, ProjectType
+
         project = Project(
             org_id=ORG_ID,
             title="Test Project",
@@ -706,9 +710,7 @@ class TestAnalyzeListing:
         db_session.add(book)
         await db_session.flush()
 
-        request = ListingAnalyzeRequest(
-            url="https://www.amazon.com/dp/B09V2KKG1D"
-        )
+        request = ListingAnalyzeRequest(url="https://www.amazon.com/dp/B09V2KKG1D")
         result = await service.analyze_amazon_listing(request, db_session)
 
         assert result.asin == "B09V2KKG1D"
@@ -794,7 +796,9 @@ class TestCheckMobileListing:
     @pytest.mark.asyncio
     async def test_long_title_truncated(self):
         """A very long title should be flagged as truncated on mobile."""
-        long_title = "An Extremely Long Book Title That Will Certainly Be Truncated On Mobile Devices Due To Screen Width"
+        long_title = (
+            "An Extremely Long Book Title That Will Certainly Be Truncated On Mobile Devices Due To Screen Width"
+        )
         request = MobileCheckRequest(
             title=long_title,
             blurb="A compelling blurb about the book with enough detail for the mobile check.",
@@ -847,9 +851,9 @@ class TestGetConversionScores:
             book_id=book,
             status=ABTestStatus.COMPLETED.value,
             variant_a_impressions=1000,
-            variant_a_clicks=80,   # 8% CTR -> score 80
+            variant_a_clicks=80,  # 8% CTR -> score 80
             variant_b_impressions=1000,
-            variant_b_clicks=50,   # 5% CTR -> score 50
+            variant_b_clicks=50,  # 5% CTR -> score 50
             completed_at=datetime.now(UTC),
         )
         result = await service.get_conversion_scores(book, db_session)
@@ -872,15 +876,11 @@ class TestExtractAsin:
         assert asin == "B09V2KKG1D"
 
     def test_gp_product_pattern(self):
-        asin = service._extract_asin_from_url(
-            "https://www.amazon.com/gp/product/B09V2KKG1D/ref=..."
-        )
+        asin = service._extract_asin_from_url("https://www.amazon.com/gp/product/B09V2KKG1D/ref=...")
         assert asin == "B09V2KKG1D"
 
     def test_asin_query_param_pattern(self):
-        asin = service._extract_asin_from_url(
-            "https://www.amazon.com/something?asin=B09V2KKG1D&other=1"
-        )
+        asin = service._extract_asin_from_url("https://www.amazon.com/something?asin=B09V2KKG1D&other=1")
         assert asin == "B09V2KKG1D"
 
     def test_no_asin_returns_none(self):

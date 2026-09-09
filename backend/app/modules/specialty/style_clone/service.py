@@ -1,4 +1,5 @@
 """Art Style Cloning service layer."""
+
 from __future__ import annotations
 
 import logging
@@ -38,9 +39,7 @@ def _profile_to_dict(profile: StyleCloneProfile) -> dict[str, Any]:
     }
 
 
-async def _get_profile_or_404(
-    db: AsyncSession, org_id: UUID, profile_id: UUID
-) -> StyleCloneProfile:
+async def _get_profile_or_404(db: AsyncSession, org_id: UUID, profile_id: UUID) -> StyleCloneProfile:
     stmt = select(StyleCloneProfile).where(
         StyleCloneProfile.id == profile_id,
         StyleCloneProfile.org_id == org_id,
@@ -68,9 +67,13 @@ async def list_profiles(
         StyleCloneProfile.org_id == org_id,
         StyleCloneProfile.deleted_at.is_(None),
     )
-    count_stmt = select(func.count()).select_from(StyleCloneProfile).where(
-        StyleCloneProfile.org_id == org_id,
-        StyleCloneProfile.deleted_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(StyleCloneProfile)
+        .where(
+            StyleCloneProfile.org_id == org_id,
+            StyleCloneProfile.deleted_at.is_(None),
+        )
     )
 
     if active_only:
@@ -128,15 +131,18 @@ async def get_profile(db: AsyncSession, org_id: UUID, profile_id: UUID) -> dict[
     return _profile_to_dict(profile)
 
 
-async def update_profile(
-    db: AsyncSession, org_id: UUID, profile_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def update_profile(db: AsyncSession, org_id: UUID, profile_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Update a style clone profile."""
     profile = await _get_profile_or_404(db, org_id, profile_id)
 
     updatable_fields = [
-        "name", "description", "reference_image_urls", "book_type",
-        "style_attributes", "style_prompt", "is_active",
+        "name",
+        "description",
+        "reference_image_urls",
+        "book_type",
+        "style_attributes",
+        "style_prompt",
+        "is_active",
     ]
     for field in updatable_fields:
         if field in payload:
@@ -215,10 +221,7 @@ async def test_generate(
     profile = await _get_profile_or_404(db, org_id, profile_id)
     count = payload.get("count", 4)
 
-    test_urls = [
-        f"https://placeholder.com/style-test-{i}.png"
-        for i in range(count)
-    ]
+    test_urls = [f"https://placeholder.com/style-test-{i}.png" for i in range(count)]
     profile.test_image_urls = test_urls
     await db.flush()
 

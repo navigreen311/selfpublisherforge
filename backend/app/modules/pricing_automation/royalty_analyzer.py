@@ -85,9 +85,7 @@ def _generate_optimization_tips(rows: list[dict]) -> list[str]:
     return tips
 
 
-async def get_royalty_analysis(
-    db: AsyncSession, org_id: UUID, period: str = "30d"
-) -> dict:
+async def get_royalty_analysis(db: AsyncSession, org_id: UUID, period: str = "30d") -> dict:
     """Return per-book royalty breakdown with optimization tips.
 
     If SalesData model is available, queries actual sales records.

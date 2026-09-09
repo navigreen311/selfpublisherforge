@@ -1,4 +1,5 @@
 """Tests for Puzzle Books CRUD API -- service_puzzle + router_puzzle."""
+
 from __future__ import annotations
 
 import uuid
@@ -27,7 +28,9 @@ async def puzzle_book(db, org_id):
 @pytest_asyncio.fixture
 async def puzzle(db, org_id, puzzle_book):
     p = await service_puzzle.create_puzzle(
-        db, org_id, puzzle_book.id,
+        db,
+        org_id,
+        puzzle_book.id,
         {"puzzle_type": "word_search", "puzzle_number": 1},
     )
     await db.commit()
@@ -50,7 +53,9 @@ class TestPuzzleBookCRUD:
     @pytest.mark.asyncio
     async def test_create_book_with_template(self, db, org_id):
         book = await service_puzzle.create_puzzle_book(
-            db, org_id, {"title": "Word Search", "template": "word_search_classic"},
+            db,
+            org_id,
+            {"title": "Word Search", "template": "word_search_classic"},
         )
         await db.commit()
         assert book.puzzle_config is not None
@@ -102,7 +107,9 @@ class TestPuzzleCRUD:
     @pytest.mark.asyncio
     async def test_create_puzzle(self, db, org_id, puzzle_book):
         p = await service_puzzle.create_puzzle(
-            db, org_id, puzzle_book.id,
+            db,
+            org_id,
+            puzzle_book.id,
             {"puzzle_type": "crossword", "puzzle_number": 1},
         )
         await db.commit()
@@ -141,7 +148,9 @@ class TestPuzzleCRUD:
     async def test_create_puzzle_nonexistent_book(self, db, org_id):
         fake_id = uuid.uuid4()
         p = await service_puzzle.create_puzzle(
-            db, org_id, fake_id,
+            db,
+            org_id,
+            fake_id,
             {"puzzle_type": "word_search", "puzzle_number": 1},
         )
         assert p.book_id == fake_id
@@ -328,9 +337,14 @@ class TestTemplates:
     def test_all_eight_exist(self):
         assert len(PUZZLE_BOOK_TEMPLATES) == 8
         expected = {
-            "word_search_classic", "crossword_collection", "maze_adventure",
-            "sudoku_challenge", "mixed_puzzle_fun", "large_print_word_search",
-            "holiday_puzzles", "brain_teasers",
+            "word_search_classic",
+            "crossword_collection",
+            "maze_adventure",
+            "sudoku_challenge",
+            "mixed_puzzle_fun",
+            "large_print_word_search",
+            "holiday_puzzles",
+            "brain_teasers",
         }
         assert set(PUZZLE_BOOK_TEMPLATES.keys()) == expected
 

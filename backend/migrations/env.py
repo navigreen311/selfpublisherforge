@@ -1,4 +1,5 @@
 """Alembic environment configuration for async SQLAlchemy migrations."""
+
 import asyncio
 import os
 import sys

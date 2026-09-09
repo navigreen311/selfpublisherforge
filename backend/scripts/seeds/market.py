@@ -1,4 +1,5 @@
 """Seed demo market intelligence data."""
+
 import random
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -141,9 +142,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
         org_id: Organization ID
     """
     # Check if data already exists
-    existing = await db.execute(
-        select(CompetitorBook).where(CompetitorBook.org_id == org_id).limit(1)
-    )
+    existing = await db.execute(select(CompetitorBook).where(CompetitorBook.org_id == org_id).limit(1))
     if existing.scalar_one_or_none():
         print("✓ Market data already exists, skipping")
         return
@@ -159,9 +158,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
         bsr_history = {}
         current_bsr = book_data["bsr"]
         for day in range(30):
-            date_key = (
-                datetime.now(UTC) - timedelta(days=30 - day)
-            ).strftime("%Y-%m-%d")
+            date_key = (datetime.now(UTC) - timedelta(days=30 - day)).strftime("%Y-%m-%d")
             # BSR fluctuates
             fluctuation = random.randint(-500, 500)
             bsr_history[date_key] = max(100, current_bsr + fluctuation)

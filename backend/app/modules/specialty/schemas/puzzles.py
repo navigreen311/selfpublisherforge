@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for the Puzzle Book Generator."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -33,9 +34,9 @@ class Difficulty(str, Enum):
 class DifficultyMode(str, Enum):
     """Book-level difficulty progression mode."""
 
-    PROGRESSIVE = "progressive"   # easy -> hard ramp
-    FIXED = "fixed"               # same difficulty throughout
-    MIXED = "mixed"               # random mix
+    PROGRESSIVE = "progressive"  # easy -> hard ramp
+    FIXED = "fixed"  # same difficulty throughout
+    MIXED = "mixed"  # random mix
 
 
 class ClueStyle(str, Enum):
@@ -46,9 +47,9 @@ class ClueStyle(str, Enum):
 
 
 class WordDifficulty(str, Enum):
-    SIMPLE = "simple"        # 3-6 letters
-    STANDARD = "standard"    # 4-10 letters
-    ADVANCED = "advanced"    # 6-15 letters
+    SIMPLE = "simple"  # 3-6 letters
+    STANDARD = "standard"  # 4-10 letters
+    ADVANCED = "advanced"  # 6-15 letters
 
 
 class AnswerKeyPosition(str, Enum):
@@ -131,40 +132,22 @@ class PuzzleBookCreate(BaseModel):
         DifficultyMode.PROGRESSIVE,
         description="How difficulty progresses through the book",
     )
-    themes: list[str] = Field(
-        default_factory=list, description="Theme categories for content"
-    )
+    themes: list[str] = Field(default_factory=list, description="Theme categories for content")
     seasonal_theme: str | None = Field(
         None, max_length=100, description="Seasonal/holiday theme applied across all puzzles"
     )
-    word_difficulty: WordDifficulty = Field(
-        WordDifficulty.STANDARD, description="Word length/difficulty level"
-    )
-    clue_style: ClueStyle = Field(
-        ClueStyle.STANDARD, description="Style for crossword and other clues"
-    )
+    word_difficulty: WordDifficulty = Field(WordDifficulty.STANDARD, description="Word length/difficulty level")
+    clue_style: ClueStyle = Field(ClueStyle.STANDARD, description="Style for crossword and other clues")
     answer_key_position: AnswerKeyPosition = Field(
         AnswerKeyPosition.BACK_OF_BOOK, description="Where answer keys appear"
     )
-    layout_mode: LayoutMode = Field(
-        LayoutMode.ONE_PER_PAGE, description="Puzzles per page"
-    )
-    trim_size: str = Field(
-        ..., max_length=20, description="Trim size, e.g. '8.5x11'"
-    )
+    layout_mode: LayoutMode = Field(LayoutMode.ONE_PER_PAGE, description="Puzzles per page")
+    trim_size: str = Field(..., max_length=20, description="Trim size, e.g. '8.5x11'")
     include_toc: bool = Field(True, description="Include table of contents")
-    include_instructions: bool = Field(
-        True, description="Include instruction pages per puzzle type"
-    )
-    include_difficulty_badges: bool = Field(
-        True, description="Show difficulty badge on each puzzle"
-    )
-    include_section_dividers: bool = Field(
-        True, description="Include divider pages between puzzle type sections"
-    )
-    include_hints: bool = Field(
-        False, description="Include hint system (crossword first letter, theme hints)"
-    )
+    include_instructions: bool = Field(True, description="Include instruction pages per puzzle type")
+    include_difficulty_badges: bool = Field(True, description="Show difficulty badge on each puzzle")
+    include_section_dividers: bool = Field(True, description="Include divider pages between puzzle type sections")
+    include_hints: bool = Field(False, description="Include hint system (crossword first letter, theme hints)")
     series_id: UUID | None = Field(None, description="Series ID if part of a set")
     volume_number: int | None = Field(None, ge=1, description="Volume number in series")
 
@@ -245,12 +228,8 @@ class PuzzleVerification(BaseModel):
     """Verification data for a puzzle."""
 
     is_solvable: bool = Field(..., description="True if the puzzle has at least one solution")
-    has_unique_solution: bool | None = Field(
-        None, description="True if exactly one solution exists (where applicable)"
-    )
-    content_hash: str = Field(
-        ..., description="Hash for duplicate detection"
-    )
+    has_unique_solution: bool | None = Field(None, description="True if exactly one solution exists (where applicable)")
+    content_hash: str = Field(..., description="Hash for duplicate detection")
     verified_at: datetime | None = None
 
 
@@ -265,25 +244,15 @@ class PuzzleResponse(BaseModel):
     puzzle_number: int
     theme: str | None = None
     difficulty: Difficulty
-    difficulty_score: float | None = Field(
-        None, ge=0, le=100, description="Calculated difficulty score"
-    )
+    difficulty_score: float | None = Field(None, ge=0, le=100, description="Calculated difficulty score")
     grid_size: str | None = Field(None, description="e.g. '15x15'")
-    grid_data: dict[str, Any] | None = Field(
-        None, description="JSON grid structure (cells, walls, etc.)"
-    )
-    word_list: list[str] = Field(
-        default_factory=list, description="Words used in this puzzle"
-    )
-    clues: list[PuzzleClue] = Field(
-        default_factory=list, description="Clues for crossword/cryptogram puzzles"
-    )
+    grid_data: dict[str, Any] | None = Field(None, description="JSON grid structure (cells, walls, etc.)")
+    word_list: list[str] = Field(default_factory=list, description="Words used in this puzzle")
+    clues: list[PuzzleClue] = Field(default_factory=list, description="Clues for crossword/cryptogram puzzles")
     answer_data: dict[str, Any] | None = Field(
         None, description="Answer key data (filled grid, highlighted paths, etc.)"
     )
-    verification: PuzzleVerification | None = Field(
-        None, description="Solvability and uniqueness verification"
-    )
+    verification: PuzzleVerification | None = Field(None, description="Solvability and uniqueness verification")
     created_at: datetime
     updated_at: datetime
 
@@ -297,9 +266,7 @@ class GeneratePuzzleRequest(BaseModel):
     """Generate a single puzzle."""
 
     puzzle_type: PuzzleType = Field(..., description="Type of puzzle to generate")
-    theme: str | None = Field(
-        None, max_length=200, description="Theme for content/word selection"
-    )
+    theme: str | None = Field(None, max_length=200, description="Theme for content/word selection")
     difficulty: Difficulty = Field(Difficulty.MEDIUM, description="Target difficulty")
     grid_size: str | None = Field(
         None,
@@ -320,15 +287,9 @@ class GeneratePuzzleRequest(BaseModel):
 class GenerateWordListRequest(BaseModel):
     """AI-generate a themed word list."""
 
-    theme: str = Field(
-        ..., min_length=1, max_length=200, description="Theme for word generation"
-    )
-    count: int = Field(
-        20, ge=5, le=200, description="Number of words to generate"
-    )
-    difficulty: WordDifficulty = Field(
-        WordDifficulty.STANDARD, description="Word length / difficulty level"
-    )
+    theme: str = Field(..., min_length=1, max_length=200, description="Theme for word generation")
+    count: int = Field(20, ge=5, le=200, description="Number of words to generate")
+    difficulty: WordDifficulty = Field(WordDifficulty.STANDARD, description="Word length / difficulty level")
     language: str = Field("en", max_length=10, description="Language code")
 
 
@@ -344,9 +305,7 @@ class WordListResponse(BaseModel):
 class SanitizeWordListRequest(BaseModel):
     """Run sanitization pipeline on a word list."""
 
-    words: list[str] = Field(
-        ..., min_length=1, description="Words to sanitize"
-    )
+    words: list[str] = Field(..., min_length=1, description="Words to sanitize")
     check_offensive: bool = Field(True, description="Filter offensive language")
     check_trademarks: bool = Field(True, description="Filter trademarked terms")
     check_abbreviations: bool = Field(True, description="Filter abbreviations")
@@ -369,9 +328,7 @@ class SanitizeWordListResponse(BaseModel):
     """Sanitized word list result."""
 
     clean_words: list[str] = Field(..., description="Words that passed all filters")
-    removed_words: list[RemovedWord] = Field(
-        default_factory=list, description="Words removed with reasons"
-    )
+    removed_words: list[RemovedWord] = Field(default_factory=list, description="Words removed with reasons")
     original_count: int = Field(..., ge=0)
     clean_count: int = Field(..., ge=0)
 
@@ -399,15 +356,9 @@ class AmbiguousClue(BaseModel):
     clue_number: int
     clue_text: str
     answer: str
-    ambiguity_score: float = Field(
-        ..., ge=0, le=1, description="How ambiguous the clue is (1 = very ambiguous)"
-    )
-    alternative_answers: list[str] = Field(
-        default_factory=list, description="Other valid answers for this clue"
-    )
-    suggested_rewrite: str | None = Field(
-        None, description="AI-suggested unambiguous alternative"
-    )
+    ambiguity_score: float = Field(..., ge=0, le=1, description="How ambiguous the clue is (1 = very ambiguous)")
+    alternative_answers: list[str] = Field(default_factory=list, description="Other valid answers for this clue")
+    suggested_rewrite: str | None = Field(None, description="AI-suggested unambiguous alternative")
 
 
 class ClueQAIssue(BaseModel):
@@ -425,12 +376,8 @@ class ClueQAIssue(BaseModel):
 class ClueQAResponse(BaseModel):
     """Clue quality assurance result."""
 
-    issues: list[ClueQAIssue] = Field(
-        default_factory=list, description="All clue quality issues"
-    )
-    ambiguous_clues: list[AmbiguousClue] = Field(
-        default_factory=list, description="Clues flagged as ambiguous"
-    )
+    issues: list[ClueQAIssue] = Field(default_factory=list, description="All clue quality issues")
+    ambiguous_clues: list[AmbiguousClue] = Field(default_factory=list, description="Clues flagged as ambiguous")
     total_clues_checked: int = Field(..., ge=0)
     passed: bool = Field(..., description="True if no critical clue issues")
 
@@ -446,32 +393,20 @@ class AnswerKeyResponse(BaseModel):
     book_id: UUID
     position: AnswerKeyPosition
     total_puzzles: int = Field(..., ge=0)
-    answer_pages: list[dict[str, Any]] = Field(
-        ..., description="Rendered answer key pages with puzzle answers"
-    )
-    compact_layout: bool = Field(
-        True, description="True if using compact layout (4 answers per page)"
-    )
+    answer_pages: list[dict[str, Any]] = Field(..., description="Rendered answer key pages with puzzle answers")
+    compact_layout: bool = Field(True, description="True if using compact layout (4 answers per page)")
 
 
 class VerifyAnswerKeyResponse(BaseModel):
     """Verification that all answer keys match their puzzles."""
 
-    all_keys_present: bool = Field(
-        ..., description="True if every puzzle has an answer key"
-    )
-    all_keys_correct: bool = Field(
-        ..., description="True if all keys match their puzzles"
-    )
+    all_keys_present: bool = Field(..., description="True if every puzzle has an answer key")
+    all_keys_correct: bool = Field(..., description="True if all keys match their puzzles")
     numbering_consistent: bool = Field(
         ..., description="True if puzzle numbering matches between puzzle and key sections"
     )
-    missing_answers: list[int] = Field(
-        default_factory=list, description="Puzzle numbers missing answer keys"
-    )
-    mismatched_answers: list[int] = Field(
-        default_factory=list, description="Puzzle numbers with incorrect answers"
-    )
+    missing_answers: list[int] = Field(default_factory=list, description="Puzzle numbers missing answer keys")
+    mismatched_answers: list[int] = Field(default_factory=list, description="Puzzle numbers with incorrect answers")
     total_verified: int = Field(..., ge=0)
 
 
@@ -497,9 +432,7 @@ class PacingAnalysis(BaseModel):
     """Difficulty pacing analysis across the book."""
 
     mode: DifficultyMode
-    distribution: dict[str, int] = Field(
-        ..., description="Count of puzzles per difficulty level"
-    )
+    distribution: dict[str, int] = Field(..., description="Count of puzzles per difficulty level")
     ramp_quality: float | None = Field(
         None,
         ge=0,
@@ -515,9 +448,7 @@ class PacingAnalysis(BaseModel):
 class DifficultyCalibrationResponse(BaseModel):
     """Difficulty calibration result for the entire book."""
 
-    scores: list[PuzzleDifficultyScore] = Field(
-        ..., description="Difficulty score per puzzle"
-    )
+    scores: list[PuzzleDifficultyScore] = Field(..., description="Difficulty score per puzzle")
     distribution_chart: dict[str, Any] = Field(
         ..., description="Data for rendering the difficulty distribution visualization"
     )
@@ -533,21 +464,11 @@ class DifficultyCalibrationResponse(BaseModel):
 class GenerateLargePrintRequest(BaseModel):
     """Create a large print variant of an existing puzzle book."""
 
-    scale: LargePrintScale = Field(
-        LargePrintScale.SCALE_150, description="Scale factor (125%, 150%, or 175%)"
-    )
-    auto_adjust_grid: bool = Field(
-        True, description="Automatically reduce grid size to fit at larger scale"
-    )
-    auto_adjust_words: bool = Field(
-        True, description="Automatically reduce words per puzzle if needed"
-    )
-    increase_letter_spacing: bool = Field(
-        True, description="Increase letter spacing for readability"
-    )
-    bold_grid_lines: bool = Field(
-        True, description="Use thicker grid lines"
-    )
+    scale: LargePrintScale = Field(LargePrintScale.SCALE_150, description="Scale factor (125%, 150%, or 175%)")
+    auto_adjust_grid: bool = Field(True, description="Automatically reduce grid size to fit at larger scale")
+    auto_adjust_words: bool = Field(True, description="Automatically reduce words per puzzle if needed")
+    increase_letter_spacing: bool = Field(True, description="Increase letter spacing for readability")
+    bold_grid_lines: bool = Field(True, description="Use thicker grid lines")
 
 
 class LargePrintResponse(BaseModel):
@@ -556,18 +477,14 @@ class LargePrintResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     original_book_id: UUID
-    large_print_book_id: UUID = Field(
-        ..., description="ID of the new large print book copy"
-    )
+    large_print_book_id: UUID = Field(..., description="ID of the new large print book copy")
     scale: LargePrintScale
     adjustments_made: list[str] = Field(
         default_factory=list,
         description="List of auto-adjustments applied (grid reductions, word removals, etc.)",
     )
     total_puzzles: int = Field(..., ge=0)
-    puzzles_modified: int = Field(
-        0, ge=0, description="Number of puzzles that required modifications"
-    )
+    puzzles_modified: int = Field(0, ge=0, description="Number of puzzles that required modifications")
     created_at: datetime
 
 

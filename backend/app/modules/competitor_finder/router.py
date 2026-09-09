@@ -8,6 +8,7 @@ Endpoints:
   POST /competitors/gap-analysis     - Cover/title/content gap analysis
   GET  /competitors/alerts           - Get competitor alerts
 """
+
 from __future__ import annotations
 
 from uuid import UUID, uuid4

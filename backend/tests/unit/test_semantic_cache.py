@@ -20,6 +20,7 @@ from app.modules.llm_orchestration.router_config import TaskType
 # Fixtures
 # -------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_redis() -> AsyncMock:
     """In-memory mock of an async Redis client."""
@@ -43,6 +44,7 @@ def mock_redis() -> AsyncMock:
 
     async def _scan_iter(match=None, count=None):
         import fnmatch
+
         for key in list(redis._store.keys()):
             if match is None or fnmatch.fnmatch(key, match):
                 yield key
@@ -64,22 +66,19 @@ def cache(mock_redis: AsyncMock) -> SemanticCache:
 # Cache key generation
 # -------------------------------------------------------------------
 
+
 class TestCacheKeyGeneration:
     """Verify deterministic, collision-resistant cache keys."""
 
     def test_key_starts_with_prefix(self, cache: SemanticCache):
-        key = cache.build_cache_key(
-            TaskType.MARKET_ANALYSIS, "test prompt", "claude-sonnet"
-        )
+        key = cache.build_cache_key(TaskType.MARKET_ANALYSIS, "test prompt", "claude-sonnet")
         assert key.startswith(CACHE_KEY_PREFIX)
 
     def test_key_embeds_task_type(self, cache: SemanticCache):
-        key = cache.build_cache_key(
-            TaskType.MARKET_ANALYSIS, "test prompt", "claude-sonnet"
-        )
+        key = cache.build_cache_key(TaskType.MARKET_ANALYSIS, "test prompt", "claude-sonnet")
         # Key format: "llm_cache:<task_type>:<64-char hex digest>"
         assert key.startswith(CACHE_KEY_PREFIX)
-        remainder = key[len(CACHE_KEY_PREFIX):]
+        remainder = key[len(CACHE_KEY_PREFIX) :]
         task_segment, hex_part = remainder.split(":", 1)
         assert task_segment == TaskType.MARKET_ANALYSIS.value
         assert len(hex_part) == 64
@@ -106,12 +105,8 @@ class TestCacheKeyGeneration:
         assert key1 != key2
 
     def test_system_prompt_affects_key(self, cache: SemanticCache):
-        key1 = cache.build_cache_key(
-            TaskType.BLURB_AD_COPY, "hello", "model-a", system_prompt="sys1"
-        )
-        key2 = cache.build_cache_key(
-            TaskType.BLURB_AD_COPY, "hello", "model-a", system_prompt="sys2"
-        )
+        key1 = cache.build_cache_key(TaskType.BLURB_AD_COPY, "hello", "model-a", system_prompt="sys1")
+        key2 = cache.build_cache_key(TaskType.BLURB_AD_COPY, "hello", "model-a", system_prompt="sys2")
         assert key1 != key2
 
     def test_whitespace_normalization(self, cache: SemanticCache):
@@ -123,6 +118,7 @@ class TestCacheKeyGeneration:
 # -------------------------------------------------------------------
 # TTL configuration
 # -------------------------------------------------------------------
+
 
 class TestTTLConfiguration:
     """Verify task-type-specific TTL settings."""
@@ -155,19 +151,16 @@ class TestTTLConfiguration:
 # Cache hit / miss
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestCacheHitMiss:
     """Test get/set operations on the cache."""
 
     async def test_miss_returns_none(self, cache: SemanticCache):
-        result = await cache.get(
-            TaskType.BLURB_AD_COPY, "nonexistent", "model-a"
-        )
+        result = await cache.get(TaskType.BLURB_AD_COPY, "nonexistent", "model-a")
         assert result is None
 
-    async def test_set_then_get_returns_data(
-        self, cache: SemanticCache, mock_redis: AsyncMock
-    ):
+    async def test_set_then_get_returns_data(self, cache: SemanticCache, mock_redis: AsyncMock):
         data = {"content": "Hello world", "model_id": "model-a", "input_tokens": 10}
         await cache.set(TaskType.BLURB_AD_COPY, "test", "model-a", data)
         result = await cache.get(TaskType.BLURB_AD_COPY, "test", "model-a")
@@ -176,14 +169,10 @@ class TestCacheHitMiss:
 
     async def test_no_cache_for_zero_ttl_task_get(self, cache: SemanticCache):
         # LONG_FORM_WRITING has TTL=0, so get should always return None
-        result = await cache.get(
-            TaskType.LONG_FORM_WRITING, "some prompt", "model-a"
-        )
+        result = await cache.get(TaskType.LONG_FORM_WRITING, "some prompt", "model-a")
         assert result is None
 
-    async def test_no_cache_for_zero_ttl_task_set(
-        self, cache: SemanticCache, mock_redis: AsyncMock
-    ):
+    async def test_no_cache_for_zero_ttl_task_set(self, cache: SemanticCache, mock_redis: AsyncMock):
         # set should return False and not write
         result = await cache.set(
             TaskType.LONG_FORM_WRITING,
@@ -194,9 +183,7 @@ class TestCacheHitMiss:
         assert result is False
         assert len(mock_redis._store) == 0
 
-    async def test_set_stores_with_correct_ttl(
-        self, cache: SemanticCache, mock_redis: AsyncMock
-    ):
+    async def test_set_stores_with_correct_ttl(self, cache: SemanticCache, mock_redis: AsyncMock):
         await cache.set(
             TaskType.MARKET_ANALYSIS,
             "prompt",
@@ -209,9 +196,7 @@ class TestCacheHitMiss:
         ttl = list(stored_ttls.values())[0]
         assert ttl == 86400
 
-    async def test_invalidate_removes_entry(
-        self, cache: SemanticCache, mock_redis: AsyncMock
-    ):
+    async def test_invalidate_removes_entry(self, cache: SemanticCache, mock_redis: AsyncMock):
         data = {"content": "to be deleted"}
         await cache.set(TaskType.BLURB_AD_COPY, "del-test", "model-a", data)
         assert len(mock_redis._store) == 1
@@ -223,9 +208,7 @@ class TestCacheHitMiss:
         assert result is None
 
     async def test_invalidate_nonexistent_returns_false(self, cache: SemanticCache):
-        removed = await cache.invalidate(
-            TaskType.BLURB_AD_COPY, "never-stored", "model-a"
-        )
+        removed = await cache.invalidate(TaskType.BLURB_AD_COPY, "never-stored", "model-a")
         assert removed is False
 
 
@@ -233,22 +216,15 @@ class TestCacheHitMiss:
 # Flush by task type
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestFlushByTaskType:
     """Test bulk cache invalidation."""
 
-    async def test_flush_deletes_matching_keys(
-        self, cache: SemanticCache, mock_redis: AsyncMock
-    ):
-        await cache.set(
-            TaskType.MARKET_ANALYSIS, "p1", "m", {"content": "a"}
-        )
-        await cache.set(
-            TaskType.MARKET_ANALYSIS, "p2", "m", {"content": "b"}
-        )
-        await cache.set(
-            TaskType.BLURB_AD_COPY, "p3", "m", {"content": "c"}
-        )
+    async def test_flush_deletes_matching_keys(self, cache: SemanticCache, mock_redis: AsyncMock):
+        await cache.set(TaskType.MARKET_ANALYSIS, "p1", "m", {"content": "a"})
+        await cache.set(TaskType.MARKET_ANALYSIS, "p2", "m", {"content": "b"})
+        await cache.set(TaskType.BLURB_AD_COPY, "p3", "m", {"content": "c"})
         assert len(mock_redis._store) == 3
 
         deleted = await cache.flush_task_type(TaskType.MARKET_ANALYSIS)

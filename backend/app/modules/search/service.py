@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 ALL_TYPES = {"projects", "books", "recipes", "chapters", "reviews"}
 
 
-async def _search_projects(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_projects(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.models.project import Project
 
@@ -52,9 +50,7 @@ async def _search_projects(
         return []
 
 
-async def _search_books(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_books(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.models.project import Book, Project
 
@@ -86,9 +82,7 @@ async def _search_books(
         return []
 
 
-async def _search_chapters(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_chapters(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.models.content import Chapter
 
@@ -98,9 +92,7 @@ async def _search_chapters(
                 Chapter.deleted_at.is_(None) if hasattr(Chapter, "deleted_at") else True,
                 or_(
                     Chapter.title.ilike(like),
-                    Chapter.content.ilike(like)
-                    if hasattr(Chapter, "content")
-                    else Chapter.title.ilike(like),
+                    Chapter.content.ilike(like) if hasattr(Chapter, "content") else Chapter.title.ilike(like),
                 ),
             )
             .limit(10)
@@ -120,18 +112,14 @@ async def _search_chapters(
         return []
 
 
-async def _search_recipes(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_recipes(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.modules.specialty.cookbook.models import Recipe  # type: ignore
 
         stmt = (
             select(Recipe)
             .where(
-                getattr(Recipe, "org_id", None) == org_id
-                if hasattr(Recipe, "org_id")
-                else True,
+                getattr(Recipe, "org_id", None) == org_id if hasattr(Recipe, "org_id") else True,
                 Recipe.title.ilike(like),
             )
             .limit(10)
@@ -151,9 +139,7 @@ async def _search_recipes(
         return []
 
 
-async def _search_reviews(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_reviews(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.modules.review_intelligence.models import BookReview
 
@@ -213,6 +199,4 @@ async def search(
         results_by_type[t] = items
 
     total = sum(len(v) for v in results_by_type.values())
-    return SearchResponse(
-        query=q, results_by_type=results_by_type, total_count=total
-    )
+    return SearchResponse(query=q, results_by_type=results_by_type, total_count=total)

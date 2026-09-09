@@ -6,6 +6,7 @@ keys (for puzzle books).
 
 Blueprint refs: 12.3
 """
+
 from __future__ import annotations
 
 import uuid
@@ -20,6 +21,7 @@ from app.modules.specialty.models.shared import BookBundle, BookSeries
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class BundleInfo:
@@ -50,6 +52,7 @@ class BundleContent:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _row_to_bundle(row: BookBundle) -> BundleInfo:
     return BundleInfo(
         id=row.id,
@@ -77,6 +80,7 @@ DEFAULT_BUNDLE_CONFIG: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def create_bundle(
     db: AsyncSession,

@@ -19,6 +19,7 @@ def _utcnow() -> datetime:
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class GenerationType(str, Enum):
     chapter = "chapter"
     blurb = "blurb"
@@ -63,6 +64,7 @@ class ManuscriptTypeEnum(str, Enum):
 # Generation
 # ---------------------------------------------------------------------------
 
+
 class GenerateRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
@@ -78,6 +80,7 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     """Returned when stream=false or as the event:complete payload."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     request_id: UUID
@@ -93,8 +96,10 @@ class GenerateResponse(BaseModel):
 # Action-based generation (6-action Writing Studio)
 # ---------------------------------------------------------------------------
 
+
 class ActionGenerateRequest(BaseModel):
     """Request for a 6-action writing generation (write/rewrite/expand/shorten/continue/ideas)."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     action: WritingAction
@@ -116,6 +121,7 @@ class ActionGenerateRequest(BaseModel):
 
 class ActionGenerateResponse(BaseModel):
     """Response from a 6-action writing generation."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     request_id: UUID
@@ -131,6 +137,7 @@ class ActionGenerateResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Chapters / Manuscript
 # ---------------------------------------------------------------------------
+
 
 class ChapterCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
@@ -162,6 +169,7 @@ class ChapterContent(BaseModel):
 
 class ChapterContentUpdate(BaseModel):
     """Lightweight body for auto-save of chapter content."""
+
     content: str
 
 
@@ -185,8 +193,10 @@ class ManuscriptResponse(BaseModel):
 # Manuscript CRUD (Writing Studio)
 # ---------------------------------------------------------------------------
 
+
 class ManuscriptCreateRequest(BaseModel):
     """Body for POST /manuscripts."""
+
     project_id: UUID | None = None
     title: str = Field("Untitled Manuscript", min_length=1, max_length=500)
     type: ManuscriptTypeEnum = ManuscriptTypeEnum.fiction
@@ -194,6 +204,7 @@ class ManuscriptCreateRequest(BaseModel):
 
 class ManuscriptUpdateRequest(BaseModel):
     """Body for PATCH /manuscripts/{id}."""
+
     title: str | None = None
     status: ManuscriptStatusEnum | None = None
     target_word_count: int | None = None
@@ -201,6 +212,7 @@ class ManuscriptUpdateRequest(BaseModel):
 
 class ManuscriptDetail(BaseModel):
     """Full manuscript representation returned by the API."""
+
     id: UUID
     book_id: UUID | None = None
     title: str = ""
@@ -218,6 +230,7 @@ class ManuscriptDetail(BaseModel):
 
 class ManuscriptListItem(BaseModel):
     """Summary representation for list endpoint."""
+
     id: UUID
     book_id: UUID | None = None
     title: str = ""
@@ -236,8 +249,10 @@ class ManuscriptListItem(BaseModel):
 # Chapter Versions
 # ---------------------------------------------------------------------------
 
+
 class ChapterVersionSummary(BaseModel):
     """Summary of a chapter version in a list."""
+
     id: UUID
     chapter_id: UUID
     version_number: int
@@ -248,6 +263,7 @@ class ChapterVersionSummary(BaseModel):
 
 class ChapterVersionDetail(BaseModel):
     """Full chapter version with content."""
+
     id: UUID
     chapter_id: UUID
     version_number: int
@@ -261,6 +277,7 @@ class ChapterVersionDetail(BaseModel):
 # ---------------------------------------------------------------------------
 # Readability
 # ---------------------------------------------------------------------------
+
 
 class ReadabilityScore(BaseModel):
     flesch_kincaid_grade: float
@@ -277,6 +294,7 @@ class ReadabilityScore(BaseModel):
 
 class ReadabilityRequest(BaseModel):
     """Body for POST /writing/readability."""
+
     text: str = Field(..., min_length=1)
 
 
@@ -292,6 +310,7 @@ class ManuscriptAnalysis(BaseModel):
 # ---------------------------------------------------------------------------
 # Outline
 # ---------------------------------------------------------------------------
+
 
 class OutlineChapter(BaseModel):
     title: str
@@ -318,6 +337,7 @@ class OutlineResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Standalone Outline Generation (no book_id required)
 # ---------------------------------------------------------------------------
+
 
 class OutlineGenerateRequest(BaseModel):
     book_title: str
@@ -348,6 +368,7 @@ class OutlineGenerateResponse(BaseModel):
 # Writing Sessions
 # ---------------------------------------------------------------------------
 
+
 class WritingSessionCreate(BaseModel):
     book_id: UUID
     words_written: int = 0
@@ -371,30 +392,35 @@ class WritingSessionRecord(BaseModel):
 
 class WritingSessionStartRequest(BaseModel):
     """Body for POST /writing/sessions/start."""
+
     manuscript_id: UUID | None = None
     chapter_id: UUID | None = None
 
 
 class WritingSessionStartResponse(BaseModel):
     """Response for starting a writing session."""
+
     session_id: UUID
     started_at: datetime
 
 
 class WritingSessionHeartbeatRequest(BaseModel):
     """Body for POST /writing/sessions/{id}/heartbeat."""
+
     words_written: int = 0
     current_chapter_id: UUID | None = None
 
 
 class WritingSessionEndRequest(BaseModel):
     """Body for POST /writing/sessions/{id}/end."""
+
     words_written: int = 0
     notes: str = ""
 
 
 class WritingSessionEndResponse(BaseModel):
     """Response for ending a writing session."""
+
     session_id: UUID
     duration_seconds: int
     words_written: int
@@ -403,6 +429,7 @@ class WritingSessionEndResponse(BaseModel):
 
 class WritingSessionListItem(BaseModel):
     """Session summary for list endpoint."""
+
     id: UUID
     user_id: UUID
     manuscript_id: UUID | None = None
@@ -418,8 +445,10 @@ class WritingSessionListItem(BaseModel):
 # Export / Import
 # ---------------------------------------------------------------------------
 
+
 class ExportRequest(BaseModel):
     """Body for POST /manuscripts/{id}/export."""
+
     format: str = Field("docx", pattern="^(docx|pdf|epub|markdown|txt)$")
     include_toc: bool = True
     include_metadata: bool = True
@@ -427,6 +456,7 @@ class ExportRequest(BaseModel):
 
 class ExportResponse(BaseModel):
     """Response with download information."""
+
     download_url: str
     format: str
     manuscript_id: UUID
@@ -435,6 +465,7 @@ class ExportResponse(BaseModel):
 
 class ImportResponse(BaseModel):
     """Response after importing a manuscript."""
+
     manuscript_id: UUID
     title: str
     chapter_count: int

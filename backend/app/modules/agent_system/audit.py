@@ -77,11 +77,7 @@ async def list_audit_entries(
     total_count = total_result.scalar() or 0
 
     # Data query
-    query = (
-        select(AuditTrail)
-        .where(AuditTrail.org_id == org_id)
-        .order_by(desc(AuditTrail.created_at))
-    )
+    query = select(AuditTrail).where(AuditTrail.org_id == org_id).order_by(desc(AuditTrail.created_at))
     if action:
         query = query.where(AuditTrail.action == action)
     if actor_id:

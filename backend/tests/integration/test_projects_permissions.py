@@ -23,6 +23,7 @@ PREFIX = f"{settings.API_V1_PREFIX}/projects"
 # Helper Functions
 # ---------------------------------------------------------------------------
 
+
 async def _create_org(db: AsyncSession, name: str = "Test Org") -> Organization:
     """Create a test organization."""
     org = Organization(
@@ -98,6 +99,7 @@ def _auth_headers(token: str) -> dict:
 # Unauthenticated Access Tests
 # ---------------------------------------------------------------------------
 
+
 class TestUnauthenticatedAccess:
     """Verify unauthenticated users cannot access project endpoints."""
 
@@ -154,6 +156,7 @@ class TestUnauthenticatedAccess:
 # ---------------------------------------------------------------------------
 # Cross-Organization Access Tests
 # ---------------------------------------------------------------------------
+
 
 class TestCrossOrganizationAccess:
     """Verify users cannot access projects from other organizations."""
@@ -228,6 +231,7 @@ class TestCrossOrganizationAccess:
 # ---------------------------------------------------------------------------
 # Role-Based Access Control Tests
 # ---------------------------------------------------------------------------
+
 
 class TestRoleBasedAccess:
     """Verify role-based access control on project endpoints."""
@@ -337,6 +341,7 @@ class TestRoleBasedAccess:
 # Soft Delete Tests
 # ---------------------------------------------------------------------------
 
+
 class TestSoftDeletedProjects:
     """Verify soft-deleted projects don't appear in lists."""
 
@@ -400,6 +405,7 @@ class TestSoftDeletedProjects:
 # ---------------------------------------------------------------------------
 # Project Filtering Tests
 # ---------------------------------------------------------------------------
+
 
 class TestProjectFiltering:
     """Verify project filtering by type and status."""

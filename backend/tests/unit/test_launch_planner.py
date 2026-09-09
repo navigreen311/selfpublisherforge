@@ -32,6 +32,7 @@ from app.modules.marketing.social_generator import SocialContentGenerator, _genr
 # LaunchPlanner Tests
 # ---------------------------------------------------------------------------
 
+
 class TestLaunchPlanner:
     """Tests for the AI launch plan generator."""
 
@@ -142,7 +143,8 @@ class TestLaunchPlanner:
     ):
         """AI generation should fall back to template when LLM is unavailable."""
         with patch.object(
-            planner, "_call_llm_for_plan",
+            planner,
+            "_call_llm_for_plan",
             new_callable=AsyncMock,
             side_effect=RuntimeError("LLM unavailable"),
         ):
@@ -182,6 +184,7 @@ class TestLaunchPlanner:
 # ---------------------------------------------------------------------------
 # EmailBuilder Tests
 # ---------------------------------------------------------------------------
+
 
 class TestEmailBuilder:
     """Tests for the email sequence builder."""
@@ -300,6 +303,7 @@ class TestEmailBuilder:
 # SocialContentGenerator Tests
 # ---------------------------------------------------------------------------
 
+
 class TestSocialContentGenerator:
     """Tests for the social media content generator."""
 
@@ -360,9 +364,7 @@ class TestSocialContentGenerator:
             assert len(post.hashtags) > 0
 
     @pytest.mark.asyncio
-    async def test_generate_for_single_platform(
-        self, generator: SocialContentGenerator
-    ):
+    async def test_generate_for_single_platform(self, generator: SocialContentGenerator):
         request = GenerateSocialContentRequest(
             book_title="Solo Platform Book",
             genre="Mystery",
@@ -377,9 +379,7 @@ class TestSocialContentGenerator:
         assert len(posts) == 2
 
     @pytest.mark.asyncio
-    async def test_generate_with_launch_plan_id(
-        self, generator: SocialContentGenerator
-    ):
+    async def test_generate_with_launch_plan_id(self, generator: SocialContentGenerator):
         plan_id = uuid.uuid4()
         request = GenerateSocialContentRequest(
             book_title="Linked Book",
@@ -405,7 +405,8 @@ class TestSocialContentGenerator:
         self, generator: SocialContentGenerator, social_request: GenerateSocialContentRequest
     ):
         with patch.object(
-            generator, "_call_llm_for_content",
+            generator,
+            "_call_llm_for_content",
             new_callable=AsyncMock,
             side_effect=RuntimeError("LLM unavailable"),
         ):
@@ -418,6 +419,7 @@ class TestSocialContentGenerator:
 # ---------------------------------------------------------------------------
 # Task Template Tests
 # ---------------------------------------------------------------------------
+
 
 class TestTaskTemplates:
     """Tests for task template data integrity."""

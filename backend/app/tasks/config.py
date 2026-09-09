@@ -1,4 +1,5 @@
 """Enhanced Celery configuration with task routing, priority queues, and retry policies."""
+
 from kombu import Exchange, Queue
 
 # ---------------------------------------------------------------------------
@@ -94,35 +95,28 @@ CELERY_CONFIG = {
     "task_serializer": "json",
     "accept_content": ["json"],
     "result_serializer": "json",
-
     # Timezone
     "timezone": "UTC",
     "enable_utc": True,
-
     # Task tracking
     "task_track_started": True,
     "task_time_limit": 3600,
     "task_soft_time_limit": 3300,
-
     # Worker tuning
     "worker_prefetch_multiplier": 1,
     "worker_max_tasks_per_child": 1000,
-
     # Queues & routing
     "task_queues": TASK_QUEUES,
     "task_routes": TASK_ROUTES,
     "task_default_queue": "default",
     "task_default_exchange": "default",
     "task_default_routing_key": "default",
-
     # Result backend
     "result_expires": 86400,  # 24 hours
     "result_extended": True,
-
     # Late acks — only ack after task completes (avoid lost tasks)
     "task_acks_late": True,
     "task_reject_on_worker_lost": True,
-
     # Default retry
     "task_default_retry_delay": 60,
 }

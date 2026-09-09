@@ -15,6 +15,7 @@ from app.modules.users.service import UserService, _generate_api_key, _role_leve
 
 # ─── Helper Fixtures ──────────────────────────────────────────────────────────
 
+
 def _make_user(role: str = "owner", org_id: UUID | None = None) -> dict:
     return {
         "user_id": uuid4(),
@@ -45,6 +46,7 @@ def _make_mapping_result(rows: list[dict]):
 
 # ─── Role Hierarchy Tests ─────────────────────────────────────────────────────
 
+
 class TestRoleHierarchy:
     def test_owner_is_highest(self):
         assert _role_level("owner") > _role_level("admin")
@@ -64,6 +66,7 @@ class TestRoleHierarchy:
 
 # ─── API Key Generation ──────────────────────────────────────────────────────
 
+
 class TestApiKeyGeneration:
     def test_generate_api_key_returns_tuple(self):
         key, prefix = _generate_api_key()
@@ -78,6 +81,7 @@ class TestApiKeyGeneration:
 
 
 # ─── User Profile ─────────────────────────────────────────────────────────────
+
 
 class TestGetUserProfile:
     @pytest.mark.asyncio
@@ -130,13 +134,12 @@ class TestUpdateUserProfile:
     async def test_none_values_filtered_out(self):
         db = AsyncMock()
         with pytest.raises(AppException) as exc_info:
-            await UserService.update_user_profile(
-                db, uuid4(), {"name": None, "avatar_url": None}
-            )
+            await UserService.update_user_profile(db, uuid4(), {"name": None, "avatar_url": None})
         assert exc_info.value.status_code == 400
 
 
 # ─── Organization Updates ─────────────────────────────────────────────────────
+
 
 class TestUpdateOrg:
     @pytest.mark.asyncio
@@ -167,9 +170,7 @@ class TestUpdateOrg:
         db.execute.return_value = _make_mapping_result([org_row])
         db.flush = AsyncMock()
 
-        result = await UserService.update_org(
-            db, org_id, {"name": "Updated"}, user
-        )
+        result = await UserService.update_org(db, org_id, {"name": "Updated"}, user)
         assert result["name"] == "Updated"
 
     @pytest.mark.asyncio
@@ -183,15 +184,14 @@ class TestUpdateOrg:
 
 # ─── Invite Logic ─────────────────────────────────────────────────────────────
 
+
 class TestInviteMember:
     @pytest.mark.asyncio
     async def test_viewer_cannot_invite(self):
         db = AsyncMock()
         user = _make_user(role="viewer")
         with pytest.raises(AppException) as exc_info:
-            await UserService.invite_member(
-                db, user["org_id"], "new@example.com", "viewer", user
-            )
+            await UserService.invite_member(db, user["org_id"], "new@example.com", "viewer", user)
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
@@ -199,9 +199,7 @@ class TestInviteMember:
         db = AsyncMock()
         user = _make_user(role="admin")
         with pytest.raises(AppException) as exc_info:
-            await UserService.invite_member(
-                db, user["org_id"], "new@example.com", "admin", user
-            )
+            await UserService.invite_member(db, user["org_id"], "new@example.com", "admin", user)
         assert exc_info.value.status_code == 403
         assert exc_info.value.code == "ROLE_ESCALATION"
 
@@ -210,9 +208,7 @@ class TestInviteMember:
         db = AsyncMock()
         user = _make_user(role="admin")
         with pytest.raises(AppException) as exc_info:
-            await UserService.invite_member(
-                db, user["org_id"], "new@example.com", "owner", user
-            )
+            await UserService.invite_member(db, user["org_id"], "new@example.com", "owner", user)
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
@@ -223,14 +219,13 @@ class TestInviteMember:
         db.execute.return_value = _make_mapping_result([{"id": uuid4()}])
 
         with pytest.raises(AppException) as exc_info:
-            await UserService.invite_member(
-                db, user["org_id"], "dup@example.com", "viewer", user
-            )
+            await UserService.invite_member(db, user["org_id"], "dup@example.com", "viewer", user)
         assert exc_info.value.status_code == 409
         assert exc_info.value.code == "INVITE_EXISTS"
 
 
 # ─── Role Change ──────────────────────────────────────────────────────────────
+
 
 class TestChangeRole:
     @pytest.mark.asyncio
@@ -238,9 +233,7 @@ class TestChangeRole:
         db = AsyncMock()
         user = _make_user(role="admin")
         with pytest.raises(AppException) as exc_info:
-            await UserService.change_member_role(
-                db, user["org_id"], uuid4(), "editor", user
-            )
+            await UserService.change_member_role(db, user["org_id"], uuid4(), "editor", user)
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
@@ -248,9 +241,7 @@ class TestChangeRole:
         db = AsyncMock()
         user = _make_user(role="owner")
         with pytest.raises(AppException) as exc_info:
-            await UserService.change_member_role(
-                db, user["org_id"], user["user_id"], "admin", user
-            )
+            await UserService.change_member_role(db, user["org_id"], user["user_id"], "admin", user)
         assert exc_info.value.status_code == 400
         assert exc_info.value.code == "SELF_ROLE_CHANGE"
 
@@ -264,13 +255,12 @@ class TestChangeRole:
         db.flush = AsyncMock()
 
         with pytest.raises(AppException) as exc_info:
-            await UserService.change_member_role(
-                db, user["org_id"], uuid4(), "editor", user
-            )
+            await UserService.change_member_role(db, user["org_id"], uuid4(), "editor", user)
         assert exc_info.value.status_code == 404
 
 
 # ─── Remove Member ────────────────────────────────────────────────────────────
+
 
 class TestRemoveMember:
     @pytest.mark.asyncio
@@ -286,9 +276,7 @@ class TestRemoveMember:
         db = AsyncMock()
         user = _make_user(role="owner")
         with pytest.raises(AppException) as exc_info:
-            await UserService.remove_member(
-                db, user["org_id"], user["user_id"], user
-            )
+            await UserService.remove_member(db, user["org_id"], user["user_id"], user)
         assert exc_info.value.status_code == 400
         assert exc_info.value.code == "SELF_REMOVE"
 
@@ -301,14 +289,13 @@ class TestRemoveMember:
         db.execute.return_value = _make_mapping_result([{"role": "owner"}])
 
         with pytest.raises(AppException) as exc_info:
-            await UserService.remove_member(
-                db, user["org_id"], target_id, user
-            )
+            await UserService.remove_member(db, user["org_id"], target_id, user)
         assert exc_info.value.status_code == 403
         assert exc_info.value.code == "ROLE_ESCALATION"
 
 
 # ─── API Keys ─────────────────────────────────────────────────────────────────
+
 
 class TestApiKeys:
     @pytest.mark.asyncio
@@ -316,9 +303,7 @@ class TestApiKeys:
         db = AsyncMock()
         user = _make_user(role="viewer")
         with pytest.raises(AppException) as exc_info:
-            await UserService.create_api_key(
-                db, user["org_id"], {"name": "test"}, user
-            )
+            await UserService.create_api_key(db, user["org_id"], {"name": "test"}, user)
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
@@ -362,6 +347,7 @@ class TestApiKeys:
 
 
 # ─── Session Revocation ───────────────────────────────────────────────────────
+
 
 class TestSessionRevocation:
     @pytest.mark.asyncio

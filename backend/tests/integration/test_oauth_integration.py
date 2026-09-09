@@ -104,17 +104,14 @@ class TestGoogleOAuthIntegration:
 
         # Verify user was created
         from sqlalchemy import select
-        user_result = await db_session.execute(
-            select(User).where(User.email == "newuser@example.com")
-        )
+
+        user_result = await db_session.execute(select(User).where(User.email == "newuser@example.com"))
         user = user_result.scalar_one_or_none()
         assert user is not None
         assert user.email_verified is True  # OAuth users are pre-verified
 
         # Verify OAuth account was linked
-        oauth_result = await db_session.execute(
-            select(OAuthAccount).where(OAuthAccount.user_id == user.id)
-        )
+        oauth_result = await db_session.execute(select(OAuthAccount).where(OAuthAccount.user_id == user.id))
         oauth_account = oauth_result.scalar_one_or_none()
         assert oauth_account is not None
         assert oauth_account.provider == "google"
@@ -128,9 +125,7 @@ class TestGoogleOAuthIntegration:
 
         # Mock the provider
         mock_provider = MagicMock()
-        mock_provider.exchange_code = AsyncMock(
-            return_value=OAuthTokens(access_token="google-access-token")
-        )
+        mock_provider.exchange_code = AsyncMock(return_value=OAuthTokens(access_token="google-access-token"))
         mock_provider.get_user_info = AsyncMock(
             return_value=OAuthUserInfo(
                 provider_user_id="google-456",
@@ -154,6 +149,7 @@ class TestGoogleOAuthIntegration:
 
         # Verify OAuth account was created and linked
         from sqlalchemy import select
+
         oauth_result = await db_session.execute(
             select(OAuthAccount).where(
                 OAuthAccount.user_id == existing_user.id,
@@ -266,9 +262,7 @@ class TestGitHubOAuthIntegration:
     async def test_github_callback_new_user(self, db_session):
         """Test GitHub callback creates new user."""
         mock_provider = MagicMock()
-        mock_provider.exchange_code = AsyncMock(
-            return_value=OAuthTokens(access_token="github-token")
-        )
+        mock_provider.exchange_code = AsyncMock(return_value=OAuthTokens(access_token="github-token"))
         mock_provider.get_user_info = AsyncMock(
             return_value=OAuthUserInfo(
                 provider_user_id="github-999",
@@ -293,9 +287,8 @@ class TestGitHubOAuthIntegration:
 
         # Verify user and OAuth account
         from sqlalchemy import select
-        user_result = await db_session.execute(
-            select(User).where(User.email == "githubuser@example.com")
-        )
+
+        user_result = await db_session.execute(select(User).where(User.email == "githubuser@example.com"))
         user = user_result.scalar_one_or_none()
         assert user is not None
 
@@ -315,9 +308,7 @@ class TestGitHubOAuthIntegration:
         existing_user = await _seed_user(db_session, email="gitexist@example.com")
 
         mock_provider = MagicMock()
-        mock_provider.exchange_code = AsyncMock(
-            return_value=OAuthTokens(access_token="github-token")
-        )
+        mock_provider.exchange_code = AsyncMock(return_value=OAuthTokens(access_token="github-token"))
         mock_provider.get_user_info = AsyncMock(
             return_value=OAuthUserInfo(
                 provider_user_id="github-111",
@@ -341,6 +332,7 @@ class TestGitHubOAuthIntegration:
 
         # Verify no duplicate users
         from sqlalchemy import func, select
+
         count_result = await db_session.execute(
             select(func.count()).select_from(User).where(User.email == "gitexist@example.com")
         )
@@ -435,9 +427,7 @@ class TestOAuthErrorHandling:
     async def test_callback_missing_email(self, db_session):
         """Test callback handles missing email gracefully."""
         mock_provider = MagicMock()
-        mock_provider.exchange_code = AsyncMock(
-            return_value=OAuthTokens(access_token="token")
-        )
+        mock_provider.exchange_code = AsyncMock(return_value=OAuthTokens(access_token="token"))
         mock_provider.get_user_info = AsyncMock(
             side_effect=AppException(
                 status_code=400,

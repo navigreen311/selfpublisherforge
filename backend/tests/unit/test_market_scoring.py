@@ -9,7 +9,6 @@ Tests verify that:
   - Recommendations match score thresholds.
 """
 
-
 from app.modules.market_intelligence.scoring import (
     NicheMetrics,
     NicheScores,
@@ -26,6 +25,7 @@ from app.modules.market_intelligence.scoring import (
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def _scores(metrics: NicheMetrics) -> NicheScores:
     return calculate_niche_scores(metrics)
 
@@ -33,6 +33,7 @@ def _scores(metrics: NicheMetrics) -> NicheScores:
 # ---------------------------------------------------------------------------
 # Tests: _clamp
 # ---------------------------------------------------------------------------
+
 
 class TestClamp:
     def test_within_range(self):
@@ -53,6 +54,7 @@ class TestClamp:
 # Tests: _sigmoid_scale
 # ---------------------------------------------------------------------------
 
+
 class TestSigmoidScale:
     def test_at_midpoint_is_50(self):
         result = _sigmoid_scale(5000, midpoint=5000, steepness=0.001)
@@ -70,6 +72,7 @@ class TestSigmoidScale:
 # ---------------------------------------------------------------------------
 # Tests: Demand score
 # ---------------------------------------------------------------------------
+
 
 class TestDemandScore:
     def test_high_search_volume_increases_demand(self):
@@ -106,6 +109,7 @@ class TestDemandScore:
 # Tests: Supply score
 # ---------------------------------------------------------------------------
 
+
 class TestSupplyScore:
     def test_more_titles_increases_supply(self):
         few = NicheMetrics(total_competing_titles=50)
@@ -136,6 +140,7 @@ class TestSupplyScore:
 # Tests: Opportunity score
 # ---------------------------------------------------------------------------
 
+
 class TestOpportunityScore:
     def test_high_demand_low_supply_gives_high_opportunity(self):
         score = _compute_opportunity(demand=90, supply=20)
@@ -155,6 +160,7 @@ class TestOpportunityScore:
 # ---------------------------------------------------------------------------
 # Tests: Recommendation
 # ---------------------------------------------------------------------------
+
 
 class TestRecommendation:
     def test_excellent_opportunity(self):
@@ -177,6 +183,7 @@ class TestRecommendation:
 # ---------------------------------------------------------------------------
 # Tests: End-to-end calculate_niche_scores
 # ---------------------------------------------------------------------------
+
 
 class TestCalculateNicheScores:
     def test_returns_niche_scores_dataclass(self):

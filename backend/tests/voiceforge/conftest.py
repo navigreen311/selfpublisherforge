@@ -4,6 +4,7 @@ These fixtures replicate the DB setup from the root conftest but avoid
 importing ``app.main`` (which triggers a chain of imports that may fail
 when model re-exports are incomplete).
 """
+
 from __future__ import annotations
 
 import uuid
@@ -57,9 +58,7 @@ def _compile_pg_uuid_sqlite(element, compiler, **kw):
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestingSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
+TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # ---------------------------------------------------------------------------

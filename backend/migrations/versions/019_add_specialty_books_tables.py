@@ -3,6 +3,7 @@
 Revision ID: 019
 Revises: 018
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -16,118 +17,221 @@ depends_on = None
 def upgrade() -> None:
     # ── Enum types ────────────────────────────────────────────────────
     age_range = sa.Enum(
-        "baby", "toddler", "preschool", "early_reader", "chapter_book", "middle_grade",
+        "baby",
+        "toddler",
+        "preschool",
+        "early_reader",
+        "chapter_book",
+        "middle_grade",
         name="age_range",
     )
     illustration_style = sa.Enum(
-        "watercolor", "cartoon", "digital_painting", "flat_vector",
-        "pencil_sketch", "collage", "storybook_classic", "anime",
+        "watercolor",
+        "cartoon",
+        "digital_painting",
+        "flat_vector",
+        "pencil_sketch",
+        "collage",
+        "storybook_classic",
+        "anime",
         name="illustration_style",
     )
     color_palette = sa.Enum(
-        "bright", "pastel", "earthy", "monochrome", "neon", "warm", "cool", "muted",
+        "bright",
+        "pastel",
+        "earthy",
+        "monochrome",
+        "neon",
+        "warm",
+        "cool",
+        "muted",
         name="color_palette",
     )
     story_mode = sa.Enum(
-        "ai_generated", "manual", "hybrid",
+        "ai_generated",
+        "manual",
+        "hybrid",
         name="story_mode",
     )
     bilingual_layout = sa.Enum(
-        "side_by_side", "top_bottom", "alternating_pages",
+        "side_by_side",
+        "top_bottom",
+        "alternating_pages",
         name="bilingual_layout",
     )
     fear_intensity = sa.Enum(
-        "none", "mild", "moderate",
+        "none",
+        "mild",
+        "moderate",
         name="fear_intensity",
     )
     page_layout = sa.Enum(
-        "full_bleed_image", "image_top_text_bottom", "image_left_text_right",
-        "image_right_text_left", "text_overlay", "vignette", "split_panel",
+        "full_bleed_image",
+        "image_top_text_bottom",
+        "image_left_text_right",
+        "image_right_text_left",
+        "text_overlay",
+        "vignette",
+        "split_panel",
         name="page_layout",
     )
     text_position = sa.Enum(
-        "top", "bottom", "left", "right", "center", "overlay",
+        "top",
+        "bottom",
+        "left",
+        "right",
+        "center",
+        "overlay",
         name="text_position",
     )
     book_status = sa.Enum(
-        "draft", "in_progress", "review", "approved", "exported", "published",
+        "draft",
+        "in_progress",
+        "review",
+        "approved",
+        "exported",
+        "published",
         name="book_status",
     )
     audience = sa.Enum(
-        "kids", "teens", "adults", "seniors",
+        "kids",
+        "teens",
+        "adults",
+        "seniors",
         name="audience",
     )
     line_style = sa.Enum(
-        "fine", "medium", "bold", "sketchy", "clean", "whimsical",
+        "fine",
+        "medium",
+        "bold",
+        "sketchy",
+        "clean",
+        "whimsical",
         name="line_style",
     )
     coloring_page_type = sa.Enum(
-        "illustration", "pattern", "mandala", "scene", "border", "title_page",
+        "illustration",
+        "pattern",
+        "mandala",
+        "scene",
+        "border",
+        "title_page",
         name="coloring_page_type",
     )
     puzzle_type = sa.Enum(
-        "word_search", "crossword", "maze", "sudoku", "word_scramble",
-        "cryptogram", "number_search", "word_connect",
+        "word_search",
+        "crossword",
+        "maze",
+        "sudoku",
+        "word_scramble",
+        "cryptogram",
+        "number_search",
+        "word_connect",
         name="puzzle_type",
     )
     difficulty = sa.Enum(
-        "easy", "medium", "hard", "expert",
+        "easy",
+        "medium",
+        "hard",
+        "expert",
         name="difficulty",
     )
     difficulty_mode = sa.Enum(
-        "fixed", "progressive", "random", "chapter_based",
+        "fixed",
+        "progressive",
+        "random",
+        "chapter_based",
         name="difficulty_mode",
     )
     clue_style = sa.Enum(
-        "standard", "trivia", "fill_in_blank", "thematic",
+        "standard",
+        "trivia",
+        "fill_in_blank",
+        "thematic",
         name="clue_style",
     )
     word_difficulty = sa.Enum(
-        "simple", "intermediate", "advanced", "expert",
+        "simple",
+        "intermediate",
+        "advanced",
+        "expert",
         name="word_difficulty",
     )
     answer_key_position = sa.Enum(
-        "back_of_book", "next_page", "same_page_upside_down", "none",
+        "back_of_book",
+        "next_page",
+        "same_page_upside_down",
+        "none",
         name="answer_key_position",
     )
     book_type = sa.Enum(
-        "childrens", "coloring", "puzzle",
+        "childrens",
+        "coloring",
+        "puzzle",
         name="book_type",
     )
     asset_type = sa.Enum(
-        "illustration", "line_art", "puzzle_grid", "cover", "reference_image",
+        "illustration",
+        "line_art",
+        "puzzle_grid",
+        "cover",
+        "reference_image",
         name="asset_type",
     )
     batch_status = sa.Enum(
-        "pending", "running", "paused", "completed", "failed", "cancelled",
+        "pending",
+        "running",
+        "paused",
+        "completed",
+        "failed",
+        "cancelled",
         name="batch_status",
     )
     isbn_status = sa.Enum(
-        "available", "assigned", "used",
+        "available",
+        "assigned",
+        "used",
         name="isbn_status",
     )
     distributor_name = sa.Enum(
-        "kdp", "ingram_spark", "bn_press",
+        "kdp",
+        "ingram_spark",
+        "bn_press",
         name="distributor_name",
     )
     preflight_status = sa.Enum(
-        "pending", "passed", "failed", "warnings",
+        "pending",
+        "passed",
+        "failed",
+        "warnings",
         name="preflight_status",
     )
     variant_type = sa.Enum(
-        "dyslexia_friendly", "large_print", "high_contrast",
+        "dyslexia_friendly",
+        "large_print",
+        "high_contrast",
         name="variant_type",
     )
     template_type = sa.Enum(
-        "about_author", "also_by", "review_request", "newsletter_signup", "custom",
+        "about_author",
+        "also_by",
+        "review_request",
+        "newsletter_signup",
+        "custom",
         name="template_type",
     )
     license_type = sa.Enum(
-        "open_source", "commercial", "personal", "sil_ofl",
+        "open_source",
+        "commercial",
+        "personal",
+        "sil_ofl",
         name="license_type",
     )
     word_list_source_type = sa.Enum(
-        "built_in", "user_uploaded", "api", "curated",
+        "built_in",
+        "user_uploaded",
+        "api",
+        "curated",
         name="word_list_source_type",
     )
 
@@ -179,7 +283,13 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("book_id", UUID(as_uuid=True), sa.ForeignKey("childrens_books.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "book_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("childrens_books.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("page_number", sa.Integer(), nullable=False),
         sa.Column("page_type", sa.String(30), nullable=False, server_default="story"),
         sa.Column("layout", page_layout, nullable=False),
@@ -205,7 +315,13 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("book_id", UUID(as_uuid=True), sa.ForeignKey("childrens_books.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "book_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("childrens_books.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("species", sa.String(50), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
@@ -234,7 +350,13 @@ def upgrade() -> None:
         sa.Column("complexity", sa.Float(), nullable=False, server_default="0.5"),
         sa.Column("stroke_uniformity", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("single_sided", sa.Boolean(), nullable=False, server_default="true"),
-        sa.Column("series_id", UUID(as_uuid=True), sa.ForeignKey("book_series.id", ondelete="SET NULL"), nullable=True, index=True),
+        sa.Column(
+            "series_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("book_series.id", ondelete="SET NULL"),
+            nullable=True,
+            index=True,
+        ),
         sa.Column("status", book_status, nullable=False, server_default="draft"),
         sa.Column("qa_score", sa.Float(), nullable=True),
     )
@@ -246,7 +368,13 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("book_id", UUID(as_uuid=True), sa.ForeignKey("coloring_books.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "book_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("coloring_books.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("page_number", sa.Integer(), nullable=False),
         sa.Column("page_type", coloring_page_type, nullable=False),
         sa.Column("illustration_prompt", sa.Text(), nullable=True),
@@ -294,7 +422,13 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("book_id", UUID(as_uuid=True), sa.ForeignKey("puzzle_books.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "book_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("puzzle_books.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("puzzle_type", puzzle_type, nullable=False),
         sa.Column("puzzle_number", sa.Integer(), nullable=False),
         sa.Column("theme", sa.String(100), nullable=True),
@@ -513,15 +647,33 @@ def downgrade() -> None:
 
     # Drop enum types
     for enum_name in [
-        "word_list_source_type", "variant_type", "template_type",
-        "preflight_status", "distributor_name", "isbn_status",
-        "batch_status", "asset_type", "book_type",
-        "answer_key_position", "word_difficulty", "clue_style",
-        "difficulty_mode", "difficulty", "puzzle_type",
-        "coloring_page_type", "line_style", "audience",
-        "book_status", "text_position", "page_layout",
-        "fear_intensity", "bilingual_layout", "story_mode",
-        "color_palette", "illustration_style", "age_range",
+        "word_list_source_type",
+        "variant_type",
+        "template_type",
+        "preflight_status",
+        "distributor_name",
+        "isbn_status",
+        "batch_status",
+        "asset_type",
+        "book_type",
+        "answer_key_position",
+        "word_difficulty",
+        "clue_style",
+        "difficulty_mode",
+        "difficulty",
+        "puzzle_type",
+        "coloring_page_type",
+        "line_style",
+        "audience",
+        "book_status",
+        "text_position",
+        "page_layout",
+        "fear_intensity",
+        "bilingual_layout",
+        "story_mode",
+        "color_palette",
+        "illustration_style",
+        "age_range",
         "license_type",
     ]:
         sa.Enum(name=enum_name).drop(op.get_bind(), checkfirst=True)

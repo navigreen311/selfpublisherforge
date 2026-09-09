@@ -353,10 +353,7 @@ async def reorder_stages(
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found.")
 
-    stage_order = [
-        {"stage_id": str(sid), "order_index": idx}
-        for idx, sid in enumerate(payload.stage_ids)
-    ]
+    stage_order = [{"stage_id": str(sid), "order_index": idx} for idx, sid in enumerate(payload.stage_ids)]
     stages = await stage_service.reorder_stages(db, pipeline_id, stage_order)
 
     await activity_service.log_activity(
@@ -423,9 +420,7 @@ async def update_checklist_item(
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found.")
 
-    task = await task_service.update_checklist_item(
-        db, task_id, checklist_item_id, payload.done
-    )
+    task = await task_service.update_checklist_item(db, task_id, checklist_item_id, payload.done)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
@@ -492,9 +487,7 @@ async def get_activity(
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found.")
 
-    return await activity_service.get_activity(
-        db, pipeline_id, task_id=task_id, limit=limit
-    )
+    return await activity_service.get_activity(db, pipeline_id, task_id=task_id, limit=limit)
 
 
 # ── Automation endpoints ─────────────────────────────────────────────────
@@ -577,9 +570,7 @@ async def update_automation(
         raise HTTPException(status_code=404, detail="Pipeline not found.")
 
     update_data = payload.model_dump(exclude_unset=True)
-    automation = await automation_service.update_automation(
-        db, automation_id, **update_data
-    )
+    automation = await automation_service.update_automation(db, automation_id, **update_data)
     if not automation:
         raise HTTPException(status_code=404, detail="Automation not found.")
 

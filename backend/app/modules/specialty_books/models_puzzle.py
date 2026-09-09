@@ -1,4 +1,5 @@
 """SQLAlchemy models for Puzzle Books."""
+
 from __future__ import annotations
 
 import uuid
@@ -24,14 +25,18 @@ class PuzzleBook(TenantModel):
     status: Mapped[str | None] = mapped_column(String(20), default="draft")
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     puzzles: Mapped[list[Puzzle]] = relationship(
-        back_populates="book", cascade="all, delete-orphan", lazy="selectin",
+        back_populates="book",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
 
 class Puzzle(TenantModel):
     __tablename__ = "puzzles"
     book_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("puzzle_books.id", ondelete="CASCADE"), nullable=False, index=True,
+        ForeignKey("puzzle_books.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     puzzle_type: Mapped[str] = mapped_column(String(50), nullable=False)
     puzzle_number: Mapped[int] = mapped_column(Integer, nullable=False)

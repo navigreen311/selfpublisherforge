@@ -6,6 +6,7 @@ front matter, export/preflight.
 
 ~28 test cases.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -29,8 +30,12 @@ class TestCookbookCRUD:
         """Create a cookbook with minimal payload; verify defaults."""
         mock_service = AsyncMock()
         mock_service.create_cookbook.return_value = {
-            "id": str(COOKBOOK_ID), "title": "My Cookbook", "status": "draft",
-            "cuisine_type": "general", "recipe_count": 0, "org_id": str(ORG_ID),
+            "id": str(COOKBOOK_ID),
+            "title": "My Cookbook",
+            "status": "draft",
+            "cuisine_type": "general",
+            "recipe_count": 0,
+            "org_id": str(ORG_ID),
         }
         result = await mock_service.create_cookbook(org_id=ORG_ID, title="My Cookbook")
         assert result["status"] == "draft"
@@ -42,13 +47,19 @@ class TestCookbookCRUD:
         """Create a cookbook with all fields populated."""
         mock_service = AsyncMock()
         payload = {
-            "title": "Italian Kitchen", "description": "Traditional Italian recipes",
-            "cuisine_type": "italian", "dietary_focus": "mediterranean",
-            "skill_level": "intermediate", "serving_size_default": 4,
+            "title": "Italian Kitchen",
+            "description": "Traditional Italian recipes",
+            "cuisine_type": "italian",
+            "dietary_focus": "mediterranean",
+            "skill_level": "intermediate",
+            "serving_size_default": 4,
             "measurement_system": "metric",
         }
         mock_service.create_cookbook.return_value = {
-            "id": str(COOKBOOK_ID), **payload, "status": "draft", "org_id": str(ORG_ID),
+            "id": str(COOKBOOK_ID),
+            **payload,
+            "status": "draft",
+            "org_id": str(ORG_ID),
         }
         result = await mock_service.create_cookbook(org_id=ORG_ID, **payload)
         assert result["title"] == "Italian Kitchen"
@@ -60,7 +71,10 @@ class TestCookbookCRUD:
         mock_service = AsyncMock()
         cookbooks = [{"id": str(uuid.uuid4()), "title": f"Book {i}"} for i in range(10)]
         mock_service.list_cookbooks.return_value = {
-            "items": cookbooks[:3], "total": 10, "page": 1, "page_size": 3,
+            "items": cookbooks[:3],
+            "total": 10,
+            "page": 1,
+            "page_size": 3,
         }
         result = await mock_service.list_cookbooks(org_id=ORG_ID, page=1, page_size=3)
         assert len(result["items"]) == 3
@@ -71,7 +85,8 @@ class TestCookbookCRUD:
         """Filter cookbooks by cuisine type."""
         mock_service = AsyncMock()
         mock_service.list_cookbooks.return_value = {
-            "items": [{"id": str(COOKBOOK_ID), "cuisine_type": "italian"}], "total": 1,
+            "items": [{"id": str(COOKBOOK_ID), "cuisine_type": "italian"}],
+            "total": 1,
         }
         result = await mock_service.list_cookbooks(org_id=ORG_ID, cuisine_type="italian")
         assert all(c["cuisine_type"] == "italian" for c in result["items"])
@@ -89,10 +104,15 @@ class TestCookbookCRUD:
         """Update title and cuisine type of an existing cookbook."""
         mock_service = AsyncMock()
         mock_service.update_cookbook.return_value = {
-            "id": str(COOKBOOK_ID), "title": "Updated Italian Kitchen", "cuisine_type": "fusion",
+            "id": str(COOKBOOK_ID),
+            "title": "Updated Italian Kitchen",
+            "cuisine_type": "fusion",
         }
         result = await mock_service.update_cookbook(
-            org_id=ORG_ID, cookbook_id=COOKBOOK_ID, title="Updated Italian Kitchen", cuisine_type="fusion",
+            org_id=ORG_ID,
+            cookbook_id=COOKBOOK_ID,
+            title="Updated Italian Kitchen",
+            cuisine_type="fusion",
         )
         assert result["title"] == "Updated Italian Kitchen"
 
@@ -113,7 +133,10 @@ class TestCookbookChapters:
         """Create a chapter with title and order."""
         mock_service = AsyncMock()
         mock_service.create_chapter.return_value = {
-            "id": str(CHAPTER_ID), "cookbook_id": str(COOKBOOK_ID), "title": "Appetizers", "order": 1,
+            "id": str(CHAPTER_ID),
+            "cookbook_id": str(COOKBOOK_ID),
+            "title": "Appetizers",
+            "order": 1,
         }
         result = await mock_service.create_chapter(cookbook_id=COOKBOOK_ID, title="Appetizers", order=1)
         assert result["title"] == "Appetizers"
@@ -161,11 +184,17 @@ class TestRecipeCRUD:
         """Create a recipe with only required fields."""
         mock_service = AsyncMock()
         mock_service.create_recipe.return_value = {
-            "id": str(RECIPE_ID), "title": "Simple Pasta",
-            "chapter_id": str(CHAPTER_ID), "prep_time_minutes": 10, "cook_time_minutes": 15,
+            "id": str(RECIPE_ID),
+            "title": "Simple Pasta",
+            "chapter_id": str(CHAPTER_ID),
+            "prep_time_minutes": 10,
+            "cook_time_minutes": 15,
         }
         result = await mock_service.create_recipe(
-            chapter_id=CHAPTER_ID, title="Simple Pasta", prep_time_minutes=10, cook_time_minutes=15,
+            chapter_id=CHAPTER_ID,
+            title="Simple Pasta",
+            prep_time_minutes=10,
+            cook_time_minutes=15,
         )
         assert result["title"] == "Simple Pasta"
 
@@ -174,8 +203,11 @@ class TestRecipeCRUD:
         """Create a recipe with ingredients, instructions, and nutrition."""
         mock_service = AsyncMock()
         payload = {
-            "title": "Margherita Pizza", "description": "Classic Neapolitan pizza",
-            "prep_time_minutes": 30, "cook_time_minutes": 15, "servings": 4,
+            "title": "Margherita Pizza",
+            "description": "Classic Neapolitan pizza",
+            "prep_time_minutes": 30,
+            "cook_time_minutes": 15,
+            "servings": 4,
             "ingredients": [
                 {"name": "flour", "amount": 500, "unit": "g"},
                 {"name": "tomatoes", "amount": 400, "unit": "g"},
@@ -265,7 +297,8 @@ class TestRecipeAI:
         """Verify recipe image generation stub returns image URL."""
         mock_service = AsyncMock()
         mock_service.generate_recipe_image.return_value = {
-            "recipe_id": str(RECIPE_ID), "image_url": "https://example.com/images/recipe.jpg",
+            "recipe_id": str(RECIPE_ID),
+            "image_url": "https://example.com/images/recipe.jpg",
         }
         result = await mock_service.generate_recipe_image(recipe_id=RECIPE_ID)
         assert "image_url" in result
@@ -316,8 +349,10 @@ class TestRecipeScaling:
         """Scale recipe by 2x and verify ingredient amounts doubled."""
         mock_service = AsyncMock()
         mock_service.scale_recipe.return_value = {
-            "recipe_id": str(RECIPE_ID), "scale_factor": 2.0,
-            "original_servings": 4, "scaled_servings": 8,
+            "recipe_id": str(RECIPE_ID),
+            "scale_factor": 2.0,
+            "original_servings": 4,
+            "scaled_servings": 8,
             "ingredients": [{"name": "flour", "amount": 1000, "unit": "g"}],
         }
         result = await mock_service.scale_recipe(recipe_id=RECIPE_ID, scale_factor=2.0)
@@ -329,8 +364,10 @@ class TestRecipeScaling:
         """Scale recipe by 0.5x and verify ingredient amounts halved."""
         mock_service = AsyncMock()
         mock_service.scale_recipe.return_value = {
-            "recipe_id": str(RECIPE_ID), "scale_factor": 0.5,
-            "original_servings": 4, "scaled_servings": 2,
+            "recipe_id": str(RECIPE_ID),
+            "scale_factor": 0.5,
+            "original_servings": 4,
+            "scaled_servings": 2,
             "ingredients": [{"name": "flour", "amount": 250, "unit": "g"}],
         }
         result = await mock_service.scale_recipe(recipe_id=RECIPE_ID, scale_factor=0.5)
@@ -346,11 +383,18 @@ class TestMealPlans:
         """Create a meal plan with basic structure."""
         mock_service = AsyncMock()
         mock_service.create_meal_plan.return_value = {
-            "id": str(MEAL_PLAN_ID), "cookbook_id": str(COOKBOOK_ID),
-            "name": "Weekly Plan", "duration_days": 7, "meals_per_day": 3, "days": [],
+            "id": str(MEAL_PLAN_ID),
+            "cookbook_id": str(COOKBOOK_ID),
+            "name": "Weekly Plan",
+            "duration_days": 7,
+            "meals_per_day": 3,
+            "days": [],
         }
         result = await mock_service.create_meal_plan(
-            cookbook_id=COOKBOOK_ID, name="Weekly Plan", duration_days=7, meals_per_day=3,
+            cookbook_id=COOKBOOK_ID,
+            name="Weekly Plan",
+            duration_days=7,
+            meals_per_day=3,
         )
         assert result["name"] == "Weekly Plan"
         assert result["duration_days"] == 7
@@ -360,12 +404,18 @@ class TestMealPlans:
         """Verify auto-fill populates meal plan with recipes."""
         mock_service = AsyncMock()
         mock_service.auto_fill_meal_plan.return_value = {
-            "meal_plan_id": str(MEAL_PLAN_ID), "filled": True,
-            "days": [{"day": 1, "meals": [
-                {"meal_type": "breakfast", "recipe_id": str(uuid.uuid4())},
-                {"meal_type": "lunch", "recipe_id": str(uuid.uuid4())},
-                {"meal_type": "dinner", "recipe_id": str(uuid.uuid4())},
-            ]}],
+            "meal_plan_id": str(MEAL_PLAN_ID),
+            "filled": True,
+            "days": [
+                {
+                    "day": 1,
+                    "meals": [
+                        {"meal_type": "breakfast", "recipe_id": str(uuid.uuid4())},
+                        {"meal_type": "lunch", "recipe_id": str(uuid.uuid4())},
+                        {"meal_type": "dinner", "recipe_id": str(uuid.uuid4())},
+                    ],
+                }
+            ],
         }
         result = await mock_service.auto_fill_meal_plan(meal_plan_id=MEAL_PLAN_ID)
         assert result["filled"] is True
@@ -410,8 +460,11 @@ class TestCookbookExport:
         """Verify cookbook export returns valid response."""
         mock_service = AsyncMock()
         mock_service.export_cookbook.return_value = {
-            "cookbook_id": str(COOKBOOK_ID), "format": "pdf",
-            "status": "completed", "page_count": 120, "recipe_count": 45,
+            "cookbook_id": str(COOKBOOK_ID),
+            "format": "pdf",
+            "status": "completed",
+            "page_count": 120,
+            "recipe_count": 45,
         }
         result = await mock_service.export_cookbook(cookbook_id=COOKBOOK_ID, format="pdf")
         assert result["status"] == "completed"
@@ -422,7 +475,8 @@ class TestCookbookExport:
         """Verify preflight returns check results for cookbook."""
         mock_service = AsyncMock()
         mock_service.run_preflight.return_value = {
-            "cookbook_id": str(COOKBOOK_ID), "passed": True,
+            "cookbook_id": str(COOKBOOK_ID),
+            "passed": True,
             "checks": [
                 {"name": "image_resolution", "passed": True, "message": "OK"},
                 {"name": "recipe_completeness", "passed": True, "message": "OK"},

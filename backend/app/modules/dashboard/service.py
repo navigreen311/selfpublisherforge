@@ -52,9 +52,7 @@ async def _get_stats(db: AsyncSession, org_id: UUID) -> DashboardStats:
 
     total = await _safe_scalar(
         db,
-        select(func.count(Project.id)).where(
-            Project.org_id == org_id, Project.deleted_at.is_(None)
-        ),
+        select(func.count(Project.id)).where(Project.org_id == org_id, Project.deleted_at.is_(None)),
     )
     stats.total_projects = int(total or 0)
 
@@ -98,9 +96,7 @@ async def _get_stats(db: AsyncSession, org_id: UUID) -> DashboardStats:
     return stats
 
 
-async def _get_revenue_trend(
-    db: AsyncSession, org_id: UUID
-) -> list[RevenuePoint]:
+async def _get_revenue_trend(db: AsyncSession, org_id: UUID) -> list[RevenuePoint]:
     try:
         from app.modules.analytics.models import RoyaltyRecord
 
@@ -137,9 +133,7 @@ async def _get_revenue_trend(
         return []
 
 
-async def _get_active_pipelines(
-    db: AsyncSession, org_id: UUID
-) -> list[ActivePipelineItem]:
+async def _get_active_pipelines(db: AsyncSession, org_id: UUID) -> list[ActivePipelineItem]:
     try:
         from app.modules.production_pipeline.models import Pipeline
 
@@ -169,16 +163,9 @@ async def _get_active_pipelines(
         return []
 
 
-async def _get_recent_activity(
-    db: AsyncSession, org_id: UUID
-) -> list[RecentActivityItem]:
+async def _get_recent_activity(db: AsyncSession, org_id: UUID) -> list[RecentActivityItem]:
     try:
-        stmt = (
-            select(ActivityLog)
-            .where(ActivityLog.org_id == org_id)
-            .order_by(ActivityLog.created_at.desc())
-            .limit(10)
-        )
+        stmt = select(ActivityLog).where(ActivityLog.org_id == org_id).order_by(ActivityLog.created_at.desc()).limit(10)
         result = await db.execute(stmt)
         rows = result.scalars().all()
         return [RecentActivityItem.model_validate(r) for r in rows]
@@ -187,9 +174,7 @@ async def _get_recent_activity(
         return []
 
 
-async def _get_upcoming_deadlines(
-    db: AsyncSession, org_id: UUID
-) -> list[UpcomingDeadline]:
+async def _get_upcoming_deadlines(db: AsyncSession, org_id: UUID) -> list[UpcomingDeadline]:
     out: list[UpcomingDeadline] = []
     try:
         from app.models.project import Project

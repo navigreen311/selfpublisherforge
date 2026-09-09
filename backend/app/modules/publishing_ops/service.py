@@ -72,6 +72,7 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -80,14 +81,12 @@ def _now() -> datetime:
 # Publishing Accounts
 # ---------------------------------------------------------------------------
 
+
 async def list_accounts(db: AsyncSession, org_id: uuid.UUID) -> list[PublishingAccount]:
     """Return all publishing accounts for an organisation."""
-    stmt = (
-        select(PublishingAccountModel)
-        .where(
-            PublishingAccountModel.org_id == org_id,
-            PublishingAccountModel.deleted_at.is_(None),
-        )
+    stmt = select(PublishingAccountModel).where(
+        PublishingAccountModel.org_id == org_id,
+        PublishingAccountModel.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
     rows = result.scalars().all()
@@ -149,12 +148,9 @@ async def create_account(
 
 async def delete_account(db: AsyncSession, account_id: uuid.UUID) -> bool:
     """Disconnect (soft-delete) a publishing account."""
-    stmt = (
-        select(PublishingAccountModel)
-        .where(
-            PublishingAccountModel.id == account_id,
-            PublishingAccountModel.deleted_at.is_(None),
-        )
+    stmt = select(PublishingAccountModel).where(
+        PublishingAccountModel.id == account_id,
+        PublishingAccountModel.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
     account = result.scalar_one_or_none()
@@ -169,6 +165,7 @@ async def delete_account(db: AsyncSession, account_id: uuid.UUID) -> bool:
 # ---------------------------------------------------------------------------
 # Export Orchestration
 # ---------------------------------------------------------------------------
+
 
 async def generate_export(
     db: AsyncSession,
@@ -243,7 +240,9 @@ async def generate_export(
 
         logger.info(
             "Export task dispatched: export_id=%s, celery_task_id=%s, format=%s",
-            export_id_str, result.id, fmt_str,
+            export_id_str,
+            result.id,
+            fmt_str,
         )
 
         return ExportResponse(
@@ -261,9 +260,9 @@ async def generate_export(
     except Exception as exc:
         # Celery broker is unreachable -- fall back to synchronous generation
         logger.warning(
-            "Celery broker unavailable, falling back to synchronous export "
-            "for export_id=%s: %s",
-            export_id_str, exc,
+            "Celery broker unavailable, falling back to synchronous export " "for export_id=%s: %s",
+            export_id_str,
+            exc,
         )
 
         if request.format == ExportFormat.EPUB:
@@ -306,6 +305,7 @@ async def generate_export(
 # Export History
 # ---------------------------------------------------------------------------
 
+
 async def list_exports(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -341,13 +341,10 @@ async def get_export(
     org_id: uuid.UUID,
 ) -> ExportDetailResponse | None:
     """Return full details for a single export job, or None if not found."""
-    stmt = (
-        select(ExportJob)
-        .where(
-            ExportJob.id == export_id,
-            ExportJob.org_id == org_id,
-            ExportJob.deleted_at.is_(None),
-        )
+    stmt = select(ExportJob).where(
+        ExportJob.id == export_id,
+        ExportJob.org_id == org_id,
+        ExportJob.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
     row = result.scalar_one_or_none()
@@ -373,13 +370,10 @@ async def get_export_download_url(
     org_id: uuid.UUID,
 ) -> str | None:
     """Return the file URL for a completed export, or None if not found/ready."""
-    stmt = (
-        select(ExportJob)
-        .where(
-            ExportJob.id == export_id,
-            ExportJob.org_id == org_id,
-            ExportJob.deleted_at.is_(None),
-        )
+    stmt = select(ExportJob).where(
+        ExportJob.id == export_id,
+        ExportJob.org_id == org_id,
+        ExportJob.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
     row = result.scalar_one_or_none()
@@ -394,6 +388,7 @@ async def get_export_download_url(
 # Formatting Templates
 # ---------------------------------------------------------------------------
 
+
 async def list_templates(
     db: AsyncSession,
     org_id: uuid.UUID | None = None,
@@ -401,10 +396,7 @@ async def list_templates(
     """Return all formatting templates (built-in + custom for org)."""
     builtin = get_all_templates()
 
-    stmt = (
-        select(FormattingTemplateModel)
-        .where(FormattingTemplateModel.deleted_at.is_(None))
-    )
+    stmt = select(FormattingTemplateModel).where(FormattingTemplateModel.deleted_at.is_(None))
     if org_id is not None:
         stmt = stmt.where(FormattingTemplateModel.org_id == org_id)
     result = await db.execute(stmt)
@@ -468,6 +460,7 @@ async def create_template(
 # Book Metadata
 # ---------------------------------------------------------------------------
 
+
 async def get_metadata(db: AsyncSession, book_id: uuid.UUID) -> BookMetadata | None:
     """Retrieve metadata for a book from the Book model's JSONB metadata_ column."""
     stmt = select(Book).where(Book.id == book_id, Book.deleted_at.is_(None))
@@ -512,6 +505,7 @@ async def update_metadata(
     if book is None:
         # If no book found, raise — the router should handle 404
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Book not found")
 
     existing_meta = book.metadata_ or {}
@@ -575,6 +569,7 @@ async def update_metadata(
 # Listings
 # ---------------------------------------------------------------------------
 
+
 async def list_listings(db: AsyncSession, org_id: uuid.UUID) -> list[ListingDetail]:
     """Return all listings across platforms for an organisation.
 
@@ -628,12 +623,9 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
     listing is still marked with an updated ``last_synced`` timestamp
     and the caller receives a degraded but functional response.
     """
-    stmt = (
-        select(ListingModel)
-        .where(
-            ListingModel.id == listing_id,
-            ListingModel.deleted_at.is_(None),
-        )
+    stmt = select(ListingModel).where(
+        ListingModel.id == listing_id,
+        ListingModel.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
     listing = result.scalar_one_or_none()
@@ -659,7 +651,9 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
 
         logger.info(
             "Listing sync task dispatched: listing_id=%s, celery_task_id=%s, platform=%s",
-            listing_id, celery_result.id, platform,
+            listing_id,
+            celery_result.id,
+            platform,
         )
 
         return ListingSyncResponse(
@@ -671,9 +665,9 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
     except Exception as exc:
         # Celery broker is unreachable -- perform inline fallback sync
         logger.warning(
-            "Celery broker unavailable, falling back to inline sync "
-            "for listing_id=%s: %s",
-            listing_id, exc,
+            "Celery broker unavailable, falling back to inline sync " "for listing_id=%s: %s",
+            listing_id,
+            exc,
         )
 
         listing.last_synced = _now()
@@ -690,6 +684,7 @@ async def sync_listing(db: AsyncSession, listing_id: uuid.UUID) -> ListingSyncRe
 # ---------------------------------------------------------------------------
 # Pricing
 # ---------------------------------------------------------------------------
+
 
 def _calculate_royalty(
     price: float,
@@ -771,6 +766,7 @@ async def update_pricing(
 
     if book is None:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Book not found")
 
     existing_meta = book.metadata_ or {}
@@ -790,7 +786,10 @@ async def update_pricing(
 def calculate_royalty(data: RoyaltyCalcRequest) -> RoyaltyCalcResponse:
     """Pure calculation — no DB needed."""
     royalty, printing_cost = _calculate_royalty(
-        data.price, data.format, data.platform, data.page_count,
+        data.price,
+        data.format,
+        data.platform,
+        data.page_count,
     )
 
     # Determine the rate that was applied

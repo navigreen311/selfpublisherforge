@@ -1,4 +1,5 @@
 """MarketCategory, MarketKeyword, CompetitorBook, CompetitorReview, and MarketSnapshot models."""
+
 import uuid
 from datetime import date, datetime
 
@@ -29,9 +30,7 @@ class MarketCategory(BaseModel):
         default=None,
         index=True,
     )
-    amazon_node_id: Mapped[str | None] = mapped_column(
-        String(50), nullable=True, default=None, unique=True, index=True
-    )
+    amazon_node_id: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, unique=True, index=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     path: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -67,15 +66,9 @@ class MarketKeyword(BaseModel):
     keyword: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
     search_volume: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     competition_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
-    cpc_estimate: Mapped[float | None] = mapped_column(
-        Numeric(10, 4), nullable=True, default=None
-    )
-    trend_direction: Mapped[str | None] = mapped_column(
-        String(20), nullable=True, default=None
-    )
-    last_updated: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    cpc_estimate: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True, default=None)
+    trend_direction: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    last_updated: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     __table_args__ = (
         Index("ix_market_keywords_search_volume", "search_volume"),
@@ -102,8 +95,12 @@ class CompetitorBook(BaseModel):
     metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    reviews = relationship("CompetitorReview", back_populates="competitor_book", lazy="selectin",
-                           foreign_keys="CompetitorReview.competitor_book_id")
+    reviews = relationship(
+        "CompetitorReview",
+        back_populates="competitor_book",
+        lazy="selectin",
+        foreign_keys="CompetitorReview.competitor_book_id",
+    )
     analyses = relationship("CompetitorAnalysis", back_populates="book", lazy="selectin")
 
     __table_args__ = (
@@ -144,9 +141,7 @@ class CompetitorReview(BaseModel):
     rating: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
     review_text: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
-    review_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    review_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     verified_purchase: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     helpful_votes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)

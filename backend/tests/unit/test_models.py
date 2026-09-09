@@ -3,6 +3,7 @@
 Tests model instantiation, relationships, default values, soft delete behavior,
 and enum definitions without requiring a live database connection.
 """
+
 import uuid
 from datetime import UTC, date, datetime
 
@@ -1418,6 +1419,7 @@ class TestModelsInit:
             Report,
             User,
         )
+
         # Just verify they're all classes
         assert Organization.__tablename__ == "organizations"
         assert User.__tablename__ == "users"
@@ -1431,6 +1433,7 @@ class TestModelsInit:
             LaunchPlanStatus,
             SocialPlatform,
         )
+
         assert LaunchPlanStatus.DRAFT.value == "draft"
         assert SocialPlatform.TWITTER.value == "twitter"
         assert ARCCampaignStatus.ACTIVE.value == "active"
@@ -1440,6 +1443,7 @@ class TestModelsInit:
         # Import all to register
         import app.models  # noqa: F401
         from app.database import Base
+
         # Count the non-abstract tables
         table_names = list(Base.metadata.tables.keys())
         assert len(table_names) >= 30, f"Expected at least 30 tables, got {len(table_names)}: {table_names}"

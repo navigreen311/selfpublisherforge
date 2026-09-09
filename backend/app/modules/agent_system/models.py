@@ -29,6 +29,7 @@ from app.database import Base
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class AgentType(str, enum.Enum):
     RESEARCH = "research"
     WRITING_ASSISTANT = "writing_assistant"
@@ -102,6 +103,7 @@ class AuditAction(str, enum.Enum):
 # Models
 # ---------------------------------------------------------------------------
 
+
 class Agent(Base):
     """Agent type definition and configuration for an organization."""
 
@@ -132,21 +134,18 @@ class Agent(Base):
     temperature: Mapped[float] = mapped_column(Float, default=0.7, nullable=False)
     config: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     tasks: Mapped[list[AgentTask]] = relationship(back_populates="agent", lazy="selectin")
     budget: Mapped[AgentBudget | None] = relationship(back_populates="agent", uselist=False, lazy="selectin")
     organization = relationship(
-        "Organization", back_populates="agents",
+        "Organization",
+        back_populates="agents",
         primaryjoin="Agent.org_id == Organization.id",
         foreign_keys="[Agent.org_id]",
     )
@@ -164,9 +163,7 @@ class AgentTask(Base):
         server_default=text("gen_random_uuid()"),
     )
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
-    agent_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("agents.id"), index=True, nullable=False
-    )
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"), index=True, nullable=False)
     workflow_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agent_workflows.id"), nullable=True, index=True
     )
@@ -199,15 +196,11 @@ class AgentTask(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     agent: Mapped[Agent] = relationship(back_populates="tasks", lazy="selectin")
@@ -244,20 +237,17 @@ class AgentWorkflow(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     tasks: Mapped[list[AgentTask]] = relationship(back_populates="workflow", lazy="selectin")
     organization = relationship(
-        "Organization", back_populates="agent_workflows",
+        "Organization",
+        back_populates="agent_workflows",
         primaryjoin="AgentWorkflow.org_id == Organization.id",
         foreign_keys="[AgentWorkflow.org_id]",
     )
@@ -289,16 +279,10 @@ class AgentBudget(Base):
     total_tokens_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total_usd_used: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
-    last_reset_daily: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    last_reset_monthly: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_reset_daily: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_reset_monthly: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
@@ -306,7 +290,8 @@ class AgentBudget(Base):
     # Relationships
     agent: Mapped[Agent] = relationship(back_populates="budget", lazy="selectin")
     organization = relationship(
-        "Organization", back_populates="agent_budgets",
+        "Organization",
+        back_populates="agent_budgets",
         primaryjoin="AgentBudget.org_id == Organization.id",
         foreign_keys="[AgentBudget.org_id]",
     )
@@ -344,7 +329,8 @@ class AuditTrail(Base):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="audit_trails",
+        "Organization",
+        back_populates="audit_trails",
         primaryjoin="AuditTrail.org_id == Organization.id",
         foreign_keys="[AuditTrail.org_id]",
     )

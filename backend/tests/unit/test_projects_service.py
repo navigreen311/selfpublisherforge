@@ -126,11 +126,7 @@ class TestCreateProject:
         org_id = uuid.uuid4()
 
         result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="My Book Project",
-            description="A great book",
-            project_type="book"
+            mock_db, organization_id=org_id, title="My Book Project", description="A great book", project_type="book"
         )
 
         assert result.title == "My Book Project"
@@ -150,11 +146,7 @@ class TestCreateProject:
         mock_db = _mock_db_for_create()
         org_id = uuid.uuid4()
 
-        result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="Simple Project"
-        )
+        result = await service.create_project(mock_db, organization_id=org_id, title="Simple Project")
 
         assert result.title == "Simple Project"
         assert result.description is None
@@ -167,10 +159,7 @@ class TestCreateProject:
         org_id = uuid.uuid4()
 
         result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="Book Series",
-            project_type="series"
+            mock_db, organization_id=org_id, title="Book Series", project_type="series"
         )
 
         assert result.project_type == "series"
@@ -182,10 +171,7 @@ class TestCreateProject:
         org_id = uuid.uuid4()
 
         result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="Online Course",
-            project_type="course"
+            mock_db, organization_id=org_id, title="Online Course", project_type="course"
         )
 
         assert result.project_type == "course"
@@ -204,11 +190,7 @@ class TestGetProject:
         """Should return project details when found."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            title="Found Project",
-            org_id=org_id
-        )
+        project_row = _make_project_row(project_id=project_id, title="Found Project", org_id=org_id)
         mock_db = _mock_db_with_project(project_row)
 
         result = await service.get_project(mock_db, project_id, org_id)
@@ -251,10 +233,7 @@ class TestGetProject:
         project_org_id = uuid.uuid4()
         user_org_id = uuid.uuid4()
 
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=project_org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=project_org_id)
         mock_db = _mock_db_with_project(project_row)
 
         with pytest.raises(AppException) as exc_info:
@@ -278,11 +257,7 @@ class TestUpdateProject:
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
         project_row = _make_project_row(
-            project_id=project_id,
-            title="Old Title",
-            description="Old Desc",
-            status="draft",
-            org_id=org_id
+            project_id=project_id, title="Old Title", description="Old Desc", status="draft", org_id=org_id
         )
         mock_db = _mock_db_with_project(project_row)
 
@@ -293,7 +268,7 @@ class TestUpdateProject:
             user_role="admin",
             title="New Title",
             description="New Description",
-            status="published"
+            status="published",
         )
 
         assert result.title == "New Title"
@@ -307,19 +282,10 @@ class TestUpdateProject:
         """Should update only title when other fields are None."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=org_id)
         mock_db = _mock_db_with_project(project_row)
 
-        result = await service.update_project(
-            mock_db,
-            project_id,
-            org_id,
-            user_role="editor",
-            title="Updated Title"
-        )
+        result = await service.update_project(mock_db, project_id, org_id, user_role="editor", title="Updated Title")
 
         assert result.title == "Updated Title"
         mock_db.commit.assert_called_once()
@@ -329,20 +295,10 @@ class TestUpdateProject:
         """Should update only status."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=org_id,
-            status="draft"
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=org_id, status="draft")
         mock_db = _mock_db_with_project(project_row)
 
-        result = await service.update_project(
-            mock_db,
-            project_id,
-            org_id,
-            user_role="owner",
-            status="published"
-        )
+        result = await service.update_project(mock_db, project_id, org_id, user_role="owner", status="published")
 
         assert result.status == "published"
 
@@ -354,13 +310,7 @@ class TestUpdateProject:
         mock_db = _mock_db_with_project(None)
 
         with pytest.raises(AppException) as exc_info:
-            await service.update_project(
-                mock_db,
-                project_id,
-                org_id,
-                user_role="admin",
-                title="New Title"
-            )
+            await service.update_project(mock_db, project_id, org_id, user_role="admin", title="New Title")
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.code == "PROJECT_NOT_FOUND"
@@ -372,20 +322,11 @@ class TestUpdateProject:
         project_org_id = uuid.uuid4()
         user_org_id = uuid.uuid4()
 
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=project_org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=project_org_id)
         mock_db = _mock_db_with_project(project_row)
 
         with pytest.raises(AppException) as exc_info:
-            await service.update_project(
-                mock_db,
-                project_id,
-                user_org_id,
-                user_role="admin",
-                title="New Title"
-            )
+            await service.update_project(mock_db, project_id, user_org_id, user_role="admin", title="New Title")
 
         assert exc_info.value.status_code == 403
         assert exc_info.value.code == "ACCESS_DENIED"
@@ -453,10 +394,7 @@ class TestListProjects:
     async def test_pagination(self):
         """Should apply limit and offset."""
         org_id = uuid.uuid4()
-        project_rows = [
-            _make_project_row(title=f"Project {i}", org_id=org_id)
-            for i in range(5)
-        ]
+        project_rows = [_make_project_row(title=f"Project {i}", org_id=org_id) for i in range(5)]
         mock_db = _mock_db_with_projects(project_rows)
 
         request = ProjectListRequest(limit=2, offset=1)
@@ -491,18 +429,10 @@ class TestDeleteProject:
         """Should set deleted_at timestamp on project."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=org_id)
         mock_db = _mock_db_with_project(project_row)
 
-        await service.delete_project(
-            mock_db,
-            project_id,
-            org_id,
-            user_role="owner"
-        )
+        await service.delete_project(mock_db, project_id, org_id, user_role="owner")
 
         mock_db.commit.assert_called_once()
 
@@ -514,12 +444,7 @@ class TestDeleteProject:
         mock_db = _mock_db_with_project(None)
 
         with pytest.raises(AppException) as exc_info:
-            await service.delete_project(
-                mock_db,
-                project_id,
-                org_id,
-                user_role="admin"
-            )
+            await service.delete_project(mock_db, project_id, org_id, user_role="admin")
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.code == "PROJECT_NOT_FOUND"
@@ -531,19 +456,11 @@ class TestDeleteProject:
         project_org_id = uuid.uuid4()
         user_org_id = uuid.uuid4()
 
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=project_org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=project_org_id)
         mock_db = _mock_db_with_project(project_row)
 
         with pytest.raises(AppException) as exc_info:
-            await service.delete_project(
-                mock_db,
-                project_id,
-                user_org_id,
-                user_role="admin"
-            )
+            await service.delete_project(mock_db, project_id, user_org_id, user_role="admin")
 
         assert exc_info.value.status_code == 403
         assert exc_info.value.code == "ACCESS_DENIED"
@@ -557,12 +474,7 @@ class TestDeleteProject:
         mock_db = _mock_db_with_project(None)
 
         with pytest.raises(AppException) as exc_info:
-            await service.delete_project(
-                mock_db,
-                project_id,
-                org_id,
-                user_role="owner"
-            )
+            await service.delete_project(mock_db, project_id, org_id, user_role="owner")
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.code == "PROJECT_NOT_FOUND"

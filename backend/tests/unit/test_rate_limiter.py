@@ -77,9 +77,7 @@ class FakePipeline:
         self._redis = redis
         self._ops: list[tuple[str, Any]] = []
 
-    def zremrangebyscore(
-        self, key: str, min_score: str, max_score: float
-    ) -> FakePipeline:
+    def zremrangebyscore(self, key: str, min_score: str, max_score: float) -> FakePipeline:
         self._ops.append(("zremrangebyscore", (key, min_score, max_score)))
         return self
 
@@ -102,9 +100,7 @@ class FakePipeline:
             if op == "zremrangebyscore":
                 key, _min, max_score = args
                 if key in self._redis._store:
-                    self._redis._store[key] = [
-                        (s, m) for s, m in self._redis._store[key] if s > max_score
-                    ]
+                    self._redis._store[key] = [(s, m) for s, m in self._redis._store[key] if s > max_score]
                 results.append(0)
             elif op == "zadd":
                 key, mapping = args
@@ -160,10 +156,7 @@ class TestPatternMatching:
 
     def test_pattern_with_multiple_segments_after_wildcard(self) -> None:
         # Wildcard should match everything after
-        assert (
-            match_pattern("/api/v1/ai/*", "/api/v1/ai/writing/generate/chapter")
-            is True
-        )
+        assert match_pattern("/api/v1/ai/*", "/api/v1/ai/writing/generate/chapter") is True
 
     def test_empty_segments(self) -> None:
         assert match_pattern("/api/v1/*", "/api/v1/") is True
@@ -182,15 +175,11 @@ class TestRateLimitConfiguration:
 
     def test_find_with_tier_multiplier(self) -> None:
         # FREE tier: 5 requests
-        limit_free, window = find_rate_limit(
-            "POST", "/api/v1/auth/login", PlanTier.FREE
-        )
+        limit_free, window = find_rate_limit("POST", "/api/v1/auth/login", PlanTier.FREE)
         assert limit_free == 5
 
         # STARTER tier: 5 * 2 = 10 requests
-        limit_starter, _ = find_rate_limit(
-            "POST", "/api/v1/auth/login", PlanTier.STARTER
-        )
+        limit_starter, _ = find_rate_limit("POST", "/api/v1/auth/login", PlanTier.STARTER)
         assert limit_starter == 10
 
         # PRO tier: 5 * 5 = 25 requests
@@ -198,24 +187,18 @@ class TestRateLimitConfiguration:
         assert limit_pro == 25
 
         # ENTERPRISE tier: 5 * 50 = 250 requests
-        limit_ent, _ = find_rate_limit(
-            "POST", "/api/v1/auth/login", PlanTier.ENTERPRISE
-        )
+        limit_ent, _ = find_rate_limit("POST", "/api/v1/auth/login", PlanTier.ENTERPRISE)
         assert limit_ent == 250
 
     def test_find_wildcard_match(self) -> None:
         # Should match "POST /api/v1/ai/*"
-        limit, window = find_rate_limit(
-            "POST", "/api/v1/ai/generate-outline", PlanTier.FREE
-        )
+        limit, window = find_rate_limit("POST", "/api/v1/ai/generate-outline", PlanTier.FREE)
         assert limit == 15  # AI catch-all
         assert window == 3600
 
     def test_find_most_specific_match(self) -> None:
         # "POST /api/v1/ai/writing/*" is more specific than "POST /api/v1/ai/*"
-        limit, window = find_rate_limit(
-            "POST", "/api/v1/ai/writing/generate", PlanTier.FREE
-        )
+        limit, window = find_rate_limit("POST", "/api/v1/ai/writing/generate", PlanTier.FREE)
         assert limit == 20  # Writing specific
         assert window == 3600
 
@@ -240,9 +223,7 @@ class TestRateLimitConfiguration:
 
     def test_business_tier_multiplier(self) -> None:
         # BUSINESS tier: 5 * 10 = 50 requests
-        limit, window = find_rate_limit(
-            "POST", "/api/v1/auth/login", PlanTier.BUSINESS
-        )
+        limit, window = find_rate_limit("POST", "/api/v1/auth/login", PlanTier.BUSINESS)
         assert limit == 50
         assert window == 300
 
@@ -254,9 +235,7 @@ class TestRateLimitConfiguration:
 
 class TestSlidingWindowLimiter:
     @pytest.mark.asyncio
-    async def test_first_request_allowed(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_first_request_allowed(self, limiter: SlidingWindowRateLimiter) -> None:
         result = await limiter.check("test:1", limit=10, window_seconds=60)
         assert result.allowed is True
         assert result.limit == 10
@@ -264,17 +243,13 @@ class TestSlidingWindowLimiter:
         assert result.retry_after is None
 
     @pytest.mark.asyncio
-    async def test_requests_up_to_limit_allowed(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_requests_up_to_limit_allowed(self, limiter: SlidingWindowRateLimiter) -> None:
         for i in range(10):
             result = await limiter.check("test:2", limit=10, window_seconds=60)
             assert result.allowed is True
 
     @pytest.mark.asyncio
-    async def test_exceeding_limit_denied(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_exceeding_limit_denied(self, limiter: SlidingWindowRateLimiter) -> None:
         # Fill to limit
         for _ in range(10):
             await limiter.check("test:3", limit=10, window_seconds=60)
@@ -287,9 +262,7 @@ class TestSlidingWindowLimiter:
         assert result.retry_after > 0
 
     @pytest.mark.asyncio
-    async def test_retry_after_header(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_retry_after_header(self, limiter: SlidingWindowRateLimiter) -> None:
         # Fill to limit
         for _ in range(5):
             await limiter.check("test:retry", limit=5, window_seconds=60)
@@ -302,9 +275,7 @@ class TestSlidingWindowLimiter:
         assert 1 <= result.retry_after <= 60
 
     @pytest.mark.asyncio
-    async def test_different_keys_independent(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_different_keys_independent(self, limiter: SlidingWindowRateLimiter) -> None:
         # Fill key A
         for _ in range(10):
             await limiter.check("test:A", limit=10, window_seconds=60)
@@ -318,9 +289,7 @@ class TestSlidingWindowLimiter:
         assert result_b.allowed is True
 
     @pytest.mark.asyncio
-    async def test_denied_request_not_counted(
-        self, fake_redis: FakeRedis, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_denied_request_not_counted(self, fake_redis: FakeRedis, limiter: SlidingWindowRateLimiter) -> None:
         # Fill to limit
         for _ in range(10):
             await limiter.check("test:rollback", limit=10, window_seconds=60)
@@ -334,9 +303,7 @@ class TestSlidingWindowLimiter:
         assert len(fake_redis._store.get(key, [])) == 10
 
     @pytest.mark.asyncio
-    async def test_window_expiration(
-        self, fake_redis: FakeRedis, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_window_expiration(self, fake_redis: FakeRedis, limiter: SlidingWindowRateLimiter) -> None:
         # Fill to limit
         for _ in range(10):
             await limiter.check("test:expire", limit=10, window_seconds=60)
@@ -359,9 +326,7 @@ class TestSlidingWindowLimiter:
 
 class TestRequestBasedRateLimiting:
     @pytest.mark.asyncio
-    async def test_check_request_uses_endpoint_config(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_check_request_uses_endpoint_config(self, limiter: SlidingWindowRateLimiter) -> None:
         # Auth endpoint should have strict limits
         result = await limiter.check_request(
             identifier="user:123",
@@ -373,9 +338,7 @@ class TestRequestBasedRateLimiting:
         assert result.limit == 5  # Configured for auth login
 
     @pytest.mark.asyncio
-    async def test_check_request_applies_tier_multiplier(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_check_request_applies_tier_multiplier(self, limiter: SlidingWindowRateLimiter) -> None:
         # PRO tier should get 5x multiplier
         result = await limiter.check_request(
             identifier="user:pro",
@@ -386,9 +349,7 @@ class TestRequestBasedRateLimiting:
         assert result.limit == 25  # 5 * 5x
 
     @pytest.mark.asyncio
-    async def test_check_request_different_endpoints_separate_limits(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_check_request_different_endpoints_separate_limits(self, limiter: SlidingWindowRateLimiter) -> None:
         # Fill auth endpoint
         for _ in range(5):
             await limiter.check_request(
@@ -417,9 +378,7 @@ class TestRequestBasedRateLimiting:
         assert result_other.allowed is True
 
     @pytest.mark.asyncio
-    async def test_check_request_wildcard_matching(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_check_request_wildcard_matching(self, limiter: SlidingWindowRateLimiter) -> None:
         # Should match "POST /api/v1/ai/writing/*" with limit 20
         result = await limiter.check_request(
             identifier="user:ai",
@@ -437,18 +396,14 @@ class TestRequestBasedRateLimiting:
 
 class TestResetTimestamp:
     @pytest.mark.asyncio
-    async def test_reset_is_future_timestamp(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_reset_is_future_timestamp(self, limiter: SlidingWindowRateLimiter) -> None:
         result = await limiter.check("test:reset", limit=10, window_seconds=60)
         now = int(time.time())
         assert result.reset_at > now
         assert result.reset_at <= now + 60 + 2  # Allow 2s margin
 
     @pytest.mark.asyncio
-    async def test_reset_matches_window(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_reset_matches_window(self, limiter: SlidingWindowRateLimiter) -> None:
         result = await limiter.check("test:window", limit=10, window_seconds=120)
         now = int(time.time())
         # Reset should be approximately now + window
@@ -483,9 +438,7 @@ class TestSingleton:
 
 class TestCloseConnection:
     @pytest.mark.asyncio
-    async def test_close_clears_redis(
-        self, fake_redis: FakeRedis, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_close_clears_redis(self, fake_redis: FakeRedis, limiter: SlidingWindowRateLimiter) -> None:
         assert limiter._redis is not None
         await limiter.close()
         assert limiter._redis is None
@@ -503,9 +456,7 @@ class TestCloseConnection:
 
 class TestConcurrentRequests:
     @pytest.mark.asyncio
-    async def test_concurrent_requests_counted_correctly(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_concurrent_requests_counted_correctly(self, limiter: SlidingWindowRateLimiter) -> None:
         import asyncio
 
         tasks = [limiter.check("test:concurrent", 20, 60) for _ in range(10)]
@@ -520,9 +471,7 @@ class TestConcurrentRequests:
         assert final.remaining == 9  # 20 - 11
 
     @pytest.mark.asyncio
-    async def test_concurrent_at_boundary(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_concurrent_at_boundary(self, limiter: SlidingWindowRateLimiter) -> None:
         import asyncio
 
         # Fill to near limit
@@ -567,9 +516,7 @@ class TestEdgeCases:
         assert result.reset_at <= int(time.time()) + 2
 
     @pytest.mark.asyncio
-    async def test_remaining_never_negative(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_remaining_never_negative(self, limiter: SlidingWindowRateLimiter) -> None:
         # Exceed limit significantly
         for _ in range(20):
             result = await limiter.check("test:negative", limit=5, window_seconds=60)
@@ -585,9 +532,7 @@ class TestEdgeCases:
 
 class TestMethodPathCombinations:
     @pytest.mark.asyncio
-    async def test_same_path_different_methods_separate_limits(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_same_path_different_methods_separate_limits(self, limiter: SlidingWindowRateLimiter) -> None:
         # POST /api/v1/books
         for _ in range(30):
             await limiter.check_request(
@@ -604,9 +549,7 @@ class TestMethodPathCombinations:
         assert result_post.allowed is False
 
         # GET should still work (different limit)
-        result_get = await limiter.check_request(
-            "user:method", method="GET", path="/api/v1/books", tier=PlanTier.FREE
-        )
+        result_get = await limiter.check_request("user:method", method="GET", path="/api/v1/books", tier=PlanTier.FREE)
         assert result_get.allowed is True
 
 
@@ -617,9 +560,7 @@ class TestMethodPathCombinations:
 
 class TestAllTiers:
     @pytest.mark.asyncio
-    async def test_all_tier_multipliers(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_all_tier_multipliers(self, limiter: SlidingWindowRateLimiter) -> None:
         base_limit = 10
 
         tiers_and_expected = [

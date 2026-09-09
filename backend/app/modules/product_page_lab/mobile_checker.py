@@ -77,6 +77,7 @@ COVER_RATIO_TOLERANCE = 0.2
 # Mobile check logic
 # ---------------------------------------------------------------------------
 
+
 def check_mobile_display(
     title: str,
     blurb: str,
@@ -94,14 +95,16 @@ def check_mobile_display(
     title_display = _check_truncation("title", title, title_limit)
     if title_display.is_truncated:
         score -= 15
-        recommendations.append(Recommendation(
-            area="mobile_title",
-            severity="warning",
-            message=f"Title truncated on mobile at {title_limit} chars (yours: {len(title)} chars).",
-            suggestion=f"Shorten title to {title_limit} characters or ensure the most important keywords appear first.",
-            current_value=title,
-            recommended_value=title[:title_limit],
-        ))
+        recommendations.append(
+            Recommendation(
+                area="mobile_title",
+                severity="warning",
+                message=f"Title truncated on mobile at {title_limit} chars (yours: {len(title)} chars).",
+                suggestion=f"Shorten title to {title_limit} characters or ensure the most important keywords appear first.",
+                current_value=title,
+                recommended_value=title[:title_limit],
+            )
+        )
 
     # --- Subtitle truncation ---
     subtitle_display: MobileTruncation | None = None
@@ -110,14 +113,16 @@ def check_mobile_display(
         subtitle_display = _check_truncation("subtitle", subtitle, sub_limit)
         if subtitle_display.is_truncated:
             score -= 8
-            recommendations.append(Recommendation(
-                area="mobile_subtitle",
-                severity="info",
-                message=f"Subtitle truncated on mobile at {sub_limit} chars.",
-                suggestion=f"Shorten subtitle to {sub_limit} characters.",
-                current_value=subtitle,
-                recommended_value=subtitle[:sub_limit],
-            ))
+            recommendations.append(
+                Recommendation(
+                    area="mobile_subtitle",
+                    severity="info",
+                    message=f"Subtitle truncated on mobile at {sub_limit} chars.",
+                    suggestion=f"Shorten subtitle to {sub_limit} characters.",
+                    current_value=subtitle,
+                    recommended_value=subtitle[:sub_limit],
+                )
+            )
 
     # --- Blurb fold point ---
     blurb_fold = DEFAULT_MOBILE_CONFIG["blurb_fold_chars"]
@@ -130,51 +135,61 @@ def check_mobile_display(
         # Check if the above-fold content is compelling
         if not _has_above_fold_hook(blurb_above_fold):
             score -= 15
-            recommendations.append(Recommendation(
-                area="mobile_blurb",
-                severity="critical",
-                message="Blurb above the fold lacks a compelling hook on mobile.",
-                suggestion="Front-load your blurb with the most compelling hook and key value proposition.",
-            ))
+            recommendations.append(
+                Recommendation(
+                    area="mobile_blurb",
+                    severity="critical",
+                    message="Blurb above the fold lacks a compelling hook on mobile.",
+                    suggestion="Front-load your blurb with the most compelling hook and key value proposition.",
+                )
+            )
         else:
             score -= 5  # Still penalize slightly for being long
-            recommendations.append(Recommendation(
-                area="mobile_blurb",
-                severity="info",
-                message=f"Blurb extends below the fold ({len(blurb_plain)} chars > {blurb_fold} visible).",
-                suggestion="Consider condensing your opening to keep key info above the fold.",
-            ))
+            recommendations.append(
+                Recommendation(
+                    area="mobile_blurb",
+                    severity="info",
+                    message=f"Blurb extends below the fold ({len(blurb_plain)} chars > {blurb_fold} visible).",
+                    suggestion="Consider condensing your opening to keep key info above the fold.",
+                )
+            )
 
     # --- Cover image ---
     cover_aspect_ok = True
     cover_readable = True
     if cover_image_url:
         # We can't actually check the image, but we can flag the need for check
-        recommendations.append(Recommendation(
-            area="mobile_cover",
-            severity="info",
-            message="Cover image provided. Ensure it is readable at thumbnail size (130px wide).",
-            suggestion="Use large, bold fonts on your cover. Test at 130px wide to verify readability.",
-        ))
+        recommendations.append(
+            Recommendation(
+                area="mobile_cover",
+                severity="info",
+                message="Cover image provided. Ensure it is readable at thumbnail size (130px wide).",
+                suggestion="Use large, bold fonts on your cover. Test at 130px wide to verify readability.",
+            )
+        )
     else:
         score -= 5
         cover_readable = False
-        recommendations.append(Recommendation(
-            area="mobile_cover",
-            severity="warning",
-            message="No cover image URL provided for mobile preview check.",
-            suggestion="Provide a cover image URL to check mobile thumbnail readability.",
-        ))
+        recommendations.append(
+            Recommendation(
+                area="mobile_cover",
+                severity="warning",
+                message="No cover image URL provided for mobile preview check.",
+                suggestion="Provide a cover image URL to check mobile thumbnail readability.",
+            )
+        )
 
     # --- Author name length ---
     if len(author_name) > 30:
         score -= 3
-        recommendations.append(Recommendation(
-            area="mobile_author",
-            severity="info",
-            message=f"Author name is long ({len(author_name)} chars) and may be truncated on mobile.",
-            suggestion="Consider using a shorter pen name or initials for better mobile display.",
-        ))
+        recommendations.append(
+            Recommendation(
+                area="mobile_author",
+                severity="info",
+                message=f"Author name is long ({len(author_name)} chars) and may be truncated on mobile.",
+                suggestion="Consider using a shorter pen name or initials for better mobile display.",
+            )
+        )
 
     # --- Price visibility ---
     price_visibility = "good"
@@ -184,12 +199,14 @@ def check_mobile_display(
         elif price > 9.99:
             price_visibility = "neutral"
             score -= 3
-            recommendations.append(Recommendation(
-                area="mobile_price",
-                severity="info",
-                message="Higher price point may reduce impulse purchases on mobile.",
-                suggestion="Consider promotional pricing for mobile discovery.",
-            ))
+            recommendations.append(
+                Recommendation(
+                    area="mobile_price",
+                    severity="info",
+                    message="Higher price point may reduce impulse purchases on mobile.",
+                    suggestion="Consider promotional pricing for mobile discovery.",
+                )
+            )
     else:
         price_visibility = "unknown"
 
@@ -235,6 +252,7 @@ def check_mobile_display(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _check_truncation(field: str, text: str, char_limit: int) -> MobileTruncation:
     """Check if text will be truncated on mobile."""
     original_length = len(text)
@@ -255,6 +273,7 @@ def _check_truncation(field: str, text: str, char_limit: int) -> MobileTruncatio
 def _strip_html(text: str) -> str:
     """Remove HTML tags from text for character counting."""
     import re
+
     return re.sub(r"<[^>]+>", "", text)
 
 
@@ -272,8 +291,19 @@ def _has_above_fold_hook(text: str) -> bool:
 
     # Strong opening words
     hook_words = [
-        "discover", "imagine", "secret", "what if", "reveal",
-        "never", "always", "shocking", "incredible", "powerful",
-        "exclusive", "finally", "the truth", "you won't",
+        "discover",
+        "imagine",
+        "secret",
+        "what if",
+        "reveal",
+        "never",
+        "always",
+        "shocking",
+        "incredible",
+        "powerful",
+        "exclusive",
+        "finally",
+        "the truth",
+        "you won't",
     ]
     return any(word in text_lower for word in hook_words)

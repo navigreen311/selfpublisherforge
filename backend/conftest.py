@@ -1,4 +1,5 @@
 """Root conftest: ensures project root is on sys.path for shared imports."""
+
 import sys
 from pathlib import Path
 

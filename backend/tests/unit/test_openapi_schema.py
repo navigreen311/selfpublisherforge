@@ -26,6 +26,7 @@ from app.core.openapi import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_app() -> FastAPI:
     """Create a minimal FastAPI app for schema generation."""
     app = FastAPI()
@@ -45,8 +46,8 @@ def _make_app() -> FastAPI:
 # API metadata constants
 # =========================================================================
 
-class TestAPIMetadataConstants:
 
+class TestAPIMetadataConstants:
     def test_api_title(self):
         assert API_TITLE == "SelfPublisherForge API"
 
@@ -67,8 +68,8 @@ class TestAPIMetadataConstants:
 # Tags metadata
 # =========================================================================
 
-class TestTagsMetadata:
 
+class TestTagsMetadata:
     EXPECTED_TAGS = [
         "health",
         "auth",
@@ -129,8 +130,8 @@ class TestTagsMetadata:
 # Security schemes
 # =========================================================================
 
-class TestSecuritySchemes:
 
+class TestSecuritySchemes:
     def test_bearer_auth_exists(self):
         assert "BearerAuth" in _SECURITY_SCHEMES
 
@@ -152,8 +153,8 @@ class TestSecuritySchemes:
 # custom_openapi_schema() factory
 # =========================================================================
 
-class TestCustomOpenApiSchema:
 
+class TestCustomOpenApiSchema:
     def test_returns_callable(self):
         app = _make_app()
         result = custom_openapi_schema(app)

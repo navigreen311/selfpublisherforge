@@ -100,9 +100,7 @@ class TestListNotifications:
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -117,18 +115,14 @@ class TestListNotifications:
     async def test_list_with_items(self, mock_service):
         n1 = _make_notification()
         n2 = _make_notification(read=True)
-        mock_service.list_notifications = AsyncMock(
-            return_value=([n1, n2], "2024-01-01T00:00:00+00:00", True)
-        )
+        mock_service.list_notifications = AsyncMock(return_value=([n1, n2], "2024-01-01T00:00:00+00:00", True))
 
         app = _build_app()
         mock_db = AsyncMock()
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -156,9 +150,7 @@ class TestMarkNotificationRead:
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -182,9 +174,7 @@ class TestMarkAllRead:
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -208,9 +198,7 @@ class TestUnreadCount:
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -233,9 +221,7 @@ class TestGetPreferences:
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -255,9 +241,7 @@ class TestGetPreferences:
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -285,9 +269,7 @@ class TestUpdatePreferences:
         app.dependency_overrides[
             __import__("app.core.dependencies", fromlist=["get_current_user"]).get_current_user
         ] = lambda: TEST_USER
-        app.dependency_overrides[
-            __import__("app.database", fromlist=["get_db"]).get_db
-        ] = lambda: mock_db
+        app.dependency_overrides[__import__("app.database", fromlist=["get_db"]).get_db] = lambda: mock_db
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:

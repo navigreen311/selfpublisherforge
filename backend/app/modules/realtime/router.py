@@ -38,6 +38,7 @@ manager = ConnectionManager(redis_url=get_settings().REDIS_URL)
 # (WebSocket-only routes are excluded from the spec by default).
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/api/v1/ws/status",
     summary="WebSocket subsystem status",
@@ -56,6 +57,7 @@ async def ws_status() -> dict[str, Any]:
 # Auth helper
 # ---------------------------------------------------------------------------
 
+
 def _authenticate_ws(token: str | None) -> dict[str, Any]:
     """Validate a JWT from the WebSocket query string.
 
@@ -72,6 +74,7 @@ def _authenticate_ws(token: str | None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Generic handler
 # ---------------------------------------------------------------------------
+
 
 async def _ws_handler(
     websocket: WebSocket,
@@ -91,12 +94,15 @@ async def _ws_handler(
     await manager.connect(websocket, channel, room_id)
 
     # Send a welcome message with connection metadata
-    await manager.send_personal(websocket, {
-        "type": "connected",
-        "channel": channel.value,
-        "room_id": room_id,
-        "user_id": user.get("sub"),
-    })
+    await manager.send_personal(
+        websocket,
+        {
+            "type": "connected",
+            "channel": channel.value,
+            "room_id": room_id,
+            "user_id": user.get("sub"),
+        },
+    )
 
     try:
         while True:
@@ -109,13 +115,17 @@ async def _ws_handler(
     except ConnectionError as exc:
         logger.error(
             "Connection lost on WebSocket: channel=%s room=%s — %s",
-            channel.value, room_id, exc,
+            channel.value,
+            room_id,
+            exc,
         )
         await manager.disconnect(websocket, channel, room_id)
     except RuntimeError as exc:
         logger.error(
             "Runtime error on WebSocket: channel=%s room=%s — %s",
-            channel.value, room_id, exc,
+            channel.value,
+            room_id,
+            exc,
         )
         await manager.disconnect(websocket, channel, room_id)
 
@@ -123,6 +133,7 @@ async def _ws_handler(
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.websocket("/api/v1/ws/writing/{book_id}")
 async def ws_writing(

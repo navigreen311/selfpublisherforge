@@ -32,6 +32,7 @@ def _service(db: AsyncSession) -> StorageService:
 # POST /upload — get presigned upload URL
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/upload",
     response_model=UploadResponse,
@@ -59,6 +60,7 @@ async def request_upload(
 # POST /upload/complete — confirm upload
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/upload/complete",
     response_model=AssetResponse,
@@ -81,6 +83,7 @@ async def complete_upload(
 # ---------------------------------------------------------------------------
 # GET /assets — list org assets (paginated, filterable by type)
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/assets",
@@ -109,6 +112,7 @@ async def list_assets(
 # GET /assets/{id} — get asset details + download URL
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/assets/{asset_id}",
     response_model=AssetResponse,
@@ -131,6 +135,7 @@ async def get_asset(
 # ---------------------------------------------------------------------------
 # DELETE /assets/{id} — soft-delete asset
 # ---------------------------------------------------------------------------
+
 
 @router.delete(
     "/assets/{asset_id}",
@@ -155,6 +160,7 @@ async def delete_asset(
 # ---------------------------------------------------------------------------
 # POST /assets/{id}/process — trigger processing
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/assets/{asset_id}/process",

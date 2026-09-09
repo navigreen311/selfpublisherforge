@@ -3,6 +3,7 @@
 Revision ID: 020_add_activity_log
 Revises: 019
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID

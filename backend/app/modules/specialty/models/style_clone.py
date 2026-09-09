@@ -1,4 +1,5 @@
 """SQLAlchemy models for Art Style Cloning."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -47,12 +48,8 @@ class StyleCloneProfile(TenantModel):
     # Which book type this is primarily for (optional)
     book_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
-    is_default: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     # Usage stats
     times_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")

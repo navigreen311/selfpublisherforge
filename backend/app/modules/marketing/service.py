@@ -99,15 +99,11 @@ class MarketingService:
         await self.db.flush()
         return await self.get_launch_plan(plan.id, org_id)
 
-    async def get_launch_plan(
-        self, plan_id: uuid.UUID, org_id: uuid.UUID
-    ) -> LaunchPlan | None:
+    async def get_launch_plan(self, plan_id: uuid.UUID, org_id: uuid.UUID) -> LaunchPlan | None:
         """Get a launch plan with all phases and tasks."""
         stmt = (
             select(LaunchPlan)
-            .options(
-                selectinload(LaunchPlan.phases).selectinload(LaunchPhase.tasks)
-            )
+            .options(selectinload(LaunchPlan.phases).selectinload(LaunchPhase.tasks))
             .where(
                 and_(
                     LaunchPlan.id == plan_id,
@@ -220,9 +216,7 @@ class MarketingService:
         await self.db.flush()
         return await self.get_email_sequence(sequence.id, org_id)
 
-    async def get_email_sequence(
-        self, sequence_id: uuid.UUID, org_id: uuid.UUID
-    ) -> EmailSequence | None:
+    async def get_email_sequence(self, sequence_id: uuid.UUID, org_id: uuid.UUID) -> EmailSequence | None:
         """Get an email sequence with all templates."""
         stmt = (
             select(EmailSequence)
@@ -449,9 +443,7 @@ class MarketingService:
         await self.db.flush()
         return await self.get_arc_campaign(campaign.id, org_id)
 
-    async def get_arc_campaign(
-        self, campaign_id: uuid.UUID, org_id: uuid.UUID
-    ) -> ARCCampaign | None:
+    async def get_arc_campaign(self, campaign_id: uuid.UUID, org_id: uuid.UUID) -> ARCCampaign | None:
         """Get an ARC campaign with all recipients."""
         stmt = (
             select(ARCCampaign)

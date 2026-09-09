@@ -100,9 +100,7 @@ class OrgBudget:
     monthly_budget_usd: float = 100.0
     spent_usd: float = 0.0
     period_start: datetime = field(
-        default_factory=lambda: datetime.now(UTC).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
+        default_factory=lambda: datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     )
     alert_level: BudgetAlertLevel = BudgetAlertLevel.NONE
 
@@ -175,8 +173,7 @@ class CostTracker:
                 self._redis_available = True
             except (redis.exceptions.RedisError, ConnectionError, OSError):
                 logger.warning(
-                    "Redis connection unavailable for cost tracking — "
-                    "falling back to in-memory only",
+                    "Redis connection unavailable for cost tracking — " "falling back to in-memory only",
                     exc_info=True,
                 )
                 self._redis_available = False
@@ -198,10 +195,7 @@ class CostTracker:
         if pricing is None:
             logger.warning("No pricing data for model %s, cost = 0", model_id)
             return 0.0
-        cost = (
-            (input_tokens / 1000) * pricing.input_cost_per_1k
-            + (output_tokens / 1000) * pricing.output_cost_per_1k
-        )
+        cost = (input_tokens / 1000) * pricing.input_cost_per_1k + (output_tokens / 1000) * pricing.output_cost_per_1k
         return round(cost, 6)
 
     # ------------------------------------------------------------------
@@ -307,8 +301,7 @@ class CostTracker:
             )
         except (redis.exceptions.RedisError, ConnectionError, OSError):
             logger.warning(
-                "Failed to persist cost to Redis for org=%s — "
-                "in-memory tracking continues",
+                "Failed to persist cost to Redis for org=%s — " "in-memory tracking continues",
                 org_id,
                 exc_info=True,
             )
@@ -335,13 +328,10 @@ class CostTracker:
         try:
             client = await self._get_redis()
             if client is not None:
-                return await self._get_costs_from_redis(
-                    client, org_id, start_date, end_date, model_id
-                )
+                return await self._get_costs_from_redis(client, org_id, start_date, end_date, model_id)
         except (redis.exceptions.RedisError, ConnectionError, OSError):
             logger.warning(
-                "Failed to read costs from Redis for org=%s — "
-                "falling back to in-memory",
+                "Failed to read costs from Redis for org=%s — " "falling back to in-memory",
                 org_id,
                 exc_info=True,
             )
@@ -394,13 +384,15 @@ class CostTracker:
             total_requests += day_reqs
 
             if day_cost > 0 or day_reqs > 0:
-                daily.append({
-                    "date": current.isoformat(),
-                    "cost_usd": round(day_cost, 6),
-                    "input_tokens": day_tin,
-                    "output_tokens": day_tout,
-                    "request_count": day_reqs,
-                })
+                daily.append(
+                    {
+                        "date": current.isoformat(),
+                        "cost_usd": round(day_cost, 6),
+                        "input_tokens": day_tin,
+                        "output_tokens": day_tout,
+                        "request_count": day_reqs,
+                    }
+                )
 
             current += timedelta(days=1)
 
@@ -424,17 +416,13 @@ class CostTracker:
         model_id: str | None,
     ) -> dict:
         """Aggregate cost data from the in-memory usage log."""
-        records = [
-            r
-            for r in self._usage_log
-            if r.org_id == org_id
-            and start_date <= r.created_at.date() <= end_date
-        ]
+        records = [r for r in self._usage_log if r.org_id == org_id and start_date <= r.created_at.date() <= end_date]
         if model_id:
             records = [r for r in records if r.model_id == model_id]
 
         # Group by day
         from collections import defaultdict
+
         by_day: dict[date, list[UsageRecord]] = defaultdict(list)
         for r in records:
             by_day[r.created_at.date()].append(r)
@@ -442,13 +430,15 @@ class CostTracker:
         daily: list[dict] = []
         for day in sorted(by_day.keys()):
             day_records = by_day[day]
-            daily.append({
-                "date": day.isoformat(),
-                "cost_usd": round(sum(r.cost_usd for r in day_records), 6),
-                "input_tokens": sum(r.input_tokens for r in day_records),
-                "output_tokens": sum(r.output_tokens for r in day_records),
-                "request_count": len(day_records),
-            })
+            daily.append(
+                {
+                    "date": day.isoformat(),
+                    "cost_usd": round(sum(r.cost_usd for r in day_records), 6),
+                    "input_tokens": sum(r.input_tokens for r in day_records),
+                    "output_tokens": sum(r.output_tokens for r in day_records),
+                    "request_count": len(day_records),
+                }
+            )
 
         total_cost = sum(r.cost_usd for r in records)
         total_input = sum(r.input_tokens for r in records)

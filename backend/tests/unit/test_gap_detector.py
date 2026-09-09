@@ -1,4 +1,5 @@
 """Unit tests for the gap detector module."""
+
 import pytest
 
 from app.modules.competitor_finder.gap_detector import (
@@ -14,6 +15,7 @@ from app.modules.competitor_finder.schemas import ContentGap, CoverGap, TitleGap
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_book(
     title: str = "Test Book",
@@ -44,6 +46,7 @@ def _make_book(
 # ---------------------------------------------------------------------------
 # detect_cover_gaps
 # ---------------------------------------------------------------------------
+
 
 class TestDetectCoverGaps:
     def test_empty_books_returns_empty(self):
@@ -105,6 +108,7 @@ class TestDetectCoverGaps:
 # ---------------------------------------------------------------------------
 # detect_title_gaps
 # ---------------------------------------------------------------------------
+
 
 class TestDetectTitleGaps:
     def test_empty_books_returns_empty(self):
@@ -176,6 +180,7 @@ class TestDetectTitleGaps:
 # detect_content_gaps
 # ---------------------------------------------------------------------------
 
+
 class TestDetectContentGaps:
     def test_empty_books_returns_empty(self):
         gaps = detect_content_gaps([])
@@ -244,6 +249,7 @@ class TestDetectContentGaps:
 # ---------------------------------------------------------------------------
 # run_gap_analysis (async full pipeline)
 # ---------------------------------------------------------------------------
+
 
 class TestRunGapAnalysis:
     @pytest.mark.asyncio

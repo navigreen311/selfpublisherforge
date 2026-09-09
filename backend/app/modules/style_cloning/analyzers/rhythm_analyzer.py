@@ -9,6 +9,7 @@ from typing import TypedDict
 
 class RhythmMetrics(TypedDict):
     """Rhythm analysis results."""
+
     avg_syllables_per_sentence: float
     syllable_variance: float
     sentence_length_variety_score: float
@@ -69,11 +70,7 @@ class RhythmAnalyzer:
             RhythmMetrics containing rhythm analysis
         """
         # Split into sentences
-        sentences = [
-            s.strip()
-            for s in re.split(r'[.!?]+', text)
-            if s.strip() and len(s.split()) >= 2
-        ]
+        sentences = [s.strip() for s in re.split(r"[.!?]+", text) if s.strip() and len(s.split()) >= 2]
 
         if not sentences:
             return RhythmMetrics(
@@ -98,15 +95,11 @@ class RhythmAnalyzer:
         variety_score = (std_words / avg_words) if avg_words > 0 else 0.0
 
         # Paragraph rhythm (split by double newlines)
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
         if paragraphs:
             para_sentence_counts = []
             for para in paragraphs:
-                para_sentences = [
-                    s.strip()
-                    for s in re.split(r'[.!?]+', para)
-                    if s.strip() and len(s.split()) >= 2
-                ]
+                para_sentences = [s.strip() for s in re.split(r"[.!?]+", para) if s.strip() and len(s.split()) >= 2]
                 para_sentence_counts.append(len(para_sentences))
 
             # Paragraph rhythm: consistency in paragraph length

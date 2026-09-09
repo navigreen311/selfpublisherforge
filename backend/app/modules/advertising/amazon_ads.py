@@ -102,12 +102,7 @@ class AmazonAdsClient:
         that require Amazon Ads API access.  When credentials are missing,
         action methods will raise ``AmazonAdsNotConfiguredError``.
         """
-        return bool(
-            self.client_id
-            and self.client_secret
-            and self.refresh_token
-            and self.profile_id
-        )
+        return bool(self.client_id and self.client_secret and self.refresh_token and self.profile_id)
 
     # Keep the private alias for internal backward-compatibility
     @property
@@ -161,10 +156,7 @@ class AmazonAdsClient:
 
     async def _ensure_auth(self) -> None:
         """Ensure we have a valid access token."""
-        if not self._access_token or (
-            self._token_expiry
-            and datetime.now(UTC) >= self._token_expiry
-        ):
+        if not self._access_token or (self._token_expiry and datetime.now(UTC) >= self._token_expiry):
             await self._refresh_access_token()
 
     async def _rate_limit_wait(self) -> None:
@@ -215,10 +207,15 @@ class AmazonAdsClient:
             # Retry on 429 or 5xx errors with exponential backoff
             if response.status_code == 429 or response.status_code >= 500:
                 if attempt < max_attempts - 1:
-                    backoff = 2 ** attempt  # 1s, 2s
+                    backoff = 2**attempt  # 1s, 2s
                     logger.warning(
                         "Amazon Ads API %s %s returned %s, retrying in %ss (attempt %d/%d)",
-                        method, url, response.status_code, backoff, attempt + 1, max_attempts,
+                        method,
+                        url,
+                        response.status_code,
+                        backoff,
+                        attempt + 1,
+                        max_attempts,
                     )
                     await asyncio.sleep(backoff)
                     continue
@@ -361,15 +358,11 @@ class AmazonAdsClient:
 
     async def pause_campaign(self, external_campaign_id: str) -> dict:
         """Pause an Amazon Ads campaign."""
-        return await self.update_campaign(
-            external_campaign_id, {"status": "paused"}
-        )
+        return await self.update_campaign(external_campaign_id, {"status": "paused"})
 
     async def resume_campaign(self, external_campaign_id: str) -> dict:
         """Resume a paused Amazon Ads campaign."""
-        return await self.update_campaign(
-            external_campaign_id, {"status": "enabled"}
-        )
+        return await self.update_campaign(external_campaign_id, {"status": "enabled"})
 
     # ─── Keyword & Bid Management ────────────────────────────────────────
 
@@ -382,9 +375,7 @@ class AmazonAdsClient:
 
         Each keyword dict should have: keyword, match_type, bid
         """
-        logger.info(
-            f"Adding {len(keywords)} keywords to campaign {external_campaign_id}"
-        )
+        logger.info(f"Adding {len(keywords)} keywords to campaign {external_campaign_id}")
         self._require_configured("add_keywords")
 
         sp_keywords = [
@@ -413,23 +404,27 @@ class AmazonAdsClient:
                 # Correlate response items by position
                 if i < len(successes):
                     entry = successes[i]
-                    results.append({
-                        "keyword": kw["keyword"],
-                        "match_type": kw.get("match_type", "broad"),
-                        "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
-                        "status": "enabled",
-                        "external_keyword_id": str(entry.get("keywordId", "")),
-                    })
+                    results.append(
+                        {
+                            "keyword": kw["keyword"],
+                            "match_type": kw.get("match_type", "broad"),
+                            "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
+                            "status": "enabled",
+                            "external_keyword_id": str(entry.get("keywordId", "")),
+                        }
+                    )
                 else:
                     error_entry = errors[i - len(successes)] if (i - len(successes)) < len(errors) else {}
-                    results.append({
-                        "keyword": kw["keyword"],
-                        "match_type": kw.get("match_type", "broad"),
-                        "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
-                        "status": "error",
-                        "external_keyword_id": None,
-                        "error": str(error_entry),
-                    })
+                    results.append(
+                        {
+                            "keyword": kw["keyword"],
+                            "match_type": kw.get("match_type", "broad"),
+                            "bid": kw.get("bid", DEFAULT_BID_AMOUNT),
+                            "status": "error",
+                            "external_keyword_id": None,
+                            "error": str(error_entry),
+                        }
+                    )
             return results
 
         except AmazonAdsError as exc:
@@ -455,9 +450,7 @@ class AmazonAdsClient:
 
         Each bid_update dict should have: external_keyword_id, bid
         """
-        logger.info(
-            f"Updating {len(bid_updates)} keyword bids for campaign {external_campaign_id}"
-        )
+        logger.info(f"Updating {len(bid_updates)} keyword bids for campaign {external_campaign_id}")
         self._require_configured("update_keyword_bids")
 
         sp_updates = [
@@ -480,11 +473,13 @@ class AmazonAdsClient:
             results: list[dict] = []
             success_ids = {str(s.get("keywordId", "")) for s in successes}
             for update in bid_updates:
-                results.append({
-                    "external_keyword_id": update["external_keyword_id"],
-                    "new_bid": update["bid"],
-                    "updated": update["external_keyword_id"] in success_ids,
-                })
+                results.append(
+                    {
+                        "external_keyword_id": update["external_keyword_id"],
+                        "new_bid": update["bid"],
+                        "updated": update["external_keyword_id"] in success_ids,
+                    }
+                )
             return results
 
         except AmazonAdsError as exc:
@@ -505,9 +500,7 @@ class AmazonAdsClient:
         keywords: list[str],
     ) -> list[dict]:
         """Add negative keywords to a campaign."""
-        logger.info(
-            f"Adding {len(keywords)} negative keywords to campaign {external_campaign_id}"
-        )
+        logger.info(f"Adding {len(keywords)} negative keywords to campaign {external_campaign_id}")
         self._require_configured("add_negative_keywords")
 
         neg_keywords = [
@@ -532,18 +525,22 @@ class AmazonAdsClient:
             results: list[dict] = []
             for i, kw in enumerate(keywords):
                 if i < len(successes):
-                    results.append({
-                        "keyword": kw,
-                        "match_type": "negative_exact",
-                        "status": "enabled",
-                        "external_keyword_id": str(successes[i].get("keywordId", "")),
-                    })
+                    results.append(
+                        {
+                            "keyword": kw,
+                            "match_type": "negative_exact",
+                            "status": "enabled",
+                            "external_keyword_id": str(successes[i].get("keywordId", "")),
+                        }
+                    )
                 else:
-                    results.append({
-                        "keyword": kw,
-                        "match_type": "negative_exact",
-                        "status": "error",
-                    })
+                    results.append(
+                        {
+                            "keyword": kw,
+                            "match_type": "negative_exact",
+                            "status": "error",
+                        }
+                    )
             return results
 
         except AmazonAdsError as exc:
@@ -626,15 +623,18 @@ class AmazonAdsClient:
         Returns aggregated metrics for the date range.
         """
         default_metrics = [
-            "impressions", "clicks", "cost", "sales",
-            "acos", "roas", "ctr", "cpc",
+            "impressions",
+            "clicks",
+            "cost",
+            "sales",
+            "acos",
+            "roas",
+            "ctr",
+            "cpc",
         ]
         requested_metrics = metrics or default_metrics
 
-        logger.info(
-            f"Fetching report for {external_campaign_id} "
-            f"from {start_date} to {end_date}"
-        )
+        logger.info(f"Fetching report for {external_campaign_id} " f"from {start_date} to {end_date}")
         self._require_configured("get_campaign_report")
 
         # Amazon Advertising v3 reporting API column names
@@ -714,9 +714,7 @@ class AmazonAdsClient:
         end_date: str,
     ) -> list[dict]:
         """Fetch keyword-level performance report."""
-        logger.info(
-            f"Fetching keyword report for {external_campaign_id}"
-        )
+        logger.info(f"Fetching keyword report for {external_campaign_id}")
         self._require_configured("get_keyword_report")
 
         report_payload = {
@@ -757,19 +755,21 @@ class AmazonAdsClient:
             rows = report_data if isinstance(report_data, list) else report_data.get("rows", [])
             results: list[dict] = []
             for row in rows:
-                results.append({
-                    "external_keyword_id": str(row.get("keywordId", "")),
-                    "keyword": row.get("keywordText", ""),
-                    "match_type": str(row.get("matchType", "")).lower(),
-                    "impressions": int(row.get("impressions", 0)),
-                    "clicks": int(row.get("clicks", 0)),
-                    "spend": float(row.get("cost", 0)),
-                    "sales": float(row.get("sales14d", 0)),
-                    "acos": float(row.get("acosClicks14d", 0)),
-                    "roas": float(row.get("roasClicks14d", 0)),
-                    "ctr": float(row.get("clickThroughRate", 0)),
-                    "cpc": float(row.get("costPerClick", 0)),
-                })
+                results.append(
+                    {
+                        "external_keyword_id": str(row.get("keywordId", "")),
+                        "keyword": row.get("keywordText", ""),
+                        "match_type": str(row.get("matchType", "")).lower(),
+                        "impressions": int(row.get("impressions", 0)),
+                        "clicks": int(row.get("clicks", 0)),
+                        "spend": float(row.get("cost", 0)),
+                        "sales": float(row.get("sales14d", 0)),
+                        "acos": float(row.get("acosClicks14d", 0)),
+                        "roas": float(row.get("roasClicks14d", 0)),
+                        "ctr": float(row.get("clickThroughRate", 0)),
+                        "cpc": float(row.get("costPerClick", 0)),
+                    }
+                )
             return results
 
         except AmazonAdsError as exc:
@@ -783,9 +783,7 @@ class AmazonAdsClient:
         end_date: str,
     ) -> list[dict]:
         """Fetch search term report to discover new keyword opportunities."""
-        logger.info(
-            f"Fetching search term report for {external_campaign_id}"
-        )
+        logger.info(f"Fetching search term report for {external_campaign_id}")
         self._require_configured("get_search_term_report")
 
         report_payload = {
@@ -825,18 +823,20 @@ class AmazonAdsClient:
             rows = report_data if isinstance(report_data, list) else report_data.get("rows", [])
             results: list[dict] = []
             for row in rows:
-                results.append({
-                    "search_term": row.get("searchTerm", ""),
-                    "keyword": row.get("keywordText", ""),
-                    "external_keyword_id": str(row.get("keywordId", "")),
-                    "impressions": int(row.get("impressions", 0)),
-                    "clicks": int(row.get("clicks", 0)),
-                    "spend": float(row.get("cost", 0)),
-                    "sales": float(row.get("sales14d", 0)),
-                    "acos": float(row.get("acosClicks14d", 0)),
-                    "ctr": float(row.get("clickThroughRate", 0)),
-                    "cpc": float(row.get("costPerClick", 0)),
-                })
+                results.append(
+                    {
+                        "search_term": row.get("searchTerm", ""),
+                        "keyword": row.get("keywordText", ""),
+                        "external_keyword_id": str(row.get("keywordId", "")),
+                        "impressions": int(row.get("impressions", 0)),
+                        "clicks": int(row.get("clicks", 0)),
+                        "spend": float(row.get("cost", 0)),
+                        "sales": float(row.get("sales14d", 0)),
+                        "acos": float(row.get("acosClicks14d", 0)),
+                        "ctr": float(row.get("clickThroughRate", 0)),
+                        "cpc": float(row.get("costPerClick", 0)),
+                    }
+                )
             return results
 
         except AmazonAdsError as exc:

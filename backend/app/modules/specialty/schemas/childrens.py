@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for the Children's Book Studio."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -16,10 +17,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class AgeRange(str, Enum):
     """Target age range for a children's book."""
 
-    BOARD = "board"          # 0-3, 10-16 pages
-    PICTURE = "picture"      # 3-5, 24-32 pages
+    BOARD = "board"  # 0-3, 10-16 pages
+    PICTURE = "picture"  # 3-5, 24-32 pages
     EARLY_READER = "early-reader"  # 5-8, 32-48 pages
-    CHAPTER = "chapter"      # 8-12, 48-80 pages
+    CHAPTER = "chapter"  # 8-12, 48-80 pages
 
 
 class IllustrationStyle(str, Enum):
@@ -125,9 +126,7 @@ class ChildrensBookCreate(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=300, description="Book title")
     subtitle: str | None = Field(None, max_length=300, description="Optional subtitle")
-    author: str = Field(
-        ..., min_length=1, max_length=200, description="Author or pen name"
-    )
+    author: str = Field(..., min_length=1, max_length=200, description="Author or pen name")
     age_range: AgeRange = Field(..., description="Target age range")
     page_count: int = Field(
         ...,
@@ -140,9 +139,7 @@ class ChildrensBookCreate(BaseModel):
         max_length=20,
         description="Trim size, e.g. '8.5x8.5', '8.5x11', '10x8', '6x9'",
     )
-    illustration_style: IllustrationStyle = Field(
-        ..., description="Visual illustration style"
-    )
+    illustration_style: IllustrationStyle = Field(..., description="Visual illustration style")
     color_palette: ColorPalette = Field(..., description="Color palette for illustrations")
     story_mode: StoryMode = Field(..., description="Story writing mode")
     is_bilingual: bool = Field(False, description="Whether this is a bilingual edition")
@@ -214,25 +211,15 @@ class PageCreate(BaseModel):
 
     page_number: int = Field(..., ge=1, description="Page position in the book")
     page_type: PageType = Field(PageType.STORY, description="Type of page")
-    layout: PageLayout = Field(
-        PageLayout.TOP_IMAGE_BOTTOM_TEXT, description="Page layout"
-    )
+    layout: PageLayout = Field(PageLayout.TOP_IMAGE_BOTTOM_TEXT, description="Page layout")
     text_content: str | None = Field(None, max_length=5000, description="Text on the page")
-    translated_text: str | None = Field(
-        None, max_length=5000, description="Translated text for bilingual editions"
-    )
+    translated_text: str | None = Field(None, max_length=5000, description="Translated text for bilingual editions")
     text_font: str | None = Field(None, max_length=100, description="Font family name")
     text_size: int | None = Field(None, ge=10, le=72, description="Font size in points")
-    text_color: str | None = Field(
-        None, max_length=20, description="Text color as hex code"
-    )
+    text_color: str | None = Field(None, max_length=20, description="Text color as hex code")
     text_position: TextPosition | None = Field(None, description="Text vertical position")
-    text_plate_enabled: bool = Field(
-        False, description="Add a subtle background plate behind text for contrast"
-    )
-    illustration_prompt: str | None = Field(
-        None, max_length=2000, description="AI illustration generation prompt"
-    )
+    text_plate_enabled: bool = Field(False, description="Add a subtle background plate behind text for contrast")
+    illustration_prompt: str | None = Field(None, max_length=2000, description="AI illustration generation prompt")
 
 
 class PageUpdate(BaseModel):
@@ -281,9 +268,7 @@ class PageResponse(BaseModel):
 class PageReorderRequest(BaseModel):
     """Reorder pages by providing the new sequence of page IDs."""
 
-    page_ids: list[UUID] = Field(
-        ..., min_length=1, description="Ordered list of page IDs in desired sequence"
-    )
+    page_ids: list[UUID] = Field(..., min_length=1, description="Ordered list of page IDs in desired sequence")
 
 
 # ---------------------------------------------------------------------------
@@ -295,18 +280,14 @@ class CharacterCreate(BaseModel):
     """Create a character consistency sheet."""
 
     name: str = Field(..., min_length=1, max_length=100, description="Character name")
-    species: str | None = Field(
-        None, max_length=100, description="Species or type, e.g. 'orange tabby kitten'"
-    )
+    species: str | None = Field(None, max_length=100, description="Species or type, e.g. 'orange tabby kitten'")
     description: str = Field(
         ...,
         min_length=1,
         max_length=2000,
         description="Detailed visual description appended to illustration prompts",
     )
-    auto_append: bool = Field(
-        True, description="Auto-append this description to every page's illustration prompt"
-    )
+    auto_append: bool = Field(True, description="Auto-append this description to every page's illustration prompt")
     clothing_rules: dict[str, Any] = Field(
         default_factory=dict,
         description="What the character always wears, e.g. {'collar': 'red with gold bell'}",
@@ -370,12 +351,8 @@ class GenerateStoryRequest(BaseModel):
     """Request AI generation of a full children's story."""
 
     age_range: AgeRange = Field(..., description="Target age range for vocabulary and length")
-    story_prompt: str = Field(
-        ..., min_length=1, max_length=2000, description="Story idea or prompt"
-    )
-    theme: str | None = Field(
-        None, max_length=200, description="Theme or moral, e.g. 'Courage'"
-    )
+    story_prompt: str = Field(..., min_length=1, max_length=2000, description="Story idea or prompt")
+    theme: str | None = Field(None, max_length=200, description="Theme or moral, e.g. 'Courage'")
     main_character: str | None = Field(
         None,
         max_length=200,
@@ -399,9 +376,7 @@ class StoryPageContent(BaseModel):
 
     page_number: int = Field(..., ge=1)
     text: str = Field(..., description="Story text for this page")
-    illustration_prompt: str = Field(
-        ..., description="AI illustration prompt for this page"
-    )
+    illustration_prompt: str = Field(..., description="AI illustration prompt for this page")
 
 
 class CharacterSheet(BaseModel):
@@ -422,24 +397,16 @@ class LanguageReport(BaseModel):
     max_word_length: int
     vocabulary_level: str
     total_word_count: int
-    issues: list[str] = Field(
-        default_factory=list, description="Language issues found"
-    )
+    issues: list[str] = Field(default_factory=list, description="Language issues found")
     passed: bool
 
 
 class StoryGenerationResponse(BaseModel):
     """Full AI-generated story with illustration prompts and metadata."""
 
-    pages: list[StoryPageContent] = Field(
-        ..., description="Story content split across pages with illustration prompts"
-    )
-    character_sheet: CharacterSheet | None = Field(
-        None, description="Auto-generated character description sheet"
-    )
-    language_report: LanguageReport | None = Field(
-        None, description="Age-band language compliance report"
-    )
+    pages: list[StoryPageContent] = Field(..., description="Story content split across pages with illustration prompts")
+    character_sheet: CharacterSheet | None = Field(None, description="Auto-generated character description sheet")
+    language_report: LanguageReport | None = Field(None, description="Age-band language compliance report")
 
 
 # ---------------------------------------------------------------------------
@@ -450,12 +417,8 @@ class StoryGenerationResponse(BaseModel):
 class AnalyzeTextRequest(BaseModel):
     """Analyze text readability and pacing for a children's book."""
 
-    book_id: UUID | None = Field(
-        None, description="Book ID to analyze (uses all pages). Mutually exclusive with text."
-    )
-    text: str | None = Field(
-        None, max_length=50000, description="Raw text to analyze (alternative to book_id)"
-    )
+    book_id: UUID | None = Field(None, description="Book ID to analyze (uses all pages). Mutually exclusive with text.")
+    text: str | None = Field(None, max_length=50000, description="Raw text to analyze (alternative to book_id)")
     age_range: AgeRange = Field(..., description="Target age range for scoring")
 
 
@@ -476,27 +439,17 @@ class PageTurnEvent(BaseModel):
     """A page-turn moment with pacing metadata."""
 
     page_number: int
-    surprise_score: float = Field(
-        ..., ge=0, le=100, description="How surprising the page turn is"
-    )
+    surprise_score: float = Field(..., ge=0, le=100, description="How surprising the page turn is")
     is_reveal_moment: bool = Field(..., description="True if this is a story reveal")
 
 
 class TextAnalysisResponse(BaseModel):
     """Readability and pacing analysis result."""
 
-    readability_score: float = Field(
-        ..., ge=0, le=100, description="Overall readability score for target age range"
-    )
-    rhythm_score: float = Field(
-        ..., ge=0, le=100, description="Read-aloud rhythm score"
-    )
-    issues: list[TextIssue] = Field(
-        default_factory=list, description="Readability and pacing issues"
-    )
-    page_turn_map: list[PageTurnEvent] = Field(
-        default_factory=list, description="Page-turn surprise and pacing map"
-    )
+    readability_score: float = Field(..., ge=0, le=100, description="Overall readability score for target age range")
+    rhythm_score: float = Field(..., ge=0, le=100, description="Read-aloud rhythm score")
+    issues: list[TextIssue] = Field(default_factory=list, description="Readability and pacing issues")
+    page_turn_map: list[PageTurnEvent] = Field(default_factory=list, description="Page-turn surprise and pacing map")
     total_word_count: int = Field(..., ge=0)
     look_inside_hook_score: float | None = Field(
         None, ge=0, le=100, description="Hook strength of the first 10% (Amazon preview)"
@@ -531,12 +484,8 @@ class ContinuityIssue(BaseModel):
 class ContinuityReport(BaseModel):
     """Continuity check results."""
 
-    issues: list[ContinuityIssue] = Field(
-        default_factory=list, description="All continuity issues found"
-    )
-    auto_fixable_count: int = Field(
-        0, ge=0, description="Number of issues that can be auto-fixed"
-    )
+    issues: list[ContinuityIssue] = Field(default_factory=list, description="All continuity issues found")
+    auto_fixable_count: int = Field(0, ge=0, description="Number of issues that can be auto-fixed")
     total_pages_checked: int = Field(0, ge=0)
     total_characters_checked: int = Field(0, ge=0)
 
@@ -556,9 +505,7 @@ class TrademarkIssue(BaseModel):
     """A trademark safety issue."""
 
     page_number: int | None = None
-    location: str = Field(
-        ..., description="Where the issue was found: 'prompt', 'text', 'title'"
-    )
+    location: str = Field(..., description="Where the issue was found: 'prompt', 'text', 'title'")
     flagged_term: str = Field(..., description="The trademarked term detected")
     severity: str = Field(..., description="'warning' or 'block'")
     suggestion: str | None = None
@@ -581,9 +528,7 @@ class SafetyReport(BaseModel):
 
     trademark_issues: list[TrademarkIssue] = Field(default_factory=list)
     content_issues: list[ContentIssue] = Field(default_factory=list)
-    overall_safe: bool = Field(
-        ..., description="True if no blocking issues were found"
-    )
+    overall_safe: bool = Field(..., description="True if no blocking issues were found")
     font_license_ok: bool = Field(True, description="True if all fonts are commercially licensed")
 
 
@@ -596,13 +541,9 @@ class TranslateRequest(BaseModel):
     """Generate bilingual translation for a book."""
 
     book_id: UUID
-    target_language: str = Field(
-        ..., min_length=2, max_length=50, description="Target language code or name"
-    )
+    target_language: str = Field(..., min_length=2, max_length=50, description="Target language code or name")
     layout: BilingualLayout = Field(..., description="Layout mode for bilingual text")
-    cultural_adaptation: bool = Field(
-        True, description="Apply cultural adaptation beyond literal translation"
-    )
+    cultural_adaptation: bool = Field(True, description="Apply cultural adaptation beyond literal translation")
 
 
 class TranslateResponse(BaseModel):
@@ -611,12 +552,8 @@ class TranslateResponse(BaseModel):
     pages_translated: int = Field(..., ge=0)
     target_language: str
     layout: BilingualLayout
-    language_report: LanguageReport | None = Field(
-        None, description="Reading level validation in target language"
-    )
-    issues: list[str] = Field(
-        default_factory=list, description="Translation issues or warnings"
-    )
+    language_report: LanguageReport | None = Field(None, description="Reading level validation in target language")
+    issues: list[str] = Field(default_factory=list, description="Translation issues or warnings")
 
 
 # ---------------------------------------------------------------------------
@@ -630,12 +567,8 @@ class ExportRequest(BaseModel):
     format: ExportFormat = Field(..., description="Export format")
     dpi: int = Field(300, ge=72, le=600, description="Output resolution")
     include_bleed: bool = Field(True, description="Include bleed area")
-    color_profile: str | None = Field(
-        None, description="Color profile, e.g. 'sRGB', 'CMYK'"
-    )
-    include_provenance_report: bool = Field(
-        True, description="Include asset provenance report with export"
-    )
+    color_profile: str | None = Field(None, description="Color profile, e.g. 'sRGB', 'CMYK'")
+    include_provenance_report: bool = Field(True, description="Include asset provenance report with export")
 
 
 class ExportResponse(BaseModel):
@@ -644,9 +577,7 @@ class ExportResponse(BaseModel):
     url: str = Field(..., description="Download URL for the exported file")
     format: ExportFormat
     file_size_bytes: int | None = None
-    preflight_report: dict[str, Any] | None = Field(
-        None, description="Summary of preflight checks run during export"
-    )
+    preflight_report: dict[str, Any] | None = Field(None, description="Summary of preflight checks run during export")
 
 
 # ---------------------------------------------------------------------------
@@ -659,21 +590,15 @@ class DevicePreviewRequest(BaseModel):
 
     book_id: UUID
     device: DeviceType = Field(..., description="Target device for preview")
-    pages: list[int] | None = Field(
-        None, description="Specific page numbers to preview; None = all pages"
-    )
+    pages: list[int] | None = Field(None, description="Specific page numbers to preview; None = all pages")
 
 
 class DevicePreviewResponse(BaseModel):
     """Device preview result."""
 
     device: DeviceType
-    preview_urls: list[str] = Field(
-        ..., description="URLs of preview images per page"
-    )
-    hook_score: float | None = Field(
-        None, ge=0, le=100, description="Look Inside hook score for this device"
-    )
+    preview_urls: list[str] = Field(..., description="URLs of preview images per page")
+    hook_score: float | None = Field(None, ge=0, le=100, description="Look Inside hook score for this device")
 
 
 # ---------------------------------------------------------------------------
@@ -688,9 +613,7 @@ class PreflightCheck(BaseModel):
     passed: bool
     severity: str = Field(..., description="'info', 'warning', or 'error'")
     message: str = Field(..., description="Human-readable result message")
-    details: dict[str, Any] = Field(
-        default_factory=dict, description="Additional check-specific details"
-    )
+    details: dict[str, Any] = Field(default_factory=dict, description="Additional check-specific details")
 
 
 class PreflightRequest(BaseModel):
@@ -702,12 +625,8 @@ class PreflightRequest(BaseModel):
 class PreflightReport(BaseModel):
     """Full preflight check report."""
 
-    checks: list[PreflightCheck] = Field(
-        ..., description="Individual check results"
-    )
-    passed: bool = Field(
-        ..., description="True if all critical checks passed"
-    )
+    checks: list[PreflightCheck] = Field(..., description="Individual check results")
+    passed: bool = Field(..., description="True if all critical checks passed")
     issues: list[str] = Field(
         default_factory=list,
         description="Summary of issues found (warnings + errors)",

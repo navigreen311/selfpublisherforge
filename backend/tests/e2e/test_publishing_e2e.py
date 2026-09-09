@@ -40,6 +40,7 @@ VALID_PASSWORD = "StrongP@ss1"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _register(
     client: AsyncClient,
     email: str = "pub-e2e@test.com",
@@ -177,14 +178,13 @@ async def _create_listing_in_db(
 # E2E: Create project -> add listing -> publish flow
 # ---------------------------------------------------------------------------
 
+
 class TestCreateProjectAddListingPublish:
     """Full flow: register, create a project+book, create a publishing
     account, add a listing, and exercise listing retrieval and sync."""
 
     @pytest.mark.asyncio
-    async def test_full_publishing_flow(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_full_publishing_flow(self, client: AsyncClient, db_session: AsyncSession):
         # 1. Register + login -> get token
         email = "pub-flow-1@test.com"
         token, org_id = await _register_and_get_token(client, email)
@@ -233,9 +233,7 @@ class TestCreateProjectAddListingPublish:
         assert sync_data["status"] in ("sync_queued",)
 
     @pytest.mark.asyncio
-    async def test_publishing_account_lifecycle(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_publishing_account_lifecycle(self, client: AsyncClient, db_session: AsyncSession):
         """Create an account, list it, then delete it."""
         email = "pub-acct-lifecycle@test.com"
         token, _org_id = await _register_and_get_token(client, email)
@@ -275,13 +273,12 @@ class TestCreateProjectAddListingPublish:
 # E2E: Multiple listings for one project
 # ---------------------------------------------------------------------------
 
+
 class TestMultipleListingsForOneProject:
     """Create a project with multiple listings across different platforms."""
 
     @pytest.mark.asyncio
-    async def test_multiple_listings_same_book(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_multiple_listings_same_book(self, client: AsyncClient, db_session: AsyncSession):
         email = "multi-listing@test.com"
         token, org_id = await _register_and_get_token(client, email)
 
@@ -295,9 +292,7 @@ class TestMultipleListingsForOneProject:
         kdp_account_id = uuid.UUID(kdp_account["id"])
 
         # Create a second publishing account via API (for a different listing)
-        is_account = await _create_publishing_account_via_api(
-            client, token, platform="kdp", account_name="IS Account"
-        )
+        is_account = await _create_publishing_account_via_api(client, token, platform="kdp", account_name="IS Account")
         is_account_id = uuid.UUID(is_account["id"])
 
         # Create KDP listing (via DB)
@@ -341,13 +336,12 @@ class TestMultipleListingsForOneProject:
 # E2E: Listing status transitions
 # ---------------------------------------------------------------------------
 
+
 class TestListingStatusTransitions:
     """Verify that listing status can transition from draft to other states."""
 
     @pytest.mark.asyncio
-    async def test_listing_created_as_draft(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_listing_created_as_draft(self, client: AsyncClient, db_session: AsyncSession):
         """A newly created listing should have 'draft' status."""
         email = "status-draft@test.com"
         token, org_id = await _register_and_get_token(client, email)
@@ -375,9 +369,7 @@ class TestListingStatusTransitions:
         assert found[0]["status"] == "draft"
 
     @pytest.mark.asyncio
-    async def test_listing_status_changes_to_pending(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_listing_status_changes_to_pending(self, client: AsyncClient, db_session: AsyncSession):
         """Update a listing's status to 'pending' via DB and verify it's
         reflected when queried through the API."""
         email = "status-pending@test.com"
@@ -397,11 +389,7 @@ class TestListingStatusTransitions:
         # Transition status to pending via DB (no update API for listings yet)
         from sqlalchemy import update
 
-        stmt = (
-            update(Listing)
-            .where(Listing.id == listing_id)
-            .values(status=ListingStatusEnum.PENDING)
-        )
+        stmt = update(Listing).where(Listing.id == listing_id).values(status=ListingStatusEnum.PENDING)
         await db_session.execute(stmt)
         await db_session.flush()
 
@@ -417,9 +405,7 @@ class TestListingStatusTransitions:
         assert found[0]["status"] == "pending"
 
     @pytest.mark.asyncio
-    async def test_listing_status_live_via_db(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_listing_status_live_via_db(self, client: AsyncClient, db_session: AsyncSession):
         """Verify a listing with 'live' status is correctly reported by the API."""
         email = "status-live@test.com"
         token, org_id = await _register_and_get_token(client, email)
@@ -449,9 +435,7 @@ class TestListingStatusTransitions:
         assert found[0]["status"] == "live"
 
     @pytest.mark.asyncio
-    async def test_listing_sync_returns_queued(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_listing_sync_returns_queued(self, client: AsyncClient, db_session: AsyncSession):
         """Syncing a listing returns 'sync_queued' regardless of Celery
         broker availability (either dispatched or inline fallback)."""
         email = "status-sync@test.com"
@@ -483,13 +467,12 @@ class TestListingStatusTransitions:
 # E2E: Delete listing (soft-delete)
 # ---------------------------------------------------------------------------
 
+
 class TestDeleteListing:
     """Verify that soft-deleting a listing hides it from the API."""
 
     @pytest.mark.asyncio
-    async def test_soft_deleted_listing_not_returned(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_soft_deleted_listing_not_returned(self, client: AsyncClient, db_session: AsyncSession):
         """After soft-deleting a listing via DB, the API should no longer
         return it in the listings list."""
         email = "del-listing@test.com"
@@ -520,11 +503,7 @@ class TestDeleteListing:
 
         from sqlalchemy import update
 
-        stmt = (
-            update(Listing)
-            .where(Listing.id == listing_id)
-            .values(deleted_at=datetime.now(UTC))
-        )
+        stmt = update(Listing).where(Listing.id == listing_id).values(deleted_at=datetime.now(UTC))
         await db_session.execute(stmt)
         await db_session.flush()
 
@@ -538,9 +517,7 @@ class TestDeleteListing:
         assert len(found_after) == 0
 
     @pytest.mark.asyncio
-    async def test_sync_deleted_listing_returns_not_found(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_sync_deleted_listing_returns_not_found(self, client: AsyncClient, db_session: AsyncSession):
         """Syncing a soft-deleted listing should return a 'not_found' status."""
         email = "del-sync@test.com"
         token, org_id = await _register_and_get_token(client, email)
@@ -561,11 +538,7 @@ class TestDeleteListing:
 
         from sqlalchemy import update
 
-        stmt = (
-            update(Listing)
-            .where(Listing.id == listing_id)
-            .values(deleted_at=datetime.now(UTC))
-        )
+        stmt = update(Listing).where(Listing.id == listing_id).values(deleted_at=datetime.now(UTC))
         await db_session.execute(stmt)
         await db_session.flush()
 
@@ -583,13 +556,12 @@ class TestDeleteListing:
 # E2E: Book metadata flow
 # ---------------------------------------------------------------------------
 
+
 class TestBookMetadataFlow:
     """Create a book, then update and retrieve its metadata via the API."""
 
     @pytest.mark.asyncio
-    async def test_update_and_get_metadata(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_update_and_get_metadata(self, client: AsyncClient, db_session: AsyncSession):
         email = "metadata@test.com"
         token, org_id = await _register_and_get_token(client, email)
 
@@ -634,13 +606,12 @@ class TestBookMetadataFlow:
 # E2E: Formatting templates flow
 # ---------------------------------------------------------------------------
 
+
 class TestFormattingTemplatesFlow:
     """Create custom templates and list them alongside built-in ones."""
 
     @pytest.mark.asyncio
-    async def test_create_and_list_templates(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_create_and_list_templates(self, client: AsyncClient, db_session: AsyncSession):
         email = "templates@test.com"
         token, _org_id = await _register_and_get_token(client, email)
 
@@ -686,13 +657,12 @@ class TestFormattingTemplatesFlow:
 # E2E: Delete nonexistent account returns 404
 # ---------------------------------------------------------------------------
 
+
 class TestPublishingAccountErrors:
     """Verify error handling for publishing account operations."""
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_account_returns_404(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_delete_nonexistent_account_returns_404(self, client: AsyncClient, db_session: AsyncSession):
         email = "acct-err@test.com"
         token, _org_id = await _register_and_get_token(client, email)
 
@@ -705,7 +675,8 @@ class TestPublishingAccountErrors:
 
     @pytest.mark.asyncio
     async def test_unauthenticated_listing_access_rejected(
-        self, client: AsyncClient,
+        self,
+        client: AsyncClient,
     ):
         """Accessing listings without a token should be rejected."""
         resp = await client.get(f"{PUB_PREFIX}/listings")

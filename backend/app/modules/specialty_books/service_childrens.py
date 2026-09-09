@@ -48,9 +48,7 @@ async def create_childrens_book(
     if hasattr(age_range, "value"):
         age_range = age_range.value
     if age_range not in VALID_AGE_RANGES:
-        raise ValueError(
-            f"Invalid age_range '{age_range}'. Must be one of: {', '.join(sorted(VALID_AGE_RANGES))}"
-        )
+        raise ValueError(f"Invalid age_range '{age_range}'. Must be one of: {', '.join(sorted(VALID_AGE_RANGES))}")
 
     def _val(v):
         return v.value if hasattr(v, "value") else v
@@ -113,11 +111,27 @@ async def update_childrens_book(
     if not book:
         return None
     updatable = {
-        "title", "subtitle", "author", "age_range", "trim_size",
-        "illustration_style", "color_palette", "story_mode", "creation_mode",
-        "theme_moral", "main_character", "setting", "tone",
-        "is_bilingual", "bilingual_language", "bilingual_layout",
-        "fear_intensity", "safety_settings", "page_count", "description", "status",
+        "title",
+        "subtitle",
+        "author",
+        "age_range",
+        "trim_size",
+        "illustration_style",
+        "color_palette",
+        "story_mode",
+        "creation_mode",
+        "theme_moral",
+        "main_character",
+        "setting",
+        "tone",
+        "is_bilingual",
+        "bilingual_language",
+        "bilingual_layout",
+        "fear_intensity",
+        "safety_settings",
+        "page_count",
+        "description",
+        "status",
     }
     for field, value in data.items():
         if field in updatable and value is not None:
@@ -210,9 +224,20 @@ async def update_page(db: AsyncSession, book_id: uuid.UUID, page_id: uuid.UUID, 
     if not page:
         return None
     updatable = {
-        "page_number", "page_type", "layout", "text_content", "translated_text",
-        "illustration_prompt", "illustration_url", "illustration_model", "illustration_seed",
-        "text_font", "text_size", "text_color", "text_position", "text_plate_enabled",
+        "page_number",
+        "page_type",
+        "layout",
+        "text_content",
+        "translated_text",
+        "illustration_prompt",
+        "illustration_url",
+        "illustration_model",
+        "illustration_seed",
+        "text_font",
+        "text_size",
+        "text_color",
+        "text_position",
+        "text_plate_enabled",
     }
     for field, value in data.items():
         if field in updatable and value is not None:
@@ -267,9 +292,7 @@ async def reorder_pages(db: AsyncSession, book_id: uuid.UUID, org_id: uuid.UUID,
     return list(result.scalars().all())
 
 
-async def upload_page_image(
-    db: AsyncSession, book_id: uuid.UUID, page_id: uuid.UUID, org_id: uuid.UUID, file_url: str
-):
+async def upload_page_image(db: AsyncSession, book_id: uuid.UUID, page_id: uuid.UUID, org_id: uuid.UUID, file_url: str):
     book = await _verify_book_ownership(db, book_id, org_id)
     if not book:
         return None
@@ -332,9 +355,7 @@ async def get_character(db: AsyncSession, book_id: uuid.UUID, char_id: uuid.UUID
     return result.scalar_one_or_none()
 
 
-async def update_character(
-    db: AsyncSession, book_id: uuid.UUID, char_id: uuid.UUID, org_id: uuid.UUID, data: dict
-):
+async def update_character(db: AsyncSession, book_id: uuid.UUID, char_id: uuid.UUID, org_id: uuid.UUID, data: dict):
     book = await _verify_book_ownership(db, book_id, org_id)
     if not book:
         return None

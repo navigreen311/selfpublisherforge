@@ -10,6 +10,7 @@ Revision ID: d0e1f2a3b4c5
 Revises: c9d0e1f2a3b4
 Create Date: 2026-02-13
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
@@ -26,15 +27,10 @@ def upgrade() -> None:
     # 1. Alter chapters table
     # ---------------------------------------------------------------
     # Convert content from TEXT to JSONB (TipTap JSON storage)
-    op.execute(
-        "ALTER TABLE chapters "
-        "ALTER COLUMN content TYPE JSONB USING content::jsonb"
-    )
+    op.execute("ALTER TABLE chapters " "ALTER COLUMN content TYPE JSONB USING content::jsonb")
 
     # Drop the old GIN trigram index on text content (incompatible with JSONB)
-    op.execute(
-        "DROP INDEX IF EXISTS ix_chapters_content_fulltext"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_chapters_content_fulltext")
 
     # Create a standard GIN index for JSONB content
     op.create_index(
@@ -60,13 +56,8 @@ def upgrade() -> None:
     )
 
     # The existing column uses an enum; we widen to VARCHAR(50) for flexibility
-    op.execute(
-        "ALTER TABLE chapters "
-        "ALTER COLUMN status TYPE VARCHAR(50) USING status::text"
-    )
-    op.execute(
-        "ALTER TABLE chapters ALTER COLUMN status SET DEFAULT 'draft'"
-    )
+    op.execute("ALTER TABLE chapters " "ALTER COLUMN status TYPE VARCHAR(50) USING status::text")
+    op.execute("ALTER TABLE chapters ALTER COLUMN status SET DEFAULT 'draft'")
 
     # ---------------------------------------------------------------
     # 2. Alter writing_sessions table
@@ -174,12 +165,8 @@ def upgrade() -> None:
         sa.Column("word_count", sa.Integer(), server_default="0", nullable=False),
         sa.Column("created_by", postgresql.UUID(as_uuid=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(
-            ["chapter_id"], ["chapters.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["created_by"], ["users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["chapter_id"], ["chapters.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="SET NULL"),
     )
 
     op.create_index(
@@ -219,21 +206,13 @@ def upgrade() -> None:
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column(
-            "font_family", sa.String(100), server_default="Georgia", nullable=False
-        ),
+        sa.Column("font_family", sa.String(100), server_default="Georgia", nullable=False),
         sa.Column("font_size", sa.Integer(), server_default="16", nullable=False),
         sa.Column("theme", sa.String(20), server_default="light", nullable=False),
         sa.Column("line_height", sa.Float(), server_default="1.8", nullable=False),
-        sa.Column(
-            "show_ai_panel", sa.Boolean(), server_default="true", nullable=False
-        ),
-        sa.Column(
-            "show_chapter_panel", sa.Boolean(), server_default="true", nullable=False
-        ),
-        sa.Column(
-            "style_profile_id", postgresql.UUID(as_uuid=True), nullable=True
-        ),
+        sa.Column("show_ai_panel", sa.Boolean(), server_default="true", nullable=False),
+        sa.Column("show_chapter_panel", sa.Boolean(), server_default="true", nullable=False),
+        sa.Column("style_profile_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column(
             "tone_preference",
             sa.String(50),
@@ -252,16 +231,10 @@ def upgrade() -> None:
             server_default="2",
             nullable=False,
         ),
-        sa.Column(
-            "daily_word_goal", sa.Integer(), server_default="1000", nullable=False
-        ),
+        sa.Column("daily_word_goal", sa.Integer(), server_default="1000", nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["style_profile_id"], ["style_profiles.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["style_profile_id"], ["style_profiles.id"], ondelete="SET NULL"),
         sa.UniqueConstraint("user_id", name="uq_editor_settings_user_id"),
     )
 
@@ -291,17 +264,12 @@ def downgrade() -> None:
     op.drop_column("writing_sessions", "org_id")
 
     # Revert chapters changes
-    op.execute(
-        "ALTER TABLE chapters ALTER COLUMN status TYPE chapter_status "
-        "USING status::chapter_status"
-    )
+    op.execute("ALTER TABLE chapters ALTER COLUMN status TYPE chapter_status " "USING status::chapter_status")
     op.drop_column("chapters", "chapter_type")
     op.drop_column("chapters", "target_word_count")
 
     op.drop_index("ix_chapters_content_gin", table_name="chapters")
-    op.execute(
-        "ALTER TABLE chapters ALTER COLUMN content TYPE TEXT USING content::text"
-    )
+    op.execute("ALTER TABLE chapters ALTER COLUMN content TYPE TEXT USING content::text")
     op.create_index(
         "ix_chapters_content_fulltext",
         "chapters",

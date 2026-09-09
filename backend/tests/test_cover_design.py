@@ -2,6 +2,7 @@
 
 Covers schemas, models, service helpers, analyzer, generator, and templates.
 """
+
 from __future__ import annotations
 
 import uuid

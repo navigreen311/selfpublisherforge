@@ -211,9 +211,7 @@ async def market_trends(
 ):
     """Market trend data for categories and keywords."""
     svc = _service()
-    return await svc.get_trends(
-        category_id=category_id, keyword=keyword, days=days
-    )
+    return await svc.get_trends(category_id=category_id, keyword=keyword, days=days)
 
 
 @router.get(

@@ -8,6 +8,7 @@ device preview, layout protection, and export utilities.
 Blueprint refs: 6.1-6.5, 7.1-7.4, 8.1-8.2, 9.1-9.3, 10.1-10.3, 11.1-11.3,
 12.1-12.6, 14.4
 """
+
 from __future__ import annotations
 
 import base64
@@ -92,12 +93,14 @@ async def metadata_advisor(
         keywords=keywords,
     )
 
-    return SuccessResponse(data={
-        "categories": categories_prompt,
-        "keywords": keywords_prompt,
-        "subtitle_suggestions": subtitle_prompt,
-        "compliance": compliance,
-    })
+    return SuccessResponse(
+        data={
+            "categories": categories_prompt,
+            "keywords": keywords_prompt,
+            "subtitle_suggestions": subtitle_prompt,
+            "compliance": compliance,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -184,13 +187,12 @@ async def originality_compare(
         org_id=org_id,
         book_id=book_id,
     )
-    return SuccessResponse(data={
-        "book_id": str(book_id),
-        "comparisons": [
-            {"other_book_id": str(other_id), "similarity": score}
-            for other_id, score in comparisons
-        ],
-    })
+    return SuccessResponse(
+        data={
+            "book_id": str(book_id),
+            "comparisons": [{"other_book_id": str(other_id), "similarity": score} for other_id, score in comparisons],
+        }
+    )
 
 
 @router.post(
@@ -258,14 +260,16 @@ async def pricing_calculate(
         target_margins=target_margins,
     )
 
-    return SuccessResponse(data={
-        "cost": cost,
-        "scenarios": scenarios,
-        "page_count": page_count,
-        "interior_type": interior_type,
-        "trim_size": trim_size,
-        "marketplace": marketplace,
-    })
+    return SuccessResponse(
+        data={
+            "cost": cost,
+            "scenarios": scenarios,
+            "page_count": page_count,
+            "interior_type": interior_type,
+            "trim_size": trim_size,
+            "marketplace": marketplace,
+        }
+    )
 
 
 @router.post(
@@ -286,10 +290,12 @@ async def pricing_ink_coverage(
     report = color_management.analyze_ink_coverage(pages_data)
     ink_factor = print_pricing.ink_coverage_factor(pages_data)
 
-    return SuccessResponse(data={
-        "pages": report,
-        "ink_coverage_factor": ink_factor,
-    })
+    return SuccessResponse(
+        data={
+            "pages": report,
+            "ink_coverage_factor": ink_factor,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -501,12 +507,15 @@ async def generate_back_matter(
     if series_id:
         series_uuid = UUID(series_id) if isinstance(series_id, str) else series_id
         also_page = await back_matter.generate_also_in_series(
-            db=db, series_id=series_uuid, current_book_id=book_id,
+            db=db,
+            series_id=series_uuid,
+            current_book_id=book_id,
         )
         pages.append(dataclasses.asdict(also_page))
 
         about_series_page = await back_matter.generate_about_series(
-            db=db, series_id=series_uuid,
+            db=db,
+            series_id=series_uuid,
         )
         pages.append(dataclasses.asdict(about_series_page))
 
@@ -557,10 +566,12 @@ async def generate_qr_code(
         box_size=box_size,
         border=border,
     )
-    return SuccessResponse(data={
-        "qr_code_base64": qr_data,
-        "url": url,
-    })
+    return SuccessResponse(
+        data={
+            "qr_code_base64": qr_data,
+            "url": url,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -756,18 +767,17 @@ async def distributor_preflight(
         distributor=distributor,
         book_data=book_data,
     )
-    return SuccessResponse(data={
-        "status": result.status,
-        "distributor": result.distributor,
-        "checks": [
-            {"name": c.name, "passed": c.passed, "message": c.message, "severity": c.severity}
-            for c in result.checks
-        ],
-        "issues": [
-            {"name": i.name, "message": i.message, "severity": i.severity}
-            for i in result.issues
-        ],
-    })
+    return SuccessResponse(
+        data={
+            "status": result.status,
+            "distributor": result.distributor,
+            "checks": [
+                {"name": c.name, "passed": c.passed, "message": c.message, "severity": c.severity}
+                for c in result.checks
+            ],
+            "issues": [{"name": i.name, "message": i.message, "severity": i.severity} for i in result.issues],
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -807,10 +817,12 @@ async def export_kindle(
 
     encoded = base64.b64encode(file_bytes).decode("ascii")
 
-    return SuccessResponse(data={
-        "format": export_format,
-        "file_base64": encoded,
-        "file_size_bytes": len(file_bytes),
-        "book_type": book_type,
-        "book_id": str(book_id),
-    })
+    return SuccessResponse(
+        data={
+            "format": export_format,
+            "file_base64": encoded,
+            "file_size_bytes": len(file_bytes),
+            "book_type": book_type,
+            "book_id": str(book_id),
+        }
+    )

@@ -26,9 +26,7 @@ class ExportJob(TenantModel):
         index=True,
     )
     format: Mapped[str] = mapped_column(String(20), nullable=False)  # epub, pdf
-    status: Mapped[str] = mapped_column(
-        String(20), default="pending", server_default="pending"
-    )
+    status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending")
     file_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -53,9 +51,7 @@ class ISBNRecord(TenantModel):
 
     isbn: Mapped[str] = mapped_column(String(17), nullable=False, unique=True)
     format: Mapped[str] = mapped_column(String(20), nullable=False, default="isbn_13")
-    status: Mapped[str] = mapped_column(
-        String(20), default="available", server_default="available"
-    )
+    status: Mapped[str] = mapped_column(String(20), default="available", server_default="available")
     book_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("books.id", ondelete="SET NULL"),
         nullable=True,

@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for the Cover Design Studio."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -286,7 +287,9 @@ class VoteRequest(BaseModel):
     """Request to vote on an A/B test."""
 
     choice: str = Field(..., pattern="^(a|b)$", description="Must be 'a' or 'b'")
-    voter_fingerprint: str | None = Field(None, max_length=500, description="Optional fingerprint to prevent duplicate votes")
+    voter_fingerprint: str | None = Field(
+        None, max_length=500, description="Optional fingerprint to prevent duplicate votes"
+    )
 
 
 class VoteResponse(BaseModel):

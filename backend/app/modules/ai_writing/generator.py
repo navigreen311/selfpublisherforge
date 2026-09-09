@@ -49,11 +49,13 @@ _LLM_PROVIDER: str  # "anthropic" | "openai"
 
 try:
     import anthropic  # noqa: F401
+
     _LLM_PROVIDER = "anthropic"
     logger.info("Using Anthropic SDK for LLM generation")
 except ImportError:
     try:
         import openai  # noqa: F401
+
         _LLM_PROVIDER = "openai"
         logger.info("Anthropic SDK not found; falling back to OpenAI SDK for LLM generation")
     except ImportError:
@@ -76,7 +78,9 @@ _CONFUSED_WORDS: list[tuple[re.Pattern[str], str, str]] = [
         "there",
     ),
     (
-        re.compile(r"\bthere\s+(car|house|book|dog|cat|name|idea|plan|work|team|friend|mother|father)\b", re.IGNORECASE),
+        re.compile(
+            r"\bthere\s+(car|house|book|dog|cat|name|idea|plan|work|team|friend|mother|father)\b", re.IGNORECASE
+        ),
         "Possible confused word: 'there' may should be 'their' (possessive)",
         "their",
     ),
@@ -204,45 +208,51 @@ def _check_grammar(content: str) -> dict[str, Any]:
 
     # --- Rule 1: Double spaces (outside of line-leading indentation) ---
     for match in re.finditer(r"(?<=\S)  +", content):
-        issues.append({
-            "type": "whitespace",
-            "message": "Multiple consecutive spaces",
-            "position": match.start(),
-            "length": len(match.group()),
-            "suggestion": " ",
-            "context": _excerpt(content, match.start(), match.end()),
-        })
+        issues.append(
+            {
+                "type": "whitespace",
+                "message": "Multiple consecutive spaces",
+                "position": match.start(),
+                "length": len(match.group()),
+                "suggestion": " ",
+                "context": _excerpt(content, match.start(), match.end()),
+            }
+        )
 
     # --- Rule 2: Missing capitalization after sentence-ending punctuation ---
     # Matches ". <lowercase>" but not inside abbreviations like "e.g." or "Dr."
-    for match in re.finditer(r'([.!?])\s+([a-z])', content):
+    for match in re.finditer(r"([.!?])\s+([a-z])", content):
         # Skip common abbreviations that precede the period
-        pre_text = content[max(0, match.start() - 5):match.start()]
-        if re.search(r'\b(?:Mr|Mrs|Ms|Dr|Prof|Jr|Sr|St|vs|etc|e\.g|i\.e|a\.m|p\.m)\s*$', pre_text, re.IGNORECASE):
+        pre_text = content[max(0, match.start() - 5) : match.start()]
+        if re.search(r"\b(?:Mr|Mrs|Ms|Dr|Prof|Jr|Sr|St|vs|etc|e\.g|i\.e|a\.m|p\.m)\s*$", pre_text, re.IGNORECASE):
             continue
-        issues.append({
-            "type": "capitalization",
-            "message": f"Sentence after '{match.group(1)}' should start with a capital letter",
-            "position": match.start(2),
-            "length": 1,
-            "suggestion": match.group(2).upper(),
-            "context": _excerpt(content, match.start(), match.end()),
-        })
+        issues.append(
+            {
+                "type": "capitalization",
+                "message": f"Sentence after '{match.group(1)}' should start with a capital letter",
+                "position": match.start(2),
+                "length": 1,
+                "suggestion": match.group(2).upper(),
+                "context": _excerpt(content, match.start(), match.end()),
+            }
+        )
 
     # --- Rule 3: Repeated words (e.g., "the the") ---
-    for match in re.finditer(r'\b(\w+)\s+\1\b', content, re.IGNORECASE):
+    for match in re.finditer(r"\b(\w+)\s+\1\b", content, re.IGNORECASE):
         word = match.group(1).lower()
         # Skip intentional repetitions common in prose (e.g., "had had", "that that")
         if word in {"had", "that", "very", "so", "no", "bye"}:
             continue
-        issues.append({
-            "type": "repeated_word",
-            "message": f"Repeated word: '{match.group(1)}'",
-            "position": match.start(),
-            "length": len(match.group()),
-            "suggestion": match.group(1),
-            "context": _excerpt(content, match.start(), match.end()),
-        })
+        issues.append(
+            {
+                "type": "repeated_word",
+                "message": f"Repeated word: '{match.group(1)}'",
+                "position": match.start(),
+                "length": len(match.group()),
+                "suggestion": match.group(1),
+                "context": _excerpt(content, match.start(), match.end()),
+            }
+        )
 
     # --- Rule 4: Missing punctuation at end of paragraph/sentence ---
     # Split into paragraphs and check if non-empty ones end without terminal punctuation
@@ -252,17 +262,19 @@ def _check_grammar(content: str) -> dict[str, Any]:
         stripped = para.rstrip()
         if stripped and len(stripped) > 20:  # Only flag substantial lines
             # Skip lines that look like headings, list items, or dialogue tags
-            if not re.match(r'^[\s]*[-*#>\d]', stripped):
+            if not re.match(r"^[\s]*[-*#>\d]", stripped):
                 if not re.search(r'[.!?"\'\u2019\u201D)\]]\s*$', stripped):
                     end_pos = offset + len(stripped) - 1
-                    issues.append({
-                        "type": "punctuation",
-                        "message": "Paragraph/sentence may be missing ending punctuation",
-                        "position": end_pos,
-                        "length": 1,
-                        "suggestion": ".",
-                        "context": _excerpt(content, max(0, end_pos - 30), end_pos + 1),
-                    })
+                    issues.append(
+                        {
+                            "type": "punctuation",
+                            "message": "Paragraph/sentence may be missing ending punctuation",
+                            "position": end_pos,
+                            "length": 1,
+                            "suggestion": ".",
+                            "context": _excerpt(content, max(0, end_pos - 30), end_pos + 1),
+                        }
+                    )
         offset += len(para) + 1  # +1 for the newline
 
     # --- Rule 5: Confused words and common misspellings ---
@@ -270,14 +282,16 @@ def _check_grammar(content: str) -> dict[str, Any]:
         if not description:  # Skip entries with no error message (correct spellings)
             continue
         for match in pattern.finditer(content):
-            issues.append({
-                "type": "confused_word",
-                "message": description,
-                "position": match.start(),
-                "length": len(match.group()),
-                "suggestion": suggestion,
-                "context": _excerpt(content, match.start(), match.end()),
-            })
+            issues.append(
+                {
+                    "type": "confused_word",
+                    "message": description,
+                    "position": match.start(),
+                    "length": len(match.group()),
+                    "suggestion": suggestion,
+                    "context": _excerpt(content, match.start(), match.end()),
+                }
+            )
 
     # Sort issues by position for consistent output
     issues.sort(key=lambda x: x["position"])
@@ -299,6 +313,7 @@ def _excerpt(text: str, start: int, end: int, margin: int = 20) -> str:
 # ---------------------------------------------------------------------------
 # Quality checks
 # ---------------------------------------------------------------------------
+
 
 def _run_quality_checks(content: str, checks: list[str]) -> dict[str, Any]:
     """Run requested quality checks on the generated content."""
@@ -322,6 +337,7 @@ def _run_quality_checks(content: str, checks: list[str]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Prompt construction
 # ---------------------------------------------------------------------------
+
 
 def build_messages(request: GenerateRequest) -> list[dict[str, str]]:
     """Build LLM message list from a GenerateRequest."""
@@ -347,6 +363,7 @@ def resolve_model(preference: str) -> str:
 # ---------------------------------------------------------------------------
 # Streaming generator (SSE)
 # ---------------------------------------------------------------------------
+
 
 async def generate_stream(request: GenerateRequest) -> AsyncGenerator[str, None]:
     """Yield SSE-formatted events for a streaming generation request.
@@ -396,6 +413,7 @@ async def generate_stream(request: GenerateRequest) -> AsyncGenerator[str, None]
 # ---------------------------------------------------------------------------
 # Non-streaming generation
 # ---------------------------------------------------------------------------
+
 
 async def generate_sync(request: GenerateRequest) -> GenerateResponse:
     """Generate content without streaming; returns complete response."""
@@ -456,6 +474,7 @@ def build_action_messages(request: ActionGenerateRequest) -> list[dict[str, str]
 # ---------------------------------------------------------------------------
 # Action-based SSE streaming
 # ---------------------------------------------------------------------------
+
 
 async def action_generate_stream(
     request: ActionGenerateRequest,
@@ -532,6 +551,7 @@ async def action_generate_stream(
 # Action-based non-streaming generation
 # ---------------------------------------------------------------------------
 
+
 async def action_generate_sync(
     request: ActionGenerateRequest,
 ) -> ActionGenerateResponse:
@@ -552,11 +572,7 @@ async def action_generate_sync(
 
     content = await _call_llm(messages, model)
     word_count = len(content.split())
-    quality_results = (
-        _run_quality_checks(content, request.quality_checks)
-        if request.quality_checks
-        else {}
-    )
+    quality_results = _run_quality_checks(content, request.quality_checks) if request.quality_checks else {}
 
     logger.info(
         "Action sync complete: action=%s words=%d",
@@ -580,6 +596,7 @@ async def action_generate_sync(
 # SSE formatting helper
 # ---------------------------------------------------------------------------
 
+
 def _sse_data(payload: dict[str, Any]) -> str:
     """Format a payload dict as an SSE data line.
 
@@ -591,6 +608,7 @@ def _sse_data(payload: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # LLM integration helpers
 # ---------------------------------------------------------------------------
+
 
 def _split_messages(messages: list[dict[str, str]]) -> tuple[str, list[dict[str, str]]]:
     """Separate system content from user/assistant messages."""
@@ -608,9 +626,8 @@ def _split_messages(messages: list[dict[str, str]]) -> tuple[str, list[dict[str,
 # Anthropic provider
 # ---------------------------------------------------------------------------
 
-async def _anthropic_stream(
-    messages: list[dict[str, str]], model: str
-) -> AsyncGenerator[str, None]:
+
+async def _anthropic_stream(messages: list[dict[str, str]], model: str) -> AsyncGenerator[str, None]:
     """Stream responses via the Anthropic SDK."""
     import anthropic
 
@@ -641,16 +658,15 @@ async def _anthropic_call(messages: list[dict[str, str]], model: str) -> str:
         messages=user_messages,  # type: ignore[arg-type]
     )
     content_block = response.content[0]
-    return content_block.text if hasattr(content_block, 'text') else str(content_block)
+    return content_block.text if hasattr(content_block, "text") else str(content_block)
 
 
 # ---------------------------------------------------------------------------
 # OpenAI provider (fallback)
 # ---------------------------------------------------------------------------
 
-async def _openai_stream(
-    messages: list[dict[str, str]], model: str
-) -> AsyncGenerator[str, None]:
+
+async def _openai_stream(messages: list[dict[str, str]], model: str) -> AsyncGenerator[str, None]:
     """Stream responses via the OpenAI SDK."""
     import openai
 
@@ -689,9 +705,8 @@ async def _openai_call(messages: list[dict[str, str]], model: str) -> str:
 # LLM integration layer (abstracted for testability)
 # ---------------------------------------------------------------------------
 
-async def _call_llm_stream(
-    messages: list[dict[str, str]], model: str
-) -> AsyncGenerator[str, None]:
+
+async def _call_llm_stream(messages: list[dict[str, str]], model: str) -> AsyncGenerator[str, None]:
     """Stream responses from the configured LLM provider.
 
     Dispatches to Anthropic or OpenAI based on SDK availability

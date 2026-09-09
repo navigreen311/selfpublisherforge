@@ -21,6 +21,7 @@ from app.modules.portfolio_economics import service
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def org_id():
     return uuid.uuid4()
@@ -34,6 +35,7 @@ def book_id():
 # ===========================================================================
 # Tests: build_audience_personas
 # ===========================================================================
+
 
 class TestBuildAudiencePersonas:
     """Tests for service.build_audience_personas."""
@@ -71,6 +73,7 @@ class TestBuildAudiencePersonas:
 # Tests: get_audience_growth
 # ===========================================================================
 
+
 class TestGetAudienceGrowth:
     """Tests for service.get_audience_growth."""
 
@@ -105,6 +108,7 @@ class TestGetAudienceGrowth:
 # Tests: predict_churn
 # ===========================================================================
 
+
 class TestPredictChurn:
     """Tests for service.predict_churn."""
 
@@ -137,6 +141,7 @@ class TestPredictChurn:
 # Tests: build_portfolio_overview
 # ===========================================================================
 
+
 class TestBuildPortfolioOverview:
     """Tests for service.build_portfolio_overview."""
 
@@ -166,6 +171,7 @@ class TestBuildPortfolioOverview:
 # ===========================================================================
 # Tests: calculate_kill_scale
 # ===========================================================================
+
 
 class TestCalculateKillScale:
     """Tests for service.calculate_kill_scale."""
@@ -205,6 +211,7 @@ class TestCalculateKillScale:
 # Tests: generate_portfolio_recommendations
 # ===========================================================================
 
+
 class TestGeneratePortfolioRecommendations:
     """Tests for service.generate_portfolio_recommendations."""
 
@@ -242,6 +249,7 @@ class TestGeneratePortfolioRecommendations:
 # Tests: get_seasonal_calendar
 # ===========================================================================
 
+
 class TestGenerateSeasonalCalendar:
     """Tests for service.get_seasonal_calendar."""
 
@@ -276,6 +284,7 @@ class TestGenerateSeasonalCalendar:
 # Tests: get_niche_seasonality
 # ===========================================================================
 
+
 class TestGetNicheSeasonality:
     """Tests for service.get_niche_seasonality."""
 
@@ -308,6 +317,7 @@ class TestGetNicheSeasonality:
 # Tests: recommend_launch_date
 # ===========================================================================
 
+
 class TestGenerateLaunchRecommendations:
     """Tests for service.recommend_launch_date."""
 
@@ -339,6 +349,7 @@ class TestGenerateLaunchRecommendations:
 # ===========================================================================
 # Tests: calculate_backlist_projection
 # ===========================================================================
+
 
 class TestCalculateBacklistProjection:
     """Tests for service.calculate_backlist_projection."""
@@ -377,6 +388,7 @@ class TestCalculateBacklistProjection:
 # Tests: calculate_greenlight
 # ===========================================================================
 
+
 class TestCalculateGreenlight:
     """Tests for service.calculate_greenlight."""
 
@@ -411,6 +423,7 @@ class TestCalculateGreenlight:
 # ===========================================================================
 # Tests: build_also_bought_intelligence
 # ===========================================================================
+
 
 class TestBuildAlsoBoughtIntelligence:
     """Tests for service.build_also_bought_intelligence."""

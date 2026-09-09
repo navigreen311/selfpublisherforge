@@ -66,6 +66,7 @@ def _make_redis_pubsub_mock():
 # EventPublisher base class
 # =========================================================================
 
+
 class TestEventPublisherInterface:
     """The base EventPublisher should raise NotImplementedError."""
 
@@ -100,8 +101,8 @@ class TestEventPublisherInterface:
 # Event serialization (_serialize_event / _deserialize_event for Streams)
 # =========================================================================
 
-class TestEventSerialization:
 
+class TestEventSerialization:
     def test_serialize_produces_flat_string_dict(self):
         event = _make_event()
         fields = _serialize_event(event)
@@ -186,8 +187,8 @@ class TestEventSerialization:
 # Channel naming convention (Pub/Sub + Streams)
 # =========================================================================
 
-class TestChannelNaming:
 
+class TestChannelNaming:
     def test_pubsub_channel_format(self):
         """RedisEventPublisher uses ``events:{event_type.value}`` for channels."""
         event = _make_event(event_type=EventType.PROJECT_CREATED)
@@ -221,8 +222,8 @@ class TestChannelNaming:
 # RedisEventPublisher.publish() -- Pub/Sub based
 # =========================================================================
 
-class TestRedisEventPublisherPublish:
 
+class TestRedisEventPublisherPublish:
     @pytest.mark.asyncio
     async def test_publish_calls_redis_publish(self):
         redis_mock = _make_redis_pubsub_mock()
@@ -345,8 +346,8 @@ class TestRedisEventPublisherPublish:
 # RedisEventPublisher -- lazy initialization
 # =========================================================================
 
-class TestRedisEventPublisherInit:
 
+class TestRedisEventPublisherInit:
     def test_default_init_no_redis_url(self):
         publisher = RedisEventPublisher()
         assert publisher._redis_url is None
@@ -397,17 +398,15 @@ class TestRedisEventPublisherInit:
 
                 await publisher._get_redis()
 
-                mock_aioredis.Redis.from_url.assert_called_once_with(
-                    "redis://from-settings:6379/0"
-                )
+                mock_aioredis.Redis.from_url.assert_called_once_with("redis://from-settings:6379/0")
 
 
 # =========================================================================
 # RedisEventPublisher is a proper EventPublisher subclass
 # =========================================================================
 
-class TestRedisEventPublisherInterface:
 
+class TestRedisEventPublisherInterface:
     def test_is_subclass_of_event_publisher(self):
         assert issubclass(RedisEventPublisher, EventPublisher)
 
@@ -424,8 +423,8 @@ class TestRedisEventPublisherInterface:
 # get_event_publisher() singleton
 # =========================================================================
 
-class TestGetEventPublisher:
 
+class TestGetEventPublisher:
     def test_returns_event_publisher_instance(self):
         with patch("app.core.events._publisher", None):
             publisher = get_event_publisher()

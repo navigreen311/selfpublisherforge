@@ -18,9 +18,7 @@ from typing import Any
 from app.config import get_settings
 
 # Context variable for request correlation IDs
-correlation_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "correlation_id", default=None
-)
+correlation_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar("correlation_id", default=None)
 
 # Keys whose values must be redacted when logging request/response bodies.
 _SENSITIVE_KEYS = re.compile(
@@ -43,10 +41,7 @@ def sanitize(data: Any, _depth: int = 0) -> Any:
         return data
 
     if isinstance(data, dict):
-        return {
-            k: (_REDACTED if _SENSITIVE_KEYS.search(k) else sanitize(v, _depth + 1))
-            for k, v in data.items()
-        }
+        return {k: (_REDACTED if _SENSITIVE_KEYS.search(k) else sanitize(v, _depth + 1)) for k, v in data.items()}
     if isinstance(data, list | tuple):
         return [sanitize(item, _depth + 1) for item in data]
     return data

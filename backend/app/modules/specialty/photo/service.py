@@ -1,4 +1,5 @@
 """Photo Integration service layer."""
+
 from __future__ import annotations
 
 import logging
@@ -106,9 +107,7 @@ async def get_photo(db: AsyncSession, org_id: UUID, photo_id: UUID) -> dict[str,
     return _photo_to_dict(photo)
 
 
-async def update_photo(
-    db: AsyncSession, org_id: UUID, photo_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def update_photo(db: AsyncSession, org_id: UUID, photo_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Update photo reference metadata."""
     photo = await _get_or_404(db, org_id, photo_id)
 

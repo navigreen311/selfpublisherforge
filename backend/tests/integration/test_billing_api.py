@@ -80,6 +80,7 @@ def _create_test_app() -> FastAPI:
     def override_require_role(*roles):
         async def checker():
             return TEST_USER
+
         return checker
 
     app.dependency_overrides[get_db] = override_get_db

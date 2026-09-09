@@ -105,23 +105,27 @@ def simulate_price_change(request: PriceSimulationRequest) -> PriceSimulationRes
 
     # Revenue & royalty change percentages
     revenue_change_pct = (
-        ((proposed_point.estimated_monthly_revenue - current_point.estimated_monthly_revenue)
-         / current_point.estimated_monthly_revenue * 100)
+        (
+            (proposed_point.estimated_monthly_revenue - current_point.estimated_monthly_revenue)
+            / current_point.estimated_monthly_revenue
+            * 100
+        )
         if current_point.estimated_monthly_revenue > 0
         else 0.0
     )
     royalty_change_pct = (
-        ((proposed_point.estimated_monthly_royalties - current_point.estimated_monthly_royalties)
-         / current_point.estimated_monthly_royalties * 100)
+        (
+            (proposed_point.estimated_monthly_royalties - current_point.estimated_monthly_royalties)
+            / current_point.estimated_monthly_royalties
+            * 100
+        )
         if current_point.estimated_monthly_royalties > 0
         else 0.0
     )
 
     # Breakeven sales: how many daily sales at proposed price to match current daily royalties
     proposed_royalty_rate = (
-        request.royalty_rate
-        if request.royalty_rate is not None
-        else _get_royalty_rate(proposed, fmt)
+        request.royalty_rate if request.royalty_rate is not None else _get_royalty_rate(proposed, fmt)
     )
     breakeven_sales = (
         current_point.estimated_daily_royalties / (proposed * proposed_royalty_rate)
@@ -138,9 +142,7 @@ def simulate_price_change(request: PriceSimulationRequest) -> PriceSimulationRes
         royalty_override=request.royalty_rate,
     )
 
-    price_change_pct = (
-        ((proposed - current) / current * 100) if current > 0 else 0.0
-    )
+    price_change_pct = ((proposed - current) / current * 100) if current > 0 else 0.0
 
     return PriceSimulationResponse(
         book_id=request.book_id,

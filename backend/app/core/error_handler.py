@@ -72,9 +72,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     )
 
 
-async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle Pydantic / FastAPI request validation errors."""
     request_id = _get_request_id(request)
     field_errors = []
@@ -97,9 +95,7 @@ async def validation_exception_handler(
     )
 
 
-async def not_found_handler(
-    request: Request, exc: StarletteHTTPException
-) -> JSONResponse:
+async def not_found_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """Handle 404 Not Found."""
     request_id = _get_request_id(request)
     return JSONResponse(

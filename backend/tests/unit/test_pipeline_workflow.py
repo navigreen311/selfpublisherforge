@@ -81,15 +81,11 @@ class TestPipelineTransitions:
 
     def test_completed_to_active_is_invalid(self):
         with pytest.raises(WorkflowError):
-            validate_pipeline_transition(
-                PipelineStatus.COMPLETED, PipelineStatus.ACTIVE
-            )
+            validate_pipeline_transition(PipelineStatus.COMPLETED, PipelineStatus.ACTIVE)
 
     def test_cancelled_is_terminal(self):
         with pytest.raises(WorkflowError):
-            validate_pipeline_transition(
-                PipelineStatus.CANCELLED, PipelineStatus.ACTIVE
-            )
+            validate_pipeline_transition(PipelineStatus.CANCELLED, PipelineStatus.ACTIVE)
 
     def test_all_transitions_are_documented(self):
         """Ensure every PipelineStatus has an entry in PIPELINE_TRANSITIONS."""

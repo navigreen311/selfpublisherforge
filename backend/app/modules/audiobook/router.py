@@ -123,9 +123,7 @@ async def list_pronunciation(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    entries = await service.list_pronunciation(
-        db, current_user["org_id"], project_id=project_id
-    )
+    entries = await service.list_pronunciation(db, current_user["org_id"], project_id=project_id)
     return PronunciationListResponse(items=entries, total=len(entries))
 
 
@@ -148,9 +146,8 @@ async def delete_pronunciation(
         )
 
 
-
-
 # Stats endpoint
+
 
 @router.get(
     "/stats",

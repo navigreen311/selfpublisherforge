@@ -1,4 +1,5 @@
 """SQLAlchemy models for Puzzle Books."""
+
 from __future__ import annotations
 
 import uuid
@@ -40,18 +41,14 @@ class PuzzleBook(TenantModel):
         nullable=False,
         default=Audience.adults,
     )
-    puzzle_config: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    puzzle_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     difficulty_mode: Mapped[str] = mapped_column(
         Enum(DifficultyMode, name="difficulty_mode", native_enum=True),
         nullable=False,
         default=DifficultyMode.progressive,
     )
     themes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    seasonal_theme: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
+    seasonal_theme: Mapped[str | None] = mapped_column(String(50), nullable=True)
     word_difficulty: Mapped[str | None] = mapped_column(
         Enum(WordDifficulty, name="word_difficulty", native_enum=True),
         nullable=True,
@@ -65,12 +62,8 @@ class PuzzleBook(TenantModel):
         nullable=False,
         default=AnswerKeyPosition.back_of_book,
     )
-    has_toc: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    has_hints: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+    has_toc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    has_hints: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     layout_mode: Mapped[str | None] = mapped_column(String(30), nullable=True)
     status: Mapped[str] = mapped_column(
         Enum(BookStatus, name="book_status", native_enum=True, create_type=False),
@@ -112,23 +105,13 @@ class Puzzle(BaseModel):
     )
     difficulty_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     grid_size: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    grid_data: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    grid_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     word_list: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     clues: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    answer_data: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    answer_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    is_verified: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    has_unique_solution: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
-    )
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    has_unique_solution: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # Relationships
-    book: Mapped[PuzzleBook] = relationship(
-        "PuzzleBook", back_populates="puzzles"
-    )
+    book: Mapped[PuzzleBook] = relationship("PuzzleBook", back_populates="puzzles")

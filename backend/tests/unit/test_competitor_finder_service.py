@@ -27,6 +27,7 @@ from app.modules.competitor_finder.service import CompetitorFinderService
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def org_id():
     return uuid.uuid4()
@@ -96,6 +97,7 @@ def _make_competitor_review(**overrides):
 # ===========================================================================
 # Tests: analyze_competitor
 # ===========================================================================
+
 
 class TestAnalyzeCompetitor:
     """Tests for CompetitorFinderService.analyze_competitor."""
@@ -266,6 +268,7 @@ class TestAnalyzeCompetitor:
 # Tests: get_weaknesses
 # ===========================================================================
 
+
 class TestGetWeaknesses:
     """Tests for CompetitorFinderService.get_weaknesses."""
 
@@ -299,6 +302,7 @@ class TestGetWeaknesses:
 # ===========================================================================
 # Tests: batch_analyze
 # ===========================================================================
+
 
 class TestBatchAnalyze:
     """Tests for CompetitorFinderService.batch_analyze."""
@@ -352,6 +356,7 @@ class TestBatchAnalyze:
 # Tests: get_opportunity
 # ===========================================================================
 
+
 class TestGetOpportunity:
     """Tests for CompetitorFinderService.get_opportunity."""
 
@@ -382,6 +387,7 @@ class TestGetOpportunity:
 # ===========================================================================
 # Tests: run_gap_analysis
 # ===========================================================================
+
 
 class TestRunGapAnalysis:
     """Tests for CompetitorFinderService.run_gap_analysis."""
@@ -447,6 +453,7 @@ class TestRunGapAnalysis:
 # ===========================================================================
 # Tests: Alerts
 # ===========================================================================
+
 
 class TestAlerts:
     """Tests for alert management methods."""
@@ -524,6 +531,7 @@ class TestAlerts:
 # ===========================================================================
 # Tests: _compute_overall_score
 # ===========================================================================
+
 
 class TestComputeOverallScore:
     """Tests for the static _compute_overall_score method."""

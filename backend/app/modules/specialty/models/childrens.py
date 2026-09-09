@@ -1,4 +1,5 @@
 """SQLAlchemy models for Children's Books."""
+
 from __future__ import annotations
 
 import uuid
@@ -45,9 +46,7 @@ class ChildrensBook(TenantModel):
         default=AgeRange.preschool,
     )
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
-    trim_size: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="8.5x8.5"
-    )
+    trim_size: Mapped[str] = mapped_column(String(20), nullable=False, default="8.5x8.5")
     illustration_style: Mapped[str] = mapped_column(
         Enum(IllustrationStyle, name="illustration_style", native_enum=True),
         nullable=False,
@@ -63,12 +62,8 @@ class ChildrensBook(TenantModel):
         nullable=False,
         default=StoryMode.ai_generated,
     )
-    is_bilingual: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    bilingual_language: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
+    is_bilingual: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    bilingual_language: Mapped[str | None] = mapped_column(String(50), nullable=True)
     bilingual_layout: Mapped[str | None] = mapped_column(
         Enum(BilingualLayout, name="bilingual_layout", native_enum=True),
         nullable=True,
@@ -111,9 +106,7 @@ class ChildrensBookPage(BaseModel):
         index=True,
     )
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    page_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="story"
-    )
+    page_type: Mapped[str] = mapped_column(String(30), nullable=False, default="story")
     layout: Mapped[str] = mapped_column(
         Enum(PageLayout, name="page_layout", native_enum=True),
         nullable=False,
@@ -128,24 +121,16 @@ class ChildrensBookPage(BaseModel):
         Enum(TextPosition, name="text_position", native_enum=True),
         nullable=True,
     )
-    text_plate_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+    text_plate_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     illustration_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     illustration_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    illustration_model: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
-    illustration_seed: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
+    illustration_model: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    illustration_seed: Mapped[str | None] = mapped_column(String(50), nullable=True)
     contrast_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     gutter_safe: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # Relationships
-    book: Mapped[ChildrensBook] = relationship(
-        "ChildrensBook", back_populates="pages"
-    )
+    book: Mapped[ChildrensBook] = relationship("ChildrensBook", back_populates="pages")
 
 
 class ChildrensBookCharacter(BaseModel):
@@ -162,26 +147,12 @@ class ChildrensBookCharacter(BaseModel):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     species: Mapped[str | None] = mapped_column(String(50), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    reference_images: Mapped[list[str] | None] = mapped_column(
-        JSON, nullable=True
-    )
-    auto_append: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
-    clothing_rules: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
-    scale_rules: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
-    setting_rules: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
-    time_rules: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    reference_images: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    auto_append: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    clothing_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    scale_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    setting_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    time_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    book: Mapped[ChildrensBook] = relationship(
-        "ChildrensBook", back_populates="characters"
-    )
+    book: Mapped[ChildrensBook] = relationship("ChildrensBook", back_populates="characters")

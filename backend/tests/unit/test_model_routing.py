@@ -21,6 +21,7 @@ from app.modules.llm_orchestration.router_config import (
 # Fixtures
 # -------------------------------------------------------------------
 
+
 @pytest.fixture
 def router() -> ModelRouter:
     return ModelRouter()
@@ -41,6 +42,7 @@ def custom_router() -> ModelRouter:
 # -------------------------------------------------------------------
 # Task type routing
 # -------------------------------------------------------------------
+
 
 class TestTaskTypeRouting:
     """Verify that each task type maps to the correct primary model."""
@@ -67,6 +69,7 @@ class TestTaskTypeRouting:
 # -------------------------------------------------------------------
 # Fallback chains
 # -------------------------------------------------------------------
+
 
 class TestFallbackChains:
     """Verify fallback model chains for each task type."""
@@ -108,6 +111,7 @@ class TestFallbackChains:
 # Provider resolution
 # -------------------------------------------------------------------
 
+
 class TestProviderResolution:
     """Verify model-to-provider mapping."""
 
@@ -128,6 +132,7 @@ class TestProviderResolution:
 # -------------------------------------------------------------------
 # Max tokens & cache TTLs
 # -------------------------------------------------------------------
+
 
 class TestMaxTokensAndTTL:
     """Verify task-specific max_tokens and cache TTL settings."""
@@ -155,6 +160,7 @@ class TestMaxTokensAndTTL:
 # Custom routing tables
 # -------------------------------------------------------------------
 
+
 class TestCustomRouting:
     """Verify custom routing table overrides."""
 
@@ -175,6 +181,7 @@ class TestCustomRouting:
 # -------------------------------------------------------------------
 # Routing table completeness
 # -------------------------------------------------------------------
+
 
 class TestRoutingTableCompleteness:
     """Ensure the default routing table covers all task types."""

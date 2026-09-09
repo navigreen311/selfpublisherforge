@@ -63,14 +63,10 @@ class Pipeline(TenantModel):
         server_default="draft",
     )
     settings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
-    deadline: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     template: Mapped[str | None] = mapped_column(String(100), nullable=True)
     target_launch_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    progress_pct: Mapped[int | None] = mapped_column(
-        Integer, server_default="0", default=0
-    )
+    progress_pct: Mapped[int | None] = mapped_column(Integer, server_default="0", default=0)
 
     # Relationships
     tasks: Mapped[list[PipelineTask]] = relationship(
@@ -99,9 +95,7 @@ class PipelineTask(TenantModel):
 
     __tablename__ = "pipeline_tasks"
 
-    pipeline_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("pipelines.id", ondelete="CASCADE"), index=True
-    )
+    pipeline_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("pipelines.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     type: Mapped[TaskType] = mapped_column(
@@ -114,45 +108,23 @@ class PipelineTask(TenantModel):
         server_default="pending",
     )
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
-    due_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    depends_on: Mapped[list[str] | None] = mapped_column(
-        JSON, nullable=True, default=list
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    depends_on: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=list)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     position: Mapped[int] = mapped_column(default=0)
     stage_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("pipeline_stages.id", ondelete="SET NULL"), nullable=True
     )
-    priority: Mapped[str | None] = mapped_column(
-        String(20), server_default="medium", default="medium"
-    )
-    checklist: Mapped[list | None] = mapped_column(
-        JSONB, server_default="[]", nullable=True
-    )
-    links: Mapped[list | None] = mapped_column(
-        JSONB, server_default="[]", nullable=True
-    )
-    blocked_by: Mapped[list | None] = mapped_column(
-        ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=True
-    )
-    metadata_json: Mapped[dict | None] = mapped_column(
-        JSONB, server_default="{}", nullable=True
-    )
-    order_index: Mapped[int | None] = mapped_column(
-        Integer, server_default="0", default=0
-    )
+    priority: Mapped[str | None] = mapped_column(String(20), server_default="medium", default="medium")
+    checklist: Mapped[list | None] = mapped_column(JSONB, server_default="[]", nullable=True)
+    links: Mapped[list | None] = mapped_column(JSONB, server_default="[]", nullable=True)
+    blocked_by: Mapped[list | None] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default="{}", nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(JSONB, server_default="{}", nullable=True)
+    order_index: Mapped[int | None] = mapped_column(Integer, server_default="0", default=0)
 
     # Relationships
-    pipeline: Mapped[Pipeline] = relationship(
-        "Pipeline", back_populates="tasks"
-    )
-    stage: Mapped[PipelineStage | None] = relationship(
-        "PipelineStage", back_populates="tasks"
-    )
+    pipeline: Mapped[Pipeline] = relationship("Pipeline", back_populates="tasks")
+    stage: Mapped[PipelineStage | None] = relationship("PipelineStage", back_populates="tasks")
 
     __table_args__ = (
         Index("ix_pipeline_tasks_pipeline_status", "pipeline_id", "status"),
@@ -172,9 +144,7 @@ class PipelineTemplate(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
     is_public: Mapped[bool] = mapped_column(default=False, server_default="false")
 
-    __table_args__ = (
-        Index("ix_pipeline_templates_org", "org_id"),
-    )
+    __table_args__ = (Index("ix_pipeline_templates_org", "org_id"),)
 
 
 class PipelineStage(TenantModel):
@@ -182,9 +152,7 @@ class PipelineStage(TenantModel):
 
     __tablename__ = "pipeline_stages"
 
-    pipeline_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("pipelines.id", ondelete="CASCADE"), index=True
-    )
+    pipeline_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("pipelines.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(255))
     order_index: Mapped[int] = mapped_column(Integer, default=0)
     color: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -192,9 +160,7 @@ class PipelineStage(TenantModel):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Relationships
-    pipeline: Mapped[Pipeline] = relationship(
-        "Pipeline", back_populates="stages"
-    )
+    pipeline: Mapped[Pipeline] = relationship("Pipeline", back_populates="stages")
     tasks: Mapped[list[PipelineTask]] = relationship(
         "PipelineTask",
         back_populates="stage",
@@ -202,9 +168,7 @@ class PipelineStage(TenantModel):
         order_by="PipelineTask.order_index",
     )
 
-    __table_args__ = (
-        Index("idx_pipeline_stages_pipeline", "pipeline_id"),
-    )
+    __table_args__ = (Index("idx_pipeline_stages_pipeline", "pipeline_id"),)
 
 
 class PipelineActivity(BaseModel):
@@ -212,9 +176,7 @@ class PipelineActivity(BaseModel):
 
     __tablename__ = "pipeline_activity"
 
-    pipeline_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("pipelines.id", ondelete="CASCADE"), index=True
-    )
+    pipeline_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("pipelines.id", ondelete="CASCADE"), index=True)
     task_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("pipeline_tasks.id", ondelete="CASCADE"), nullable=True
     )
@@ -222,9 +184,7 @@ class PipelineActivity(BaseModel):
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
 
-    __table_args__ = (
-        Index("idx_pipeline_activity_pipeline", "pipeline_id"),
-    )
+    __table_args__ = (Index("idx_pipeline_activity_pipeline", "pipeline_id"),)
 
 
 class PipelineAutomation(BaseModel):
@@ -232,13 +192,9 @@ class PipelineAutomation(BaseModel):
 
     __tablename__ = "pipeline_automations"
 
-    pipeline_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("pipelines.id", ondelete="CASCADE"), index=True
-    )
+    pipeline_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("pipelines.id", ondelete="CASCADE"), index=True)
     trigger_type: Mapped[str] = mapped_column(String(50))
     trigger_config: Mapped[dict] = mapped_column(JSONB)
     action_type: Mapped[str] = mapped_column(String(50))
     action_config: Mapped[dict] = mapped_column(JSONB)
-    enabled: Mapped[bool] = mapped_column(
-        Boolean, server_default="true", default=True
-    )
+    enabled: Mapped[bool] = mapped_column(Boolean, server_default="true", default=True)

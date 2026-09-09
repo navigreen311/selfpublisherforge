@@ -24,13 +24,19 @@ async def test_get_dashboard_default_period():
     mock_db = AsyncMock()
     org_id = uuid4()
 
-    with patch("app.modules.analytics.service.compute_kpis") as mock_kpis,          patch("app.modules.analytics.service.aggregate_revenue") as mock_rev,          patch("app.modules.analytics.service.aggregate_revenue_by_book") as mock_books,          patch("app.modules.analytics.service.aggregate_revenue_by_platform") as mock_platforms:
-
+    with (
+        patch("app.modules.analytics.service.compute_kpis") as mock_kpis,
+        patch("app.modules.analytics.service.aggregate_revenue") as mock_rev,
+        patch("app.modules.analytics.service.aggregate_revenue_by_book") as mock_books,
+        patch("app.modules.analytics.service.aggregate_revenue_by_platform") as mock_platforms,
+    ):
         mock_kpis.return_value = {"total_revenue": Decimal("100.00")}
         mock_rev.return_value = []
         mock_books.return_value = []
         mock_platforms.return_value = []
-        mock_db.execute = AsyncMock(return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))))
+        mock_db.execute = AsyncMock(
+            return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[]))))
+        )
 
         result = await service.get_dashboard(mock_db, org_id)
 
@@ -68,8 +74,10 @@ async def test_create_report_celery_failure():
         output_format=OutputFormat.CSV,
     )
 
-    with patch("app.modules.analytics.service.scheduled_report_generation") as mock_task,          patch("app.modules.analytics.service.generate_report") as mock_gen:
-
+    with (
+        patch("app.modules.analytics.service.scheduled_report_generation") as mock_task,
+        patch("app.modules.analytics.service.generate_report") as mock_gen,
+    ):
         mock_task.delay.side_effect = ConnectionError("Broker unreachable")
         mock_gen.return_value = MagicMock(id=uuid4())
 

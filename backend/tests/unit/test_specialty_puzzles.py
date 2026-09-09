@@ -7,7 +7,6 @@ Blueprint Section 17.3 — 30 test cases covering:
   and difficulty score ranges.
 """
 
-
 import pytest
 
 from app.modules.specialty.puzzles.algorithms.crossword import (
@@ -88,13 +87,16 @@ CROSSWORD_CLUES = {
 # 1. Word Search — valid grids with configurable directions (2, 4, 8)
 # ============================================================================
 
-class TestWordSearch:
 
+class TestWordSearch:
     @pytest.mark.parametrize("direction_count", [2, 4, 8])
     def test_generates_valid_grids_with_configurable_directions(self, direction_count):
         """Test 1: Word Search generates valid grids with configurable directions."""
         result = generate_word_search(
-            WORD_LIST, grid_size=15, directions=direction_count, seed=42,
+            WORD_LIST,
+            grid_size=15,
+            directions=direction_count,
+            seed=42,
         )
         grid = result["grid"]
 
@@ -102,10 +104,7 @@ class TestWordSearch:
         assert len(grid) == 15
         assert all(len(row) == 15 for row in grid)
         # Every cell is a single uppercase letter
-        assert all(
-            len(cell) == 1 and cell.isalpha() and cell.isupper()
-            for row in grid for cell in row
-        )
+        assert all(len(cell) == 1 and cell.isalpha() and cell.isupper() for row in grid for cell in row)
         # Direction setting recorded
         assert result["directions"] == direction_count
         # At least some words were placed
@@ -146,11 +145,17 @@ class TestWordSearch:
         """Test 3: Difficulty score reflects parameters."""
         # Easy: small grid, few directions
         easy = ws_calculate_difficulty(
-            grid_size=10, word_count=5, direction_count=2, overlap_rate=0.0,
+            grid_size=10,
+            word_count=5,
+            direction_count=2,
+            overlap_rate=0.0,
         )
         # Hard: large grid, many directions
         hard = ws_calculate_difficulty(
-            grid_size=20, word_count=25, direction_count=8, overlap_rate=0.3,
+            grid_size=20,
+            word_count=25,
+            direction_count=8,
+            overlap_rate=0.3,
         )
         assert 0 <= easy <= 100
         assert 0 <= hard <= 100
@@ -161,12 +166,16 @@ class TestWordSearch:
 # 4-6. Crossword
 # ============================================================================
 
-class TestCrossword:
 
+class TestCrossword:
     def _make_crossword(self, seed=42):
         return generate_crossword(
-            CROSSWORD_WORDS, CROSSWORD_CLUES,
-            max_width=20, max_height=20, max_attempts=3, seed=seed,
+            CROSSWORD_WORDS,
+            CROSSWORD_CLUES,
+            max_width=20,
+            max_height=20,
+            max_attempts=3,
+            seed=seed,
         )
 
     # 4. Crossword generates valid intersecting grids
@@ -239,17 +248,15 @@ class TestCrossword:
                     visited.add(other)
                     queue.append(other)
 
-        assert visited == set(words), (
-            f"Disconnected words: {set(words) - visited}"
-        )
+        assert visited == set(words), f"Disconnected words: {set(words) - visited}"
 
 
 # ============================================================================
 # 7-9. Maze
 # ============================================================================
 
-class TestMaze:
 
+class TestMaze:
     # 7. Maze generates solvable mazes (solution path exists)
     def test_generates_solvable_mazes(self):
         """Test 7: Generated maze has a non-empty solution path."""
@@ -261,7 +268,8 @@ class TestMaze:
 
     # 8. Maze shape variants work
     @pytest.mark.parametrize(
-        "shape", ["rectangle", "circle", "heart", "star", "christmas_tree", "pumpkin"],
+        "shape",
+        ["rectangle", "circle", "heart", "star", "christmas_tree", "pumpkin"],
     )
     def test_shape_variants_work(self, shape):
         """Test 8: All shape variants produce a valid, solvable maze."""
@@ -291,8 +299,8 @@ class TestMaze:
 # 10-13. Sudoku
 # ============================================================================
 
-class TestSudoku:
 
+class TestSudoku:
     # 10. Sudoku generates valid complete solutions
     def test_valid_complete_solutions_no_conflicts(self):
         """Test 10: Solution grid has no row/col/box conflicts."""
@@ -303,16 +311,12 @@ class TestSudoku:
 
         # Check all rows
         for r in range(size):
-            assert sorted(solution[r]) == list(range(1, size + 1)), (
-                f"Row {r} invalid: {solution[r]}"
-            )
+            assert sorted(solution[r]) == list(range(1, size + 1)), f"Row {r} invalid: {solution[r]}"
 
         # Check all columns
         for c in range(size):
             col_vals = [solution[r][c] for r in range(size)]
-            assert sorted(col_vals) == list(range(1, size + 1)), (
-                f"Col {c} invalid"
-            )
+            assert sorted(col_vals) == list(range(1, size + 1)), f"Col {c} invalid"
 
         # Check all boxes
         for br in range(0, size, box_rows):
@@ -321,9 +325,7 @@ class TestSudoku:
                 for r in range(br, br + box_rows):
                     for c in range(bc, bc + box_cols):
                         box_vals.append(solution[r][c])
-                assert sorted(box_vals) == list(range(1, size + 1)), (
-                    f"Box at ({br},{bc}) invalid"
-                )
+                assert sorted(box_vals) == list(range(1, size + 1)), f"Box at ({br},{bc}) invalid"
 
     # 11. Sudoku generated puzzles have unique solutions
     def test_puzzles_have_unique_solutions(self):
@@ -340,12 +342,8 @@ class TestSudoku:
             givens = result["givens_count"]
             # Allow small slack because unique-solution constraint may prevent
             # removing enough numbers.
-            assert givens >= lo_9 - 5, (
-                f"{diff}: givens {givens} below floor {lo_9}"
-            )
-            assert givens <= hi_9 + 5, (
-                f"{diff}: givens {givens} above ceiling {hi_9}"
-            )
+            assert givens >= lo_9 - 5, f"{diff}: givens {givens} below floor {lo_9}"
+            assert givens <= hi_9 + 5, f"{diff}: givens {givens} above ceiling {hi_9}"
 
     # 13. Sudoku 4x4 and 6x6 kids variants
     @pytest.mark.parametrize("size", [4, 6])
@@ -373,8 +371,8 @@ class TestSudoku:
 # 14-15. Word Scramble
 # ============================================================================
 
-class TestWordScramble:
 
+class TestWordScramble:
     # 14. Word Scramble generates valid scrambles
     def test_generates_valid_scrambles_different_from_original(self):
         """Test 14: Scrambled word differs from the original."""
@@ -382,9 +380,9 @@ class TestWordScramble:
         result = generate_word_scramble(words, hint_mode="first_letter")
 
         for entry in result["scrambles"]:
-            assert entry["scrambled"] != entry["original"], (
-                f"Scrambled '{entry['scrambled']}' same as original '{entry['original']}'"
-            )
+            assert (
+                entry["scrambled"] != entry["original"]
+            ), f"Scrambled '{entry['scrambled']}' same as original '{entry['original']}'"
             # Same letters (sorted)
             assert sorted(entry["scrambled"]) == sorted(entry["original"])
 
@@ -395,26 +393,22 @@ class TestWordScramble:
         result = generate_word_scramble(words, hint_mode="none")
 
         for entry in result["scrambles"]:
-            assert entry["scrambled"].lower() not in COMMON_WORDS, (
-                f"Scrambled '{entry['scrambled']}' is a common word"
-            )
+            assert entry["scrambled"].lower() not in COMMON_WORDS, f"Scrambled '{entry['scrambled']}' is a common word"
 
 
 # ============================================================================
 # 16-17. Cryptogram
 # ============================================================================
 
-class TestCryptogram:
 
+class TestCryptogram:
     # 16. Substitution cipher — no letter maps to itself
     def test_no_letter_maps_to_itself(self):
         """Test 16: Derangement cipher has no fixed points."""
         for _ in range(20):
             cipher = _generate_derangement()
             for letter in ALPHABET:
-                assert cipher[letter] != letter, (
-                    f"Letter '{letter}' maps to itself"
-                )
+                assert cipher[letter] != letter, f"Letter '{letter}' maps to itself"
 
     # 17. Cryptogram can be decoded back to original
     def test_decoded_back_to_original(self):
@@ -433,8 +427,8 @@ class TestCryptogram:
 # 18. Number Search
 # ============================================================================
 
-class TestNumberSearch:
 
+class TestNumberSearch:
     def test_generates_valid_grids_with_numbers_placed(self):
         """Test 18: Number search places digit sequences in the grid."""
         numbers = ["314", "2718", "42", "1618", "99"]
@@ -444,10 +438,7 @@ class TestNumberSearch:
         assert len(grid) == 12
         assert all(len(row) == 12 for row in grid)
         # Every cell is a single digit
-        assert all(
-            len(cell) == 1 and cell.isdigit()
-            for row in grid for cell in row
-        )
+        assert all(len(cell) == 1 and cell.isdigit() for row in grid for cell in row)
         # At least some numbers were placed
         assert len(result["placed_numbers"]) > 0
 
@@ -461,8 +452,8 @@ class TestNumberSearch:
 # 19. Content hash generation is deterministic
 # ============================================================================
 
-class TestContentHash:
 
+class TestContentHash:
     def test_deterministic_hashing(self):
         """Test 19: Same input produces same hash, different input differs."""
         data_a = {"grid": [[1, 2], [3, 4]], "words": ["HELLO"]}
@@ -482,8 +473,8 @@ class TestContentHash:
 # 20. SVG rendering produces valid SVG strings
 # ============================================================================
 
-class TestSVGRendering:
 
+class TestSVGRendering:
     def test_word_search_svg(self):
         """Test 20a: Word search SVG is valid."""
         puzzle = generate_word_search(WORD_LIST, grid_size=10, directions=4, seed=1)
@@ -500,7 +491,9 @@ class TestSVGRendering:
     def test_crossword_svg(self):
         """Test 20c: Crossword SVG is valid."""
         puzzle = generate_crossword(
-            CROSSWORD_WORDS, CROSSWORD_CLUES, seed=42,
+            CROSSWORD_WORDS,
+            CROSSWORD_CLUES,
+            seed=42,
         )
         svg = cw_render_to_svg(puzzle, show_solution=False)
         assert svg.strip().startswith("<svg")
@@ -546,8 +539,8 @@ class TestSVGRendering:
 # 21. Difficulty scores in range 0-100 for all algorithms
 # ============================================================================
 
-class TestDifficultyScoresInRange:
 
+class TestDifficultyScoresInRange:
     def test_word_search_difficulty_range(self):
         """Test 21a: Word search difficulty in [0, 100]."""
         result = generate_word_search(WORD_LIST, grid_size=15, directions=8, seed=1)
@@ -578,19 +571,25 @@ class TestDifficultyScoresInRange:
         result = generate_cryptogram("The quick brown fox jumps over the lazy dog")
         assert 0.0 <= result["difficulty_score"] <= 100.0
 
-    @pytest.mark.parametrize("params", [
-        dict(grid_size=10, word_count=5, direction_count=2, overlap_rate=0.0),
-        dict(grid_size=20, word_count=25, direction_count=8, overlap_rate=0.5),
-    ])
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(grid_size=10, word_count=5, direction_count=2, overlap_rate=0.0),
+            dict(grid_size=20, word_count=25, direction_count=8, overlap_rate=0.5),
+        ],
+    )
     def test_ws_calculate_difficulty_bounds(self, params):
         """Test 21g: ws calculate_difficulty always in [0, 100]."""
         score = ws_calculate_difficulty(**params)
         assert 0.0 <= score <= 100.0
 
-    @pytest.mark.parametrize("params", [
-        dict(path_length=10, dead_end_count=5, branch_factor=1.8, grid_size=10),
-        dict(path_length=500, dead_end_count=200, branch_factor=3.0, grid_size=40),
-    ])
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(path_length=10, dead_end_count=5, branch_factor=1.8, grid_size=10),
+            dict(path_length=500, dead_end_count=200, branch_factor=3.0, grid_size=40),
+        ],
+    )
     def test_maze_calculate_difficulty_bounds(self, params):
         """Test 21h: maze calculate_difficulty always in [0, 100]."""
         score = maze_calculate_difficulty(**params)
@@ -599,14 +598,16 @@ class TestDifficultyScoresInRange:
     def test_sudoku_calculate_difficulty_bounds(self):
         """Test 21i: sudoku calculate_difficulty always in [0, 100]."""
         score = sudoku_calculate_difficulty(
-            givens_count=30, techniques_required=["naked_singles", "hidden_singles"],
+            givens_count=30,
+            techniques_required=["naked_singles", "hidden_singles"],
         )
         assert 0.0 <= score <= 100.0
 
     def test_cryptogram_calculate_difficulty_bounds(self):
         """Test 21j: cryptogram calculate_difficulty always in [0, 100]."""
         score = crypto_calculate_difficulty(
-            phrase_length=100, unique_letters=20,
+            phrase_length=100,
+            unique_letters=20,
             letter_frequency_distribution=0.04,
         )
         assert 0.0 <= score <= 100.0
@@ -616,8 +617,8 @@ class TestDifficultyScoresInRange:
 # Additional edge-case / robustness tests (extending to ≥30 total)
 # ============================================================================
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_word_search_invalid_direction_count(self):
         """Invalid direction count raises ValueError."""
         with pytest.raises(ValueError, match="directions must be 2, 4, or 8"):
@@ -663,6 +664,8 @@ class TestEdgeCases:
     def test_crossword_difficulty_function_edge(self):
         """Crossword difficulty with extreme inputs stays bounded."""
         score = cw_calculate_difficulty(
-            black_square_pct=0.8, avg_word_length=12, clue_grade_level=12,
+            black_square_pct=0.8,
+            avg_word_length=12,
+            clue_grade_level=12,
         )
         assert 0.0 <= score <= 100.0

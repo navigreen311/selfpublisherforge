@@ -152,16 +152,12 @@ async def test_list_pipelines_filter_by_status(client: AsyncClient):
     assert resp.status_code == 201
 
     # Filter for active (should be empty)
-    resp = await client.get(
-        _pipeline_url(), params={"org_id": ORG_ID, "status": "active"}
-    )
+    resp = await client.get(_pipeline_url(), params={"org_id": ORG_ID, "status": "active"})
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
 
     # Filter for draft (should find it)
-    resp = await client.get(
-        _pipeline_url(), params={"org_id": ORG_ID, "status": "draft"}
-    )
+    resp = await client.get(_pipeline_url(), params={"org_id": ORG_ID, "status": "draft"})
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
 
@@ -178,9 +174,7 @@ async def test_get_pipeline_detail(client: AsyncClient):
     )
     pipeline_id = create_resp.json()["id"]
 
-    resp = await client.get(
-        _pipeline_url(f"/{pipeline_id}"), params={"org_id": ORG_ID}
-    )
+    resp = await client.get(_pipeline_url(f"/{pipeline_id}"), params={"org_id": ORG_ID})
     assert resp.status_code == 200
     assert resp.json()["id"] == pipeline_id
     assert resp.json()["tasks"] == []
@@ -189,9 +183,7 @@ async def test_get_pipeline_detail(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_get_pipeline_not_found(client: AsyncClient):
     fake_id = str(uuid.uuid4())
-    resp = await client.get(
-        _pipeline_url(f"/{fake_id}"), params={"org_id": ORG_ID}
-    )
+    resp = await client.get(_pipeline_url(f"/{fake_id}"), params={"org_id": ORG_ID})
     assert resp.status_code == 404
 
 
@@ -434,9 +426,7 @@ async def test_get_timeline(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_timeline_not_found(client: AsyncClient):
     fake_id = str(uuid.uuid4())
-    resp = await client.get(
-        _pipeline_url(f"/{fake_id}/timeline"), params={"org_id": ORG_ID}
-    )
+    resp = await client.get(_pipeline_url(f"/{fake_id}/timeline"), params={"org_id": ORG_ID})
     assert resp.status_code == 404
 
 
@@ -480,9 +470,7 @@ async def test_list_templates(client: AsyncClient):
         },
     )
 
-    resp = await client.get(
-        _pipeline_url("/templates"), params={"org_id": ORG_ID}
-    )
+    resp = await client.get(_pipeline_url("/templates"), params={"org_id": ORG_ID})
     assert resp.status_code == 200
     templates = resp.json()
     assert len(templates) >= 1
@@ -491,8 +479,6 @@ async def test_list_templates(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_list_templates_empty(client: AsyncClient):
-    resp = await client.get(
-        _pipeline_url("/templates"), params={"org_id": ORG_ID}
-    )
+    resp = await client.get(_pipeline_url("/templates"), params={"org_id": ORG_ID})
     assert resp.status_code == 200
     assert resp.json() == []

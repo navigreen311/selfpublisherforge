@@ -26,31 +26,60 @@ depends_on: str | None = None
 def upgrade() -> None:
     # -- Enum types ----------------------------------------------------------
     voice_provider = postgresql.ENUM(
-        "coqui_xtts", "elevenlabs", "piper", "custom_clone",
-        name="voice_provider", create_type=False,
+        "coqui_xtts",
+        "elevenlabs",
+        "piper",
+        "custom_clone",
+        name="voice_provider",
+        create_type=False,
     )
     voice_type = postgresql.ENUM(
-        "narrator", "character", "custom",
-        name="voice_type", create_type=False,
+        "narrator",
+        "character",
+        "custom",
+        name="voice_type",
+        create_type=False,
     )
     audiobook_project_status = postgresql.ENUM(
-        "draft", "configuring", "generating", "reviewing",
-        "mastering", "complete", "published",
-        name="audiobook_project_status", create_type=False,
+        "draft",
+        "configuring",
+        "generating",
+        "reviewing",
+        "mastering",
+        "complete",
+        "published",
+        name="audiobook_project_status",
+        create_type=False,
     )
     audiobook_chapter_status = postgresql.ENUM(
-        "pending", "preprocessing", "generating", "post_processing",
-        "review", "approved", "failed",
-        name="audiobook_chapter_status", create_type=False,
+        "pending",
+        "preprocessing",
+        "generating",
+        "post_processing",
+        "review",
+        "approved",
+        "failed",
+        name="audiobook_chapter_status",
+        create_type=False,
     )
     audiobook_job_type = postgresql.ENUM(
-        "chapter_generate", "chapter_regenerate", "segment_regenerate",
-        "master_merge", "quality_check", "format_convert",
-        name="audiobook_job_type", create_type=False,
+        "chapter_generate",
+        "chapter_regenerate",
+        "segment_regenerate",
+        "master_merge",
+        "quality_check",
+        "format_convert",
+        name="audiobook_job_type",
+        create_type=False,
     )
     audiobook_job_status = postgresql.ENUM(
-        "queued", "processing", "completed", "failed", "cancelled",
-        name="audiobook_job_status", create_type=False,
+        "queued",
+        "processing",
+        "completed",
+        "failed",
+        "cancelled",
+        name="audiobook_job_status",
+        create_type=False,
     )
 
     # Create enum types in the database
@@ -88,9 +117,16 @@ def upgrade() -> None:
     op.create_index("ix_audiobook_voices_provider", "audiobook_voices", ["provider"])
     op.create_index("ix_audiobook_voices_voice_type", "audiobook_voices", ["voice_type"])
     op.create_index("ix_audiobook_voices_active", "audiobook_voices", ["active"])
-    op.create_index("ix_audiobook_voices_voice_settings_gin", "audiobook_voices", ["voice_settings"], postgresql_using="gin")
+    op.create_index(
+        "ix_audiobook_voices_voice_settings_gin", "audiobook_voices", ["voice_settings"], postgresql_using="gin"
+    )
     op.create_index("ix_audiobook_voices_org_id_created_at", "audiobook_voices", ["org_id", "created_at"])
-    op.create_index("ix_audiobook_voices_deleted_at_partial", "audiobook_voices", ["id"], postgresql_where=sa.text("deleted_at IS NULL"))
+    op.create_index(
+        "ix_audiobook_voices_deleted_at_partial",
+        "audiobook_voices",
+        ["id"],
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
 
     # -- audiobook_projects --------------------------------------------------
     op.create_table(
@@ -100,10 +136,21 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("org_id", postgresql.UUID(as_uuid=True), nullable=False, index=True),
-        sa.Column("book_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("books.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "book_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("books.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("title", sa.String(500), nullable=True),
         sa.Column("status", audiobook_project_status, nullable=False, server_default="draft"),
-        sa.Column("narrator_voice_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("audiobook_voices.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "narrator_voice_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("audiobook_voices.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("character_voices", postgresql.JSONB, nullable=True),
         sa.Column("narration_style", postgresql.JSONB, nullable=True),
         sa.Column("output_format", sa.String(20), nullable=False, server_default="mp3"),
@@ -120,16 +167,27 @@ def upgrade() -> None:
         sa.Column("cover_audio_url", sa.Text, nullable=True),
         sa.Column("metadata", postgresql.JSONB, nullable=True),
         sa.Column("settings", postgresql.JSONB, nullable=True),
-        sa.Column("created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ),
     )
     op.create_index("ix_audiobook_projects_status", "audiobook_projects", ["status"])
     op.create_index("ix_audiobook_projects_target_platform", "audiobook_projects", ["target_platform"])
-    op.create_index("ix_audiobook_projects_character_voices_gin", "audiobook_projects", ["character_voices"], postgresql_using="gin")
-    op.create_index("ix_audiobook_projects_narration_style_gin", "audiobook_projects", ["narration_style"], postgresql_using="gin")
+    op.create_index(
+        "ix_audiobook_projects_character_voices_gin", "audiobook_projects", ["character_voices"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_audiobook_projects_narration_style_gin", "audiobook_projects", ["narration_style"], postgresql_using="gin"
+    )
     op.create_index("ix_audiobook_projects_metadata_gin", "audiobook_projects", ["metadata"], postgresql_using="gin")
     op.create_index("ix_audiobook_projects_settings_gin", "audiobook_projects", ["settings"], postgresql_using="gin")
     op.create_index("ix_audiobook_projects_org_id_created_at", "audiobook_projects", ["org_id", "created_at"])
-    op.create_index("ix_audiobook_projects_deleted_at_partial", "audiobook_projects", ["id"], postgresql_where=sa.text("deleted_at IS NULL"))
+    op.create_index(
+        "ix_audiobook_projects_deleted_at_partial",
+        "audiobook_projects",
+        ["id"],
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
 
     # -- audiobook_chapters --------------------------------------------------
     op.create_table(
@@ -138,14 +196,30 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("audiobook_project_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("audiobook_projects.id", ondelete="CASCADE"), nullable=False, index=True),
-        sa.Column("chapter_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "audiobook_project_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("audiobook_projects.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+        sa.Column(
+            "chapter_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("chapters.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("chapter_number", sa.Integer, nullable=False),
         sa.Column("chapter_title", sa.String(500), nullable=True),
         sa.Column("source_text", sa.Text, nullable=False),
         sa.Column("word_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("status", audiobook_chapter_status, nullable=False, server_default="pending"),
-        sa.Column("voice_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("audiobook_voices.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "voice_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("audiobook_voices.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("ssml_text", sa.Text, nullable=True),
         sa.Column("audio_url", sa.Text, nullable=True),
         sa.Column("waveform_data", postgresql.JSONB, nullable=True),
@@ -161,9 +235,21 @@ def upgrade() -> None:
     )
     op.create_index("ix_audiobook_chapters_status", "audiobook_chapters", ["status"])
     op.create_index("ix_audiobook_chapters_chapter_number", "audiobook_chapters", ["chapter_number"])
-    op.create_index("ix_audiobook_chapters_generation_params_gin", "audiobook_chapters", ["generation_params"], postgresql_using="gin")
-    op.create_index("ix_audiobook_chapters_quality_metrics_gin", "audiobook_chapters", ["quality_metrics"], postgresql_using="gin")
-    op.create_index("ix_audiobook_chapters_deleted_at_partial", "audiobook_chapters", ["id"], postgresql_where=sa.text("deleted_at IS NULL"))
+    op.create_index(
+        "ix_audiobook_chapters_generation_params_gin",
+        "audiobook_chapters",
+        ["generation_params"],
+        postgresql_using="gin",
+    )
+    op.create_index(
+        "ix_audiobook_chapters_quality_metrics_gin", "audiobook_chapters", ["quality_metrics"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_audiobook_chapters_deleted_at_partial",
+        "audiobook_chapters",
+        ["id"],
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
 
     # -- audiobook_pronunciation ---------------------------------------------
     op.create_table(
@@ -173,7 +259,13 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("org_id", postgresql.UUID(as_uuid=True), nullable=False, index=True),
-        sa.Column("audiobook_project_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("audiobook_projects.id", ondelete="CASCADE"), nullable=True, index=True),
+        sa.Column(
+            "audiobook_project_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("audiobook_projects.id", ondelete="CASCADE"),
+            nullable=True,
+            index=True,
+        ),
         sa.Column("word", sa.String(255), nullable=False),
         sa.Column("phonetic", sa.String(500), nullable=False),
         sa.Column("ssml_phoneme", sa.String(500), nullable=True),
@@ -184,7 +276,12 @@ def upgrade() -> None:
     op.create_index("ix_audiobook_pronunciation_word", "audiobook_pronunciation", ["word"])
     op.create_index("ix_audiobook_pronunciation_active", "audiobook_pronunciation", ["active"])
     op.create_index("ix_audiobook_pronunciation_org_id_created_at", "audiobook_pronunciation", ["org_id", "created_at"])
-    op.create_index("ix_audiobook_pronunciation_deleted_at_partial", "audiobook_pronunciation", ["id"], postgresql_where=sa.text("deleted_at IS NULL"))
+    op.create_index(
+        "ix_audiobook_pronunciation_deleted_at_partial",
+        "audiobook_pronunciation",
+        ["id"],
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
 
     # -- audiobook_generation_jobs -------------------------------------------
     op.create_table(
@@ -193,8 +290,19 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("audiobook_project_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("audiobook_projects.id", ondelete="CASCADE"), nullable=False, index=True),
-        sa.Column("chapter_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("audiobook_chapters.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "audiobook_project_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("audiobook_projects.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+        sa.Column(
+            "chapter_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("audiobook_chapters.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("job_type", audiobook_job_type, nullable=False),
         sa.Column("status", audiobook_job_status, nullable=False, server_default="queued"),
         sa.Column("priority", sa.Integer, nullable=False, server_default="5"),
@@ -213,9 +321,21 @@ def upgrade() -> None:
     op.create_index("ix_audiobook_generation_jobs_job_type", "audiobook_generation_jobs", ["job_type"])
     op.create_index("ix_audiobook_generation_jobs_priority", "audiobook_generation_jobs", ["priority"])
     op.create_index("ix_audiobook_generation_jobs_celery_task_id", "audiobook_generation_jobs", ["celery_task_id"])
-    op.create_index("ix_audiobook_generation_jobs_input_params_gin", "audiobook_generation_jobs", ["input_params"], postgresql_using="gin")
-    op.create_index("ix_audiobook_generation_jobs_output_gin", "audiobook_generation_jobs", ["output"], postgresql_using="gin")
-    op.create_index("ix_audiobook_generation_jobs_deleted_at_partial", "audiobook_generation_jobs", ["id"], postgresql_where=sa.text("deleted_at IS NULL"))
+    op.create_index(
+        "ix_audiobook_generation_jobs_input_params_gin",
+        "audiobook_generation_jobs",
+        ["input_params"],
+        postgresql_using="gin",
+    )
+    op.create_index(
+        "ix_audiobook_generation_jobs_output_gin", "audiobook_generation_jobs", ["output"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_audiobook_generation_jobs_deleted_at_partial",
+        "audiobook_generation_jobs",
+        ["id"],
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
 
 
 def downgrade() -> None:

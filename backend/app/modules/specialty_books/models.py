@@ -26,6 +26,7 @@ from app.database import BaseModel, TenantModel
 # ENUMS
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class BookType(str, enum.Enum):
     CHILDRENS = "childrens"
     COLORING = "coloring"
@@ -173,6 +174,7 @@ class FearInventory(str, enum.Enum):
 # CHILDREN'S BOOKS
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class ChildrensBook(TenantModel):
     """Master record for a children's book project."""
 
@@ -290,6 +292,7 @@ class ChildrensBookCharacter(TenantModel):
 # COLORING BOOKS
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class ColoringBook(TenantModel):
     """Master record for a coloring book project."""
 
@@ -368,6 +371,7 @@ class ColoringBookPage(TenantModel):
 # ═══════════════════════════════════════════════════════════════════════
 # PUZZLE BOOKS
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class PuzzleBook(TenantModel):
     """Master record for a puzzle book project."""
@@ -452,6 +456,7 @@ class Puzzle(TenantModel):
 # ═══════════════════════════════════════════════════════════════════════
 # SHARED TABLES
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class AssetProvenance(TenantModel):
     """Every generated asset tracked for legal protection."""

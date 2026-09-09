@@ -31,6 +31,7 @@ from app.modules.market_intelligence.service import MarketIntelligenceService
 # Helpers / Factories
 # ---------------------------------------------------------------------------
 
+
 def _make_competitor_book(**overrides) -> MagicMock:
     """Create a MagicMock resembling a CompetitorBook ORM row."""
     now = datetime.now(UTC)
@@ -116,6 +117,7 @@ def _make_category(**overrides) -> MagicMock:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_db():
     """Return an AsyncMock simulating an AsyncSession."""
@@ -153,6 +155,7 @@ def org_id():
 # Tests: list_competitors
 # ===========================================================================
 
+
 class TestListCompetitors:
     """Tests for MarketIntelligenceService.list_competitors."""
 
@@ -171,12 +174,8 @@ class TestListCompetitors:
     @pytest.mark.asyncio
     async def test_returns_mapped_competitor_list_items(self, service, mock_db, org_id):
         """list_competitors should map DB rows to CompetitorListItem schemas."""
-        book1 = _make_competitor_book(
-            asin="B000000001", title="Book One", org_id=org_id
-        )
-        book2 = _make_competitor_book(
-            asin="B000000002", title="Book Two", org_id=org_id
-        )
+        book1 = _make_competitor_book(asin="B000000001", title="Book One", org_id=org_id)
+        book2 = _make_competitor_book(asin="B000000002", title="Book Two", org_id=org_id)
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [book1, book2]
         mock_db.execute.return_value = mock_result
@@ -219,6 +218,7 @@ class TestListCompetitors:
 # ===========================================================================
 # Tests: track_competitor
 # ===========================================================================
+
 
 class TestTrackCompetitor:
     """Tests for MarketIntelligenceService.track_competitor."""
@@ -265,9 +265,7 @@ class TestTrackCompetitor:
         mock_client.get_product_detail.assert_awaited_once_with("B001234567", marketplace="US")
 
     @pytest.mark.asyncio
-    async def test_returns_existing_competitor_without_duplicate(
-        self, service, mock_db, mock_client, org_id
-    ):
+    async def test_returns_existing_competitor_without_duplicate(self, service, mock_db, mock_client, org_id):
         """track_competitor should return the existing record if ASIN is already tracked."""
         existing_book = _make_competitor_book(asin="B001234567", org_id=org_id)
         mock_result = MagicMock()
@@ -284,9 +282,7 @@ class TestTrackCompetitor:
         assert result.asin == "B001234567"
 
     @pytest.mark.asyncio
-    async def test_raises_value_error_when_product_not_found(
-        self, service, mock_db, mock_client, org_id
-    ):
+    async def test_raises_value_error_when_product_not_found(self, service, mock_db, mock_client, org_id):
         """track_competitor should raise AppException when Amazon returns no product."""
         # No existing competitor
         mock_result = MagicMock()
@@ -361,6 +357,7 @@ class TestTrackCompetitor:
 # Tests: get_competitor
 # ===========================================================================
 
+
 class TestGetCompetitor:
     """Tests for MarketIntelligenceService.get_competitor."""
 
@@ -425,6 +422,7 @@ class TestGetCompetitor:
 # Tests: get_snapshots
 # ===========================================================================
 
+
 class TestGetSnapshots:
     """Tests for MarketIntelligenceService.get_snapshots."""
 
@@ -475,9 +473,7 @@ class TestGetSnapshots:
         cat_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = cat_result
 
-        result = await service.get_snapshots(
-            db=mock_db, category_id="nonexistent_node", limit=10
-        )
+        result = await service.get_snapshots(db=mock_db, category_id="nonexistent_node", limit=10)
 
         assert result == []
 
@@ -497,9 +493,7 @@ class TestGetSnapshots:
 
         mock_db.execute = AsyncMock(side_effect=[cat_result, snap_result])
 
-        result = await service.get_snapshots(
-            db=mock_db, category_id="154606011", limit=10
-        )
+        result = await service.get_snapshots(db=mock_db, category_id="154606011", limit=10)
 
         assert len(result) == 1
         assert isinstance(result[0], MarketSnapshot)
@@ -542,6 +536,7 @@ class TestGetSnapshots:
 # ===========================================================================
 # Tests: Mapping helpers (edge cases)
 # ===========================================================================
+
 
 class TestMappingHelpers:
     """Tests for private mapping methods exposed through the public API."""

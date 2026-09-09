@@ -98,9 +98,7 @@ class TestGeneratePdfReturnsBytes:
 
     def test_generate_pdf_bytes_returns_bytes(self, export_request: ExportRequest):
         result = generate_pdf_bytes(export_request, title="Test Book")
-        assert isinstance(result, bytes), (
-            f"Expected bytes, got {type(result).__name__}"
-        )
+        assert isinstance(result, bytes), f"Expected bytes, got {type(result).__name__}"
 
     def test_generate_pdf_bytes_not_empty(self, export_request: ExportRequest):
         result = generate_pdf_bytes(export_request, title="Test Book")
@@ -109,9 +107,7 @@ class TestGeneratePdfReturnsBytes:
     def test_generate_pdf_bytes_starts_with_pdf_header(self, export_request: ExportRequest):
         """Real PDF files begin with the %PDF magic bytes."""
         result = generate_pdf_bytes(export_request, title="Test Book")
-        assert result[:5] == b"%PDF-", (
-            "PDF output should start with %PDF- magic header"
-        )
+        assert result[:5] == b"%PDF-", "PDF output should start with %PDF- magic header"
 
     def test_generate_pdf_returns_pdfdocument(self, export_request: ExportRequest):
         doc = generate_pdf(export_request, title="Test Book")
@@ -126,9 +122,7 @@ class TestGeneratePdfReturnsBytes:
     def test_to_bytes_matches_generate_pdf_bytes(self, export_request: ExportRequest):
         """Both code paths should produce equivalent PDF output."""
         doc = generate_pdf(export_request, title="Consistent")
-        via_wrapper = generate_pdf_bytes(
-            export_request, title="Consistent"
-        )
+        via_wrapper = generate_pdf_bytes(export_request, title="Consistent")
         # Both should be valid PDFs (start with %PDF-)
         assert doc.to_bytes()[:5] == b"%PDF-"
         assert via_wrapper[:5] == b"%PDF-"
@@ -145,9 +139,7 @@ class TestGeneratePdfWithChapters:
     def test_two_chapters_produce_multiple_pages(self, export_request: ExportRequest):
         doc = generate_pdf(export_request, title="Two Chapters")
         # Title page + TOC + at least 2 chapter pages = 4+ pages
-        assert doc.total_pages >= 4, (
-            f"Expected at least 4 pages (title+TOC+2 chapters), got {doc.total_pages}"
-        )
+        assert doc.total_pages >= 4, f"Expected at least 4 pages (title+TOC+2 chapters), got {doc.total_pages}"
 
     def test_chapters_sorted_by_order(self, book_id: uuid.UUID):
         """Chapters should be sorted by their order field, not insertion order.
@@ -235,9 +227,7 @@ class TestGeneratePdfWithIsbn:
         doc = generate_pdf(export_request, title="No ISBN")
         assert doc.include_isbn_barcode is False
 
-    def test_generate_pdf_bytes_with_isbn_does_not_crash(
-        self, export_request_with_isbn: ExportRequest
-    ):
+    def test_generate_pdf_bytes_with_isbn_does_not_crash(self, export_request_with_isbn: ExportRequest):
         """End-to-end: generating bytes with ISBN should not raise."""
         result = generate_pdf_bytes(export_request_with_isbn, title="ISBN Bytes Test")
         assert isinstance(result, bytes)
@@ -376,9 +366,7 @@ class TestGeneratePdfPageSizes:
         assert doc.trim_height_in == 10.0
         assert doc.total_pages >= 2
 
-    def test_all_trim_sizes_produce_valid_documents(
-        self, book_id: uuid.UUID, sample_chapters: list[ChapterInput]
-    ):
+    def test_all_trim_sizes_produce_valid_documents(self, book_id: uuid.UUID, sample_chapters: list[ChapterInput]):
         """Every trim size in the enum should produce a valid document without error."""
         for trim_size in TrimSize:
             request = ExportRequest(
@@ -395,9 +383,7 @@ class TestGeneratePdfPageSizes:
     def test_trim_dimensions_lookup_complete(self):
         """Ensure TRIM_DIMENSIONS has an entry for every TrimSize enum member."""
         for trim_size in TrimSize:
-            assert trim_size in TRIM_DIMENSIONS, (
-                f"Missing TRIM_DIMENSIONS entry for {trim_size.value}"
-            )
+            assert trim_size in TRIM_DIMENSIONS, f"Missing TRIM_DIMENSIONS entry for {trim_size.value}"
             w, h = TRIM_DIMENSIONS[trim_size]
             assert w > 0
             assert h > 0

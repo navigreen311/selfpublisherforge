@@ -58,8 +58,8 @@ async def _seed_user(db, *, email="user@test.com", password=VALID_PASSWORD, mfa=
 # Registration tests
 # ---------------------------------------------------------------------------
 
-class TestRegisterUser:
 
+class TestRegisterUser:
     @pytest.mark.asyncio
     async def test_register_success(self, db_session):
         result = await service.register_user(
@@ -97,9 +97,8 @@ class TestRegisterUser:
             org_name="SessOrg",
         )
         from sqlalchemy import func, select
-        count = await db_session.execute(
-            select(func.count()).select_from(UserSession)
-        )
+
+        count = await db_session.execute(select(func.count()).select_from(UserSession))
         assert count.scalar() >= 1
 
 
@@ -107,8 +106,8 @@ class TestRegisterUser:
 # Authentication tests
 # ---------------------------------------------------------------------------
 
-class TestAuthenticate:
 
+class TestAuthenticate:
     @pytest.mark.asyncio
     async def test_login_success(self, db_session):
         await _seed_user(db_session)
@@ -139,9 +138,7 @@ class TestAuthenticate:
     async def test_login_mfa_invalid_code(self, db_session):
         await _seed_user(db_session, mfa=True)
         with pytest.raises(AppException) as exc_info:
-            await service.authenticate(
-                db_session, email="user@test.com", password=VALID_PASSWORD, mfa_code="000000"
-            )
+            await service.authenticate(db_session, email="user@test.com", password=VALID_PASSWORD, mfa_code="000000")
         assert exc_info.value.code == "INVALID_MFA_CODE"
 
 
@@ -149,8 +146,8 @@ class TestAuthenticate:
 # Token refresh tests
 # ---------------------------------------------------------------------------
 
-class TestRefreshToken:
 
+class TestRefreshToken:
     @pytest.mark.asyncio
     async def test_refresh_success(self, db_session):
         reg = await service.register_user(
@@ -160,9 +157,7 @@ class TestRefreshToken:
             name="Refresh",
             org_name="RefOrg",
         )
-        new_tokens = await service.refresh_access_token(
-            db_session, refresh_token=reg["tokens"].refresh_token
-        )
+        new_tokens = await service.refresh_access_token(db_session, refresh_token=reg["tokens"].refresh_token)
         assert new_tokens.access_token
         assert new_tokens.refresh_token != reg["tokens"].refresh_token  # rotated
 
@@ -177,8 +172,8 @@ class TestRefreshToken:
 # Logout tests
 # ---------------------------------------------------------------------------
 
-class TestLogout:
 
+class TestLogout:
     @pytest.mark.asyncio
     async def test_logout_removes_session(self, db_session):
         reg = await service.register_user(
@@ -192,17 +187,15 @@ class TestLogout:
 
         # Trying to refresh should now fail
         with pytest.raises(AppException):
-            await service.refresh_access_token(
-                db_session, refresh_token=reg["tokens"].refresh_token
-            )
+            await service.refresh_access_token(db_session, refresh_token=reg["tokens"].refresh_token)
 
 
 # ---------------------------------------------------------------------------
 # Password reset tests
 # ---------------------------------------------------------------------------
 
-class TestPasswordReset:
 
+class TestPasswordReset:
     @pytest.mark.asyncio
     async def test_forgot_password_existing_user(self, db_session):
         await _seed_user(db_session, email="reset@test.com")
@@ -245,17 +238,15 @@ class TestPasswordReset:
 
         # Old refresh token should be invalid
         with pytest.raises(AppException):
-            await service.refresh_access_token(
-                db_session, refresh_token=reg["tokens"].refresh_token
-            )
+            await service.refresh_access_token(db_session, refresh_token=reg["tokens"].refresh_token)
 
 
 # ---------------------------------------------------------------------------
 # Email verification tests
 # ---------------------------------------------------------------------------
 
-class TestEmailVerification:
 
+class TestEmailVerification:
     @pytest.mark.asyncio
     async def test_verify_email_success(self, db_session):
         reg = await service.register_user(
@@ -268,6 +259,7 @@ class TestEmailVerification:
         await service.verify_email(db_session, token=reg["email_verify_token"])
         # Fetch user and check
         from sqlalchemy import select
+
         result = await db_session.execute(select(User).where(User.email == "verify@test.com"))
         user = result.scalar_one()
         assert user.email_verified is True
@@ -283,8 +275,8 @@ class TestEmailVerification:
 # MFA tests
 # ---------------------------------------------------------------------------
 
-class TestMFA:
 
+class TestMFA:
     @pytest.mark.asyncio
     async def test_setup_mfa(self, db_session):
         user = await _seed_user(db_session, email="mfa@test.com")
@@ -305,6 +297,7 @@ class TestMFA:
         user = await _seed_user(db_session, email="dis@test.com", mfa=True)
         await service.disable_mfa(db_session, user_id=user.id, password=VALID_PASSWORD)
         from sqlalchemy import select
+
         result = await db_session.execute(select(User).where(User.id == user.id))
         u = result.scalar_one()
         assert u.mfa_enabled is False
@@ -321,23 +314,20 @@ class TestMFA:
 # Session management tests
 # ---------------------------------------------------------------------------
 
-class TestSessionManagement:
 
+class TestSessionManagement:
     @pytest.mark.asyncio
     async def test_max_sessions_enforced(self, db_session):
         """Creating more than MAX_SESSIONS should evict the oldest."""
         user = await _seed_user(db_session, email="maxsess@test.com")
         # Authenticate multiple times to create sessions
         for _ in range(service.MAX_SESSIONS + 2):
-            await service.authenticate(
-                db_session, email="maxsess@test.com", password=VALID_PASSWORD
-            )
+            await service.authenticate(db_session, email="maxsess@test.com", password=VALID_PASSWORD)
 
         from sqlalchemy import func, select
+
         count_result = await db_session.execute(
-            select(func.count()).select_from(UserSession).where(
-                UserSession.user_id == user.id
-            )
+            select(func.count()).select_from(UserSession).where(UserSession.user_id == user.id)
         )
         assert count_result.scalar() <= service.MAX_SESSIONS
 
@@ -346,8 +336,8 @@ class TestSessionManagement:
 # Utils tests
 # ---------------------------------------------------------------------------
 
-class TestUtils:
 
+class TestUtils:
     def test_generate_token(self):
         t = generate_token()
         assert len(t) > 20
@@ -379,5 +369,6 @@ class TestUtils:
 
     def test_token_expiry(self):
         from datetime import datetime
+
         exp = token_expiry(hours=1)
         assert exp > datetime.now(UTC)

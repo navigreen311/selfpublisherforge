@@ -12,6 +12,7 @@ from app.database import BaseModel, TenantModel
 
 class Campaign(TenantModel):
     """Ad campaign across platforms (Amazon, Facebook)."""
+
     __tablename__ = "campaigns"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -31,21 +32,19 @@ class Campaign(TenantModel):
 
     # Relationships
     book = relationship(
-        "Book", back_populates="campaigns",
+        "Book",
+        back_populates="campaigns",
         primaryjoin="Campaign.book_id == Book.id",
         foreign_keys="[Campaign.book_id]",
     )
-    keyword_bids: Mapped[list["KeywordBid"]] = relationship(
-        "KeywordBid", back_populates="campaign", lazy="selectin"
-    )
+    keyword_bids: Mapped[list["KeywordBid"]] = relationship("KeywordBid", back_populates="campaign", lazy="selectin")
     performance_records: Mapped[list["CampaignPerformance"]] = relationship(
         "CampaignPerformance", back_populates="campaign", lazy="selectin"
     )
-    creatives: Mapped[list["AdCreative"]] = relationship(
-        "AdCreative", back_populates="campaign", lazy="selectin"
-    )
+    creatives: Mapped[list["AdCreative"]] = relationship("AdCreative", back_populates="campaign", lazy="selectin")
     organization = relationship(
-        "Organization", back_populates="campaigns",
+        "Organization",
+        back_populates="campaigns",
         primaryjoin="Campaign.org_id == Organization.id",
         foreign_keys="[Campaign.org_id]",
     )
@@ -58,11 +57,11 @@ class Campaign(TenantModel):
 
 class CampaignPerformance(BaseModel):
     """Daily performance metrics for a campaign."""
+
     __tablename__ = "campaign_performance"
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
     )
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     impressions: Mapped[int] = mapped_column(Integer, default=0)
@@ -79,18 +78,16 @@ class CampaignPerformance(BaseModel):
     # Relationships
     campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="performance_records")
 
-    __table_args__ = (
-        Index("ix_perf_campaign_date", "campaign_id", "date"),
-    )
+    __table_args__ = (Index("ix_perf_campaign_date", "campaign_id", "date"),)
 
 
 class KeywordBid(BaseModel):
     """Keyword-level bid for a campaign."""
+
     __tablename__ = "keyword_bids"
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
     )
     keyword: Mapped[str] = mapped_column(String(255), nullable=False)
     match_type: Mapped[str] = mapped_column(String(20), nullable=False, default="broad")
@@ -108,18 +105,16 @@ class KeywordBid(BaseModel):
     # Relationships
     campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="keyword_bids")
 
-    __table_args__ = (
-        Index("ix_keyword_bids_campaign_keyword", "campaign_id", "keyword"),
-    )
+    __table_args__ = (Index("ix_keyword_bids_campaign_keyword", "campaign_id", "keyword"),)
 
 
 class AdCreative(TenantModel):
     """Ad creative (headline, body, CTA) associated with a campaign."""
+
     __tablename__ = "ad_creatives"
 
     campaign_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="SET NULL"),
-        nullable=True, index=True
+        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True, index=True
     )
     book_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     headline: Mapped[str] = mapped_column(String(150), nullable=False)
@@ -137,18 +132,16 @@ class AdCreative(TenantModel):
     # Relationships
     campaign: Mapped["Campaign | None"] = relationship("Campaign", back_populates="creatives")
 
-    __table_args__ = (
-        Index("ix_ad_creatives_org_campaign", "org_id", "campaign_id"),
-    )
+    __table_args__ = (Index("ix_ad_creatives_org_campaign", "org_id", "campaign_id"),)
 
 
 class AdSearchTerm(BaseModel):
     """Search term report data for a campaign."""
+
     __tablename__ = "ad_search_terms"
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
     )
     search_term: Mapped[str] = mapped_column(String(500), nullable=False)
     impressions: Mapped[int] = mapped_column(Integer, default=0)
@@ -157,9 +150,7 @@ class AdSearchTerm(BaseModel):
     sales: Mapped[float] = mapped_column(Float, default=0.0)
     orders: Mapped[int] = mapped_column(Integer, default=0)
     action_taken: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    recorded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     campaign: Mapped["Campaign"] = relationship("Campaign")
@@ -167,11 +158,11 @@ class AdSearchTerm(BaseModel):
 
 class AdDailyMetric(BaseModel):
     """Aggregated daily metrics for a campaign."""
+
     __tablename__ = "ad_daily_metrics"
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        PGUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
     )
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     spend: Mapped[float] = mapped_column(Float, default=0.0)
@@ -183,6 +174,4 @@ class AdDailyMetric(BaseModel):
     # Relationships
     campaign: Mapped["Campaign"] = relationship("Campaign")
 
-    __table_args__ = (
-        Index("ix_daily_metrics_campaign_date", "campaign_id", "date", unique=True),
-    )
+    __table_args__ = (Index("ix_daily_metrics_campaign_date", "campaign_id", "date", unique=True),)

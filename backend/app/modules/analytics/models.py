@@ -33,13 +33,12 @@ class AnalyticsEvent(TenantModel):
     entity_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     entity_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     data: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
-    occurred_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), index=True
-    )
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="analytics_events",
+        "Organization",
+        back_populates="analytics_events",
         primaryjoin="AnalyticsEvent.org_id == Organization.id",
         foreign_keys="[AnalyticsEvent.org_id]",
     )
@@ -78,7 +77,8 @@ class RoyaltyRecord(TenantModel):
 
     # Relationships
     book = relationship(
-        "Book", back_populates="royalty_records",
+        "Book",
+        back_populates="royalty_records",
         primaryjoin="RoyaltyRecord.book_id == Book.id",
         foreign_keys="[RoyaltyRecord.book_id]",
     )
@@ -109,7 +109,8 @@ class PortfolioMetricSnapshot(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="portfolio_metrics",
+        "Organization",
+        back_populates="portfolio_metrics",
         primaryjoin="PortfolioMetricSnapshot.org_id == Organization.id",
         foreign_keys="[PortfolioMetricSnapshot.org_id]",
     )
@@ -138,7 +139,8 @@ class Report(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="reports",
+        "Organization",
+        back_populates="reports",
         primaryjoin="Report.org_id == Organization.id",
         foreign_keys="[Report.org_id]",
     )
@@ -180,9 +182,7 @@ class BSRTracking(TenantModel):
     bsr: Mapped[int | None] = mapped_column(nullable=True)
     category_rank: Mapped[int | None] = mapped_column(nullable=True)
     category_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    recorded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), index=True
-    )
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     __table_args__ = (
         Index("ix_bsr_tracking_book_recorded", "book_id", "recorded_at"),

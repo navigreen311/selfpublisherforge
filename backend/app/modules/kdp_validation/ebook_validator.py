@@ -109,8 +109,7 @@ class EbookValidator:
                         severity=Severity.ERROR,
                         rule="ebook_image_size",
                         message=(
-                            f"Image '{img.filename}' is {size_mb:.1f} MB, "
-                            f"exceeding the {max_mb:.0f} MB limit."
+                            f"Image '{img.filename}' is {size_mb:.1f} MB, " f"exceeding the {max_mb:.0f} MB limit."
                         ),
                         location=f"image:{img.filename}",
                         details={"max_bytes": MAX_EBOOK_IMAGE_SIZE_BYTES, "actual_bytes": img.size_bytes},
@@ -225,10 +224,7 @@ class EbookValidator:
                 ValidationIssue(
                     severity=Severity.ERROR,
                     rule="ebook_file_size",
-                    message=(
-                        f"Ebook file size ({size_mb:.0f} MB) exceeds "
-                        f"the KDP limit of {max_mb:.0f} MB."
-                    ),
+                    message=(f"Ebook file size ({size_mb:.0f} MB) exceeds " f"the KDP limit of {max_mb:.0f} MB."),
                     location="file",
                     details={"max_bytes": MAX_EBOOK_FILE_SIZE_BYTES, "actual_bytes": req.file_size_bytes},
                 )

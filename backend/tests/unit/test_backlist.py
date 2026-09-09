@@ -1,4 +1,5 @@
 """Unit tests for the Backlist compounding revenue model."""
+
 import pytest
 
 from app.modules.portfolio_economics.backlist import (
@@ -17,6 +18,7 @@ from app.modules.portfolio_economics.schemas import (
 )
 
 # ─── Decay Function Tests ────────────────────────────────────────────────────
+
 
 class TestApplyDecay:
     def test_no_decay_at_month_0(self):
@@ -57,6 +59,7 @@ class TestApplyDecay:
 
 # ─── Promotion Boost Tests ───────────────────────────────────────────────────
 
+
 class TestApplyPromotionBoost:
     def test_no_boost_at_month_0(self):
         result = _apply_promotion_boost(0, 100.0)
@@ -84,6 +87,7 @@ class TestApplyPromotionBoost:
 
 
 # ─── Series Read-Through Tests ───────────────────────────────────────────────
+
 
 class TestCalculateSeriesReadThrough:
     def test_single_book_no_readthrough(self):
@@ -126,6 +130,7 @@ class TestCalculateSeriesReadThrough:
 
 
 # ─── Full Backlist Projection Tests ──────────────────────────────────────────
+
 
 class TestCalculateBacklistProjection:
     def test_returns_backlist_projection(self):

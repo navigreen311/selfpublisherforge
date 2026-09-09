@@ -116,7 +116,9 @@ class SocialContentGenerator:
             "genre_hashtag": genre_hashtag,
             "target_audience": request.target_audience,
             "book_description": request.book_description,
-            "short_desc": request.book_description[:100] + "..." if len(request.book_description) > 100 else request.book_description,
+            "short_desc": request.book_description[:100] + "..."
+            if len(request.book_description) > 100
+            else request.book_description,
             "hook": f"you could {request.book_description[:50].lower().strip()}...",
             "comp_authors": "similar authors",
             "appeal": "keep you turning pages",
@@ -180,8 +182,12 @@ class SocialContentGenerator:
             SocialPlatform.TWITTER: [f"#{genre_hashtag}", "#BookLaunch", "#IndieAuthor"],
             SocialPlatform.FACEBOOK: [f"#{genre_hashtag}", "#NewBook"],
             SocialPlatform.INSTAGRAM: [
-                f"#{genre_hashtag}", "#BookStagram", "#NewRelease",
-                "#IndieAuthor", "#BookLovers", "#ReadersOfInstagram",
+                f"#{genre_hashtag}",
+                "#BookStagram",
+                "#NewRelease",
+                "#IndieAuthor",
+                "#BookLovers",
+                "#ReadersOfInstagram",
             ],
         }
 

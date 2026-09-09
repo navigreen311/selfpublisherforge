@@ -8,6 +8,7 @@ PowerUser represents 10% of traffic:
 
 Wait time: 1-2 seconds between requests (busy power users)
 """
+
 from __future__ import annotations
 
 import random

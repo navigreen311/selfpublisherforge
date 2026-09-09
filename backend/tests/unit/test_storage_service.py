@@ -37,6 +37,7 @@ from app.modules.storage.validators import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _fake_s3_client() -> MagicMock:
     """Return a mock boto3 S3 client."""
     client = MagicMock()
@@ -813,8 +814,9 @@ class TestGetAsset:
         await svc.get_asset(asset_id=asset.id, org_id=ORG_ID)
 
         call_kwargs = s3.generate_presigned_url.call_args
-        assert call_kwargs.kwargs.get("ClientMethod") == "get_object" or \
-               call_kwargs[1].get("ClientMethod") == "get_object"
+        assert (
+            call_kwargs.kwargs.get("ClientMethod") == "get_object" or call_kwargs[1].get("ClientMethod") == "get_object"
+        )
 
 
 # ===========================================================================
@@ -872,9 +874,7 @@ class TestExtractMetadata:
 
     def test_options_passed_through(self):
         asset = _make_fake_asset(content_type="image/png", file_name="img.png")
-        metadata = StorageService._extract_metadata(
-            asset, action="resize", options={"width": 800}
-        )
+        metadata = StorageService._extract_metadata(asset, action="resize", options={"width": 800})
         assert metadata["action"] == "resize"
         assert metadata["options"] == {"width": 800}
 

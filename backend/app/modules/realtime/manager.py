@@ -223,11 +223,7 @@ class ConnectionManager:
 
     def get_all_rooms(self) -> list[tuple[str, str, int]]:
         """Return a list of ``(channel, room_id, connection_count)`` tuples."""
-        return [
-            (ch.value, rid, len(conns))
-            for (ch, rid), conns in self.active_connections.items()
-            if conns
-        ]
+        return [(ch.value, rid, len(conns)) for (ch, rid), conns in self.active_connections.items() if conns]
 
     # ------------------------------------------------------------------
     # Shutdown

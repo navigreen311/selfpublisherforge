@@ -8,6 +8,7 @@ WriterUser represents 30% of traffic:
 
 Wait time: 2-5 seconds between requests (thoughtful content creation)
 """
+
 from __future__ import annotations
 
 import random

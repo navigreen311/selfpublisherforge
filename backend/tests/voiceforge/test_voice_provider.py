@@ -78,9 +78,7 @@ async def _seed_voices(db: AsyncSession) -> list[AudiobookVoice]:
     return voices
 
 
-async def _create_org_voice(
-    db: AsyncSession, org_id: uuid.UUID, name: str = "My Custom Voice"
-) -> AudiobookVoice:
+async def _create_org_voice(db: AsyncSession, org_id: uuid.UUID, name: str = "My Custom Voice") -> AudiobookVoice:
     """Helper: insert a custom org voice."""
     voice = AudiobookVoice(
         org_id=org_id,
@@ -196,9 +194,7 @@ class TestCreateClone:
         }
         with (
             patch.object(voice_manager, "_get_duration", return_value=200.0),
-            patch(
-                "app.services.voiceforge.tts_engine.TTSEngine"
-            ) as MockTTS,
+            patch("app.services.voiceforge.tts_engine.TTSEngine") as MockTTS,
         ):
             mock_tts = MockTTS.return_value
             mock_tts.clone_voice = AsyncMock(return_value=mock_clone_result)
@@ -244,9 +240,7 @@ class TestDeleteCloneSystemVoice:
         """Deleting a system voice returns False (query filters is_system_voice=False)."""
         voices = await _seed_voices(db_session)
         system_voice = voices[0]
-        result = await voice_manager.delete_clone(
-            db_session, system_voice.id, SYSTEM_ORG
-        )
+        result = await voice_manager.delete_clone(db_session, system_voice.id, SYSTEM_ORG)
         assert result is False
 
     @pytest.mark.asyncio
@@ -265,9 +259,7 @@ class TestDeleteCloneSystemVoice:
         self, voice_manager: VoiceManager, db_session: AsyncSession, org_id: uuid.UUID
     ) -> None:
         """Deleting a voice that does not exist returns False."""
-        result = await voice_manager.delete_clone(
-            db_session, uuid.uuid4(), org_id
-        )
+        result = await voice_manager.delete_clone(db_session, uuid.uuid4(), org_id)
         assert result is False
 
 
@@ -275,9 +267,7 @@ class TestDetectCharacters:
     """test_detect_characters — Detects dialogue characters in text."""
 
     @pytest.mark.asyncio
-    async def test_detect_characters_returns_sorted(
-        self, voice_manager: VoiceManager
-    ) -> None:
+    async def test_detect_characters_returns_sorted(self, voice_manager: VoiceManager) -> None:
         """Characters are returned sorted by dialogue_count descending."""
         mock_segments = [
             {"character": "Alice", "text": "Hello!"},
@@ -286,9 +276,7 @@ class TestDetectCharacters:
             {"character": "Alice", "text": "I'm fine."},
             {"character": "narrator", "text": "She said."},
         ]
-        with patch(
-            "app.services.voiceforge.ssml_generator.SSMLGenerator"
-        ) as MockSSML:
+        with patch("app.services.voiceforge.ssml_generator.SSMLGenerator") as MockSSML:
             mock_gen = MockSSML.return_value
             mock_gen.detect_dialogue = AsyncMock(return_value=mock_segments)
 
@@ -301,17 +289,13 @@ class TestDetectCharacters:
         assert chars[1]["dialogue_count"] == 1
 
     @pytest.mark.asyncio
-    async def test_detect_characters_excludes_narrator(
-        self, voice_manager: VoiceManager
-    ) -> None:
+    async def test_detect_characters_excludes_narrator(self, voice_manager: VoiceManager) -> None:
         """Narrator segments are not included in character results."""
         mock_segments = [
             {"character": "narrator", "text": "Once upon a time."},
             {"character": "narrator", "text": "The end."},
         ]
-        with patch(
-            "app.services.voiceforge.ssml_generator.SSMLGenerator"
-        ) as MockSSML:
+        with patch("app.services.voiceforge.ssml_generator.SSMLGenerator") as MockSSML:
             mock_gen = MockSSML.return_value
             mock_gen.detect_dialogue = AsyncMock(return_value=mock_segments)
 
@@ -320,13 +304,9 @@ class TestDetectCharacters:
         assert chars == []
 
     @pytest.mark.asyncio
-    async def test_detect_characters_empty_segments(
-        self, voice_manager: VoiceManager
-    ) -> None:
+    async def test_detect_characters_empty_segments(self, voice_manager: VoiceManager) -> None:
         """Empty segment list returns empty character list."""
-        with patch(
-            "app.services.voiceforge.ssml_generator.SSMLGenerator"
-        ) as MockSSML:
+        with patch("app.services.voiceforge.ssml_generator.SSMLGenerator") as MockSSML:
             mock_gen = MockSSML.return_value
             mock_gen.detect_dialogue = AsyncMock(return_value=[])
 
@@ -362,16 +342,15 @@ class TestRouteTTSCoqui:
     """test_route_tts_coqui — Routes to Coqui for standard requests."""
 
     @pytest.mark.asyncio
-    async def test_route_tts_draft_selects_coqui(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_route_tts_draft_selects_coqui(self, provider_router: ProviderRouter) -> None:
         """DRAFT requests should prefer coqui_xtts."""
-        with patch.object(
-            provider_router, "get_cost_usage", new_callable=AsyncMock
-        ) as mock_cost:
+        with patch.object(provider_router, "get_cost_usage", new_callable=AsyncMock) as mock_cost:
             mock_cost.return_value = CostUsage(
-                org_id="org1", current_month_cost=5.0,
-                budget_limit=100.0, percent_used=5.0, alert_level=None,
+                org_id="org1",
+                current_month_cost=5.0,
+                budget_limit=100.0,
+                percent_used=5.0,
+                alert_level=None,
             )
             result = await provider_router.route_tts(
                 text="This is a draft text for testing purposes.",
@@ -385,16 +364,15 @@ class TestRouteTTSCoqui:
         assert result.estimated_cost > 0
 
     @pytest.mark.asyncio
-    async def test_route_tts_preview_selects_piper(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_route_tts_preview_selects_piper(self, provider_router: ProviderRouter) -> None:
         """PREVIEW requests should prefer piper (fastest/cheapest)."""
-        with patch.object(
-            provider_router, "get_cost_usage", new_callable=AsyncMock
-        ) as mock_cost:
+        with patch.object(provider_router, "get_cost_usage", new_callable=AsyncMock) as mock_cost:
             mock_cost.return_value = CostUsage(
-                org_id="org1", current_month_cost=0.0,
-                budget_limit=100.0, percent_used=0.0, alert_level=None,
+                org_id="org1",
+                current_month_cost=0.0,
+                budget_limit=100.0,
+                percent_used=0.0,
+                alert_level=None,
             )
             result = await provider_router.route_tts(
                 text="Quick preview.",
@@ -411,16 +389,15 @@ class TestRouteTTSElevenLabs:
     """test_route_tts_elevenlabs — Routes to ElevenLabs for premium voices."""
 
     @pytest.mark.asyncio
-    async def test_route_tts_production_selects_elevenlabs(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_route_tts_production_selects_elevenlabs(self, provider_router: ProviderRouter) -> None:
         """PRODUCTION requests should prefer elevenlabs for best quality."""
-        with patch.object(
-            provider_router, "get_cost_usage", new_callable=AsyncMock
-        ) as mock_cost:
+        with patch.object(provider_router, "get_cost_usage", new_callable=AsyncMock) as mock_cost:
             mock_cost.return_value = CostUsage(
-                org_id="org1", current_month_cost=10.0,
-                budget_limit=100.0, percent_used=10.0, alert_level=None,
+                org_id="org1",
+                current_month_cost=10.0,
+                budget_limit=100.0,
+                percent_used=10.0,
+                alert_level=None,
             )
             result = await provider_router.route_tts(
                 text="Final production narration for the book.",
@@ -434,16 +411,15 @@ class TestRouteTTSElevenLabs:
         assert result.fallback is not None
 
     @pytest.mark.asyncio
-    async def test_route_tts_locked_voice(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_route_tts_locked_voice(self, provider_router: ProviderRouter) -> None:
         """Voice locked to a provider overrides routing logic."""
-        with patch.object(
-            provider_router, "get_cost_usage", new_callable=AsyncMock
-        ) as mock_cost:
+        with patch.object(provider_router, "get_cost_usage", new_callable=AsyncMock) as mock_cost:
             mock_cost.return_value = CostUsage(
-                org_id="org1", current_month_cost=0.0,
-                budget_limit=100.0, percent_used=0.0, alert_level=None,
+                org_id="org1",
+                current_month_cost=0.0,
+                budget_limit=100.0,
+                percent_used=0.0,
+                alert_level=None,
             )
             result = await provider_router.route_tts(
                 text="Cloned voice narration.",
@@ -457,16 +433,15 @@ class TestRouteTTSElevenLabs:
         assert result.reason == "voice locked to provider"
 
     @pytest.mark.asyncio
-    async def test_route_tts_free_tier_no_elevenlabs(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_route_tts_free_tier_no_elevenlabs(self, provider_router: ProviderRouter) -> None:
         """Free tier should not have access to elevenlabs."""
-        with patch.object(
-            provider_router, "get_cost_usage", new_callable=AsyncMock
-        ) as mock_cost:
+        with patch.object(provider_router, "get_cost_usage", new_callable=AsyncMock) as mock_cost:
             mock_cost.return_value = CostUsage(
-                org_id="org1", current_month_cost=0.0,
-                budget_limit=100.0, percent_used=0.0, alert_level=None,
+                org_id="org1",
+                current_month_cost=0.0,
+                budget_limit=100.0,
+                percent_used=0.0,
+                alert_level=None,
             )
             result = await provider_router.route_tts(
                 text="Free tier production text.",
@@ -479,16 +454,15 @@ class TestRouteTTSElevenLabs:
         assert result.provider != "elevenlabs"
 
     @pytest.mark.asyncio
-    async def test_route_tts_budget_exceeded_raises(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_route_tts_budget_exceeded_raises(self, provider_router: ProviderRouter) -> None:
         """Exceeding budget should raise RuntimeError."""
-        with patch.object(
-            provider_router, "get_cost_usage", new_callable=AsyncMock
-        ) as mock_cost:
+        with patch.object(provider_router, "get_cost_usage", new_callable=AsyncMock) as mock_cost:
             mock_cost.return_value = CostUsage(
-                org_id="org1", current_month_cost=100.0,
-                budget_limit=100.0, percent_used=100.0, alert_level="100%",
+                org_id="org1",
+                current_month_cost=100.0,
+                budget_limit=100.0,
+                percent_used=100.0,
+                alert_level="100%",
             )
             with pytest.raises(RuntimeError, match="Cost budget exceeded"):
                 await provider_router.route_tts(
@@ -524,9 +498,7 @@ class TestCircuitBreakerOpens:
         assert cb.is_open
         assert cb.open_until > time.time()
 
-    def test_provider_unavailable_when_circuit_open(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    def test_provider_unavailable_when_circuit_open(self, provider_router: ProviderRouter) -> None:
         """A provider with an open circuit is not available for routing."""
         circuit = provider_router._circuits["coqui_xtts"]
         circuit.record_failure()
@@ -598,9 +570,7 @@ class TestCostTracking:
         assert usage.alert_level is None
 
     @pytest.mark.asyncio
-    async def test_get_cost_usage_no_data(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_get_cost_usage_no_data(self, provider_router: ProviderRouter) -> None:
         """Returns zero cost when no Redis data exists."""
         mock_redis = AsyncMock()
         mock_redis.get = AsyncMock(return_value=None)
@@ -614,9 +584,7 @@ class TestCostTracking:
         assert usage.alert_level is None
 
     @pytest.mark.asyncio
-    async def test_get_cost_usage_alert_levels(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_get_cost_usage_alert_levels(self, provider_router: ProviderRouter) -> None:
         """Alert levels are set at correct thresholds."""
         mock_redis = AsyncMock()
         mock_redis.aclose = AsyncMock()
@@ -664,9 +632,7 @@ class TestProviderHealthCheck:
     """test_provider_health_check — Returns provider health status."""
 
     @pytest.mark.asyncio
-    async def test_health_check_healthy(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_health_check_healthy(self, provider_router: ProviderRouter) -> None:
         """Returns HEALTHY when provider responds with 2xx."""
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -678,9 +644,7 @@ class TestProviderHealthCheck:
         assert result == ProviderHealth.HEALTHY
 
     @pytest.mark.asyncio
-    async def test_health_check_degraded(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_health_check_degraded(self, provider_router: ProviderRouter) -> None:
         """Returns DEGRADED when provider responds with 4xx/5xx."""
         mock_response = MagicMock()
         mock_response.status_code = 500
@@ -692,9 +656,7 @@ class TestProviderHealthCheck:
         assert result == ProviderHealth.DEGRADED
 
     @pytest.mark.asyncio
-    async def test_health_check_down(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_health_check_down(self, provider_router: ProviderRouter) -> None:
         """Returns DOWN when provider raises an exception."""
         provider_router._http = AsyncMock()
         provider_router._http.get = AsyncMock(side_effect=Exception("Connection refused"))
@@ -703,17 +665,13 @@ class TestProviderHealthCheck:
         assert result == ProviderHealth.DOWN
 
     @pytest.mark.asyncio
-    async def test_health_check_unknown_provider(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_health_check_unknown_provider(self, provider_router: ProviderRouter) -> None:
         """Returns DOWN for an unknown provider name."""
         result = await provider_router.check_provider_health("nonexistent_provider")
         assert result == ProviderHealth.DOWN
 
     @pytest.mark.asyncio
-    async def test_get_provider_status(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_get_provider_status(self, provider_router: ProviderRouter) -> None:
         """get_provider_status returns cached status for all providers."""
         status = await provider_router.get_provider_status()
         # All providers were set HEALTHY in the fixture
@@ -723,19 +681,18 @@ class TestProviderHealthCheck:
         assert "piper" in status
 
     @pytest.mark.asyncio
-    async def test_no_providers_available_raises(
-        self, provider_router: ProviderRouter
-    ) -> None:
+    async def test_no_providers_available_raises(self, provider_router: ProviderRouter) -> None:
         """RuntimeError when all providers are down."""
         for p in provider_router.TTS_PROVIDERS:
             provider_router._health[p] = ProviderHealth.DOWN
 
-        with patch.object(
-            provider_router, "get_cost_usage", new_callable=AsyncMock
-        ) as mock_cost:
+        with patch.object(provider_router, "get_cost_usage", new_callable=AsyncMock) as mock_cost:
             mock_cost.return_value = CostUsage(
-                org_id="org1", current_month_cost=0.0,
-                budget_limit=100.0, percent_used=0.0, alert_level=None,
+                org_id="org1",
+                current_month_cost=0.0,
+                budget_limit=100.0,
+                percent_used=0.0,
+                alert_level=None,
             )
             with pytest.raises(RuntimeError, match="No TTS providers available"):
                 await provider_router.route_tts(

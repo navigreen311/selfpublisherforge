@@ -25,8 +25,8 @@ from app.tasks.config import (
 # Global time limits from CELERY_CONFIG
 # =========================================================================
 
-class TestGlobalTimeLimits:
 
+class TestGlobalTimeLimits:
     def test_task_time_limit_is_set(self):
         assert "task_time_limit" in CELERY_CONFIG
 
@@ -61,8 +61,8 @@ class TestGlobalTimeLimits:
 # Other CELERY_CONFIG essentials
 # =========================================================================
 
-class TestCeleryConfigEssentials:
 
+class TestCeleryConfigEssentials:
     def test_serializer_is_json(self):
         assert CELERY_CONFIG["task_serializer"] == "json"
 
@@ -98,8 +98,8 @@ class TestCeleryConfigEssentials:
 # Retry policies
 # =========================================================================
 
-class TestRetryPolicies:
 
+class TestRetryPolicies:
     def test_default_policy_exists(self):
         assert "default" in RETRY_POLICIES
 
@@ -149,8 +149,8 @@ class TestRetryPolicies:
 # Task queues and routing
 # =========================================================================
 
-class TestTaskQueuesAndRouting:
 
+class TestTaskQueuesAndRouting:
     def test_task_queues_defined(self):
         assert len(TASK_QUEUES) > 0
 
@@ -191,6 +191,7 @@ class TestTaskQueuesAndRouting:
 # Celery app include list
 # =========================================================================
 
+
 class TestCeleryAppIncludes:
     """Verify that the Celery app's ``include`` list references all task modules."""
 
@@ -218,5 +219,6 @@ class TestCeleryAppIncludes:
         # We only verify the module is importable; actual Celery app registration
         # is integration-level.
         import importlib
+
         mod = importlib.import_module(module_path)
         assert mod is not None

@@ -60,7 +60,6 @@ def make_issue(
 
 
 class TestRunFullValidation:
-
     def test_full_validation_all_passed(self):
         """Should aggregate results from all validators when all pass."""
         service = ValidationService()
@@ -191,7 +190,6 @@ class TestRunFullValidation:
 
 
 class TestValidatePrint:
-
     def test_validate_print_delegates_to_validator(self):
         """Should delegate to PrintValidator."""
         service = ValidationService()
@@ -213,7 +211,6 @@ class TestValidatePrint:
 
 
 class TestValidateEbook:
-
     def test_validate_ebook_delegates_to_validator(self):
         """Should delegate to EbookValidator."""
         service = ValidationService()
@@ -233,7 +230,6 @@ class TestValidateEbook:
 
 
 class TestValidateCover:
-
     def test_validate_cover_delegates_to_validator(self):
         """Should delegate to CoverValidator."""
         service = ValidationService()
@@ -254,7 +250,6 @@ class TestValidateCover:
 
 
 class TestScanCompliance:
-
     def test_scan_compliance_delegates_to_scanner(self):
         """Should delegate to ComplianceScanner."""
         service = ValidationService()
@@ -278,7 +273,6 @@ class TestScanCompliance:
 
 
 class TestGetResults:
-
     def test_get_results_existing(self):
         """Should retrieve stored validation results by ID."""
         service = ValidationService()
@@ -314,7 +308,6 @@ class TestGetResults:
 
 
 class TestAggregateStatus:
-
     def test_aggregate_empty_results(self):
         """Should return PASSED for empty results."""
         status = ValidationService._aggregate_status([])
@@ -355,7 +348,6 @@ class TestAggregateStatus:
 
 
 class TestEdgeCases:
-
     def test_validation_with_no_validators_selected(self):
         """Should handle validation request with no validators enabled."""
         service = ValidationService()

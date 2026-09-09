@@ -1,4 +1,5 @@
 """SQLAlchemy models for Comic Books."""
+
 from __future__ import annotations
 
 import uuid
@@ -77,9 +78,7 @@ class Comic(TenantModel):
     )
 
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
-    trim_size: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="6.625x10.25"
-    )
+    trim_size: Mapped[str] = mapped_column(String(20), nullable=False, default="6.625x10.25")
 
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
     premise: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -135,9 +134,7 @@ class ComicPage(BaseModel):
         index=True,
     )
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    page_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="story"
-    )
+    page_type: Mapped[str] = mapped_column(String(30), nullable=False, default="story")
     script_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     full_art_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -242,9 +239,7 @@ class ComicCharacter(BaseModel):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     visual_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     reference_images: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    auto_append: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
+    auto_append: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     default_costume: Mapped[str | None] = mapped_column(String(100), nullable=True)
     color_palette: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
@@ -283,9 +278,7 @@ class CharacterExpression(BaseModel):
     reference_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    character: Mapped[ComicCharacter] = relationship(
-        "ComicCharacter", back_populates="expressions"
-    )
+    character: Mapped[ComicCharacter] = relationship("ComicCharacter", back_populates="expressions")
 
 
 class CharacterPose(BaseModel):
@@ -304,9 +297,7 @@ class CharacterPose(BaseModel):
     reference_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    character: Mapped[ComicCharacter] = relationship(
-        "ComicCharacter", back_populates="poses"
-    )
+    character: Mapped[ComicCharacter] = relationship("ComicCharacter", back_populates="poses")
 
 
 class CharacterCostume(BaseModel):
@@ -323,11 +314,7 @@ class CharacterCostume(BaseModel):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     reference_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    is_default: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     # Relationships
-    character: Mapped[ComicCharacter] = relationship(
-        "ComicCharacter", back_populates="costumes"
-    )
+    character: Mapped[ComicCharacter] = relationship("ComicCharacter", back_populates="costumes")

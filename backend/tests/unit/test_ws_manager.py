@@ -20,6 +20,7 @@ from app.modules.realtime.schemas import WSChannel
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class FakeWebSocket:
     """Minimal WebSocket stand-in for unit testing."""
 
@@ -30,6 +31,7 @@ class FakeWebSocket:
 
         # Starlette's WebSocketState enum value for CONNECTED is 1.
         from starlette.websockets import WebSocketState
+
         self.client_state = WebSocketState.CONNECTED if connected else WebSocketState.DISCONNECTED
 
     async def accept(self) -> None:
@@ -50,6 +52,7 @@ class FakeWebSocket:
 # Tests — channel key
 # ---------------------------------------------------------------------------
 
+
 def test_channel_key() -> None:
     assert _channel_key(WSChannel.WRITING, "book-1") == "ws:writing:book-1"
     assert _channel_key(WSChannel.AGENTS, "org-42") == "ws:agents:org-42"
@@ -60,6 +63,7 @@ def test_channel_key() -> None:
 # ---------------------------------------------------------------------------
 # Tests — connect / disconnect
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_connect_registers_websocket() -> None:
@@ -108,6 +112,7 @@ async def test_disconnect_nonexistent_is_noop() -> None:
 # Tests — broadcasting
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_broadcast_sends_to_all_in_room() -> None:
     mgr = ConnectionManager()
@@ -149,6 +154,7 @@ async def test_broadcast_removes_dead_connections() -> None:
     ws_dead = FakeWebSocket(connected=False)
     # Override client_state to DISCONNECTED so broadcast detects it.
     from starlette.websockets import WebSocketState
+
     ws_dead.client_state = WebSocketState.DISCONNECTED
 
     await mgr.connect(ws_alive, WSChannel.PUBLISHING, "book-3")  # type: ignore[arg-type]
@@ -167,6 +173,7 @@ async def test_broadcast_removes_dead_connections() -> None:
 # Tests — personal message
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_send_personal() -> None:
     mgr = ConnectionManager()
@@ -184,6 +191,7 @@ async def test_send_personal_to_closed_ws() -> None:
     mgr = ConnectionManager()
     ws = FakeWebSocket(connected=False)
     from starlette.websockets import WebSocketState
+
     ws.client_state = WebSocketState.DISCONNECTED
 
     # Should not raise, just log warning
@@ -193,6 +201,7 @@ async def test_send_personal_to_closed_ws() -> None:
 # ---------------------------------------------------------------------------
 # Tests — queries
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_get_all_rooms() -> None:
@@ -212,6 +221,7 @@ async def test_get_all_rooms() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Redis pub/sub (mocked)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_broadcast_publishes_to_redis() -> None:
@@ -257,6 +267,7 @@ async def test_broadcast_falls_back_to_local_without_redis() -> None:
 # ---------------------------------------------------------------------------
 # Tests — shutdown
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_shutdown_cleans_up() -> None:

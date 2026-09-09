@@ -1,4 +1,5 @@
 """Seed demo marketing campaigns and email templates."""
+
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -34,9 +35,7 @@ async def seed_marketing(
 
     # Check if data already exists
     existing = await db.execute(
-        select(LaunchPlan).where(
-            LaunchPlan.org_id == org_id, LaunchPlan.book_id == published_book
-        )
+        select(LaunchPlan).where(LaunchPlan.org_id == org_id, LaunchPlan.book_id == published_book)
     )
     if existing.scalar_one_or_none():
         print("✓ Marketing data already exists, skipping")
@@ -203,6 +202,4 @@ async def seed_marketing(
 
     await db.commit()
 
-    print(
-        f"✓ Seeded launch plan, campaign, email sequence with {len(email_templates)} templates"
-    )
+    print(f"✓ Seeded launch plan, campaign, email sequence with {len(email_templates)} templates")

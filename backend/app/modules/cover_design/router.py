@@ -8,6 +8,7 @@ Endpoints:
     GET  /api/v1/covers/book/{book_id}       — List covers for a book
     DELETE /api/v1/covers/{id}               — Delete a cover
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -152,7 +153,8 @@ async def list_covers_filtered(
     current_user: dict = Depends(get_current_user),
 ):
     covers = await service.list_covers(
-        db, current_user["org_id"],
+        db,
+        current_user["org_id"],
         project_id=project_id,
         format_filter=format,
         sort_by=sort,
@@ -223,7 +225,9 @@ async def update_editor_state(
     current_user: dict = Depends(get_current_user),
 ):
     cover = await service.update_editor_state(
-        db, current_user["org_id"], cover_id,
+        db,
+        current_user["org_id"],
+        cover_id,
         request.editor_state.model_dump(),
     )
     return SuccessResponse(data=cover)
@@ -241,7 +245,9 @@ async def export_cover_endpoint(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.export_cover(
-        db, current_user["org_id"], cover_id,
+        db,
+        current_user["org_id"],
+        cover_id,
         export_format=request.format.value,
         dpi=request.dpi,
         include_bleed=request.include_bleed,
@@ -311,7 +317,8 @@ async def create_ab_test_endpoint(
     current_user: dict = Depends(get_current_user),
 ):
     ab_test = await service.create_ab_test(
-        db, current_user["org_id"],
+        db,
+        current_user["org_id"],
         name=request.name,
         description=request.description,
         cover_a_id=request.cover_a_id,
@@ -362,7 +369,8 @@ async def vote_on_ab_test_endpoint(
 ):
     """Public endpoint - no authentication required."""
     result = await service.vote_on_ab_test(
-        db, test_id,
+        db,
+        test_id,
         choice=request.choice,
         voter_fingerprint=request.voter_fingerprint,
     )
@@ -381,7 +389,9 @@ async def end_ab_test_endpoint(
     current_user: dict = Depends(get_current_user),
 ):
     test = await service.end_ab_test(
-        db, current_user["org_id"], test_id,
+        db,
+        current_user["org_id"],
+        test_id,
         winner=request.winner,
         notes=request.notes,
     )

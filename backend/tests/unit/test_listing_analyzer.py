@@ -33,6 +33,7 @@ from app.modules.product_page_lab.schemas import Genre
 # Title analysis tests
 # ===========================================================================
 
+
 class TestTitleAnalysis:
     """Tests for analyze_title()."""
 
@@ -105,6 +106,7 @@ class TestTitleAnalysis:
 # Blurb analysis tests
 # ===========================================================================
 
+
 class TestBlurbAnalysis:
     """Tests for analyze_blurb()."""
 
@@ -172,8 +174,7 @@ class TestBlurbAnalysis:
 
     def test_no_bullet_points_flagged(self):
         blurb = (
-            "Discover the truth! A compelling narrative about love and betrayal. "
-            "Join the adventure today. Buy now!"
+            "Discover the truth! A compelling narrative about love and betrayal. " "Join the adventure today. Buy now!"
         )
         result = analyze_blurb(blurb)
         assert result.has_bullet_points is False
@@ -201,6 +202,7 @@ class TestBlurbAnalysis:
 # ===========================================================================
 # Keyword analysis tests
 # ===========================================================================
+
 
 class TestKeywordAnalysis:
     """Tests for analyze_keywords()."""
@@ -243,6 +245,7 @@ class TestKeywordAnalysis:
 # Category analysis tests
 # ===========================================================================
 
+
 class TestCategoryAnalysis:
     """Tests for analyze_category()."""
 
@@ -278,6 +281,7 @@ class TestCategoryAnalysis:
 # Price analysis tests
 # ===========================================================================
 
+
 class TestPriceAnalysis:
     """Tests for analyze_price()."""
 
@@ -312,6 +316,7 @@ class TestPriceAnalysis:
 # ===========================================================================
 # Full listing analysis tests
 # ===========================================================================
+
 
 class TestListingAnalysis:
     """Tests for analyze_listing() end-to-end."""
@@ -373,6 +378,7 @@ class TestListingAnalysis:
 # ===========================================================================
 # Mobile checker tests
 # ===========================================================================
+
 
 class TestMobileChecker:
     """Tests for mobile_checker module."""
@@ -463,6 +469,7 @@ class TestMobileChecker:
 # Blurb generator tests
 # ===========================================================================
 
+
 class TestBlurbGenerator:
     """Tests for blurb_generator module."""
 
@@ -539,6 +546,7 @@ class TestBlurbGenerator:
 # ===========================================================================
 # Helper function tests
 # ===========================================================================
+
 
 class TestHelpers:
     """Tests for internal helper functions."""

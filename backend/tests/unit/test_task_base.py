@@ -1,4 +1,5 @@
 """Unit tests for TrackedTask, OrgScopedTask, and AITask base classes."""
+
 from __future__ import annotations
 
 import time
@@ -11,6 +12,7 @@ from app.tasks.config import RETRY_POLICIES, get_retry_policy
 # ---------------------------------------------------------------------------
 # Helpers — lightweight stubs for Celery's Task internals
 # ---------------------------------------------------------------------------
+
 
 def _make_request(retries: int = 0, headers: dict | None = None, correlation_id: str | None = None):
     """Create a mock Celery request object."""
@@ -42,8 +44,8 @@ def _build_task(cls, task_name: str = "app.tasks.test_task", **kwargs):
 # TrackedTask
 # ========================================================================
 
-class TestTrackedTask:
 
+class TestTrackedTask:
     def test_before_start_sets_correlation_id_from_request(self):
         task = _build_task(TrackedTask, correlation_id="corr-123")
         task.before_start("tid-1", ("a",), {})
@@ -111,8 +113,8 @@ class TestTrackedTask:
 # OrgScopedTask
 # ========================================================================
 
-class TestOrgScopedTask:
 
+class TestOrgScopedTask:
     def test_extracts_org_id_from_kwargs(self):
         task = _build_task(OrgScopedTask)
         task.before_start("tid-10", (), {"org_id": "org-abc"})
@@ -145,8 +147,8 @@ class TestOrgScopedTask:
 # AITask
 # ========================================================================
 
-class TestAITask:
 
+class TestAITask:
     def test_record_tokens_accumulates(self):
         task = _build_task(AITask)
         task.before_start("tid-20", ("org-ai",), {})
@@ -214,8 +216,8 @@ class TestAITask:
 # Retry policy lookup
 # ========================================================================
 
-class TestRetryPolicy:
 
+class TestRetryPolicy:
     def test_ai_task_policy(self):
         policy = get_retry_policy("app.tasks.ai_tasks.generate_content")
         assert policy["max_retries"] == 3

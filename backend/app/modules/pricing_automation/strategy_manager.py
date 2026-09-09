@@ -27,15 +27,9 @@ async def create_strategy(db: AsyncSession, org_id: UUID, data: dict) -> dict:
     return _to_dict(strategy)
 
 
-async def list_strategies(
-    db: AsyncSession, org_id: UUID, status: str | None = None
-) -> list[dict]:
+async def list_strategies(db: AsyncSession, org_id: UUID, status: str | None = None) -> list[dict]:
     """List pricing strategies for an organization."""
-    query = (
-        select(PricingStrategy)
-        .where(PricingStrategy.org_id == org_id)
-        .where(PricingStrategy.deleted_at.is_(None))
-    )
+    query = select(PricingStrategy).where(PricingStrategy.org_id == org_id).where(PricingStrategy.deleted_at.is_(None))
     if status is not None:
         query = query.where(PricingStrategy.status == status)
     query = query.order_by(PricingStrategy.created_at.desc())
@@ -58,9 +52,7 @@ async def get_strategy(db: AsyncSession, org_id: UUID, strategy_id: UUID) -> dic
     return _to_dict(strategy)
 
 
-async def update_strategy(
-    db: AsyncSession, org_id: UUID, strategy_id: UUID, data: dict
-) -> dict | None:
+async def update_strategy(db: AsyncSession, org_id: UUID, strategy_id: UUID, data: dict) -> dict | None:
     """Update an existing pricing strategy."""
     result = await db.execute(
         select(PricingStrategy)

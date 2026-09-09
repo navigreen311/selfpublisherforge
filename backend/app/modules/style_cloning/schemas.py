@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class ProfileStatus(str, Enum):
     pending = "pending"
     analyzing = "analyzing"
@@ -29,6 +30,7 @@ class ManuscriptFormat(str, Enum):
 # ---------------------------------------------------------------------------
 # Voice Fingerprint sub-models
 # ---------------------------------------------------------------------------
+
 
 class VocabularyMetrics(BaseModel):
     unique_word_count: int = Field(0, description="Number of unique words (types)")
@@ -105,6 +107,7 @@ class StyleCard(BaseModel):
 # Request / Response
 # ---------------------------------------------------------------------------
 
+
 class CreateProfileRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Profile name")
     description: str = Field("", max_length=2000)
@@ -144,6 +147,7 @@ class ConformityCheckResult(BaseModel):
 
 class TuneRequest(BaseModel):
     """Adjust style tuning parameters for a profile."""
+
     formality_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Formality adjustment (-1 to 1)")
     warmth_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Warmth adjustment (-1 to 1)")
     sentence_length_adjust: float = Field(0.0, ge=-1.0, le=1.0, description="Sentence length adjustment (-1 to 1)")
@@ -152,6 +156,7 @@ class TuneRequest(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     """Update basic profile info (all fields optional)."""
+
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = Field(None, max_length=2000)
     genre: str | None = Field(None, max_length=100)

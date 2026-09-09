@@ -1,4 +1,5 @@
 """Unit tests for the cover generator module."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
@@ -51,9 +52,7 @@ def _mock_openai_dalle(monkeypatch):
     )
 
     mock_client_instance = MagicMock()
-    mock_client_instance.images.generate = AsyncMock(
-        return_value=_fake_dalle_response()
-    )
+    mock_client_instance.images.generate = AsyncMock(return_value=_fake_dalle_response())
     mock_client_cls = MagicMock(return_value=mock_client_instance)
     monkeypatch.setattr(
         "app.modules.cover_design.generator.openai.AsyncOpenAI",

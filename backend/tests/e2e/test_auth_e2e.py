@@ -23,6 +23,7 @@ NEW_PASSWORD = "NewStr0ng!Pass2"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _register(
     client: AsyncClient,
     email: str = "e2e@test.com",
@@ -65,6 +66,7 @@ def _auth_header(access_token: str) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # E2E: Full registration -> login -> access -> logout flow
 # ---------------------------------------------------------------------------
+
 
 class TestFullAuthLifecycle:
     """Register, login, access a protected resource, then logout."""
@@ -127,6 +129,7 @@ class TestFullAuthLifecycle:
 # ---------------------------------------------------------------------------
 # E2E: Token refresh flow
 # ---------------------------------------------------------------------------
+
 
 class TestTokenRefreshFlow:
     """Verify the full token rotation lifecycle."""
@@ -196,6 +199,7 @@ class TestTokenRefreshFlow:
 # E2E: Password reset flow (forgot-password -> reset-password -> login)
 # ---------------------------------------------------------------------------
 
+
 class TestPasswordResetFlow:
     """Exercise the forgot-password / reset-password cycle.
 
@@ -237,6 +241,7 @@ class TestPasswordResetFlow:
 # ---------------------------------------------------------------------------
 # E2E: Invalid credentials rejected
 # ---------------------------------------------------------------------------
+
 
 class TestInvalidCredentialsRejected:
     """Verify that bad credentials are properly rejected."""

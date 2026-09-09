@@ -451,9 +451,7 @@ class TestMultipleCampaigns:
     async def test_fractional_penny_spend_preserved(self):
         """Verify sub-cent precision is handled through Decimal conversion."""
         db = AsyncMock()
-        db.execute = AsyncMock(
-            return_value=_make_expense_result(Decimal("123.456789"))
-        )
+        db.execute = AsyncMock(return_value=_make_expense_result(Decimal("123.456789")))
 
         result = await _compute_total_expenses(db, ORG_ID)
 

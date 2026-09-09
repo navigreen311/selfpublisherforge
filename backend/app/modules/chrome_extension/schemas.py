@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for the Chrome Extension API."""
+
 from __future__ import annotations
 
 from datetime import datetime

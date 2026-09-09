@@ -38,6 +38,7 @@ from app.modules.advertising.service import AdvertisingService
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def org_id():
     return uuid.uuid4()
@@ -97,6 +98,7 @@ def _make_campaign(**overrides):
 # ===========================================================================
 # Tests: list_campaigns
 # ===========================================================================
+
 
 class TestListCampaigns:
     """Tests for AdvertisingService.list_campaigns."""
@@ -158,6 +160,7 @@ class TestListCampaigns:
 # Tests: get_campaign
 # ===========================================================================
 
+
 class TestGetCampaign:
     """Tests for AdvertisingService.get_campaign."""
 
@@ -205,6 +208,7 @@ class TestGetCampaign:
 # Tests: create_campaign
 # ===========================================================================
 
+
 class TestCreateCampaign:
     """Tests for AdvertisingService.create_campaign."""
 
@@ -237,6 +241,7 @@ class TestCreateCampaign:
 # Tests: update_campaign
 # ===========================================================================
 
+
 class TestUpdateCampaign:
     """Tests for AdvertisingService.update_campaign."""
 
@@ -268,6 +273,7 @@ class TestUpdateCampaign:
 # ===========================================================================
 # Tests: get_campaign_performance
 # ===========================================================================
+
 
 class TestGetCampaignPerformance:
     """Tests for AdvertisingService.get_campaign_performance."""
@@ -306,6 +312,7 @@ class TestGetCampaignPerformance:
 # ===========================================================================
 # Tests: Keyword Bids
 # ===========================================================================
+
 
 class TestKeywordBids:
     """Tests for keyword bid management."""
@@ -364,6 +371,7 @@ class TestKeywordBids:
 # ===========================================================================
 # Tests: Ad Creatives
 # ===========================================================================
+
 
 class TestAdCreatives:
     """Tests for ad creative generation and listing."""
@@ -424,6 +432,7 @@ class TestAdCreatives:
 # Tests: Optimization
 # ===========================================================================
 
+
 class TestOptimization:
     """Tests for campaign optimization."""
 
@@ -470,6 +479,7 @@ class TestOptimization:
 # ===========================================================================
 # Tests: Dashboard
 # ===========================================================================
+
 
 class TestGetDashboard:
     """Tests for AdvertisingService.get_dashboard."""
@@ -522,6 +532,7 @@ class TestGetDashboard:
 # ===========================================================================
 # Tests: Facebook Ads
 # ===========================================================================
+
 
 class TestFacebookAds:
     """Tests for Facebook Ads integration."""

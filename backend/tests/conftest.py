@@ -1,4 +1,5 @@
 """Shared test fixtures for the backend test suite."""
+
 from __future__ import annotations
 
 import asyncio
@@ -75,14 +76,13 @@ def _compile_pg_uuid_sqlite(element, compiler, **kw):
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestingSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
+TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # ---------------------------------------------------------------------------
 # Neutralize PostgreSQL-specific indexes before table creation on SQLite
 # ---------------------------------------------------------------------------
+
 
 def _is_pg_only_index(idx) -> bool:
     """Return True if the index uses PostgreSQL-specific features that

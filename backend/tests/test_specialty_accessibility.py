@@ -25,9 +25,11 @@ from app.database import Base
 def _compile_jsonb_sqlite(element, compiler, **kw):
     return "JSON"
 
+
 @compiles(PG_ARRAY, "sqlite")
 def _compile_array_sqlite(element, compiler, **kw):
     return "TEXT"
+
 
 @compiles(PG_UUID, "sqlite")
 def _compile_pg_uuid_sqlite(element, compiler, **kw):
@@ -219,8 +221,7 @@ async def test_large_print_18pt_minimum(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_large_print_rejects_small_font(db_session: AsyncSession):
     book_id = uuid.uuid4()
-    result = await acc_svc.generate_large_print(
-        db_session, "coloring", book_id, ORG_ID, settings={"min_font_size": 14})
+    result = await acc_svc.generate_large_print(db_session, "coloring", book_id, ORG_ID, settings={"min_font_size": 14})
     assert result["settings"]["min_font_size"] >= LARGE_PRINT_MIN_FONT_SIZE
 
 
@@ -263,8 +264,7 @@ async def test_high_contrast_bold_elements(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_wcag_aaa_compliance(db_session: AsyncSession):
     book_id = uuid.uuid4()
-    report = await acc_svc.check_accessibility_compliance(
-        db_session, "coloring", book_id, ORG_ID, standard="WCAG_AAA")
+    report = await acc_svc.check_accessibility_compliance(db_session, "coloring", book_id, ORG_ID, standard="WCAG_AAA")
     assert report["standard"] == "WCAG AAA"
     assert report["total_checks"] >= 3
     contrast_check = next(c for c in report["checks"] if c["name"] == "contrast_ratio")
@@ -274,8 +274,7 @@ async def test_wcag_aaa_compliance(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_wcag_aa_compliance(db_session: AsyncSession):
     book_id = uuid.uuid4()
-    report = await acc_svc.check_accessibility_compliance(
-        db_session, "coloring", book_id, ORG_ID, standard="WCAG_AA")
+    report = await acc_svc.check_accessibility_compliance(db_session, "coloring", book_id, ORG_ID, standard="WCAG_AA")
     assert report["standard"] == "WCAG AA"
     assert report["total_checks"] >= 3
 
@@ -292,7 +291,8 @@ async def test_variants_stored_in_db(db_session: AsyncSession):
     await acc_svc.generate_large_print(db_session, "coloring", book_id, ORG_ID)
     await acc_svc.generate_high_contrast(db_session, "coloring", book_id, ORG_ID)
     result = await db_session.execute(
-        select(AccessibilityVariant).where(AccessibilityVariant.source_book_id == book_id))
+        select(AccessibilityVariant).where(AccessibilityVariant.source_book_id == book_id)
+    )
     variants = result.scalars().all()
     assert len(variants) == 3
     assert {v.variant_type for v in variants} == {VARIANT_DYSLEXIA, VARIANT_LARGE_PRINT, VARIANT_HIGH_CONTRAST}

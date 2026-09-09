@@ -1,4 +1,5 @@
 """Voice dictation models — sessions, commands."""
+
 import enum
 import uuid
 
@@ -43,9 +44,7 @@ class DictationSession(TenantModel):
         default=None,
         index=True,
     )
-    status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="active", server_default="active"
-    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active", server_default="active")
     duration_seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     words_dictated: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     words_after_refinement: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -54,27 +53,17 @@ class DictationSession(TenantModel):
     asr_provider: Mapped[str] = mapped_column(
         String(50), nullable=False, default="faster_whisper", server_default="faster_whisper"
     )
-    asr_model: Mapped[str] = mapped_column(
-        String(100), nullable=False, default="large-v3", server_default="large-v3"
-    )
-    language: Mapped[str] = mapped_column(
-        String(10), nullable=False, default="en", server_default="en"
-    )
+    asr_model: Mapped[str] = mapped_column(String(100), nullable=False, default="large-v3", server_default="large-v3")
+    language: Mapped[str] = mapped_column(String(10), nullable=False, default="en", server_default="en")
     audio_recording_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
-    refinement_applied: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+    refinement_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     refinement_style_profile_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("style_profiles.id", ondelete="SET NULL"),
         nullable=True,
         default=None,
     )
-    session_metrics: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, default=None, server_default="{}"
-    )
-    ended_at: Mapped[None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    session_metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None, server_default="{}")
+    ended_at: Mapped[None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     user = relationship("User", backref="dictation_sessions")
@@ -96,12 +85,8 @@ class DictationCommand(TenantModel):
 
     command_phrase: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
-    is_system: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
-    active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
 
     __table_args__ = (
         Index("ix_dictation_commands_command_phrase", "command_phrase"),

@@ -193,9 +193,7 @@ async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
         from app.models.project import Book
 
         result = await db.execute(
-            select(func.count(Book.id)).where(
-                Book.project_id == project_id, Book.deleted_at.is_(None)
-            )
+            select(func.count(Book.id)).where(Book.project_id == project_id, Book.deleted_at.is_(None))
         )
         count = result.scalar() or 0
         out.append(
@@ -212,9 +210,7 @@ async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
     try:
         from app.modules.production_pipeline.models import Pipeline
 
-        result = await db.execute(
-            select(Pipeline).where(Pipeline.deleted_at.is_(None))
-        )
+        result = await db.execute(select(Pipeline).where(Pipeline.deleted_at.is_(None)))
         pipelines = [p for p in result.scalars().all() if getattr(p, "book_id", None)]
         # Simple heuristic: any pipeline whose book belongs to this project
         # (we don't require it -- just surface pipeline count for the project)

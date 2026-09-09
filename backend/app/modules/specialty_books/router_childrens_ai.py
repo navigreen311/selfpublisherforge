@@ -53,14 +53,14 @@ router = APIRouter(
 
 class AnalyzeTextRequest(BaseModel):
     """Request body for text analysis endpoint."""
-    pages_text: list[str] = Field(
-        default_factory=list, description="List of page texts"
-    )
+
+    pages_text: list[str] = Field(default_factory=list, description="List of page texts")
     age_band: AgeBand = AgeBand.PICTURE
 
 
 class ContinuityCheckRequest(BaseModel):
     """Request body for continuity check endpoint."""
+
     character_sheets: list[CharacterSheet] = Field(default_factory=list)
     illustration_prompts: list[dict[str, str]] = Field(
         default_factory=list,
@@ -70,6 +70,7 @@ class ContinuityCheckRequest(BaseModel):
 
 class AutoFixRequest(BaseModel):
     """Request body for auto-fix prompts endpoint."""
+
     character_sheets: list[CharacterSheet] = Field(default_factory=list)
     illustration_prompts: list[dict[str, str]] = Field(
         default_factory=list,
@@ -79,6 +80,7 @@ class AutoFixRequest(BaseModel):
 
 class TranslateBookRequest(BaseModel):
     """Request body for translation endpoint."""
+
     target_language: str = Field(..., min_length=2, max_length=50)
     layout_mode: BilingualLayout = BilingualLayout.SIDE_BY_SIDE
     pages_text: list[str] = Field(default_factory=list)

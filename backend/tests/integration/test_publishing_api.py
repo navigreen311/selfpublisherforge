@@ -64,22 +64,26 @@ async def client():
 # Publishing Accounts
 # ---------------------------------------------------------------------------
 
+
 class TestPublishingAccounts:
     @pytest.mark.anyio
     async def test_create_account(self, client: AsyncClient):
         with patch("app.modules.publishing_ops.router.service") as mock_svc:
             from app.modules.publishing_ops.schemas import PublishingAccount
-            mock_svc.create_account = AsyncMock(return_value=PublishingAccount(
-                id=uuid.uuid4(),
-                org_id=_TEST_ORG_ID,
-                platform="kdp",
-                account_name="My KDP Account",
-                account_email="author@example.com",
-                is_active=True,
-                last_synced_at=None,
-                created_at=_NOW,
-                updated_at=_NOW,
-            ))
+
+            mock_svc.create_account = AsyncMock(
+                return_value=PublishingAccount(
+                    id=uuid.uuid4(),
+                    org_id=_TEST_ORG_ID,
+                    platform="kdp",
+                    account_name="My KDP Account",
+                    account_email="author@example.com",
+                    is_active=True,
+                    last_synced_at=None,
+                    created_at=_NOW,
+                    updated_at=_NOW,
+                )
+            )
             payload = {
                 "platform": "kdp",
                 "account_name": "My KDP Account",
@@ -122,22 +126,26 @@ class TestPublishingAccounts:
 # Export
 # ---------------------------------------------------------------------------
 
+
 class TestExport:
     @pytest.mark.anyio
     async def test_export_epub(self, client: AsyncClient):
         with patch("app.modules.publishing_ops.router.service") as mock_svc:
             from app.modules.publishing_ops.schemas import ExportResponse
-            mock_svc.generate_export = AsyncMock(return_value=ExportResponse(
-                id=uuid.uuid4(),
-                book_id=uuid.uuid4(),
-                format="epub",
-                status="completed",
-                file_url="/exports/test.epub",
-                file_size_bytes=1024,
-                page_count=None,
-                created_at=_NOW,
-                message="EPUB export completed",
-            ))
+
+            mock_svc.generate_export = AsyncMock(
+                return_value=ExportResponse(
+                    id=uuid.uuid4(),
+                    book_id=uuid.uuid4(),
+                    format="epub",
+                    status="completed",
+                    file_url="/exports/test.epub",
+                    file_size_bytes=1024,
+                    page_count=None,
+                    created_at=_NOW,
+                    message="EPUB export completed",
+                )
+            )
             payload = {
                 "book_id": str(uuid.uuid4()),
                 "format": "epub",
@@ -159,17 +167,20 @@ class TestExport:
     async def test_export_pdf(self, client: AsyncClient):
         with patch("app.modules.publishing_ops.router.service") as mock_svc:
             from app.modules.publishing_ops.schemas import ExportResponse
-            mock_svc.generate_export = AsyncMock(return_value=ExportResponse(
-                id=uuid.uuid4(),
-                book_id=uuid.uuid4(),
-                format="pdf",
-                status="completed",
-                file_url="/exports/test.pdf",
-                file_size_bytes=2048,
-                page_count=10,
-                created_at=_NOW,
-                message="PDF export completed",
-            ))
+
+            mock_svc.generate_export = AsyncMock(
+                return_value=ExportResponse(
+                    id=uuid.uuid4(),
+                    book_id=uuid.uuid4(),
+                    format="pdf",
+                    status="completed",
+                    file_url="/exports/test.pdf",
+                    file_size_bytes=2048,
+                    page_count=10,
+                    created_at=_NOW,
+                    message="PDF export completed",
+                )
+            )
             payload = {
                 "book_id": str(uuid.uuid4()),
                 "format": "pdf",
@@ -189,31 +200,50 @@ class TestExport:
 # Formatting Templates
 # ---------------------------------------------------------------------------
 
+
 class TestTemplates:
     @pytest.mark.anyio
     async def test_list_builtin_templates(self, client: AsyncClient):
         with patch("app.modules.publishing_ops.router.service") as mock_svc:
             from app.modules.publishing_ops.schemas import FormattingTemplate
-            mock_svc.list_templates = AsyncMock(return_value=[
-                FormattingTemplate(
-                    id=uuid.uuid4(), org_id=None, name="Romance Standard",
-                    genre="romance", description=None, trim_size="5.5x8.5",
-                    is_builtin=True,
-                    created_at=_NOW, updated_at=_NOW,
-                ),
-                FormattingTemplate(
-                    id=uuid.uuid4(), org_id=None, name="Thriller Pace",
-                    genre="thriller", description=None, trim_size="6x9",
-                    is_builtin=True,
-                    created_at=_NOW, updated_at=_NOW,
-                ),
-                FormattingTemplate(
-                    id=uuid.uuid4(), org_id=None, name="Nonfiction Clean",
-                    genre="nonfiction", description=None, trim_size="6x9",
-                    is_builtin=True,
-                    created_at=_NOW, updated_at=_NOW,
-                ),
-            ])
+
+            mock_svc.list_templates = AsyncMock(
+                return_value=[
+                    FormattingTemplate(
+                        id=uuid.uuid4(),
+                        org_id=None,
+                        name="Romance Standard",
+                        genre="romance",
+                        description=None,
+                        trim_size="5.5x8.5",
+                        is_builtin=True,
+                        created_at=_NOW,
+                        updated_at=_NOW,
+                    ),
+                    FormattingTemplate(
+                        id=uuid.uuid4(),
+                        org_id=None,
+                        name="Thriller Pace",
+                        genre="thriller",
+                        description=None,
+                        trim_size="6x9",
+                        is_builtin=True,
+                        created_at=_NOW,
+                        updated_at=_NOW,
+                    ),
+                    FormattingTemplate(
+                        id=uuid.uuid4(),
+                        org_id=None,
+                        name="Nonfiction Clean",
+                        genre="nonfiction",
+                        description=None,
+                        trim_size="6x9",
+                        is_builtin=True,
+                        created_at=_NOW,
+                        updated_at=_NOW,
+                    ),
+                ]
+            )
             resp = await client.get(f"{BASE}/publishing/templates")
             assert resp.status_code == 200
             templates = resp.json()
@@ -227,13 +257,20 @@ class TestTemplates:
     async def test_create_custom_template(self, client: AsyncClient):
         with patch("app.modules.publishing_ops.router.service") as mock_svc:
             from app.modules.publishing_ops.schemas import FormattingTemplate
-            mock_svc.create_template = AsyncMock(return_value=FormattingTemplate(
-                id=uuid.uuid4(), org_id=_TEST_ORG_ID,
-                name="My Custom Template", genre="custom",
-                description="A test template", trim_size="5.5x8.5",
-                is_builtin=False,
-                created_at=_NOW, updated_at=_NOW,
-            ))
+
+            mock_svc.create_template = AsyncMock(
+                return_value=FormattingTemplate(
+                    id=uuid.uuid4(),
+                    org_id=_TEST_ORG_ID,
+                    name="My Custom Template",
+                    genre="custom",
+                    description="A test template",
+                    trim_size="5.5x8.5",
+                    is_builtin=False,
+                    created_at=_NOW,
+                    updated_at=_NOW,
+                )
+            )
             payload = {
                 "name": "My Custom Template",
                 "genre": "custom",
@@ -251,6 +288,7 @@ class TestTemplates:
 # Listings
 # ---------------------------------------------------------------------------
 
+
 class TestListings:
     @pytest.mark.anyio
     async def test_list_listings_empty(self, client: AsyncClient):
@@ -265,11 +303,14 @@ class TestListings:
         listing_id = uuid.uuid4()
         with patch("app.modules.publishing_ops.router.service") as mock_svc:
             from app.modules.publishing_ops.schemas import ListingSyncResponse
-            mock_svc.sync_listing = AsyncMock(return_value=ListingSyncResponse(
-                listing_id=listing_id,
-                status="sync_queued",
-                message="Listing sync has been queued",
-            ))
+
+            mock_svc.sync_listing = AsyncMock(
+                return_value=ListingSyncResponse(
+                    listing_id=listing_id,
+                    status="sync_queued",
+                    message="Listing sync has been queued",
+                )
+            )
             resp = await client.post(f"{BASE}/publishing/listings/{listing_id}/sync")
             assert resp.status_code == 200
             data = resp.json()

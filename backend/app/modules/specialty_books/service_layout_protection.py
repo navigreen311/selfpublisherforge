@@ -30,8 +30,11 @@ GUTTER_WARNING_DISTANCE_IN = 0.5
 GUTTER_CAUTION_DISTANCE_IN = 0.75
 
 ZONE_COLORS = {
-    "bleed": "#FF0000", "trim_danger": "#FF4444",
-    "caution": "#FFAA00", "safe": "#00CC00", "gutter": "#0066FF",
+    "bleed": "#FF0000",
+    "trim_danger": "#FF4444",
+    "caution": "#FFAA00",
+    "safe": "#00CC00",
+    "gutter": "#0066FF",
 }
 
 SEVERITY_CRITICAL = "critical"
@@ -40,9 +43,13 @@ SEVERITY_CAUTION = "caution"
 SEVERITY_OK = "ok"
 
 TRIM_DIMENSIONS: dict[str, tuple[float, float]] = {
-    "5x8": (5.0, 8.0), "5.5x8.5": (5.5, 8.5), "6x9": (6.0, 9.0),
-    "7x10": (7.0, 10.0), "8x10": (8.0, 10.0),
-    "8.5x8.5": (8.5, 8.5), "8.5x11": (8.5, 11.0),
+    "5x8": (5.0, 8.0),
+    "5.5x8.5": (5.5, 8.5),
+    "6x9": (6.0, 9.0),
+    "7x10": (7.0, 10.0),
+    "8x10": (8.0, 10.0),
+    "8.5x8.5": (8.5, 8.5),
+    "8.5x11": (8.5, 11.0),
 }
 
 DEFAULT_MARGINS: dict[str, dict[str, float]] = {
@@ -74,7 +81,10 @@ def _parse_trim_size(trim_size: str) -> tuple[float, float]:
 
 
 def _classify_zone(
-    x: float, y: float, page_width: float, page_height: float,
+    x: float,
+    y: float,
+    page_width: float,
+    page_height: float,
     is_left_page: bool = True,
 ) -> str:
     """Classify a point by zone on the page."""
@@ -113,8 +123,11 @@ def _determine_severity(distance_from_gutter: float) -> str:
 
 
 async def generate_safe_zone_heatmap(
-    db: AsyncSession, book_type: str, book_id: uuid.UUID,
-    page_id: uuid.UUID, org_id: uuid.UUID,
+    db: AsyncSession,
+    book_type: str,
+    book_id: uuid.UUID,
+    page_id: uuid.UUID,
+    org_id: uuid.UUID,
 ) -> dict[str, Any]:
     """Generate a safe-zone heatmap overlay for a single page.
 
@@ -126,16 +139,27 @@ async def generate_safe_zone_heatmap(
     width, height = _parse_trim_size(trim_size)
 
     zones = {
-        "bleed": {"color": ZONE_COLORS["bleed"], "boundary_in": BLEED_ZONE_IN,
-                  "description": "Content will be cut off during trimming"},
-        "trim_danger": {"color": ZONE_COLORS["trim_danger"], "boundary_in": TRIM_DANGER_ZONE_IN,
-                        "description": "High risk of partial trimming"},
-        "caution": {"color": ZONE_COLORS["caution"], "boundary_in": CAUTION_ZONE_IN,
-                    "description": "Close to edge; may look cramped"},
-        "safe": {"color": ZONE_COLORS["safe"], "boundary_in": None,
-                 "description": "Content is safely within margins"},
-        "gutter": {"color": ZONE_COLORS["gutter"], "boundary_in": GUTTER_ZONE_IN,
-                   "description": "Near spine/fold; content may be hidden"},
+        "bleed": {
+            "color": ZONE_COLORS["bleed"],
+            "boundary_in": BLEED_ZONE_IN,
+            "description": "Content will be cut off during trimming",
+        },
+        "trim_danger": {
+            "color": ZONE_COLORS["trim_danger"],
+            "boundary_in": TRIM_DANGER_ZONE_IN,
+            "description": "High risk of partial trimming",
+        },
+        "caution": {
+            "color": ZONE_COLORS["caution"],
+            "boundary_in": CAUTION_ZONE_IN,
+            "description": "Close to edge; may look cramped",
+        },
+        "safe": {"color": ZONE_COLORS["safe"], "boundary_in": None, "description": "Content is safely within margins"},
+        "gutter": {
+            "color": ZONE_COLORS["gutter"],
+            "boundary_in": GUTTER_ZONE_IN,
+            "description": "Near spine/fold; content may be hidden",
+        },
     }
 
     simulated_elements = [
@@ -159,22 +183,27 @@ async def generate_safe_zone_heatmap(
             if z in corner_zones:
                 worst_zone = z
                 break
-        detected_elements.append({
-            "type": elem["type"],
-            "position": {"x": elem["x"], "y": elem["y"]},
-            "size": {"width": elem["width"], "height": elem["height"]},
-            "zone": worst_zone,
-            "zone_color": ZONE_COLORS[worst_zone],
-            "at_risk": worst_zone in ("bleed", "trim_danger", "gutter"),
-        })
+        detected_elements.append(
+            {
+                "type": elem["type"],
+                "position": {"x": elem["x"], "y": elem["y"]},
+                "size": {"width": elem["width"], "height": elem["height"]},
+                "zone": worst_zone,
+                "zone_color": ZONE_COLORS[worst_zone],
+                "at_risk": worst_zone in ("bleed", "trim_danger", "gutter"),
+            }
+        )
 
     bt = book_type.value if hasattr(book_type, "value") else book_type
     heatmap_url = f"/api/v1/specialty/{bt}/{book_id}/pages/{page_id}/heatmap.png"
 
     return {
-        "book_id": book_id, "page_id": page_id, "trim_size": trim_size,
+        "book_id": book_id,
+        "page_id": page_id,
+        "trim_size": trim_size,
         "page_dimensions": {"width": width, "height": height},
-        "zones": zones, "heatmap_url": heatmap_url,
+        "zones": zones,
+        "heatmap_url": heatmap_url,
         "detected_elements": detected_elements,
         "elements_at_risk": sum(1 for e in detected_elements if e["at_risk"]),
         "total_elements": len(detected_elements),
@@ -185,7 +214,10 @@ async def generate_safe_zone_heatmap(
 
 
 async def check_gutter_collisions(
-    db: AsyncSession, book_type: str, book_id: uuid.UUID, org_id: uuid.UUID,
+    db: AsyncSession,
+    book_type: str,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
 ) -> dict[str, Any]:
     """Scan all pages for content near the fold/spine.
 
@@ -209,19 +241,27 @@ async def check_gutter_collisions(
             continue
         safe_distance = GUTTER_ZONE_IN
         suggested_shift = safe_distance - distance if distance < safe_distance else 0.0
-        collisions.append({
-            "page": elem["page"], "element_type": elem["type"],
-            "distance_from_gutter": round(distance, 3), "severity": severity,
-            "auto_shift_available": severity != SEVERITY_CRITICAL or elem["type"] == "text",
-            "suggested_shift_in": round(suggested_shift, 3),
-            "description": f"{elem['type'].title()} on page {elem['page']} is {distance:.2f}in from gutter ({severity})",
-        })
+        collisions.append(
+            {
+                "page": elem["page"],
+                "element_type": elem["type"],
+                "distance_from_gutter": round(distance, 3),
+                "severity": severity,
+                "auto_shift_available": severity != SEVERITY_CRITICAL or elem["type"] == "text",
+                "suggested_shift_in": round(suggested_shift, 3),
+                "description": f"{elem['type'].title()} on page {elem['page']} is {distance:.2f}in from gutter ({severity})",
+            }
+        )
 
     pages_with_collisions = len(set(c["page"] for c in collisions))
     return {
-        "book_id": book_id, "book_type": book_type, "trim_size": "8.5x11",
-        "collisions": collisions, "total_collisions": len(collisions),
-        "total_pages_scanned": page_count, "pages_with_collisions": pages_with_collisions,
+        "book_id": book_id,
+        "book_type": book_type,
+        "trim_size": "8.5x11",
+        "collisions": collisions,
+        "total_collisions": len(collisions),
+        "total_pages_scanned": page_count,
+        "pages_with_collisions": pages_with_collisions,
         "critical_count": sum(1 for c in collisions if c["severity"] == SEVERITY_CRITICAL),
         "warning_count": sum(1 for c in collisions if c["severity"] == SEVERITY_WARNING),
         "caution_count": sum(1 for c in collisions if c["severity"] == SEVERITY_CAUTION),
@@ -232,8 +272,11 @@ async def check_gutter_collisions(
 
 
 async def generate_reflow(
-    db: AsyncSession, book_type: str, book_id: uuid.UUID,
-    org_id: uuid.UUID, target_trim_size: str,
+    db: AsyncSession,
+    book_type: str,
+    book_id: uuid.UUID,
+    org_id: uuid.UUID,
+    target_trim_size: str,
 ) -> dict[str, Any]:
     """Reflow a book layout for an alternate trim size.
 
@@ -265,21 +308,37 @@ async def generate_reflow(
 
     issues: list[dict[str, Any]] = []
     if content_scale < 0.7:
-        issues.append({"type": "significant_scaling", "severity": "warning",
-            "description": f"Content scaled to {content_scale:.0%}. Text readability may be affected."})
+        issues.append(
+            {
+                "type": "significant_scaling",
+                "severity": "warning",
+                "description": f"Content scaled to {content_scale:.0%}. Text readability may be affected.",
+            }
+        )
     if content_scale > 1.3:
-        issues.append({"type": "sparse_layout", "severity": "info",
-            "description": f"Target is larger ({content_scale:.0%} scale). Consider adding content."})
+        issues.append(
+            {
+                "type": "sparse_layout",
+                "severity": "info",
+                "description": f"Target is larger ({content_scale:.0%} scale). Consider adding content.",
+            }
+        )
 
     gutter_safe = target_margins["inner"] >= GUTTER_ZONE_IN
     if not gutter_safe:
-        issues.append({"type": "gutter_margin_tight", "severity": "warning",
-            "description": f"Inner margin ({target_margins['inner']}in) < recommended ({GUTTER_ZONE_IN}in)"})
+        issues.append(
+            {
+                "type": "gutter_margin_tight",
+                "severity": "warning",
+                "description": f"Inner margin ({target_margins['inner']}in) < recommended ({GUTTER_ZONE_IN}in)",
+            }
+        )
 
     estimated_new_page_count = math.ceil(page_count / content_scale) if content_scale < 1.0 else page_count
 
     reflow_report = {
-        "source_trim_size": source_trim, "target_trim_size": target_trim_size,
+        "source_trim_size": source_trim,
+        "target_trim_size": target_trim_size,
         "source_dimensions": {"width": source_width, "height": source_height},
         "target_dimensions": {"width": target_width, "height": target_height},
         "content_scale_factor": round(content_scale, 3),
@@ -288,13 +347,19 @@ async def generate_reflow(
         "source_page_count": page_count,
         "estimated_new_page_count": estimated_new_page_count,
         "margin_adjustments": {"source": source_margins, "target": target_margins},
-        "gutter_safety_check": {"passed": gutter_safe, "inner_margin": target_margins["inner"],
-                                "required_minimum": GUTTER_ZONE_IN},
-        "issues": issues, "total_issues": len(issues),
+        "gutter_safety_check": {
+            "passed": gutter_safe,
+            "inner_margin": target_margins["inner"],
+            "required_minimum": GUTTER_ZONE_IN,
+        },
+        "issues": issues,
+        "total_issues": len(issues),
     }
 
     return {
-        "new_book_id": new_book_id, "source_book_id": book_id,
-        "book_type": book_type, "reflow_report": reflow_report,
+        "new_book_id": new_book_id,
+        "source_book_id": book_id,
+        "book_type": book_type,
+        "reflow_report": reflow_report,
         "created_at": datetime.now(UTC),
     }

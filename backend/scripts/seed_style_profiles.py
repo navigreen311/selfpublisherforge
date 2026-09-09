@@ -25,8 +25,7 @@ PROFILES = [
     {
         "name": "Hardboiled Noir",
         "genre": "Crime / Detective",
-        "description": "Terse, punchy first-person detective voice. Short sentences, "
-        "wry cynicism, sensory grit.",
+        "description": "Terse, punchy first-person detective voice. Short sentences, " "wry cynicism, sensory grit.",
         "sample_texts": [
             "The rain came down like it had a grudge. I lit a cigarette and watched the "
             "gutter swallow the city's sins. She walked in at half past nothing, heels "

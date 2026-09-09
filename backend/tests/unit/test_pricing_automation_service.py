@@ -31,6 +31,7 @@ from app.modules.pricing_automation.service import PricingAutomationService
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def org_id():
     return uuid.uuid4()
@@ -88,6 +89,7 @@ def _make_pricing_rule(**overrides):
 # Tests: list_rules
 # ===========================================================================
 
+
 class TestListRules:
     """Tests for PricingAutomationService.list_rules."""
 
@@ -135,6 +137,7 @@ class TestListRules:
 # Tests: create_rule
 # ===========================================================================
 
+
 class TestCreateRule:
     """Tests for PricingAutomationService.create_rule."""
 
@@ -170,6 +173,7 @@ class TestCreateRule:
 # Tests: update_rule
 # ===========================================================================
 
+
 class TestUpdateRule:
     """Tests for PricingAutomationService.update_rule."""
 
@@ -202,6 +206,7 @@ class TestUpdateRule:
 # ===========================================================================
 # Tests: simulate_price
 # ===========================================================================
+
 
 class TestSimulatePrice:
     """Tests for PricingAutomationService.simulate_price."""
@@ -239,6 +244,7 @@ class TestSimulatePrice:
 # ===========================================================================
 # Tests: get_competitor_prices
 # ===========================================================================
+
 
 class TestGetCompetitorPrices:
     """Tests for PricingAutomationService.get_competitor_prices."""
@@ -278,6 +284,7 @@ class TestGetCompetitorPrices:
 # Tests: create_ab_test
 # ===========================================================================
 
+
 class TestCreateABTest:
     """Tests for PricingAutomationService.create_ab_test."""
 
@@ -311,6 +318,7 @@ class TestCreateABTest:
 # Tests: list_promotions
 # ===========================================================================
 
+
 class TestListPromotions:
     """Tests for PricingAutomationService.list_promotions."""
 
@@ -338,6 +346,7 @@ class TestListPromotions:
 # ===========================================================================
 # Tests: create_promotion
 # ===========================================================================
+
 
 class TestCreatePromotion:
     """Tests for PricingAutomationService.create_promotion."""
@@ -372,6 +381,7 @@ class TestCreatePromotion:
 # ===========================================================================
 # Tests: calculate_ku_revenue
 # ===========================================================================
+
 
 class TestCalculateKURevenue:
     """Tests for PricingAutomationService.calculate_ku_revenue."""

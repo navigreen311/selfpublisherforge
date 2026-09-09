@@ -90,6 +90,7 @@ def _create_test_app(mock_db: MockDB, test_user: dict) -> FastAPI:
     def override_require_role(*roles):
         async def checker():
             return test_user
+
         return checker
 
     app.dependency_overrides[get_db] = override_get_db
@@ -315,10 +316,12 @@ class TestPlanEnforcement:
     def test_expired_subscription_reflected_in_status(self):
         """Expired subscriptions should be reflected in the subscription status."""
         mock_db = MockDB(plan_tier="pro", subscription_status="canceled")
-        mock_db.org_data.update({
-            "stripe_subscription_id": None,
-            "current_period_end": datetime.now(UTC) - timedelta(days=1),  # Expired
-        })
+        mock_db.org_data.update(
+            {
+                "stripe_subscription_id": None,
+                "current_period_end": datetime.now(UTC) - timedelta(days=1),  # Expired
+            }
+        )
 
         test_user = create_test_user(plan_tier="pro")
         app = _create_test_app(mock_db, test_user)
@@ -471,8 +474,13 @@ class TestPlanEnforcement:
         plans = response.json()
 
         required_fields = [
-            "tier", "name", "price_monthly", "description",
-            "max_projects", "ai_generations_per_day", "features"
+            "tier",
+            "name",
+            "price_monthly",
+            "description",
+            "max_projects",
+            "ai_generations_per_day",
+            "features",
         ]
 
         for plan in plans:

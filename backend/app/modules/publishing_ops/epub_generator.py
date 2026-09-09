@@ -113,9 +113,7 @@ def _build_content_opf(
     safe_title = xml_escape(title)
     now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    author_elements = "\n    ".join(
-        f"<dc:creator>{xml_escape(a)}</dc:creator>" for a in (authors or ["Unknown"])
-    )
+    author_elements = "\n    ".join(f"<dc:creator>{xml_escape(a)}</dc:creator>" for a in (authors or ["Unknown"]))
 
     manifest_items = [
         '<item id="style" href="style.css" media-type="text/css"/>',
@@ -171,7 +169,7 @@ def _build_nav_xhtml(chapters: list[ChapterInput]) -> str:
         '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">\n'
         "<head>\n"
         "  <title>Table of Contents</title>\n"
-        '</head>\n<body>\n'
+        "</head>\n<body>\n"
         '  <nav epub:type="toc">\n'
         "    <h1>Table of Contents</h1>\n"
         "    <ol>\n"

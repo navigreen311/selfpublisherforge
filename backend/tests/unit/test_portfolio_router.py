@@ -279,9 +279,7 @@ class TestGetPortfolioOverviewRequiresAuth:
                 params={"org_id": str(uuid.uuid4())},
             )
         # The app enforces auth middleware: unauthenticated = 403
-        assert response.status_code in (401, 403), (
-            f"Expected 401 or 403, got {response.status_code}"
-        )
+        assert response.status_code in (401, 403), f"Expected 401 or 403, got {response.status_code}"
 
     @pytest.mark.asyncio
     async def test_recommendations_unauthenticated_returns_403(self):

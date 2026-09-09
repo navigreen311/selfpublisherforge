@@ -3,6 +3,7 @@
 Orchestrates CRUD operations, line art generation, batch processing,
 quality dashboard, series planning, volume generation, export, and preflight.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -100,7 +101,13 @@ async def _store_specialty_asset(
     # For now we log the storage operation so callers get a proper URL back.
     logger.info(
         "Stored specialty asset: org=%s book_type=%s book=%s page=%s ext=%s size=%d -> %s",
-        org_id, book_type, book_id, page_id, ext, len(data), url_path,
+        org_id,
+        book_type,
+        book_id,
+        page_id,
+        ext,
+        len(data),
+        url_path,
     )
 
     return url_path
@@ -154,10 +161,10 @@ async def _raster_to_svg(image_data: bytes, page_id: UUID) -> bytes:
     svg_placeholder = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2550 3300">\n'
-        f'  <!-- Vectorized from page {page_id} -->\n'
-        '  <!-- In production: potrace/vtracer traced paths go here -->\n'
+        f"  <!-- Vectorized from page {page_id} -->\n"
+        "  <!-- In production: potrace/vtracer traced paths go here -->\n"
         '  <rect width="100%" height="100%" fill="white"/>\n'
-        '</svg>\n'
+        "</svg>\n"
     )
     return svg_placeholder.encode("utf-8")
 
@@ -212,21 +219,25 @@ async def get_stats(
     total_result = await db.execute(total_stmt)
     total_books = total_result.scalar() or 0
 
-    in_progress_stmt = select(func.count()).select_from(ColoringBook).where(
-        *base, ColoringBook.status == BookStatus.in_progress
+    in_progress_stmt = (
+        select(func.count()).select_from(ColoringBook).where(*base, ColoringBook.status == BookStatus.in_progress)
     )
     in_progress_result = await db.execute(in_progress_stmt)
     in_progress = in_progress_result.scalar() or 0
 
-    published_stmt = select(func.count()).select_from(ColoringBook).where(
-        *base, ColoringBook.status == BookStatus.published
+    published_stmt = (
+        select(func.count()).select_from(ColoringBook).where(*base, ColoringBook.status == BookStatus.published)
     )
     published_result = await db.execute(published_stmt)
     published = published_result.scalar() or 0
 
     book_ids_stmt = select(ColoringBook.id).where(*base)
-    pages_stmt = select(func.count()).select_from(ColoringBookPage).where(
-        ColoringBookPage.book_id.in_(book_ids_stmt),
+    pages_stmt = (
+        select(func.count())
+        .select_from(ColoringBookPage)
+        .where(
+            ColoringBookPage.book_id.in_(book_ids_stmt),
+        )
     )
     pages_result = await db.execute(pages_stmt)
     pages_created = pages_result.scalar() or 0
@@ -371,9 +382,7 @@ async def list_pages(
     await get_coloring_book(db, org_id, book_id)
 
     stmt = (
-        select(ColoringBookPage)
-        .where(ColoringBookPage.book_id == book_id)
-        .order_by(ColoringBookPage.page_number.asc())
+        select(ColoringBookPage).where(ColoringBookPage.book_id == book_id).order_by(ColoringBookPage.page_number.asc())
     )
     result = await db.execute(stmt)
     return [_page_to_dict(p) for p in result.scalars().all()]
@@ -421,7 +430,9 @@ async def generate_line_art(
 
     # Use provided values or fall back to page/book defaults
     final_prompt = prompt or page.illustration_prompt or "coloring book illustration"
-    final_style = style or book.get("line_style", "clean_outlines") if isinstance(book, dict) else style or "clean_outlines"
+    final_style = (
+        style or book.get("line_style", "clean_outlines") if isinstance(book, dict) else style or "clean_outlines"
+    )
     final_complexity = complexity or (book.get("complexity", 50) if isinstance(book, dict) else 50)
 
     # Complexity modifiers for the prompt
@@ -441,10 +452,20 @@ async def generate_line_art(
 
     # Store the raw generated image and the cleaned pipeline output
     illustration_url = await _store_specialty_asset(
-        org_id, "coloring", book_id, page_id, raw_image, ext="png",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        raw_image,
+        ext="png",
     )
     cleaned_url = await _store_specialty_asset(
-        org_id, "coloring", book_id, page_id, pipeline_result.image_data, ext="cleaned.png",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        pipeline_result.image_data,
+        ext="cleaned.png",
     )
 
     # Update page record
@@ -455,8 +476,7 @@ async def generate_line_art(
     page.illustration_seed = secrets.randbelow(2**32)
     page.qa_score = pipeline_result.report.score
     page.qa_issues = [
-        {"step": i.step, "severity": i.severity.value, "message": i.message}
-        for i in pipeline_result.report.issues
+        {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]
 
     await db.flush()
@@ -507,18 +527,27 @@ async def upload_page_art(
 
     # Store the uploaded image and cleaned pipeline output
     illustration_url = await _store_specialty_asset(
-        org_id, "coloring", book_id, page_id, image_data, ext="png",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        image_data,
+        ext="png",
     )
     cleaned_url = await _store_specialty_asset(
-        org_id, "coloring", book_id, page_id, pipeline_result.image_data, ext="cleaned.png",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        pipeline_result.image_data,
+        ext="cleaned.png",
     )
 
     page.illustration_url = illustration_url
     page.cleaned_url = cleaned_url
     page.qa_score = pipeline_result.report.score
     page.qa_issues = [
-        {"step": i.step, "severity": i.severity.value, "message": i.message}
-        for i in pipeline_result.report.issues
+        {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]
 
     await db.flush()
@@ -574,13 +603,17 @@ async def clean_lines(
 
     # Store cleaned output
     cleaned_url = await _store_specialty_asset(
-        org_id, "coloring", book_id, page_id, pipeline_result.image_data, ext="cleaned.png",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        pipeline_result.image_data,
+        ext="cleaned.png",
     )
     page.cleaned_url = cleaned_url
     page.qa_score = pipeline_result.report.score
     page.qa_issues = [
-        {"step": i.step, "severity": i.severity.value, "message": i.message}
-        for i in pipeline_result.report.issues
+        {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]
 
     await db.flush()
@@ -638,7 +671,12 @@ async def vectorize_page(
 
     # Store the SVG output
     vectorized_url = await _store_specialty_asset(
-        org_id, "coloring", book_id, page_id, svg_data, ext="svg",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        svg_data,
+        ext="svg",
     )
     page.vectorized_url = vectorized_url
 
@@ -691,8 +729,7 @@ async def quality_check_page(
 
     page.qa_score = pipeline_result.report.score
     page.qa_issues = [
-        {"step": i.step, "severity": i.severity.value, "message": i.message}
-        for i in pipeline_result.report.issues
+        {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]
 
     await db.flush()
@@ -703,8 +740,7 @@ async def quality_check_page(
         "score": pipeline_result.report.score,
         "passed": pipeline_result.report.passed,
         "issues": [
-            {"step": i.step, "severity": i.severity.value, "message": i.message}
-            for i in pipeline_result.report.issues
+            {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
         ],
         "steps_completed": pipeline_result.steps_completed,
     }
@@ -752,7 +788,11 @@ async def coloring_simulation(
 
     # Fetch the page image from storage for region detection
     image_data = await _fetch_specialty_asset(
-        org_id, "coloring", book_id, page_id, ext="png",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        ext="png",
     )
 
     # Run the simulation pipeline: detect regions, assign colors, build
@@ -766,7 +806,11 @@ async def coloring_simulation(
 
     # Build a simulation URL for backwards compatibility / caching
     simulation_url = _build_specialty_storage_path(
-        org_id, "coloring", book_id, page_id, ext=f"sim-{medium}.png",
+        org_id,
+        "coloring",
+        book_id,
+        page_id,
+        ext=f"sim-{medium}.png",
     )
 
     return {
@@ -835,26 +879,35 @@ async def batch_generate(
             # Store the generated page
             page_label_id = UUID(int=idx)  # deterministic placeholder page ID for batch
             asset_url = await _store_specialty_asset(
-                org_id, "coloring", book_id, page_label_id, pipeline_result.image_data, ext="png",
+                org_id,
+                "coloring",
+                book_id,
+                page_label_id,
+                pipeline_result.image_data,
+                ext="png",
             )
 
-            _batch_jobs[job_id]["results"].append({
-                "index": idx,
-                "description": description,
-                "status": "completed",
-                "url": asset_url,
-                "quality_score": pipeline_result.report.score,
-                "quality_passed": pipeline_result.report.passed,
-            })
+            _batch_jobs[job_id]["results"].append(
+                {
+                    "index": idx,
+                    "description": description,
+                    "status": "completed",
+                    "url": asset_url,
+                    "quality_score": pipeline_result.report.score,
+                    "quality_passed": pipeline_result.report.passed,
+                }
+            )
             _batch_jobs[job_id]["completed_pages"] += 1
 
         except Exception as exc:
             logger.error("Batch page %d failed: %s", idx, exc)
-            _batch_jobs[job_id]["errors"].append({
-                "index": idx,
-                "description": description,
-                "error": str(exc),
-            })
+            _batch_jobs[job_id]["errors"].append(
+                {
+                    "index": idx,
+                    "description": description,
+                    "error": str(exc),
+                }
+            )
             _batch_jobs[job_id]["failed_pages"] += 1
 
     # Mark batch as completed
@@ -936,9 +989,7 @@ async def run_quality_dashboard(
     book = await get_coloring_book(db, org_id, book_id)
 
     stmt = (
-        select(ColoringBookPage)
-        .where(ColoringBookPage.book_id == book_id)
-        .order_by(ColoringBookPage.page_number.asc())
+        select(ColoringBookPage).where(ColoringBookPage.book_id == book_id).order_by(ColoringBookPage.page_number.asc())
     )
     result = await db.execute(stmt)
     pages = result.scalars().all()
@@ -984,12 +1035,14 @@ async def run_quality_dashboard(
     for p in pages:
         page_issues = getattr(p, "qa_issues", None) or []
         if page_issues:
-            pages_with_issues.append({
-                "page_id": str(p.id),
-                "page_number": p.page_number,
-                "score": p.qa_score,
-                "issue_count": len(page_issues),
-            })
+            pages_with_issues.append(
+                {
+                    "page_id": str(p.id),
+                    "page_number": p.page_number,
+                    "score": p.qa_score,
+                    "issue_count": len(page_issues),
+                }
+            )
             all_issues.extend(page_issues)
 
     # Categorize issues
@@ -1050,13 +1103,15 @@ async def plan_series(
             n=i,
             theme=theme,
         )
-        volumes.append({
-            "volume_number": i,
-            "title": volume_title,
-            "theme": theme,
-            "status": "completed" if i == 1 else "planned",
-            "book_id": str(book_id) if i == 1 else None,
-        })
+        volumes.append(
+            {
+                "volume_number": i,
+                "title": volume_title,
+                "theme": theme,
+                "status": "completed" if i == 1 else "planned",
+                "book_id": str(book_id) if i == 1 else None,
+            }
+        )
 
     # Branding template from the source book
     branding_template = {
@@ -1065,7 +1120,9 @@ async def plan_series(
         "author_position": series_config.get("author_position", "bottom_center"),
         "volume_badge_style": series_config.get("volume_badge_style", "circle"),
         "spine_layout": series_config.get("spine_layout", "standard"),
-        "line_style": book.get("line_style") if isinstance(book, dict) else getattr(book, "line_style", "clean_outlines"),
+        "line_style": book.get("line_style")
+        if isinstance(book, dict)
+        else getattr(book, "line_style", "clean_outlines"),
         "line_weight": book.get("line_weight") if isinstance(book, dict) else getattr(book, "line_weight", 3),
         "complexity": book.get("complexity") if isinstance(book, dict) else getattr(book, "complexity", 50),
         "trim_size": book.get("trim_size") if isinstance(book, dict) else getattr(book, "trim_size", "8.5x11"),
@@ -1109,10 +1166,14 @@ async def generate_next_volume(
         "audience": book.get("audience") if isinstance(book, dict) else getattr(book, "audience", "adults"),
         "page_count": book.get("page_count") if isinstance(book, dict) else getattr(book, "page_count", 30),
         "trim_size": book.get("trim_size") if isinstance(book, dict) else getattr(book, "trim_size", "8.5x11"),
-        "line_style": book.get("line_style") if isinstance(book, dict) else getattr(book, "line_style", "clean_outlines"),
+        "line_style": book.get("line_style")
+        if isinstance(book, dict)
+        else getattr(book, "line_style", "clean_outlines"),
         "line_weight": book.get("line_weight") if isinstance(book, dict) else getattr(book, "line_weight", 3),
         "complexity": book.get("complexity") if isinstance(book, dict) else getattr(book, "complexity", 50),
-        "stroke_uniformity": book.get("stroke_uniformity") if isinstance(book, dict) else getattr(book, "stroke_uniformity", True),
+        "stroke_uniformity": book.get("stroke_uniformity")
+        if isinstance(book, dict)
+        else getattr(book, "stroke_uniformity", True),
         "theme": "new theme",  # To be set by caller
         "series_id": book.get("series_id") if isinstance(book, dict) else getattr(book, "series_id", None),
     }
@@ -1171,9 +1232,7 @@ async def export_book(
         )
 
     stmt = (
-        select(ColoringBookPage)
-        .where(ColoringBookPage.book_id == book_id)
-        .order_by(ColoringBookPage.page_number.asc())
+        select(ColoringBookPage).where(ColoringBookPage.book_id == book_id).order_by(ColoringBookPage.page_number.asc())
     )
     result = await db.execute(stmt)
     pages = result.scalars().all()
@@ -1183,12 +1242,14 @@ async def export_book(
     # Build page dicts for the export engine
     page_dicts = []
     for p in pages:
-        page_dicts.append({
-            "page_number": getattr(p, "page_number", None),
-            "page_type": getattr(p, "page_type", "coloring"),
-            "image_url": getattr(p, "illustration_url", None) or getattr(p, "cleaned_url", None),
-            "label": getattr(p, "title", None) or f"Page {getattr(p, 'page_number', '?')}",
-        })
+        page_dicts.append(
+            {
+                "page_number": getattr(p, "page_number", None),
+                "page_type": getattr(p, "page_type", "coloring"),
+                "image_url": getattr(p, "illustration_url", None) or getattr(p, "cleaned_url", None),
+                "label": getattr(p, "title", None) or f"Page {getattr(p, 'page_number', '?')}",
+            }
+        )
 
     book_data: dict[str, Any] = {
         "id": str(book_id),
@@ -1271,9 +1332,7 @@ async def run_preflight(
     book = await get_coloring_book(db, org_id, book_id)
 
     stmt = (
-        select(ColoringBookPage)
-        .where(ColoringBookPage.book_id == book_id)
-        .order_by(ColoringBookPage.page_number.asc())
+        select(ColoringBookPage).where(ColoringBookPage.book_id == book_id).order_by(ColoringBookPage.page_number.asc())
     )
     result = await db.execute(stmt)
     pages = result.scalars().all()
@@ -1288,11 +1347,13 @@ async def run_preflight(
         for issue in qa_issues:
             if isinstance(issue, dict) and "gray" in issue.get("message", "").lower():
                 bw_issues.append({"page": p.page_number, "issue": issue["message"]})
-    checks.append({
-        "check": "pure_bw",
-        "passed": len(bw_issues) == 0,
-        "details": bw_issues if bw_issues else "All pages are pure B&W",
-    })
+    checks.append(
+        {
+            "check": "pure_bw",
+            "passed": len(bw_issues) == 0,
+            "details": bw_issues if bw_issues else "All pages are pure B&W",
+        }
+    )
     if bw_issues:
         overall_passed = False
 
@@ -1303,11 +1364,13 @@ async def run_preflight(
         for issue in qa_issues:
             if isinstance(issue, dict) and "resolution" in issue.get("message", "").lower():
                 resolution_issues.append({"page": p.page_number, "issue": issue["message"]})
-    checks.append({
-        "check": "dpi_300",
-        "passed": len(resolution_issues) == 0,
-        "details": resolution_issues if resolution_issues else "All pages meet 300 DPI",
-    })
+    checks.append(
+        {
+            "check": "dpi_300",
+            "passed": len(resolution_issues) == 0,
+            "details": resolution_issues if resolution_issues else "All pages meet 300 DPI",
+        }
+    )
     if resolution_issues:
         overall_passed = False
 
@@ -1318,11 +1381,13 @@ async def run_preflight(
         for issue in qa_issues:
             if isinstance(issue, dict) and "stroke" in issue.get("message", "").lower():
                 uniformity_issues.append({"page": p.page_number, "issue": issue["message"]})
-    checks.append({
-        "check": "stroke_uniformity",
-        "passed": len(uniformity_issues) == 0,
-        "details": uniformity_issues if uniformity_issues else "Stroke uniformity consistent",
-    })
+    checks.append(
+        {
+            "check": "stroke_uniformity",
+            "passed": len(uniformity_issues) == 0,
+            "details": uniformity_issues if uniformity_issues else "Stroke uniformity consistent",
+        }
+    )
 
     # Check 4: Closed shapes
     shape_issues = []
@@ -1331,11 +1396,13 @@ async def run_preflight(
         for issue in qa_issues:
             if isinstance(issue, dict) and "open" in issue.get("message", "").lower():
                 shape_issues.append({"page": p.page_number, "issue": issue["message"]})
-    checks.append({
-        "check": "closed_shapes",
-        "passed": len(shape_issues) == 0,
-        "details": shape_issues if shape_issues else "All shapes are closed",
-    })
+    checks.append(
+        {
+            "check": "closed_shapes",
+            "passed": len(shape_issues) == 0,
+            "details": shape_issues if shape_issues else "All shapes are closed",
+        }
+    )
 
     # Check 5: Specks
     speck_issues = []
@@ -1344,11 +1411,13 @@ async def run_preflight(
         for issue in qa_issues:
             if isinstance(issue, dict) and "speck" in issue.get("message", "").lower():
                 speck_issues.append({"page": p.page_number, "issue": issue["message"]})
-    checks.append({
-        "check": "speck_free",
-        "passed": len(speck_issues) == 0,
-        "details": speck_issues if speck_issues else "No specks detected",
-    })
+    checks.append(
+        {
+            "check": "speck_free",
+            "passed": len(speck_issues) == 0,
+            "details": speck_issues if speck_issues else "No specks detected",
+        }
+    )
 
     # Check 6: Ink density
     density_issues = []
@@ -1357,11 +1426,13 @@ async def run_preflight(
         for issue in qa_issues:
             if isinstance(issue, dict) and "ink" in issue.get("message", "").lower():
                 density_issues.append({"page": p.page_number, "issue": issue["message"]})
-    checks.append({
-        "check": "ink_density",
-        "passed": len(density_issues) == 0,
-        "details": density_issues if density_issues else "Ink density within limits",
-    })
+    checks.append(
+        {
+            "check": "ink_density",
+            "passed": len(density_issues) == 0,
+            "details": density_issues if density_issues else "Ink density within limits",
+        }
+    )
 
     # Check 7: Duplicate detection (perceptual hash)
     # In production: compare pHash of all pages pairwise
@@ -1372,35 +1443,43 @@ async def run_preflight(
         prompt = getattr(p, "illustration_prompt", "") or ""
         prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:8]
         if prompt_hash in page_hashes and prompt:
-            duplicate_pairs.append({
-                "page_a": page_hashes[prompt_hash],
-                "page_b": p.page_number,
-                "similarity": "high",
-            })
+            duplicate_pairs.append(
+                {
+                    "page_a": page_hashes[prompt_hash],
+                    "page_b": p.page_number,
+                    "similarity": "high",
+                }
+            )
         else:
             page_hashes[prompt_hash] = p.page_number
-    checks.append({
-        "check": "no_duplicates",
-        "passed": len(duplicate_pairs) == 0,
-        "details": duplicate_pairs if duplicate_pairs else "No duplicate pages detected",
-    })
+    checks.append(
+        {
+            "check": "no_duplicates",
+            "passed": len(duplicate_pairs) == 0,
+            "details": duplicate_pairs if duplicate_pairs else "No duplicate pages detected",
+        }
+    )
     if duplicate_pairs:
         overall_passed = False
 
     # Check 8: Grayscale verification
-    checks.append({
-        "check": "grayscale_verified",
-        "passed": True,
-        "details": "Interior is B&W (no color channels needed)",
-    })
+    checks.append(
+        {
+            "check": "grayscale_verified",
+            "passed": True,
+            "details": "Interior is B&W (no color channels needed)",
+        }
+    )
 
     # Check 9: Font licensing
     # Only relevant for bonus pages with text
-    checks.append({
-        "check": "font_licensing",
-        "passed": True,
-        "details": "No custom fonts detected or all fonts licensed for commercial print",
-    })
+    checks.append(
+        {
+            "check": "font_licensing",
+            "passed": True,
+            "details": "No custom fonts detected or all fonts licensed for commercial print",
+        }
+    )
 
     # Calculate overall score
     passed_count = sum(1 for c in checks if c["passed"])

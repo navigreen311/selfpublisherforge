@@ -1,4 +1,5 @@
 """SQLAlchemy models for Photo References."""
+
 from __future__ import annotations
 
 import uuid
@@ -46,6 +47,4 @@ class PhotoReference(TenantModel):
     book_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     book_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")

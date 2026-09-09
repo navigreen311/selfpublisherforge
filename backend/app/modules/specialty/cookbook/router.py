@@ -4,6 +4,7 @@ Endpoints cover full CRUD for cookbooks, chapters, recipes, and meal plans,
 plus AI recipe generation, nutrition calculation, recipe scaling, shopping
 lists, index generation, and export/preflight.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -173,7 +174,11 @@ async def update_chapter(
     current_user: dict = Depends(get_current_user),
 ):
     chapter = await service.update_chapter(
-        db, current_user["org_id"], cookbook_id, chapter_id, payload,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        chapter_id,
+        payload,
     )
     return SuccessResponse(data=chapter)
 
@@ -190,7 +195,10 @@ async def delete_chapter(
     current_user: dict = Depends(get_current_user),
 ):
     deleted = await service.delete_chapter(
-        db, current_user["org_id"], cookbook_id, chapter_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        chapter_id,
     )
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
@@ -211,7 +219,10 @@ async def reorder_chapters(
     """Expects ``{"chapter_ids": [uuid, uuid, ...]}`` in desired order."""
     chapter_ids = payload.get("chapter_ids", [])
     chapters = await service.reorder_chapters(
-        db, current_user["org_id"], cookbook_id, chapter_ids,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        chapter_ids,
     )
     return SuccessResponse(data=chapters)
 
@@ -233,7 +244,10 @@ async def list_recipes(
     current_user: dict = Depends(get_current_user),
 ):
     recipes = await service.list_recipes(
-        db, current_user["org_id"], cookbook_id, chapter_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        chapter_id,
     )
     return SuccessResponse(data=recipes)
 
@@ -252,7 +266,11 @@ async def create_recipe(
     current_user: dict = Depends(get_current_user),
 ):
     recipe = await service.create_recipe(
-        db, current_user["org_id"], cookbook_id, chapter_id, payload,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        chapter_id,
+        payload,
     )
     return SuccessResponse(data=recipe)
 
@@ -269,7 +287,10 @@ async def get_recipe(
     current_user: dict = Depends(get_current_user),
 ):
     recipe = await service.get_recipe(
-        db, current_user["org_id"], cookbook_id, recipe_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        recipe_id,
     )
     return SuccessResponse(data=recipe)
 
@@ -287,7 +308,11 @@ async def update_recipe(
     current_user: dict = Depends(get_current_user),
 ):
     recipe = await service.update_recipe(
-        db, current_user["org_id"], cookbook_id, recipe_id, payload,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        recipe_id,
+        payload,
     )
     return SuccessResponse(data=recipe)
 
@@ -304,7 +329,10 @@ async def delete_recipe(
     current_user: dict = Depends(get_current_user),
 ):
     deleted = await service.delete_recipe(
-        db, current_user["org_id"], cookbook_id, recipe_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        recipe_id,
     )
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found")
@@ -326,7 +354,11 @@ async def reorder_recipes(
     """Expects ``{"recipe_ids": [uuid, uuid, ...]}`` in desired order."""
     recipe_ids = payload.get("recipe_ids", [])
     recipes = await service.reorder_recipes(
-        db, current_user["org_id"], cookbook_id, chapter_id, recipe_ids,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        chapter_id,
+        recipe_ids,
     )
     return SuccessResponse(data=recipes)
 
@@ -349,7 +381,10 @@ async def generate_recipe(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.generate_recipe(
-        db, current_user["org_id"], cookbook_id, payload or {},
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -368,7 +403,11 @@ async def generate_recipe_image(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.generate_recipe_image(
-        db, current_user["org_id"], cookbook_id, recipe_id, payload or {},
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        recipe_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -386,7 +425,11 @@ async def improve_recipe(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.improve_recipe(
-        db, current_user["org_id"], cookbook_id, recipe_id, payload or {},
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        recipe_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -408,7 +451,10 @@ async def calculate_nutrition(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.calculate_nutrition(
-        db, current_user["org_id"], cookbook_id, recipe_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        recipe_id,
     )
     return SuccessResponse(data=result)
 
@@ -424,7 +470,9 @@ async def batch_nutrition(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.batch_nutrition(
-        db, current_user["org_id"], cookbook_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
     )
     return SuccessResponse(data=result)
 
@@ -449,7 +497,11 @@ async def scale_recipe(
     """Expects ``{"factor": 2.0}`` in body."""
     factor = float(payload.get("factor", 1.0))
     result = await service.scale_recipe(
-        db, current_user["org_id"], cookbook_id, recipe_id, factor,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        recipe_id,
+        factor,
     )
     return SuccessResponse(data=result)
 
@@ -502,7 +554,11 @@ async def update_meal_plan(
     current_user: dict = Depends(get_current_user),
 ):
     plan = await service.update_meal_plan(
-        db, current_user["org_id"], cookbook_id, plan_id, payload,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        plan_id,
+        payload,
     )
     return SuccessResponse(data=plan)
 
@@ -519,7 +575,10 @@ async def delete_meal_plan(
     current_user: dict = Depends(get_current_user),
 ):
     deleted = await service.delete_meal_plan(
-        db, current_user["org_id"], cookbook_id, plan_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        plan_id,
     )
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meal plan not found")
@@ -538,7 +597,10 @@ async def auto_fill_meal_plan(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.auto_fill_meal_plan(
-        db, current_user["org_id"], cookbook_id, plan_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        plan_id,
     )
     return SuccessResponse(data=result)
 
@@ -555,7 +617,10 @@ async def generate_shopping_list(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.generate_shopping_list(
-        db, current_user["org_id"], cookbook_id, plan_id,
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        plan_id,
     )
     return SuccessResponse(data=result)
 
@@ -591,7 +656,10 @@ async def generate_front_matter(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.generate_front_matter(
-        db, current_user["org_id"], cookbook_id, payload or {},
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -613,7 +681,10 @@ async def export_cookbook(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.export_cookbook(
-        db, current_user["org_id"], cookbook_id, payload or {},
+        db,
+        current_user["org_id"],
+        cookbook_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 

@@ -21,6 +21,7 @@ from app.modules.llm_orchestration.router_config import ModelID
 # Fixtures
 # -------------------------------------------------------------------
 
+
 @pytest.fixture
 def tracker() -> CostTracker:
     """Return a CostTracker with Redis persistence disabled."""
@@ -39,6 +40,7 @@ def org_id() -> str:
 # -------------------------------------------------------------------
 # Cost calculation
 # -------------------------------------------------------------------
+
 
 class TestCostCalculation:
     """Verify per-model token cost calculations."""
@@ -89,6 +91,7 @@ class TestCostCalculation:
 # Usage recording
 # -------------------------------------------------------------------
 
+
 class TestUsageRecording:
     """Verify that usage records are created and budgets updated."""
 
@@ -134,6 +137,7 @@ class TestUsageRecording:
 # Budget management
 # -------------------------------------------------------------------
 
+
 class TestBudgetManagement:
     """Verify per-org budget tracking and checks."""
 
@@ -171,6 +175,7 @@ class TestBudgetManagement:
 # -------------------------------------------------------------------
 # Alert levels
 # -------------------------------------------------------------------
+
 
 class TestAlertLevels:
     """Verify budget alert thresholds at 50/75/90/100%."""
@@ -230,6 +235,7 @@ class TestAlertLevels:
 # -------------------------------------------------------------------
 # OrgBudget dataclass
 # -------------------------------------------------------------------
+
 
 class TestOrgBudget:
     """Test OrgBudget property calculations."""

@@ -12,9 +12,11 @@ from dataclasses import dataclass, field
 # Data containers
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SegmentedText:
     """Result of ingestion: the full text broken into structural units."""
+
     raw_text: str = ""
     sentences: list[str] = field(default_factory=list)
     paragraphs: list[str] = field(default_factory=list)
@@ -27,17 +29,39 @@ class SegmentedText:
 # ---------------------------------------------------------------------------
 
 _SENTENCE_END = re.compile(
-    r'(?<=[.!?])'           # after sentence-ending punctuation
-    r'(?:\s*["\u201D])?'    # optional closing quote
-    r'\s+'                  # whitespace
-    r'(?=[A-Z\u201C"])',    # next sentence starts with upper-case or opening quote
+    r"(?<=[.!?])"  # after sentence-ending punctuation
+    r'(?:\s*["\u201D])?'  # optional closing quote
+    r"\s+"  # whitespace
+    r'(?=[A-Z\u201C"])',  # next sentence starts with upper-case or opening quote
 )
 
-_ABBREVIATIONS = frozenset([
-    "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "vs", "etc",
-    "inc", "ltd", "co", "corp", "dept", "univ", "approx", "vol", "no",
-    "fig", "e.g", "i.e", "al",
-])
+_ABBREVIATIONS = frozenset(
+    [
+        "mr",
+        "mrs",
+        "ms",
+        "dr",
+        "prof",
+        "sr",
+        "jr",
+        "st",
+        "vs",
+        "etc",
+        "inc",
+        "ltd",
+        "co",
+        "corp",
+        "dept",
+        "univ",
+        "approx",
+        "vol",
+        "no",
+        "fig",
+        "e.g",
+        "i.e",
+        "al",
+    ]
+)
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -64,14 +88,14 @@ def _split_sentences(text: str) -> list[str]:
 
 def _split_paragraphs(text: str) -> list[str]:
     """Split text into paragraphs on blank lines or indent boundaries."""
-    parts = re.split(r'\n\s*\n', text)
+    parts = re.split(r"\n\s*\n", text)
     return [p.strip() for p in parts if p.strip()]
 
 
 def _split_chapters(text: str) -> list[str]:
     """Best-effort chapter splitting based on common markers."""
     pattern = re.compile(
-        r'^(?:chapter|part)\s+\w+',
+        r"^(?:chapter|part)\s+\w+",
         re.IGNORECASE | re.MULTILINE,
     )
     positions = [m.start() for m in pattern.finditer(text)]
@@ -89,6 +113,7 @@ def _split_chapters(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # Format-specific extractors
 # ---------------------------------------------------------------------------
+
 
 def _extract_txt(content: bytes) -> str:
     for encoding in ("utf-8", "latin-1", "cp1252"):
@@ -166,14 +191,15 @@ def _extract_pdf(content: bytes) -> str:
 # Normalizer
 # ---------------------------------------------------------------------------
 
+
 def _normalize(text: str) -> str:
     """Normalize whitespace, strip control chars, unify quotes."""
     # Replace various Unicode dashes/hyphens with standard
     text = text.replace("\u2013", "-").replace("\u2014", " -- ")
     # Collapse multiple spaces
-    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r"[ \t]+", " ", text)
     # Collapse more than two newlines
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
 

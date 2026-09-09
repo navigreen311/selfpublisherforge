@@ -79,8 +79,15 @@ def validate_template(template: dict[str, Any]) -> bool:
         True if valid, raises ValueError otherwise
     """
     required_fields = [
-        "name", "slug", "description", "category", "tier",
-        "default_config", "steps", "triggers", "outputs"
+        "name",
+        "slug",
+        "description",
+        "category",
+        "tier",
+        "default_config",
+        "steps",
+        "triggers",
+        "outputs",
     ]
 
     for field in required_fields:

@@ -4,6 +4,7 @@ Blueprint Section 17.4 -- 21 test cases covering preflight, pricing,
 color management, fingerprinting, spam detection, safety, font licensing,
 metadata, review feedback, accessibility, device preview, and distributor.
 """
+
 from __future__ import annotations
 
 import pytest

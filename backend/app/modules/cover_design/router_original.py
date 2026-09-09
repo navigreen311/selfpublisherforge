@@ -8,6 +8,7 @@ Endpoints:
     GET  /api/v1/covers/book/{book_id}       — List covers for a book
     DELETE /api/v1/covers/{id}               — Delete a cover
 """
+
 from __future__ import annotations
 
 from uuid import UUID

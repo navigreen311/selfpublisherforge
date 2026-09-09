@@ -19,6 +19,7 @@ from app.core.event_types import BaseEvent, EventPublisher, EventType
 # EventType enum
 # ---------------------------------------------------------------------------
 
+
 class TestEventType:
     """EventType is a str enum whose values use dot-notation domain prefixes."""
 
@@ -356,6 +357,7 @@ class TestBaseEvent:
 # ---------------------------------------------------------------------------
 # EventPublisher
 # ---------------------------------------------------------------------------
+
 
 class TestEventPublisher:
     """EventPublisher is an abstract interface (raises NotImplementedError)."""

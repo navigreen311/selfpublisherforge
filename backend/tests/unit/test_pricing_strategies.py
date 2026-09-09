@@ -342,11 +342,15 @@ class TestDynamicStrategy:
 
     def test_confidence_scales_with_data(self):
         context_short = StrategyContext(
-            current_price=4.99, min_price=0.99, max_price=9.99,
+            current_price=4.99,
+            min_price=0.99,
+            max_price=9.99,
             bsr_trend=[5000, 4000],
         )
         context_long = StrategyContext(
-            current_price=4.99, min_price=0.99, max_price=9.99,
+            current_price=4.99,
+            min_price=0.99,
+            max_price=9.99,
             bsr_trend=[5000, 4500, 4000, 3500, 3000, 2500, 2000],
         )
         result_short = self.strategy.calculate(context_short)

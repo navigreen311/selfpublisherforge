@@ -306,10 +306,7 @@ class TestFeatureFlags:
         """Should return the updated flag (stub implementation)."""
         mock_db = AsyncMock()
         result = await service.update_feature_flag(
-            mock_db,
-            flag_key="test_feature",
-            enabled=True,
-            description="Test feature flag"
+            mock_db, flag_key="test_feature", enabled=True, description="Test feature flag"
         )
         assert result.key == "test_feature"
         assert result.enabled is True
@@ -319,11 +316,7 @@ class TestFeatureFlags:
     async def test_update_feature_flag_without_description(self):
         """Should update flag without description."""
         mock_db = AsyncMock()
-        result = await service.update_feature_flag(
-            mock_db,
-            flag_key="another_feature",
-            enabled=False
-        )
+        result = await service.update_feature_flag(mock_db, flag_key="another_feature", enabled=False)
         assert result.key == "another_feature"
         assert result.enabled is False
         assert result.description is None

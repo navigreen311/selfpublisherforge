@@ -11,9 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.pricing_automation.models import ScheduledPriceChange
 
 
-async def create_scheduled_change(
-    db: AsyncSession, org_id: UUID, data: dict
-) -> dict:
+async def create_scheduled_change(db: AsyncSession, org_id: UUID, data: dict) -> dict:
     """Create a new scheduled price change."""
     change = ScheduledPriceChange(
         org_id=org_id,
@@ -54,9 +52,7 @@ async def list_scheduled_changes(
     return [_to_dict(c) for c in changes]
 
 
-async def cancel_scheduled_change(
-    db: AsyncSession, org_id: UUID, change_id: UUID
-) -> bool:
+async def cancel_scheduled_change(db: AsyncSession, org_id: UUID, change_id: UUID) -> bool:
     """Cancel a scheduled price change."""
     result = await db.execute(
         select(ScheduledPriceChange)

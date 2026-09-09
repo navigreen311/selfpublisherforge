@@ -49,6 +49,7 @@ router = APIRouter()
 # Launch Plan Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/launch-plan/generate",
     response_model=SuccessResponse[LaunchPlanResponse],
@@ -162,6 +163,7 @@ async def update_launch_plan(
 # Email Sequence Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/email-sequences",
     response_model=SuccessResponse[EmailSequenceResponse],
@@ -273,6 +275,7 @@ async def trigger_email_send(
 # Social Media Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/social/generate",
     response_model=SuccessResponse[list[SocialPostResponse]],
@@ -338,6 +341,7 @@ async def get_social_calendar(
 # ---------------------------------------------------------------------------
 # ARC Campaign Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/arc",
@@ -462,8 +466,13 @@ async def update_email(
     from app.modules.marketing.email_builder import update_email_in_sequence
 
     result = await update_email_in_sequence(
-        db, sequence_id, current_user["org_id"], email_id,
-        subject=subject, body_html=body_html, delay_days=delay_days,
+        db,
+        sequence_id,
+        current_user["org_id"],
+        email_id,
+        subject=subject,
+        body_html=body_html,
+        delay_days=delay_days,
     )
     if not result:
         raise HTTPException(status_code=404, detail="Email not found")
@@ -523,9 +532,13 @@ async def update_social_post(
     from app.modules.marketing.social_generator import update_social_post as do_update
 
     result = await do_update(
-        db, post_id, current_user["org_id"],
-        content=content, hashtags=hashtags,
-        scheduled_at=scheduled_at, status=status_val,
+        db,
+        post_id,
+        current_user["org_id"],
+        content=content,
+        hashtags=hashtags,
+        scheduled_at=scheduled_at,
+        status=status_val,
     )
     if not result:
         raise HTTPException(status_code=404, detail="Post not found")

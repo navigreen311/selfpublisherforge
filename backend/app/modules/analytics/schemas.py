@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # ---------- Enums ----------
 
+
 class Platform(str, Enum):
     KDP = "kdp"
     INGRAM_SPARK = "ingram_spark"
@@ -56,6 +57,7 @@ class FormatType(str, Enum):
 
 # ---------- Analytics Event ----------
 
+
 class AnalyticsEventCreate(BaseModel):
     event_type: str = Field(..., max_length=100)
     event_source: str = Field(default="system", max_length=100)
@@ -84,6 +86,7 @@ class AnalyticsEventResponse(BaseModel):
 
 
 # ---------- Royalty Records ----------
+
 
 class RoyaltyRecordBase(BaseModel):
     platform: str
@@ -131,6 +134,7 @@ class RoyaltyImportResponse(BaseModel):
 
 # ---------- Revenue ----------
 
+
 class RevenueDataPoint(BaseModel):
     period: str
     revenue: Decimal
@@ -160,6 +164,7 @@ class RevenueQueryParams(BaseModel):
 
 # ---------- Dashboard ----------
 
+
 class KPICard(BaseModel):
     label: str
     value: str
@@ -180,6 +185,7 @@ class DashboardData(BaseModel):
 
 # ---------- Portfolio Metrics ----------
 
+
 class PortfolioMetrics(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -196,6 +202,7 @@ class PortfolioMetrics(BaseModel):
 
 
 # ---------- Reports ----------
+
 
 class ReportRequest(BaseModel):
     title: str = Field(..., max_length=500)
@@ -225,6 +232,7 @@ class ReportResponse(BaseModel):
 
 # ---------- Trends ----------
 
+
 class TrendDataPoint(BaseModel):
     period: str
     value: Decimal
@@ -243,6 +251,7 @@ class TrendData(BaseModel):
 
 
 # ---------- Sales Data ----------
+
 
 class SalesDataResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -274,6 +283,7 @@ class SalesResponse(BaseModel):
 
 # ---------- BSR Tracking ----------
 
+
 class BSRDataPoint(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -285,6 +295,7 @@ class BSRDataPoint(BaseModel):
 
 # ---------- Book Performance ----------
 
+
 class BookPerformanceResponse(BaseModel):
     book_id: str
     stats: dict[str, Any]
@@ -294,6 +305,7 @@ class BookPerformanceResponse(BaseModel):
 
 
 # ---------- Enhanced Dashboard ----------
+
 
 class EnhancedDashboardResponse(BaseModel):
     stats: list[dict[str, Any]]
@@ -307,6 +319,7 @@ class EnhancedDashboardResponse(BaseModel):
 
 # ---------- AI Insights ----------
 
+
 class AIAnalyticsInsight(BaseModel):
     type: str
     message: str
@@ -316,6 +329,7 @@ class AIAnalyticsInsight(BaseModel):
 
 
 # ---------- Enhanced Report Generation ----------
+
 
 class ReportGenerateRequest(BaseModel):
     title: str = Field(..., max_length=500)

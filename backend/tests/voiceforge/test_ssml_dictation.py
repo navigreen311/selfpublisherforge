@@ -3,6 +3,7 @@
 Mocks the broken app.models import chain before importing the services
 so tests can run independently of database model registration.
 """
+
 from __future__ import annotations
 
 import sys
@@ -54,20 +55,15 @@ from app.services.voiceforge.ssml_generator import (
 # Test data
 # ---------------------------------------------------------------------------
 
-DIALOGUE_TEXT = '''
+DIALOGUE_TEXT = """
 "I can't believe it," Sarah whispered.
 John replied, "Neither can I."
 "What do we do now?" she asked.
-'''
+"""
 
-UNPUNCTUATED_TEXT = (
-    "the quick brown fox jumps over the lazy dog it was a sunny day"
-)
+UNPUNCTUATED_TEXT = "the quick brown fox jumps over the lazy dog it was a sunny day"
 
-FILLER_TEXT = (
-    "so um I was thinking you know that maybe we should uh go to the "
-    "store like tomorrow"
-)
+FILLER_TEXT = "so um I was thinking you know that maybe we should uh go to the " "store like tomorrow"
 
 
 # ===================================================================
@@ -350,9 +346,7 @@ class TestRestorePunctuation:
 
     def test_question_mark(self):
         refiner = DictationRefiner()
-        result = refiner.restore_punctuation(
-            "how are you question mark fine thanks"
-        )
+        result = refiner.restore_punctuation("how are you question mark fine thanks")
         assert "?" in result
 
 
@@ -497,9 +491,7 @@ class TestRefineTranscriptFull:
         monkeypatch.setattr(DictationRefiner, "_claude_cleanup", _fake_cleanup)
         monkeypatch.setattr(DictationRefiner, "apply_style", _fake_style)
 
-        result = await refiner.refine_transcript(
-            FILLER_TEXT, style_profile_id="test-profile"
-        )
+        result = await refiner.refine_transcript(FILLER_TEXT, style_profile_id="test-profile")
 
         assert isinstance(result, RefinedText)
         # style_match_score is set when style_profile_id is provided
@@ -519,7 +511,5 @@ class TestRefineTranscriptFull:
 
         summary = result.changes_summary
         assert summary["original_word_count"] == len(FILLER_TEXT.split())
-        assert summary["refined_word_count"] == len(
-            result.refined_text.split()
-        )
+        assert summary["refined_word_count"] == len(result.refined_text.split())
         assert summary["paragraphs"] >= 1

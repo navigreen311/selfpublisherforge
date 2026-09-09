@@ -38,16 +38,13 @@ class ABTest(TenantModel):
 
     duration_days: Mapped[int] = mapped_column(Integer, default=7)
 
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
 
 class ListingAnalysisRecord(TenantModel):
     """Persisted listing analysis result."""
+
     __tablename__ = "listing_analyses"
 
     book_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
@@ -61,6 +58,7 @@ class ListingAnalysisRecord(TenantModel):
 
 class GeneratedBlurb(TenantModel):
     """A generated blurb version."""
+
     __tablename__ = "generated_blurbs"
 
     book_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
@@ -76,6 +74,7 @@ class GeneratedBlurb(TenantModel):
 
 class KeywordAnalysisRecord(TenantModel):
     """Persisted keyword optimization result."""
+
     __tablename__ = "keyword_analyses"
 
     book_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
@@ -87,6 +86,7 @@ class KeywordAnalysisRecord(TenantModel):
 
 class APlusPlan(TenantModel):
     """A+ content plan for a book."""
+
     __tablename__ = "aplus_plans"
 
     book_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)

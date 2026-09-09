@@ -1,4 +1,5 @@
 """Seed demo projects and books."""
+
 import uuid
 
 from sqlalchemy import select
@@ -16,9 +17,7 @@ from app.models.project import (
 )
 
 
-async def seed_projects(
-    db: AsyncSession, org_id: uuid.UUID
-) -> dict[str, dict[str, uuid.UUID]]:
+async def seed_projects(db: AsyncSession, org_id: uuid.UUID) -> dict[str, dict[str, uuid.UUID]]:
     """Seed demo projects and books for an organization.
 
     Args:
@@ -29,9 +28,7 @@ async def seed_projects(
         Dict with project_ids and book_ids mappings
     """
     # Check if PenName exists for this org
-    pen_name_result = await db.execute(
-        select(PenName).where(PenName.org_id == org_id, PenName.name == "Jane Doe")
-    )
+    pen_name_result = await db.execute(select(PenName).where(PenName.org_id == org_id, PenName.name == "Jane Doe"))
     pen_name = pen_name_result.scalar_one_or_none()
 
     if not pen_name:
@@ -150,15 +147,9 @@ async def seed_projects(
         await db.flush()
 
         # Create manuscript
-        content_type = (
-            ContentType.FICTION
-            if book_data["genre"] in ["Fantasy", "Romance"]
-            else ContentType.NONFICTION
-        )
+        content_type = ContentType.FICTION if book_data["genre"] in ["Fantasy", "Romance"] else ContentType.NONFICTION
         manuscript_status = (
-            ManuscriptStatus.FINAL
-            if book_data["status"] == BookStatus.PUBLISHED
-            else ManuscriptStatus.DRAFT
+            ManuscriptStatus.FINAL if book_data["status"] == BookStatus.PUBLISHED else ManuscriptStatus.DRAFT
         )
 
         manuscript = Manuscript(

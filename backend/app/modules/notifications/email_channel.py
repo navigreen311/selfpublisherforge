@@ -144,7 +144,7 @@ EMAIL_TEMPLATES: dict[str, dict[str, str]] = {
         ),
         "text": (
             "Hi {name},\n\n"
-            "Great news! Your report \"{report_name}\" has finished processing "
+            'Great news! Your report "{report_name}" has finished processing '
             "and is ready for download.\n\n"
             "Download it here:\n"
             "{download_url}\n\n"
@@ -230,8 +230,7 @@ async def send_email(
 
     if not smtp_host:
         logger.warning(
-            "SMTP not configured (SMTP_HOST is empty). "
-            "Skipping email to %s: %s",
+            "SMTP not configured (SMTP_HOST is empty). " "Skipping email to %s: %s",
             to,
             subject,
         )

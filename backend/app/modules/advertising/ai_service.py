@@ -29,26 +29,30 @@ async def get_ai_insights(db: AsyncSession, org_id) -> list[dict]:
     campaigns = result.scalars().all()
 
     if not campaigns:
-        insights.append({
-            "type": "getting_started",
-            "message": "No campaigns found. Create your first campaign to start advertising your books.",
-            "campaign_id": None,
-            "action": "create_campaign",
-            "severity": "info",
-        })
+        insights.append(
+            {
+                "type": "getting_started",
+                "message": "No campaigns found. Create your first campaign to start advertising your books.",
+                "campaign_id": None,
+                "action": "create_campaign",
+                "severity": "info",
+            }
+        )
         return insights
 
     active_campaigns = [c for c in campaigns if c.status == "active"]
     paused_campaigns = [c for c in campaigns if c.status == "paused"]
 
     if not active_campaigns:
-        insights.append({
-            "type": "no_active",
-            "message": f"You have {len(campaigns)} campaign(s) but none are active. Consider activating or creating new campaigns.",
-            "campaign_id": None,
-            "action": "activate_campaign",
-            "severity": "warning",
-        })
+        insights.append(
+            {
+                "type": "no_active",
+                "message": f"You have {len(campaigns)} campaign(s) but none are active. Consider activating or creating new campaigns.",
+                "campaign_id": None,
+                "action": "activate_campaign",
+                "severity": "warning",
+            }
+        )
 
     # Analyze each active campaign
     since = datetime.utcnow() - timedelta(days=30)
@@ -64,13 +68,15 @@ async def get_ai_insights(db: AsyncSession, org_id) -> list[dict]:
         perf_records = perf_result.scalars().all()
 
         if not perf_records:
-            insights.append({
-                "type": "no_data",
-                "message": f"Campaign '{campaign.name}' has no performance data in the last 30 days. Check if it is running correctly.",
-                "campaign_id": str(campaign.id),
-                "action": "check_campaign",
-                "severity": "warning",
-            })
+            insights.append(
+                {
+                    "type": "no_data",
+                    "message": f"Campaign '{campaign.name}' has no performance data in the last 30 days. Check if it is running correctly.",
+                    "campaign_id": str(campaign.id),
+                    "action": "check_campaign",
+                    "severity": "warning",
+                }
+            )
             continue
 
         total_spend = sum(r.spend for r in perf_records)
@@ -82,54 +88,64 @@ async def get_ai_insights(db: AsyncSession, org_id) -> list[dict]:
         if total_sales > 0:
             acos = (total_spend / total_sales) * 100
             if acos > 70:
-                insights.append({
-                    "type": "high_acos",
-                    "message": f"Campaign '{campaign.name}' has a high ACOS of {acos:.1f}%. Consider lowering bids or pausing underperforming keywords.",
-                    "campaign_id": str(campaign.id),
-                    "action": "optimize_bids",
-                    "severity": "warning",
-                })
+                insights.append(
+                    {
+                        "type": "high_acos",
+                        "message": f"Campaign '{campaign.name}' has a high ACOS of {acos:.1f}%. Consider lowering bids or pausing underperforming keywords.",
+                        "campaign_id": str(campaign.id),
+                        "action": "optimize_bids",
+                        "severity": "warning",
+                    }
+                )
             elif acos < 20:
-                insights.append({
-                    "type": "low_acos",
-                    "message": f"Campaign '{campaign.name}' has an excellent ACOS of {acos:.1f}%. Consider increasing bids to capture more sales.",
-                    "campaign_id": str(campaign.id),
-                    "action": "increase_bids",
-                    "severity": "success",
-                })
+                insights.append(
+                    {
+                        "type": "low_acos",
+                        "message": f"Campaign '{campaign.name}' has an excellent ACOS of {acos:.1f}%. Consider increasing bids to capture more sales.",
+                        "campaign_id": str(campaign.id),
+                        "action": "increase_bids",
+                        "severity": "success",
+                    }
+                )
 
         # CTR analysis
         if total_impressions > 0:
             ctr = (total_clicks / total_impressions) * 100
             if ctr < 0.2:
-                insights.append({
-                    "type": "low_ctr",
-                    "message": f"Campaign '{campaign.name}' has a low CTR of {ctr:.2f}%. Consider improving ad copy or refining targeting.",
-                    "campaign_id": str(campaign.id),
-                    "action": "improve_creative",
-                    "severity": "warning",
-                })
+                insights.append(
+                    {
+                        "type": "low_ctr",
+                        "message": f"Campaign '{campaign.name}' has a low CTR of {ctr:.2f}%. Consider improving ad copy or refining targeting.",
+                        "campaign_id": str(campaign.id),
+                        "action": "improve_creative",
+                        "severity": "warning",
+                    }
+                )
 
         # Budget analysis
         if total_spend > 0 and campaign.daily_budget > 0:
             avg_daily_spend = total_spend / len(perf_records)
             budget_utilization = (avg_daily_spend / campaign.daily_budget) * 100
             if budget_utilization > 95:
-                insights.append({
-                    "type": "budget_capped",
-                    "message": f"Campaign '{campaign.name}' is spending its full daily budget. Consider increasing budget to capture more traffic.",
-                    "campaign_id": str(campaign.id),
-                    "action": "increase_budget",
-                    "severity": "info",
-                })
+                insights.append(
+                    {
+                        "type": "budget_capped",
+                        "message": f"Campaign '{campaign.name}' is spending its full daily budget. Consider increasing budget to capture more traffic.",
+                        "campaign_id": str(campaign.id),
+                        "action": "increase_budget",
+                        "severity": "info",
+                    }
+                )
             elif budget_utilization < 30:
-                insights.append({
-                    "type": "low_spend",
-                    "message": f"Campaign '{campaign.name}' is only using {budget_utilization:.0f}% of its budget. Consider adding more keywords or increasing bids.",
-                    "campaign_id": str(campaign.id),
-                    "action": "add_keywords",
-                    "severity": "info",
-                })
+                insights.append(
+                    {
+                        "type": "low_spend",
+                        "message": f"Campaign '{campaign.name}' is only using {budget_utilization:.0f}% of its budget. Consider adding more keywords or increasing bids.",
+                        "campaign_id": str(campaign.id),
+                        "action": "add_keywords",
+                        "severity": "info",
+                    }
+                )
 
         # Zero-sales keywords analysis
         kw_result = await db.execute(
@@ -146,23 +162,27 @@ async def get_ai_insights(db: AsyncSession, org_id) -> list[dict]:
         wasteful_keywords = kw_result.scalars().all()
         if wasteful_keywords:
             kw_names = ", ".join(kw.keyword for kw in wasteful_keywords[:3])
-            insights.append({
-                "type": "wasteful_keywords",
-                "message": f"Campaign '{campaign.name}' has {len(wasteful_keywords)} keyword(s) with spend but no sales ({kw_names}). Consider negating or pausing them.",
-                "campaign_id": str(campaign.id),
-                "action": "negate_keywords",
-                "severity": "warning",
-            })
+            insights.append(
+                {
+                    "type": "wasteful_keywords",
+                    "message": f"Campaign '{campaign.name}' has {len(wasteful_keywords)} keyword(s) with spend but no sales ({kw_names}). Consider negating or pausing them.",
+                    "campaign_id": str(campaign.id),
+                    "action": "negate_keywords",
+                    "severity": "warning",
+                }
+            )
 
     # Paused campaign reminder
     if paused_campaigns:
-        insights.append({
-            "type": "paused_campaigns",
-            "message": f"You have {len(paused_campaigns)} paused campaign(s). Review them to see if any should be reactivated.",
-            "campaign_id": None,
-            "action": "review_paused",
-            "severity": "info",
-        })
+        insights.append(
+            {
+                "type": "paused_campaigns",
+                "message": f"You have {len(paused_campaigns)} paused campaign(s). Review them to see if any should be reactivated.",
+                "campaign_id": None,
+                "action": "review_paused",
+                "severity": "info",
+            }
+        )
 
     return insights
 
@@ -183,10 +203,12 @@ async def suggest_keywords(db: AsyncSession, org_id, book_id=None) -> list[dict]
         campaign_ids_q = campaign_ids_q.where(Campaign.book_id == book_id)
 
     kw_result = await db.execute(
-        select(KeywordBid.keyword).where(
+        select(KeywordBid.keyword)
+        .where(
             KeywordBid.campaign_id.in_(campaign_ids_q),
             KeywordBid.is_negative.is_(False),
-        ).distinct()
+        )
+        .distinct()
     )
     existing_keywords = [r for r in kw_result.scalars().all()]
 
@@ -210,8 +232,16 @@ async def suggest_keywords(db: AsyncSession, org_id, book_id=None) -> list[dict]
     ]
 
     genres = [
-        "romance", "thriller", "mystery", "fantasy", "sci-fi",
-        "self-help", "business", "horror", "historical fiction", "literary fiction",
+        "romance",
+        "thriller",
+        "mystery",
+        "fantasy",
+        "sci-fi",
+        "self-help",
+        "business",
+        "horror",
+        "historical fiction",
+        "literary fiction",
     ]
 
     suggestions = []
@@ -223,12 +253,14 @@ async def suggest_keywords(db: AsyncSession, org_id, book_id=None) -> list[dict]
             suggestion = template.format(keyword=kw, genre=kw)
             if suggestion not in seen and suggestion != kw:
                 seen.add(suggestion)
-                suggestions.append({
-                    "keyword": suggestion,
-                    "search_volume": random.randint(100, 50000),
-                    "suggested_bid": round(random.uniform(0.25, 3.50), 2),
-                    "competition": random.choice(["low", "medium", "high"]),
-                })
+                suggestions.append(
+                    {
+                        "keyword": suggestion,
+                        "search_volume": random.randint(100, 50000),
+                        "suggested_bid": round(random.uniform(0.25, 3.50), 2),
+                        "competition": random.choice(["low", "medium", "high"]),
+                    }
+                )
 
     # If few suggestions from existing keywords, add genre-based ones
     if len(suggestions) < 10:
@@ -237,12 +269,14 @@ async def suggest_keywords(db: AsyncSession, org_id, book_id=None) -> list[dict]
                 suggestion = template.format(genre=genre, keyword=genre)
                 if suggestion not in seen:
                     seen.add(suggestion)
-                    suggestions.append({
-                        "keyword": suggestion,
-                        "search_volume": random.randint(500, 100000),
-                        "suggested_bid": round(random.uniform(0.20, 2.50), 2),
-                        "competition": random.choice(["low", "medium", "high"]),
-                    })
+                    suggestions.append(
+                        {
+                            "keyword": suggestion,
+                            "search_volume": random.randint(500, 100000),
+                            "suggested_bid": round(random.uniform(0.20, 2.50), 2),
+                            "competition": random.choice(["low", "medium", "high"]),
+                        }
+                    )
 
     # Sort by search volume descending and limit
     suggestions.sort(key=lambda x: x["search_volume"], reverse=True)
@@ -349,16 +383,16 @@ async def optimize_bids(
         suggested_bid = max(0.02, suggested_bid)
 
         if abs(suggested_bid - current_bid) > 0.01:
-            expected_acos_impact = round(
-                (suggested_bid - current_bid) / current_bid * -10 if current_bid > 0 else 0, 1
+            expected_acos_impact = round((suggested_bid - current_bid) / current_bid * -10 if current_bid > 0 else 0, 1)
+            recommendations.append(
+                {
+                    "keyword": kw.keyword,
+                    "current_bid": current_bid,
+                    "suggested_bid": suggested_bid,
+                    "reason": reason,
+                    "expected_acos_impact": expected_acos_impact,
+                }
             )
-            recommendations.append({
-                "keyword": kw.keyword,
-                "current_bid": current_bid,
-                "suggested_bid": suggested_bid,
-                "reason": reason,
-                "expected_acos_impact": expected_acos_impact,
-            })
             total_current_spend += kw.spend
             total_estimated_spend += kw.spend * (suggested_bid / current_bid) if current_bid > 0 else 0
 
@@ -367,7 +401,8 @@ async def optimize_bids(
         "keywords_with_changes": len(recommendations),
         "estimated_spend_change_pct": round(
             ((total_estimated_spend - total_current_spend) / total_current_spend * 100)
-            if total_current_spend > 0 else 0,
+            if total_current_spend > 0
+            else 0,
             1,
         ),
         "strategy": strategy,

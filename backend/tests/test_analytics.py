@@ -35,6 +35,7 @@ from app.modules.analytics.schemas import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def org_id():
     return uuid.uuid4()
@@ -82,6 +83,7 @@ async def client(mock_user):
 # 1. Dashboard endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestDashboard:
     @pytest.mark.asyncio
     async def test_get_dashboard_returns_200(self, client, org_id):
@@ -118,6 +120,7 @@ class TestDashboard:
 # ---------------------------------------------------------------------------
 # 2. Revenue endpoint
 # ---------------------------------------------------------------------------
+
 
 class TestRevenue:
     @pytest.mark.asyncio
@@ -186,6 +189,7 @@ class TestRevenue:
 # 3. Portfolio endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestPortfolio:
     @pytest.mark.asyncio
     async def test_get_portfolio_returns_200(self, client, org_id):
@@ -219,6 +223,7 @@ class TestPortfolio:
 # ---------------------------------------------------------------------------
 # 4. Events endpoint
 # ---------------------------------------------------------------------------
+
 
 class TestEvents:
     @pytest.mark.asyncio
@@ -265,6 +270,7 @@ class TestEvents:
 # ---------------------------------------------------------------------------
 # 5. Reports endpoints
 # ---------------------------------------------------------------------------
+
 
 class TestReports:
     @pytest.mark.asyncio
@@ -340,9 +346,7 @@ class TestReports:
         with patch("app.modules.analytics.router.service") as mock_service:
             mock_service.get_report_by_id = AsyncMock(return_value=None)
 
-            response = await client.get(
-                f"/api/v1/analytics/reports/{report_id}/download"
-            )
+            response = await client.get(f"/api/v1/analytics/reports/{report_id}/download")
 
             assert response.status_code == 404
             body = response.json()
@@ -354,6 +358,7 @@ class TestReports:
 # ---------------------------------------------------------------------------
 # 6. Trends endpoint
 # ---------------------------------------------------------------------------
+
 
 class TestTrends:
     @pytest.mark.asyncio
@@ -391,6 +396,7 @@ class TestTrends:
 # 7. Royalties endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestRoyalties:
     @pytest.mark.asyncio
     async def test_get_royalties_returns_200(self, client, org_id):
@@ -419,9 +425,7 @@ class TestRoyalties:
     @pytest.mark.asyncio
     async def test_import_royalties_returns_200(self, client, org_id):
         """POST /api/v1/analytics/royalties/import should accept CSV data."""
-        csv_content = base64.b64encode(
-            b"Title,ASIN,Units Sold,Royalty\nMy Book,B001,10,29.99"
-        ).decode()
+        csv_content = base64.b64encode(b"Title,ASIN,Units Sold,Royalty\nMy Book,B001,10,29.99").decode()
 
         import_response = RoyaltyImportResponse(
             import_batch_id=uuid.uuid4(),

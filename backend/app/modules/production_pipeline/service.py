@@ -81,9 +81,7 @@ async def create_pipeline(
                 )
                 # Calculate due dates from estimated_days if pipeline has deadline
                 if payload.deadline and td.get("estimated_days"):
-                    task.due_date = payload.deadline - timedelta(
-                        days=max(0, len(template.task_definitions) - idx)
-                    )
+                    task.due_date = payload.deadline - timedelta(days=max(0, len(template.task_definitions) - idx))
                 db.add(task)
 
     await db.flush()
@@ -91,9 +89,7 @@ async def create_pipeline(
     return pipeline
 
 
-async def get_pipeline(
-    db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID
-) -> Pipeline | None:
+async def get_pipeline(db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID) -> Pipeline | None:
     """Get a single pipeline with its tasks."""
     stmt = select(Pipeline).where(
         Pipeline.id == pipeline_id,
@@ -127,9 +123,7 @@ async def list_pipelines(
     total = (await db.execute(count_stmt)).scalar() or 0
 
     # Fetch page
-    stmt = base.order_by(Pipeline.created_at.desc()).offset(
-        (page - 1) * page_size
-    ).limit(page_size)
+    stmt = base.order_by(Pipeline.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(stmt)
     pipelines = list(result.scalars().all())
 
@@ -189,9 +183,7 @@ async def update_pipeline(
     return pipeline
 
 
-async def delete_pipeline(
-    db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID
-) -> bool:
+async def delete_pipeline(db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID) -> bool:
     """Soft-delete a pipeline."""
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:
@@ -277,9 +269,7 @@ async def update_task(
         await db.refresh(pipeline)
         if detect_cycle(pipeline.tasks):
             await db.rollback()
-            raise WorkflowError(
-                "Updating dependencies would create a cycle."
-            )
+            raise WorkflowError("Updating dependencies would create a cycle.")
 
     # Refresh blocked statuses across the pipeline
     await db.refresh(pipeline)
@@ -289,9 +279,7 @@ async def update_task(
     return task
 
 
-async def _get_task(
-    db: AsyncSession, task_id: uuid.UUID, pipeline_id: uuid.UUID
-) -> PipelineTask | None:
+async def _get_task(db: AsyncSession, task_id: uuid.UUID, pipeline_id: uuid.UUID) -> PipelineTask | None:
     stmt = select(PipelineTask).where(
         PipelineTask.id == task_id,
         PipelineTask.pipeline_id == pipeline_id,
@@ -301,9 +289,7 @@ async def _get_task(
     return result.scalar_one_or_none()
 
 
-async def _refresh_blocked_statuses(
-    db: AsyncSession, pipeline: Pipeline
-) -> None:
+async def _refresh_blocked_statuses(db: AsyncSession, pipeline: Pipeline) -> None:
     """Mark tasks blocked/unblocked based on current dependency state."""
     tasks = pipeline.tasks or []
     blocked = compute_blocked_tasks(tasks)
@@ -322,9 +308,7 @@ async def _refresh_blocked_statuses(
 # ── Timeline ──────────────────────────────────────────────────────────────
 
 
-async def get_timeline(
-    db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID
-) -> TimelineView | None:
+async def get_timeline(db: AsyncSession, pipeline_id: uuid.UUID, org_id: uuid.UUID) -> TimelineView | None:
     """Generate a Gantt-style timeline view for a pipeline."""
     pipeline = await get_pipeline(db, pipeline_id, org_id)
     if not pipeline:
@@ -362,9 +346,7 @@ async def get_timeline(
 # ── Templates ─────────────────────────────────────────────────────────────
 
 
-async def create_template(
-    db: AsyncSession, org_id: uuid.UUID, payload: CreateTemplate
-) -> PipelineTemplate:
+async def create_template(db: AsyncSession, org_id: uuid.UUID, payload: CreateTemplate) -> PipelineTemplate:
     """Save a pipeline template."""
     template = PipelineTemplate(
         org_id=org_id,
@@ -380,14 +362,16 @@ async def create_template(
     return template
 
 
-async def list_templates(
-    db: AsyncSession, org_id: uuid.UUID
-) -> list[PipelineTemplate]:
+async def list_templates(db: AsyncSession, org_id: uuid.UUID) -> list[PipelineTemplate]:
     """List templates visible to the org (own + public)."""
-    stmt = select(PipelineTemplate).where(
-        (PipelineTemplate.org_id == org_id) | (PipelineTemplate.is_public.is_(True)),
-        PipelineTemplate.deleted_at.is_(None),
-    ).order_by(PipelineTemplate.created_at.desc())
+    stmt = (
+        select(PipelineTemplate)
+        .where(
+            (PipelineTemplate.org_id == org_id) | (PipelineTemplate.is_public.is_(True)),
+            PipelineTemplate.deleted_at.is_(None),
+        )
+        .order_by(PipelineTemplate.created_at.desc())
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -405,7 +389,7 @@ async def create_template_from_pipeline(
         return None
 
     task_defs = []
-    for t in (pipeline.tasks or []):
+    for t in pipeline.tasks or []:
         task_defs.append(
             {
                 "title": t.title,

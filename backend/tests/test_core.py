@@ -4,6 +4,7 @@ Tests for core infrastructure modules.
 Covers: security (JWT + password hashing), exceptions, pagination,
 error_handler, middleware, logging sanitization, and versioning.
 """
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -61,9 +62,7 @@ class TestJWTTokens:
 
     def test_access_token_custom_expiry(self):
         """Custom expiration delta is respected."""
-        token = create_access_token(
-            {"sub": "user1"}, expires_delta=timedelta(minutes=5)
-        )
+        token = create_access_token({"sub": "user1"}, expires_delta=timedelta(minutes=5))
         payload = decode_token(token)
         assert payload["sub"] == "user1"
 

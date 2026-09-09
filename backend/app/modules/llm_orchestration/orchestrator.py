@@ -84,9 +84,7 @@ class LLMOrchestrator:
         self._cost_tracker = cost_tracker or CostTracker()
         self._quality = quality or QualityAssurance()
 
-    def register_provider(
-        self, name: ProviderName, provider: BaseLLMProvider
-    ) -> None:
+    def register_provider(self, name: ProviderName, provider: BaseLLMProvider) -> None:
         """Register a provider implementation."""
         self._providers[name] = provider
 

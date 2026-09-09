@@ -12,6 +12,7 @@ Usage::
     prompt = recommend_categories("My Animal Coloring Book", ...)
     result = check_metadata_compliance(title, subtitle, description, keywords)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -67,22 +68,40 @@ _KDP_MAX_KEYWORDS = 7
 
 # Trademarked terms (subset for metadata)
 _TRADEMARK_TERMS: list[str] = [
-    "disney", "pixar", "marvel", "pokemon", "hello kitty",
-    "sesame street", "paw patrol", "barbie", "lego", "harry potter",
-    "peppa pig", "cocomelon", "bluey",
+    "disney",
+    "pixar",
+    "marvel",
+    "pokemon",
+    "hello kitty",
+    "sesame street",
+    "paw patrol",
+    "barbie",
+    "lego",
+    "harry potter",
+    "peppa pig",
+    "cocomelon",
+    "bluey",
 ]
 
 # KDP restricted phrases in titles/subtitles
 _KDP_RESTRICTED_PHRASES: list[str] = [
-    "best seller", "bestseller", "#1", "number one",
-    "award winning", "award-winning", "as seen on",
-    "free", "bonus", "limited edition",
+    "best seller",
+    "bestseller",
+    "#1",
+    "number one",
+    "award winning",
+    "award-winning",
+    "as seen on",
+    "free",
+    "bonus",
+    "limited edition",
 ]
 
 
 # ---------------------------------------------------------------------------
 # LLM Prompt Builders
 # ---------------------------------------------------------------------------
+
 
 def recommend_categories(
     title: str,
@@ -99,9 +118,7 @@ def recommend_categories(
     """
     ref_cats = KDP_CATEGORIES.get(book_type, KDP_CATEGORIES["childrens"])
 
-    categories_text = "\n".join(
-        f"  - {cat['code']}: {cat['path']}" for cat in ref_cats
-    )
+    categories_text = "\n".join(f"  - {cat['code']}: {cat['path']}" for cat in ref_cats)
 
     system_prompt = (
         "You are a KDP metadata expert. Given a book title, description, "
@@ -201,6 +218,7 @@ def optimize_subtitle(
 # Metadata Compliance Checking (deterministic, no LLM)
 # ---------------------------------------------------------------------------
 
+
 def check_metadata_compliance(
     title: str,
     subtitle: str | None = None,
@@ -232,10 +250,7 @@ def check_metadata_compliance(
     if not title or not title.strip():
         issues.append("Title is empty or blank.")
     elif len(title) > _MAX_TITLE_LEN:
-        issues.append(
-            f"Title exceeds {_MAX_TITLE_LEN} characters "
-            f"({len(title)} characters)."
-        )
+        issues.append(f"Title exceeds {_MAX_TITLE_LEN} characters " f"({len(title)} characters).")
 
     # Trademark check in title
     title_lower = (title or "").lower()
@@ -246,76 +261,50 @@ def check_metadata_compliance(
     # Restricted phrases
     for phrase in _KDP_RESTRICTED_PHRASES:
         if phrase in title_lower:
-            issues.append(
-                f"Title contains KDP-restricted phrase: '{phrase}'."
-            )
+            issues.append(f"Title contains KDP-restricted phrase: '{phrase}'.")
 
     # ALL-CAPS title
     if title and title == title.upper() and len(title) > 3:
-        suggestions.append(
-            "Avoid ALL-CAPS titles — use title case for better readability."
-        )
+        suggestions.append("Avoid ALL-CAPS titles — use title case for better readability.")
 
     # --- Subtitle checks ---
     if subtitle:
         if len(subtitle) > _MAX_SUBTITLE_LEN:
-            issues.append(
-                f"Subtitle exceeds {_MAX_SUBTITLE_LEN} characters "
-                f"({len(subtitle)} characters)."
-            )
+            issues.append(f"Subtitle exceeds {_MAX_SUBTITLE_LEN} characters " f"({len(subtitle)} characters).")
         sub_lower = subtitle.lower()
         for term in _TRADEMARK_TERMS:
             if term in sub_lower:
-                issues.append(
-                    f"Subtitle contains trademarked term: '{term}'."
-                )
+                issues.append(f"Subtitle contains trademarked term: '{term}'.")
         for phrase in _KDP_RESTRICTED_PHRASES:
             if phrase in sub_lower:
-                issues.append(
-                    f"Subtitle contains KDP-restricted phrase: '{phrase}'."
-                )
+                issues.append(f"Subtitle contains KDP-restricted phrase: '{phrase}'.")
 
     # --- Description checks ---
     if description:
         if len(description) > _MAX_DESCRIPTION_LEN:
-            issues.append(
-                f"Description exceeds {_MAX_DESCRIPTION_LEN} characters "
-                f"({len(description)} characters)."
-            )
+            issues.append(f"Description exceeds {_MAX_DESCRIPTION_LEN} characters " f"({len(description)} characters).")
         if len(description) < 50:
             suggestions.append(
-                "Description is very short. Aim for at least 150 characters "
-                "for better discoverability."
+                "Description is very short. Aim for at least 150 characters " "for better discoverability."
             )
     else:
-        suggestions.append(
-            "No description provided. A compelling description improves "
-            "conversion on Amazon."
-        )
+        suggestions.append("No description provided. A compelling description improves " "conversion on Amazon.")
 
     # --- Keyword checks ---
     if keywords:
         if len(keywords) > _KDP_MAX_KEYWORDS:
-            issues.append(
-                f"Too many keywords ({len(keywords)}). KDP allows "
-                f"a maximum of {_KDP_MAX_KEYWORDS}."
-            )
+            issues.append(f"Too many keywords ({len(keywords)}). KDP allows " f"a maximum of {_KDP_MAX_KEYWORDS}.")
         for kw in keywords:
             if len(kw) > _MAX_KEYWORD_LEN:
-                issues.append(
-                    f"Keyword '{kw}' exceeds {_MAX_KEYWORD_LEN} characters."
-                )
+                issues.append(f"Keyword '{kw}' exceeds {_MAX_KEYWORD_LEN} characters.")
             kw_lower = kw.lower()
             for term in _TRADEMARK_TERMS:
                 if term in kw_lower:
-                    issues.append(
-                        f"Keyword '{kw}' contains trademarked term: '{term}'."
-                    )
+                    issues.append(f"Keyword '{kw}' contains trademarked term: '{term}'.")
             # Check if keyword duplicates title words
             if title and kw.lower() in title.lower():
                 suggestions.append(
-                    f"Keyword '{kw}' duplicates words in the title. "
-                    "Use unique keywords for broader reach."
+                    f"Keyword '{kw}' duplicates words in the title. " "Use unique keywords for broader reach."
                 )
         # Fewer than 7 keywords
         if len(keywords) < _KDP_MAX_KEYWORDS:
@@ -325,8 +314,7 @@ def check_metadata_compliance(
             )
     else:
         suggestions.append(
-            "No keywords provided. KDP allows up to 7 backend keywords — "
-            "use them all for maximum discoverability."
+            "No keywords provided. KDP allows up to 7 backend keywords — " "use them all for maximum discoverability."
         )
 
     return {
