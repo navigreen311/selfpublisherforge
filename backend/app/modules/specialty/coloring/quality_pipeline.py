@@ -170,7 +170,7 @@ async def step_2_auto_clean(image_data: bytes) -> tuple[bytes, list[QualityIssue
         gray_pixel_count = 0
         for y in range(height):
             for x in range(width):
-                val = pixels[x, y]
+                val = int(pixels[x, y])  # PIL access is untyped
                 if 1 <= val <= 254:
                     gray_pixel_count += 1
                 # Threshold binarization at 128
@@ -533,7 +533,7 @@ async def step_6_background_check(image_data: bytes) -> tuple[bytes, list[Qualit
 
         for y in range(height):
             for x in range(width):
-                val = pixels[x, y]
+                val = int(pixels[x, y])  # PIL access is untyped
                 if val > 0:  # not black
                     total_white_area += 1
                     if val < 255:

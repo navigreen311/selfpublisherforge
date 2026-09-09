@@ -6,13 +6,14 @@ of specialty books.  Includes WCAG compliance checking.
 """
 
 import copy
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Accessibility constants
 # ---------------------------------------------------------------------------
 
 # Dyslexia-friendly settings
-DYSLEXIA_SETTINGS = {
+DYSLEXIA_SETTINGS: dict[str, Any] = {
     "font_family": "OpenDyslexic",
     "line_spacing_multiplier": 1.5,
     "letter_spacing_increase_pct": 15,
@@ -25,7 +26,7 @@ DYSLEXIA_SETTINGS = {
 }
 
 # Large print settings (APH -- American Printing House for the Blind)
-LARGE_PRINT_SETTINGS = {
+LARGE_PRINT_SETTINGS: dict[str, Any] = {
     "min_body_font_pt": 18,
     "min_heading_font_pt": 24,
     "contrast_ratio_min": 7.0,  # WCAG AAA
@@ -40,7 +41,7 @@ LARGE_PRINT_SETTINGS = {
 }
 
 # High contrast settings
-HIGH_CONTRAST_SETTINGS = {
+HIGH_CONTRAST_SETTINGS: dict[str, Any] = {
     "background_color": "#FFFFFF",
     "text_color": "#000000",
     "grid_line_min_width_px": 2,

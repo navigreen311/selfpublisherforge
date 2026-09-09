@@ -268,7 +268,7 @@ async def get_puzzle(
 # Verification / QA
 # ---------------------------------------------------------------------------
 async def verify_puzzle(db: AsyncSession, puzzle: Puzzle) -> dict[str, Any]:
-    scores = {
+    scores: dict[str, float | None] = {
         "solvability": 1.0,
         "uniqueness": 0.95,
         "difficulty_match": 0.9,

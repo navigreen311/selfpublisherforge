@@ -1837,7 +1837,9 @@ async def device_preview(db: AsyncSession, org_id: UUID, book_id: UUID, options:
     pages = await list_pages(db, org_id, book_id)
 
     # Physical dimensions per device (diagonal inches and PPI)
-    devices = [
+    # Entries mix str and numeric values, so without this the reads below
+    # come back as `object` and every arithmetic use is an error.
+    devices: list[dict[str, Any]] = [
         {"name": "Kindle Fire HD 10", "width": 1920, "height": 1200, "type": "tablet", "ppi": 224, "diag_in": 10.1},
         {"name": "Kindle Fire HD 8", "width": 1280, "height": 800, "type": "tablet", "ppi": 189, "diag_in": 8.0},
         {"name": "iPad Pro 12.9", "width": 2048, "height": 2732, "type": "tablet", "ppi": 264, "diag_in": 12.9},

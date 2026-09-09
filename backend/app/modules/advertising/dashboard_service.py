@@ -1,6 +1,7 @@
 """Enhanced dashboard service for Advertising Intelligence."""
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,7 +51,9 @@ async def get_enhanced_dashboard(db: AsyncSession, org_id, period: str = "30d"):
     }
 
     # Trend data (aggregate by date)
-    trend_map = {}
+    # Values mix a date string with numeric counters, so this needs an
+    # explicit annotation or they infer as `object` and every += fails.
+    trend_map: dict[str, dict[str, Any]] = {}
     for r in perf_records:
         date_key = r.date.strftime("%Y-%m-%d") if hasattr(r.date, "strftime") else str(r.date)
         if date_key not in trend_map:
@@ -70,7 +73,7 @@ async def get_enhanced_dashboard(db: AsyncSession, org_id, period: str = "30d"):
     trend_data = sorted(trend_map.values(), key=lambda x: x["date"])
 
     # Top campaigns by spend
-    campaign_stats = {}
+    campaign_stats: dict[Any, dict[str, Any]] = {}
     for r in perf_records:
         cid = str(r.campaign_id)
         if cid not in campaign_stats:

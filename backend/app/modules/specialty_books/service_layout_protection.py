@@ -162,7 +162,7 @@ async def generate_safe_zone_heatmap(
         },
     }
 
-    simulated_elements = [
+    simulated_elements: list[dict[str, Any]] = [
         {"type": "text", "x": 0.3, "y": 2.0, "width": 4.0, "height": 0.5},
         {"type": "illustration", "x": 1.0, "y": 3.0, "width": 3.0, "height": 3.0},
         {"type": "face", "x": 2.5, "y": 4.0, "width": 1.0, "height": 1.2},
