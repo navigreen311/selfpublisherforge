@@ -16,6 +16,44 @@ export interface TeamMember {
   name: string;
   email: string;
   role: string;
+  role_id?: string;
+  status?: "active" | "invited" | "suspended";
+  avatar_url?: string;
+  invited_at?: string;
+  joined_at?: string;
+}
+
+// Roles & Permissions (Feature 2)
+export type PermissionAction = "view" | "create" | "edit" | "delete" | "publish";
+
+export type RolePermissions = Record<string, Partial<Record<PermissionAction, boolean>>>;
+
+export interface Role {
+  id: string;
+  org_id?: string;
+  name: string;
+  description?: string;
+  permissions: RolePermissions;
+  is_system?: boolean;
+  created_at?: string;
+}
+
+export interface RoleCreatePayload {
+  name: string;
+  description?: string;
+  permissions: RolePermissions;
+}
+
+export interface RoleUpdatePayload {
+  name?: string;
+  description?: string;
+  permissions?: RolePermissions;
+}
+
+export interface InvitePayload {
+  email: string;
+  role_id: string;
+  message?: string;
 }
 
 export interface OrgSettingsUpdate {

@@ -5,6 +5,7 @@ import type {
   SessionInfo, LoginHistoryEntry, ApiKey, ApiKeyCreatePayload, ApiKeyCreated,
   Webhook, WebhookCreatePayload, WebhookUpdate,
   NotificationPrefs, NotificationPrefsUpdate, SettingsBilling,
+  Role, RoleCreatePayload, RoleUpdatePayload, TeamMember, InvitePayload,
 } from "./types";
 
 const settingsKeys = {
@@ -16,7 +17,100 @@ const settingsKeys = {
   webhooks: () => [...settingsKeys.all, "webhooks"] as const,
   notifications: () => [...settingsKeys.all, "notifications"] as const,
   billing: () => [...settingsKeys.all, "billing"] as const,
+  roles: () => [...settingsKeys.all, "roles"] as const,
+  members: (orgId: string) => [...settingsKeys.all, "members", orgId] as const,
 };
+
+// Roles & Permissions
+export function useRoles() {
+  return useQuery({
+    queryKey: settingsKeys.roles(),
+    queryFn: async () => {
+      const res = await api.get("/api/v1/roles");
+      return res.data as Role[];
+    },
+  });
+}
+
+export function useCreateRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: RoleCreatePayload) => {
+      const res = await api.post("/api/v1/roles", data);
+      return res.data as Role;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.roles() }),
+  });
+}
+
+export function useUpdateRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: RoleUpdatePayload }) => {
+      const res = await api.patch(`/api/v1/roles/${id}`, data);
+      return res.data as Role;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.roles() }),
+  });
+}
+
+export function useDeleteRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/api/v1/roles/${id}`);
+      return res.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.roles() }),
+  });
+}
+
+// Team Members
+export function useTeamMembers(orgId: string | undefined) {
+  return useQuery({
+    queryKey: settingsKeys.members(orgId ?? ""),
+    queryFn: async () => {
+      const res = await api.get(`/api/v1/organizations/${orgId}/members`);
+      return res.data as TeamMember[];
+    },
+    enabled: !!orgId,
+  });
+}
+
+export function useUpdateMemberRole(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
+      const res = await api.patch(`/api/v1/organizations/${orgId}/members/${userId}`, {
+        role_id: roleId,
+      });
+      return res.data as TeamMember;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.members(orgId ?? "") }),
+  });
+}
+
+export function useRemoveMember(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.delete(`/api/v1/organizations/${orgId}/members/${userId}`);
+      return res.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.members(orgId ?? "") }),
+  });
+}
+
+export function useInviteMember(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: InvitePayload) => {
+      const res = await api.post(`/api/v1/organizations/${orgId}/invite`, data);
+      return res.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: settingsKeys.members(orgId ?? "") }),
+  });
+}
 
 // Organization
 export function useOrgSettings() { return useQuery({ queryKey: settingsKeys.org(), queryFn: async () => { const res = await api.get("/api/v1/settings/organization"); return res.data as OrgSettings; } }); }
