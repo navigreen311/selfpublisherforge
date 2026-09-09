@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from app.modules.style_cloning.ingestion import ingest_text
+from app.modules.style_cloning.conformity import _bounded_similarity, _ratio_similarity, check_conformity
 from app.modules.style_cloning.features import extract_all_features
+from app.modules.style_cloning.ingestion import ingest_text
 from app.modules.style_cloning.profile_generator import generate_voice_fingerprint
-from app.modules.style_cloning.conformity import check_conformity, _ratio_similarity, _bounded_similarity
 from app.modules.style_cloning.schemas import VoiceFingerprint
-
 
 # ---------------------------------------------------------------------------
 # Sample texts

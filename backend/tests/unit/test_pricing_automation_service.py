@@ -9,7 +9,7 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,7 +26,6 @@ from app.modules.pricing_automation.schemas import (
     PromotionCreate,
 )
 from app.modules.pricing_automation.service import PricingAutomationService
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures

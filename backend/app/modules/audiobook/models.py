@@ -25,7 +25,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import BaseModel, TenantModel
 
 # Re-export canonical enums/models so existing imports keep working
-from app.models.audiobook import AudiobookStatus  # noqa: F401
+from app.models.audiobook import AudiobookStatus
 from app.models.audiobook import ChapterAudioStatus as ChapterStatus  # noqa: F401
 
 

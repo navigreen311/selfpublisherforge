@@ -14,24 +14,20 @@ from __future__ import annotations
 
 import time
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.rate_limiter import (
-    RateLimitResult,
     SlidingWindowRateLimiter,
     get_rate_limiter,
     reset_limiter,
 )
 from app.core.rate_limits_config import (
-    RATE_LIMITS,
     TIER_MULTIPLIERS,
     find_rate_limit,
     match_pattern,
 )
 from app.schemas.common import PlanTier
-
 
 # ---------------------------------------------------------------------------
 # Fake Redis Implementation
@@ -44,7 +40,7 @@ class FakeRedis:
     def __init__(self) -> None:
         self._store: dict[str, list[tuple[float, str]]] = {}
 
-    def pipeline(self) -> "FakePipeline":
+    def pipeline(self) -> FakePipeline:
         return FakePipeline(self)
 
     async def zrem(self, key: str, member: str) -> int:
@@ -83,19 +79,19 @@ class FakePipeline:
 
     def zremrangebyscore(
         self, key: str, min_score: str, max_score: float
-    ) -> "FakePipeline":
+    ) -> FakePipeline:
         self._ops.append(("zremrangebyscore", (key, min_score, max_score)))
         return self
 
-    def zadd(self, key: str, mapping: dict[str, float]) -> "FakePipeline":
+    def zadd(self, key: str, mapping: dict[str, float]) -> FakePipeline:
         self._ops.append(("zadd", (key, mapping)))
         return self
 
-    def zcard(self, key: str) -> "FakePipeline":
+    def zcard(self, key: str) -> FakePipeline:
         self._ops.append(("zcard", (key,)))
         return self
 
-    def expire(self, key: str, ttl: int) -> "FakePipeline":
+    def expire(self, key: str, ttl: int) -> FakePipeline:
         self._ops.append(("expire", (key, ttl)))
         return self
 

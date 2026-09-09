@@ -4,14 +4,14 @@ Tests cover generation, variations, template listing, competitor analysis,
 and cover queries.
 """
 
-import pytest
 import uuid
-from datetime import datetime, UTC
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from app.core.exceptions import AppException
-from app.modules.cover_design.models import Cover
 from app.modules.cover_design import service
+from app.modules.cover_design.models import Cover
 from app.modules.cover_design.schemas import (
     CompetitorCoverAnalysisRequest,
     CoverGenerateRequest,
@@ -20,7 +20,6 @@ from app.modules.cover_design.schemas import (
     CoverStatus,
     CoverVariationRequest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

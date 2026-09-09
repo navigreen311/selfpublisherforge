@@ -158,8 +158,9 @@ async def step_2_auto_clean(image_data: bytes) -> tuple[bytes, list[QualityIssue
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         pixels = img.load()
@@ -230,8 +231,9 @@ async def step_3_stroke_uniformity(
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image, ImageFilter, ImageMorph
         import io
+
+        from PIL import Image, ImageFilter, ImageMorph
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
 
@@ -305,8 +307,9 @@ async def step_4_closed_shapes(image_data: bytes) -> tuple[bytes, list[QualityIs
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         width, height = img.size
@@ -418,8 +421,9 @@ async def step_5_speck_removal(
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         width, height = img.size
@@ -499,8 +503,9 @@ async def step_6_background_check(image_data: bytes) -> tuple[bytes, list[Qualit
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         pixels = img.load()
@@ -568,8 +573,9 @@ async def step_7_quality_check(image_data: bytes) -> QualityReport:
     score = 100.0
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         width, height = img.size

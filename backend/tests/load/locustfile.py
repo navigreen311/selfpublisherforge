@@ -36,13 +36,13 @@ import logging
 import sys
 
 from locust import events
+from users.power_user import PowerUser
 
 # Import user classes - Locust will automatically detect classes with weight attributes
 from users.reader_user import ReaderUser
 from users.writer_user import WriterUser
-from users.power_user import PowerUser
 
-from config import get_active_profile, BACKEND_URL, LOAD_PROFILES
+from config import BACKEND_URL, LOAD_PROFILES, get_active_profile
 
 # Configure logging
 logging.basicConfig(

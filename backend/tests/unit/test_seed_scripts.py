@@ -1,20 +1,20 @@
 """Tests for database seeding scripts."""
 import pytest
-from sqlalchemy import select
-
-from app.models.organization import Organization
-from app.models.user import User
-from app.models.project import Project, Book
-from app.models.content import Manuscript, Chapter
-from app.modules.analytics.models import RoyaltyRecord, PortfolioMetricSnapshot
-from app.models.market import CompetitorBook, MarketKeyword
-from app.models.marketing import LaunchPlan, EmailSequence
-from scripts.seeds.users import seed_users
-from scripts.seeds.projects import seed_projects
-from scripts.seeds.content import seed_content
 from scripts.seeds.analytics import seed_analytics
+from scripts.seeds.content import seed_content
 from scripts.seeds.market import seed_market
 from scripts.seeds.marketing import seed_marketing
+from scripts.seeds.projects import seed_projects
+from scripts.seeds.users import seed_users
+from sqlalchemy import select
+
+from app.models.content import Chapter, Manuscript
+from app.models.market import CompetitorBook, MarketKeyword
+from app.models.marketing import EmailSequence, LaunchPlan
+from app.models.organization import Organization
+from app.models.project import Book, Project
+from app.models.user import User
+from app.modules.analytics.models import PortfolioMetricSnapshot, RoyaltyRecord
 
 
 @pytest.mark.asyncio

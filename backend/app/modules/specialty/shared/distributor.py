@@ -8,15 +8,13 @@ Blueprint refs: 12.5
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.specialty.models.enums import DistributorName, PreflightStatus
+from app.modules.specialty.models.enums import PreflightStatus
 from app.modules.specialty.models.shared import DistributorPreflight
-
 
 # ---------------------------------------------------------------------------
 # Distributor specifications

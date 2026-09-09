@@ -334,7 +334,7 @@ async def delete_stage(
         user_id=current_user["user_id"],
         details={"stage_id": str(stage_id)},
     )
-    return None
+    return
 
 
 @router.post(
@@ -623,4 +623,4 @@ async def delete_automation(
         user_id=current_user["user_id"],
         details={"automation_id": str(automation_id)},
     )
-    return None
+    return

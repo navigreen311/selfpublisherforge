@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 async def _safe_scalar(db: AsyncSession, stmt, default=0):
     try:
         return (await db.scalar(stmt)) or default
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("dashboard safe_scalar failed: %s", exc)
         return default
 
@@ -40,7 +40,7 @@ async def _safe_scalar(db: AsyncSession, stmt, default=0):
 async def _safe_execute(db: AsyncSession, stmt):
     try:
         return (await db.execute(stmt)).all()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("dashboard safe_execute failed: %s", exc)
         return []
 
@@ -92,7 +92,7 @@ async def _get_stats(db: AsyncSession, org_id: UUID) -> DashboardStats:
             default=Decimal("0"),
         )
         stats.monthly_revenue = Decimal(str(total_rev or 0))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("monthly_revenue failed: %s", exc)
 
     return stats
@@ -124,7 +124,7 @@ async def _get_revenue_trend(
             if isinstance(d, str):
                 try:
                     d = date.fromisoformat(d)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     continue
             elif isinstance(d, datetime):
                 d = d.date()
@@ -132,7 +132,7 @@ async def _get_revenue_trend(
                 continue
             out.append(RevenuePoint(date=d, amount=Decimal(str(row[1] or 0))))
         return out
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("revenue_trend failed: %s", exc)
         return []
 
@@ -164,7 +164,7 @@ async def _get_active_pipelines(
             )
             for p in pipelines
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("active_pipelines failed: %s", exc)
         return []
 
@@ -182,7 +182,7 @@ async def _get_recent_activity(
         result = await db.execute(stmt)
         rows = result.scalars().all()
         return [RecentActivityItem.model_validate(r) for r in rows]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("recent_activity failed: %s", exc)
         return []
 
@@ -217,7 +217,7 @@ async def _get_upcoming_deadlines(
                     source_id=p.id,
                 )
             )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("upcoming_deadlines failed: %s", exc)
     return out
 

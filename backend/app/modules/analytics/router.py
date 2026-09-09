@@ -312,10 +312,10 @@ async def get_enhanced_dashboard(
     current_user: dict = Depends(get_current_user),
 ):
     """Enhanced analytics dashboard with comparisons and AI insights."""
+    from app.core.contracts import SuccessResponse
     from app.modules.analytics.enhanced_dashboard_service import (
         get_enhanced_dashboard as _get_enhanced,
     )
-    from app.core.contracts import SuccessResponse
 
     data = await _get_enhanced(db, current_user["org_id"], period=period, compare=compare)
     return SuccessResponse(data=data)
@@ -340,8 +340,8 @@ async def get_sales(
     current_user: dict = Depends(get_current_user),
 ):
     """Sales data with daily breakdown, totals, and marketplace split."""
-    from app.modules.analytics.sales_service import get_sales_data
     from app.core.contracts import SuccessResponse
+    from app.modules.analytics.sales_service import get_sales_data
 
     data = await get_sales_data(
         db, current_user["org_id"], period=period, book_id=book_id, marketplace=marketplace,
@@ -367,10 +367,10 @@ async def get_book_performance(
     current_user: dict = Depends(get_current_user),
 ):
     """Detailed book performance with BSR history and revenue breakdown."""
+    from app.core.contracts import SuccessResponse
     from app.modules.analytics.book_performance_service import (
         get_book_performance as _get_perf,
     )
-    from app.core.contracts import SuccessResponse
 
     data = await _get_perf(db, current_user["org_id"], book_id, period=period)
     return SuccessResponse(data=data)
@@ -394,9 +394,9 @@ async def generate_enhanced_report(
     current_user: dict = Depends(get_current_user),
 ):
     """Generate a report with enhanced options (sections, book filtering, etc.)."""
+    from app.core.contracts import SuccessResponse
     from app.modules.analytics.models import Report
     from app.modules.analytics.schemas import ReportStatus
-    from app.core.contracts import SuccessResponse
 
     report = Report(
         org_id=current_user["org_id"],

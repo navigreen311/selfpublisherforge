@@ -47,7 +47,7 @@ async def _search_projects(
             )
             for p in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search projects failed: %s", exc)
         return []
 
@@ -81,13 +81,13 @@ async def _search_books(
             )
             for b in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search books failed: %s", exc)
         return []
 
 
 async def _search_chapters(
-    db: AsyncSession, org_id: UUID, like: str  # noqa: ARG001
+    db: AsyncSession, org_id: UUID, like: str
 ) -> list[SearchResultItem]:
     try:
         from app.models.content import Chapter
@@ -115,7 +115,7 @@ async def _search_chapters(
             )
             for c in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search chapters failed: %s", exc)
         return []
 
@@ -146,7 +146,7 @@ async def _search_recipes(
             )
             for r in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search recipes failed: %s", exc)
         return []
 
@@ -175,7 +175,7 @@ async def _search_reviews(
             )
             for r in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search reviews failed: %s", exc)
         return []
 

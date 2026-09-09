@@ -8,16 +8,15 @@ from __future__ import annotations
 
 import pytest
 
-from app.modules.style_cloning.ingestion import ingest_text, SegmentedText
 from app.modules.style_cloning.features import (
     extract_all_features,
-    extract_vocabulary,
-    extract_sentence_metrics,
+    extract_dialogue_metrics,
     extract_paragraph_metrics,
     extract_rhetorical_metrics,
-    extract_dialogue_metrics,
+    extract_sentence_metrics,
+    extract_vocabulary,
 )
-
+from app.modules.style_cloning.ingestion import SegmentedText, ingest_text
 
 # ---------------------------------------------------------------------------
 # Fixtures — sample texts of varying styles

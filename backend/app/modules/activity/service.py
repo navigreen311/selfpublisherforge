@@ -41,6 +41,6 @@ async def log_activity(
     db.add(entry)
     try:
         await db.flush()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("activity_log flush failed: %s", exc)
     return entry

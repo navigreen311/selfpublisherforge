@@ -1,6 +1,10 @@
 """Maze generator using recursive backtracker algorithm."""
 from __future__ import annotations
-import hashlib, json, math, random
+
+import hashlib
+import json
+import math
+import random
 from collections import deque
 from typing import Any
 

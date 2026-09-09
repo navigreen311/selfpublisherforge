@@ -1,22 +1,20 @@
 """Unit tests for the analytics service layer."""
 
-import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
+
 from app.modules.analytics import service
 from app.modules.analytics.schemas import (
-    AggregationPeriod,
     AnalyticsEventCreate,
+    OutputFormat,
     Platform,
     ReportRequest,
     ReportType,
-    OutputFormat,
-    RevenueQueryParams,
     RoyaltyImportRequest,
-    RoyaltyImportResponse,
 )
 
 

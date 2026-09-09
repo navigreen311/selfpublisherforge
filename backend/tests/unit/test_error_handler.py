@@ -7,7 +7,6 @@ as well as the ``register_error_handlers`` integration.
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,7 +31,6 @@ from app.core.exceptions import (
     UnauthorizedError,
     ValidationError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

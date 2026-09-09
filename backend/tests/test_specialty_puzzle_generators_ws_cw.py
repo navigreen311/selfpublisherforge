@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import pytest
 
-from app.modules.specialty_books.generators.word_search import generate_word_search
 from app.modules.specialty_books.generators.crossword import generate_crossword
 from app.modules.specialty_books.generators.svg_renderer import (
-    render_word_search_svg,
     render_crossword_svg,
+    render_word_search_svg,
 )
-
+from app.modules.specialty_books.generators.word_search import generate_word_search
 
 # ---- Helpers ----
 

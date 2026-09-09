@@ -2,9 +2,8 @@
 
 import random
 from datetime import datetime, timedelta
-from uuid import UUID
 
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.advertising.models import Campaign, CampaignPerformance, KeywordBid

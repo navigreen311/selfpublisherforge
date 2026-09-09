@@ -8,7 +8,7 @@ the notification endpoints.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,7 +20,6 @@ from app.modules.notifications.models import (
     NotificationPreference,
     NotificationType,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -46,8 +45,8 @@ def _make_notification(
     n.title = "Test Notification"
     n.message = "This is a test"
     n.data = {"action": "test"}
-    n.read_at = datetime.now(timezone.utc) if read else None
-    n.created_at = datetime.now(timezone.utc)
+    n.read_at = datetime.now(UTC) if read else None
+    n.created_at = datetime.now(UTC)
     return n
 
 

@@ -5,12 +5,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
 from app.modules.notifications.email import send_transactional_email
 from app.modules.organization import schemas, service
 from app.schemas.common import MessageResponse
-from app.config import get_settings
 
 router = APIRouter()
 

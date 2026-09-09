@@ -3,7 +3,8 @@ import logging
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum as _SAEnum, func, text
+from sqlalchemy import DateTime, func, text
+from sqlalchemy import Enum as _SAEnum
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -19,7 +20,8 @@ if _is_sqlite:
     # so every model file keeps its imports unchanged.
     # -----------------------------------------------------------------------
     import sqlalchemy.dialects.postgresql as _pg_dialect
-    from sqlalchemy import JSON as _JSON, String as _String, Uuid as _GenericUuid
+    from sqlalchemy import JSON as _JSON
+    from sqlalchemy import Uuid as _GenericUuid
     from sqlalchemy.types import TypeDecorator as _TD
 
     class _PortableJSONB(_JSON):
@@ -39,7 +41,7 @@ if _is_sqlite:
     _pg_dialect.array.ARRAY = _PortableARRAY      # type: ignore
 
     # Patch DDL compiler to strip gen_random_uuid() server defaults on SQLite
-    from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler, SQLiteDDLCompiler
+    from sqlalchemy.dialects.sqlite.base import SQLiteDDLCompiler
     _orig_get_col_spec = SQLiteDDLCompiler.get_column_specification
     def _patched_get_col_spec(self, column, **kw):
         if column.server_default is not None:

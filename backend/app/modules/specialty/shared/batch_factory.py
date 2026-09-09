@@ -17,10 +17,10 @@ import logging
 import uuid
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.specialty.models.enums import BatchStatus, BookType
+from app.modules.specialty.models.enums import BatchStatus
 from app.modules.specialty.models.shared import BatchJob
 
 logger = logging.getLogger(__name__)

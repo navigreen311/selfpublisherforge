@@ -1,6 +1,8 @@
 """SVG renderers for Maze, Sudoku, Word Scramble, and Cryptogram puzzles."""
 from __future__ import annotations
+
 from xml.sax.saxutils import escape
+
 
 def render_maze_svg(puzzle_data, show_solution=False):
     grid=puzzle_data["grid"]; size=puzzle_data["size"]

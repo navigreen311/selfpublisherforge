@@ -1,6 +1,9 @@
 """Word Scramble generator."""
 from __future__ import annotations
-import hashlib, json, random
+
+import hashlib
+import json
+import random
 
 _COMMON_WORDS = None
 
@@ -27,7 +30,7 @@ def _load_dictionary():
         "NEVER","OTHER","PLACE","POINT","RIGHT","SMALL","SOUND","SPELL","STILL","STUDY",
         "THEIR","THERE","THESE","THING","THINK","THREE","WATER","WHERE","WHICH","WORLD",
         "WOULD","WRITE","HEART","STAR","LOVE","CARE","POTS","STOP","TOPS","SPOT","POST",
-        "OPTS","PALE","LEAP","PLEA","PEAL","LAME","MALE","MEAL","VILE","LIVE","EVIL",
+        "OPTS","PALE","LEAP","PLEA","PEAL","LAME","MALE","MEAL","VILE","EVIL",
         "VEIL","RATS","TSAR","ARTS","TARS","MEAT","TEAM","MATE","TAME","META","LATE",
         "TALE","PEAR","REAP","PARE","RAPE","ACRE","RACE","LACE","DEAL","LEAD","DALE",
     })

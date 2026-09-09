@@ -13,12 +13,10 @@ import logging
 import uuid
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty_books.models_accessibility import (
     AccessibilityVariant,
-    BookType,
 )
 
 logger = logging.getLogger(__name__)

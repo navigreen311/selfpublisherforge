@@ -357,7 +357,8 @@ class TestManuscriptToPublishFlow:
         # ===== Step 10: Create a listing (via DB - no API endpoint exists) =====
         # Insert listing directly since the publishing router doesn't expose
         # a listing creation endpoint
-        from app.models.publishing import Listing, ListingStatus as ListingStatusEnum
+        from app.models.publishing import Listing
+        from app.models.publishing import ListingStatus as ListingStatusEnum
 
         listing_id = uuid.uuid4()
         listing = Listing(

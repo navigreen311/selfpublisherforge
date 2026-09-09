@@ -21,10 +21,8 @@ from app.modules.review_intelligence.schemas import (
     BatchAnalysisRequest,
     ReviewListParams,
     SentimentLabel,
-    VelocityPeriod,
     VelocityTrend,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures

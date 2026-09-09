@@ -9,14 +9,12 @@ safety, PortfolioMetricSnapshot population, and multi-campaign scenarios.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.modules.analytics.metrics import _compute_total_expenses, compute_portfolio_metrics
-
 
 # ---------------------------------------------------------------------------
 # Helpers

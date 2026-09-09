@@ -1,10 +1,9 @@
 """Unit tests for the cover generator module."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import pytest_asyncio
 
 from app.modules.cover_design.generator import (
     _pick_dalle_size,

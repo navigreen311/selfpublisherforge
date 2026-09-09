@@ -9,8 +9,7 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppException, NotFoundError
-from app.database import TenantModel
+from app.core.exceptions import NotFoundError
 from app.modules.specialty.models.style_clone import StyleCloneProfile
 
 logger = logging.getLogger(__name__)

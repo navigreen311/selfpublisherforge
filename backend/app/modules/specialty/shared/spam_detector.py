@@ -17,17 +17,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty.models.shared import (
-    AssetProvenance,
     ContentFingerprint,
-    OriginalityReport,
 )
 from app.modules.specialty.shared.fingerprinting import (
-    FingerprintResult,
-    compare_fingerprints,
     cross_book_comparison,
-    _row_to_fingerprint_result,
 )
-
 
 # ---------------------------------------------------------------------------
 # Result types

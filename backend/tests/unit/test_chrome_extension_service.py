@@ -9,11 +9,10 @@ Tests cover:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 from app.modules.chrome_extension.schemas import (
     AmazonMarketplace,
@@ -22,15 +21,14 @@ from app.modules.chrome_extension.schemas import (
     RelatedKeyword,
 )
 from app.modules.chrome_extension.service import (
-    get_quick_research,
     _estimate_daily_sales,
     _extract_candidate_words,
-    _volume_indicator,
     _generate_related_keywords,
     _generate_related_keywords_from_corpus,
     _generate_related_keywords_via_llm,
+    _volume_indicator,
+    get_quick_research,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -79,7 +77,7 @@ def _make_mock_product(
     product.bsr = bsr
     product.price = price
     product.keywords = keywords or []
-    product.created_at = created_at or datetime.now(timezone.utc)
+    product.created_at = created_at or datetime.now(UTC)
     product.deleted_at = deleted_at
     return product
 
@@ -136,8 +134,8 @@ class TestGetQuickResearchAggregatesData:
         mock_db = AsyncMock()
 
         products = [
-            _make_mock_product(bsr=3500, created_at=datetime(2024, 6, 1, tzinfo=timezone.utc)),
-            _make_mock_product(bsr=4200, created_at=datetime(2024, 5, 1, tzinfo=timezone.utc)),
+            _make_mock_product(bsr=3500, created_at=datetime(2024, 6, 1, tzinfo=UTC)),
+            _make_mock_product(bsr=4200, created_at=datetime(2024, 5, 1, tzinfo=UTC)),
         ]
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = products

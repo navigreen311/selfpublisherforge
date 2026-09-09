@@ -10,7 +10,6 @@ from app.modules.pricing_automation.ku_calculator import (
 )
 from app.modules.pricing_automation.schemas import KUCalculatorRequest, KUCalculatorResponse
 
-
 # ──────────────────── Basic Calculation Tests ────────────────────
 
 

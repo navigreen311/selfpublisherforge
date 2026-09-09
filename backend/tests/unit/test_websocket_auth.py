@@ -12,14 +12,13 @@ Tests cover:
 from __future__ import annotations
 
 from datetime import timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import WebSocket, status
 
 from app.core.security import create_access_token
 from app.modules.realtime.router import _authenticate_ws
-
 
 # ---------------------------------------------------------------------------
 # Tests — Valid Token Authentication
@@ -99,8 +98,9 @@ def test_authenticate_ws_rejects_expired_token() -> None:
 def test_authenticate_ws_rejects_token_without_subject() -> None:
     """Test token missing 'sub' claim raises ValueError."""
     # Create token without sub claim (using dict manipulation)
-    from app.config import get_settings
     from jose import jwt
+
+    from app.config import get_settings
 
     payload = {"exp": 9999999999, "type": "access"}  # No "sub"
     token = jwt.encode(payload, get_settings().SECRET_KEY, algorithm="HS256")

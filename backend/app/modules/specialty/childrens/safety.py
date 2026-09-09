@@ -9,10 +9,9 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Trademark blocklist
@@ -427,7 +426,7 @@ def generate_provenance_record(
     in the record to keep it lightweight and privacy-friendly.
     """
     prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-    generated_date = datetime.now(timezone.utc).isoformat()
+    generated_date = datetime.now(UTC).isoformat()
 
     return ProvenanceRecord(
         model=model,

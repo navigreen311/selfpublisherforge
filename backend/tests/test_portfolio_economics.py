@@ -8,18 +8,16 @@ Covers:
 from __future__ import annotations
 
 import uuid
+from datetime import date, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from datetime import date, timedelta
-from uuid import uuid4
-from unittest.mock import AsyncMock, MagicMock, patch
-
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.main import create_app
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -66,8 +64,8 @@ async def client(mock_db, mock_user) -> AsyncClient:
     """Yield an HTTP test client with auth and DB dependency overrides."""
     app = create_app()
 
-    from app.database import get_db
     from app.core.dependencies import get_current_user
+    from app.database import get_db
 
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: mock_user

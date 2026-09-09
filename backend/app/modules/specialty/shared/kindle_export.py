@@ -7,11 +7,9 @@ with read-order mapping, text pop-up overlays, and read-aloud sync.
 
 import io
 import json
-import struct
 import uuid
 import zipfile
 from datetime import datetime
-from typing import Any
 
 # ---------------------------------------------------------------------------
 # Internal helpers

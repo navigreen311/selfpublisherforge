@@ -41,8 +41,8 @@ def _generate_derangement() -> dict[str, str]:
     while True:
         shuffled = letters[:]
         random.shuffle(shuffled)
-        if all(a != b for a, b in zip(letters, shuffled)):
-            return dict(zip(letters, shuffled))
+        if all(a != b for a, b in zip(letters, shuffled, strict=False)):
+            return dict(zip(letters, shuffled, strict=False))
 
 
 def _apply_cipher(text: str, cipher_map: dict[str, str]) -> str:

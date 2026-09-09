@@ -5,7 +5,7 @@ Verifies USD cost calculation, usage recording, budget thresholds,
 and alert levels at 50/75/90/100%.
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -13,11 +13,9 @@ from app.modules.llm_orchestration.cost_tracker import (
     MODEL_PRICING,
     BudgetAlertLevel,
     CostTracker,
-    ModelPricing,
     OrgBudget,
 )
 from app.modules.llm_orchestration.router_config import ModelID
-
 
 # -------------------------------------------------------------------
 # Fixtures

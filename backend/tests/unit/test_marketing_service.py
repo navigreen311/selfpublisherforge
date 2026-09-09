@@ -8,7 +8,7 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -25,16 +25,14 @@ from app.modules.marketing.schemas import (
     ARCCampaignCreate,
     ARCRecipientCreate,
     EmailSequenceCreate,
-    EmailSequenceUpdate,
     EmailTemplateCreate,
+    LaunchPhaseCreate,
     LaunchPlanCreate,
     LaunchPlanUpdate,
-    LaunchPhaseCreate,
-    SocialPostCreate,
     PhaseTaskCreate,
+    SocialPostCreate,
 )
 from app.modules.marketing.service import MarketingService
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures

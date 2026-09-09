@@ -10,15 +10,14 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty.models.shared import AssetProvenance
-
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -165,7 +164,7 @@ async def export_provenance_report(
         "report_type": "provenance",
         "book_type": book_type,
         "book_id": str(book_id),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "total_assets": len(assets),
         "models_used": sorted(models_used),
         "assets": assets,

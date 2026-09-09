@@ -13,6 +13,7 @@ via the DB session so that subsequent API calls have data to act on.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC
 
 import pytest
 from httpx import AsyncClient
@@ -22,10 +23,9 @@ from app.config import get_settings
 from app.models.project import Book, BookFormat, BookStatus, Project, ProjectType
 from app.models.publishing import (
     Listing,
+)
+from app.models.publishing import (
     ListingStatus as ListingStatusEnum,
-    PublishingAccount as PublishingAccountModel,
-    PublishingAccountStatus,
-    PublishingPlatform,
 )
 
 settings = get_settings()
@@ -395,7 +395,7 @@ class TestListingStatusTransitions:
         )
 
         # Transition status to pending via DB (no update API for listings yet)
-        from sqlalchemy import select, update
+        from sqlalchemy import update
 
         stmt = (
             update(Listing)
@@ -516,13 +516,14 @@ class TestDeleteListing:
         assert len(found_before) == 1
 
         # Soft-delete the listing via DB
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from sqlalchemy import update
 
         stmt = (
             update(Listing)
             .where(Listing.id == listing_id)
-            .values(deleted_at=datetime.now(timezone.utc))
+            .values(deleted_at=datetime.now(UTC))
         )
         await db_session.execute(stmt)
         await db_session.flush()
@@ -556,13 +557,14 @@ class TestDeleteListing:
         )
 
         # Soft-delete the listing
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from sqlalchemy import update
 
         stmt = (
             update(Listing)
             .where(Listing.id == listing_id)
-            .values(deleted_at=datetime.now(timezone.utc))
+            .values(deleted_at=datetime.now(UTC))
         )
         await db_session.execute(stmt)
         await db_session.flush()

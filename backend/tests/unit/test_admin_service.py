@@ -7,16 +7,15 @@ and user management operations using mocked database calls.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.core.exceptions import AppException
-from app.modules.admin.schemas import UserListRequest
 from app.modules.admin import service
+from app.modules.admin.schemas import UserListRequest
 from shared.types.enums import PlanTier
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -38,7 +37,7 @@ def _make_user_row(
         "name": name,
         "is_active": is_active,
         "organization_id": org_id or uuid.uuid4(),
-        "created_at": created_at or datetime.now(timezone.utc),
+        "created_at": created_at or datetime.now(UTC),
     }
 
 
@@ -95,14 +94,13 @@ def _mock_db_with_users(user_rows: list[dict], org_rows: list[dict]) -> AsyncMoc
             result.scalar.return_value = count_scalar
             return result
         # Second call: user query
-        elif call_count["count"] == 2:
+        if call_count["count"] == 2:
             return user_result
         # Subsequent calls: org queries
-        else:
-            idx = call_count["count"] - 3
-            if idx < len(org_results):
-                return org_results[idx]
-            return org_results[-1] if org_results else MagicMock()
+        idx = call_count["count"] - 3
+        if idx < len(org_results):
+            return org_results[idx]
+        return org_results[-1] if org_results else MagicMock()
 
     mock_db.execute = AsyncMock(side_effect=execute_side_effect)
     mock_db.scalar = AsyncMock(return_value=count_scalar)
@@ -274,10 +272,9 @@ class TestListUsers:
             call_count["count"] += 1
             if call_count["count"] == 1:
                 return count_result
-            elif call_count["count"] == 2:
+            if call_count["count"] == 2:
                 return user_result
-            else:
-                return org_result
+            return org_result
 
         mock_db.execute = AsyncMock(side_effect=execute_side_effect)
         mock_db.scalar = AsyncMock(return_value=1)

@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.main import create_app
-from app.database import get_db
 from app.core.dependencies import get_current_user
-
+from app.database import get_db
+from app.main import create_app
 
 # ── Fixtures ─────────────────────────────────────────────────────
 
@@ -38,8 +37,8 @@ def _make_mock_entry(**overrides):
         "tags": ["test"],
         "credibility_score": 0.9,
         "metadata_": {"key": "value"},
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
         "deleted_at": None,
     }
     defaults.update(overrides)

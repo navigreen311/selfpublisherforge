@@ -1,6 +1,9 @@
 """Cryptogram generator using substitution cipher."""
 from __future__ import annotations
-import hashlib, json, random
+
+import hashlib
+import json
+import random
 from collections import Counter
 
 ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -9,14 +12,14 @@ def _generate_cipher_map(rng):
     letters = list(ALPHABET); shuffled = letters[:]
     for _ in range(1000):
         rng.shuffle(shuffled)
-        if all(a != b for a,b in zip(letters, shuffled)): break
+        if all(a != b for a,b in zip(letters, shuffled, strict=False)): break
     else:
         for i in range(len(letters)):
             if letters[i] == shuffled[i]:
                 j = (i+1) % len(letters)
                 while letters[j]==shuffled[i] or letters[i]==shuffled[j]: j = (j+1)%len(letters)
                 shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-    return dict(zip(letters, shuffled))
+    return dict(zip(letters, shuffled, strict=False))
 
 def _apply_cipher(phrase, cm):
     result = []

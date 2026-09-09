@@ -1,13 +1,16 @@
 """Service layer for Puzzle Books CRUD, word lists, QA, and export."""
 from __future__ import annotations
+
 import random
 import re
 import uuid
+from datetime import UTC
 from typing import Any
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.modules.specialty_books.models_puzzle import Puzzle, PuzzleBook
 
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.specialty_books.models_puzzle import Puzzle, PuzzleBook
 
 # ---------------------------------------------------------------------------
 # 8 puzzle book templates
@@ -146,8 +149,8 @@ async def update_puzzle_book(
 
 
 async def delete_puzzle_book(db: AsyncSession, book: PuzzleBook) -> None:
-    from datetime import datetime, timezone
-    book.deleted_at = datetime.now(timezone.utc)
+    from datetime import datetime
+    book.deleted_at = datetime.now(UTC)
     await db.flush()
 
 
@@ -200,8 +203,8 @@ async def update_puzzle(
 
 
 async def delete_puzzle(db: AsyncSession, puzzle: Puzzle) -> None:
-    from datetime import datetime, timezone
-    puzzle.deleted_at = datetime.now(timezone.utc)
+    from datetime import datetime
+    puzzle.deleted_at = datetime.now(UTC)
     await db.flush()
 
 
@@ -483,7 +486,7 @@ def _gen_word_scramble(data: dict) -> dict[str, Any]:
     return {
         "grid_data": {"scrambled": scrambled, "originals": words},
         "word_list": words,
-        "solution_data": {"answers": dict(zip(scrambled, words))},
+        "solution_data": {"answers": dict(zip(scrambled, words, strict=False))},
         "difficulty_score": 0.4,
     }
 

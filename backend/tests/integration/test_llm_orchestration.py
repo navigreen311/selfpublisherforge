@@ -8,17 +8,15 @@ and budget enforcement.
 
 from __future__ import annotations
 
-from typing import AsyncIterator
-from unittest.mock import AsyncMock, MagicMock
+from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock
 
 import pytest
-import pytest_asyncio
 
 from app.modules.llm_orchestration.cache import SemanticCache
-from app.modules.llm_orchestration.cost_tracker import BudgetAlertLevel, CostTracker
+from app.modules.llm_orchestration.cost_tracker import CostTracker
 from app.modules.llm_orchestration.orchestrator import (
     GenerationOptions,
-    GenerationResult,
     LLMOrchestrator,
 )
 from app.modules.llm_orchestration.providers.base import (
@@ -34,7 +32,6 @@ from app.modules.llm_orchestration.router_config import (
     ProviderName,
     TaskType,
 )
-
 
 # -------------------------------------------------------------------
 # Mock provider factory
@@ -415,22 +412,21 @@ class TestQualityIntegration:
                     latency_ms=10.0,
                     finish_reason="end_turn",
                 )
-            else:
-                # Second call (Sonnet) — good quality
-                return LLMResponse(
-                    model_id=request.model_id,
-                    content=(
-                        "The sentiment analysis reveals predominantly positive reviews "
-                        "with strong themes of character development and plot pacing. "
-                        "Readers consistently praise the atmospheric setting and the "
-                        "author's ability to create tension throughout the narrative."
-                    ),
-                    input_tokens=50,
-                    output_tokens=100,
-                    total_tokens=150,
-                    latency_ms=80.0,
-                    finish_reason="end_turn",
-                )
+            # Second call (Sonnet) — good quality
+            return LLMResponse(
+                model_id=request.model_id,
+                content=(
+                    "The sentiment analysis reveals predominantly positive reviews "
+                    "with strong themes of character development and plot pacing. "
+                    "Readers consistently praise the atmospheric setting and the "
+                    "author's ability to create tension throughout the narrative."
+                ),
+                input_tokens=50,
+                output_tokens=100,
+                total_tokens=150,
+                latency_ms=80.0,
+                finish_reason="end_turn",
+            )
 
         poor_anthropic.generate = AsyncMock(side_effect=_generate)
 

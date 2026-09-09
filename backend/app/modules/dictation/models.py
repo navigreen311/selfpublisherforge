@@ -5,22 +5,31 @@ This module re-exports them for backwards compatibility with
 ``app.modules.dictation.service`` imports.
 """
 
-from app.models.dictation import (  # noqa: F401
+# DictationSettings only exists in the module layer (not in app.models.dictation),
+# so we define it here.
+import uuid
+
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database import BaseModel
+from app.models.dictation import (
     DictationCommand,
     DictationSession,
     DictationSessionStatus as SessionStatus,
 )
 
-# DictationSettings only exists in the module layer (not in app.models.dictation),
-# so we define it here.
-import uuid
-
-from sqlalchemy import Boolean, Index, Integer, String
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import ForeignKey
-
-from app.database import BaseModel
+# Re-exported for backwards compatibility. Declared in __all__ rather than
+# carrying a `# noqa: F401`, because ruff's import sorter relocates the block
+# and the trailing noqa does not travel with it — which silently dropped the
+# SessionStatus alias.
+__all__ = [
+    "DictationCommand",
+    "DictationSession",
+    "DictationSettings",
+    "SessionStatus",
+]
 
 
 class DictationSettings(BaseModel):

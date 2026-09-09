@@ -8,7 +8,6 @@ from app.modules.kdp_validation.ebook_validator import EbookValidator
 from app.modules.kdp_validation.rules import (
     MAX_EBOOK_FILE_SIZE_BYTES,
     MAX_EBOOK_IMAGE_SIZE_BYTES,
-    MIN_EBOOK_DPI,
     RECOMMENDED_MIN_FONT_SIZE_PT,
 )
 from app.modules.kdp_validation.schemas import (

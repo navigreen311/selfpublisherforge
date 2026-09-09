@@ -17,13 +17,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import text
 
-from app.database import async_session, engine, Base
-from scripts.seeds.users import seed_users
-from scripts.seeds.projects import seed_projects
-from scripts.seeds.content import seed_content
+from app.database import Base, async_session, engine
 from scripts.seeds.analytics import seed_analytics
+from scripts.seeds.content import seed_content
 from scripts.seeds.market import seed_market
 from scripts.seeds.marketing import seed_marketing
+from scripts.seeds.projects import seed_projects
+from scripts.seeds.users import seed_users
 
 
 async def reset_database():

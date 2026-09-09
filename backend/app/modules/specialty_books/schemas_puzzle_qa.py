@@ -1,10 +1,13 @@
 """Pydantic schemas for Puzzle Book QA."""
 from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID
+
 from pydantic import BaseModel, Field
+
 
 class ClueStyle(str, Enum):
     STANDARD = "standard"

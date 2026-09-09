@@ -13,8 +13,8 @@ All tests use mocked AsyncSession and mocked Amazon client -- no real DB or API.
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -27,14 +27,13 @@ from app.modules.market_intelligence.schemas import (
 )
 from app.modules.market_intelligence.service import MarketIntelligenceService
 
-
 # ---------------------------------------------------------------------------
 # Helpers / Factories
 # ---------------------------------------------------------------------------
 
 def _make_competitor_book(**overrides) -> MagicMock:
     """Create a MagicMock resembling a CompetitorBook ORM row."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     defaults = {
         "id": uuid.uuid4(),
         "org_id": uuid.uuid4(),
@@ -67,7 +66,7 @@ def _make_competitor_book(**overrides) -> MagicMock:
 
 def _make_snapshot(**overrides) -> MagicMock:
     """Create a MagicMock resembling a MarketSnapshot ORM row."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cat_mock = MagicMock()
     cat_mock.amazon_node_id = "154606011"
     cat_mock.name = "Self-Help"
@@ -248,8 +247,8 @@ class TestTrackCompetitor:
         # After db.refresh, simulate the ORM populating fields
         def _refresh_side_effect(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
-            obj.updated_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
+            obj.updated_at = datetime.now(UTC)
             obj.deleted_at = None
             obj.metadata_json = {"marketplace": "US"}
             obj.bsr_history = []
@@ -339,8 +338,8 @@ class TestTrackCompetitor:
 
         def _refresh_side_effect(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
-            obj.updated_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
+            obj.updated_at = datetime.now(UTC)
             obj.deleted_at = None
             obj.metadata_json = {"marketplace": "US"}
 

@@ -21,7 +21,9 @@ from app.database import get_db
 from app.modules.specialty_books import service_accessibility as acc_svc
 from app.modules.specialty_books import service_layout_protection as layout_svc
 from app.modules.specialty_books.service_accessibility import (
-    VARIANT_DYSLEXIA, VARIANT_HIGH_CONTRAST, VARIANT_LARGE_PRINT,
+    VARIANT_DYSLEXIA,
+    VARIANT_HIGH_CONTRAST,
+    VARIANT_LARGE_PRINT,
 )
 
 router = APIRouter(prefix="/api/v1/specialty", tags=["accessibility-layout"])
@@ -60,13 +62,12 @@ async def generate_accessible_variant(
     try:
         if body.variant_type == VARIANT_DYSLEXIA:
             return await acc_svc.generate_dyslexia_friendly(db, book_type, book_id, org_id)
-        elif body.variant_type == VARIANT_LARGE_PRINT:
+        if body.variant_type == VARIANT_LARGE_PRINT:
             return await acc_svc.generate_large_print(db, book_type, book_id, org_id, settings=body.settings)
-        elif body.variant_type == VARIANT_HIGH_CONTRAST:
+        if body.variant_type == VARIANT_HIGH_CONTRAST:
             return await acc_svc.generate_high_contrast(db, book_type, book_id, org_id)
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown variant type: {body.variant_type}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown variant type: {body.variant_type}")
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 

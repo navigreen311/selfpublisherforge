@@ -21,21 +21,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.database import get_db
-from app.modules.specialty.shared import provenance
-from app.modules.specialty.shared import metadata_advisor as metadata_advisor_svc
-from app.modules.specialty.shared import fingerprinting
-from app.modules.specialty.shared import spam_detector
-from app.modules.specialty.shared import print_pricing
-from app.modules.specialty.shared import color_management
-from app.modules.specialty.shared import batch_factory
-from app.modules.specialty.shared import template_marketplace
-from app.modules.specialty.shared import series_manager
-from app.modules.specialty.shared import back_matter
-from app.modules.specialty.shared import accessibility
-from app.modules.specialty.shared import device_preview
-from app.modules.specialty.shared import layout_protection
+from app.modules.specialty.shared import (
+    accessibility,
+    back_matter,
+    batch_factory,
+    color_management,
+    device_preview,
+    fingerprinting,
+    kindle_export,
+    layout_protection,
+    print_pricing,
+    provenance,
+    series_manager,
+    spam_detector,
+    template_marketplace,
+)
 from app.modules.specialty.shared import distributor as distributor_svc
-from app.modules.specialty.shared import kindle_export
+from app.modules.specialty.shared import metadata_advisor as metadata_advisor_svc
 
 router = APIRouter(prefix="/specialty", tags=["specialty"])
 

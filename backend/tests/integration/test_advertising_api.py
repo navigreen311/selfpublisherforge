@@ -1,32 +1,30 @@
 """Integration tests for the Advertising Intelligence API endpoints."""
 
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
+from uuid import uuid4
+
 import pytest
 import pytest_asyncio
-from datetime import datetime, timezone, timedelta
-from unittest.mock import AsyncMock, patch, MagicMock
-from uuid import uuid4, UUID
-
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base, get_db
 from app.main import create_app
 from app.modules.advertising.models import (
+    AdCreative,
     Campaign,
     CampaignPerformance,
     KeywordBid,
-    AdCreative,
 )
 from app.modules.advertising.schemas import (
     AdPlatform,
+    BidStrategy,
     CampaignStatus,
     CampaignType,
-    BidStrategy,
     MatchType,
 )
-from app.modules.advertising.amazon_ads import AmazonAdsNotConfiguredError
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -119,7 +117,7 @@ async def sample_campaign(test_db, org_id):
 async def sample_performance(test_db, sample_campaign):
     """Create sample performance records for a campaign."""
     records = []
-    base_date = datetime.now(timezone.utc) - timedelta(days=7)
+    base_date = datetime.now(UTC) - timedelta(days=7)
     for i in range(7):
         perf = CampaignPerformance(
             campaign_id=sample_campaign.id,
@@ -352,7 +350,7 @@ class TestPerformanceEndpoints:
         self, client, sample_campaign, sample_performance
     ):
         """GET /api/v1/ads/campaigns/{id}/performance with date range."""
-        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        yesterday = (datetime.now(UTC) - timedelta(days=1)).isoformat()
         response = await client.get(
             f"/api/v1/ads/campaigns/{sample_campaign.id}/performance",
             params={"date_from": yesterday},

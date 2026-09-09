@@ -11,12 +11,11 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.modules.portfolio_economics import service
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures

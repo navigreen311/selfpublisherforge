@@ -516,14 +516,13 @@ async def manage_isbn(
     """
     if action == "add_to_pool":
         return await _isbn_add_to_pool(db, org_id, data)
-    elif action == "assign":
+    if action == "assign":
         return await _isbn_assign(db, org_id, data)
-    elif action == "generate_barcode":
+    if action == "generate_barcode":
         return _isbn_generate_barcode(data.get("isbn", ""))
-    elif action == "get_status":
+    if action == "get_status":
         return await _isbn_get_status(db, org_id, data.get("isbn", ""))
-    else:
-        raise ValueError(f"Unknown ISBN action: {action}")
+    raise ValueError(f"Unknown ISBN action: {action}")
 
 
 async def _isbn_add_to_pool(
@@ -777,9 +776,9 @@ async def run_distributor_preflight(
 def _get_checks_for_distributor(distributor: str) -> list[tuple[str, str]]:
     if distributor == DistributorTarget.KDP.value:
         return _KDP_CHECKS
-    elif distributor == DistributorTarget.INGRAM_SPARK.value:
+    if distributor == DistributorTarget.INGRAM_SPARK.value:
         return _INGRAM_CHECKS
-    elif distributor == DistributorTarget.BN_PRESS.value:
+    if distributor == DistributorTarget.BN_PRESS.value:
         return _BN_CHECKS
     return _KDP_CHECKS
 
@@ -796,9 +795,8 @@ def _run_single_check(
         if distributor == DistributorTarget.BN_PRESS.value:
             ok = 24 <= page_count <= 800
             return ok, f"Page count: {page_count} (B&N range: 24-800)"
-        else:
-            ok = 24 <= page_count <= 828
-            return ok, f"Page count: {page_count} (range: 24-828)"
+        ok = 24 <= page_count <= 828
+        return ok, f"Page count: {page_count} (range: 24-828)"
 
     if check_name == "dpi":
         return True, "All images >= 300 DPI (simulated check)"

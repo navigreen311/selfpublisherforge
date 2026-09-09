@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, select
 from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 

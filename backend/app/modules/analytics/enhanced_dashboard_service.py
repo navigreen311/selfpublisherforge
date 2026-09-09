@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.analytics.models import SalesData, RoyaltyRecord
+from app.modules.analytics.models import RoyaltyRecord, SalesData
 
 logger = logging.getLogger(__name__)
 

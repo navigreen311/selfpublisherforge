@@ -16,7 +16,7 @@ Known router gaps documented in tests:
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 
 import pytest
 import pytest_asyncio
@@ -26,7 +26,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.main import create_app
-from app.models.market import CompetitorBook, MarketCategory, MarketSnapshot as MarketSnapshotDB
+from app.models.market import CompetitorBook, MarketCategory
+from app.models.market import MarketSnapshot as MarketSnapshotDB
 
 BASE = "/api/v1/market"
 

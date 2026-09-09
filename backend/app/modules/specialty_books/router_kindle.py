@@ -125,8 +125,7 @@ async def _generate_export(
 ) -> KPFExportResponse | FixedLayoutEPUBResponse:
     if fmt == ExportFormat.KPF:
         return await generate_kpf(db, book_type, book_id, org_id)
-    else:
-        return await generate_fixed_epub(db, book_type, book_id, org_id)
+    return await generate_fixed_epub(db, book_type, book_id, org_id)
 
 
 @router.post(

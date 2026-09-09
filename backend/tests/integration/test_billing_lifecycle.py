@@ -8,19 +8,18 @@ including upgrades, downgrades, cancellations, and reactivations.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.billing.router import router
+from app.core.dependencies import get_current_user, require_role
 from app.core.error_handler import register_error_handlers
 from app.database import get_db
-from app.core.dependencies import get_current_user, require_role
+from app.modules.billing.router import router
 from app.schemas.common import PlanTier
-
 
 # ===========================================================================
 # Test Fixtures
@@ -188,8 +187,8 @@ class TestBillingLifecycle:
             subscription_status="active",
             stripe_subscription_id="sub_starter_456",
             stripe_customer_id="cus_test_789",
-            current_period_start=datetime.now(timezone.utc),
-            current_period_end=datetime.now(timezone.utc) + timedelta(days=30),
+            current_period_start=datetime.now(UTC),
+            current_period_end=datetime.now(UTC) + timedelta(days=30),
         )
 
         # Verify subscription is now active on Starter
@@ -247,14 +246,14 @@ class TestBillingLifecycle:
     def test_downgrade_pro_to_starter(self, client, mock_db):
         """Downgrading from pro to starter removes access at end of billing period."""
         # User is on Pro with cancel_at_period_end flag
-        end_date = datetime.now(timezone.utc) + timedelta(days=15)
+        end_date = datetime.now(UTC) + timedelta(days=15)
         mock_db.update_org(
             plan_tier="pro",
             subscription_status="active",
             stripe_subscription_id="sub_pro_123",
             stripe_customer_id="cus_test_123",
             cancel_at_period_end=True,
-            current_period_start=datetime.now(timezone.utc) - timedelta(days=15),
+            current_period_start=datetime.now(UTC) - timedelta(days=15),
             current_period_end=end_date,
         )
 
@@ -358,8 +357,8 @@ class TestBillingLifecycle:
             subscription_status="active",
             projects_count=10,
             ai_generations_today=42,
-            current_period_start=datetime.now(timezone.utc) - timedelta(days=10),
-            current_period_end=datetime.now(timezone.utc) + timedelta(days=20),
+            current_period_start=datetime.now(UTC) - timedelta(days=10),
+            current_period_end=datetime.now(UTC) + timedelta(days=20),
         )
 
         response = client.get("/api/v1/billing/usage")
@@ -406,8 +405,8 @@ class TestBillingLifecycle:
             subscription_status="trialing",
             stripe_subscription_id="sub_trial_123",
             stripe_customer_id="cus_test_123",
-            current_period_start=datetime.now(timezone.utc),
-            current_period_end=datetime.now(timezone.utc) + timedelta(days=14),
+            current_period_start=datetime.now(UTC),
+            current_period_end=datetime.now(UTC) + timedelta(days=14),
         )
 
         response = client.get("/api/v1/billing/subscription")
@@ -509,9 +508,9 @@ class TestBillingLifecycle:
         mock_inv.amount_due = 7900
         mock_inv.amount_paid = 7900
         mock_inv.currency = "usd"
-        mock_inv.created = int(datetime.now(timezone.utc).timestamp())
-        mock_inv.period_start = int(datetime.now(timezone.utc).timestamp())
-        mock_inv.period_end = int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())
+        mock_inv.created = int(datetime.now(UTC).timestamp())
+        mock_inv.period_start = int(datetime.now(UTC).timestamp())
+        mock_inv.period_end = int((datetime.now(UTC) + timedelta(days=30)).timestamp())
         mock_inv.hosted_invoice_url = "https://invoice.stripe.com/i/001"
         mock_inv.invoice_pdf = "https://invoice.stripe.com/i/001/pdf"
 

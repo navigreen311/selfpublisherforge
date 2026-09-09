@@ -9,20 +9,18 @@ Tests verify that:
   - Recommendations match score thresholds.
 """
 
-import pytest
 
 from app.modules.market_intelligence.scoring import (
     NicheMetrics,
     NicheScores,
-    calculate_niche_scores,
     _clamp,
-    _sigmoid_scale,
     _compute_demand,
-    _compute_supply,
     _compute_opportunity,
+    _compute_supply,
     _generate_recommendation,
+    _sigmoid_scale,
+    calculate_niche_scores,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helper

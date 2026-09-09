@@ -7,12 +7,10 @@ model validators defined in ``app.config.Settings``.
 from __future__ import annotations
 
 import warnings
-from typing import Any
 
 import pytest
 
 from app.config import Settings
-
 
 # ---------------------------------------------------------------------------
 # All 8 placeholder secrets that must be caught by the validator

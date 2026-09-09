@@ -6,31 +6,28 @@ price analysis, mobile checking, and blurb generation.
 
 from __future__ import annotations
 
-import pytest
-
 from app.modules.product_page_lab.analyzer import (
+    _calculate_readability,
+    _count_syllables,
+    _has_hook,
     analyze_blurb,
     analyze_category,
     analyze_keywords,
     analyze_listing,
     analyze_price,
     analyze_title,
-    _count_syllables,
-    _calculate_readability,
-    _has_hook,
-)
-from app.modules.product_page_lab.mobile_checker import (
-    check_mobile_display,
-    _check_truncation,
-    _strip_html,
-    _has_above_fold_hook,
 )
 from app.modules.product_page_lab.blurb_generator import (
     build_blurb_generation_prompt,
     generate_blurb_variants_local,
 )
+from app.modules.product_page_lab.mobile_checker import (
+    _check_truncation,
+    _has_above_fold_hook,
+    _strip_html,
+    check_mobile_display,
+)
 from app.modules.product_page_lab.schemas import Genre
-
 
 # ===========================================================================
 # Title analysis tests

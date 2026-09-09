@@ -8,7 +8,7 @@ orchestration, template CRUD, book metadata, and listing sync.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -45,12 +45,11 @@ from app.modules.publishing_ops.service import (
     update_metadata,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_NOW = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+_NOW = datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_db() -> AsyncMock:

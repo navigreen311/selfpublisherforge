@@ -8,25 +8,17 @@ DB dependencies.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-
-from app.modules.publishing_ops.router import router, metadata_router
-from app.modules.publishing_ops.schemas import (
-    ExportFormat,
-    PlatformType,
-    TemplateGenre,
-    TrimSize,
-)
 
 # Build a minimal FastAPI app for testing
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 from app.core.dependencies import get_current_user
-from app.database import get_db
+from app.modules.publishing_ops.router import metadata_router, router
 
 app = FastAPI()
 app.include_router(router, prefix="/api/v1/publishing")
@@ -36,7 +28,7 @@ BASE = "/api/v1"
 
 _TEST_ORG_ID = uuid.uuid4()
 _TEST_USER = {"user_id": str(uuid.uuid4()), "org_id": _TEST_ORG_ID, "role": "admin"}
-_NOW = datetime.now(timezone.utc)
+_NOW = datetime.now(UTC)
 
 
 # Override dependencies

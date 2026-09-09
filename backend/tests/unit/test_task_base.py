@@ -3,13 +3,10 @@ from __future__ import annotations
 
 import time
 import uuid
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
-import pytest
-
-from app.tasks.base import TrackedTask, OrgScopedTask, AITask
-from app.tasks.config import get_retry_policy, RETRY_POLICIES
-
+from app.tasks.base import AITask, OrgScopedTask, TrackedTask
+from app.tasks.config import RETRY_POLICIES, get_retry_policy
 
 # ---------------------------------------------------------------------------
 # Helpers — lightweight stubs for Celery's Task internals

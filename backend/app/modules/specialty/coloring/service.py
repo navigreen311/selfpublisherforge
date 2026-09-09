@@ -17,14 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
 from app.modules.specialty.coloring.quality_pipeline import (
-    QualityReport,
-    Severity,
     run_full_pipeline,
     step_1_generate,
 )
 from app.modules.specialty.coloring.simulation import (
-    detect_regions,
-    get_color_palettes,
     simulate_coloring,
 )
 
@@ -369,7 +365,7 @@ async def list_pages(
     book_id: UUID,
 ) -> list[dict[str, Any]]:
     """List all pages for a coloring book."""
-    from app.modules.specialty.models.coloring import ColoringBook, ColoringBookPage
+    from app.modules.specialty.models.coloring import ColoringBookPage
 
     # Verify book ownership
     await get_coloring_book(db, org_id, book_id)
@@ -406,7 +402,7 @@ async def generate_line_art(
       - Closed shapes suitable for coloring
     Then calls image generation and runs the full quality pipeline.
     """
-    from app.modules.specialty.models.coloring import ColoringBook, ColoringBookPage
+    from app.modules.specialty.models.coloring import ColoringBookPage
 
     book = await get_coloring_book(db, org_id, book_id)
 
@@ -1218,7 +1214,7 @@ async def export_book(
             "color_mode": "B&W",
             "created_at": _now().isoformat(),
         }
-    elif format == "pdfx1a":
+    if format == "pdfx1a":
         manifest = generate_pdfx1a_manifest("coloring", book_data)
         metadata = calculate_export_metadata("coloring", book_data)
         return {
@@ -1231,21 +1227,20 @@ async def export_book(
             "color_mode": "B&W",
             "created_at": _now().isoformat(),
         }
-    else:
-        # Default: PDF (also used for svg/digital as base manifest)
-        manifest = generate_pdf_manifest("coloring", book_data)
-        metadata = calculate_export_metadata("coloring", book_data)
-        return {
-            "book_id": str(book_id),
-            "format": format,
-            "export_url": export_url,
-            "manifest": manifest,
-            "metadata": metadata,
-            "single_sided": True,
-            "color_mode": "B&W",
-            "dpi": 300,
-            "created_at": _now().isoformat(),
-        }
+    # Default: PDF (also used for svg/digital as base manifest)
+    manifest = generate_pdf_manifest("coloring", book_data)
+    metadata = calculate_export_metadata("coloring", book_data)
+    return {
+        "book_id": str(book_id),
+        "format": format,
+        "export_url": export_url,
+        "manifest": manifest,
+        "metadata": metadata,
+        "single_sided": True,
+        "color_mode": "B&W",
+        "dpi": 300,
+        "created_at": _now().isoformat(),
+    }
 
 
 # ---------------------------------------------------------------------------

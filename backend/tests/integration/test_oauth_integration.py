@@ -4,18 +4,17 @@ Tests the complete OAuth flow including authorization URL generation,
 callback handling, state validation, user creation/linking, and token issuance.
 """
 
-import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
-from httpx import Response
 
+import pytest
+
+from app.core.exceptions import AppException
+from app.core.security import hash_password
+from app.models.organization import Organization
+from app.models.user import OAuthAccount, User, UserRole
 from app.modules.auth import service
 from app.modules.auth.oauth_providers import OAuthTokens, OAuthUserInfo
-from app.models.user import User, OAuthAccount, UserRole
-from app.models.organization import Organization
-from app.core.security import hash_password
-from app.core.exceptions import AppException
-
 
 # ---------------------------------------------------------------------------
 # Helper functions
@@ -341,7 +340,7 @@ class TestGitHubOAuthIntegration:
             assert result["user"]["id"] == str(existing_user.id)
 
         # Verify no duplicate users
-        from sqlalchemy import select, func
+        from sqlalchemy import func, select
         count_result = await db_session.execute(
             select(func.count()).select_from(User).where(User.email == "gitexist@example.com")
         )
@@ -385,7 +384,6 @@ class TestOAuthStateManagement:
     @pytest.mark.asyncio
     async def test_state_expiration(self):
         """Test state expires after 10 minutes."""
-        import time
         from datetime import timedelta
 
         state = "expiring-state"

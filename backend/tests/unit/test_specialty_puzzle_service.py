@@ -8,8 +8,6 @@ Puzzle generation *algorithms* are NOT tested here (covered by another agent).
 """
 from __future__ import annotations
 
-import math
-from collections import Counter
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -27,7 +25,6 @@ from app.modules.specialty.models.enums import (
 
 # Import the service module so we can call its functions directly.
 from app.modules.specialty.puzzles import service
-
 
 # ---------------------------------------------------------------------------
 # Helpers

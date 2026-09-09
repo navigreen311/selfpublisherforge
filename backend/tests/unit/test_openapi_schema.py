@@ -10,21 +10,17 @@ Validates:
 
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import MagicMock
-
 import pytest
 from fastapi import FastAPI
 
 from app.core.openapi import (
+    _SECURITY_SCHEMES,
     API_DESCRIPTION,
     API_TITLE,
     API_VERSION,
     TAGS_METADATA,
-    _SECURITY_SCHEMES,
     custom_openapi_schema,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

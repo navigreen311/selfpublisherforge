@@ -309,10 +309,10 @@ async def test_market_snapshots_empty_when_no_data(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_market_snapshots_with_seeded_data(client: AsyncClient, db_session):
     """Insert snapshot rows via DB and verify the endpoint returns them."""
-    import uuid
-    from datetime import date, datetime, timezone
+    from datetime import date
 
-    from app.models.market import MarketCategory, MarketSnapshot as MarketSnapshotDB
+    from app.models.market import MarketCategory
+    from app.models.market import MarketSnapshot as MarketSnapshotDB
 
     # Create a MarketCategory first (snapshot FK target)
     cat = MarketCategory(

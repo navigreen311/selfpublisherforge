@@ -6,9 +6,7 @@ import pytest
 
 from app.modules.kdp_validation.print_validator import PrintValidator
 from app.modules.kdp_validation.rules import (
-    BLEED_SIZE,
     MIN_PAGE_COUNT,
-    MIN_PRINT_DPI,
     PaperType,
     calculate_spine_width,
     get_inside_margin,

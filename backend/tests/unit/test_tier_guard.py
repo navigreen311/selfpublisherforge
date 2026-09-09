@@ -3,16 +3,15 @@
 Tests the `require_module` dependency factory and tier gating logic.
 """
 
-import pytest
+from datetime import UTC, datetime
 from uuid import uuid4
-from datetime import datetime, timezone
 
+import pytest
 from fastapi import HTTPException
 
-from app.core.tier_guard import require_module, _get_org_tier
+from app.core.tier_guard import _get_org_tier, require_module
 from app.models.organization import Organization, PlanTier
 from shared.contracts.module_registry import get_module
-
 
 # ---------------------------------------------------------------------------
 # Test _get_org_tier helper
@@ -58,7 +57,7 @@ class TestGetOrgTier:
             name="DeletedOrg",
             slug=f"deletedorg-{str(org_id)[:8]}",
             plan_tier=PlanTier.FREE,
-            deleted_at=datetime.now(timezone.utc),
+            deleted_at=datetime.now(UTC),
         )
         db_session.add(org)
         await db_session.flush()

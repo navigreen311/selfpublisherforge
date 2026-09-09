@@ -8,15 +8,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime, timezone
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.modules.realtime.manager import ConnectionManager, _channel_key
 from app.modules.realtime.schemas import WSChannel
-
 
 # ---------------------------------------------------------------------------
 # Helpers

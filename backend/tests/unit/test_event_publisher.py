@@ -13,7 +13,7 @@ Validates:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
@@ -30,14 +30,13 @@ from app.core.events import (
     get_event_publisher,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _ORG_ID = UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
 _ACTOR_ID = UUID("11111111-2222-3333-4444-555555555555")
-_TIMESTAMP = datetime(2025, 7, 1, 12, 0, 0, tzinfo=timezone.utc)
+_TIMESTAMP = datetime(2025, 7, 1, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_event(

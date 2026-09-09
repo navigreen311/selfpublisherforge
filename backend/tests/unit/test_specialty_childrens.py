@@ -9,20 +9,46 @@ Blueprint Section 17.1 — 32 test cases.
 from __future__ import annotations
 
 import hashlib
-import math
 import re
 
 import pytest
+
+from app.modules.specialty.childrens.bilingual import (
+    SUPPORTED_LANGUAGES,
+    _age_constraints_prompt,
+    get_bilingual_layout,
+    sync_translations,
+    validate_translation,
+)
+from app.modules.specialty.childrens.bilingual import (
+    translate_book as bilingual_translate_book,
+)
+from app.modules.specialty.childrens.safety import (
+    TRADEMARK_BLOCKLIST,
+    IssueSeverity,
+    check_font_license,
+    generate_provenance_record,
+    scan_content_sensitivity,
+    scan_trademarks,
+)
+
+# Service-layer constants (no DB interaction for these)
+from app.modules.specialty.childrens.service import (
+    AGE_BAND_RULES as SVC_AGE_BAND_RULES,
+)
+from app.modules.specialty.childrens.service import (
+    CONTENT_SENSITIVITY_PATTERNS,
+    TRADEMARK_TERMS,
+    _analyze_readability,
+    _compute_rhythm_score,
+    _parse_story_pages,
+)
 
 # ---------------------------------------------------------------------------
 # Pure-function modules (no DB required)
 # ---------------------------------------------------------------------------
 from app.modules.specialty.childrens.text_analysis import (
-    AGE_BAND_RULES as TA_AGE_BAND_RULES,
-    Violation,
-    _extract_words,
     _resolve_age_range,
-    _split_sentences,
     analyze_text,
     calculate_readability_score,
     calculate_rhythm_score,
@@ -31,38 +57,6 @@ from app.modules.specialty.childrens.text_analysis import (
     score_look_inside,
     suggest_rhyme_fixes,
 )
-from app.modules.specialty.childrens.safety import (
-    TRADEMARK_BLOCKLIST,
-    FontLicenseInfo,
-    IssueSeverity,
-    ProvenanceRecord,
-    SensitivityIssue,
-    TrademarkIssue,
-    check_font_license,
-    generate_provenance_record,
-    scan_content_sensitivity,
-    scan_trademarks,
-)
-from app.modules.specialty.childrens.bilingual import (
-    SUPPORTED_LANGUAGES,
-    _age_constraints_prompt,
-    _validate_language,
-    get_bilingual_layout,
-    sync_translations,
-    translate_book as bilingual_translate_book,
-    validate_translation,
-)
-
-# Service-layer constants (no DB interaction for these)
-from app.modules.specialty.childrens.service import (
-    AGE_BAND_RULES as SVC_AGE_BAND_RULES,
-    CONTENT_SENSITIVITY_PATTERNS,
-    TRADEMARK_TERMS,
-    _analyze_readability,
-    _compute_rhythm_score,
-    _parse_story_pages,
-)
-
 
 # ===================================================================
 # 1. Age range adjusts page count, font size, and language rules

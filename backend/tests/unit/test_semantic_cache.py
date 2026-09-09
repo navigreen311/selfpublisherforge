@@ -5,11 +5,9 @@ Tests cache key generation, hit/miss behaviour, TTL configuration,
 and task-type-specific caching rules.
 """
 
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import pytest_asyncio
 
 from app.modules.llm_orchestration.cache import (
     CACHE_KEY_PREFIX,
@@ -17,7 +15,6 @@ from app.modules.llm_orchestration.cache import (
     SemanticCache,
 )
 from app.modules.llm_orchestration.router_config import TaskType
-
 
 # -------------------------------------------------------------------
 # Fixtures

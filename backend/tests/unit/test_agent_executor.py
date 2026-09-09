@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agent_system.executor import (
@@ -19,17 +18,9 @@ from app.modules.agent_system.models import (
     Agent,
     AgentBudget,
     AgentTask,
-    AgentType,
-    AuditAction,
     PermissionLevel,
-    TaskPriority,
     TaskStatus,
 )
-from app.modules.agent_system.governance import (
-    BudgetExceeded,
-    PermissionDenied,
-)
-
 
 # ---------------------------------------------------------------------------
 # Helpers – fake LLM responses used by multiple test classes
@@ -183,8 +174,8 @@ class TestTaskExecutor:
             daily_token_limit=100000,
             daily_usd_limit=10.0,
             monthly_usd_limit=200.0,
-            last_reset_daily=datetime.now(timezone.utc),
-            last_reset_monthly=datetime.now(timezone.utc),
+            last_reset_daily=datetime.now(UTC),
+            last_reset_monthly=datetime.now(UTC),
         )
         db.add(budget)
         await db.flush()

@@ -8,24 +8,23 @@ cancellations, trial events, idempotency, and edge cases.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.schemas.common import PlanTier
 from app.modules.billing.webhook_handlers import (
-    handle_subscription_upgrade,
-    handle_subscription_downgrade,
+    get_payment_attempt_count,
+    handle_invoice_paid,
     handle_payment_failure,
     handle_subscription_canceled,
+    handle_subscription_downgrade,
+    handle_subscription_upgrade,
     handle_trial_will_end,
-    handle_invoice_paid,
     is_event_processed,
     mark_event_processed,
-    get_payment_attempt_count,
 )
-
+from app.schemas.common import PlanTier
 
 # ===========================================================================
 # Helpers
@@ -44,8 +43,8 @@ def _make_subscription_dict(
         "status": status,
         "metadata": {"plan_tier": plan_tier},
         "cancel_at_period_end": cancel_at_period_end,
-        "current_period_start": int(datetime(2024, 1, 1, tzinfo=timezone.utc).timestamp()),
-        "current_period_end": int(datetime(2024, 2, 1, tzinfo=timezone.utc).timestamp()),
+        "current_period_start": int(datetime(2024, 1, 1, tzinfo=UTC).timestamp()),
+        "current_period_end": int(datetime(2024, 2, 1, tzinfo=UTC).timestamp()),
     }
 
 
@@ -70,11 +69,7 @@ def _mock_db_execute_result(rows: list[dict] | None = None) -> AsyncMock:
     mock_db = AsyncMock()
     mock_result = MagicMock()
 
-    if rows is None:
-        mock_result.scalar_one_or_none.return_value = None
-        mock_result.scalar_one.return_value = 0
-        mock_result.mappings.return_value.first.return_value = None
-    elif len(rows) == 0:
+    if rows is None or len(rows) == 0:
         mock_result.scalar_one_or_none.return_value = None
         mock_result.scalar_one.return_value = 0
         mock_result.mappings.return_value.first.return_value = None

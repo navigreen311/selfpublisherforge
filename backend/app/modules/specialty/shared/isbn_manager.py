@@ -10,14 +10,12 @@ from __future__ import annotations
 import base64
 import uuid
 from dataclasses import dataclass
-from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty.models.enums import ISBNStatus
 from app.modules.specialty.models.shared import ISBNPool
-
 
 # ---------------------------------------------------------------------------
 # Data classes

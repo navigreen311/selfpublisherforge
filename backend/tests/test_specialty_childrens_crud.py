@@ -15,7 +15,6 @@ def _compile_sa_array_sqlite(element, compiler, **kw):
     return "TEXT"
 
 
-from app.modules.specialty_books.models_childrens import ChildrensBook, ChildrensBookCharacter, ChildrensBookPage
 from app.modules.specialty_books import service_childrens as svc
 
 ORG_ID = uuid.uuid4()

@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .schemas_shared import PreflightCheck, TrimSize
 
-
 # -- Enums -----------------------------------------------------------------
 
 

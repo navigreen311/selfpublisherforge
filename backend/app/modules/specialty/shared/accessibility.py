@@ -6,8 +6,6 @@ of specialty books.  Includes WCAG compliance checking.
 """
 
 import copy
-import math
-from typing import Any
 
 # ---------------------------------------------------------------------------
 # Accessibility constants

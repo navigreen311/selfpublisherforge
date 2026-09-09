@@ -13,7 +13,6 @@ from app.models.organization import Organization
 from app.models.project import Book
 from app.models.user import User
 from app.modules.admin.schemas import (
-    ActivityLogEntry,
     ActivityLogFilters,
     ActivityLogResponse,
     AdminOrgDetail,

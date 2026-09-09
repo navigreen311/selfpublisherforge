@@ -10,7 +10,6 @@ import json
 import math
 import random
 from collections import deque
-from typing import Optional
 
 # Wall bit flags for each cell
 WALL_TOP = 1
@@ -275,7 +274,7 @@ def _solve_bfs(
     """
     queue = deque()
     queue.append(entrance)
-    came_from: dict[tuple[int, int], Optional[tuple[int, int]]] = {entrance: None}
+    came_from: dict[tuple[int, int], tuple[int, int] | None] = {entrance: None}
 
     while queue:
         r, c = queue.popleft()
@@ -283,7 +282,7 @@ def _solve_bfs(
         if (r, c) == exit_cell:
             # Reconstruct path
             path = []
-            current: Optional[tuple[int, int]] = (r, c)
+            current: tuple[int, int] | None = (r, c)
             while current is not None:
                 path.append(current)
                 current = came_from[current]
@@ -350,7 +349,7 @@ def generate_maze(
     width: int = 20,
     height: int = 20,
     shape: str = "rectangle",
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> dict:
     """
     Generate a maze using recursive backtracker (depth-first search).

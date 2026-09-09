@@ -7,13 +7,15 @@ import chain failures.
 from __future__ import annotations
 
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import event, select
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY as PG_ARRAY, UUID as PG_UUID
 from sqlalchemy.ext.compiler import compiles
 
 from app.database import Base
@@ -89,22 +91,33 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-from app.modules.specialty_books.models_accessibility import AccessibilityVariant  # noqa: E402
 from app.modules.specialty_books import service_accessibility as acc_svc  # noqa: E402
 from app.modules.specialty_books import service_layout_protection as layout_svc  # noqa: E402
+from app.modules.specialty_books.models_accessibility import AccessibilityVariant  # noqa: E402
 from app.modules.specialty_books.service_accessibility import (  # noqa: E402
+    DYSLEXIA_BACKGROUND_COLOR,
+    DYSLEXIA_FONT_FAMILY,
+    DYSLEXIA_LETTER_SPACING_PCT,
+    DYSLEXIA_LINE_SPACING,
+    DYSLEXIA_TEXT_ALIGNMENT,
+    HIGH_CONTRAST_BG,
+    HIGH_CONTRAST_FG,
+    LARGE_PRINT_MIN_FONT_SIZE,
+    VARIANT_DYSLEXIA,
+    VARIANT_HIGH_CONTRAST,
+    VARIANT_LARGE_PRINT,
+    WCAG_AAA_CONTRAST,
     calculate_contrast_ratio,
-    DYSLEXIA_FONT_FAMILY, DYSLEXIA_LINE_SPACING, DYSLEXIA_LETTER_SPACING_PCT,
-    DYSLEXIA_TEXT_ALIGNMENT, DYSLEXIA_BACKGROUND_COLOR,
-    LARGE_PRINT_MIN_FONT_SIZE, HIGH_CONTRAST_FG, HIGH_CONTRAST_BG,
-    WCAG_AA_CONTRAST, WCAG_AAA_CONTRAST,
-    VARIANT_DYSLEXIA, VARIANT_LARGE_PRINT, VARIANT_HIGH_CONTRAST,
 )
 from app.modules.specialty_books.service_layout_protection import (  # noqa: E402
-    _classify_zone, _determine_severity, _parse_trim_size,
-    GUTTER_ZONE_IN, SEVERITY_CRITICAL, SEVERITY_WARNING, SEVERITY_CAUTION, SEVERITY_OK,
+    SEVERITY_CAUTION,
+    SEVERITY_CRITICAL,
+    SEVERITY_OK,
+    SEVERITY_WARNING,
+    _classify_zone,
+    _determine_severity,
+    _parse_trim_size,
 )
-
 
 # ===========================================================================
 # Unit tests (no DB)

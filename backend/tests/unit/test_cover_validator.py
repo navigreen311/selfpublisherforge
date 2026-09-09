@@ -6,9 +6,6 @@ import pytest
 
 from app.modules.kdp_validation.cover_validator import CoverValidator
 from app.modules.kdp_validation.rules import (
-    BLEED_SIZE,
-    MIN_EBOOK_DPI,
-    MIN_PRINT_DPI,
     PaperType,
     calculate_spine_width,
     expected_print_cover_height,

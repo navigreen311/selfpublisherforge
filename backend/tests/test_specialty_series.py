@@ -23,13 +23,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.modules.specialty_books.service_series import (
-    _COMPLAINT_MAPPINGS,
     _find_best_complaint_match,
     _isbn_generate_barcode,
     _validate_isbn13,
@@ -43,13 +42,6 @@ from app.modules.specialty_books.service_series import (
     run_distributor_preflight,
     update_series_branding,
 )
-from app.modules.specialty_books.models_series import (
-    BackMatterTemplateType,
-    BookType,
-    DistributorTarget,
-    ISBNStatus,
-)
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -94,7 +86,7 @@ def _make_series_obj(
     }
     obj.branding_locked = branding_locked
     obj.volume_count = volume_count
-    obj.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    obj.created_at = datetime(2026, 1, 1, tzinfo=UTC)
     obj.deleted_at = None
     return obj
 
@@ -302,7 +294,7 @@ async def test_bundle_combines_volumes():
             "combined_answer_key": False,
         }
         mock_bundle.total_pages = 61  # 30 + 30 + 1 divider
-        mock_bundle.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        mock_bundle.created_at = datetime(2026, 1, 1, tzinfo=UTC)
         MockBundle.return_value = mock_bundle
 
         result = await create_bundle(db, ORG_ID, {
@@ -341,7 +333,7 @@ async def test_bundle_section_dividers():
             mock.series_id = kwargs.get("series_id")
             mock.config = kwargs.get("config")
             mock.total_pages = kwargs.get("total_pages", 0)
-            mock.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+            mock.created_at = datetime(2026, 1, 1, tzinfo=UTC)
             return mock
 
         MockBundle.side_effect = capture_init

@@ -6,12 +6,12 @@ content sensitivity, and full compliance reporting.
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any
 
 from app.core.dependencies import get_current_user
 from app.database import get_db

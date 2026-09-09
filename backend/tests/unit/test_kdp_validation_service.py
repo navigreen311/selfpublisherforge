@@ -4,11 +4,9 @@ Tests validation orchestration, individual validators, result aggregation,
 and result storage/retrieval.
 """
 
-import pytest
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from app.modules.kdp_validation.service import ValidationService
 from app.modules.kdp_validation.schemas import (
     ComplianceScanRequest,
     CoverValidationRequest,
@@ -20,7 +18,7 @@ from app.modules.kdp_validation.schemas import (
     ValidationResult,
     ValidationStatus,
 )
-
+from app.modules.kdp_validation.service import ValidationService
 
 # ---------------------------------------------------------------------------
 # Helpers

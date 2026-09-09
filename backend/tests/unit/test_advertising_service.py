@@ -9,7 +9,7 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,15 +26,13 @@ from app.modules.advertising.schemas import (
     CampaignUpdate,
     CreativeGenerateRequest,
     FacebookCampaignCreate,
-    FacebookObjective,
     FacebookCampaignStatus,
-    FacebookCampaignUpdate,
+    FacebookObjective,
     KeywordBidBulkUpdate,
     OptimizationRequest,
     PerformanceQuery,
 )
 from app.modules.advertising.service import AdvertisingService
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures

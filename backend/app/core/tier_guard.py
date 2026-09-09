@@ -14,7 +14,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -25,7 +25,6 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.organization import Organization
 from app.schemas.common import PlanTier
-
 
 # ---- Simple module tier registry ----
 # Maps module slugs to the minimum tier required.

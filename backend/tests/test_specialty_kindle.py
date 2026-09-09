@@ -24,9 +24,6 @@ import pytest
 from app.modules.specialty_books.service_kindle_export import (
     DEVICE_SPECS,
     KDP_MAX_FILE_SIZE_BYTES,
-    TRIM_TO_VIEWPORT,
-    DevicePreviewResponse,
-    ExportFormat,
     FixedLayoutEPUBResponse,
     HighlightMode,
     KindleDevice,
@@ -34,16 +31,16 @@ from app.modules.specialty_books.service_kindle_export import (
     KPFExportResponse,
     MultiDevicePreviewResponse,
     ReadAloudSyncResponse,
+    _build_ncx,
+    _build_opf,
+    _build_text_popups,
+    _compute_simulated_file_size,
+    _viewport_for_trim,
     generate_device_preview,
     generate_fixed_epub,
     generate_kpf,
     generate_read_aloud_sync,
     validate_kindle_export,
-    _build_opf,
-    _build_ncx,
-    _build_text_popups,
-    _viewport_for_trim,
-    _compute_simulated_file_size,
 )
 
 # ---------------------------------------------------------------------------

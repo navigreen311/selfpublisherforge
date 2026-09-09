@@ -4,20 +4,18 @@ Tests the full HTTP request/response cycle through FastAPI's TestClient,
 mocking only the database session and authentication dependencies.
 """
 
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4, UUID
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.users.router import router
-from app.database import get_db
 from app.core.dependencies import get_current_user
-from app.core.exceptions import AppException
 from app.core.error_handler import app_exception_handler
-
+from app.core.exceptions import AppException
+from app.database import get_db
+from app.modules.users.router import router
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -91,7 +89,7 @@ def _create_app(user_factory=None) -> tuple[FastAPI, AsyncMock]:
 class TestGetUserProfile:
     def test_get_me_success(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_db.execute.return_value = _make_mapping_result([{
             "id": _OWNER_ID,
             "email": "owner@example.com",
@@ -125,7 +123,7 @@ class TestGetUserProfile:
 class TestUpdateUserProfile:
     def test_update_name(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         row = {
             "id": _OWNER_ID,
             "email": "owner@example.com",
@@ -159,7 +157,7 @@ class TestUpdateUserProfile:
 class TestOrgEndpoints:
     def test_get_org_success(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_db.execute.return_value = _make_mapping_result([{
             "id": _ORG_ID,
             "name": "My Org",
@@ -186,7 +184,7 @@ class TestOrgEndpoints:
 
     def test_list_members(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_db.execute.return_value = _make_mapping_result([{
             "user_id": _OWNER_ID,
             "email": "owner@example.com",
@@ -206,7 +204,7 @@ class TestOrgEndpoints:
 class TestSessionEndpoints:
     def test_list_sessions(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_db.execute.return_value = _make_mapping_result([{
             "id": uuid4(),
             "ip_address": "127.0.0.1",
@@ -236,7 +234,7 @@ class TestSessionEndpoints:
 class TestApiKeyEndpoints:
     def test_list_api_keys(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_db.execute.return_value = _make_mapping_result([{
             "id": uuid4(),
             "name": "Test Key",

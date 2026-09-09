@@ -128,7 +128,7 @@ async def _push_websocket_event(notification: Notification) -> None:
                 },
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("notification WS push failed: %s", exc)
 
 

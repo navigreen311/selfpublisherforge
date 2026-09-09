@@ -1,13 +1,21 @@
 """Tests for Maze, Sudoku, Word Scramble, and Cryptogram generators."""
 from __future__ import annotations
+
 import xml.etree.ElementTree as ET
+
 import pytest
+
+from app.modules.specialty_books.generators.cryptogram import generate_cryptogram
 from app.modules.specialty_books.generators.maze import generate_maze
 from app.modules.specialty_books.generators.sudoku import generate_sudoku
-from app.modules.specialty_books.generators.word_scramble import generate_word_scramble
-from app.modules.specialty_books.generators.cryptogram import generate_cryptogram
 from app.modules.specialty_books.generators.svg_renderer_extended import (
-    render_maze_svg, render_sudoku_svg, render_word_scramble_svg, render_cryptogram_svg)
+    render_cryptogram_svg,
+    render_maze_svg,
+    render_sudoku_svg,
+    render_word_scramble_svg,
+)
+from app.modules.specialty_books.generators.word_scramble import generate_word_scramble
+
 
 class TestMazeGenerator:
     def test_maze_is_solvable(self):

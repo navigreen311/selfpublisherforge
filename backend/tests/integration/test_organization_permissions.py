@@ -3,15 +3,16 @@
 These tests verify that permission checks are properly enforced on organization endpoints.
 """
 
-import pytest
 import uuid
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.security import create_access_token, hash_password
-from app.models.user import User, UserRole
 from app.models.organization import Organization
+from app.models.user import User, UserRole
 
 settings = get_settings()
 PREFIX = f"{settings.API_V1_PREFIX}/orgs"

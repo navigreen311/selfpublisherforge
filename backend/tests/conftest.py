@@ -2,14 +2,24 @@
 from __future__ import annotations
 
 import asyncio
-import uuid
-from typing import AsyncGenerator, Generator
-
 import logging
+import uuid
+from collections.abc import AsyncGenerator, Generator
+from datetime import UTC
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event, text, Enum as SAEnum
+from sqlalchemy import event
+from sqlalchemy.dialects.postgresql import (
+    ARRAY as PG_ARRAY,
+)
+from sqlalchemy.dialects.postgresql import (
+    JSONB,
+)
+from sqlalchemy.dialects.postgresql import (
+    UUID as PG_UUID,
+)
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -17,25 +27,16 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from sqlalchemy.dialects.postgresql import (
-    JSONB,
-    ARRAY as PG_ARRAY,
-    UUID as PG_UUID,
-    ENUM as PG_ENUM,
-)
-from sqlalchemy import JSON, String
-
-from app.database import Base, get_db
-from app.main import create_app
-
-# Ensure all models are imported so Base.metadata knows about them
-import app.models  # noqa: F401
-
 # ---------------------------------------------------------------------------
 # Register SQLite-compatible type compilation for PostgreSQL-specific types
 # ---------------------------------------------------------------------------
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.types import ARRAY as SA_ARRAY, VARCHAR
+from sqlalchemy.types import ARRAY as SA_ARRAY
+
+# Ensure all models are imported so Base.metadata knows about them
+import app.models  # noqa: F401
+from app.database import Base, get_db
+from app.main import create_app
 
 
 @compiles(JSONB, "sqlite")
@@ -250,7 +251,7 @@ def make_review(
     **kwargs,
 ):
     """Factory helper to create a BookReview ORM instance for tests."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.modules.review_intelligence.models import BookReview
 
@@ -263,6 +264,6 @@ def make_review(
         sentiment=sentiment,
         sentiment_score=sentiment_score,
         is_competitor=is_competitor,
-        review_date=review_date or datetime.now(timezone.utc),
+        review_date=review_date or datetime.now(UTC),
         **kwargs,
     )

@@ -8,8 +8,6 @@ circular imports, and syntax errors across the entire codebase.
 from __future__ import annotations
 
 import importlib
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # 1. Router imports — every module that registers a router in main.py
@@ -131,38 +129,38 @@ class TestModelImports:
         assert Organization is not None
 
     def test_import_user_model(self):
-        from app.models.user import User, ApiKey, UserSession
+        from app.models.user import ApiKey, User, UserSession
         assert User is not None
         assert ApiKey is not None
         assert UserSession is not None
 
     def test_import_project_model(self):
-        from app.models.project import Project, Book, Series, PenName, BookVersion
+        from app.models.project import Book, Project
         assert Project is not None
         assert Book is not None
 
     def test_import_content_model(self):
-        from app.models.content import Manuscript, Chapter, StyleProfile
+        from app.models.content import Manuscript
         assert Manuscript is not None
 
     def test_import_market_model(self):
-        from app.models.market import MarketCategory, MarketKeyword, CompetitorBook
+        from app.models.market import MarketCategory
         assert MarketCategory is not None
 
     def test_import_publishing_model(self):
-        from app.models.publishing import PublishingAccount, Listing
+        from app.models.publishing import PublishingAccount
         assert PublishingAccount is not None
 
     def test_import_marketing_model(self):
-        from app.models.marketing import Campaign, LaunchPlan
+        from app.models.marketing import Campaign
         assert Campaign is not None
 
     def test_import_agent_model(self):
-        from app.models.agent import Agent, AgentTask
+        from app.models.agent import Agent
         assert Agent is not None
 
     def test_import_analytics_model(self):
-        from app.models.analytics import AnalyticsEvent, RoyaltyRecord
+        from app.models.analytics import AnalyticsEvent
         assert AnalyticsEvent is not None
 
     def test_import_notification_models(self):
@@ -175,11 +173,11 @@ class TestModelImports:
         assert KnowledgeEntry is not None
 
     def test_import_production_pipeline_models(self):
-        from app.modules.production_pipeline.models import Pipeline, PipelineTask, PipelineTemplate
+        from app.modules.production_pipeline.models import Pipeline
         assert Pipeline is not None
 
     def test_import_pricing_automation_models(self):
-        from app.modules.pricing_automation.models import PricingRule, CompetitorPrice, Promotion
+        from app.modules.pricing_automation.models import PricingRule
         assert PricingRule is not None
 
     def test_import_product_page_lab_models(self):
@@ -191,23 +189,23 @@ class TestModelImports:
         assert Cover is not None
 
     def test_import_advertising_models(self):
-        from app.modules.advertising.models import Campaign, CampaignPerformance, KeywordBid, AdCreative
+        from app.modules.advertising.models import Campaign
         assert Campaign is not None
 
     def test_import_agent_system_models(self):
-        from app.modules.agent_system.models import Agent, AgentTask, AgentWorkflow
+        from app.modules.agent_system.models import Agent
         assert Agent is not None
 
     def test_import_analytics_module_models(self):
-        from app.modules.analytics.models import AnalyticsEvent, RoyaltyRecord, Report
+        from app.modules.analytics.models import AnalyticsEvent
         assert AnalyticsEvent is not None
 
     def test_import_review_intelligence_models(self):
-        from app.modules.review_intelligence.models import BookReview, ReviewAlert
+        from app.modules.review_intelligence.models import BookReview
         assert BookReview is not None
 
     def test_import_competitor_finder_models(self):
-        from app.modules.competitor_finder.models import CompetitorAnalysis, WeaknessSignal
+        from app.modules.competitor_finder.models import CompetitorAnalysis
         assert CompetitorAnalysis is not None
 
 
@@ -220,20 +218,20 @@ class TestSchemaImports:
     """Verify all schema classes are importable."""
 
     def test_import_common_schemas(self):
-        from app.schemas.common import MessageResponse, HealthResponse, StatusEnum, PlanTier, UserRole
+        from app.schemas.common import HealthResponse, MessageResponse
         assert MessageResponse is not None
         assert HealthResponse is not None
 
     def test_import_auth_schemas(self):
         from app.modules.auth.schemas import (
-            RegisterRequest, LoginRequest, TokenResponse,
-            MFASetupResponse, UserResponse,
+            RegisterRequest,
+            TokenResponse,
         )
         assert RegisterRequest is not None
         assert TokenResponse is not None
 
     def test_import_users_schemas(self):
-        from app.modules.users.schemas import UserProfile, UpdateUserRequest
+        from app.modules.users.schemas import UserProfile
         assert UserProfile is not None
 
     def test_import_billing_schemas(self):
@@ -440,24 +438,23 @@ class TestCoreImports:
     """Verify core infrastructure modules are importable."""
 
     def test_import_config(self):
-        from app.config import get_settings, Settings
+        from app.config import Settings, get_settings
         assert get_settings is not None
         assert Settings is not None
 
     def test_import_database(self):
-        from app.database import Base, BaseModel, TenantModel, get_db
+        from app.database import Base, BaseModel
         assert Base is not None
         assert BaseModel is not None
 
     def test_import_core_security(self):
         from app.core.security import (
-            hash_password, verify_password,
-            create_access_token, create_refresh_token, decode_token,
+            hash_password,
         )
         assert hash_password is not None
 
     def test_import_core_dependencies(self):
-        from app.core.dependencies import get_current_user, require_role
+        from app.core.dependencies import get_current_user
         assert get_current_user is not None
 
     def test_import_core_exceptions(self):
@@ -466,7 +463,8 @@ class TestCoreImports:
 
     def test_import_llm_orchestration(self):
         from app.modules.llm_orchestration import (
-            LLMOrchestrator, ModelRouter, TaskType, CostTracker, SemanticCache,
+            LLMOrchestrator,
+            TaskType,
         )
         assert LLMOrchestrator is not None
         assert TaskType is not None

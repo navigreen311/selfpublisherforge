@@ -7,7 +7,6 @@ models serialize correctly and enforce their schemas.
 from __future__ import annotations
 
 import json
-from uuid import UUID
 
 import pytest
 from pydantic import BaseModel, ValidationError
@@ -19,7 +18,6 @@ from app.core.contracts import (
     PaginatedResponse,
     SuccessResponse,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers -- small domain models used as generic type arguments

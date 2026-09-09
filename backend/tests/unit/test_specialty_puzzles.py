@@ -7,58 +7,65 @@ Blueprint Section 17.3 — 30 test cases covering:
   and difficulty score ranges.
 """
 
-import random
 
 import pytest
 
-from app.modules.specialty.puzzles.algorithms.word_search import (
-    DIRECTION_SETS,
-    DIRECTION_VECTORS,
-    calculate_difficulty as ws_calculate_difficulty,
-    generate_word_search,
-    render_to_svg as ws_render_to_svg,
+from app.modules.specialty.puzzles.algorithms.crossword import (
+    calculate_difficulty as cw_calculate_difficulty,
 )
 from app.modules.specialty.puzzles.algorithms.crossword import (
     generate_crossword,
-    calculate_difficulty as cw_calculate_difficulty,
+)
+from app.modules.specialty.puzzles.algorithms.crossword import (
     render_to_svg as cw_render_to_svg,
-)
-from app.modules.specialty.puzzles.algorithms.maze import (
-    SHAPE_MASKS,
-    generate_maze,
-    calculate_difficulty as maze_calculate_difficulty,
-    render_to_svg as maze_render_to_svg,
-)
-from app.modules.specialty.puzzles.algorithms.sudoku import (
-    _SIZE_CONFIG,
-    _DIFFICULTY_RANGES_9,
-    generate_sudoku,
-    verify_unique_solution,
-    calculate_difficulty as sudoku_calculate_difficulty,
-)
-from app.modules.specialty.puzzles.algorithms.word_scramble import (
-    generate_word_scramble,
-    calculate_difficulty as scramble_calculate_difficulty,
-    _shuffle_word,
 )
 from app.modules.specialty.puzzles.algorithms.cryptogram import (
     ALPHABET,
-    generate_cryptogram,
-    _generate_derangement,
     _apply_cipher,
+    _generate_derangement,
+    generate_cryptogram,
+)
+from app.modules.specialty.puzzles.algorithms.cryptogram import (
     calculate_difficulty as crypto_calculate_difficulty,
+)
+from app.modules.specialty.puzzles.algorithms.maze import (
+    calculate_difficulty as maze_calculate_difficulty,
+)
+from app.modules.specialty.puzzles.algorithms.maze import (
+    generate_maze,
+)
+from app.modules.specialty.puzzles.algorithms.maze import (
+    render_to_svg as maze_render_to_svg,
 )
 from app.modules.specialty.puzzles.algorithms.number_search import (
     generate_number_search,
-    render_number_search_svg,
+)
+from app.modules.specialty.puzzles.algorithms.sudoku import (
+    _DIFFICULTY_RANGES_9,
+    generate_sudoku,
+    verify_unique_solution,
+)
+from app.modules.specialty.puzzles.algorithms.sudoku import (
+    calculate_difficulty as sudoku_calculate_difficulty,
 )
 from app.modules.specialty.puzzles.algorithms.utils import (
     COMMON_WORDS,
     generate_content_hash,
-    svg_header,
-    svg_footer,
 )
-
+from app.modules.specialty.puzzles.algorithms.word_scramble import (
+    generate_word_scramble,
+)
+from app.modules.specialty.puzzles.algorithms.word_search import (
+    DIRECTION_SETS,
+    DIRECTION_VECTORS,
+    generate_word_search,
+)
+from app.modules.specialty.puzzles.algorithms.word_search import (
+    calculate_difficulty as ws_calculate_difficulty,
+)
+from app.modules.specialty.puzzles.algorithms.word_search import (
+    render_to_svg as ws_render_to_svg,
+)
 
 # ============================================================================
 # Fixtures

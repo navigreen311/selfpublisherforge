@@ -1,27 +1,23 @@
 """Unit tests for the Redis event bus: publishing, subscribing, and dead letter handling."""
 from __future__ import annotations
 
-import asyncio
 import json
-import time
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
-from app.core.event_types import BaseEvent, EventType, EventPublisher
+from app.core.event_types import BaseEvent, EventPublisher, EventType
 from app.core.events import (
+    DLQ_STREAM,
+    STREAM_PREFIX,
     RedisEventPublisher,
     RedisEventSubscriber,
-    _serialize_event,
     _deserialize_event,
-    STREAM_PREFIX,
-    GLOBAL_STREAM,
-    DLQ_STREAM,
+    _serialize_event,
 )
 from app.tasks.dead_letter import DeadLetter, DeadLetterQueue
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -37,7 +33,7 @@ def _make_event(
         org_id=org_id or uuid4(),
         actor_id=actor_id or uuid4(),
         actor_type="user",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         data={"foo": "bar"},
     )
 

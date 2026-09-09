@@ -1,20 +1,19 @@
 """Unit tests for sentiment analysis module."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.modules.review_intelligence.sentiment import (
     NEGATIVE_KEYWORDS,
     POSITIVE_KEYWORDS,
     SentimentAnalysisResult,
     SentimentLabel,
-    ThemeItem,
     _keyword_sentiment,
     analyze_sentiment_batch,
     analyze_sentiment_llm,
     extract_themes_from_results,
 )
-
 
 # --- Keyword-based sentiment tests ---
 

@@ -5,7 +5,7 @@ critical path computation, and deadline helpers.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -33,7 +33,6 @@ from app.modules.production_pipeline.workflow import (
     validate_task_transition,
 )
 
-
 # ── Helpers to create mock tasks ──────────────────────────────────────────
 
 
@@ -53,7 +52,7 @@ def _make_task(
     mock.due_date = due_date
     mock.completed_at = completed_at
     mock.type = task_type
-    mock.created_at = datetime.now(timezone.utc)
+    mock.created_at = datetime.now(UTC)
     return mock
 
 
@@ -420,9 +419,9 @@ class TestCriticalPath:
 
 class TestDeadlineHelpers:
     def test_overdue_tasks(self):
-        now = datetime(2025, 6, 1, tzinfo=timezone.utc)
-        past = datetime(2025, 5, 15, tzinfo=timezone.utc)
-        future = datetime(2025, 7, 1, tzinfo=timezone.utc)
+        now = datetime(2025, 6, 1, tzinfo=UTC)
+        past = datetime(2025, 5, 15, tzinfo=UTC)
+        future = datetime(2025, 7, 1, tzinfo=UTC)
 
         t1 = _make_task("00000000-0000-0000-0000-000000000001", due_date=past)
         t2 = _make_task("00000000-0000-0000-0000-000000000002", due_date=future)
@@ -442,7 +441,7 @@ class TestDeadlineHelpers:
         assert len(overdue) == 0
 
     def test_upcoming_deadlines(self):
-        now = datetime(2025, 6, 1, 12, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
         within = now + timedelta(hours=24)
         outside = now + timedelta(hours=72)
 
@@ -454,7 +453,7 @@ class TestDeadlineHelpers:
         assert str(upcoming[0].id) == "00000000-0000-0000-0000-000000000001"
 
     def test_completed_tasks_not_in_upcoming(self):
-        now = datetime(2025, 6, 1, 12, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
         within = now + timedelta(hours=24)
         t1 = _make_task(
             "00000000-0000-0000-0000-000000000001",

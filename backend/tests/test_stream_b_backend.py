@@ -6,6 +6,7 @@ Uses mocked auth + DB dependencies like the other endpoint tests.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -14,7 +15,6 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -128,11 +128,11 @@ class TestProjectsEndpoints:
 
     @pytest.mark.asyncio
     async def test_create_project(self, client, org_id):
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from app.modules.projects.schemas import ProjectResponse
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         pid = uuid.uuid4()
         response_obj = ProjectResponse(
             id=pid,
@@ -163,14 +163,14 @@ class TestProjectsEndpoints:
 
     @pytest.mark.asyncio
     async def test_get_project_detail(self, client, org_id):
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from app.modules.projects.schemas import (
             ProjectModuleProgress,
             ProjectResponse,
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         pid = uuid.uuid4()
         response_obj = ProjectResponse(
             id=pid,
@@ -196,11 +196,11 @@ class TestProjectsEndpoints:
 
     @pytest.mark.asyncio
     async def test_patch_project(self, client, org_id):
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from app.modules.projects.schemas import ProjectResponse
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         pid = uuid.uuid4()
         response_obj = ProjectResponse(
             id=pid,

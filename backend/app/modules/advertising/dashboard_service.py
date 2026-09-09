@@ -2,10 +2,10 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.advertising.models import Campaign, CampaignPerformance, AdDailyMetric
+from app.modules.advertising.models import Campaign, CampaignPerformance
 
 
 async def get_enhanced_dashboard(db: AsyncSession, org_id, period: str = "30d"):

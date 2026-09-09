@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import base64
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from decimal import Decimal
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import event
@@ -138,6 +139,7 @@ def _patch_isoformat_for_sqlite(monkeypatch):
                                        aggregation=_agg.AggregationPeriod.MONTHLY,
                                        platform=None, book_id=None):
         from sqlalchemy import and_, func, select, text
+
         from app.modules.analytics.models import RoyaltyRecord
         from app.modules.analytics.schemas import RevenueDataPoint
 
@@ -186,6 +188,7 @@ def _patch_isoformat_for_sqlite(monkeypatch):
     async def _safe_aggregate_events_by_type(db, org_id, period_start, period_end,
                                               aggregation=_agg.AggregationPeriod.DAILY):
         from sqlalchemy import and_, func, select, text
+
         from app.modules.analytics.models import AnalyticsEvent
 
         trunc_interval = _agg._agg_to_trunc(aggregation)
@@ -224,6 +227,7 @@ def _patch_isoformat_for_sqlite(monkeypatch):
     async def _safe_compute_revenue_trend(db, org_id, period_start, period_end,
                                            aggregation=_metrics.AggregationPeriod.MONTHLY):
         from sqlalchemy import and_, func, select, text
+
         from app.modules.analytics.models import RoyaltyRecord
         from app.modules.analytics.schemas import TrendData, TrendDataPoint
 

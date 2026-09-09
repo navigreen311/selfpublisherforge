@@ -17,7 +17,6 @@ from app.models.user import UserRole
 from app.modules.organization import service
 from shared.types.enums import PlanTier
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

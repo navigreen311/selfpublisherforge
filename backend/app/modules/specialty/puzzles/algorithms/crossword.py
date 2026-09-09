@@ -8,7 +8,6 @@ Produces valid crossword grids with numbered squares and across/down clues.
 import hashlib
 import json
 import random
-from typing import Optional
 
 # Placement direction constants
 ACROSS = "across"
@@ -255,7 +254,7 @@ def generate_crossword(
     max_width: int = 15,
     max_height: int = 15,
     max_attempts: int = 3,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> dict:
     """
     Generate a crossword puzzle using intersection-based placement.
@@ -378,10 +377,10 @@ def generate_crossword(
     actual_height = max_row - min_row + 1
 
     # Build 2D grid (None = black square, letter = white square)
-    grid_2d: list[list[Optional[str]]] = [
+    grid_2d: list[list[str | None]] = [
         [None] * actual_width for _ in range(actual_height)
     ]
-    solution_2d: list[list[Optional[str]]] = [
+    solution_2d: list[list[str | None]] = [
         [None] * actual_width for _ in range(actual_height)
     ]
 
@@ -432,7 +431,7 @@ def generate_crossword(
     ).hexdigest()
 
     # Puzzle grid with numbers
-    numbered_grid: list[list[Optional[dict]]] = [
+    numbered_grid: list[list[dict | None]] = [
         [None] * actual_width for _ in range(actual_height)
     ]
     number_positions: dict[tuple[int, int], int] = {}

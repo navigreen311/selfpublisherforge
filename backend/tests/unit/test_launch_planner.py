@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, patch
 
 from app.models.marketing import (
     EmailTemplateType,
@@ -28,7 +28,6 @@ from app.modules.marketing.schemas import (
 )
 from app.modules.marketing.social_generator import SocialContentGenerator, _genre_to_hashtag
 
-
 # ---------------------------------------------------------------------------
 # LaunchPlanner Tests
 # ---------------------------------------------------------------------------
@@ -47,7 +46,7 @@ class TestLaunchPlanner:
             book_title="The Great Adventure",
             genre="Fantasy",
             target_audience="Young adults ages 18-30 who enjoy epic fantasy",
-            launch_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
+            launch_date=datetime(2025, 6, 1, tzinfo=UTC),
             budget=500.0,
             goals=["1000 copies sold first month", "50 reviews"],
         )
@@ -130,7 +129,7 @@ class TestLaunchPlanner:
             book_title="Budget Free Book",
             genre="Non-Fiction",
             target_audience="General readers",
-            launch_date=datetime(2025, 7, 1, tzinfo=timezone.utc),
+            launch_date=datetime(2025, 7, 1, tzinfo=UTC),
         )
         plan = await planner.generate_plan(request)
 
@@ -153,7 +152,7 @@ class TestLaunchPlanner:
         assert len(plan.phases) == 3
 
     def test_build_tasks_from_template(self):
-        launch_date = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        launch_date = datetime(2025, 6, 1, tzinfo=UTC)
         tasks = _build_tasks_from_template(PRE_LAUNCH_TASKS, launch_date)
 
         assert len(tasks) == len(PRE_LAUNCH_TASKS)
@@ -167,7 +166,7 @@ class TestLaunchPlanner:
             book_title="Test Book",
             genre="Romance",
             target_audience="Adult readers",
-            launch_date=datetime(2025, 8, 1, tzinfo=timezone.utc),
+            launch_date=datetime(2025, 8, 1, tzinfo=UTC),
             goals=["Best seller"],
             additional_context="This is a debut novel",
         )
@@ -196,7 +195,7 @@ class TestEmailBuilder:
             sequence_name="Test Launch",
             book_title="My Book",
             author_name="Jane Author",
-            launch_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
+            launch_date=datetime(2025, 6, 1, tzinfo=UTC),
         )
 
         assert sequence.name == "Test Launch"
@@ -207,7 +206,7 @@ class TestEmailBuilder:
             sequence_name="Test Launch",
             book_title="My Book",
             author_name="Jane Author",
-            launch_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
+            launch_date=datetime(2025, 6, 1, tzinfo=UTC),
         )
 
         types = [e.template_type for e in sequence.emails]
@@ -221,7 +220,7 @@ class TestEmailBuilder:
             sequence_name="Test",
             book_title="My Book",
             author_name="Jane",
-            launch_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
+            launch_date=datetime(2025, 6, 1, tzinfo=UTC),
         )
 
         delays = [e.delay_days for e in sequence.emails]
@@ -233,7 +232,7 @@ class TestEmailBuilder:
             sequence_name="Test",
             book_title="Great Book",
             author_name="Author",
-            launch_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
+            launch_date=datetime(2025, 6, 1, tzinfo=UTC),
             buy_link="https://amazon.com/dp/1234",
         )
 

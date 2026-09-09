@@ -11,7 +11,6 @@ from app.modules.competitor_finder.gap_detector import (
 )
 from app.modules.competitor_finder.schemas import ContentGap, CoverGap, TitleGap
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

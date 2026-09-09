@@ -8,18 +8,15 @@ Children's Book Studio.
 
 from __future__ import annotations
 
-import json
 import logging
-import math
 import re
 import uuid as _uuid
-from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.core.exceptions import AppException, NotFoundError, ValidationError
+from app.core.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 

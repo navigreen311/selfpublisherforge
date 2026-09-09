@@ -16,10 +16,8 @@ from app.modules.competitor_finder.review_analyzer import (
     generate_review_summary,
 )
 from app.modules.competitor_finder.schemas import (
-    Severity,
     WeaknessCategory,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

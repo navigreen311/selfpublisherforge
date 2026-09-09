@@ -336,7 +336,8 @@ async def delete_cover(
 
 # Additional service methods for router endpoints
 async def list_covers(db, org_id, project_id=None, format_filter=None, sort_by="created_at", sort_dir="desc", limit=50, offset=0):
-    from sqlalchemy import desc as sql_desc, asc as sql_asc
+    from sqlalchemy import asc as sql_asc
+    from sqlalchemy import desc as sql_desc
     stmt = select(Cover).where(Cover.org_id == org_id, Cover.deleted_at.is_(None))
     if project_id:
         stmt = stmt.where(Cover.book_id == project_id)
@@ -392,6 +393,7 @@ async def export_cover(db, org_id, cover_id, export_format, dpi, include_bleed, 
 
 async def create_ab_test(db, org_id, name, description, cover_a_id, cover_b_id, target_audience, duration_days, public_url_enabled):
     import secrets
+
     from app.modules.cover_design.models import CoverABTest
     stmt = select(Cover).where(Cover.id.in_([cover_a_id, cover_b_id]), Cover.org_id == org_id, Cover.deleted_at.is_(None))
     result = await db.execute(stmt)

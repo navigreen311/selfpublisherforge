@@ -9,7 +9,6 @@ import hashlib
 import json
 import random
 import string
-from typing import Optional
 
 # Direction vectors: (row_delta, col_delta)
 DIRECTION_VECTORS = {
@@ -94,7 +93,7 @@ def _remove_word(
     original_cells: list[str],
 ) -> None:
     """Remove a placed word, restoring original cell values."""
-    for (r, c), orig in zip(positions, original_cells):
+    for (r, c), orig in zip(positions, original_cells, strict=False):
         grid[r][c] = orig
 
 
@@ -121,7 +120,7 @@ def generate_word_search(
     grid_size: int = 15,
     directions: int = 4,
     max_retries_per_word: int = 200,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> dict:
     """
     Generate a word search puzzle using backtracking placement.

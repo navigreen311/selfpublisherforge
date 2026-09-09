@@ -6,8 +6,9 @@ Uses an in-memory SQLite database and the FastAPI test client.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -82,7 +83,7 @@ def book_id() -> str:
 
 @pytest.fixture
 def launch_date() -> str:
-    return (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    return (datetime.now(UTC) + timedelta(days=30)).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +370,7 @@ class TestARCCampaignAPI:
             "name": "ARC Campaign 1",
             "description": "Test ARC campaign",
             "cover_letter": "Dear reviewer, please enjoy this ARC.",
-            "deadline": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+            "deadline": (datetime.now(UTC) + timedelta(days=14)).isoformat(),
             "recipients": [
                 {"name": "Reviewer A", "email": "a@example.com"},
                 {"name": "Reviewer B", "email": "b@example.com"},

@@ -13,18 +13,13 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.modules.realtime.events import publish_to_channel, subscribe_to_channel
 from app.modules.realtime.manager import ConnectionManager
 from app.modules.realtime.schemas import WSChannel
-
 
 # ---------------------------------------------------------------------------
 # Test Helpers
@@ -272,7 +267,7 @@ async def test_writing_channel_save_ack() -> None:
     await mgr.broadcast(WSChannel.WRITING, "book-1", {
         "type": "save_ack",
         "revision": 5,
-        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "saved_at": datetime.now(UTC).isoformat(),
     })
 
     assert len(ws.sent_messages) == 1

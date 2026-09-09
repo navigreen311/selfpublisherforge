@@ -11,11 +11,9 @@ from ``conftest.py``.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
 
 import pytest
-import pytest_asyncio
 
 from app.core.exceptions import NotFoundError, ValidationError
 from app.modules.product_page_lab import service
@@ -32,7 +30,6 @@ from app.modules.product_page_lab.schemas import (
     LookInsideAnalyzeRequest,
     MobileCheckRequest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -185,7 +182,7 @@ class TestGetABTest:
         """get_ab_test should raise NotFoundError for soft-deleted records."""
         ab = await _seed_ab_test(db_session)
         # Soft-delete the record
-        ab.deleted_at = datetime.now(timezone.utc)
+        ab.deleted_at = datetime.now(UTC)
         await db_session.flush()
 
         with pytest.raises(NotFoundError):
@@ -216,7 +213,7 @@ class TestListABTests:
     async def test_excludes_soft_deleted(self, db_session):
         """list_ab_tests should exclude soft-deleted records."""
         ab = await _seed_ab_test(db_session, name="Deleted One")
-        ab.deleted_at = datetime.now(timezone.utc)
+        ab.deleted_at = datetime.now(UTC)
         await db_session.flush()
 
         await _seed_ab_test(db_session, name="Active One")
@@ -284,7 +281,7 @@ class TestStartABTest:
     async def test_start_raises_not_found_for_soft_deleted(self, db_session):
         """Starting a soft-deleted test should raise NotFoundError."""
         ab = await _seed_ab_test(db_session)
-        ab.deleted_at = datetime.now(timezone.utc)
+        ab.deleted_at = datetime.now(UTC)
         await db_session.flush()
 
         with pytest.raises(NotFoundError):
@@ -296,7 +293,7 @@ class TestStartABTest:
         ab = await _seed_ab_test(
             db_session,
             status=ABTestStatus.COMPLETED.value,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         with pytest.raises(ValidationError):
             await service.start_ab_test(ab.id, db_session)
@@ -345,7 +342,7 @@ class TestUpdateABTest:
         ab = await _seed_ab_test(
             db_session,
             status=ABTestStatus.COMPLETED.value,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         update_req = ABTestUpdateRequest(status=ABTestStatus.DRAFT)
         with pytest.raises(ValidationError):
@@ -386,7 +383,7 @@ class TestGetTestResults:
             variant_a_clicks=25,   # 5% CTR
             variant_b_impressions=500,
             variant_b_clicks=50,   # 10% CTR
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -404,7 +401,7 @@ class TestGetTestResults:
             variant_a_clicks=60,   # 12% CTR
             variant_b_impressions=500,
             variant_b_clicks=25,   # 5% CTR
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -420,7 +417,7 @@ class TestGetTestResults:
             variant_a_clicks=10,
             variant_b_impressions=100,
             variant_b_clicks=10,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -452,7 +449,7 @@ class TestGetTestResults:
             variant_a_clicks=0,
             variant_b_impressions=0,
             variant_b_clicks=0,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -472,7 +469,7 @@ class TestGetTestResults:
             variant_a_clicks=5,
             variant_b_impressions=50,
             variant_b_clicks=15,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result_small = await service.get_ab_test(ab_small.id, db_session)
 
@@ -484,7 +481,7 @@ class TestGetTestResults:
             variant_a_clicks=500,
             variant_b_impressions=5000,
             variant_b_clicks=1500,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result_large = await service.get_ab_test(ab_large.id, db_session)
 
@@ -502,7 +499,7 @@ class TestGetTestResults:
             variant_a_clicks=10_000,
             variant_b_impressions=100_000,
             variant_b_clicks=5_000,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -524,7 +521,7 @@ class TestGetDetailedResults:
         # Use naive datetimes because SQLite strips timezone info,
         # and the service uses datetime.now(timezone.utc) for comparisons.
         from unittest.mock import patch as _patch
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         started = now_utc - timedelta(days=7)
 
         ab = await _seed_ab_test(
@@ -563,7 +560,7 @@ class TestGetDetailedResults:
             variant_a_clicks=2,
             variant_b_impressions=20,
             variant_b_clicks=5,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_test_results(ab.id, db_session)
 
@@ -690,7 +687,7 @@ class TestAnalyzeListing:
     async def test_asin_extraction_from_url(self, db_session):
         """analyze_amazon_listing should extract ASIN from a URL."""
         # Seed a Book with matching ASIN so the DB lookup succeeds
-        from app.models.project import Book, Project, ProjectType, ProjectStatus, BookFormat, BookStatus
+        from app.models.project import Book, BookFormat, BookStatus, Project, ProjectStatus, ProjectType
         project = Project(
             org_id=ORG_ID,
             title="Test Project",
@@ -853,7 +850,7 @@ class TestGetConversionScores:
             variant_a_clicks=80,   # 8% CTR -> score 80
             variant_b_impressions=1000,
             variant_b_clicks=50,   # 5% CTR -> score 50
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_conversion_scores(book, db_session)
 

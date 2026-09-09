@@ -587,7 +587,7 @@ def _analyze_typography_patterns(covers: list[CoverData], genre: CoverGenre) -> 
             light_percentage=35.0,
             script_percentage=45.0,
         )
-    elif genre == CoverGenre.THRILLER:
+    if genre == CoverGenre.THRILLER:
         return TypographyPattern(
             serif_percentage=20.0,
             sans_serif_percentage=75.0,
@@ -595,7 +595,7 @@ def _analyze_typography_patterns(covers: list[CoverData], genre: CoverGenre) -> 
             light_percentage=10.0,
             script_percentage=5.0,
         )
-    elif genre == CoverGenre.FANTASY:
+    if genre == CoverGenre.FANTASY:
         return TypographyPattern(
             serif_percentage=60.0,
             sans_serif_percentage=30.0,
@@ -603,14 +603,13 @@ def _analyze_typography_patterns(covers: list[CoverData], genre: CoverGenre) -> 
             light_percentage=25.0,
             script_percentage=15.0,
         )
-    else:
-        return TypographyPattern(
-            serif_percentage=40.0,
-            sans_serif_percentage=50.0,
-            bold_percentage=45.0,
-            light_percentage=30.0,
-            script_percentage=10.0,
-        )
+    return TypographyPattern(
+        serif_percentage=40.0,
+        sans_serif_percentage=50.0,
+        bold_percentage=45.0,
+        light_percentage=30.0,
+        script_percentage=10.0,
+    )
 
 
 def _analyze_layout_patterns(covers: list[CoverData], genre: CoverGenre) -> LayoutPattern:
@@ -627,20 +626,19 @@ def _analyze_layout_patterns(covers: list[CoverData], genre: CoverGenre) -> Layo
             bottom_title_percentage=15.0,
             image_placement={"full": 60.0, "top": 15.0, "center": 20.0, "bottom": 5.0},
         )
-    elif genre == CoverGenre.ROMANCE:
+    if genre == CoverGenre.ROMANCE:
         return LayoutPattern(
             centered_title_percentage=55.0,
             top_title_percentage=25.0,
             bottom_title_percentage=20.0,
             image_placement={"full": 50.0, "center": 35.0, "top": 10.0, "bottom": 5.0},
         )
-    else:
-        return LayoutPattern(
-            centered_title_percentage=50.0,
-            top_title_percentage=30.0,
-            bottom_title_percentage=20.0,
-            image_placement={"full": 45.0, "center": 30.0, "top": 15.0, "bottom": 10.0},
-        )
+    return LayoutPattern(
+        centered_title_percentage=50.0,
+        top_title_percentage=30.0,
+        bottom_title_percentage=20.0,
+        image_placement={"full": 45.0, "center": 30.0, "top": 15.0, "bottom": 10.0},
+    )
 
 
 def _analyze_image_styles(covers: list[CoverData], genre: CoverGenre) -> ImageStyleBreakdown:
@@ -657,27 +655,26 @@ def _analyze_image_styles(covers: list[CoverData], genre: CoverGenre) -> ImageSt
             abstract_percentage=5.0,
             typography_only_percentage=5.0,
         )
-    elif genre == CoverGenre.FANTASY:
+    if genre == CoverGenre.FANTASY:
         return ImageStyleBreakdown(
             photography_percentage=15.0,
             illustration_percentage=75.0,
             abstract_percentage=5.0,
             typography_only_percentage=5.0,
         )
-    elif genre == CoverGenre.NONFICTION:
+    if genre == CoverGenre.NONFICTION:
         return ImageStyleBreakdown(
             photography_percentage=30.0,
             illustration_percentage=20.0,
             abstract_percentage=25.0,
             typography_only_percentage=25.0,
         )
-    else:
-        return ImageStyleBreakdown(
-            photography_percentage=45.0,
-            illustration_percentage=35.0,
-            abstract_percentage=10.0,
-            typography_only_percentage=10.0,
-        )
+    return ImageStyleBreakdown(
+        photography_percentage=45.0,
+        illustration_percentage=35.0,
+        abstract_percentage=10.0,
+        typography_only_percentage=10.0,
+    )
 
 
 def _generate_ai_recommendations(

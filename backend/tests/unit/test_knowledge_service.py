@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 from app.modules.knowledge_vault.schemas import (
     CreateEntryRequest,
     UpdateEntryRequest,
 )
 from app.modules.knowledge_vault.service import KnowledgeService
-
 
 # ── Fixtures ─────────────────────────────────────────────────────
 
@@ -30,8 +28,8 @@ def _make_entry(**overrides):
         "tags": ["research", "publishing"],
         "credibility_score": 0.85,
         "metadata_": {},
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
         "deleted_at": None,
     }
     defaults.update(overrides)

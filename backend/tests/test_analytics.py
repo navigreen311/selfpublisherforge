@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import base64
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,19 +22,14 @@ from app.modules.analytics.schemas import (
     AnalyticsEventResponse,
     DashboardData,
     KPICard,
-    OutputFormat,
-    Platform,
     PortfolioMetrics,
     ReportResponse,
-    ReportStatus,
-    ReportType,
     RevenueDataPoint,
     RevenueResponse,
     RoyaltyImportResponse,
     TrendData,
     TrendDataPoint,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -60,8 +55,8 @@ async def client(mock_user):
     """Yield an HTTP test client with auth and DB dependencies overridden."""
     app = create_app()
 
-    from app.database import get_db
     from app.core.dependencies import get_current_user
+    from app.database import get_db
 
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
@@ -91,7 +86,7 @@ class TestDashboard:
     @pytest.mark.asyncio
     async def test_get_dashboard_returns_200(self, client, org_id):
         """GET /api/v1/analytics/dashboard should return 200 with dashboard data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         dashboard = DashboardData(
             kpis=[
                 KPICard(label="Revenue", value="$1,000.00", change_percent=5.0, change_direction="up"),
@@ -128,7 +123,7 @@ class TestRevenue:
     @pytest.mark.asyncio
     async def test_get_revenue_returns_200(self, client, org_id):
         """GET /api/v1/analytics/revenue should return 200 with revenue data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         revenue = RevenueResponse(
             total_revenue=Decimal("2500.00"),
             total_units=100,
@@ -157,13 +152,13 @@ class TestRevenue:
     @pytest.mark.asyncio
     async def test_get_revenue_with_filters(self, client, org_id):
         """GET /api/v1/analytics/revenue with platform and date filters."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         revenue = RevenueResponse(
             total_revenue=Decimal("800.00"),
             total_units=30,
             data_points=[],
-            period_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            period_end=datetime(2024, 6, 30, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            period_start=datetime(2024, 1, 1, tzinfo=UTC),
+            period_end=datetime(2024, 6, 30, 23, 59, 59, 999999, tzinfo=UTC),
             aggregation=AggregationPeriod.WEEKLY,
             by_platform={},
             by_book=[],
@@ -195,7 +190,7 @@ class TestPortfolio:
     @pytest.mark.asyncio
     async def test_get_portfolio_returns_200(self, client, org_id):
         """GET /api/v1/analytics/portfolio should return portfolio metrics."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         portfolio = PortfolioMetrics(
             total_books=15,
             total_revenue=Decimal("12000.00"),
@@ -230,7 +225,7 @@ class TestEvents:
     async def test_record_event_returns_201(self, client, org_id):
         """POST /api/v1/analytics/events should record an event and return 201."""
         event_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         event_response = AnalyticsEventResponse(
             id=event_id,
@@ -276,7 +271,7 @@ class TestReports:
     async def test_generate_report_returns_201(self, client, org_id, user_id):
         """POST /api/v1/analytics/reports/generate should create a report."""
         report_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         report_response = ReportResponse(
             id=report_id,
@@ -364,7 +359,7 @@ class TestTrends:
     @pytest.mark.asyncio
     async def test_get_trends_returns_200(self, client, org_id):
         """GET /api/v1/analytics/trends should return trend data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         trends = TrendData(
             metric="revenue",
             data_points=[

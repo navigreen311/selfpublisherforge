@@ -2,24 +2,22 @@
 
 import json
 import uuid
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app.modules.ai_writing.generator import (
+    _run_quality_checks,
     build_messages,
-    resolve_model,
     generate_stream,
     generate_sync,
-    _run_quality_checks,
+    resolve_model,
 )
+from app.modules.ai_writing.prompts import PROMPT_REGISTRY, get_prompt
 from app.modules.ai_writing.schemas import (
     GenerateRequest,
     GenerationType,
-    ModelPreference,
 )
-from app.modules.ai_writing.prompts import get_prompt, PROMPT_REGISTRY
-
 
 # ---------------------------------------------------------------------------
 # Prompt construction

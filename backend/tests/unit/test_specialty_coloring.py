@@ -5,12 +5,11 @@ live DB or external services).
 """
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 from types import SimpleNamespace
 
 import pytest
 
+from app.modules.specialty.coloring import service as coloring_service
 from app.modules.specialty.coloring.quality_pipeline import (
     PipelineResult,
     QualityIssue,
@@ -25,8 +24,6 @@ from app.modules.specialty.coloring.quality_pipeline import (
     step_6_background_check,
     step_7_quality_check,
 )
-from app.modules.specialty.coloring import service as coloring_service
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -35,8 +32,9 @@ from app.modules.specialty.coloring import service as coloring_service
 def _make_bw_png(width: int = 4, height: int = 4, black_pixels: set | None = None) -> bytes:
     """Create a minimal B&W PNG using PIL for pipeline tests."""
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.new("L", (width, height), 255)
         if black_pixels:
@@ -54,8 +52,9 @@ def _make_bw_png(width: int = 4, height: int = 4, black_pixels: set | None = Non
 def _make_gray_png(width: int = 4, height: int = 4, gray_value: int = 128) -> bytes:
     """Create a PNG with uniform gray pixels."""
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.new("L", (width, height), gray_value)
         buf = io.BytesIO()
@@ -68,8 +67,9 @@ def _make_gray_png(width: int = 4, height: int = 4, gray_value: int = 128) -> by
 def _make_mixed_png(width: int = 10, height: int = 10) -> bytes:
     """PNG with black lines, gray artifacts, and white background."""
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.new("L", (width, height), 255)
         px = img.load()
@@ -90,8 +90,9 @@ def _make_mixed_png(width: int = 10, height: int = 10) -> bytes:
 def _make_offwhite_png(width: int = 4, height: int = 4) -> bytes:
     """PNG with off-white background (value 250 instead of 255)."""
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.new("L", (width, height), 250)
         buf = io.BytesIO()
@@ -213,8 +214,9 @@ class TestStep2AutoClean:
         gray_img = _make_gray_png(2, 2, gray_value=100)
         cleaned, issues = await step_2_auto_clean(gray_img)
 
-        from PIL import Image
         import io
+
+        from PIL import Image
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 0 for p in pixels), "All pixels below 128 should be black"
@@ -225,8 +227,9 @@ class TestStep2AutoClean:
         gray_img = _make_gray_png(2, 2, gray_value=200)
         cleaned, issues = await step_2_auto_clean(gray_img)
 
-        from PIL import Image
         import io
+
+        from PIL import Image
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 255 for p in pixels), "All pixels >= 128 should be white"
@@ -302,8 +305,9 @@ class TestStep5SpeckRemoval:
         image = _make_bw_png(20, 20, black_pixels={(10, 10)})
         cleaned, issues = await step_5_speck_removal(image, min_size=10)
 
-        from PIL import Image
         import io
+
+        from PIL import Image
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 255 for p in pixels), "Speck should have been removed"
@@ -317,8 +321,9 @@ class TestStep5SpeckRemoval:
         image = _make_bw_png(20, 20, black_pixels=black_pixels)
         cleaned, _ = await step_5_speck_removal(image, min_size=10)
 
-        from PIL import Image
         import io
+
+        from PIL import Image
         result = Image.open(io.BytesIO(cleaned))
         px = result.load()
         black_count = sum(1 for x in range(20) for y in range(20) if px[x, y] == 0)
@@ -337,8 +342,9 @@ class TestStep6BackgroundCheck:
         image = _make_offwhite_png(4, 4)
         cleaned, issues = await step_6_background_check(image)
 
-        from PIL import Image
         import io
+
+        from PIL import Image
         result = Image.open(io.BytesIO(cleaned))
         pixels = list(result.getdata())
         assert all(p == 255 for p in pixels), "All off-white should become pure white"

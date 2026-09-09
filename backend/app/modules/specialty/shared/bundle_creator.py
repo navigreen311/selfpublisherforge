@@ -9,14 +9,13 @@ Blueprint refs: 12.3
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty.models.shared import BookBundle, BookSeries
-
 
 # ---------------------------------------------------------------------------
 # Data classes

@@ -6,9 +6,7 @@ error_handler, middleware, logging sanitization, and versioning.
 """
 from __future__ import annotations
 
-import time
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -25,9 +23,8 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.logging import sanitize
-from app.core.pagination import CursorParams, PaginatedResponse, get_pagination_params
+from app.core.pagination import CursorParams, PaginatedResponse
 from app.core.security import (
-    ALGORITHM,
     create_access_token,
     create_refresh_token,
     decode_token,
@@ -35,7 +32,6 @@ from app.core.security import (
     verify_password,
 )
 from app.core.versioning import APIVersion, extract_version
-
 
 # ---------------------------------------------------------------------------
 # 1. Security — JWT token creation and validation

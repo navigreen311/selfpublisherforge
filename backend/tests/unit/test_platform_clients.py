@@ -7,10 +7,8 @@ All HTTP calls are mocked to avoid real network traffic.
 
 from __future__ import annotations
 
-import asyncio
-from datetime import date, datetime, timezone
-from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import date
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest

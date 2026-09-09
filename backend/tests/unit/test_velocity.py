@@ -1,7 +1,6 @@
 """Unit tests for velocity tracking module."""
 
-import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.modules.review_intelligence.schemas import (
     VelocityDataPoint,
@@ -14,7 +13,6 @@ from app.modules.review_intelligence.velocity import (
     detect_anomalies,
     detect_trend,
 )
-
 
 # --- Period delta tests ---
 
@@ -52,7 +50,7 @@ class TestDefaultLookback:
 
 def _make_data_points(counts: list[int]) -> list[VelocityDataPoint]:
     """Helper to create data points from a list of review counts."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return [
         VelocityDataPoint(
             period_start=now - timedelta(weeks=len(counts) - i),
@@ -227,7 +225,7 @@ class TestVelocityComputations:
 
     def test_data_point_rating_info(self):
         """Data points can carry rating distribution info."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         dp = VelocityDataPoint(
             period_start=now - timedelta(weeks=1),
             period_end=now,

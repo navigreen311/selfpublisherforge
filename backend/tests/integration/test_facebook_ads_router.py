@@ -1,18 +1,17 @@
 """Integration tests for Facebook Ads router endpoints."""
 
-import pytest
-import pytest_asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base, get_db
 from app.main import create_app
 from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 

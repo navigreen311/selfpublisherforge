@@ -4,11 +4,13 @@ Tests pipeline CRUD, task management, status transitions, timeline generation,
 dependency validation, and template management.
 """
 
-import pytest
 import uuid
-from datetime import datetime, timedelta, UTC
-from unittest.mock import AsyncMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
+import pytest
+
+from app.modules.production_pipeline import service
 from app.modules.production_pipeline.models import (
     Pipeline,
     PipelineStatus,
@@ -17,7 +19,6 @@ from app.modules.production_pipeline.models import (
     TaskStatus,
     TaskType,
 )
-from app.modules.production_pipeline import service
 from app.modules.production_pipeline.schemas import (
     CreatePipeline,
     CreateTask,
@@ -27,7 +28,6 @@ from app.modules.production_pipeline.schemas import (
     UpdateTask,
 )
 from app.modules.production_pipeline.workflow import WorkflowError
-
 
 # ---------------------------------------------------------------------------
 # Helpers

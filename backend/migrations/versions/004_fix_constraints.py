@@ -16,16 +16,15 @@ Revision ID: 004_fix_constraints
 Revises: 003_add_market_intel_org_id
 Create Date: 2026-02-10
 """
-from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers
 revision: str = "004_fix_constraints"
-down_revision: Union[str, None] = "003_add_market_intel_org_id"
-branch_labels: Union[str, None] = None
-depends_on: Union[str, None] = None
+down_revision: str | None = "003_add_market_intel_org_id"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 # ── Tables from 001 that have org_id but no FK to organizations ──────────
 _TABLES_MISSING_ORG_FK = [

@@ -24,6 +24,12 @@ from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
 from app.database import get_db
+from app.modules.pricing_automation import (
+    price_history_service,
+    royalty_analyzer,
+    scheduled_changes_service,
+    strategy_manager,
+)
 from app.modules.pricing_automation.schemas import (
     ABTestCreate,
     ABTestResponse,
@@ -50,12 +56,6 @@ from app.modules.pricing_automation.schemas import (
     StrategyUpdateRequest,
 )
 from app.modules.pricing_automation.service import PricingAutomationService
-from app.modules.pricing_automation import (
-    price_history_service,
-    royalty_analyzer,
-    scheduled_changes_service,
-    strategy_manager,
-)
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 

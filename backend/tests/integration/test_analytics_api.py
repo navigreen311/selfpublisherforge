@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import base64
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,12 +18,7 @@ from httpx import ASGITransport, AsyncClient
 from app.main import create_app
 from app.modules.analytics.schemas import (
     AggregationPeriod,
-    OutputFormat,
-    Platform,
-    ReportStatus,
-    ReportType,
 )
-
 
 # ---------- Fixtures ----------
 
@@ -57,8 +52,8 @@ def mock_db():
 async def client(mock_db, mock_user):
     app = create_app()
 
-    from app.database import get_db
     from app.core.dependencies import get_current_user
+    from app.database import get_db
 
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_user] = lambda: mock_user
@@ -83,8 +78,8 @@ class TestDashboardEndpoint:
                 top_books=[],
                 platform_breakdown={},
                 recent_royalties=[],
-                period_start=datetime.now(timezone.utc) - timedelta(days=30),
-                period_end=datetime.now(timezone.utc),
+                period_start=datetime.now(UTC) - timedelta(days=30),
+                period_end=datetime.now(UTC),
             ))
 
             # Patch model_dump for pydantic serialization
@@ -95,8 +90,8 @@ class TestDashboardEndpoint:
                 "top_books": [],
                 "platform_breakdown": {},
                 "recent_royalties": [],
-                "period_start": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
-                "period_end": datetime.now(timezone.utc).isoformat(),
+                "period_start": (datetime.now(UTC) - timedelta(days=30)).isoformat(),
+                "period_end": datetime.now(UTC).isoformat(),
             })
 
             response = await client.get("/api/v1/analytics/dashboard")
@@ -114,8 +109,8 @@ class TestDashboardEndpoint:
                 top_books=[],
                 platform_breakdown={},
                 recent_royalties=[],
-                period_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-                period_end=datetime(2024, 1, 31, tzinfo=timezone.utc),
+                period_start=datetime(2024, 1, 1, tzinfo=UTC),
+                period_end=datetime(2024, 1, 31, tzinfo=UTC),
             ))
             mock_service.get_dashboard.return_value.model_dump = MagicMock(return_value={
                 "kpis": [],
@@ -146,8 +141,8 @@ class TestRevenueEndpoint:
                 total_revenue=Decimal("1000.00"),
                 total_units=50,
                 data_points=[],
-                period_start=datetime.now(timezone.utc) - timedelta(days=365),
-                period_end=datetime.now(timezone.utc),
+                period_start=datetime.now(UTC) - timedelta(days=365),
+                period_end=datetime.now(UTC),
                 aggregation=AggregationPeriod.MONTHLY,
                 by_platform={},
                 by_book=[],
@@ -156,8 +151,8 @@ class TestRevenueEndpoint:
                 "total_revenue": "1000.00",
                 "total_units": 50,
                 "data_points": [],
-                "period_start": datetime.now(timezone.utc).isoformat(),
-                "period_end": datetime.now(timezone.utc).isoformat(),
+                "period_start": datetime.now(UTC).isoformat(),
+                "period_end": datetime.now(UTC).isoformat(),
                 "aggregation": "monthly",
                 "by_platform": {},
                 "by_book": [],
@@ -176,8 +171,8 @@ class TestRevenueEndpoint:
                 total_revenue=Decimal("500.00"),
                 total_units=25,
                 data_points=[],
-                period_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-                period_end=datetime(2024, 6, 30, tzinfo=timezone.utc),
+                period_start=datetime(2024, 1, 1, tzinfo=UTC),
+                period_end=datetime(2024, 6, 30, tzinfo=UTC),
                 aggregation=AggregationPeriod.WEEKLY,
                 by_platform={},
                 by_book=[],
@@ -282,7 +277,7 @@ class TestPortfolioEndpoint:
                 platform_breakdown={},
                 format_breakdown={},
                 top_books=[],
-                snapshot_date=datetime.now(timezone.utc),
+                snapshot_date=datetime.now(UTC),
             ))
             mock_service.get_portfolio_metrics.return_value.model_dump = MagicMock(return_value={
                 "total_books": 10,
@@ -294,7 +289,7 @@ class TestPortfolioEndpoint:
                 "platform_breakdown": {},
                 "format_breakdown": {},
                 "top_books": [],
-                "snapshot_date": datetime.now(timezone.utc).isoformat(),
+                "snapshot_date": datetime.now(UTC).isoformat(),
             })
 
             response = await client.get("/api/v1/analytics/portfolio")
@@ -323,10 +318,10 @@ class TestReportsEndpoint:
                 file_path="/tmp/reports/test.pdf",
                 file_size=1024,
                 generated_by=user_id,
-                generated_at=datetime.now(timezone.utc),
+                generated_at=datetime.now(UTC),
                 error_message=None,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             ))
             mock_service.create_report.return_value.model_dump = MagicMock(return_value={
                 "id": str(report_id),
@@ -339,10 +334,10 @@ class TestReportsEndpoint:
                 "file_path": "/tmp/reports/test.pdf",
                 "file_size": 1024,
                 "generated_by": str(user_id),
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "error_message": None,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             })
 
             response = await client.post(
@@ -399,7 +394,7 @@ class TestEventsEndpoint:
     async def test_record_event(self, client, mock_db):
         """POST /api/v1/analytics/events records an event."""
         event_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with patch("app.modules.analytics.router.service") as mock_service:
             mock_service.record_event = AsyncMock(return_value=MagicMock(
@@ -448,7 +443,7 @@ class TestTrendsEndpoint:
     @pytest.mark.asyncio
     async def test_get_trends(self, client, mock_db):
         """GET /api/v1/analytics/trends returns trend data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with patch("app.modules.analytics.router.service") as mock_service:
             mock_service.get_trends = AsyncMock(return_value=MagicMock(
@@ -480,7 +475,7 @@ class TestTrendsEndpoint:
     @pytest.mark.asyncio
     async def test_get_trends_with_params(self, client, mock_db):
         """GET /api/v1/analytics/trends with query parameters."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with patch("app.modules.analytics.router.service") as mock_service:
             mock_service.get_trends = AsyncMock(return_value=MagicMock(

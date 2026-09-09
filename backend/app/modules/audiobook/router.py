@@ -11,7 +11,6 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.audiobook import service
 from app.modules.audiobook import service_crud as crud_service
-from app.modules.audiobook.schemas_extended import AudiobookStatsResponse
 from app.modules.audiobook.schemas import (
     PronunciationCreate,
     PronunciationListResponse,
@@ -20,6 +19,7 @@ from app.modules.audiobook.schemas import (
     SSMLResponse,
     SSMLUpdateRequest,
 )
+from app.modules.audiobook.schemas_extended import AudiobookStatsResponse
 
 router = APIRouter()
 

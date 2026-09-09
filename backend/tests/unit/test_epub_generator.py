@@ -9,21 +9,19 @@ import zipfile
 import pytest
 
 from app.modules.publishing_ops.epub_generator import (
-    generate_epub,
-    _default_style,
     _build_chapter_xhtml,
     _build_container_xml,
     _build_nav_xhtml,
+    _default_style,
     _wrap_paragraphs,
+    generate_epub,
 )
 from app.modules.publishing_ops.schemas import (
     ChapterInput,
     ExportFormat,
     ExportRequest,
     TemplateStyleSettings,
-    TrimSize,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

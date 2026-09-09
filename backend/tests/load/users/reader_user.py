@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import random
 
-from locust import task, between
+from locust import between, task
 
-from . import AuthenticatedUser
 from ..config import WAIT_TIMES
+from . import AuthenticatedUser
 
 wait_config = WAIT_TIMES["reader"]
 

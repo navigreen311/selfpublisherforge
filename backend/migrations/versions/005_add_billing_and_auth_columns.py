@@ -9,16 +9,15 @@ Revision ID: 005_add_billing_and_auth_columns
 Revises: 004_fix_constraints
 Create Date: 2026-02-10
 """
-from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers
 revision: str = "005_add_billing_and_auth_columns"
-down_revision: Union[str, None] = "004_fix_constraints"
-branch_labels: Union[str, None] = None
-depends_on: Union[str, None] = None
+down_revision: str | None = "004_fix_constraints"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

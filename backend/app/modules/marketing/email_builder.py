@@ -331,7 +331,7 @@ async def update_email_in_sequence(
     delay_days: int | None = None,
 ) -> dict | None:
     """Update a single email within a sequence."""
-    from app.models.marketing import EmailSequence, EmailTemplate
+    from app.models.marketing import EmailTemplate
 
     stmt = select(EmailTemplate).where(
         EmailTemplate.id == email_id,

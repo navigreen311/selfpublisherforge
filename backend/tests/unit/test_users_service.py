@@ -4,16 +4,15 @@ Tests cover user profile management, organization operations, member management,
 invitation flow, role changes, session management, and API key operations.
 """
 
-import json
-import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import uuid4
+
+import pytest
 
 from app.core.exceptions import AppException
 from app.core.security import hash_password
-from app.modules.users.service import UserService, _role_level, _generate_api_key
-from app.models.user import User, UserRole
-
+from app.models.user import User
+from app.modules.users.service import UserService, _generate_api_key, _role_level
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -16,7 +16,7 @@ import os
 import uuid as _uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError
@@ -883,9 +883,7 @@ async def save_chapter_content(
         time_since_last = now - last_version.created_at.replace(tzinfo=UTC) if last_version.created_at.tzinfo is None else now - last_version.created_at
         word_delta = abs(word_count - (last_version.word_count or 0))
 
-        if time_since_last >= _VERSION_TIME_THRESHOLD:
-            should_snapshot = True
-        elif word_delta >= _VERSION_WORD_CHANGE_THRESHOLD:
+        if time_since_last >= _VERSION_TIME_THRESHOLD or word_delta >= _VERSION_WORD_CHANGE_THRESHOLD:
             should_snapshot = True
 
     version_id = None

@@ -18,19 +18,17 @@ raises ``KeyError``.  Tests that need rendered output therefore mock
 from __future__ import annotations
 
 import smtplib
-import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.modules.notifications.email_channel import (
-    EMAIL_TEMPLATES,
     _DEFAULT_CONTEXT,
+    EMAIL_TEMPLATES,
     _wrap_template,
     send_email,
     send_template_email,
 )
-
 
 # ===========================================================================
 # Template structure tests

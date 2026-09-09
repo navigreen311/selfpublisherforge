@@ -9,10 +9,11 @@ import uuid
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import event, Text as SA_Text
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY, JSONB, UUID as PG_UUID
 
 # ---------------------------------------------------------------------------
 # SQLite type compilation overrides (must be registered before create_all)
@@ -36,10 +37,11 @@ def _uuid_sqlite(type_, compiler, **kw):
 # ---------------------------------------------------------------------------
 # Import models so they register with Base.metadata
 # ---------------------------------------------------------------------------
+import app.modules.specialty_books.models_coloring  # noqa: E402
 from app.database import Base  # noqa: E402
-import app.modules.specialty_books.models_coloring  # noqa: E402, F401
+
 try:
-    import app.modules.specialty_books.models_puzzle  # noqa: E402, F401
+    import app.modules.specialty_books.models_puzzle  # noqa: F401
 except (ImportError, ModuleNotFoundError):
     pass
 

@@ -7,16 +7,15 @@ through the FastAPI router, using in-memory SQLite and mocked auth.
 from __future__ import annotations
 
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from unittest.mock import AsyncMock, patch
 
-from app.database import Base, get_db
 from app.core.dependencies import get_current_user
-
+from app.database import Base, get_db
 
 # ---------------------------------------------------------------------------
 # In-memory SQLite engine for tests

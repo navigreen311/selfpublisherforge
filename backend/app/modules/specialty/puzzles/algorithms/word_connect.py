@@ -7,18 +7,16 @@ word count.
 """
 
 import hashlib
-import json
 import random
-from typing import Optional
 
-from .utils import generate_content_hash, svg_header, svg_footer, svg_text, svg_rect
+from .utils import generate_content_hash, svg_footer, svg_header, svg_rect, svg_text
 
 
 def generate_word_connect(
     word_pairs: list[tuple[str, str]],
     difficulty: str = "medium",
-    distractors: Optional[list[str]] = None,
-    seed: Optional[int] = None,
+    distractors: list[str] | None = None,
+    seed: int | None = None,
 ) -> dict:
     """
     Generate a Word Connect puzzle.

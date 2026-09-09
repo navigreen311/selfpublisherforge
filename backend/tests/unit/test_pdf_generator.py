@@ -16,22 +16,21 @@ import uuid
 
 import pytest
 
+from app.modules.publishing_ops.pdf_generator import (
+    REPORTLAB_AVAILABLE,
+    TRIM_DIMENSIONS,
+    PDFDocument,
+    _validate_isbn13,
+    generate_pdf,
+    generate_pdf_bytes,
+    render_isbn_barcode,
+)
 from app.modules.publishing_ops.schemas import (
     ChapterInput,
     ExportFormat,
     ExportRequest,
     TemplateStyleSettings,
     TrimSize,
-)
-from app.modules.publishing_ops.pdf_generator import (
-    PDFDocument,
-    PDFPage,
-    TRIM_DIMENSIONS,
-    REPORTLAB_AVAILABLE,
-    generate_pdf,
-    generate_pdf_bytes,
-    render_isbn_barcode,
-    _validate_isbn13,
 )
 
 # Skip the entire module if reportlab is not installed

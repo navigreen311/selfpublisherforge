@@ -22,7 +22,9 @@ from app.modules.kdp_validation.rules import (
 def client():
     """Create a TestClient that bypasses the database lifespan."""
     from contextlib import asynccontextmanager
+
     from fastapi import FastAPI
+
     from app.modules.kdp_validation.router import router
 
     @asynccontextmanager

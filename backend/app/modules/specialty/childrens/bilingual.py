@@ -10,9 +10,9 @@ from typing import Any
 
 from app.modules.specialty.childrens.text_analysis import (
     AGE_BAND_RULES,
-    calculate_readability_score,
     _resolve_age_range,
     _word_count,
+    calculate_readability_score,
 )
 
 # ---------------------------------------------------------------------------

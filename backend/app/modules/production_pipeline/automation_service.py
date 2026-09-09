@@ -99,11 +99,7 @@ async def evaluate_trigger(
 
         # Check trigger config matches event data
         trigger_cfg = auto.trigger_config or {}
-        if event_type == "task_moved_to_stage":
-            if trigger_cfg.get("stage_id") and event_data:
-                if str(trigger_cfg["stage_id"]) != str(event_data.get("stage_id", "")):
-                    continue
-        elif event_type == "all_tasks_complete_in_stage":
+        if event_type == "task_moved_to_stage" or event_type == "all_tasks_complete_in_stage":
             if trigger_cfg.get("stage_id") and event_data:
                 if str(trigger_cfg["stage_id"]) != str(event_data.get("stage_id", "")):
                     continue

@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import math
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -296,5 +296,5 @@ async def generate_reflow(
     return {
         "new_book_id": new_book_id, "source_book_id": book_id,
         "book_type": book_type, "reflow_report": reflow_report,
-        "created_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
     }

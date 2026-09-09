@@ -13,10 +13,10 @@ from __future__ import annotations
 import random
 import uuid
 
-from locust import task, between, SequentialTaskSet
+from locust import SequentialTaskSet, between, task
 
-from . import AuthenticatedUser
 from ..config import WAIT_TIMES
+from . import AuthenticatedUser
 
 wait_config = WAIT_TIMES["power"]
 

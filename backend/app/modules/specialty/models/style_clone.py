@@ -1,22 +1,19 @@
 """SQLAlchemy models for Art Style Cloning."""
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Float,
-    ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
-    Uuid,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database import TenantModel, BaseModel
+from app.database import TenantModel
 
 
 class StyleCloneProfile(TenantModel):

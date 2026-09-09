@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -84,8 +84,8 @@ async def sample_budget(
         usd_used_this_month=0.0,
         total_tokens_used=0,
         total_usd_used=0.0,
-        last_reset_daily=datetime.now(timezone.utc),
-        last_reset_monthly=datetime.now(timezone.utc),
+        last_reset_daily=datetime.now(UTC),
+        last_reset_monthly=datetime.now(UTC),
     )
     db.add(budget)
     await db.flush()

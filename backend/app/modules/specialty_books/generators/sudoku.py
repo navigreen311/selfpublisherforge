@@ -1,6 +1,9 @@
 """Sudoku generator using generate-and-remove algorithm."""
 from __future__ import annotations
-import hashlib, json, random
+
+import hashlib
+import json
+import random
 
 GIVENS_TARGETS = {
     (4,"easy"):(10,12),(4,"medium"):(7,9),(4,"hard"):(5,6),
@@ -72,7 +75,7 @@ def _has_unique(grid, size, box_r, box_c):
 def generate_sudoku(grid_size=9, difficulty="medium", seed=None):
     """Generate a Sudoku puzzle with a guaranteed unique solution."""
     if grid_size not in VALID_GRID_SIZES: raise ValueError(f"grid_size must be one of {VALID_GRID_SIZES}")
-    if difficulty not in ("easy","medium","hard"): raise ValueError(f"difficulty must be easy/medium/hard")
+    if difficulty not in ("easy","medium","hard"): raise ValueError("difficulty must be easy/medium/hard")
     rng = random.Random(seed); box_r, box_c = _box_dims(grid_size)
     solution = _generate_solution(grid_size, rng); puzzle = [r[:] for r in solution]
     mn, mx = GIVENS_TARGETS[(grid_size, difficulty)]; target = rng.randint(mn, mx)

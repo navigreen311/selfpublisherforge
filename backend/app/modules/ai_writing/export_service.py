@@ -40,7 +40,7 @@ SUPPORTED_FORMATS: set[str] = {"docx", "epub", "pdf", "txt", "markdown"}
 async def export_manuscript(
     db: AsyncSession,
     manuscript_id: _uuid.UUID,
-    format: ExportFormat,  # noqa: A002 — shadows built-in intentionally for API clarity
+    format: ExportFormat,  # — shadows built-in intentionally for API clarity
 ) -> tuple[bytes, str, str]:
     """Export a full manuscript in the requested format.
 
@@ -178,8 +178,8 @@ def _export_docx(title: str, chapters: list[Chapter]) -> bytes:
     """Export to DOCX using python-docx."""
     try:
         from docx import Document
-        from docx.shared import Pt, Inches
         from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.shared import Inches, Pt
     except ImportError:
         raise AppException(
             status_code=400,
@@ -259,7 +259,7 @@ p { text-indent: 1.5em; margin: 0.5em 0; }
     )
     title_chapter.content = (
         f"<html><body><h1 style='text-align:center; margin-top:40%'>{title}</h1></body></html>"
-    ).encode("utf-8")
+    ).encode()
     title_chapter.add_item(style)
     book.add_item(title_chapter)
 
@@ -275,7 +275,7 @@ p { text-indent: 1.5em; margin: 0.5em 0; }
         html_content = _chapter_html(chapter)
         ch.content = (
             f"<html><body><h1>{chapter.title}</h1>{html_content}</body></html>"
-        ).encode("utf-8")
+        ).encode()
         ch.add_item(style)
         book.add_item(ch)
         spine.append(ch)
@@ -295,13 +295,13 @@ def _export_pdf(title: str, chapters: list[Chapter]) -> bytes:
     """Export to PDF using reportlab."""
     try:
         from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import inch
         from reportlab.platypus import (
-            SimpleDocTemplate,
-            Paragraph,
-            Spacer,
             PageBreak,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
         )
     except ImportError:
         raise AppException(

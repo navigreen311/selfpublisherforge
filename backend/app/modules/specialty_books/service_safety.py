@@ -234,7 +234,9 @@ async def _get_book_pages(db: AsyncSession, book_type: str, book_id: uuid.UUID, 
         from app.modules.specialty_books.models_childrens import ChildrensBookPage as PageModel
     elif book_type == "coloring":
         try:
-            from app.modules.specialty_books.models_coloring import ColoringBookPage as PageModel  # type: ignore[assignment]
+            from app.modules.specialty_books.models_coloring import (
+                ColoringBookPage as PageModel,  # type: ignore[assignment]
+            )
         except ImportError:
             return []
     elif book_type == "puzzle":
@@ -829,13 +831,7 @@ def check_content_sensitivity(
             pattern = re.compile(pattern_str, re.IGNORECASE)
             for match in pattern.finditer(text):
                 # Determine severity based on age range and category
-                if category == "mature_themes":
-                    severity = "block"
-                elif category == "weapons_violence" and min_age < 8:
-                    severity = "block"
-                elif category == "stereotypes":
-                    severity = "block"
-                elif min_age < 6:
+                if category == "mature_themes" or category == "weapons_violence" and min_age < 8 or category == "stereotypes" or min_age < 6:
                     severity = "block"
                 else:
                     severity = "warning"

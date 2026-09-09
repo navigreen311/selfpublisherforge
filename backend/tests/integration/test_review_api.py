@@ -1,14 +1,14 @@
 """Integration tests for Review Intelligence API endpoints."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.database import Base, get_db
+from app.database import get_db
 from app.main import create_app
 
 
@@ -56,7 +56,7 @@ async def seeded_db(db):
     from tests.conftest import make_review
 
     reviews = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Positive reviews
     for i in range(5):
@@ -312,7 +312,8 @@ class TestAnalyzeEndpoint:
             "app.modules.review_intelligence.sentiment.analyze_sentiment_llm",
             new_callable=AsyncMock,
         ) as mock_llm:
-            from app.modules.review_intelligence.schemas import SentimentAnalysisResult, SentimentLabel as SL
+            from app.modules.review_intelligence.schemas import SentimentAnalysisResult
+            from app.modules.review_intelligence.schemas import SentimentLabel as SL
             mock_llm.return_value = SentimentAnalysisResult(
                 sentiment=SL.POSITIVE, score=0.8, themes=["writing_style"],
                 key_phrases=[], complaints=[], praise=["amazing"],
@@ -365,8 +366,8 @@ class TestAcquisitionTipsEndpoint:
             "app.modules.review_intelligence.router.generate_acquisition_tips",
             new_callable=AsyncMock,
         ) as mock_tips:
-            from app.modules.review_intelligence.service import _default_acquisition_tips
             from app.modules.review_intelligence.schemas import AcquisitionTipsRequest
+            from app.modules.review_intelligence.service import _default_acquisition_tips
             req = AcquisitionTipsRequest(
                 book_id=BOOK_ID, current_review_count=5, genre="fantasy",
             )
@@ -391,8 +392,8 @@ class TestAcquisitionTipsEndpoint:
             "app.modules.review_intelligence.router.generate_acquisition_tips",
             new_callable=AsyncMock,
         ) as mock_tips:
-            from app.modules.review_intelligence.service import _default_acquisition_tips
             from app.modules.review_intelligence.schemas import AcquisitionTipsRequest
+            from app.modules.review_intelligence.service import _default_acquisition_tips
             req = AcquisitionTipsRequest(book_id=BOOK_ID)
             mock_tips.return_value = _default_acquisition_tips(req)
             response = await client.post(

@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import base64
 import uuid
-from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,7 +25,6 @@ from app.modules.analytics.royalty_importer import (
     parse_kdp_csv,
 )
 from app.modules.analytics.schemas import Platform
-
 
 # ---------- Helper function tests ----------
 

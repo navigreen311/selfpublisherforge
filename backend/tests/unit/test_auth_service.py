@@ -4,25 +4,25 @@ Each test gets a clean database via the ``setup_database`` autouse fixture
 from ``conftest.py`` and a fresh ``db_session``.
 """
 
-import pytest
-import pytest_asyncio
+from datetime import UTC
 from uuid import uuid4
 
-from app.core.security import hash_password, verify_password, decode_token
-from app.modules.auth import service
-from app.modules.auth.service import User, Organization, UserSession
+import pytest
+
+from app.core.exceptions import AppException
+from app.core.security import hash_password, verify_password
 from app.models.user import UserRole
+from app.modules.auth import service
+from app.modules.auth.service import Organization, User, UserSession
 from app.modules.auth.utils import (
+    build_totp_uri,
+    generate_backup_codes,
     generate_token,
     generate_token_hash,
-    token_expiry,
     generate_totp_secret,
+    token_expiry,
     verify_totp,
-    generate_backup_codes,
-    build_totp_uri,
 )
-from app.core.exceptions import AppException
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -96,7 +96,7 @@ class TestRegisterUser:
             name="Sess",
             org_name="SessOrg",
         )
-        from sqlalchemy import select, func
+        from sqlalchemy import func, select
         count = await db_session.execute(
             select(func.count()).select_from(UserSession)
         )
@@ -333,7 +333,7 @@ class TestSessionManagement:
                 db_session, email="maxsess@test.com", password=VALID_PASSWORD
             )
 
-        from sqlalchemy import select, func
+        from sqlalchemy import func, select
         count_result = await db_session.execute(
             select(func.count()).select_from(UserSession).where(
                 UserSession.user_id == user.id
@@ -378,6 +378,6 @@ class TestUtils:
         assert not verify_password("wrong", h)
 
     def test_token_expiry(self):
-        from datetime import datetime, timezone
+        from datetime import datetime
         exp = token_expiry(hours=1)
-        assert exp > datetime.now(timezone.utc)
+        assert exp > datetime.now(UTC)

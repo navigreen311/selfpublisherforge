@@ -6,8 +6,6 @@ lightweight in-memory data structures to avoid database dependencies.
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
 
 from app.modules.specialty_books.service_safety import (
@@ -23,7 +21,6 @@ from app.modules.specialty_books.service_safety import (
     check_content_sensitivity,
     check_trademark_safety,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # HELPER UTILITIES

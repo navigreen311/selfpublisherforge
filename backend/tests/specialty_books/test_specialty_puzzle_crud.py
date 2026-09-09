@@ -1,13 +1,16 @@
 """Tests for Puzzle Books CRUD API -- service_puzzle + router_puzzle."""
 from __future__ import annotations
+
 import uuid
+
 import pytest
 import pytest_asyncio
+
 from app.modules.specialty_books import service_puzzle
 from app.modules.specialty_books.service_puzzle import (
     PUZZLE_BOOK_TEMPLATES,
-    sanitize_word_list,
     _generate_puzzle_data,
+    sanitize_word_list,
 )
 
 

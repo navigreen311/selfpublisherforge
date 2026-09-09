@@ -19,12 +19,10 @@ from fastapi import UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppException, NotFoundError
-from app.database import TenantModel
+from app.core.exceptions import NotFoundError
 from app.modules.specialty.models.enums import (
     AgeRange,
     BookStatus,
-    IllustrationStyle,
     PageLayout,
 )
 
@@ -39,7 +37,6 @@ from app.modules.specialty.models.childrens import (  # noqa: E402
     ChildrensBookCharacter,
     ChildrensBookPage,
 )
-
 
 # ---------------------------------------------------------------------------
 # Age-band readability constraints (from blueprint section 3.5)
@@ -123,12 +120,12 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     fully configured (e.g. during development or testing).
     """
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
             GenerationConfig,
             TaskType,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
@@ -168,12 +165,12 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
 async def _llm_generate_image(prompt: str) -> dict[str, str]:
     """Request an AI-generated image.  Returns dict with ``image_url``."""
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
             GenerationConfig,
             TaskType,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
@@ -1646,7 +1643,7 @@ async def export_book(
             "status": "processing",
             "created_at": datetime.now(UTC).isoformat(),
         }
-    elif export_format == "pdfx1a":
+    if export_format == "pdfx1a":
         manifest = generate_pdfx1a_manifest("childrens", book_data)
         metadata = calculate_export_metadata("childrens", book_data)
         return {
@@ -1659,20 +1656,19 @@ async def export_book(
             "status": "processing",
             "created_at": datetime.now(UTC).isoformat(),
         }
-    else:
-        # Default: PDF
-        manifest = generate_pdf_manifest("childrens", book_data, options)
-        metadata = calculate_export_metadata("childrens", book_data)
-        return {
-            "book_id": str(book_id),
-            "export_id": export_id,
-            "export_url": export_url,
-            "format": export_format,
-            "manifest": manifest,
-            "metadata": metadata,
-            "status": "processing",
-            "created_at": datetime.now(UTC).isoformat(),
-        }
+    # Default: PDF
+    manifest = generate_pdf_manifest("childrens", book_data, options)
+    metadata = calculate_export_metadata("childrens", book_data)
+    return {
+        "book_id": str(book_id),
+        "export_id": export_id,
+        "export_url": export_url,
+        "format": export_format,
+        "manifest": manifest,
+        "metadata": metadata,
+        "status": "processing",
+        "created_at": datetime.now(UTC).isoformat(),
+    }
 
 
 async def export_kindle(

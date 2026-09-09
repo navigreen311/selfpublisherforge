@@ -9,23 +9,22 @@ using mocked Stripe SDK and database calls.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.exceptions import AppException
-from app.schemas.common import PlanTier
+from app.modules.billing import service
 from app.modules.billing.plans import (
     PLAN_DEFINITIONS,
+    get_all_plans,
     get_plan,
     get_plan_limits,
-    get_all_plans,
     is_upgrade,
 )
 from app.modules.billing.schemas import CheckoutRequest, PortalRequest
-from app.modules.billing import service
-
+from app.schemas.common import PlanTier
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -309,8 +308,8 @@ class TestGetSubscription:
             subscription_status="active",
             stripe_subscription_id="sub_123",
             stripe_customer_id="cus_456",
-            current_period_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            current_period_end=datetime(2024, 2, 1, tzinfo=timezone.utc),
+            current_period_start=datetime(2024, 1, 1, tzinfo=UTC),
+            current_period_end=datetime(2024, 2, 1, tzinfo=UTC),
         )
         mock_db = _mock_db_with_row(row)
 
@@ -358,8 +357,8 @@ class TestGetUsageStats:
             plan_tier="starter",
             projects_count=3,
             ai_generations_today=10,
-            current_period_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            current_period_end=datetime(2024, 2, 1, tzinfo=timezone.utc),
+            current_period_start=datetime(2024, 1, 1, tzinfo=UTC),
+            current_period_end=datetime(2024, 2, 1, tzinfo=UTC),
         )
         mock_db = _mock_db_with_row(row)
 

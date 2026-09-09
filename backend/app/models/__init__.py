@@ -7,6 +7,13 @@ from app.models.agent import AgentTask as DomainAgentTask
 from app.models.agent import AgentWorkflow as DomainAgentWorkflow
 from app.models.agent import AuditTrail as DomainAuditTrail
 from app.models.analytics import ABTestStatus, PortfolioMetric, ReportStatus
+from app.models.audiobook import (
+    AudiobookChapter,
+    AudiobookGenerationJob,
+    AudiobookProject,
+    AudiobookPronunciation,
+    AudiobookVoice,
+)
 from app.models.content import (
     Chapter,
     ChapterVersion,
@@ -32,6 +39,9 @@ from app.models.project import Book, BookVersion, PenName, Project, Series
 from app.models.publishing import ComplianceScan, Listing, PublishingAccount, UploadValidation
 from app.models.publishing import PricingRule as PublishingPricingRule
 from app.models.user import ApiKey, OAuthAccount, User, UserSession
+
+# Module-specific models
+from app.modules.activity.models import ActivityLog
 from app.modules.advertising.models import AdCreative, CampaignPerformance, KeywordBid
 from app.modules.advertising.models import Campaign as AdCampaign
 from app.modules.agent_system.models import Agent, AgentBudget, AgentTask, AgentWorkflow, AuditTrail
@@ -45,17 +55,7 @@ from app.modules.competitor_finder.models import (
 )
 from app.modules.cover_design.models import Cover, ExtractedProduct, KnowledgeClip
 from app.modules.dictation.models import DictationCommand, DictationSession, DictationSettings
-from app.models.audiobook import (
-    AudiobookChapter,
-    AudiobookGenerationJob,
-    AudiobookPronunciation,
-    AudiobookProject,
-    AudiobookVoice,
-)
 from app.modules.knowledge_vault.models import KnowledgeEntry
-
-# Module-specific models
-from app.modules.activity.models import ActivityLog
 from app.modules.notifications.models import Notification, NotificationPreference
 from app.modules.pricing_automation.models import CompetitorPrice, PricingABTest, PricingRule, Promotion
 from app.modules.product_page_lab.models import ABTest

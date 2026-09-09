@@ -5,7 +5,6 @@ Safe-zone heatmap overlay, gutter collision detection, and auto-reflow
 for alternate trim sizes.
 """
 
-from typing import Any
 
 # ---------------------------------------------------------------------------
 # Standard print zone definitions (in inches)

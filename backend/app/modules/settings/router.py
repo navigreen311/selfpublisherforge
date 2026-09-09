@@ -1,15 +1,15 @@
 """Settings API router."""
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import require_role
 from app.database import get_db
 from app.modules.settings import service
 from app.modules.settings.schemas import (
-    ApiKeyCreateRequest,
     ApiKeyCreatedResponse,
+    ApiKeyCreateRequest,
     ApiKeyResponse,
     ChangePasswordRequest,
     Enable2FAResponse,

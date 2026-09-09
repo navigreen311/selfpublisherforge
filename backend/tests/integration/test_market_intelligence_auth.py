@@ -8,7 +8,6 @@ valid bearer token.
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio

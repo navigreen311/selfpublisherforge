@@ -8,8 +8,8 @@ and conformity checking.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -23,7 +23,6 @@ from app.modules.style_cloning.schemas import (
     StyleCard,
     VoiceFingerprint,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -73,8 +72,8 @@ def _make_mock_profile(
     mock.voice_fingerprint = voice_fingerprint
     mock.sample_texts = sample_texts
     mock.deleted_at = deleted_at
-    mock.created_at = datetime.now(timezone.utc)
-    mock.updated_at = datetime.now(timezone.utc)
+    mock.created_at = datetime.now(UTC)
+    mock.updated_at = datetime.now(UTC)
     return mock
 
 
@@ -137,8 +136,8 @@ class TestCreateProfile:
             if not hasattr(obj, "id") or obj.id is None:
                 obj.id = uuid.uuid4()
             obj.org_id = org_id
-            obj.created_at = datetime.now(timezone.utc)
-            obj.updated_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
+            obj.updated_at = datetime.now(UTC)
             # Apply column defaults that the real DB would provide
             if obj.word_count is None:
                 obj.word_count = 0
@@ -419,7 +418,7 @@ class TestDeleteProfile:
         """delete_profile should update the updated_at timestamp."""
         org_id = uuid.uuid4()
         profile_id = uuid.uuid4()
-        old_updated = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        old_updated = datetime(2024, 1, 1, tzinfo=UTC)
         profile = _make_mock_profile(
             profile_id=profile_id, org_id=org_id, name="Timestamp Check"
         )
@@ -802,7 +801,7 @@ class TestRunAnalysis:
         """_run_analysis should update the updated_at timestamp."""
         from app.modules.style_cloning.service import _run_analysis
 
-        old_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        old_time = datetime(2024, 1, 1, tzinfo=UTC)
         profile = _make_mock_profile(sample_texts=[SAMPLE_TEXT])
         profile.updated_at = old_time
 

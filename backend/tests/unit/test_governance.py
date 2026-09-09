@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agent_system.governance import (
@@ -24,15 +23,12 @@ from app.modules.agent_system.models import (
     Agent,
     AgentBudget,
     AgentTask,
-    AgentType,
     AgentWorkflow,
     AuditTrail,
     PermissionLevel,
-    TaskPriority,
     TaskStatus,
     WorkflowStatus,
 )
-
 
 # ---------------------------------------------------------------------------
 # Permission checks
@@ -190,7 +186,7 @@ class TestCheckBudget:
         sample_budget: AgentBudget,
     ):
         """Daily counters should reset when last_reset_daily is > 1 day ago."""
-        sample_budget.last_reset_daily = datetime.now(timezone.utc) - timedelta(days=2)
+        sample_budget.last_reset_daily = datetime.now(UTC) - timedelta(days=2)
         sample_budget.tokens_used_today = 50000
         sample_budget.usd_used_today = 5.0
         await db.flush()

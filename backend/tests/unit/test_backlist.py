@@ -2,22 +2,19 @@
 import pytest
 
 from app.modules.portfolio_economics.backlist import (
-    calculate_backlist_projection,
-    _apply_decay,
-    _apply_promotion_boost,
-    _calculate_series_read_through,
-    DEFAULT_MONTHLY_DECAY_RATE,
     PROMOTION_BOOST_MULTIPLIER,
     PROMOTION_FREQUENCY_MONTHS,
     REVENUE_FLOOR_MULTIPLIER,
     SERIES_READ_THROUGH_BASE,
-    SERIES_READ_THROUGH_DECAY,
+    _apply_decay,
+    _apply_promotion_boost,
+    _calculate_series_read_through,
+    calculate_backlist_projection,
 )
 from app.modules.portfolio_economics.schemas import (
     BacklistProjection,
     ProjectionPeriod,
 )
-
 
 # ─── Decay Function Tests ────────────────────────────────────────────────────
 

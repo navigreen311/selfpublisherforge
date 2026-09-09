@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.modules.style_cloning.analyzers import (
     RhythmAnalyzer,
     SyntaxAnalyzer,
     ToneAnalyzer,
     VocabularyAnalyzer,
 )
-
 
 # ---------------------------------------------------------------------------
 # Sample texts for testing

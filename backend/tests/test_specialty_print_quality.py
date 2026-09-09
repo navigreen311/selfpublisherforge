@@ -11,11 +11,6 @@ import pytest
 
 from app.modules.specialty_books.service_print_quality import (
     FIXED_COST_BY_TRIM,
-    HEAVY_INK_THRESHOLD,
-    KDP_MAX_PAGES,
-    KDP_MIN_PAGES,
-    LIGHT_INK_THRESHOLD,
-    MAX_INK_DENSITY_PCT,
     PER_PAGE_COST,
     SPINE_WIDTH_CREAM,
     SPINE_WIDTH_WHITE,
@@ -26,8 +21,6 @@ from app.modules.specialty_books.service_print_quality import (
     generate_grayscale_preview,
     generate_soft_proof,
     validate_print_specs,
-    _rgb_to_cmyk,
-    _ink_density,
 )
 
 

@@ -12,9 +12,7 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
 from datetime import timedelta
-from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -25,7 +23,6 @@ from app.core.security import create_access_token
 from app.modules.realtime.manager import ConnectionManager
 from app.modules.realtime.router import router
 from app.modules.realtime.schemas import WSChannel
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

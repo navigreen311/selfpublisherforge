@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import sys
 import types
-from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # Pre-seed broken model modules so the voiceforge package __init__ can load.
@@ -39,16 +38,16 @@ for _path in _STUBS:
 
 import pytest
 
-from app.services.voiceforge.ssml_generator import (
-    SSMLGenerator,
-    SSMLResult,
-    DialogueSegment,
-    EmotionSegment,
-)
 from app.services.voiceforge.dictation_refiner import (
     DictationRefiner,
     DiffSegment,
     RefinedText,
+)
+from app.services.voiceforge.ssml_generator import (
+    DialogueSegment,
+    EmotionSegment,
+    SSMLGenerator,
+    SSMLResult,
 )
 
 # ---------------------------------------------------------------------------

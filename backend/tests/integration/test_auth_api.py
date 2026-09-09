@@ -5,7 +5,6 @@ test database from ``conftest.py``.
 """
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 from app.config import get_settings

@@ -205,7 +205,7 @@ async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
                 count=int(count),
             )
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("linked books failed: %s", exc)
 
     # Pipelines
@@ -225,7 +225,7 @@ async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
                 count=len(pipelines),
             )
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("linked pipelines failed: %s", exc)
 
     return out

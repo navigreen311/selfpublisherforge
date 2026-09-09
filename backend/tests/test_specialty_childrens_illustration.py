@@ -25,11 +25,7 @@ from app.modules.specialty_books.models_childrens import (
     ChildrensBookPage,
 )
 from app.modules.specialty_books.service_childrens_illustration import (
-    COMMERCIAL_SAFE_FONTS,
     STYLE_DIRECTIVES,
-    ExportFormat,
-    PreviewMode,
-    SafetySeverity,
     _build_illustration_prompt,
     _scan_text_for_sensitivity,
     _scan_text_for_trademarks,
@@ -44,7 +40,6 @@ from app.modules.specialty_books.service_childrens_illustration import (
     run_preflight,
     safety_check,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

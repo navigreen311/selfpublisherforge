@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,7 +12,6 @@ from app.core.exceptions import AppException
 from app.modules.dictation.models import (
     DictationCommand,
     DictationSession,
-    DictationSettings,
     SessionStatus,
 )
 from app.modules.dictation.schemas import (

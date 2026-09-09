@@ -1,6 +1,6 @@
 """Settings service layer."""
 import secrets
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status

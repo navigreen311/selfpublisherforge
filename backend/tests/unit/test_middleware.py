@@ -8,11 +8,10 @@ SecurityHeadersMiddleware, and RequestLoggingMiddleware.
 from __future__ import annotations
 
 import logging
-from unittest.mock import patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI, Request
+from httpx import ASGITransport, AsyncClient
 from starlette.responses import JSONResponse
 
 from app.core.middleware import (
@@ -21,7 +20,6 @@ from app.core.middleware import (
     RequestTimingMiddleware,
     SecurityHeadersMiddleware,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helper -- minimal FastAPI app with the middleware under test

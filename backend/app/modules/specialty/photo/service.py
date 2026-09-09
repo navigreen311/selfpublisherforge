@@ -11,8 +11,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError
-from app.modules.specialty.models.photo import PhotoReference
 from app.modules.specialty.models.enums import PhotoUsageType
+from app.modules.specialty.models.photo import PhotoReference
 
 logger = logging.getLogger(__name__)
 

@@ -17,6 +17,10 @@ from app.modules.portfolio_economics.audience_service import (
     predict_churn,
 )
 
+# Re-export backlist and greenlight utilities
+from app.modules.portfolio_economics.backlist import calculate_backlist_projection
+from app.modules.portfolio_economics.greenlight import calculate_greenlight
+
 # Re-export portfolio service functions
 from app.modules.portfolio_economics.portfolio_service import (
     build_portfolio_overview,
@@ -30,10 +34,6 @@ from app.modules.portfolio_economics.seasonal_service import (
     get_seasonal_calendar,
     recommend_launch_date,
 )
-
-# Re-export backlist and greenlight utilities
-from app.modules.portfolio_economics.backlist import calculate_backlist_projection
-from app.modules.portfolio_economics.greenlight import calculate_greenlight
 
 __all__ = [
     # Audience

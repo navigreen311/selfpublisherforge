@@ -8,14 +8,14 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     ARRAY,
+    JSON,
     Boolean,
     Date,
-    Integer,
-    JSON,
     DateTime,
     Enum,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
 )

@@ -1,25 +1,24 @@
 """Unit tests for the Greenlight ROI forecasting engine."""
-import pytest
 from datetime import datetime
 
+import pytest
+
 from app.modules.portfolio_economics.greenlight import (
-    calculate_greenlight,
-    _get_genre_data,
-    _estimate_market_size,
+    GENRE_MARKET_DATA,
     _calculate_capture_rate,
     _calculate_series_multiplier,
-    _identify_risk_factors,
-    _identify_opportunity_factors,
-    _generate_suggestions,
     _determine_confidence,
-    GENRE_MARKET_DATA,
+    _estimate_market_size,
+    _get_genre_data,
+    _identify_opportunity_factors,
+    _identify_risk_factors,
+    calculate_greenlight,
 )
 from app.modules.portfolio_economics.schemas import (
+    ConfidenceLevel,
     GreenlightRequest,
     GreenlightResult,
-    ConfidenceLevel,
 )
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 

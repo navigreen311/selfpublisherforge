@@ -7,21 +7,24 @@ when model re-exports are incomplete).
 from __future__ import annotations
 
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import event, text
+from sqlalchemy import event
+from sqlalchemy.dialects.postgresql import (
+    ARRAY as PG_ARRAY,
+)
+from sqlalchemy.dialects.postgresql import (
+    JSONB,
+)
+from sqlalchemy.dialects.postgresql import (
+    UUID as PG_UUID,
+)
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
-)
-
-from sqlalchemy.dialects.postgresql import (
-    JSONB,
-    ARRAY as PG_ARRAY,
-    UUID as PG_UUID,
 )
 from sqlalchemy.ext.compiler import compiles
 
@@ -113,7 +116,6 @@ def _patch_for_sqlite(target, connection, **kw):
 # ---------------------------------------------------------------------------
 
 import app.modules.dictation.models  # noqa: F401, E402
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

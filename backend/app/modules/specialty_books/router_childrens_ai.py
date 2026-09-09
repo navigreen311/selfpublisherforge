@@ -28,7 +28,6 @@ from app.modules.specialty_books.service_childrens_ai import (
     ContinuityCheckResponse,
     StoryGenerateRequest,
     StoryGenerateResponse,
-    StoryMode,
     TextAnalysisResponse,
     TranslateRequest,
     TranslateResponse,

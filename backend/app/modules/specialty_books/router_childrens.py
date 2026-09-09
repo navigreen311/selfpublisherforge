@@ -4,16 +4,24 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.specialty_books import service_childrens as svc
 from app.modules.specialty_books.schemas_childrens import (
-    CharacterCreate, CharacterResponse, CharacterUpdate,
-    ChildrensBookCreate, ChildrensBookListResponse, ChildrensBookResponse, ChildrensBookUpdate,
-    PageCreate, PageReorderRequest, PageResponse, PageUpdate,
+    CharacterCreate,
+    CharacterResponse,
+    CharacterUpdate,
+    ChildrensBookCreate,
+    ChildrensBookListResponse,
+    ChildrensBookResponse,
+    ChildrensBookUpdate,
+    PageCreate,
+    PageReorderRequest,
+    PageResponse,
+    PageUpdate,
 )
 
 router = APIRouter()

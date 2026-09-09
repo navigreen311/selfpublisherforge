@@ -6,9 +6,9 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
-    JSON,
     Float,
     ForeignKey,
     Integer,

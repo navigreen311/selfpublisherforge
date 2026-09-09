@@ -20,11 +20,10 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppException, NotFoundError, ValidationError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.modules.specialty.models.enums import (
     AnswerKeyPosition,
     BookStatus,
-    ClueStyle,
     Difficulty,
     DifficultyMode,
     PuzzleType,
@@ -1137,12 +1136,12 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     fully configured (e.g. during development or testing).
     """
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
             GenerationConfig,
             TaskType,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(

@@ -14,7 +14,7 @@ Tests use the async HTTPX client and in-memory SQLite fixtures from ``conftest.p
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -150,7 +150,7 @@ class TestMarketingCampaignLifecycle:
         )
 
         # ── Step 3: Generate a launch plan via AI ──
-        launch_date = datetime.now(timezone.utc) + timedelta(days=60)
+        launch_date = datetime.now(UTC) + timedelta(days=60)
         launch_plan_resp = await client.post(
             f"{MARKETING_PREFIX}/launch-plan/generate",
             json={
@@ -175,7 +175,7 @@ class TestMarketingCampaignLifecycle:
         assert launch_plan["book_id"] == str(book_id)
 
         # ── Step 4: Create an ARC campaign ──
-        arc_deadline = datetime.now(timezone.utc) + timedelta(days=45)
+        arc_deadline = datetime.now(UTC) + timedelta(days=45)
         arc_campaign_resp = await client.post(
             f"{MARKETING_PREFIX}/arc",
             json={
@@ -422,7 +422,7 @@ class TestMarketingCampaignLifecycle:
             json={
                 "name": "ARC Send Test",
                 "book_id": str(book_id),
-                "deadline": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+                "deadline": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
                 "recipients": [
                     {"name": "Tester 1", "email": "test1@example.com"},
                     {"name": "Tester 2", "email": "test2@example.com"},

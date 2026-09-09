@@ -183,7 +183,7 @@ def analyze_ink_coverage(pages_data: list[dict[str, Any]]) -> dict[str, Any]:
         page_num = page.get("page_num", 0)
         if "coverage_pct" in page and page["coverage_pct"] is not None:
             coverage = float(page["coverage_pct"])
-        elif "pixel_data" in page and page["pixel_data"]:
+        elif page.get("pixel_data"):
             pixels = page["pixel_data"]
             inked = sum(1 for p in pixels if p < 128)
             coverage = round((inked / len(pixels)) * 100, 2)

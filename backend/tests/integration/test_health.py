@@ -8,15 +8,13 @@ tests can run without external dependencies.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 from app.api.v1.health import router as health_router
-from app.config import get_settings
-
 
 # ---------------------------------------------------------------------------
 # Helpers

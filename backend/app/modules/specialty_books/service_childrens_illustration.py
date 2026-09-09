@@ -808,7 +808,7 @@ async def generate_preview(
 
     trim_size = book.trim_size or "8.5x8.5"
     try:
-        trim_w, trim_h = [float(x) for x in trim_size.split("x")]
+        trim_w, trim_h = (float(x) for x in trim_size.split("x"))
     except (ValueError, AttributeError):
         trim_w, trim_h = 8.5, 8.5
 
@@ -847,7 +847,7 @@ async def generate_preview(
             "spreads": spreads,
         }
 
-    elif preview_mode == PreviewMode.SINGLE_PAGE.value:
+    if preview_mode == PreviewMode.SINGLE_PAGE.value:
         return {
             "mode": "single_page",
             "book_id": str(book_id),
@@ -856,7 +856,7 @@ async def generate_preview(
             "pages": [_page_preview_data(p) for p in pages],
         }
 
-    elif preview_mode == PreviewMode.LOOK_INSIDE.value:
+    if preview_mode == PreviewMode.LOOK_INSIDE.value:
         preview_count = max(1, math.ceil(len(pages) * 0.10))
         preview_pages = pages[:preview_count]
 
@@ -887,15 +887,14 @@ async def generate_preview(
             },
         }
 
-    else:
-        raise AppException(
-            status_code=422,
-            code="INVALID_PREVIEW_MODE",
-            message=(
-                f"Invalid preview mode: {mode}. "
-                "Use spread_view, single_page, or look_inside."
-            ),
-        )
+    raise AppException(
+        status_code=422,
+        code="INVALID_PREVIEW_MODE",
+        message=(
+            f"Invalid preview mode: {mode}. "
+            "Use spread_view, single_page, or look_inside."
+        ),
+    )
 
 
 def _page_preview_data(page) -> dict[str, Any]:
@@ -1165,7 +1164,7 @@ async def export_book(
 
     trim_size = book.trim_size or "8.5x8.5"
     try:
-        trim_w, trim_h = [float(x) for x in trim_size.split("x")]
+        trim_w, trim_h = (float(x) for x in trim_size.split("x"))
     except (ValueError, AttributeError):
         trim_w, trim_h = 8.5, 8.5
 
@@ -1227,7 +1226,7 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    elif export_format == ExportFormat.KPF.value:
+    if export_format == ExportFormat.KPF.value:
         return {
             "format": "kpf",
             "file_url": (
@@ -1245,7 +1244,7 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    elif export_format == ExportFormat.FIXED_EPUB.value:
+    if export_format == ExportFormat.FIXED_EPUB.value:
         return {
             "format": "fixed_epub",
             "file_url": (
@@ -1260,7 +1259,7 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    elif export_format == ExportFormat.PNG.value:
+    if export_format == ExportFormat.PNG.value:
         page_files = [
             {
                 "page_number": pg.page_number,
@@ -1281,15 +1280,14 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    else:
-        raise AppException(
-            status_code=422,
-            code="INVALID_EXPORT_FORMAT",
-            message=(
-                f"Invalid export format: {format}. "
-                "Use print_pdf, kpf, fixed_epub, or png."
-            ),
-        )
+    raise AppException(
+        status_code=422,
+        code="INVALID_EXPORT_FORMAT",
+        message=(
+            f"Invalid export format: {format}. "
+            "Use print_pdf, kpf, fixed_epub, or png."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1319,20 +1317,7 @@ async def check_gutter_collisions(
             if isinstance(pos, dict):
                 x = pos.get("x", 0.5)
                 is_even = page.page_number % 2 == 0
-                if is_even and x < 0.06:
-                    collisions.append(
-                        {
-                            "page_number": page.page_number,
-                            "page_id": str(page.id),
-                            "type": "text",
-                            "position": pos,
-                            "message": (
-                                "Text too close to gutter on page "
-                                f"{page.page_number}"
-                            ),
-                        }
-                    )
-                elif not is_even and x > 0.94:
+                if is_even and x < 0.06 or not is_even and x > 0.94:
                     collisions.append(
                         {
                             "page_number": page.page_number,
@@ -1404,14 +1389,14 @@ async def generate_reflow(
 
     current_trim = book.trim_size or "8.5x8.5"
     try:
-        curr_w, curr_h = [float(x) for x in current_trim.split("x")]
+        curr_w, curr_h = (float(x) for x in current_trim.split("x"))
     except (ValueError, AttributeError):
         curr_w, curr_h = 8.5, 8.5
 
     try:
-        target_w, target_h = [
+        target_w, target_h = (
             float(x) for x in target_trim_size.split("x")
-        ]
+        )
     except (ValueError, AttributeError):
         raise AppException(
             status_code=422,

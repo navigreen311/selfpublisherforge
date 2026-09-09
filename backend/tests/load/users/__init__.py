@@ -8,7 +8,7 @@ Each user class represents a different usage pattern:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 from locust import HttpUser
@@ -68,7 +68,7 @@ class AuthenticatedUser(HttpUser):
             raise StopUser()
 
         # Token expires in 15 minutes by default
-        self.token_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
+        self.token_expiry = datetime.now(UTC) + timedelta(minutes=15)
 
         # Store user info
         user = data.get("user", {})
@@ -82,7 +82,7 @@ class AuthenticatedUser(HttpUser):
         if not self.token_expiry or not self.refresh_token:
             return
 
-        time_until_expiry = (self.token_expiry - datetime.now(timezone.utc)).total_seconds()
+        time_until_expiry = (self.token_expiry - datetime.now(UTC)).total_seconds()
 
         if time_until_expiry < TOKEN_REFRESH_THRESHOLD:
             self.refresh_access_token()
@@ -105,7 +105,7 @@ class AuthenticatedUser(HttpUser):
             data = response.json()
             self.access_token = data.get("access_token")
             self.refresh_token = data.get("refresh_token")
-            self.token_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
+            self.token_expiry = datetime.now(UTC) + timedelta(minutes=15)
             logger.debug("Token refreshed successfully")
         else:
             logger.warning(f"Token refresh failed: {response.status_code}, re-authenticating")

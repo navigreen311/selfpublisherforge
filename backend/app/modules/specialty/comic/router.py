@@ -1,9 +1,12 @@
 """FastAPI router for the Comic Book Studio."""
 from __future__ import annotations
+
 from typing import Any
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.contracts import PaginatedResponse, SuccessResponse
 from app.core.dependencies import get_current_user
 from app.database import get_db

@@ -9,9 +9,7 @@ Blueprint refs: 3.7, 5.4, 7.1
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Trademark blocklist (~100 terms)

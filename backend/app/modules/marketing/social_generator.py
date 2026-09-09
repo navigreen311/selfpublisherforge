@@ -336,7 +336,8 @@ async def mark_post_as_posted(
     org_id: uuid.UUID,
 ) -> dict | None:
     """Mark a social post as published."""
-    from datetime import UTC, datetime as dt
+    from datetime import UTC
+    from datetime import datetime as dt
 
     from app.models.marketing import SocialPost, SocialPostStatus
 

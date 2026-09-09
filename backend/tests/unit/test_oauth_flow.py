@@ -4,19 +4,19 @@ Tests the OAuth provider abstraction layer (GoogleOAuth, GitHubOAuth)
 including authorization URL generation, token exchange, and user info retrieval.
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from httpx import Response, HTTPStatusError, RequestError
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from httpx import HTTPStatusError, RequestError, Response
+
+from app.core.exceptions import AppException
 from app.modules.auth.oauth_providers import (
-    GoogleOAuth,
     GitHubOAuth,
-    get_oauth_provider,
+    GoogleOAuth,
     OAuthTokens,
     OAuthUserInfo,
+    get_oauth_provider,
 )
-from app.core.exceptions import AppException
-
 
 # ---------------------------------------------------------------------------
 # Test GoogleOAuth provider

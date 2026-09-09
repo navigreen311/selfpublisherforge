@@ -8,19 +8,17 @@ based on the subscription level.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.billing.router import router
+from app.core.dependencies import get_current_user, require_role
 from app.core.error_handler import register_error_handlers
 from app.database import get_db
-from app.core.dependencies import get_current_user, require_role
+from app.modules.billing.router import router
 from app.schemas.common import PlanTier
-
 
 # ===========================================================================
 # Test Fixtures
@@ -51,8 +49,8 @@ class MockDB:
             "subscription_status": subscription_status,
             "stripe_subscription_id": f"sub_{plan_tier}_123" if plan_tier != "free" else None,
             "stripe_customer_id": f"cus_{plan_tier}_456" if plan_tier != "free" else None,
-            "current_period_start": datetime.now(timezone.utc) if plan_tier != "free" else None,
-            "current_period_end": datetime.now(timezone.utc) + timedelta(days=30) if plan_tier != "free" else None,
+            "current_period_start": datetime.now(UTC) if plan_tier != "free" else None,
+            "current_period_end": datetime.now(UTC) + timedelta(days=30) if plan_tier != "free" else None,
             "cancel_at_period_end": False,
             "projects_count": 0,
             "ai_generations_today": 0,
@@ -319,7 +317,7 @@ class TestPlanEnforcement:
         mock_db = MockDB(plan_tier="pro", subscription_status="canceled")
         mock_db.org_data.update({
             "stripe_subscription_id": None,
-            "current_period_end": datetime.now(timezone.utc) - timedelta(days=1),  # Expired
+            "current_period_end": datetime.now(UTC) - timedelta(days=1),  # Expired
         })
 
         test_user = create_test_user(plan_tier="pro")
@@ -445,9 +443,9 @@ class TestPlanEnforcement:
         mock_inv.amount_due = 7900
         mock_inv.amount_paid = 7900
         mock_inv.currency = "usd"
-        mock_inv.created = int(datetime.now(timezone.utc).timestamp())
-        mock_inv.period_start = int(datetime.now(timezone.utc).timestamp())
-        mock_inv.period_end = int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())
+        mock_inv.created = int(datetime.now(UTC).timestamp())
+        mock_inv.period_start = int(datetime.now(UTC).timestamp())
+        mock_inv.period_end = int((datetime.now(UTC) + timedelta(days=30)).timestamp())
         mock_inv.hosted_invoice_url = "https://invoice.stripe.com/i/001"
         mock_inv.invoice_pdf = "https://invoice.stripe.com/i/001/pdf"
 

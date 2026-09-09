@@ -3,18 +3,15 @@
 Uses FastAPI TestClient with mocked auth and database.
 """
 
-import json
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch, MagicMock
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
-from app.main import app
 from app.core.dependencies import get_current_user
-from app.database import get_db
-
+from app.main import app
 
 # ---------------------------------------------------------------------------
 # Fixtures & helpers
@@ -45,8 +42,8 @@ class FakeChapter:
         self.synopsis = kwargs.get("synopsis", "")
         self.order = kwargs.get("order", 1)
         self.word_count = kwargs.get("word_count", 3)
-        self.created_at = kwargs.get("created_at", datetime.now(timezone.utc))
-        self.updated_at = kwargs.get("updated_at", datetime.now(timezone.utc))
+        self.created_at = kwargs.get("created_at", datetime.now(UTC))
+        self.updated_at = kwargs.get("updated_at", datetime.now(UTC))
 
 
 @pytest.fixture
@@ -100,8 +97,8 @@ class TestManuscriptEndpoints:
                 order=1,
                 synopsis="Synopsis",
                 word_count=2,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
         ]
         with patch.object(service, "list_chapters", new_callable=AsyncMock, return_value=mock_chapters):
@@ -123,8 +120,8 @@ class TestManuscriptEndpoints:
             content="Content here.",
             order=1,
             word_count=2,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         with patch.object(service, "get_chapter", new_callable=AsyncMock, return_value=mock_chapter):
             resp = await async_client.get(
@@ -155,8 +152,8 @@ class TestManuscriptEndpoints:
             content="Fresh content.",
             order=1,
             word_count=2,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         with patch.object(service, "create_chapter", new_callable=AsyncMock, return_value=mock_chapter):
             resp = await async_client.post(
@@ -178,8 +175,8 @@ class TestManuscriptEndpoints:
             content="Updated content.",
             order=1,
             word_count=2,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         with patch.object(service, "update_chapter", new_callable=AsyncMock, return_value=mock_chapter):
             resp = await async_client.put(
@@ -210,11 +207,11 @@ class TestManuscriptEndpoints:
         mock_chapters = [
             ChapterContent(
                 id=ch1_id, book_id=BOOK_ID, title="Ch 1", content="", order=2,
-                word_count=0, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+                word_count=0, created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
             ),
             ChapterContent(
                 id=ch2_id, book_id=BOOK_ID, title="Ch 2", content="", order=1,
-                word_count=0, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+                word_count=0, created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
             ),
         ]
         with patch.object(service, "reorder_chapters", new_callable=AsyncMock, return_value=mock_chapters):
@@ -309,7 +306,7 @@ class TestGenerateEndpoint:
             tokens_used=5,
             quality_results={},
             model_used="claude-sonnet-4-5-20250929",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         with patch(
             "app.modules.ai_writing.router.generate_sync",
@@ -360,7 +357,7 @@ class TestOutlineEndpoint:
     @pytest.mark.asyncio
     async def test_generate_outline(self, async_client):
         from app.modules.ai_writing import service
-        from app.modules.ai_writing.schemas import OutlineResponse, OutlineChapter
+        from app.modules.ai_writing.schemas import OutlineChapter, OutlineResponse
 
         mock_response = OutlineResponse(
             book_id=BOOK_ID,
@@ -372,7 +369,7 @@ class TestOutlineEndpoint:
                 ),
             ],
             summary="A hero's journey story.",
-            generated_at=datetime.now(timezone.utc),
+            generated_at=datetime.now(UTC),
         )
         with patch.object(service, "generate_outline", new_callable=AsyncMock, return_value=mock_response):
             resp = await async_client.post(
@@ -403,7 +400,7 @@ class TestWritingSessionEndpoint:
             duration_minutes=30,
             chapter_id=None,
             notes="Good session",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         with patch.object(service, "record_writing_session", new_callable=AsyncMock, return_value=mock_record):
             resp = await async_client.post(

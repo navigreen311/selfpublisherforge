@@ -8,23 +8,39 @@ difficulty scores, content hashes, and SVG rendering.
 
 from .crossword import (
     calculate_difficulty as crossword_difficulty,
+)
+from .crossword import (
     generate_crossword,
+)
+from .crossword import (
     render_to_svg as render_crossword_svg,
 )
 from .maze import (
     calculate_difficulty as maze_difficulty,
-    generate_maze,
-    render_to_svg as render_maze_svg,
 )
-from .word_search import (
-    calculate_difficulty as word_search_difficulty,
-    generate_word_search,
-    render_to_svg as render_word_search_svg,
+from .maze import (
+    generate_maze,
+)
+from .maze import (
+    render_to_svg as render_maze_svg,
 )
 from .word_connect import (
     calculate_difficulty as word_connect_difficulty,
+)
+from .word_connect import (
     generate_word_connect,
+)
+from .word_connect import (
     render_to_svg as render_word_connect_svg,
+)
+from .word_search import (
+    calculate_difficulty as word_search_difficulty,
+)
+from .word_search import (
+    generate_word_search,
+)
+from .word_search import (
+    render_to_svg as render_word_search_svg,
 )
 
 __all__ = [

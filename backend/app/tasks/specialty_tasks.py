@@ -423,10 +423,10 @@ async def _export_book_async(
 
             # Assemble export via the shared export engine
             from app.modules.specialty.shared.export_engine import (
+                calculate_export_metadata,
                 generate_pdf_manifest,
                 generate_pdfx1a_manifest,
                 generate_png_pages,
-                calculate_export_metadata,
             )
 
             book_data = {
@@ -732,9 +732,14 @@ async def _generate_puzzle_batch_async(
 
                     # Generate puzzle using real algorithm
                     from app.modules.specialty.puzzles.algorithms import (
-                        generate_word_search, generate_crossword, generate_maze,
-                        generate_sudoku, generate_word_scramble, generate_cryptogram,
-                        generate_number_search, generate_word_connect,
+                        generate_crossword,
+                        generate_cryptogram,
+                        generate_maze,
+                        generate_number_search,
+                        generate_sudoku,
+                        generate_word_connect,
+                        generate_word_scramble,
+                        generate_word_search,
                     )
 
                     gs = int(grid_size.split("x")[0]) if "x" in str(grid_size) else 15

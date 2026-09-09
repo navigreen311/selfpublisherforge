@@ -9,7 +9,6 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -23,7 +22,6 @@ from app.modules.competitor_finder.schemas import (
     GapAnalysisRequest,
 )
 from app.modules.competitor_finder.service import CompetitorFinderService
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures

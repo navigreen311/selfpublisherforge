@@ -4,14 +4,14 @@ These tests mock the database layer to validate pure service logic such as
 role validation, permission checks, and error handling.
 """
 
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID, uuid4
+
 import pytest
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4, UUID
 
 from app.core.exceptions import AppException
-from app.modules.users.service import UserService, _role_level, _generate_api_key
-
+from app.modules.users.service import UserService, _generate_api_key, _role_level
 
 # ─── Helper Fixtures ──────────────────────────────────────────────────────────
 
@@ -95,7 +95,7 @@ class TestGetUserProfile:
     async def test_returns_user_dict(self):
         user_id = uuid4()
         org_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         row = {
             "id": user_id,
             "email": "test@example.com",
@@ -151,7 +151,7 @@ class TestUpdateOrg:
     async def test_admin_can_update_org(self):
         org_id = uuid4()
         user = _make_user(role="admin", org_id=org_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         org_row = {
             "id": org_id,
             "name": "Updated",

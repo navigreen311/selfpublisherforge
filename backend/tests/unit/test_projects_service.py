@@ -13,9 +13,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.core.exceptions import AppException
-from app.modules.projects.schemas import ProjectListRequest
 from app.modules.projects import service
-
+from app.modules.projects.schemas import ProjectListRequest
 
 # ---------------------------------------------------------------------------
 # Helpers

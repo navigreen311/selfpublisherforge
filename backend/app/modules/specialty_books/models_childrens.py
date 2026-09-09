@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
-    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -16,7 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import TenantModel, BaseModel
+from app.database import BaseModel, TenantModel
 
 
 class ChildrensBook(TenantModel):
@@ -39,10 +37,10 @@ class ChildrensBook(TenantModel):
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # Relationships
-    pages: Mapped[list["ChildrensBookPage"]] = relationship(
+    pages: Mapped[list[ChildrensBookPage]] = relationship(
         back_populates="book", cascade="all, delete-orphan", lazy="selectin"
     )
-    characters: Mapped[list["ChildrensBookCharacter"]] = relationship(
+    characters: Mapped[list[ChildrensBookCharacter]] = relationship(
         back_populates="book", cascade="all, delete-orphan", lazy="selectin"
     )
 
@@ -71,7 +69,7 @@ class ChildrensBookPage(BaseModel):
     text_plate: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Relationships
-    book: Mapped["ChildrensBook"] = relationship(back_populates="pages")
+    book: Mapped[ChildrensBook] = relationship(back_populates="pages")
 
 
 class ChildrensBookCharacter(BaseModel):
@@ -91,4 +89,4 @@ class ChildrensBookCharacter(BaseModel):
     scale_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
-    book: Mapped["ChildrensBook"] = relationship(back_populates="characters")
+    book: Mapped[ChildrensBook] = relationship(back_populates="characters")

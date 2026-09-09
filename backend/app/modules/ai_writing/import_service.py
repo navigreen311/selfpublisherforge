@@ -30,7 +30,7 @@ from app.models.content import (
     Manuscript,
     ManuscriptStatus,
 )
-from app.modules.ai_writing.tiptap_converter import html_to_tiptap, text_to_tiptap
+from app.modules.ai_writing.tiptap_converter import text_to_tiptap
 
 logger = logging.getLogger(__name__)
 

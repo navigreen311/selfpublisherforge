@@ -5,31 +5,28 @@ Uses FastAPI's TestClient with mocked database and auth dependencies.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.competitor_finder.router import router
 from app.modules.competitor_finder.models import (
     CompetitorAlert,
     CompetitorAnalysis,
     CompetitorBook,
-    CompetitorReview,
     GapAnalysisResult,
     OpportunityBlueprint,
     WeaknessSignal,
 )
+from app.modules.competitor_finder.router import router
 from app.modules.competitor_finder.schemas import (
-    AnalysisStatus,
     AlertSeverity,
     AlertType,
-    WeaknessCategory,
+    AnalysisStatus,
     Severity,
+    WeaknessCategory,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -40,7 +37,7 @@ TEST_USER_ID = uuid.uuid4()
 TEST_BOOK_ID = uuid.uuid4()
 TEST_ANALYSIS_ID = uuid.uuid4()
 
-NOW = datetime.now(timezone.utc)
+NOW = datetime.now(UTC)
 
 
 def _create_test_app() -> FastAPI:

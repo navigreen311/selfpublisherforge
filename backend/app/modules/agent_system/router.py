@@ -37,7 +37,6 @@ from app.modules.agent_system.schemas import (
     CustomAgentCreateRequest,
     EmergencyStopResponse,
     TaskApproveRequest,
-    TaskApproveResponse,
     TaskCancelRequest,
     TaskCreate,
     TaskCreateRequest,
@@ -709,7 +708,8 @@ async def get_agent_usage(
 ):
     """Get usage statistics for agents."""
     from sqlalchemy import func, select
-    from app.modules.agent_system.models import AgentTask, Agent
+
+    from app.modules.agent_system.models import Agent, AgentTask
 
     # Parse period to days
     days = 30

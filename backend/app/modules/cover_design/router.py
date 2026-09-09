@@ -20,24 +20,18 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.cover_design import service
 from app.modules.cover_design.schemas import (
-    ABTestResponse,
     CompetitorAnalysisResponse,
     CompetitorCoverAnalysisRequest,
-    CoverFormat,
     CoverGenerateRequest,
     CoverGenre,
-    CoverListSortBy,
     CoverResponse,
     CoverTemplateResponse,
     CoverVariationRequest,
     CreateABTestRequest,
     EndABTestRequest,
     ExportRequest,
-    ExportResponse,
-    GenerationJobResponse,
     UpdateEditorStateRequest,
     VoteRequest,
-    VoteResponse,
 )
 
 router = APIRouter(prefix="/covers", tags=["covers"])

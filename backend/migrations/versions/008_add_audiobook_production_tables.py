@@ -11,17 +11,16 @@ Revision ID: c1d2e3f4a5b6
 Revises: b7c8d9e0f1a2
 Create Date: 2026-02-12
 """
-from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers
 revision: str = "c1d2e3f4a5b6"
-down_revision: Union[str, None] = "b7c8d9e0f1a2"
-branch_labels: Union[str, None] = None
-depends_on: Union[str, None] = None
+down_revision: str | None = "b7c8d9e0f1a2"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

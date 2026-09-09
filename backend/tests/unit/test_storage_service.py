@@ -18,21 +18,20 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from botocore.exceptions import BotoCoreError, ClientError
 
 from app.core.exceptions import AppException
-from app.modules.storage.schemas import AssetStatus, AssetType, UploadResponse
+from app.modules.storage.schemas import AssetStatus, AssetType
 from app.modules.storage.service import StorageService, check_s3_connectivity
 from app.modules.storage.validators import (
     ALLOWED_MIME_TYPES,
     MAX_FILE_SIZE,
     validate_file,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -83,8 +82,8 @@ def _make_fake_asset(
     asset.mime_type = None
     asset.file_size = None
     asset.file_url = None
-    asset.created_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-    asset.updated_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    asset.created_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC)
+    asset.updated_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC)
     asset.deleted_at = None
     return asset
 
@@ -624,7 +623,7 @@ class TestTriggerProcessing:
         with patch.object(
             StorageService,
             "_extract_metadata",
-            side_effect=IOError("metadata extraction boom"),
+            side_effect=OSError("metadata extraction boom"),
         ):
             with pytest.raises(AppException) as exc_info:
                 await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)

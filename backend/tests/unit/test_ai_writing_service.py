@@ -4,10 +4,10 @@ Tests manuscript management, chapter CRUD, outline generation, readability analy
 and writing session tracking.
 """
 
-import pytest
 import uuid
-from datetime import datetime, UTC
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.core.exceptions import AppException
 from app.models.content import (
@@ -15,18 +15,16 @@ from app.models.content import (
     ContentType,
     Manuscript,
     ManuscriptStatus,
-    WritingSession,
 )
 from app.modules.ai_writing import service
 from app.modules.ai_writing.schemas import (
     ChapterCreate,
     ChapterReorderRequest,
     ChapterUpdate,
-    OutlineRequest,
     OutlineGenerateRequest,
+    OutlineRequest,
     WritingSessionCreate,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

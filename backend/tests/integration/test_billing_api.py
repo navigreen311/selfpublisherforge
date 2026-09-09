@@ -8,19 +8,18 @@ router endpoints end-to-end via the test client.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.billing.router import router
+from app.core.dependencies import get_current_user, require_role
 from app.core.error_handler import register_error_handlers
 from app.database import get_db
-from app.core.dependencies import get_current_user, require_role
+from app.modules.billing.router import router
 from app.schemas.common import PlanTier
-
 
 # ===========================================================================
 # Fixtures
@@ -42,8 +41,8 @@ TEST_ORG_ROW = {
     "subscription_status": "active",
     "stripe_subscription_id": "sub_test_123",
     "stripe_customer_id": "cus_test_456",
-    "current_period_start": datetime(2024, 1, 1, tzinfo=timezone.utc),
-    "current_period_end": datetime(2024, 2, 1, tzinfo=timezone.utc),
+    "current_period_start": datetime(2024, 1, 1, tzinfo=UTC),
+    "current_period_end": datetime(2024, 2, 1, tzinfo=UTC),
     "cancel_at_period_end": False,
     "projects_count": 10,
     "ai_generations_today": 42,

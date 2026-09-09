@@ -4,7 +4,7 @@ Uses an in-memory SQLite database via httpx + FastAPI TestClient.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -94,7 +94,7 @@ async def test_create_pipeline(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_create_pipeline_with_deadline(client: AsyncClient):
-    deadline = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    deadline = (datetime.now(UTC) + timedelta(days=30)).isoformat()
     resp = await client.post(
         _pipeline_url(),
         params={"org_id": ORG_ID},

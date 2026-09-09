@@ -1,17 +1,15 @@
 """Unit tests for readability scoring algorithms."""
 
-import pytest
 
 from app.modules.ai_writing.readability import (
+    ReadabilityMetrics,
     analyze_readability,
     count_syllables,
     flesch_kincaid_grade,
     flesch_reading_ease,
     gunning_fog,
     smog_index,
-    ReadabilityMetrics,
 )
-
 
 # ---------------------------------------------------------------------------
 # Syllable counting

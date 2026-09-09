@@ -15,36 +15,30 @@ from __future__ import annotations
 
 import smtplib
 import uuid
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.exceptions import AppException
 from app.modules.notifications.email_channel import (
-    EMAIL_TEMPLATES,
     _DEFAULT_CONTEXT,
+    EMAIL_TEMPLATES,
     _build_email,
     _wrap_template,
     send_email,
-    send_template_email,
 )
 from app.modules.notifications.models import (
     Notification,
     NotificationChannel,
-    NotificationPreference,
     NotificationType,
 )
 from app.modules.notifications.schemas import (
     CreateNotification,
     NotificationOut,
-    NotificationPreferenceOut,
     NotificationPreferenceUpdate,
     PreferenceItem,
-    UnreadCountOut,
 )
-
 
 # ===================================================================
 # Schema validation tests
@@ -103,7 +97,7 @@ class TestNotificationOutSchema:
     """Validate the NotificationOut Pydantic model."""
 
     def test_from_attributes(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         nid = uuid.uuid4()
         uid = uuid.uuid4()
         oid = uuid.uuid4()
@@ -172,7 +166,7 @@ class TestCreateNotification:
 
         async def fake_refresh(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
 
         mock_db.refresh = fake_refresh
 
@@ -204,7 +198,7 @@ class TestCreateNotification:
 
         async def fake_refresh(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
 
         mock_db.refresh = fake_refresh
 
@@ -247,7 +241,7 @@ class TestCreateNotification:
 
         async def fake_refresh(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
 
         mock_db.refresh = fake_refresh
 
@@ -279,7 +273,7 @@ class TestCreateNotification:
 
         async def fake_refresh(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
 
         mock_db.refresh = fake_refresh
 
@@ -312,7 +306,7 @@ class TestMaybeSendEmail:
 
         async def fake_refresh(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
 
         mock_db.refresh = fake_refresh
 
@@ -347,7 +341,7 @@ class TestMaybeSendEmail:
 
         async def fake_refresh(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
 
         mock_db.refresh = fake_refresh
 
@@ -384,7 +378,7 @@ class TestMaybeSendEmail:
 
         async def fake_refresh(obj):
             obj.id = uuid.uuid4()
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
 
         mock_db.refresh = fake_refresh
 
@@ -582,7 +576,7 @@ class TestListNotifications:
         from app.modules.notifications.service import list_notifications
 
         mock_db = AsyncMock()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         items = [MagicMock(created_at=now) for _ in range(3)]
         mock_scalars = MagicMock()
@@ -603,7 +597,7 @@ class TestListNotifications:
         from app.modules.notifications.service import list_notifications
 
         mock_db = AsyncMock()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Return limit+1 items to signal has_more
         items = [MagicMock(created_at=now) for _ in range(4)]

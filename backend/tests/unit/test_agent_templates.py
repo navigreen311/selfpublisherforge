@@ -3,20 +3,20 @@
 import pytest
 
 from app.modules.agent_system.templates import (
-    list_templates,
     get_template,
+    list_templates,
     validate_template,
 )
-from app.modules.agent_system.templates.research_agent import TEMPLATE as RESEARCH_TEMPLATE
-from app.modules.agent_system.templates.writing_coach import TEMPLATE as WRITING_COACH_TEMPLATE
+from app.modules.agent_system.templates.backlist_analyzer import TEMPLATE as BACKLIST_ANALYZER_TEMPLATE
+from app.modules.agent_system.templates.competitor_tracker import TEMPLATE as COMPETITOR_TRACKER_TEMPLATE
 from app.modules.agent_system.templates.cover_designer import TEMPLATE as COVER_DESIGNER_TEMPLATE
-from app.modules.agent_system.templates.price_optimizer import TEMPLATE as PRICE_OPTIMIZER_TEMPLATE
-from app.modules.agent_system.templates.review_monitor import TEMPLATE as REVIEW_MONITOR_TEMPLATE
 from app.modules.agent_system.templates.keyword_scout import TEMPLATE as KEYWORD_SCOUT_TEMPLATE
 from app.modules.agent_system.templates.launch_planner import TEMPLATE as LAUNCH_PLANNER_TEMPLATE
-from app.modules.agent_system.templates.competitor_tracker import TEMPLATE as COMPETITOR_TRACKER_TEMPLATE
+from app.modules.agent_system.templates.price_optimizer import TEMPLATE as PRICE_OPTIMIZER_TEMPLATE
+from app.modules.agent_system.templates.research_agent import TEMPLATE as RESEARCH_TEMPLATE
+from app.modules.agent_system.templates.review_monitor import TEMPLATE as REVIEW_MONITOR_TEMPLATE
 from app.modules.agent_system.templates.social_content import TEMPLATE as SOCIAL_CONTENT_TEMPLATE
-from app.modules.agent_system.templates.backlist_analyzer import TEMPLATE as BACKLIST_ANALYZER_TEMPLATE
+from app.modules.agent_system.templates.writing_coach import TEMPLATE as WRITING_COACH_TEMPLATE
 
 
 class TestTemplateRegistry:

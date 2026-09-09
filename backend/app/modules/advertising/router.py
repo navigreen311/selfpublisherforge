@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
 from app.database import get_db
 from app.modules.advertising.facebook_ads import FacebookAdsError
-from app.core.contracts import SuccessResponse
 from app.modules.advertising.schemas import (
     AdCreativeResponse,
     AdDashboard,
@@ -652,8 +652,8 @@ async def get_enhanced_dashboard(
     db: AsyncSession = Depends(get_db),
 ):
     """Get enhanced dashboard with stats, trends, and insights."""
-    from app.modules.advertising.dashboard_service import get_enhanced_dashboard as _get_dashboard
     from app.modules.advertising.ai_service import get_ai_insights
+    from app.modules.advertising.dashboard_service import get_enhanced_dashboard as _get_dashboard
 
     dashboard_data = await _get_dashboard(db, org_id=current_user["org_id"], period=period)
     insights_data = await get_ai_insights(db, org_id=current_user["org_id"])
@@ -826,7 +826,9 @@ async def get_daily_metrics_endpoint(
 ):
     """Get daily metrics for a campaign."""
     from datetime import datetime, timedelta
-    from sqlalchemy import select, and_
+
+    from sqlalchemy import and_, select
+
     from app.modules.advertising.models import AdDailyMetric
 
     days = int(period.replace("d", "")) if period.endswith("d") else 30

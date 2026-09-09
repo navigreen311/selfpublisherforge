@@ -1,21 +1,38 @@
 """Coloring Book line-art quality pipeline, batch generation, and analytics."""
 
 from __future__ import annotations
+
 import hashlib
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.specialty_books.models_coloring import ColoringBatchJob, ColoringBook, ColoringBookPage
 from app.modules.specialty_books.schemas_coloring_quality import (
-    BatchGenerateResponse, BatchPageStatus, BatchStatusResponse, ColoringMedium,
-    ComplexityBucket, ComplexityBucketCount, ComplexityHistogramResponse,
-    ColoringSimulationResponse, DuplicateDetectionResponse, DuplicatePair,
-    GenerateLineArtResponse, InkDensityResult, PipelineStepName, PipelineStepResult,
-    PrintQualitySummary, QualityDashboardResponse, QualityPipelineResponse,
-    ThemeCohesionResponse, VariationMode, VectorizeResponse,
+    BatchGenerateResponse,
+    BatchPageStatus,
+    BatchStatusResponse,
+    ColoringMedium,
+    ColoringSimulationResponse,
+    ComplexityBucket,
+    ComplexityBucketCount,
+    ComplexityHistogramResponse,
+    DuplicateDetectionResponse,
+    DuplicatePair,
+    GenerateLineArtResponse,
+    InkDensityResult,
+    PipelineStepName,
+    PipelineStepResult,
+    PrintQualitySummary,
+    QualityDashboardResponse,
+    QualityPipelineResponse,
+    ThemeCohesionResponse,
+    VariationMode,
+    VectorizeResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,7 +84,7 @@ async def generate_line_art(db: AsyncSession, book_id: uuid.UUID, page_id: uuid.
     page.illustration_model = LINE_ART_MODEL
     page.illustration_seed = seed
     await db.flush()
-    return GenerateLineArtResponse(page_id=page.id, illustration_url=url, illustration_model=LINE_ART_MODEL, illustration_seed=seed, created_at=page.updated_at or datetime.now(timezone.utc))
+    return GenerateLineArtResponse(page_id=page.id, illustration_url=url, illustration_model=LINE_ART_MODEL, illustration_seed=seed, created_at=page.updated_at or datetime.now(UTC))
 
 
 def _step_auto_clean(page_data: dict[str, Any]) -> PipelineStepResult:
@@ -149,7 +166,7 @@ async def run_quality_pipeline(db: AsyncSession, book_id: uuid.UUID, page_id: uu
     if cleaned_url:
         page.cleaned_url = cleaned_url
     await db.flush()
-    return QualityPipelineResponse(page_id=page_id, overall_passed=overall_passed, steps=all_steps, cleaned_url=cleaned_url, run_at=datetime.now(timezone.utc))
+    return QualityPipelineResponse(page_id=page_id, overall_passed=overall_passed, steps=all_steps, cleaned_url=cleaned_url, run_at=datetime.now(UTC))
 
 
 async def vectorize_page(db: AsyncSession, book_id: uuid.UUID, page_id: uuid.UUID, org_id: uuid.UUID) -> VectorizeResponse:
@@ -181,7 +198,7 @@ def _compute_phash(prompt: str, seed: int | None) -> str:
 def _structural_similarity(hash_a: str, hash_b: str) -> float:
     if not hash_a or not hash_b:
         return 0.0
-    matches = sum(a == b for a, b in zip(hash_a, hash_b))
+    matches = sum(a == b for a, b in zip(hash_a, hash_b, strict=False))
     return (matches / max(len(hash_a), len(hash_b))) * 100
 
 
@@ -228,18 +245,17 @@ async def generate_coloring_simulation(db: AsyncSession, book_id: uuid.UUID, pag
     if not (page.cleaned_url or page.illustration_url):
         raise ValueError(f"Page {page_id} has no illustration for simulation")
     url = f"https://cdn.selfpublisherforge.com/coloring/{book_id}/{page_id}/simulation_{medium.value}.png"
-    return ColoringSimulationResponse(page_id=page_id, medium=medium, simulation_url=url, created_at=datetime.now(timezone.utc))
+    return ColoringSimulationResponse(page_id=page_id, medium=medium, simulation_url=url, created_at=datetime.now(UTC))
 
 
 def _score_to_bucket(score: float) -> ComplexityBucket:
     if score < 25:
         return ComplexityBucket.SIMPLE
-    elif score < 50:
+    if score < 50:
         return ComplexityBucket.MODERATE
-    elif score < 75:
+    if score < 75:
         return ComplexityBucket.DETAILED
-    else:
-        return ComplexityBucket.INTRICATE
+    return ComplexityBucket.INTRICATE
 
 
 async def get_complexity_histogram(db: AsyncSession, book_id: uuid.UUID, org_id: uuid.UUID) -> ComplexityHistogramResponse:
@@ -266,7 +282,7 @@ async def batch_generate(db: AsyncSession, book_id: uuid.UUID, org_id: uuid.UUID
     for idx, desc in enumerate(descriptions):
         db.add(ColoringBookPage(org_id=org_id, book_id=book_id, page_number=existing + idx + 1, illustration_prompt=desc.get("description", ""), settings={"batch_job_id": str(job.id), "variation_mode": variation_mode.value, "complexity": desc.get("complexity"), "status": "pending"}))
     await db.flush()
-    return BatchGenerateResponse(job_id=job.id, book_id=book_id, total_pages=total, estimated_cost_cents=cost, status="queued", created_at=datetime.now(timezone.utc))
+    return BatchGenerateResponse(job_id=job.id, book_id=book_id, total_pages=total, estimated_cost_cents=cost, status="queued", created_at=datetime.now(UTC))
 
 
 async def get_batch_status(db: AsyncSession, job_id: uuid.UUID, org_id: uuid.UUID) -> BatchStatusResponse:

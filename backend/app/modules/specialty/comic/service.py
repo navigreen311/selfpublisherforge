@@ -14,11 +14,10 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppException, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.modules.specialty.models.comic import (
     CharacterCostume,
     CharacterExpression,
@@ -32,7 +31,6 @@ from app.modules.specialty.models.comic import (
 from app.modules.specialty.models.enums import (
     BookStatus,
     BubbleType,
-    ComicArtStyle,
     ComicFormat,
     PanelType,
 )
@@ -48,12 +46,12 @@ logger = logging.getLogger(__name__)
 async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 4000) -> str:
     """Call the LLM orchestration service and return generated text."""
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
             GenerationConfig,
             TaskType,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
@@ -89,12 +87,12 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
 async def _llm_generate_image(prompt: str) -> dict[str, str]:
     """Request an AI-generated image. Returns dict with ``image_url``."""
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
             GenerationConfig,
             TaskType,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
@@ -1398,7 +1396,7 @@ async def export_comic(
             "status": "processing",
             "created_at": datetime.now(UTC).isoformat(),
         }
-    elif export_format == "pdfx1a":
+    if export_format == "pdfx1a":
         manifest = generate_pdfx1a_manifest("comic", book_data)
         metadata = calculate_export_metadata("comic", book_data)
         return {
@@ -1411,19 +1409,18 @@ async def export_comic(
             "status": "processing",
             "created_at": datetime.now(UTC).isoformat(),
         }
-    else:
-        manifest = generate_pdf_manifest("comic", book_data, payload)
-        metadata = calculate_export_metadata("comic", book_data)
-        return {
-            "comic_id": str(comic_id),
-            "export_id": export_id,
-            "export_url": export_url,
-            "format": export_format,
-            "manifest": manifest,
-            "metadata": metadata,
-            "status": "processing",
-            "created_at": datetime.now(UTC).isoformat(),
-        }
+    manifest = generate_pdf_manifest("comic", book_data, payload)
+    metadata = calculate_export_metadata("comic", book_data)
+    return {
+        "comic_id": str(comic_id),
+        "export_id": export_id,
+        "export_url": export_url,
+        "format": export_format,
+        "manifest": manifest,
+        "metadata": metadata,
+        "status": "processing",
+        "created_at": datetime.now(UTC).isoformat(),
+    }
 
 
 async def run_preflight(

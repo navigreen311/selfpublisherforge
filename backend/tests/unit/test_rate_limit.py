@@ -25,7 +25,6 @@ from app.core.rate_limit import (
     get_rate_limiter,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers -- in-memory fake Redis
 # ---------------------------------------------------------------------------
@@ -37,7 +36,7 @@ class FakeRedis:
     def __init__(self) -> None:
         self._store: dict[str, list[tuple[float, str]]] = {}
 
-    def pipeline(self) -> "FakePipeline":
+    def pipeline(self) -> FakePipeline:
         return FakePipeline(self)
 
     async def zrem(self, key: str, member: str) -> int:
@@ -70,19 +69,19 @@ class FakePipeline:
         self._redis = redis
         self._ops: list[tuple[str, Any]] = []
 
-    def zremrangebyscore(self, key: str, min_score: str, max_score: float) -> "FakePipeline":
+    def zremrangebyscore(self, key: str, min_score: str, max_score: float) -> FakePipeline:
         self._ops.append(("zremrangebyscore", (key, min_score, max_score)))
         return self
 
-    def zadd(self, key: str, mapping: dict[str, float]) -> "FakePipeline":
+    def zadd(self, key: str, mapping: dict[str, float]) -> FakePipeline:
         self._ops.append(("zadd", (key, mapping)))
         return self
 
-    def zcard(self, key: str) -> "FakePipeline":
+    def zcard(self, key: str) -> FakePipeline:
         self._ops.append(("zcard", (key,)))
         return self
 
-    def expire(self, key: str, ttl: int) -> "FakePipeline":
+    def expire(self, key: str, ttl: int) -> FakePipeline:
         self._ops.append(("expire", (key, ttl)))
         return self
 
@@ -114,23 +113,23 @@ class FakePipeline:
 class FakeRedisConnectionError(FakeRedis):
     """A FakeRedis that raises ConnectionError on pipeline execution."""
 
-    def pipeline(self) -> "FakeErrorPipeline":
+    def pipeline(self) -> FakeErrorPipeline:
         return FakeErrorPipeline()
 
 
 class FakeErrorPipeline:
     """Pipeline that raises on execute to simulate Redis failure."""
 
-    def zremrangebyscore(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def zremrangebyscore(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
-    def zadd(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def zadd(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
-    def zcard(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def zcard(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
-    def expire(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def expire(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
     async def execute(self) -> list[Any]:
