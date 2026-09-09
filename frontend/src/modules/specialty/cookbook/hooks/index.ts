@@ -16,6 +16,25 @@ import type {
 } from "@/modules/specialty/types/cookbook";
 
 // ---------------------------------------------------------------------------
+// Type re-exports
+// ---------------------------------------------------------------------------
+// The cookbook pages import these from this module. They previously came from
+// a sibling `hooks.ts` that declared its own duplicate copies; the canonical
+// definitions live in types/cookbook.ts, where two of them carry longer names.
+export type {
+  Cookbook,
+  CookbookChapter,
+  CookbookIngredient,
+  CookbookMealPlan,
+  CookbookRecipe,
+  CookbookStats,
+} from "@/modules/specialty/types/cookbook";
+export type {
+  CookbookInstructionStep as CookbookInstruction,
+  CookbookNutritionInfo as CookbookNutrition,
+} from "@/modules/specialty/types/cookbook";
+
+// ---------------------------------------------------------------------------
 // Query Keys
 // ---------------------------------------------------------------------------
 
@@ -419,5 +438,22 @@ export function usePreflight(cookbookId: string) {
       }
     },
     onError: (error) => { toast.error(extractApiError(error)); },
+  });
+}
+
+export function useImproveInstructions(cookbookId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<CookbookRecipe, Error, { recipeId: string }>({
+    mutationFn: async ({ recipeId }) => {
+      const { data } = await api.post(
+        `${API_BASE}/${cookbookId}/recipes/${recipeId}/improve-instructions`
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cookbookKeys.chapters(cookbookId) });
+      toast.success("Instructions improved");
+    },
+    onError: (error) => toast.error(extractApiError(error)),
   });
 }

@@ -161,7 +161,10 @@ export default function CreateComicBookPage() {
         genre: data.genre || undefined,
         premise: data.premise || undefined,
         pacing: data.pacing,
-        characters: data.characters,
+        // NOTE: characters are not part of comic creation. The API exposes them
+        // at POST /{comic_id}/characters, so anything entered in the wizard is
+        // currently dropped. Sending them here was a no-op (extra fields are
+        // ignored server-side); creating them after the comic exists is the fix.
         content_rating: data.content_rating,
         violence_level: data.violence_level,
         language_level: data.language_level,

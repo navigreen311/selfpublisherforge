@@ -147,7 +147,7 @@ jest.mock("@/modules/analytics/components/PortfolioTable", () => ({
 // Mock Radix UI primitives that are hard to test in JSDOM
 jest.mock("@radix-ui/react-tooltip", () => ({
   Root: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Trigger: React.forwardRef(({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLDivElement>) => <div ref={ref} {...props}>{children}</div>),
+  Trigger: React.forwardRef(({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLDivElement>) => <div ref={ref} {...props}>{children}</div>),
   Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Provider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Portal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -155,9 +155,9 @@ jest.mock("@radix-ui/react-tooltip", () => ({
 
 jest.mock("@radix-ui/react-dropdown-menu", () => ({
   Root: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Trigger: React.forwardRef(({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLButtonElement>) => <button ref={ref} {...props}>{children}</button>),
+  Trigger: React.forwardRef(({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLButtonElement>) => <button ref={ref} {...props}>{children}</button>),
   Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Item: ({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
+  Item: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
   Label: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Separator: () => <hr />,
   Portal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -165,10 +165,10 @@ jest.mock("@radix-ui/react-dropdown-menu", () => ({
 
 jest.mock("@radix-ui/react-select", () => ({
   Root: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Trigger: React.forwardRef(({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLButtonElement>) => <button ref={ref} {...props}>{children}</button>),
+  Trigger: React.forwardRef(({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLButtonElement>) => <button ref={ref} {...props}>{children}</button>),
   Value: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
   Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Item: React.forwardRef(({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLDivElement>) => <div ref={ref} {...props}>{children}</div>),
+  Item: React.forwardRef(({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLDivElement>) => <div ref={ref} {...props}>{children}</div>),
   ItemText: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   Portal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Viewport: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -182,9 +182,9 @@ jest.mock("@radix-ui/react-select", () => ({
 }));
 
 jest.mock("@radix-ui/react-avatar", () => ({
-  Root: ({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
+  Root: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
   Image: (props: Record<string, unknown>) => <img {...props} />,
-  Fallback: ({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>) => <span {...props}>{children}</span>,
+  Fallback: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => <span {...props}>{children}</span>,
 }));
 
 jest.mock("@radix-ui/react-separator", () => ({

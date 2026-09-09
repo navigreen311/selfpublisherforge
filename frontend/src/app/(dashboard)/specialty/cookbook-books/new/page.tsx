@@ -10,6 +10,13 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { useCreateCookbook } from "@/modules/specialty/cookbook/hooks";
+import type {
+  ChapterOrganization,
+  CookbookInteriorType,
+  CookbookType,
+  IllustrationMethod,
+  RecipeLayout,
+} from "@/modules/specialty/types/cookbook";
 import {
   Step1Details,
   Step2Format,
@@ -128,18 +135,17 @@ export default function CreateCookbookPage() {
         title: data.title,
         subtitle: data.subtitle || undefined,
         author: data.author || "self",
-        cookbook_type: data.cookbook_type,
+        cookbook_type: data.cookbook_type as CookbookType,
         cuisine: data.cuisine || undefined,
         cuisine_diet: data.cuisine_diet || undefined,
         target_audience: data.target_audience || undefined,
         description: data.description || undefined,
         trim_size: data.trim_size,
-        interior_type: data.interior_type,
-        chapter_organization: data.chapter_organization,
-        initial_chapters: data.initial_chapters,
+        interior_type: data.interior_type as CookbookInteriorType,
+        chapter_organization: data.chapter_organization as ChapterOrganization,
         page_count: estimatePageCount(data),
-        recipe_layout: data.recipe_layout,
-        illustration_method: data.illustration_method,
+        recipe_layout: data.recipe_layout as RecipeLayout,
+        illustration_method: data.illustration_method as IllustrationMethod,
         include_nutrition: data.include_nutrition,
         include_meal_plans: data.include_meal_plans,
         include_shopping_lists: data.include_shopping_lists,

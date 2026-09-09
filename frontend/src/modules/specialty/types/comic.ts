@@ -106,6 +106,13 @@ export interface ComicStats {
 
 export interface CreateComicRequest {
   title: string;
+  // Present on the ComicBook model and sent by the creation wizard, but
+  // previously missing from this type.
+  subtitle?: string;
+  author?: string;
+  artist?: string;
+  genre?: string;
+  premise?: string;
   format: string;
   art_style?: string;
   color_mode?: string;
@@ -116,6 +123,11 @@ export interface CreateComicRequest {
   trim_size?: string;
   border_style?: string;
   gutter_style?: string;
+  // Content-safety fields; all present on the ComicBook model.
+  content_rating?: string;
+  violence_level?: string;
+  language_level?: string;
+  safety_settings?: Record<string, unknown>;
 }
 
 export interface UpdateComicRequest extends Partial<CreateComicRequest> {
