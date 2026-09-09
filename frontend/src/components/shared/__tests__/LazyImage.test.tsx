@@ -6,7 +6,9 @@ import { LazyImage } from "../LazyImage";
 // Mock Next.js Image component
 jest.mock("next/image", () => ({
   __esModule: true,
-  default: (props: any) => {
+  // Named so react-hooks/rules-of-hooks recognises it as a component
+  // (an anonymous arrow assigned to `default` reads as a lowercase name).
+  default: function MockNextImage(props: any) {
     // Simulate image loading
     React.useEffect(() => {
       if (props.onLoad) {

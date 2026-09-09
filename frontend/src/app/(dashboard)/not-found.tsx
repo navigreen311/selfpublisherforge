@@ -24,7 +24,7 @@ export default function DashboardNotFound() {
           <h1 className="text-3xl font-bold">404</h1>
           <h2 className="text-xl font-semibold">Page Not Found</h2>
           <p className="text-sm text-muted-foreground pt-2">
-            The page you're looking for doesn't exist or has been moved.
+            The page you&apos;re looking for doesn&apos;t exist or has been moved.
           </p>
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">

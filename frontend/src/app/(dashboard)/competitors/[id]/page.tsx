@@ -183,7 +183,7 @@ function WeaknessCard({ weakness, t }: { weakness: WeaknessSignal; t: any }) {
           <div className="space-y-2">
             {weakness.evidence.slice(0, 2).map((evidence, idx) => (
               <div key={idx} className="p-2 rounded bg-muted/50 text-xs">
-                <p className="italic">"{evidence.excerpt}"</p>
+                <p className="italic">&quot;{evidence.excerpt}&quot;</p>
                 {evidence.rating !== undefined && (
                   <div className="mt-1 text-muted-foreground">
                     {t("detail.rating")}: {evidence.rating}/5

@@ -151,7 +151,7 @@ export function LargePrintGenerator({
       <div>
         <h2 className="text-xl font-semibold">Large Print Edition</h2>
         <p className="text-sm text-muted-foreground">
-          Generate a large print variant of "{bookTitle}" with{" "}
+          Generate a large print variant of &quot;{bookTitle}&quot; with{" "}
           {totalPuzzles} puzzles. Massive market, especially for seniors.
         </p>
       </div>

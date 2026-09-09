@@ -36,7 +36,7 @@ export function ConformityChecker({ onCheck, isChecking = false }: ConformityChe
     <div className="border rounded-lg bg-card p-6">
       <h3 className="text-lg font-semibold mb-4">Conformity Checker</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Check how well a text matches this style profile's voice.
+        Check how well a text matches this style profile&apos;s voice.
       </p>
 
       <div className="space-y-4">

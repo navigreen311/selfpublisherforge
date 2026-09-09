@@ -72,7 +72,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it("catches component errors and prevents crash propagation", () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     const { container } = render(
@@ -88,7 +87,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it("displays error UI when a child component throws", () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(
@@ -102,7 +100,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it('has data-testid="error-boundary" on the error container', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(
@@ -115,7 +112,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it("reset button clears error state and re-renders children", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
     const user = userEvent.setup();
 
@@ -156,7 +152,6 @@ describe("ErrorBoundary - error catching and display", () => {
 
     // Directly test that changing resetKey clears the error.
     // We need to access the inner class component via re-requiring the module.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     let shouldThrow = true;
@@ -217,7 +212,6 @@ describe("ErrorBoundary - reportError in production mode", () => {
     (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(
@@ -237,7 +231,6 @@ describe("ErrorBoundary - reportError in production mode", () => {
     (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     // Render 12 error boundaries in succession to exceed the rate limit.
@@ -259,7 +252,6 @@ describe("ErrorBoundary - reportError in production mode", () => {
     // Explicitly delete the URL so the module sees it as undefined
     delete process.env.NEXT_PUBLIC_ERROR_REPORTING_URL;
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     // This should not throw
@@ -279,7 +271,6 @@ describe("ErrorBoundary - reportError in production mode", () => {
     (process.env as Record<string, string | undefined>).NODE_ENV = "development";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(

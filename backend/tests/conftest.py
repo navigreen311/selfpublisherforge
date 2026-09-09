@@ -35,7 +35,7 @@ import app.models  # noqa: F401
 # Register SQLite-compatible type compilation for PostgreSQL-specific types
 # ---------------------------------------------------------------------------
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.types import VARCHAR
+from sqlalchemy.types import ARRAY as SA_ARRAY, VARCHAR
 
 
 @compiles(JSONB, "sqlite")
@@ -47,6 +47,17 @@ def _compile_jsonb_sqlite(element, compiler, **kw):
 @compiles(PG_ARRAY, "sqlite")
 def _compile_array_sqlite(element, compiler, **kw):
     """PostgreSQL ARRAY -> TEXT on SQLite."""
+    return "TEXT"
+
+
+@compiles(SA_ARRAY, "sqlite")
+def _compile_generic_array_sqlite(element, compiler, **kw):
+    """Generic sqlalchemy.ARRAY -> TEXT on SQLite.
+
+    Ten model modules import ARRAY from sqlalchemy rather than from
+    sqlalchemy.dialects.postgresql, so the PG_ARRAY rule above never applied
+    to them and every fixture touching those tables failed to create a schema.
+    """
     return "TEXT"
 
 

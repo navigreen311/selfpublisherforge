@@ -22,7 +22,7 @@ export function ApiKeysTab() {
         <h2 className="text-lg font-semibold">API Keys</h2>
         <p className="text-sm text-gray-500">
           Create and manage API keys for programmatic access to your
-          organization's resources.
+          organization&apos;s resources.
         </p>
       </div>
 
