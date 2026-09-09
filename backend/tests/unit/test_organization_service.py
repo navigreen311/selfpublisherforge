@@ -36,7 +36,7 @@ def _make_org_row(
         "id": org_id or uuid.uuid4(),
         "name": name,
         "description": description,
-        "tier": tier,
+        "plan_tier": tier,
         "created_at": created_at or now,
         "updated_at": updated_at or now,
     }

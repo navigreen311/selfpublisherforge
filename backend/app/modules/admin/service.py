@@ -80,7 +80,7 @@ async def list_users(
                 email=user.email,
                 name=user.name,
                 created_at=user.created_at,
-                tier=org.tier if org else PlanTier.FREE,
+                tier=org.plan_tier if org else PlanTier.FREE,
                 is_active=user.is_active,
             )
         )
@@ -421,7 +421,7 @@ async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
                 id=org.id,
                 name=org.name,
                 slug=org.slug,
-                plan_tier=org.tier.value if hasattr(org, "tier") else "free",
+                plan_tier=org.plan_tier.value if hasattr(org, "tier") else "free",
                 owner_name=owner.name if owner else "Unknown",
                 member_count=member_count,
                 books_count=books_count,
@@ -471,7 +471,7 @@ async def get_org_detail(db: AsyncSession, org_id: UUID) -> AdminOrgDetail:
         id=org.id,
         name=org.name,
         slug=org.slug,
-        plan_tier=org.tier.value if hasattr(org, "tier") else "free",
+        plan_tier=org.plan_tier.value if hasattr(org, "tier") else "free",
         owner_name=owner.name if owner else "Unknown",
         member_count=member_count,
         books_count=books_count,
@@ -548,7 +548,7 @@ async def get_billing_overview(db: AsyncSession, org_id: UUID) -> BillingOvervie
     if not org:
         raise AppException(status_code=404, code="ORG_NOT_FOUND", message="Organization not found")
 
-    plan_tier = org.tier.value if hasattr(org, "tier") else "free"
+    plan_tier = org.plan_tier.value if hasattr(org, "tier") else "free"
     plan_prices = {
         "free": 0.0,
         "starter": 29.0,

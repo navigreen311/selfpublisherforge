@@ -281,7 +281,7 @@ def _char_to_dict(char: ChildrensBookCharacter) -> dict[str, Any]:
         "clothing_rules": char.clothing_rules,
         "scale_rules": char.scale_rules,
         "setting_continuity": char.setting_continuity,
-        "time_of_day_rules": char.time_of_day_rules,
+        "time_of_day_rules": char.time_rules,
         "reference_images": char.reference_images or [],
         "metadata": char.metadata_json or {},
         "created_at": char.created_at.isoformat() if char.created_at else None,
@@ -654,7 +654,7 @@ async def create_character(db: AsyncSession, org_id: UUID, book_id: UUID, data: 
         clothing_rules=data.get("clothing_rules"),
         scale_rules=data.get("scale_rules"),
         setting_continuity=data.get("setting_continuity"),
-        time_of_day_rules=data.get("time_of_day_rules"),
+        time_rules=data.get("time_of_day_rules"),
         reference_images=data.get("reference_images", []),
         metadata_json=data.get("metadata", {}),
     )

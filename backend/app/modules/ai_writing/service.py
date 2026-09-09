@@ -654,7 +654,7 @@ async def create_version_snapshot(
         "id": version.id,
         "chapter_id": version.chapter_id,
         "word_count": version.word_count,
-        "snapshot_by": version.snapshot_by,
+        "snapshot_by": version.created_by,
         "created_at": version.created_at,
     }
 
@@ -681,7 +681,7 @@ async def list_versions(db: AsyncSession, chapter_id: _uuid.UUID) -> list[dict]:
             "id": v.id,
             "chapter_id": v.chapter_id,
             "word_count": v.word_count,
-            "snapshot_by": v.snapshot_by,
+            "snapshot_by": v.created_by,
             "created_at": v.created_at,
         }
         for v in versions
@@ -712,7 +712,7 @@ async def get_version(db: AsyncSession, version_id: _uuid.UUID) -> dict:
         "chapter_id": version.chapter_id,
         "content": version.content,
         "word_count": version.word_count,
-        "snapshot_by": version.snapshot_by,
+        "snapshot_by": version.created_by,
         "created_at": version.created_at,
     }
 

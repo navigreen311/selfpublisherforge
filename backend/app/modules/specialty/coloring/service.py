@@ -1006,7 +1006,7 @@ async def run_quality_dashboard(
         }
 
     # Aggregate scores
-    scores = [p.qa_score for p in pages if p.qa_score is not None]
+    scores = [p.quality_score for p in pages if p.quality_score is not None]
     overall_score = sum(scores) / len(scores) if scores else 0
 
     # Complexity distribution (bucket pages by complexity)
@@ -1039,7 +1039,7 @@ async def run_quality_dashboard(
                 {
                     "page_id": str(p.id),
                     "page_number": p.page_number,
-                    "score": p.qa_score,
+                    "score": p.quality_score,
                     "issue_count": len(page_issues),
                 }
             )

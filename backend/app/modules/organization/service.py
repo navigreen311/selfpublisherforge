@@ -51,7 +51,7 @@ async def get_organization(db: AsyncSession, org_id: UUID) -> OrganizationRespon
         id=org.id,
         name=org.name,
         description=org.description,
-        tier=org.tier,
+        tier=org.plan_tier,
         created_at=org.created_at,
         updated_at=org.updated_at,
     )
@@ -101,7 +101,7 @@ async def update_organization(
         id=org.id,
         name=org.name,
         description=org.description,
-        tier=org.tier,
+        tier=org.plan_tier,
         created_at=org.created_at,
         updated_at=org.updated_at,
     )
