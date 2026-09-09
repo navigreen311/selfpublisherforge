@@ -141,9 +141,29 @@ async def import_royalties(
     current_user: dict = Depends(get_current_user),
 ) -> RoyaltyImportResponse:
     """Import royalty data from a CSV file (base64-encoded)."""
-    return await service.import_royalty_data(
+    result = await service.import_royalty_data(
         db, current_user["org_id"], request
     )
+
+    # Emit royalty.imported webhook event (best-effort).
+    try:
+        from app.modules.webhooks.emitter import emit_event as _emit
+
+        data: dict = {"platform": getattr(request, "platform", None)}
+        for attr in ("records_imported", "records_skipped", "period_start", "period_end"):
+            val = getattr(result, attr, None)
+            if val is not None:
+                data[attr] = val if not hasattr(val, "isoformat") else val.isoformat()
+        await _emit(
+            db,
+            org_id=current_user["org_id"],
+            event_type="royalty.imported",
+            data=data,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    return result
 
 
 # ---------- Portfolio ----------

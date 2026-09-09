@@ -304,7 +304,27 @@ async def sync_listing(
     current_user: dict = Depends(get_current_user),
 ):
     """Trigger a sync for a specific listing with its platform."""
-    return await service.sync_listing(db, listing_id)
+    result = await service.sync_listing(db, listing_id)
+
+    # Emit book.published webhook event when sync completes successfully.
+    try:
+        from app.modules.webhooks.emitter import emit_event as _emit
+
+        data: dict = {"listing_id": str(listing_id)}
+        for attr in ("status", "asin", "distributor", "book_id", "title"):
+            val = getattr(result, attr, None)
+            if val is not None:
+                data[attr] = str(val) if attr in ("book_id",) else val
+        await _emit(
+            db,
+            org_id=current_user["org_id"],
+            event_type="book.published",
+            data=data,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    return result
 
 
 # ---------- Pricing ----------
