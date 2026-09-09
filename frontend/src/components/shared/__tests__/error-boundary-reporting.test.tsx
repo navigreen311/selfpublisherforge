@@ -47,7 +47,7 @@ jest.mock("@radix-ui/react-slot", () => ({
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // A component that throws an error on render
-function ThrowingComponent({ message }: { message: string }) {
+function ThrowingComponent({ message }: { message: string }): React.JSX.Element {
   throw new Error(message);
 }
 
@@ -209,12 +209,12 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
   });
 
   it("calls sendBeacon (via reportError) on error in production mode", () => {
     // Override NODE_ENV before requiring the module
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -234,7 +234,7 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   it("reportError respects rate limit (max 10 per minute)", () => {
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -255,7 +255,7 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   it("reportError handles missing NEXT_PUBLIC_ERROR_REPORTING_URL gracefully", () => {
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     // Explicitly delete the URL so the module sees it as undefined
     delete process.env.NEXT_PUBLIC_ERROR_REPORTING_URL;
 
@@ -276,7 +276,7 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   it("does not call sendBeacon in development mode (logs to console instead)", () => {
-    process.env.NODE_ENV = "development";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires

@@ -147,14 +147,14 @@ jest.mock("@radix-ui/react-select", () => {
   }) => (
     <div data-testid="select-root" data-value={value}>
       {typeof children === "function"
-        ? children({ value, onValueChange })
+        ? (children as (a: unknown) => React.ReactNode)({ value, onValueChange })
         : children}
     </div>
   );
 
   const Trigger = React.forwardRef(
     (
-      { children, ...props }: { children: React.ReactNode } & Record<string, unknown>,
+      { children, ...props }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLButtonElement>
     ) => (
       <button ref={ref} {...props}>
@@ -176,10 +176,7 @@ jest.mock("@radix-ui/react-select", () => {
         children,
         value,
         ...props
-      }: {
-        children: React.ReactNode;
-        value: string;
-      } & Record<string, unknown>,
+      }: { children?: React.ReactNode; value?: string } & Record<string, unknown>,
       ref: React.Ref<HTMLDivElement>
     ) => (
       <div ref={ref} data-value={value} {...props}>

@@ -31,7 +31,7 @@ jest.mock("@/components/ui/select", () => ({
   SelectItem: ({ children }: { children: React.ReactNode; value: string }) => <div>{children}</div>,
 }));
 jest.mock("@/components/ui/scroll-area", () => ({
-  ScrollArea: ({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
+  ScrollArea: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
   ScrollBar: () => null,
 }));
 jest.mock("@/components/ui/dialog", () => ({

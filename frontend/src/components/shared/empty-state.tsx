@@ -18,7 +18,7 @@ interface EmptyStateProps {
 // alone misses them and they get rendered as a raw object (React throws).
 function isComponentType(
   icon: React.ReactNode | LucideIcon
-): icon is React.ElementType {
+): icon is LucideIcon {
   return (
     typeof icon === "function" ||
     (typeof icon === "object" && icon !== null && !React.isValidElement(icon))
@@ -41,7 +41,7 @@ export function EmptyState({
           })
         ) : (
           <span className="h-10 w-10 text-muted-foreground flex items-center justify-center">
-            {icon}
+            {icon as React.ReactNode}
           </span>
         )}
       </div>

@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { ComponentType, ReactNode } from "react";
+import { ComponentProps, ComponentType, ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -42,11 +42,14 @@ export function lazyLoadSSR<T extends ComponentType<any>>(
  * @returns Dynamically loaded component
  */
 export function lazyLoadNamed<T extends ComponentType<any>>(
-  importFn: () => Promise<any>,
+  importFn: () => Promise<Record<string, T>>,
   exportName: string,
   fallback?: ReactNode
 ) {
-  return dynamic(() => importFn().then((mod) => ({ default: mod[exportName] })), {
+  // T must appear in the parameter types, or it is never inferred and the
+  // returned component ends up with no props at all (accepting only
+  // IntrinsicAttributes). lazyLoad gets this right via Promise<{ default: T }>.
+  return dynamic<ComponentProps<T>>(() => importFn().then((mod) => ({ default: mod[exportName] })), {
     loading: () => (fallback ? <>{fallback}</> : <Skeleton className="h-64 w-full" />),
     ssr: false,
   });

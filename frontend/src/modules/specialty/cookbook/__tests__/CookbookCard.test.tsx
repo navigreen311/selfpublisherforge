@@ -21,7 +21,7 @@ const mockCookbook: Cookbook = {
   recipe_layout: "classic", illustration_method: "ai_generated", interior_type: "full_color",
   page_count: 120, trim_size: "8x10", include_nutrition: true, include_meal_plans: false,
   include_shopping_lists: false, include_index: true, include_conversion_charts: true,
-  dietary_tags: [], status: "in-progress", qa_score: 72,
+  dietary_tags: [], status: "in_progress", qa_score: 72,
   created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z",
 };
 

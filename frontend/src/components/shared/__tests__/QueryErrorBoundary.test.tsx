@@ -99,7 +99,7 @@ describe("QueryErrorBoundary", () => {
   });
 
   it("shows default message when error has no message", () => {
-    function ThrowEmptyError() {
+    function ThrowEmptyError(): React.JSX.Element {
       throw new Error();
     }
 

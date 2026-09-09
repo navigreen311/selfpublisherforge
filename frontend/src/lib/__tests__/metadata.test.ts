@@ -21,7 +21,7 @@ describe("createMetadata", () => {
     });
 
     expect(result.openGraph).toBeDefined();
-    expect(result.openGraph?.type).toBe("website");
+    expect((result.openGraph as { type?: string } | undefined)?.type).toBe("website");
     expect(result.openGraph?.title).toBe("Dashboard | SelfPublisherForge");
     expect(result.openGraph?.description).toBe("View your analytics");
     expect(result.openGraph?.siteName).toBe("SelfPublisherForge");
@@ -34,7 +34,7 @@ describe("createMetadata", () => {
     });
 
     expect(result.twitter).toBeDefined();
-    expect(result.twitter?.card).toBe("summary_large_image");
+    expect((result.twitter as { card?: string } | undefined)?.card).toBe("summary_large_image");
     expect(result.twitter?.title).toBe("Analytics | SelfPublisherForge");
     expect(result.twitter?.description).toBe("Track your performance");
     expect(result.twitter?.creator).toBe("@selfpubforge");
@@ -250,14 +250,14 @@ describe("defaultMetadata", () => {
 
   it("has Open Graph configuration", () => {
     expect(defaultMetadata.openGraph).toBeDefined();
-    expect(defaultMetadata.openGraph?.type).toBe("website");
+    expect((defaultMetadata.openGraph as { type?: string } | undefined)?.type).toBe("website");
     expect(defaultMetadata.openGraph?.locale).toBe("en_US");
     expect(defaultMetadata.openGraph?.siteName).toBe("SelfPublisherForge");
   });
 
   it("has Twitter Card configuration", () => {
     expect(defaultMetadata.twitter).toBeDefined();
-    expect(defaultMetadata.twitter?.card).toBe("summary_large_image");
+    expect((defaultMetadata.twitter as { card?: string } | undefined)?.card).toBe("summary_large_image");
     expect(defaultMetadata.twitter?.creator).toBe("@selfpubforge");
   });
 
@@ -270,8 +270,8 @@ describe("defaultMetadata", () => {
   });
 
   it("has Google Bot specific configuration", () => {
-    expect(defaultMetadata.robots?.googleBot).toBeDefined();
-    expect(defaultMetadata.robots?.googleBot).toMatchObject({
+    expect((defaultMetadata.robots as { googleBot?: unknown } | undefined)?.googleBot).toBeDefined();
+    expect((defaultMetadata.robots as { googleBot?: unknown } | undefined)?.googleBot).toMatchObject({
       index: true,
       follow: true,
       "max-video-preview": -1,

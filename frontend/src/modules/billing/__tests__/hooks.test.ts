@@ -467,7 +467,7 @@ describe("useCreatePortal", () => {
       wrapper: createWrapper(),
     });
 
-    result.current.mutate();
+    result.current.mutate(undefined);
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
@@ -485,7 +485,7 @@ describe("useCreatePortal", () => {
       wrapper: createWrapper(),
     });
 
-    result.current.mutate();
+    result.current.mutate(undefined);
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true);

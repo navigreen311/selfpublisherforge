@@ -105,8 +105,8 @@ jest.mock("@radix-ui/react-select", () => {
     HTMLButtonElement,
     { children: React.ReactNode; className?: string; id?: string; [key: string]: unknown }
   >(({ children, className, ...props }, ref) => (
-    <button ref={ref} className={className} {...props}>
-      {children}
+    <button ref={ref} className={className as string} {...props}>
+      {children as React.ReactNode}
     </button>
   ));
   MockTrigger.displayName = "SelectTrigger";

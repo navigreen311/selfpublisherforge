@@ -498,3 +498,11 @@ export interface ExportResult {
   file_size: number;
   page_count: number;
 }
+
+/** Canonical paginated envelope for the Specialty Books module. */
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+}

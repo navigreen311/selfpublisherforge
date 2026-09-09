@@ -59,7 +59,7 @@ jest.mock("@/components/ui/select", () => ({
     children: React.ReactNode;
     value: string;
   }) => <option value={value}>{children}</option>,
-  SelectTrigger: ({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>) => (
+  SelectTrigger: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => (
     <button data-testid="select-trigger" {...props}>
       {children}
     </button>

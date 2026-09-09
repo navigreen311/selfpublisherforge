@@ -88,7 +88,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLButtonElement>
     ) => (
       <button ref={ref} {...props}>
@@ -107,7 +107,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLDivElement>
     ) => (
       <div ref={ref} role="dialog" {...props}>
@@ -120,7 +120,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLHeadingElement>
     ) => (
       <h2 ref={ref} {...props}>
@@ -133,7 +133,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLParagraphElement>
     ) => (
       <p ref={ref} {...props}>

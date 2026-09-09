@@ -43,7 +43,7 @@ import { ErrorBoundary } from "../error-boundary";
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // A component that throws an error on render
-function ThrowingComponent({ message }: { message: string }) {
+function ThrowingComponent({ message }: { message: string }): React.JSX.Element {
   throw new Error(message);
 }
 
@@ -94,7 +94,7 @@ describe("ErrorBoundary", () => {
 
   it("displays a default message when error has no message", () => {
     // Component that throws an error without a message
-    function ThrowEmpty() {
+    function ThrowEmpty(): React.JSX.Element {
       throw new Error();
     }
 
