@@ -21,7 +21,7 @@ from app.modules.users.service import UserService, _generate_api_key, _role_leve
 
 async def _seed_user_and_org(db, email="user@test.com", role="owner", org_name="TestOrg"):
     """Create an organization and a user, return both."""
-    from app.models.user import Organization
+    from app.models.organization import Organization
 
     org_id = uuid4()
     org = Organization(

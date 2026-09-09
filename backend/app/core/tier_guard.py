@@ -68,7 +68,7 @@ async def _get_org_tier(
 ) -> PlanTier:
     """Fetch the organization's current plan tier."""
     result = await db.execute(
-        select(Organization.tier).where(Organization.id == org_id, Organization.deleted_at.is_(None))
+        select(Organization.plan_tier).where(Organization.id == org_id, Organization.deleted_at.is_(None))
     )
     tier = result.scalar_one_or_none()
 

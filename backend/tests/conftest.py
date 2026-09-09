@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+import os
+
+# The suite runs against in-memory SQLite. app/database.py carries a complete
+# portability shim for that (generic Uuid, JSON-backed ARRAY/JSONB, stripped
+# gen_random_uuid() server defaults), but it is gated on the configured
+# DATABASE_URL. get_settings() is lru_cached, so this has to be set before the
+# first `app.*` import or the shim never engages and Postgres-only types reach
+# the SQLite driver — which is why binding a uuid.UUID used to fail outright.
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
+os.environ.setdefault("ENVIRONMENT", "test")
+
 import asyncio
 import logging
 import uuid
@@ -71,8 +83,6 @@ def _compile_pg_uuid_sqlite(element, compiler, **kw):
 # ---------------------------------------------------------------------------
 # In-memory SQLite for tests (async via aiosqlite)
 # ---------------------------------------------------------------------------
-
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

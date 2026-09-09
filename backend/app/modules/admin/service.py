@@ -54,7 +54,7 @@ async def list_users(
 
     if request.tier:
         # Join with organization to filter by tier
-        query = query.join(Organization).where(Organization.tier == request.tier)
+        query = query.join(Organization).where(Organization.plan_tier == request.tier)
 
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
