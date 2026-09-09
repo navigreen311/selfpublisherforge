@@ -289,7 +289,6 @@ async def get_recipe(
     recipe = await service.get_recipe(
         db,
         current_user["org_id"],
-        cookbook_id,
         recipe_id,
     )
     return SuccessResponse(data=recipe)
@@ -310,7 +309,6 @@ async def update_recipe(
     recipe = await service.update_recipe(
         db,
         current_user["org_id"],
-        cookbook_id,
         recipe_id,
         payload,
     )
@@ -331,7 +329,6 @@ async def delete_recipe(
     deleted = await service.delete_recipe(
         db,
         current_user["org_id"],
-        cookbook_id,
         recipe_id,
     )
     if not deleted:
@@ -405,7 +402,6 @@ async def generate_recipe_image(
     result = await service.generate_recipe_image(
         db,
         current_user["org_id"],
-        cookbook_id,
         recipe_id,
         payload or {},
     )
@@ -427,7 +423,6 @@ async def improve_recipe(
     result = await service.improve_recipe(
         db,
         current_user["org_id"],
-        cookbook_id,
         recipe_id,
         payload or {},
     )
@@ -453,7 +448,6 @@ async def calculate_nutrition(
     result = await service.calculate_nutrition(
         db,
         current_user["org_id"],
-        cookbook_id,
         recipe_id,
     )
     return SuccessResponse(data=result)
@@ -499,7 +493,6 @@ async def scale_recipe(
     result = await service.scale_recipe(
         db,
         current_user["org_id"],
-        cookbook_id,
         recipe_id,
         factor,
     )
@@ -593,6 +586,7 @@ async def delete_meal_plan(
 async def auto_fill_meal_plan(
     cookbook_id: UUID,
     plan_id: UUID,
+    payload: dict[str, Any] | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -601,6 +595,7 @@ async def auto_fill_meal_plan(
         current_user["org_id"],
         cookbook_id,
         plan_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -619,7 +614,6 @@ async def generate_shopping_list(
     result = await service.generate_shopping_list(
         db,
         current_user["org_id"],
-        cookbook_id,
         plan_id,
     )
     return SuccessResponse(data=result)

@@ -545,8 +545,10 @@ async def reorder_chapters(db: AsyncSession, org_id: UUID, cookbook_id: UUID, ch
 # ---------------------------------------------------------------------------
 
 
-async def list_recipes(db: AsyncSession, org_id: UUID, chapter_id: UUID) -> list[dict]:
+async def list_recipes(db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID) -> list[dict]:
     """Return all recipes for a chapter, ordered by sort_order."""
+    # Establishes that the chapter belongs to a cookbook this org owns.
+    await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
     stmt = (
         select(Recipe)
         .where(
@@ -559,16 +561,13 @@ async def list_recipes(db: AsyncSession, org_id: UUID, chapter_id: UUID) -> list
     return [_recipe_to_dict(r) for r in result.scalars().all()]
 
 
-async def create_recipe(db: AsyncSession, org_id: UUID, chapter_id: UUID, payload: dict[str, Any]) -> dict:
+async def create_recipe(
+    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID, payload: dict[str, Any]
+) -> dict:
     """Create a new recipe in a chapter."""
-    ch_stmt = select(CookbookChapter).where(
-        CookbookChapter.id == chapter_id,
-        CookbookChapter.deleted_at.is_(None),
-    )
-    ch_result = await db.execute(ch_stmt)
-    chapter = ch_result.scalar_one_or_none()
-    if chapter is None:
-        raise NotFoundError("CookbookChapter", f"Chapter {chapter_id} not found")
+    # The unscoped lookup this replaces let a caller add a recipe to another
+    # organisation's chapter.
+    chapter = await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
 
     # Auto-assign recipe_order if not provided
     if "recipe_order" not in payload:
@@ -665,8 +664,13 @@ async def delete_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID) -> bool
     return True
 
 
-async def reorder_recipes(db: AsyncSession, org_id: UUID, chapter_id: UUID, recipe_ids: list[UUID]) -> list[dict]:
+async def reorder_recipes(
+    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID, recipe_ids: list[UUID]
+) -> list[dict]:
     """Reorder recipes by assigning new sort_order based on the given ID order."""
+    # These are writes; without this the UPDATE matched on recipe/chapter id
+    # alone and could reorder another organisation's recipes.
+    await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
     for idx, rid in enumerate(recipe_ids, start=1):
         await db.execute(
             update(Recipe)
@@ -677,7 +681,7 @@ async def reorder_recipes(db: AsyncSession, org_id: UUID, chapter_id: UUID, reci
             .values(recipe_order=idx)
         )
     await db.flush()
-    return await list_recipes(db, org_id, chapter_id)
+    return await list_recipes(db, org_id, cookbook_id, chapter_id)
 
 
 # ---------------------------------------------------------------------------
@@ -1140,7 +1144,7 @@ async def generate_index(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> d
 
     all_recipes: list[dict] = []
     for ch in chapters:
-        recipes = await list_recipes(db, org_id, UUID(ch["id"]))
+        recipes = await list_recipes(db, org_id, cookbook_id, UUID(ch["id"]))
         for r in recipes:
             r["chapter_title"] = ch["title"]
         all_recipes.extend(recipes)
@@ -1237,7 +1241,7 @@ async def export_cookbook(db: AsyncSession, org_id: UUID, cookbook_id: UUID, pay
 
     all_recipes: list[dict] = []
     for ch in chapters:
-        recipes = await list_recipes(db, org_id, UUID(ch["id"]))
+        recipes = await list_recipes(db, org_id, cookbook_id, UUID(ch["id"]))
         all_recipes.extend(recipes)
 
     export_format = payload.get("format", "pdf")
@@ -1259,7 +1263,7 @@ async def export_cookbook(db: AsyncSession, org_id: UUID, cookbook_id: UUID, pay
         )
 
         pdf_manifest = generate_pdf_manifest("cookbook", book_data, payload)
-        meta = calculate_export_metadata(book_data)
+        meta = calculate_export_metadata("cookbook", book_data)
     except Exception:
         logger.warning("Export engine unavailable; returning stub manifest", exc_info=True)
         pdf_manifest = {"pages": [], "format": export_format}
@@ -1289,7 +1293,7 @@ async def run_preflight(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> di
 
     all_recipes: list[dict] = []
     for ch in chapters:
-        recipes = await list_recipes(db, org_id, UUID(ch["id"]))
+        recipes = await list_recipes(db, org_id, cookbook_id, UUID(ch["id"]))
         all_recipes.extend(recipes)
 
     checks: list[dict[str, Any]] = []
