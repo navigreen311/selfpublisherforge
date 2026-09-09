@@ -39,7 +39,7 @@ async def create_project(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await service_crud.create_project(db, current_user["org_id"], body)
+    return await service_crud.create_project(db, current_user["org_id"], body.model_dump())
 
 
 @router.get(
@@ -90,7 +90,9 @@ async def update_project(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await service_crud.update_project(db, project_id, current_user["org_id"], body)
+    result = await service_crud.update_project(
+        db, project_id, current_user["org_id"], body.model_dump(exclude_unset=True)
+    )
     if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -133,7 +135,7 @@ async def create_project_from_wizard(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await service_crud.create_project_from_wizard(db, current_user["org_id"], body)
+    return await service_crud.create_project_from_wizard(db, current_user["org_id"], body.model_dump())
 
 
 # ── Pause/Resume endpoints ────────────────────────────────────────────────
