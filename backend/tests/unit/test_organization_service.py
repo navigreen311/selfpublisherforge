@@ -296,7 +296,7 @@ class TestListMembers:
         assert result.members[0].email == "user1@test.com"
         assert result.members[0].role == "owner"
         assert result.members[1].email == "user2@test.com"
-        assert result.members[1].role == "member"
+        assert result.members[1].role == "editor"
 
     @pytest.mark.asyncio
     async def test_empty_organization(self):
