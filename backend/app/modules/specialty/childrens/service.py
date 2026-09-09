@@ -276,7 +276,7 @@ def _char_to_dict(char: ChildrensBookCharacter) -> dict[str, Any]:
         "id": str(char.id),
         "book_id": str(char.book_id),
         "name": char.name,
-        "species_type": char.species_type,
+        "species_type": char.species,
         "description": char.description,
         "clothing_rules": char.clothing_rules,
         "scale_rules": char.scale_rules,

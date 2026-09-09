@@ -371,9 +371,13 @@ async def create_command(
 ) -> CommandResponse:
     """Create a custom voice command for an organization."""
     cmd = DictationCommand(
-        trigger_phrase=request.command_phrase,
+        # The ORM column is command_phrase; the request field is trigger_phrase.
+        command_phrase=request.trigger_phrase,
         action=request.action,
-        description=request.description,
+        # NOTE: request.description is accepted by the API and then dropped —
+        # DictationCommand has no description column. Passing it here raised
+        # TypeError, so this endpoint has never created a command. Persisting
+        # it needs a schema change; see the missing-columns list.
         is_system=False,
         org_id=org_id,
     )
