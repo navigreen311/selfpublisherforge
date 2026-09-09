@@ -8,6 +8,12 @@ authors = [
     { name = "SelfPublisherForge Team" },
 ]
 
+[tool.mypy]
+# Without this plugin mypy does not understand Field(None, ...) as a default,
+# so every partial-update schema looks like it has required fields and every
+# construction of one is reported as a missing argument.
+plugins = ["pydantic.mypy"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120
