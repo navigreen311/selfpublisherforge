@@ -206,6 +206,22 @@ def _register_routers(app: FastAPI):
     from app.modules.analytics.router import router as analytics_router
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
 
+    # Royalty Tracking & Tax Dashboard (Feature 3)
+    from app.modules.royalties_tax.router import (
+        royalties_router as royalties_tax_royalties_router,
+        tax_router as royalties_tax_tax_router,
+    )
+    app.include_router(
+        royalties_tax_royalties_router,
+        prefix=f"{prefix}/royalties",
+        tags=["royalties"],
+    )
+    app.include_router(
+        royalties_tax_tax_router,
+        prefix=f"{prefix}/tax",
+        tags=["tax"],
+    )
+
     # Tier 6-8: Intelligence & Scale
     from app.modules.agent_system.router import router as agent_router
     app.include_router(agent_router, prefix=f"{prefix}/agents", tags=["agents"])
