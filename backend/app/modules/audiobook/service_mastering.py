@@ -261,7 +261,7 @@ async def validate_acx(
 
             from app.services.voiceforge.audio_processor import AudioProcessor
 
-            audio_path = Path(ch.audio_url.replace("s3://", "/tmp/"))  # noqa: S108
+            audio_path = Path(ch.audio_url.replace("s3://", "/tmp/"))  # noqa: S108 - stub: treats an s3:// URL as a local path pending real S3 download
             processor = AudioProcessor()
             acx_result = processor.validate_acx(audio_path)
 

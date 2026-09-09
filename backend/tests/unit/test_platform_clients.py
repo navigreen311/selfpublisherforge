@@ -62,13 +62,12 @@ def _make_httpx_response(
     text: str = "",
 ) -> httpx.Response:
     """Build a fake ``httpx.Response`` for patching."""
-    resp = httpx.Response(
+    return httpx.Response(
         status_code=status_code,
         request=httpx.Request("GET", "https://fake.example.com"),
         json=json_data if json_data is not None else None,
         text=text if json_data is None else None,
     )
-    return resp
 
 
 def _build_ingram_royalty_payload() -> list[dict]:

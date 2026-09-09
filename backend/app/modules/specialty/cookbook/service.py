@@ -854,7 +854,7 @@ async def scale_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID, factor: 
     scaled_ingredients = []
     for ing in ingredients:
         scaled = dict(ing)
-        if "amount" in scaled and isinstance(scaled["amount"], (int, float)):
+        if "amount" in scaled and isinstance(scaled["amount"], int | float):
             scaled["amount"] = round(scaled["amount"] * factor, 2)
         scaled_ingredients.append(scaled)
 
@@ -1083,7 +1083,7 @@ async def generate_recipe_shopping_list(
     items = []
     for ing in r.ingredients or []:
         item = dict(ing)
-        if "amount" in item and isinstance(item["amount"], (int, float)):
+        if "amount" in item and isinstance(item["amount"], int | float):
             item["amount"] = round(item["amount"] * factor, 2)
         items.append(item)
 

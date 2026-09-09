@@ -171,7 +171,7 @@ class TestExtractWeaknessSignals:
             _make_review(rating=1, body="Very shallow book, poor formatting makes it worse."),
         ]
         signals = extract_weakness_signals_heuristic(reviews)
-        categories = set(s.category for s in signals)
+        categories = {s.category for s in signals}
         assert len(categories) >= 2
 
     def test_signals_sorted_by_confidence_descending(self):

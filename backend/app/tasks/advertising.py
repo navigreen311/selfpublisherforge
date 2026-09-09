@@ -161,7 +161,7 @@ def auto_optimize_bids(self):
 
 async def _auto_optimize_async():
     """Async implementation of auto bid optimization."""
-    optimizer = AdOptimizer()
+    AdOptimizer()
 
     async with async_session() as db:
         try:

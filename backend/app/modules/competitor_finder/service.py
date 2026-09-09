@@ -334,7 +334,7 @@ class CompetitorFinderService:
             .limit(limit)
         )
         if not include_dismissed:
-            stmt = stmt.where(CompetitorAlert.dismissed == False)  # noqa: E712
+            stmt = stmt.where(CompetitorAlert.dismissed == False)
 
         result = await self.db.execute(stmt)
         return list(result.scalars().all())

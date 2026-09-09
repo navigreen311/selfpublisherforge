@@ -223,10 +223,7 @@ async def list_templates(
     genre: CoverGenre | None = None,
 ) -> list[CoverTemplateResponse]:
     """Return available cover templates, optionally filtered by genre."""
-    if genre:
-        templates = get_templates_by_genre(genre)
-    else:
-        templates = get_all_templates()
+    templates = get_templates_by_genre(genre) if genre else get_all_templates()
 
     return [
         CoverTemplateResponse(
@@ -353,7 +350,7 @@ async def list_covers(
 
 
 async def update_cover(db, org_id, cover_id, **updates):
-    cover = await get_cover_by_id(db, org_id, cover_id)
+    await get_cover_by_id(db, org_id, cover_id)
     stmt = select(Cover).where(Cover.id == cover_id, Cover.org_id == org_id, Cover.deleted_at.is_(None))
     result = await db.execute(stmt)
     cover_orm = result.scalar_one_or_none()

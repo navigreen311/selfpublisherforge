@@ -317,8 +317,7 @@ class LiveAmazonClient(AmazonClientBase):
         k_date = self._hmac_sha256(f"AWS4{self._secret_key}".encode(), date_stamp)
         k_region = self._hmac_sha256(k_date, region)
         k_service = self._hmac_sha256(k_region, self._SERVICE)
-        k_signing = self._hmac_sha256(k_service, "aws4_request")
-        return k_signing
+        return self._hmac_sha256(k_service, "aws4_request")
 
     def _sign_request(
         self,

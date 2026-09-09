@@ -84,10 +84,7 @@ def _calculate_letter_pattern_complexity(word: str) -> float:
     uniqueness = unique / length
 
     # Balance ratio: perfectly balanced vowels/consonants → harder to decode
-    if length > 0:
-        balance = 1.0 - abs(vowels - consonants) / length
-    else:
-        balance = 0.0
+    balance = 1.0 - abs(vowels - consonants) / length if length > 0 else 0.0
 
     # Repetition penalty: many repeats → easier
     repeat_penalty = 1.0 - (length - unique) / max(length, 1)

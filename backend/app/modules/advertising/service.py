@@ -618,7 +618,7 @@ class AdvertisingService:
                     )
                 )
             )
-            camp_ids = [r for r in platform_campaigns.scalars().all()]
+            camp_ids = list(platform_campaigns.scalars().all())
             if camp_ids:
                 platform_perf = await self.db.execute(
                     select(

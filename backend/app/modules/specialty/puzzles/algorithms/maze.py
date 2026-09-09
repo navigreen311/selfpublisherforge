@@ -87,10 +87,7 @@ def _star_mask(row: int, col: int, width: int, height: int) -> bool:
     half_sector = sector / 2
     relative_angle = (angle + math.pi / 2) % sector
 
-    if relative_angle < half_sector:
-        t = relative_angle / half_sector
-    else:
-        t = (sector - relative_angle) / half_sector
+    t = relative_angle / half_sector if relative_angle < half_sector else (sector - relative_angle) / half_sector
 
     threshold = max_r * (inner_ratio + (1 - inner_ratio) * t)
     return r <= threshold
@@ -98,7 +95,7 @@ def _star_mask(row: int, col: int, width: int, height: int) -> bool:
 
 def _christmas_tree_mask(row: int, col: int, width: int, height: int) -> bool:
     """Christmas tree shape: triangular tree with trunk."""
-    cx = (width - 1) / 2.0
+    (width - 1) / 2.0
     # Normalize
     ny = row / (height - 1)  # 0=top, 1=bottom
     nx = col / (width - 1)  # 0=left, 1=right

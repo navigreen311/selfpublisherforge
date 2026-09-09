@@ -73,14 +73,13 @@ def _get_orchestrator() -> LLMOrchestrator:
     underlying Anthropic SDK client manages its own connection pool.
     """
     anthropic_provider = AnthropicProvider()
-    orchestrator = LLMOrchestrator(
+    return LLMOrchestrator(
         providers={ProviderName.ANTHROPIC: anthropic_provider},
         router=ModelRouter(),
         cache=SemanticCache(),
         cost_tracker=CostTracker(),
         quality=QualityAssurance(),
     )
-    return orchestrator
 
 
 # ---------------------------------------------------------------------------
@@ -206,10 +205,7 @@ async def _compute_quality_score(
     # --- 1. Length adequacy (0.0 - 1.0), weight 0.30 ---
     # Ramp linearly up to the expected minimum, then cap at 1.0 for
     # outputs up to 4x the minimum (very long isn't necessarily better).
-    if word_count >= expected_min_words:
-        length_score = 1.0
-    else:
-        length_score = word_count / expected_min_words
+    length_score = 1.0 if word_count >= expected_min_words else word_count / expected_min_words
     # Slight penalty for extremely short outputs even relative to minimum
     if word_count < 20:
         length_score *= 0.6
@@ -230,7 +226,7 @@ async def _compute_quality_score(
             structure_score = 0.4
 
     # --- 3. Vocabulary richness / coherence (0.0 - 1.0), weight 0.20 ---
-    unique_words = set(w.lower() for w in words)
+    unique_words = {w.lower() for w in words}
     if word_count > 0:
         ttr = len(unique_words) / word_count  # type-token ratio
     else:

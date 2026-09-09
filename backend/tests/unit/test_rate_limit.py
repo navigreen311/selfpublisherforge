@@ -148,8 +148,7 @@ def fake_redis() -> FakeRedis:
 
 @pytest.fixture
 def limiter(fake_redis: FakeRedis) -> SlidingWindowRateLimiter:
-    rl = SlidingWindowRateLimiter(redis_client=fake_redis)  # type: ignore[arg-type]
-    return rl
+    return SlidingWindowRateLimiter(redis_client=fake_redis)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

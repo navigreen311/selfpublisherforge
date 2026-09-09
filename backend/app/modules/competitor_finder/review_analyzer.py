@@ -324,7 +324,7 @@ async def analyze_reviews_with_ai(
     if not review_texts:
         return baseline
 
-    prompt = _build_ai_analysis_prompt(review_texts, book_title, book_category)
+    _build_ai_analysis_prompt(review_texts, book_title, book_category)
 
     try:
         # ASSUMPTION: An LLM client will be injected / configured at infrastructure level.

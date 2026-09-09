@@ -39,11 +39,11 @@ def _uuid_sqlite(type_, compiler, **kw):
 # ---------------------------------------------------------------------------
 # Import models so they register with Base.metadata
 # ---------------------------------------------------------------------------
-import app.modules.specialty_books.models_coloring  # noqa: E402
-from app.database import Base  # noqa: E402
+import app.modules.specialty_books.models_coloring
+from app.database import Base
 
 try:
-    import app.modules.specialty_books.models_puzzle  # noqa: F401
+    import app.modules.specialty_books.models_puzzle
 except (ImportError, ModuleNotFoundError):
     pass
 

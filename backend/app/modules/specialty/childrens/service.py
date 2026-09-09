@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # ORM models — imported from the canonical models module
 # ---------------------------------------------------------------------------
-from app.modules.specialty.models.childrens import (  # noqa: E402
+from app.modules.specialty.models.childrens import (
     ChildrensBook,
     ChildrensBookCharacter,
     ChildrensBookPage,
@@ -1032,7 +1032,7 @@ async def check_continuity(db: AsyncSession, org_id: UUID, book_id: UUID) -> dic
     Checks: clothing/accessories mentioned, character scale references,
     time-of-day/location consistency, style drift.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
     characters = await list_characters(db, org_id, book_id)
 
@@ -1120,7 +1120,7 @@ async def auto_fix_prompts(db: AsyncSession, org_id: UUID, book_id: UUID) -> dic
     For every page that mentions a character by name, appends the character's
     full description, clothing rules, and scale rules to the prompt.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
     characters = await list_characters(db, org_id, book_id)
 
     stmt = select(ChildrensBookPage).where(
@@ -1956,7 +1956,7 @@ async def reflow(db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[st
 
         # Estimate whether text will overflow the new content area
         text = p.get("text_content") or ""
-        word_count = len(text.split())
+        len(text.split())
         # Rough chars-per-line estimate at the new font size (assuming ~0.6 em width)
         chars_per_line = max(1, int(new_content_w * 72 / (new_font_size * 0.6)))
         lines_needed = max(1, math.ceil(len(text) / chars_per_line))

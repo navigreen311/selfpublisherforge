@@ -78,11 +78,10 @@ async def get_weaknesses(
 ):
     service = CompetitorFinderService(db)
     try:
-        weaknesses = await service.get_weaknesses(
+        return await service.get_weaknesses(
             analysis_id=analysis_id,
             org_id=current_user["org_id"],
         )
-        return weaknesses
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
@@ -173,11 +172,10 @@ async def gap_analysis(
         )
     service = CompetitorFinderService(db)
     try:
-        result = await service.run_gap_analysis(
+        return await service.run_gap_analysis(
             request=request,
             org_id=current_user["org_id"],
         )
-        return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
@@ -195,12 +193,11 @@ async def get_alerts(
     db: AsyncSession = Depends(get_db),
 ):
     service = CompetitorFinderService(db)
-    alerts = await service.get_alerts(
+    return await service.get_alerts(
         org_id=current_user["org_id"],
         include_dismissed=include_dismissed,
         limit=limit,
     )
-    return alerts
 
 
 # ------------------------------------------------------------------

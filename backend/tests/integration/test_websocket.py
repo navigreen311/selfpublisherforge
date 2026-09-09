@@ -79,9 +79,8 @@ class TestWritingChannel:
 
     def test_reject_without_token(self, client: TestClient) -> None:
         # WebSocket should close with policy violation.
-        with pytest.raises(Exception):
-            with client.websocket_connect("/api/v1/ws/writing/book-1") as ws:
-                ws.receive_json()
+        with pytest.raises(Exception), client.websocket_connect("/api/v1/ws/writing/book-1") as ws:
+            ws.receive_json()
 
     def test_reject_with_invalid_token(self, client: TestClient) -> None:
         with pytest.raises(Exception):

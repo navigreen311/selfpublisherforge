@@ -97,8 +97,7 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
 
     try:
         loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
@@ -174,8 +173,7 @@ def send_social_post_reminders(self, org_id: str) -> dict:
 
     try:
         loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
@@ -240,8 +238,7 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
 
     try:
         loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
@@ -291,8 +288,7 @@ def generate_launch_plan_async(
 
     loop = asyncio.new_event_loop()
     try:
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except Exception as exc:
         logger.error(f"Failed to generate launch plan: {exc}", exc_info=True)
         return {"status": "error", "error": str(exc)}

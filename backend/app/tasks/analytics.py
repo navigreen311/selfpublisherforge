@@ -1118,10 +1118,7 @@ def _parse_ingramspark_response(
     records: list[dict[str, Any]] = []
 
     # The API may return a top-level list or a dict with a reports/compensations key.
-    if isinstance(data, list):
-        report_items = data
-    else:
-        report_items = data.get("reports", data.get("compensations", []))
+    report_items = data if isinstance(data, list) else data.get("reports", data.get("compensations", []))
 
     if not report_items:
         logger.info(
@@ -1433,10 +1430,7 @@ def _parse_d2d_response(
     records: list[dict[str, Any]] = []
 
     # The API may return a top-level list or a dict with a payouts/reports key.
-    if isinstance(data, list):
-        payout_items = data
-    else:
-        payout_items = data.get("payouts", data.get("reports", data.get("sales", [])))
+    payout_items = data if isinstance(data, list) else data.get("payouts", data.get("reports", data.get("sales", [])))
 
     if not payout_items:
         logger.info("D2D API returned no payout items for account %s.", account.id)

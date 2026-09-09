@@ -35,7 +35,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import ARRAY as SA_ARRAY
 
 # Ensure all models are imported so Base.metadata knows about them
-import app.models  # noqa: F401
+import app.models
 from app.database import Base, get_db
 from app.main import create_app
 
@@ -108,10 +108,7 @@ def _is_pg_only_index(idx) -> bool:
         return True
     if kw.get("postgresql_where") is not None:
         return True
-    if kw.get("postgresql_ops"):
-        return True
-
-    return False
+    return bool(kw.get("postgresql_ops"))
 
 
 @event.listens_for(Base.metadata, "before_create")
@@ -134,10 +131,7 @@ def _patch_for_sqlite(target, connection, **kw):
                 sd = column.server_default
                 sd_text = ""
                 if hasattr(sd, "arg"):
-                    if hasattr(sd.arg, "text"):
-                        sd_text = str(sd.arg.text)
-                    else:
-                        sd_text = str(sd.arg)
+                    sd_text = str(sd.arg.text) if hasattr(sd.arg, "text") else str(sd.arg)
 
                 # Strip PG-only function calls in server_default
                 pg_functions = ["gen_random_uuid", "uuid_generate"]

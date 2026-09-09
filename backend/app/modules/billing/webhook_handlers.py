@@ -15,6 +15,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.sql import assert_known_columns
+from app.models.organization import Organization as _OrgModel
 from app.modules.billing.plans import get_plan_limits
 from app.modules.notifications.models import NotificationType
 from app.modules.notifications.service import create_notification
@@ -576,11 +578,12 @@ async def _update_org(
     """Update columns on the organizations table."""
     if not data:
         return
+    assert_known_columns(_OrgModel, data)
     set_clauses = ", ".join(f"{key} = :{key}" for key in data)
     params = {**data, "org_id": str(org_id)}
     # Dynamic column names, but values are parameterized (safe from SQL injection)
     await db.execute(
-        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608
+        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608 - column names validated by assert_known_columns; values are bound
         params,
     )
     await db.flush()

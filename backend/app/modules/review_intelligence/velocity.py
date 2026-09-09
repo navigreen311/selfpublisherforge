@@ -65,10 +65,7 @@ def detect_trend(data_points: list[VelocityDataPoint]) -> VelocityTrend:
     slope = numerator / denominator
 
     # Normalize slope relative to mean
-    if y_mean > 0:
-        relative_slope = slope / y_mean
-    else:
-        relative_slope = slope
+    relative_slope = slope / y_mean if y_mean > 0 else slope
 
     if relative_slope > 0.1:
         return VelocityTrend.RISING

@@ -113,10 +113,7 @@ class _WorkingGrid:
             return False
 
         # First word doesn't need intersection; all subsequent do
-        if self.placed and not has_intersection:
-            return False
-
-        return True
+        return not (self.placed and not has_intersection)
 
     def place(self, word: str, row: int, col: int, direction: str) -> _PlacedWord:
         pw = _PlacedWord(word, row, col, direction)
@@ -253,10 +250,7 @@ def generate_crossword(
     dict with keys: grid, size, words, solution, across_clues, down_clues,
                     difficulty_score, content_hash, unplaced_words
     """
-    if seed is not None:
-        rng = random.Random(seed)
-    else:
-        rng = random.Random()
+    rng = random.Random(seed) if seed is not None else random.Random()
 
     clean_words = _sanitize_words(words)
     if not clean_words:

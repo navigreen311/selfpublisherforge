@@ -79,13 +79,12 @@ async def generate_fingerprint(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = body.org_id or current_user["org_id"]
-    result = await svc.generate_originality_fingerprint(
+    return await svc.generate_originality_fingerprint(
         db,
         body.book_type,
         body.book_id,
         org_id,
     )
-    return result
 
 
 @router.post(
@@ -99,14 +98,13 @@ async def compare_originality(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = body.org_id or current_user["org_id"]
-    result = await svc.compare_originality(
+    return await svc.compare_originality(
         db,
         body.book_id_1,
         body.book_id_2,
         org_id,
         body.book_type,
     )
-    return result
 
 
 @router.post(
@@ -120,8 +118,7 @@ async def spam_check(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = body.org_id or current_user["org_id"]
-    result = await svc.run_spam_check(db, body.book_type, body.book_id, org_id)
-    return result
+    return await svc.run_spam_check(db, body.book_type, body.book_id, org_id)
 
 
 @router.post(
@@ -164,5 +161,4 @@ async def get_compliance_report(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = current_user["org_id"]
-    result = await svc.generate_compliance_report(db, book_type, book_id, org_id)
-    return result
+    return await svc.generate_compliance_report(db, book_type, book_id, org_id)

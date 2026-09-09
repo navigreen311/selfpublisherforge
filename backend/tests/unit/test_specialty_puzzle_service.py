@@ -34,52 +34,52 @@ from app.modules.specialty.puzzles import service
 
 def _make_book(**overrides: Any) -> SimpleNamespace:
     """Create a lightweight PuzzleBook-like object for testing."""
-    defaults = dict(
-        id=uuid4(),
-        org_id=uuid4(),
-        title="Test Book",
-        audience="adults",
-        puzzle_config=None,
-        difficulty_mode=DifficultyMode.progressive,
-        themes=None,
-        seasonal_theme=None,
-        word_difficulty=None,
-        clue_style=None,
-        answer_key_position=AnswerKeyPosition.back_of_book,
-        has_toc=False,
-        has_hints=False,
-        layout_mode=None,
-        status=BookStatus.draft,
-        qa_score=None,
-        created_at=None,
-        updated_at=None,
-        deleted_at=None,
-    )
+    defaults = {
+        "id": uuid4(),
+        "org_id": uuid4(),
+        "title": "Test Book",
+        "audience": "adults",
+        "puzzle_config": None,
+        "difficulty_mode": DifficultyMode.progressive,
+        "themes": None,
+        "seasonal_theme": None,
+        "word_difficulty": None,
+        "clue_style": None,
+        "answer_key_position": AnswerKeyPosition.back_of_book,
+        "has_toc": False,
+        "has_hints": False,
+        "layout_mode": None,
+        "status": BookStatus.draft,
+        "qa_score": None,
+        "created_at": None,
+        "updated_at": None,
+        "deleted_at": None,
+    }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
 
 
 def _make_puzzle(**overrides: Any) -> SimpleNamespace:
     """Create a lightweight Puzzle-like object for testing."""
-    defaults = dict(
-        id=uuid4(),
-        book_id=uuid4(),
-        puzzle_type=PuzzleType.word_search,
-        puzzle_number=1,
-        theme=None,
-        difficulty=Difficulty.easy,
-        difficulty_score=25.0,
-        grid_size="15x15",
-        grid_data=None,
-        word_list=None,
-        clues=None,
-        answer_data=None,
-        content_hash="abc123",
-        is_verified=True,
-        has_unique_solution=True,
-        created_at=None,
-        updated_at=None,
-    )
+    defaults = {
+        "id": uuid4(),
+        "book_id": uuid4(),
+        "puzzle_type": PuzzleType.word_search,
+        "puzzle_number": 1,
+        "theme": None,
+        "difficulty": Difficulty.easy,
+        "difficulty_score": 25.0,
+        "grid_size": "15x15",
+        "grid_data": None,
+        "word_list": None,
+        "clues": None,
+        "answer_data": None,
+        "content_hash": "abc123",
+        "is_verified": True,
+        "has_unique_solution": True,
+        "created_at": None,
+        "updated_at": None,
+    }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
 

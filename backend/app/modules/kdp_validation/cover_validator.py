@@ -80,10 +80,7 @@ class CoverValidator:
     def _check_resolution(self, req: CoverValidationRequest) -> list[ValidationIssue]:
         issues: list[ValidationIssue] = []
 
-        if req.cover_type == CoverType.PRINT.value:
-            min_dpi = MIN_PRINT_DPI
-        else:
-            min_dpi = MIN_EBOOK_DPI
+        min_dpi = MIN_PRINT_DPI if req.cover_type == CoverType.PRINT.value else MIN_EBOOK_DPI
 
         if req.dpi < min_dpi:
             issues.append(

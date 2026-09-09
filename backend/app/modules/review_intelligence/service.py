@@ -92,10 +92,7 @@ async def list_reviews(
 
     # Sorting
     sort_column = getattr(BookReview, params.sort_by, BookReview.review_date)
-    if params.sort_dir == "asc":
-        stmt = stmt.order_by(sort_column.asc())
-    else:
-        stmt = stmt.order_by(sort_column.desc())
+    stmt = stmt.order_by(sort_column.asc()) if params.sort_dir == "asc" else stmt.order_by(sort_column.desc())
 
     stmt = stmt.limit(params.limit + 1)
 
@@ -150,10 +147,7 @@ async def get_reviews_for_book(
         stmt = stmt.where(BookReview.id > params.cursor)
 
     sort_column = getattr(BookReview, params.sort_by, BookReview.review_date)
-    if params.sort_dir == "asc":
-        stmt = stmt.order_by(sort_column.asc())
-    else:
-        stmt = stmt.order_by(sort_column.desc())
+    stmt = stmt.order_by(sort_column.asc()) if params.sort_dir == "asc" else stmt.order_by(sort_column.desc())
 
     stmt = stmt.limit(params.limit + 1)
 
@@ -619,10 +613,7 @@ def _calculate_overall_score(
     rating_score = (avg_rating / 5.0) * 40 if avg_rating > 0 else 0
 
     # Volume component (0-20), log-scaled
-    if total_reviews > 0:
-        volume_score = min(20, (math.log10(total_reviews + 1) / math.log10(1001)) * 20)
-    else:
-        volume_score = 0
+    volume_score = min(20, math.log10(total_reviews + 1) / math.log10(1001) * 20) if total_reviews > 0 else 0
 
     # Sentiment component (0-25)
     sentiment_score = sentiment_ratio * 25

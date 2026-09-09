@@ -253,7 +253,7 @@ async def check_gutter_collisions(
             }
         )
 
-    pages_with_collisions = len(set(c["page"] for c in collisions))
+    pages_with_collisions = len({c["page"] for c in collisions})
     return {
         "book_id": book_id,
         "book_type": book_type,

@@ -48,7 +48,7 @@ def generate_cryptogram(phrase, difficulty="medium", seed=None):
     cm = _generate_cipher_map(rng)
     encoded = _apply_cipher(phrase, cm)
     inv = {v: k for k, v in cm.items()}
-    used = set(ch.upper() for ch in phrase if ch.isalpha())
+    used = {ch.upper() for ch in phrase if ch.isalpha()}
     eu = [cm[l] for l in used if l in cm]
     hints = []
     if difficulty == "easy":
@@ -59,7 +59,7 @@ def generate_cryptogram(phrase, difficulty="medium", seed=None):
         c = rng.choice(eu)
         hints = [{"encoded_letter": c, "decoded_letter": inv[c]}]
     freq = dict(sorted(Counter(ch.upper() for ch in encoded if ch.isalpha()).items(), key=lambda x: -x[1]))
-    ul = len(set(ch.upper() for ch in phrase if ch.isalpha()))
+    ul = len({ch.upper() for ch in phrase if ch.isalpha()})
     base = {"easy": 10, "medium": 40, "hard": 70}.get(difficulty, 40)
     cx = min(ul / 26, 1) * 20 + min(len(phrase) / 200, 1) * 10
     score = max(0, min(100, int(base + cx - len(hints) * 5)))

@@ -163,7 +163,7 @@ async def analyze_amazon_listing(
         len(keywords),
     )
 
-    analysis = analyze_listing(
+    return analyze_listing(
         title=title,
         blurb=blurb,
         keywords=keywords,
@@ -172,8 +172,6 @@ async def analyze_amazon_listing(
         genre=genre,
         asin=resolved_asin,
     )
-
-    return analysis
 
 
 async def analyze_listing_with_data(

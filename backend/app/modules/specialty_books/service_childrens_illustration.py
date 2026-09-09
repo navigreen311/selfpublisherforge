@@ -1110,8 +1110,8 @@ async def export_book(
 
     provenance_report = {
         "total_assets": len(provenance_records),
-        "models_used": list(set(p.model for p in provenance_records if p.model)),
-        "generation_dates": list(set(p.created_at.isoformat()[:10] for p in provenance_records if p.created_at)),
+        "models_used": list({p.model for p in provenance_records if p.model}),
+        "generation_dates": list({p.created_at.isoformat()[:10] for p in provenance_records if p.created_at}),
     }
 
     font_result = await check_font_licensing(db, book_id, org_id)

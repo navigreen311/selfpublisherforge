@@ -61,22 +61,22 @@ def _make_create_request(
 
 async def _seed_ab_test(db, *, status: str = "draft", **overrides) -> ABTest:
     """Insert an ABTest row directly into the DB and return the ORM object."""
-    defaults = dict(
-        id=uuid.uuid4(),
-        org_id=ORG_ID,
-        book_id=BOOK_ID,
-        name="Seed Test",
-        status=status,
-        variant_a_content=VARIANT_A,
-        variant_b_content=VARIANT_B,
-        variant_a_impressions=0,
-        variant_a_clicks=0,
-        variant_b_impressions=0,
-        variant_b_clicks=0,
-        duration_days=7,
-        started_at=None,
-        completed_at=None,
-    )
+    defaults = {
+        "id": uuid.uuid4(),
+        "org_id": ORG_ID,
+        "book_id": BOOK_ID,
+        "name": "Seed Test",
+        "status": status,
+        "variant_a_content": VARIANT_A,
+        "variant_b_content": VARIANT_B,
+        "variant_a_impressions": 0,
+        "variant_a_clicks": 0,
+        "variant_b_impressions": 0,
+        "variant_b_clicks": 0,
+        "duration_days": 7,
+        "started_at": None,
+        "completed_at": None,
+    }
     defaults.update(overrides)
     ab = ABTest(**defaults)
     db.add(ab)

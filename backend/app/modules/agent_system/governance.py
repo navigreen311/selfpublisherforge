@@ -167,28 +167,25 @@ async def check_budget(
         budget.last_reset_monthly = now
 
     # Check daily token limit
-    if budget.daily_token_limit > 0:
-        if budget.tokens_used_today + estimated_tokens > budget.daily_token_limit:
-            raise BudgetExceeded(
-                f"Daily token limit exceeded. Used: {budget.tokens_used_today}, "
-                f"Limit: {budget.daily_token_limit}, Estimated: {estimated_tokens}"
-            )
+    if budget.daily_token_limit > 0 and budget.tokens_used_today + estimated_tokens > budget.daily_token_limit:
+        raise BudgetExceeded(
+            f"Daily token limit exceeded. Used: {budget.tokens_used_today}, "
+            f"Limit: {budget.daily_token_limit}, Estimated: {estimated_tokens}"
+        )
 
     # Check daily USD limit
-    if budget.daily_usd_limit > 0:
-        if budget.usd_used_today + estimated_cost > budget.daily_usd_limit:
-            raise BudgetExceeded(
-                f"Daily USD limit exceeded. Used: ${budget.usd_used_today:.4f}, "
-                f"Limit: ${budget.daily_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
-            )
+    if budget.daily_usd_limit > 0 and budget.usd_used_today + estimated_cost > budget.daily_usd_limit:
+        raise BudgetExceeded(
+            f"Daily USD limit exceeded. Used: ${budget.usd_used_today:.4f}, "
+            f"Limit: ${budget.daily_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
+        )
 
     # Check monthly USD limit
-    if budget.monthly_usd_limit > 0:
-        if budget.usd_used_this_month + estimated_cost > budget.monthly_usd_limit:
-            raise BudgetExceeded(
-                f"Monthly USD limit exceeded. Used: ${budget.usd_used_this_month:.4f}, "
-                f"Limit: ${budget.monthly_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
-            )
+    if budget.monthly_usd_limit > 0 and budget.usd_used_this_month + estimated_cost > budget.monthly_usd_limit:
+        raise BudgetExceeded(
+            f"Monthly USD limit exceeded. Used: ${budget.usd_used_this_month:.4f}, "
+            f"Limit: ${budget.monthly_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
+        )
 
     await db.flush()
     return budget

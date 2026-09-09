@@ -27,13 +27,13 @@ class ReportStatus(str, enum.Enum):
 
 
 # ── Re-exports from canonical module models ───────────────────────────
-from app.modules.analytics.models import (  # noqa: E402
+from app.modules.analytics.models import (
     AnalyticsEvent,
     PortfolioMetricSnapshot,
     Report,
     RoyaltyRecord,
 )
-from app.modules.product_page_lab.models import ABTest  # noqa: E402
+from app.modules.product_page_lab.models import ABTest
 
 # Backward-compatible alias — legacy code references "PortfolioMetric"
 PortfolioMetric = PortfolioMetricSnapshot

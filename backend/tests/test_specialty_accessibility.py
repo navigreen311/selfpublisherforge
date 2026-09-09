@@ -46,9 +46,7 @@ def _is_pg_only_index(idx) -> bool:
     if pg_opts.get("using") or pg_opts.get("where") is not None or pg_opts.get("ops"):
         return True
     kw = getattr(idx, "kwargs", {})
-    if kw.get("postgresql_using") or kw.get("postgresql_where") is not None or kw.get("postgresql_ops"):
-        return True
-    return False
+    return bool(kw.get("postgresql_using") or kw.get("postgresql_where") is not None or kw.get("postgresql_ops"))
 
 
 @event.listens_for(Base.metadata, "before_create")
@@ -78,7 +76,7 @@ def _patch_for_sqlite(target, connection, **kw):
             table.indexes.discard(idx)
 
 
-import app.modules.specialty_books.models_accessibility  # noqa: E402, F401
+import app.modules.specialty_books.models_accessibility
 
 ORG_ID = uuid.uuid4()
 
@@ -93,10 +91,10 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-from app.modules.specialty_books import service_accessibility as acc_svc  # noqa: E402
-from app.modules.specialty_books import service_layout_protection as layout_svc  # noqa: E402
-from app.modules.specialty_books.models_accessibility import AccessibilityVariant  # noqa: E402
-from app.modules.specialty_books.service_accessibility import (  # noqa: E402
+from app.modules.specialty_books import service_accessibility as acc_svc
+from app.modules.specialty_books import service_layout_protection as layout_svc
+from app.modules.specialty_books.models_accessibility import AccessibilityVariant
+from app.modules.specialty_books.service_accessibility import (
     DYSLEXIA_BACKGROUND_COLOR,
     DYSLEXIA_FONT_FAMILY,
     DYSLEXIA_LETTER_SPACING_PCT,
@@ -111,7 +109,7 @@ from app.modules.specialty_books.service_accessibility import (  # noqa: E402
     WCAG_AAA_CONTRAST,
     calculate_contrast_ratio,
 )
-from app.modules.specialty_books.service_layout_protection import (  # noqa: E402
+from app.modules.specialty_books.service_layout_protection import (
     SEVERITY_CAUTION,
     SEVERITY_CRITICAL,
     SEVERITY_OK,

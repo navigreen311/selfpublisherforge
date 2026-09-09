@@ -22,7 +22,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import BaseModel, TenantModel
 
 # Import canonical Campaign and AdCreative from the advertising module
-from app.modules.advertising.models import AdCreative, Campaign  # noqa: F401
+from app.modules.advertising.models import AdCreative, Campaign
 
 # ---------------------------------------------------------------------------
 # Enums

@@ -82,9 +82,7 @@ async def _compute_total_expenses(
     )
     result = await db.execute(ad_spend_query)
     row = result.one()
-    total_ad_spend = Decimal(str(row.total_ad_spend))
-
-    return total_ad_spend
+    return Decimal(str(row.total_ad_spend))
 
 
 async def compute_portfolio_metrics(
@@ -122,10 +120,7 @@ async def compute_portfolio_metrics(
     net_profit = total_revenue - total_expenses
 
     # Average ROI: (revenue - expenses) / expenses when expenses > 0
-    if total_expenses > 0:
-        avg_roi = (total_revenue - total_expenses) / total_expenses
-    else:
-        avg_roi = Decimal("0.00")
+    avg_roi = (total_revenue - total_expenses) / total_expenses if total_expenses > 0 else Decimal("0.00")
 
     # Platform breakdown
     platform_query = (

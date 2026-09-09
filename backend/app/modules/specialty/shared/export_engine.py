@@ -197,7 +197,6 @@ def generate_pdf_manifest(
 
     # Content pages
     single_sided = book_type == "coloring" or book_data.get("single_sided", False)
-    coloring_margin_extra = 0.25 if book_type == "coloring" else 0.0
 
     for p in pages_input:
         page_seq += 1
@@ -438,7 +437,7 @@ def generate_png_pages(
     height_px = _in_to_px(full_h)
 
     book_id = book_data.get("id", book_data.get("book_id", "unknown"))
-    pages_input = book_data.get("pages", [])
+    book_data.get("pages", [])
 
     # Build full ordered page list via the PDF manifest for consistency
     pdf_manifest = generate_pdf_manifest(book_type, book_data)

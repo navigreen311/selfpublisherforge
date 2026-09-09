@@ -44,8 +44,7 @@ def check_deadlines(self) -> dict:
 
     loop = asyncio.new_event_loop()
     try:
-        result = loop.run_until_complete(_check_deadlines_async())
-        return result
+        return loop.run_until_complete(_check_deadlines_async())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise

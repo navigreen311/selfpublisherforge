@@ -314,7 +314,7 @@ def _calculate_opportunity_score(weaknesses: list[WeaknessSignalCreate], book_ra
     severity_factor = min(total_severity / max(max_severity, 1), 1.0) * 0.4
 
     # Factor 2: Category diversity (0 to 0.3) - weaknesses across more categories = bigger opp
-    unique_categories = len(set(w.category for w in weaknesses))
+    unique_categories = len({w.category for w in weaknesses})
     category_factor = min(unique_categories / 5.0, 1.0) * 0.3
 
     # Factor 3: Rating-based opportunity (0 to 0.3) - lower competitor rating = higher opp

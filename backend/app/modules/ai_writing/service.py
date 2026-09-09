@@ -1267,10 +1267,7 @@ async def generate_outline(
         import re
 
         json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
-        if json_match:
-            data = json.loads(json_match.group(1))
-        else:
-            data = {"chapters": [], "summary": raw}
+        data = json.loads(json_match.group(1)) if json_match else {"chapters": [], "summary": raw}
 
     chapters = [
         OutlineChapter(
@@ -1351,10 +1348,7 @@ async def generate_outline_standalone(
         import re as _re
 
         json_match = _re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, _re.DOTALL)
-        if json_match:
-            data = json.loads(json_match.group(1))
-        else:
-            data = {"chapters": [], "synopsis": raw}
+        data = json.loads(json_match.group(1)) if json_match else {"chapters": [], "synopsis": raw}
 
     chapters = [
         ChapterOutline(

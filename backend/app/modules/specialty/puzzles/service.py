@@ -300,11 +300,11 @@ def _generate_crossword(
                     if pl["direction"] == "across":
                         r = pl["start"][0] - wi
                         c = pl["start"][1] + pi2
-                        dr, orient = 1, "down"
+                        _dr, orient = 1, "down"
                     else:
                         r = pl["start"][0] + pi2
                         c = pl["start"][1] - wi
-                        dr, orient = 0, "across"
+                        _dr, orient = 0, "across"
                     # Bounds check
                     if orient == "down":
                         if r < 0 or r + len(word_upper) > size:
@@ -528,7 +528,7 @@ def _generate_sudoku(
     for r, c in positions:
         if removed >= cells_to_remove:
             break
-        backup = board[r][c]
+        board[r][c]
         board[r][c] = 0
         removed += 1
         # Simplified unique-solution check skipped for perf; flag accordingly
@@ -1028,7 +1028,7 @@ async def generate_puzzle(
     Delegates to the appropriate algorithm based on puzzle_type, verifies the
     solution, calculates a difficulty score, and generates a content hash.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
 
     puzzle_type = puzzle_type or PuzzleType.word_search
     difficulty = difficulty or Difficulty.medium
@@ -1161,12 +1161,11 @@ async def verify_puzzle(
                 issues.append("No solution path found")
                 is_solvable = False
 
-    elif puzzle.puzzle_type == PuzzleType.crossword:
-        if puzzle.answer_data:
-            placements = puzzle.answer_data.get("placements", [])
-            if not placements:
-                issues.append("No words placed in crossword grid")
-                is_solvable = False
+    elif puzzle.puzzle_type == PuzzleType.crossword and puzzle.answer_data:
+        placements = puzzle.answer_data.get("placements", [])
+        if not placements:
+            issues.append("No words placed in crossword grid")
+            is_solvable = False
 
     puzzle.is_verified = is_solvable
     puzzle.has_unique_solution = has_unique and is_solvable
@@ -1498,7 +1497,7 @@ async def auto_fix_clues(
     Identifies problematic clues (contains answer, too short) and sends
     them to the LLM for rewriting while maintaining the original style.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
 
     stmt = select(Puzzle).where(
         Puzzle.book_id == book_id,
@@ -1672,7 +1671,7 @@ async def verify_answer_key(
     - Puzzle numbering is sequential
     - Answer data is non-empty
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
 
     stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
@@ -1791,7 +1790,7 @@ async def calibrate_difficulty(
         "book_id": str(book_id),
         "difficulty_mode": book.difficulty_mode,
         "total_puzzles": total,
-        "distribution": {k: v for k, v in distribution.items()},
+        "distribution": dict(distribution.items()),
         "scores": [
             {
                 "puzzle_number": p.puzzle_number,
@@ -1964,7 +1963,7 @@ async def run_quality_check(
     all_word_sets: list[tuple[int, set[str]]] = []
     for puzzle in puzzles:
         if puzzle.word_list:
-            all_word_sets.append((puzzle.puzzle_number, set(w.lower() for w in puzzle.word_list)))
+            all_word_sets.append((puzzle.puzzle_number, {w.lower() for w in puzzle.word_list}))
     for i in range(len(all_word_sets)):
         for j in range(i + 1, len(all_word_sets)):
             num_i, set_i = all_word_sets[i]

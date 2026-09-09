@@ -1441,7 +1441,7 @@ class TestModelsInit:
     def test_model_count(self):
         """Verify we have all 30+ models defined."""
         # Import all to register
-        import app.models  # noqa: F401
+        import app.models
         from app.database import Base
 
         # Count the non-abstract tables

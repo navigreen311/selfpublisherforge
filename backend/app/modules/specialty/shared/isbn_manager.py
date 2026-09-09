@@ -249,12 +249,11 @@ def _render_ean13_svg(digits: str) -> str:
         f'letter-spacing="2">{right_text}</text>'
     )
 
-    svg = (
+    return (
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">'
         f'<rect width="{svg_w}" height="{svg_h}" fill="#fff"/>' + "".join(rects) + "".join(texts) + "</svg>"
     )
-    return svg
 
 
 # ---------------------------------------------------------------------------

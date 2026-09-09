@@ -113,8 +113,7 @@ def process_single_analysis(
     try:
         loop = asyncio.new_event_loop()
         try:
-            result = loop.run_until_complete(_run())
-            return result
+            return loop.run_until_complete(_run())
         finally:
             loop.close()
     except SoftTimeLimitExceeded:

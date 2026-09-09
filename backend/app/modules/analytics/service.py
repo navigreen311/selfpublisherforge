@@ -166,7 +166,7 @@ async def get_royalties(
         except ValueError:
             logger.warning("Failed to parse timezone value, using default UTC")
 
-    count_query = select(func.count(RoyaltyRecord.id)).where(and_(*[c for c in conditions if "id <" not in str(c)]))
+    select(func.count(RoyaltyRecord.id)).where(and_(*[c for c in conditions if "id <" not in str(c)]))
     count_result = await db.execute(
         select(func.count(RoyaltyRecord.id)).where(
             and_(

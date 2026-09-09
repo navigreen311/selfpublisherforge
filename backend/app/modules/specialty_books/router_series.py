@@ -234,8 +234,7 @@ async def create_series(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.create_series(db, user["org_id"], body.model_dump())
-    return result
+    return await service_series.create_series(db, user["org_id"], body.model_dump())
 
 
 @router.get(
@@ -339,8 +338,7 @@ async def create_bundle(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.create_bundle(db, user["org_id"], body.model_dump())
-    return result
+    return await service_series.create_bundle(db, user["org_id"], body.model_dump())
 
 
 @router.get(
@@ -373,13 +371,12 @@ async def add_isbns(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.manage_isbn(
+    return await service_series.manage_isbn(
         db,
         user["org_id"],
         "add_to_pool",
         {"isbns": body.isbns, "publisher_name": body.publisher_name},
     )
-    return result
 
 
 @router.get(
@@ -480,11 +477,10 @@ async def review_feedback(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.process_review_feedback(
+    return await service_series.process_review_feedback(
         db,
         book_type,
         book_id,
         user["org_id"],
         body.complaints,
     )
-    return result

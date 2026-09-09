@@ -210,7 +210,7 @@ async def suggest_keywords(db: AsyncSession, org_id, book_id=None) -> list[dict]
         )
         .distinct()
     )
-    existing_keywords = [r for r in kw_result.scalars().all()]
+    existing_keywords = list(kw_result.scalars().all())
 
     # Generate mock keyword suggestions based on existing keywords
     suggestion_templates = [

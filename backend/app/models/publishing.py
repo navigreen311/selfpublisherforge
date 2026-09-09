@@ -22,7 +22,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import BaseModel, TenantModel
 
 # Import canonical PricingRule from the pricing_automation module
-from app.modules.pricing_automation.models import PricingRule  # noqa: F401
+from app.modules.pricing_automation.models import PricingRule
 
 
 class PublishingPlatform(str, enum.Enum):

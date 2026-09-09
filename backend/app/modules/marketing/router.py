@@ -328,14 +328,12 @@ async def get_social_calendar(
             ) from None
 
     service = MarketingService(db)
-    calendar_data = await service.get_social_calendar(
+    return await service.get_social_calendar(
         org_id=current_user["org_id"],
         start_date=start_date,
         end_date=end_date,
         platform=social_platform,
     )
-
-    return calendar_data
 
 
 # ---------------------------------------------------------------------------

@@ -631,9 +631,7 @@ def _words_rhyme(word_a: str, word_b: str) -> bool:
                 pre_b = b[: vb.start()]
                 # If both have the same preceding consonant, it's a suffix
                 # match (e.g. "slowly"/"gently" -> "l"+"y"), not a rhyme
-                if pre_a and pre_b and pre_a[-1] == pre_b[-1]:
-                    return False
-                return True
+                return not (pre_a and pre_b and pre_a[-1] == pre_b[-1])
 
     return False
 
@@ -652,9 +650,7 @@ def _near_rhyme(word_a: str, word_b: str) -> bool:
     if vowels_a and vowels_b and vowels_a == vowels_b:
         return True
     # Last consonant match
-    if a[-1] == b[-1] and a[-1] not in "aeiouy":
-        return True
-    return False
+    return bool(a[-1] == b[-1] and a[-1] not in "aeiouy")
 
 
 def _check_word_in_vocabulary(word: str, vocab_level: int | None) -> bool:
@@ -772,7 +768,7 @@ def _compute_hook_strength(pages_text: list[str]) -> float:
     if '"' in hook_text or "'" in hook_text:
         score += 10
     action_words = {"ran", "jumped", "flew", "crashed", "zoomed", "raced", "dashed"}
-    if set(w.lower() for w in words) & action_words:
+    if {w.lower() for w in words} & action_words:
         score += 15
     sentences = _split_sentences(hook_text)
     avg_len = sum(len(_tokenize_words(s)) for s in sentences) / max(len(sentences), 1)
@@ -897,7 +893,7 @@ async def generate_story(
         enriched_prompt += f"\nSetting: {request.setting}"
 
     # Call LLM
-    llm_result = await _call_llm_generate_story(
+    await _call_llm_generate_story(
         prompt=enriched_prompt,
         age_band=request.age_band,
         page_count=page_count,

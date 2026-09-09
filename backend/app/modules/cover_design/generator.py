@@ -117,8 +117,7 @@ def calculate_spine_width(
         Spine width in inches
     """
     thickness_per_page = 0.0025 if paper_type.lower() == "cream" else 0.002252
-    spine_inches = page_count * thickness_per_page
-    return spine_inches
+    return page_count * thickness_per_page
 
 
 def get_paperback_dimensions(

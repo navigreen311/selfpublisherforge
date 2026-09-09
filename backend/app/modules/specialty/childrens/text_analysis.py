@@ -546,13 +546,12 @@ def detect_rhyme_pattern(text: str) -> dict[str, Any]:
         e1, e2 = endings[i], endings[i + 1]
         if e1 and e2 and e1 != e2:
             # Check if they share some but not all ending sounds
-            if len(e1) >= 2 and len(e2) >= 2:
-                if e1[-1] == e2[-1] and e1[-2:] != e2[-2:]:
-                    issues.append(
-                        f"Lines {i + 1}-{i + 2}: near-rhyme detected "
-                        f"('{lines[i].split()[-1] if lines[i].split() else ''}' / "
-                        f"'{lines[i + 1].split()[-1] if lines[i + 1].split() else ''}')"
-                    )
+            if len(e1) >= 2 and len(e2) >= 2 and e1[-1] == e2[-1] and e1[-2:] != e2[-2:]:
+                issues.append(
+                    f"Lines {i + 1}-{i + 2}: near-rhyme detected "
+                    f"('{lines[i].split()[-1] if lines[i].split() else ''}' / "
+                    f"'{lines[i + 1].split()[-1] if lines[i + 1].split() else ''}')"
+                )
 
     # --- Meter consistency (syllable-count heuristic) ---
     word_counts_per_line = [len(_extract_words(ln)) for ln in lines]

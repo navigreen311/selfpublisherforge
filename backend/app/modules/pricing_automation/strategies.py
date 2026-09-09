@@ -260,10 +260,7 @@ class DynamicStrategy(PricingStrategy):
         avg_recent = sum(recent) / len(recent)
         avg_older = sum(older) / len(older)
 
-        if avg_older == 0:
-            bsr_change = 0.0
-        else:
-            bsr_change = (avg_recent - avg_older) / avg_older
+        bsr_change = 0.0 if avg_older == 0 else (avg_recent - avg_older) / avg_older
 
         # Negative bsr_change means rank improved (lower number = better)
         # If rank improved: we can raise price slightly

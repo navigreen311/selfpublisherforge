@@ -73,23 +73,22 @@ def refresh_category_data(self):
 
         # Flatten the tree and upsert each node into market_categories
         flat = _flatten_category_tree(categories)
-        async with async_session() as session:
-            async with session.begin():
-                for node in flat:
-                    result = await session.execute(
-                        select(MarketCategory).where(MarketCategory.amazon_node_id == node["id"])
+        async with async_session() as session, session.begin():
+            for node in flat:
+                result = await session.execute(
+                    select(MarketCategory).where(MarketCategory.amazon_node_id == node["id"])
+                )
+                existing = result.scalar_one_or_none()
+                if existing:
+                    existing.name = node["name"]
+                    existing.book_count = node.get("book_count") or 0
+                else:
+                    cat = MarketCategory(
+                        amazon_node_id=node["id"],
+                        name=node["name"],
+                        book_count=node.get("book_count") or 0,
                     )
-                    existing = result.scalar_one_or_none()
-                    if existing:
-                        existing.name = node["name"]
-                        existing.book_count = node.get("book_count") or 0
-                    else:
-                        cat = MarketCategory(
-                            amazon_node_id=node["id"],
-                            name=node["name"],
-                            book_count=node.get("book_count") or 0,
-                        )
-                        session.add(cat)
+                    session.add(cat)
         return count
 
     try:
@@ -235,31 +234,30 @@ def generate_market_snapshot(self, category_id: str | None = None):
                     "competition_score": analysis.competition_score,
                 }
 
-                async with async_session() as session:
-                    async with session.begin():
-                        # Look up or create the MarketCategory row for this node
-                        cat_result = await session.execute(
-                            select(MarketCategory).where(
-                                MarketCategory.amazon_node_id == cat_id,
-                                MarketCategory.deleted_at.is_(None),
-                            )
+                async with async_session() as session, session.begin():
+                    # Look up or create the MarketCategory row for this node
+                    cat_result = await session.execute(
+                        select(MarketCategory).where(
+                            MarketCategory.amazon_node_id == cat_id,
+                            MarketCategory.deleted_at.is_(None),
                         )
-                        cat_obj = cat_result.scalar_one_or_none()
-                        if cat_obj is None:
-                            cat_obj = MarketCategory(
-                                amazon_node_id=cat_id,
-                                name=analysis.category_name,
-                                book_count=analysis.book_count,
-                            )
-                            session.add(cat_obj)
-                            await session.flush()
+                    )
+                    cat_obj = cat_result.scalar_one_or_none()
+                    if cat_obj is None:
+                        cat_obj = MarketCategory(
+                            amazon_node_id=cat_id,
+                            name=analysis.category_name,
+                            book_count=analysis.book_count,
+                        )
+                        session.add(cat_obj)
+                        await session.flush()
 
-                        snapshot = MarketSnapshot(
-                            category_id=cat_obj.id,
-                            snapshot_date=date.today(),
-                            metrics=snapshot_data,
-                        )
-                        session.add(snapshot)
+                    snapshot = MarketSnapshot(
+                        category_id=cat_obj.id,
+                        snapshot_date=date.today(),
+                        metrics=snapshot_data,
+                    )
+                    session.add(snapshot)
 
                 snapshots_created += 1
                 logger.debug("Snapshot created for %s: %s", cat_id, snapshot_data)

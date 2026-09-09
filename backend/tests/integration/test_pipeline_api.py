@@ -42,7 +42,7 @@ async def override_get_db():
 async def fastapi_app():
     """Create a fresh app with a clean in-memory database."""
     # Import models so they are registered on Base.metadata
-    import app.modules.production_pipeline.models  # noqa: F401
+    import app.modules.production_pipeline.models
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

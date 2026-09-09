@@ -184,10 +184,7 @@ def generate_word_search(
     -------
     dict with keys: grid, words, solution, difficulty_score, content_hash
     """
-    if seed is not None:
-        rng = random.Random(seed)
-    else:
-        rng = random.Random()
+    rng = random.Random(seed) if seed is not None else random.Random()
 
     # Apply preset defaults only when caller uses default grid_size/directions
     preset = DIFFICULTY_PRESETS.get(difficulty, DIFFICULTY_PRESETS["medium"])

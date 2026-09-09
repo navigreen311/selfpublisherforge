@@ -190,10 +190,7 @@ class TestCrossword:
         for p in placements:
             word = p["word"]
             for i, letter in enumerate(word):
-                if p["direction"] == "across":
-                    pos = (p["row"], p["col"] + i)
-                else:
-                    pos = (p["row"] + i, p["col"])
+                pos = (p["row"], p["col"] + i) if p["direction"] == "across" else (p["row"] + i, p["col"])
                 occupied.setdefault(pos, []).append(word)
 
         intersections = {pos for pos, words in occupied.items() if len(words) > 1}
@@ -574,8 +571,8 @@ class TestDifficultyScoresInRange:
     @pytest.mark.parametrize(
         "params",
         [
-            dict(grid_size=10, word_count=5, direction_count=2, overlap_rate=0.0),
-            dict(grid_size=20, word_count=25, direction_count=8, overlap_rate=0.5),
+            {"grid_size": 10, "word_count": 5, "direction_count": 2, "overlap_rate": 0.0},
+            {"grid_size": 20, "word_count": 25, "direction_count": 8, "overlap_rate": 0.5},
         ],
     )
     def test_ws_calculate_difficulty_bounds(self, params):
@@ -586,8 +583,8 @@ class TestDifficultyScoresInRange:
     @pytest.mark.parametrize(
         "params",
         [
-            dict(path_length=10, dead_end_count=5, branch_factor=1.8, grid_size=10),
-            dict(path_length=500, dead_end_count=200, branch_factor=3.0, grid_size=40),
+            {"path_length": 10, "dead_end_count": 5, "branch_factor": 1.8, "grid_size": 10},
+            {"path_length": 500, "dead_end_count": 200, "branch_factor": 3.0, "grid_size": 40},
         ],
     )
     def test_maze_calculate_difficulty_bounds(self, params):

@@ -280,7 +280,7 @@ class FacebookAdsClient:
 
         # Convert daily_budget from dollars to cents if present
         payload = dict(updates)
-        if "daily_budget" in payload and isinstance(payload["daily_budget"], (int, float)):
+        if "daily_budget" in payload and isinstance(payload["daily_budget"], int | float):
             payload["daily_budget"] = int(round(payload["daily_budget"] * 100))
 
         logger.info("Updating Facebook Ads campaign: %s", external_campaign_id)
@@ -599,16 +599,13 @@ class FacebookAdsClient:
 
         # The insights endpoint returns data inside a "data" array
         insights_list = data.get("data", [])
-        if insights_list:
-            metrics = insights_list[0]
-        else:
-            metrics = {f: "0" for f in requested_fields}
+        metrics = insights_list[0] if insights_list else {f: "0" for f in requested_fields}
 
         # Normalise metric values to floats
         normalised: dict[str, float | list | dict] = {}
         for key in requested_fields:
             value = metrics.get(key, 0)
-            if isinstance(value, (list, dict)):
+            if isinstance(value, list | dict):
                 normalised[key] = value
             else:
                 try:
@@ -662,7 +659,7 @@ class FacebookAdsClient:
             raw = insights_list[0]
             for key in fields:
                 value = raw.get(key, 0)
-                if isinstance(value, (list, dict)):
+                if isinstance(value, list | dict):
                     metrics[key] = value
                 else:
                     try:

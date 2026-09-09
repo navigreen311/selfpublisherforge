@@ -292,8 +292,7 @@ def _xml_escape(text: str) -> str:
     text = text.replace("<", "&lt;")
     text = text.replace(">", "&gt;")
     text = text.replace('"', "&quot;")
-    text = text.replace("'", "&apos;")
-    return text
+    return text.replace("'", "&apos;")
 
 
 class SSMLGenerator:
@@ -502,7 +501,7 @@ class SSMLGenerator:
 
         # Attempt XML parse
         try:
-            root = ElementTree.fromstring(ssml_text)  # noqa: S314  — validating our own SSML output
+            root = ElementTree.fromstring(ssml_text)  # — validating our own SSML output
         except ElementTree.ParseError as exc:
             errors.append(f"XML parse error: {exc}")
             return {
@@ -995,13 +994,11 @@ class SSMLGenerator:
                 return num_str
             return f'<say-as interpret-as="cardinal">{num_str}</say-as>'
 
-        text = re.sub(
+        return re.sub(
             r'(?<!["\w>])(\d{1,3}(?:,\d{3})+(?:\.\d+)?)(?!["\w<])',
             _number_replace,
             text,
         )
-
-        return text
 
     # ------------------------------------------------------------------
     # Helpers

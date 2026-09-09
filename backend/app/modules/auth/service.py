@@ -111,7 +111,7 @@ async def register_user(
         "tokens": TokenResponse(
             access_token=access,
             refresh_token=refresh,
-            token_type="bearer",
+            token_type="bearer",  # noqa: S106 - the literal "bearer" scheme name
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         ),
         "email_verify_token": raw_verify_token,
@@ -178,7 +178,7 @@ async def authenticate(
         "tokens": TokenResponse(
             access_token=access,
             refresh_token=refresh,
-            token_type="bearer",
+            token_type="bearer",  # noqa: S106 - the literal "bearer" scheme name
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         ),
     }
@@ -222,7 +222,7 @@ async def refresh_access_token(db: AsyncSession, *, refresh_token: str) -> Token
     return TokenResponse(
         access_token=new_access,
         refresh_token=new_refresh,
-        token_type="bearer",
+        token_type="bearer",  # noqa: S106 - the literal "bearer" scheme name
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -715,7 +715,7 @@ async def _issue_oauth_tokens(db: AsyncSession, user: User) -> dict:
         "tokens": TokenResponse(
             access_token=access,
             refresh_token=refresh,
-            token_type="bearer",
+            token_type="bearer",  # noqa: S106 - the literal "bearer" scheme name
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         ),
     }

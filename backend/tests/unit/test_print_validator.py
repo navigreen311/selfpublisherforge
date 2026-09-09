@@ -26,19 +26,19 @@ def validator() -> PrintValidator:
 
 def _make_request(**overrides) -> PrintValidationRequest:
     """Create a valid-by-default print validation request."""
-    defaults = dict(
-        trim_size="6x9",
-        page_count=200,
-        paper_type="white",
-        has_bleed=False,
-        inside_margin=0.625,
-        outside_margin=0.5,
-        top_margin=0.5,
-        bottom_margin=0.5,
-        image_dpi=300,
-        fonts_embedded=True,
-        color_space="RGB",
-    )
+    defaults = {
+        "trim_size": "6x9",
+        "page_count": 200,
+        "paper_type": "white",
+        "has_bleed": False,
+        "inside_margin": 0.625,
+        "outside_margin": 0.5,
+        "top_margin": 0.5,
+        "bottom_margin": 0.5,
+        "image_dpi": 300,
+        "fonts_embedded": True,
+        "color_space": "RGB",
+    }
     defaults.update(overrides)
     return PrintValidationRequest(**defaults)
 

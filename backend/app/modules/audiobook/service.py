@@ -271,7 +271,7 @@ def _detect_dialogue_basic(text: str) -> list[dict]:
 def _validate_ssml(ssml_text: str) -> dict:
     """Validate SSML syntax by parsing as XML."""
     try:
-        ElementTree.fromstring(ssml_text)  # noqa: S314
+        ElementTree.fromstring(ssml_text)
         return {"valid": True, "error": None}
     except ElementTree.ParseError as e:
         return {"valid": False, "error": str(e)}

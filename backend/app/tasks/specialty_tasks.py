@@ -475,9 +475,8 @@ async def _export_book_async(
             else:
                 generate_pdf_manifest(book_type, book_data)
 
-            metadata = calculate_export_metadata(book_type, book_data)
+            calculate_export_metadata(book_type, book_data)
 
-            export_filename = f"{book_id}.{format}"
             download_url = f"/api/v1/storage/specialty/{book_type}/{book_id}/export.{format}"
 
             _publish_event(
@@ -760,7 +759,7 @@ async def _generate_puzzle_batch_async(
 
     async with async_session() as db:
         try:
-            book = (await db.execute(select(PuzzleBook).where(PuzzleBook.id == book_id))).scalar_one()
+            (await db.execute(select(PuzzleBook).where(PuzzleBook.id == book_id))).scalar_one()
 
             total = len(puzzle_configs)
             completed = 0

@@ -201,7 +201,7 @@ def generate_word_search(
 
     # Calculate overlap rate
     total_placed_cells = sum(len(pw["positions"]) for pw in placed_words)
-    unique_cells = len(set(pos for pw in placed_words for pos in pw["positions"]))
+    unique_cells = len({pos for pw in placed_words for pos in pw["positions"]})
     overlap_rate = 1.0 - (unique_cells / total_placed_cells) if total_placed_cells > 0 else 0.0
 
     difficulty = calculate_difficulty(

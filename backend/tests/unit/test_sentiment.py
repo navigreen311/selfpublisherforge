@@ -149,15 +149,17 @@ class TestLLMSentiment:
         mock_anthropic = MagicMock()
         mock_anthropic.AsyncAnthropic.return_value = mock_client_instance
 
-        with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
-            with patch(
+        with (
+            patch.dict("sys.modules", {"anthropic": mock_anthropic}),
+            patch(
                 "app.modules.review_intelligence.sentiment.anthropic",
                 mock_anthropic,
                 create=True,
-            ):
-                # We need to bypass the try/except import by directly calling
-                # Let's test the fallback path instead since mocking imports is tricky
-                pass
+            ),
+        ):
+            # We need to bypass the try/except import by directly calling
+            # Let's test the fallback path instead since mocking imports is tricky
+            pass
 
     @pytest.mark.asyncio
     async def test_handles_exception_gracefully(self):

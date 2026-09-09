@@ -839,7 +839,7 @@ async def batch_generate(
     pipeline on each, and tracks progress.  Variation mode prevents
     similar compositions by injecting variation prompts.
     """
-    book = await get_coloring_book(db, org_id, book_id)
+    await get_coloring_book(db, org_id, book_id)
 
     job_id = f"batch-{secrets.token_urlsafe(16)}"
 
@@ -1329,7 +1329,7 @@ async def run_preflight(
     """
     from app.modules.specialty.models.coloring import ColoringBookPage
 
-    book = await get_coloring_book(db, org_id, book_id)
+    await get_coloring_book(db, org_id, book_id)
 
     stmt = (
         select(ColoringBookPage).where(ColoringBookPage.book_id == book_id).order_by(ColoringBookPage.page_number.asc())

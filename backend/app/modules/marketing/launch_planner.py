@@ -221,7 +221,7 @@ class LaunchPlanner:
             tasks=_build_tasks_from_template(POST_LAUNCH_TASKS, launch_date),
         )
 
-        plan = LaunchPlanCreate(
+        return LaunchPlanCreate(
             book_id=request.book_id,
             title=f"Launch Plan: {request.book_title}",
             description=(
@@ -235,8 +235,6 @@ class LaunchPlanner:
             goals={"user_goals": request.goals} if request.goals else None,
             phases=[pre_launch_phase, launch_week_phase, post_launch_phase],
         )
-
-        return plan
 
     async def generate_plan_with_ai(
         self,

@@ -21,7 +21,7 @@ from app.models.dictation import (
 )
 
 # Re-exported for backwards compatibility. Declared in __all__ rather than
-# carrying a `# noqa: F401`, because ruff's import sorter relocates the block
+# carrying a `# `, because ruff's import sorter relocates the block
 # and the trailing noqa does not travel with it — which silently dropped the
 # SessionStatus alias.
 __all__ = [

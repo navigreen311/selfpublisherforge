@@ -283,8 +283,7 @@ async def sanitize_word_list(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = service_puzzle.sanitize_word_list(body.words)
-    return result
+    return service_puzzle.sanitize_word_list(body.words)
 
 
 # ---------------------------------------------------------------------------

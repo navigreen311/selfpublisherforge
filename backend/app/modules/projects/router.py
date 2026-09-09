@@ -106,8 +106,7 @@ async def get_project(
     db: AsyncSession = Depends(get_db),
 ):
     """Get project by ID."""
-    project = await service.get_project(db, project_id, current_user["org_id"])
-    return project
+    return await service.get_project(db, project_id, current_user["org_id"])
 
 
 # ---------------------------------------------------------------------------

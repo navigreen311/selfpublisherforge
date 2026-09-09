@@ -90,8 +90,7 @@ def _average_hash(image_bytes: bytes, hash_size: int = 8) -> str:
     bits = "".join("1" if px >= mean_val else "0" for px in sampled)
 
     # Convert to hex
-    hex_str = format(int(bits, 2), f"0{total_pixels // 4}x")
-    return hex_str
+    return format(int(bits, 2), f"0{total_pixels // 4}x")
 
 
 def _grid_data_hash(grid_data: Any) -> str:

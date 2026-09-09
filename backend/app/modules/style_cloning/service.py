@@ -179,7 +179,7 @@ async def list_profiles(
     stmt = (
         select(StyleProfile)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
         .order_by(StyleProfile.created_at.desc())
     )
     result = await db.execute(stmt)
@@ -198,7 +198,7 @@ async def get_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -217,7 +217,7 @@ async def get_fingerprint(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -244,7 +244,7 @@ async def analyze_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -272,7 +272,7 @@ async def delete_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -297,7 +297,7 @@ async def conformity_check(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -322,7 +322,7 @@ async def tune_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -348,7 +348,7 @@ async def update_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)  # noqa: E711
+        .where(StyleProfile.deleted_at == None)
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()

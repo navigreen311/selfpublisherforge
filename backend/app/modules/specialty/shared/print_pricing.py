@@ -297,10 +297,7 @@ def strategy_advisor(
     """
     # Infer interior type
     if interior_type is None:
-        if book_type == "childrens":
-            interior_type = "premium_color"
-        else:
-            interior_type = "bw"
+        interior_type = "premium_color" if book_type == "childrens" else "bw"
 
     cost = calculate_print_cost(page_count, interior_type)
     category_avg = _CATEGORY_AVG_PRICES.get(book_type, 9.99)

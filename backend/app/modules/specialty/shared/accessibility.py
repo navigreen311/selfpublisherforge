@@ -280,9 +280,8 @@ def generate_high_contrast_variant(book_data: dict) -> dict:
         page["background_color"] = settings["background_color"]
 
         # Grid lines
-        if page.get("grid_line_width"):
-            if page["grid_line_width"] < settings["grid_line_min_width_px"]:
-                page["grid_line_width"] = settings["grid_line_min_width_px"]
+        if page.get("grid_line_width") and page["grid_line_width"] < settings["grid_line_min_width_px"]:
+            page["grid_line_width"] = settings["grid_line_min_width_px"]
         page["grid_line_color"] = settings["text_color"]
 
         # Bold numbers and instructions

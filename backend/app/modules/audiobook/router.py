@@ -108,8 +108,7 @@ async def add_pronunciation(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    entry = await service.add_pronunciation(db, current_user["org_id"], request)
-    return entry
+    return await service.add_pronunciation(db, current_user["org_id"], request)
 
 
 @router.get(

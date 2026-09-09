@@ -779,15 +779,17 @@ class TestCreateCheckoutSession:
         org_id = uuid.uuid4()
         mock_db = AsyncMock()
 
-        with patch.dict(service._TIER_TO_PRICE_ID, {}, clear=True):
-            with patch(
+        with (
+            patch.dict(service._TIER_TO_PRICE_ID, {}, clear=True),
+            patch(
                 "app.modules.billing.service._resolve_price_ids",
                 return_value={},
-            ):
-                request = CheckoutRequest(plan_tier=PlanTier.ENTERPRISE)
-                with pytest.raises(AppException) as exc_info:
-                    await service.create_checkout_session(mock_db, org_id, "test@example.com", request)
-                assert exc_info.value.code == "INVALID_PLAN"
+            ),
+        ):
+            request = CheckoutRequest(plan_tier=PlanTier.ENTERPRISE)
+            with pytest.raises(AppException) as exc_info:
+                await service.create_checkout_session(mock_db, org_id, "test@example.com", request)
+            assert exc_info.value.code == "INVALID_PLAN"
 
 
 # ===========================================================================

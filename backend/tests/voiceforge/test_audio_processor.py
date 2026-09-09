@@ -240,7 +240,7 @@ class TestValidateACXSpecs:
             assert "actual" in check
             assert "expected" in check
             assert "auto_fixable" in check
-            assert check["passed"] is True or check["passed"] is False or isinstance(check["passed"], (bool, np.bool_))
+            assert check["passed"] is True or check["passed"] is False or isinstance(check["passed"], bool | np.bool_)
 
     def test_validate_acx_thresholds_peak(self, processor: AudioProcessor, loud_wav: Path):
         """Peak must be <= -3 dB — loud audio should fail."""
@@ -259,7 +259,7 @@ class TestValidateACXSpecs:
         """Noise floor must be < -60 dB."""
         result = processor.validate_acx(sample_wav)
         nf_check = next(c for c in result.checks if "Noise Floor" in c["name"])
-        assert isinstance(nf_check["passed"], (bool, np.bool_))
+        assert isinstance(nf_check["passed"], bool | np.bool_)
 
     def test_validate_acx_thresholds_sample_rate(self, processor: AudioProcessor, sample_wav: Path):
         """Sample rate must be 44100 Hz."""

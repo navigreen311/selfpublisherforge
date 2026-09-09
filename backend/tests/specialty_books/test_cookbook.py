@@ -258,7 +258,7 @@ class TestRecipeCRUD:
             "nutrition": {"calories": 285, "protein_g": 12.5, "fat_g": 10.2},
         }
         result = await mock_service.get_recipe(recipe_id=RECIPE_ID)
-        assert isinstance(result["nutrition"]["calories"], (int, float))
+        assert isinstance(result["nutrition"]["calories"], int | float)
 
     @pytest.mark.asyncio
     async def test_update_recipe(self):

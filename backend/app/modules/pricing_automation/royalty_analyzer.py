@@ -68,13 +68,12 @@ def _generate_optimization_tips(rows: list[dict]) -> list[str]:
                     f"Lowering to ${ROYALTY_70_MAX:.2f} or below would qualify for the 70% "
                     f"royalty tier on KDP."
                 )
-        elif fmt.lower() == "paperback":
-            if price < 7.99:
-                tips.append(
-                    f"'{title}' paperback at ${price:.2f} may have thin margins after "
-                    f"printing costs. Consider raising to at least $7.99 for better "
-                    f"profitability."
-                )
+        elif fmt.lower() == "paperback" and price < 7.99:
+            tips.append(
+                f"'{title}' paperback at ${price:.2f} may have thin margins after "
+                f"printing costs. Consider raising to at least $7.99 for better "
+                f"profitability."
+            )
 
     if not tips:
         tips.append(

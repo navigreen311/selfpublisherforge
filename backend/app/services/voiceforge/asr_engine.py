@@ -129,7 +129,7 @@ class ASREngine:
         self,
         session_id: str,
         language: str = "en",
-        config: dict | None = None,  # noqa: ARG002 - reserved for future use
+        config: dict | None = None,  # - reserved for future use
     ) -> ASRSession:
         """Initialize a new ASR session."""
         session = ASRSession(session_id=session_id, language=language)

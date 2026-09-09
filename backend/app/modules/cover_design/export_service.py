@@ -42,7 +42,7 @@ BLEED_INCHES = 0.125
 async def export_cover(
     db: AsyncSession,
     cover_id: UUID,
-    format: ExportFormat,  # noqa: A002 — shadows built-in intentionally for API clarity
+    format: ExportFormat,  # — shadows built-in intentionally for API clarity
     include_bleed: bool = False,
 ) -> tuple[bytes, str, str]:
     """Export a cover in the requested format.
@@ -328,7 +328,7 @@ async def _export_pdf(cover: Cover, include_bleed: bool) -> bytes:
 
 
 def _add_trim_marks(
-    c: "canvas.Canvas",  # noqa: F821
+    c: canvas.Canvas,
     width_inches: float,
     height_inches: float,
     bleed_inches: float,

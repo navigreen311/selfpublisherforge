@@ -23,7 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import BaseModel, TenantModel
 
 # Re-export the canonical models so existing imports from this module keep working
-from app.models.market import CompetitorBook, CompetitorReview  # noqa: F401
+from app.models.market import CompetitorBook, CompetitorReview
 
 
 class CompetitorAnalysis(TenantModel):

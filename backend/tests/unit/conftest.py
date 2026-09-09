@@ -32,7 +32,7 @@ def user_id() -> uuid.UUID:
 @pytest.fixture
 def sample_agent(org_id: uuid.UUID) -> Agent:
     """Return a detached Agent instance for pure-unit tests."""
-    agent = Agent(
+    return Agent(
         id=uuid.uuid4(),
         org_id=org_id,
         agent_type=AgentType.RESEARCH,
@@ -44,7 +44,6 @@ def sample_agent(org_id: uuid.UUID) -> Agent:
         temperature=0.7,
         is_enabled=True,
     )
-    return agent
 
 
 @pytest_asyncio.fixture

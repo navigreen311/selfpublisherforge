@@ -219,10 +219,9 @@ class TestCalculateBacklistProjection:
             if month > 0 and month % PROMOTION_FREQUENCY_MONTHS == 0:
                 # Previous month (non-promo) should be lower
                 prev = result.monthly_projections[month - 2] if month > 1 else None
-                if prev:
-                    if proj["revenue"] > prev["revenue"]:
-                        has_spike = True
-                        break
+                if prev and proj["revenue"] > prev["revenue"]:
+                    has_spike = True
+                    break
 
         assert has_spike, "Expected at least one promotion spike"
 

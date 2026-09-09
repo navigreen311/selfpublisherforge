@@ -181,13 +181,6 @@ class EmailBuilder:
         - Follow-Up: 5 days after launch
         - Review Request: 14 days after launch
         """
-        default_personalization = {
-            "book_title": book_title,
-            "author_name": author_name,
-            "buy_link": buy_link,
-            "preview_link": preview_link,
-            "review_link": review_link,
-        }
 
         emails = [
             self._build_template_email(

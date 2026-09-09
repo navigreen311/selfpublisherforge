@@ -147,7 +147,7 @@ class TestCryptogramGenerator:
         phrase = "HELLO WORLD"
         r = generate_cryptogram(phrase, seed=42)
         inv = {v: k for k, v in r["cipher_map"].items()}
-        decoded = "".join(inv[ch.upper()] if ch.upper() in inv else ch for ch in r["encoded"])
+        decoded = "".join(inv.get(ch.upper(), ch) for ch in r["encoded"])
         assert decoded.upper() == phrase.upper()
 
     def test_cryptogram_hints_easy(self):

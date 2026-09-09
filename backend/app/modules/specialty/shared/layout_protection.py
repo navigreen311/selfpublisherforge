@@ -224,7 +224,7 @@ def check_gutter_collision(page_data: dict, spine_width: float) -> list[dict]:
         ``collision``, ``auto_shift_suggestion``.
     """
     dpi = page_data.get("dpi", 300)
-    gutter_px = _inches_to_px(_GUTTER_MARGIN + spine_width * 0.5, dpi)
+    _inches_to_px(_GUTTER_MARGIN + spine_width * 0.5, dpi)
     min_safe_px = _inches_to_px(0.5, dpi)  # 0.5 inches from spine
 
     elements = page_data.get("elements", [])
@@ -323,8 +323,8 @@ def auto_reflow(book_data: dict, target_trim_size: str) -> dict:
     scale_y = target["height"] / source["height"]
 
     dpi = book_data.get("dpi", 300)
-    source_w_px = _inches_to_px(source["width"], dpi)
-    source_h_px = _inches_to_px(source["height"], dpi)
+    _inches_to_px(source["width"], dpi)
+    _inches_to_px(source["height"], dpi)
     target_w_px = _inches_to_px(target["width"], dpi)
     target_h_px = _inches_to_px(target["height"], dpi)
 

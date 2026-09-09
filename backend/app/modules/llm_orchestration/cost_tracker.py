@@ -357,10 +357,7 @@ class CostTracker:
 
         current = start_date
         while current <= end_date:
-            if model_id:
-                cost_key = _model_cost_key(org_id, current, model_id)
-            else:
-                cost_key = _daily_cost_key(org_id, current)
+            cost_key = _model_cost_key(org_id, current, model_id) if model_id else _daily_cost_key(org_id, current)
 
             tin_key = _tokens_input_key(org_id, current)
             tout_key = _tokens_output_key(org_id, current)

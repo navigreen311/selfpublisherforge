@@ -108,8 +108,7 @@ class TrackedTask(Task):
         """Calculate exponential backoff countdown based on current retry number."""
         retries = self.request.retries or 0
         base = 60  # 1-minute base
-        countdown = min(base * (2**retries), policy.get("retry_backoff_max", 300))
-        return countdown
+        return min(base * (2**retries), policy.get("retry_backoff_max", 300))
 
 
 class OrgScopedTask(TrackedTask):

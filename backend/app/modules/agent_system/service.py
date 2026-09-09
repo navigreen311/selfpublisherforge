@@ -118,8 +118,7 @@ async def ensure_default_agents(db: AsyncSession, org_id: uuid.UUID) -> list[Age
 
 async def list_agents(db: AsyncSession, org_id: uuid.UUID) -> list[Agent]:
     """List all non-deleted agents for the org, seeding defaults if needed."""
-    agents = await ensure_default_agents(db, org_id)
-    return agents
+    return await ensure_default_agents(db, org_id)
 
 
 async def get_agent(db: AsyncSession, agent_id: uuid.UUID, org_id: uuid.UUID) -> Agent:

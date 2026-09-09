@@ -418,7 +418,7 @@ class TestFullPipelineReport:
                 black_pixels.add((x, 15 + y_off))
         image = _make_bw_png(30, 30, black_pixels=black_pixels)
         result = await run_full_pipeline(image)
-        assert isinstance(result.report.score, (int, float))
+        assert isinstance(result.report.score, int | float)
         assert 0 <= result.report.score <= 100
 
     @pytest.mark.asyncio

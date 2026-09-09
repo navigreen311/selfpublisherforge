@@ -637,9 +637,7 @@ class QualityAssurance:
         # false positives from sentence-initial capitalization
         proper_nouns = cls._RE_PROPER_NOUNS.findall(sentence)
         multi_word_names = [pn for pn in proper_nouns if " " in pn]
-        if multi_word_names:
-            return True
-        return False
+        return bool(multi_word_names)
 
     @classmethod
     def _is_strong_claim(cls, sentence: str) -> bool:
@@ -658,9 +656,7 @@ class QualityAssurance:
             if re.search(r"\b\d{4}\b", sentence):
                 return True
         # Precise multi-digit numbers
-        if re.search(r"\b\d{3,}\b", sentence):
-            return True
-        return False
+        return bool(re.search("\\b\\d{3,}\\b", sentence))
 
     @classmethod
     def _claim_supported_by_context(

@@ -32,33 +32,33 @@ def _make_print_cover(**overrides) -> CoverValidationRequest:
     spine = _spine(200, "white")
     exp_w = expected_print_cover_width(6.0, spine)
     exp_h = expected_print_cover_height(9.0)
-    defaults = dict(
-        cover_type="print",
-        width_inches=round(exp_w, 4),
-        height_inches=round(exp_h, 4),
-        dpi=300,
-        file_format="TIFF",
-        color_space="CMYK",
-        trim_size="6x9",
-        page_count=200,
-        paper_type="white",
-        has_text_in_bleed=False,
-    )
+    defaults = {
+        "cover_type": "print",
+        "width_inches": round(exp_w, 4),
+        "height_inches": round(exp_h, 4),
+        "dpi": 300,
+        "file_format": "TIFF",
+        "color_space": "CMYK",
+        "trim_size": "6x9",
+        "page_count": 200,
+        "paper_type": "white",
+        "has_text_in_bleed": False,
+    }
     defaults.update(overrides)
     return CoverValidationRequest(**defaults)
 
 
 def _make_ebook_cover(**overrides) -> CoverValidationRequest:
     """Create a valid-by-default ebook cover request."""
-    defaults = dict(
-        cover_type="ebook",
-        width_inches=6.0,
-        height_inches=9.0,
-        dpi=72,
-        file_format="JPEG",
-        color_space="RGB",
-        has_text_in_bleed=False,
-    )
+    defaults = {
+        "cover_type": "ebook",
+        "width_inches": 6.0,
+        "height_inches": 9.0,
+        "dpi": 72,
+        "file_format": "JPEG",
+        "color_space": "RGB",
+        "has_text_in_bleed": False,
+    }
     defaults.update(overrides)
     return CoverValidationRequest(**defaults)
 

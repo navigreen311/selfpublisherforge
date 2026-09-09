@@ -634,12 +634,11 @@ async def create_facebook_audience(
         )
 
     try:
-        result = await _facebook_client.create_custom_audience(
+        return await _facebook_client.create_custom_audience(
             name=data.name,
             description=data.description,
             source_type=data.source_type,
         )
-        return result
     except FacebookAdsError as exc:
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,

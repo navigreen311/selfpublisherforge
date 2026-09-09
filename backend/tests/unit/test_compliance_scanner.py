@@ -19,14 +19,14 @@ def scanner() -> ComplianceScanner:
 
 def _make_request(**overrides) -> ComplianceScanRequest:
     """Create a clean compliance scan request."""
-    defaults = dict(
-        title="My Great Book",
-        subtitle="A Novel",
-        description="<p>A wonderful story about life.</p>",
-        keywords=["fiction", "adventure", "novel"],
-        categories=["Fiction > Adventure"],
-        content_sample="",
-    )
+    defaults = {
+        "title": "My Great Book",
+        "subtitle": "A Novel",
+        "description": "<p>A wonderful story about life.</p>",
+        "keywords": ["fiction", "adventure", "novel"],
+        "categories": ["Fiction > Adventure"],
+        "content_sample": "",
+    }
     defaults.update(overrides)
     return ComplianceScanRequest(**defaults)
 

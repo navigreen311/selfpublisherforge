@@ -424,7 +424,7 @@ def _render_pdf(
     margin_outer = max(style.margin_outer_in, 0.75) * inch
 
     base_font = _get_font_name(style.font_family)
-    bold_font = _get_bold_font_name(base_font)
+    _get_bold_font_name(base_font)
     italic_font = _get_italic_font_name(base_font)
     heading_font = _get_font_name(style.chapter_heading_font)
     heading_bold = _get_bold_font_name(heading_font)
@@ -455,10 +455,7 @@ def _render_pdf(
 
             # Resolve footer template
             footer_text_resolved = _resolve_template(footer_template, title, authors, page_num)
-            if footer_text_resolved:
-                display_footer = f"{footer_text_resolved} | Page {page_num}"
-            else:
-                display_footer = f"Page {page_num}"
+            display_footer = f"{footer_text_resolved} | Page {page_num}" if footer_text_resolved else f"Page {page_num}"
 
             canvas.drawCentredString(page_width / 2, footer_y, display_footer)
 
@@ -562,7 +559,7 @@ def _render_pdf(
         spaceBefore=0,
         spaceAfter=12,
     )
-    subtitle_style = ParagraphStyle(
+    ParagraphStyle(
         "BookSubtitle",
         fontName=italic_font,
         fontSize=16,
@@ -789,7 +786,7 @@ def generate_pdf(
         )
         page_number += 1
 
-    doc = PDFDocument(
+    return PDFDocument(
         book_id=str(request.book_id),
         title=title,
         authors=authors,
@@ -809,8 +806,6 @@ def generate_pdf(
         total_pages=total_pages,
         _pdf_bytes=pdf_bytes,
     )
-
-    return doc
 
 
 def generate_pdf_bytes(

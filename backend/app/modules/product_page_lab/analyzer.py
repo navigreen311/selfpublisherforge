@@ -603,10 +603,7 @@ def _has_hook(sentence: str) -> bool:
     if any(s.startswith(starter) for starter in hook_starters):
         return True
     # Contains emotional / power words in first sentence
-    for word in EMOTIONAL_WORDS[:10] + POWER_WORDS[:10]:
-        if word in s:
-            return True
-    return False
+    return any(word in s for word in EMOTIONAL_WORDS[:10] + POWER_WORDS[:10])
 
 
 def _calculate_readability(text: str) -> float:

@@ -123,7 +123,9 @@ def master_audiobook_task(self, job_id: str, project_id: str) -> dict:
 
             processor = AudioProcessor()
             chapter_paths = [
-                Path(ch.audio_url.replace("s3://", "/tmp/"))  # noqa: S108 — TODO: download from S3
+                Path(
+                    ch.audio_url.replace("s3://", "/tmp/")
+                )  # — TODO: download from S3  # noqa: S108 - stub: treats an s3:// URL as a local path pending real S3 download
                 for ch in chapters
             ]
 
@@ -314,7 +316,7 @@ def validate_audiobook_task(self, project_id: str) -> dict:
                 if not ch.audio_url:
                     continue
                 result = processor.validate_acx(
-                    Path(ch.audio_url.replace("s3://", "/tmp/"))  # noqa: S108
+                    Path(ch.audio_url.replace("s3://", "/tmp/"))  # noqa: S108 - stub: treats an s3:// URL as a local path pending real S3 download
                 )
                 all_results.append(
                     {

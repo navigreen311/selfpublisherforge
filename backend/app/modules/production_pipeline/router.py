@@ -58,8 +58,7 @@ async def create_template(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    template = await service.create_template(db, current_user["org_id"], payload)
-    return template
+    return await service.create_template(db, current_user["org_id"], payload)
 
 
 @router.get(
@@ -90,8 +89,7 @@ async def create_pipeline(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    pipeline = await service.create_pipeline(db, current_user["org_id"], payload)
-    return pipeline
+    return await service.create_pipeline(db, current_user["org_id"], payload)
 
 
 @router.get(

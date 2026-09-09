@@ -26,16 +26,16 @@ def validator() -> EbookValidator:
 
 def _make_request(**overrides) -> EbookValidationRequest:
     """Create a valid-by-default ebook validation request."""
-    defaults = dict(
-        has_ncx_toc=True,
-        has_html_toc=True,
-        images=[],
-        links=[],
-        has_javascript=False,
-        has_external_resources=False,
-        min_font_size_pt=12.0,
-        file_size_bytes=10 * 1024 * 1024,  # 10 MB
-    )
+    defaults = {
+        "has_ncx_toc": True,
+        "has_html_toc": True,
+        "images": [],
+        "links": [],
+        "has_javascript": False,
+        "has_external_resources": False,
+        "min_font_size_pt": 12.0,
+        "file_size_bytes": 10 * 1024 * 1024,  # 10 MB
+    }
     defaults.update(overrides)
     return EbookValidationRequest(**defaults)
 

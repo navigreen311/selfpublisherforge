@@ -291,8 +291,8 @@ async def generate_originality_fingerprint(
 
         # Word list Jaccard vector (puzzle word_list)
         word_list = getattr(page, "word_list", None)
-        if word_list and isinstance(word_list, (list, set)):
-            words_set = set(w.lower() for w in word_list if isinstance(w, str))
+        if word_list and isinstance(word_list, list | set):
+            words_set = {w.lower() for w in word_list if isinstance(w, str)}
             fp["jaccard_vector"] = sorted(words_set)
             combined_parts.append("|".join(sorted(words_set)))
 
@@ -393,10 +393,7 @@ async def compare_originality(
         "text_ngram": 0.15,
     }
     total_weight = sum(weights.get(k, 0.25) for k in scores)
-    if total_weight > 0:
-        overall = sum(scores[k] * weights.get(k, 0.25) for k in scores) / total_weight
-    else:
-        overall = 0.0
+    overall = sum(scores[k] * weights.get(k, 0.25) for k in scores) / total_weight if total_weight > 0 else 0.0
 
     flagged = overall > SIMILARITY_THRESHOLD
 
@@ -981,8 +978,8 @@ async def anti_duplicate_guardrails(
             all_word_sets: list[set[str]] = []
             for page in pages:
                 word_list = getattr(page, "word_list", None)
-                if word_list and isinstance(word_list, (list, set)):
-                    all_word_sets.append(set(w.lower() for w in word_list if isinstance(w, str)))
+                if word_list and isinstance(word_list, list | set):
+                    all_word_sets.append({w.lower() for w in word_list if isinstance(w, str)})
 
             if len(all_word_sets) >= 2:
                 max_overlap = 0.0

@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Import Base so that target_metadata has all registered models
 # Ensure all models are imported so Base.metadata is populated
-import app.models  # noqa: F401
+import app.models
 from app.database import Base
 
 config = context.config

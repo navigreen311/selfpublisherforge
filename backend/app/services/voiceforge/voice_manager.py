@@ -263,9 +263,7 @@ class VoiceManager:
 
     async def get_system_voices(self, db: AsyncSession) -> list[AudiobookVoice]:
         """Return built-in system voices. Seed them if not present."""
-        result = await db.execute(
-            select(AudiobookVoice).where(AudiobookVoice.is_system_voice == True)  # noqa: E712
-        )
+        result = await db.execute(select(AudiobookVoice).where(AudiobookVoice.is_system_voice == True))
         voices = result.scalars().all()
         if not voices:
             voices = await self._seed_system_voices(db)
@@ -275,10 +273,8 @@ class VoiceManager:
         """Return org-specific custom voices + system voices."""
         result = await db.execute(
             select(AudiobookVoice)
-            .where(
-                (AudiobookVoice.org_id == org_id) | (AudiobookVoice.is_system_voice == True)  # noqa: E712
-            )
-            .where(AudiobookVoice.active == True)  # noqa: E712
+            .where((AudiobookVoice.org_id == org_id) | (AudiobookVoice.is_system_voice == True))
+            .where(AudiobookVoice.active == True)
         )
         return list(result.scalars().all())
 
@@ -327,7 +323,7 @@ class VoiceManager:
             select(AudiobookVoice).where(
                 AudiobookVoice.id == voice_id,
                 AudiobookVoice.org_id == org_id,
-                AudiobookVoice.is_system_voice == False,  # noqa: E712
+                AudiobookVoice.is_system_voice == False,
             )
         )
         voice = result.scalar_one_or_none()

@@ -540,7 +540,7 @@ async def simulate_enhanced(
     # Ensure proposed price is included
     if data.proposed_price not in curve_prices:
         curve_prices.append(data.proposed_price)
-    curve_prices = sorted(set(p for p in curve_prices if p > 0))
+    curve_prices = sorted({p for p in curve_prices if p > 0})
 
     revenue_curve: list[dict] = []
     best_royalty = 0.0

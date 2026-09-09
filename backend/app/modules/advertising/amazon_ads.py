@@ -74,7 +74,7 @@ class AmazonAdsClient:
 
     BASE_URL = "https://advertising-api.amazon.com"
     API_VERSION = "v3"
-    TOKEN_URL = "https://api.amazon.com/auth/o2/token"
+    TOKEN_URL = "https://api.amazon.com/auth/o2/token"  # noqa: S105 - OAuth token endpoint URL, not a password
 
     def __init__(
         self,
@@ -205,20 +205,19 @@ class AmazonAdsClient:
                 )
 
             # Retry on 429 or 5xx errors with exponential backoff
-            if response.status_code == 429 or response.status_code >= 500:
-                if attempt < max_attempts - 1:
-                    backoff = 2**attempt  # 1s, 2s
-                    logger.warning(
-                        "Amazon Ads API %s %s returned %s, retrying in %ss (attempt %d/%d)",
-                        method,
-                        url,
-                        response.status_code,
-                        backoff,
-                        attempt + 1,
-                        max_attempts,
-                    )
-                    await asyncio.sleep(backoff)
-                    continue
+            if (response.status_code == 429 or response.status_code >= 500) and attempt < max_attempts - 1:
+                backoff = 2**attempt  # 1s, 2s
+                logger.warning(
+                    "Amazon Ads API %s %s returned %s, retrying in %ss (attempt %d/%d)",
+                    method,
+                    url,
+                    response.status_code,
+                    backoff,
+                    attempt + 1,
+                    max_attempts,
+                )
+                await asyncio.sleep(backoff)
+                continue
 
             break
 

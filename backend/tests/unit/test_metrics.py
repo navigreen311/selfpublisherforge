@@ -125,8 +125,7 @@ class TestComputePortfolioMetrics:
 
     @pytest.fixture
     def mock_db(self):
-        db = AsyncMock()
-        return db
+        return AsyncMock()
 
     @pytest.mark.asyncio
     async def test_returns_portfolio_metrics_structure(self, mock_db, org_id):

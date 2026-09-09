@@ -272,7 +272,7 @@ def generate_soft_proof(
         r, g, b = px.get("r", 0), px.get("g", 0), px.get("b", 0)
         page, x, y = px.get("page", 1), px.get("x", 0), px.get("y", 0)
         cmyk = _rgb_to_cmyk(r, g, b)
-        nearest_rgb = _cmyk_to_rgb(*cmyk)
+        _cmyk_to_rgb(*cmyk)
 
         if _is_out_of_gamut(r, g, b):
             out_of_gamut_areas.append(
