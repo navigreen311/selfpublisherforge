@@ -127,3 +127,14 @@ class CompetitorAlert(TenantModel):
     data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     read: Mapped[bool] = mapped_column(Boolean, default=False)
     dismissed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+__all__ = [
+    "CompetitorAlert",
+    "CompetitorAnalysis",
+    "CompetitorBook",
+    "CompetitorReview",
+    "GapAnalysisResult",
+    "OpportunityBlueprint",
+    "WeaknessSignal",
+]

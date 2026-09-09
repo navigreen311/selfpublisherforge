@@ -11,12 +11,12 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agent_system.models import AuditAction, AuditTrail
+
+logger = logging.getLogger(__name__)
 
 
 async def record_audit(

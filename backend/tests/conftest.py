@@ -35,7 +35,6 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import ARRAY as SA_ARRAY
 
 # Ensure all models are imported so Base.metadata knows about them
-import app.models
 from app.database import Base, get_db
 from app.main import create_app
 

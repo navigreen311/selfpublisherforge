@@ -9,8 +9,6 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.models.content import StyleProfile
 from app.modules.style_cloning.analyzers import (
     RhythmAnalyzer,
@@ -42,6 +40,9 @@ from app.modules.style_cloning.schemas import (
     UpdateProfileRequest,
     VoiceFingerprint,
 )
+
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # ORM -> Response conversion
@@ -179,7 +180,7 @@ async def list_profiles(
     stmt = (
         select(StyleProfile)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
         .order_by(StyleProfile.created_at.desc())
     )
     result = await db.execute(stmt)
@@ -198,7 +199,7 @@ async def get_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -217,7 +218,7 @@ async def get_fingerprint(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -244,7 +245,7 @@ async def analyze_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -272,7 +273,7 @@ async def delete_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -297,7 +298,7 @@ async def conformity_check(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -322,7 +323,7 @@ async def tune_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()
@@ -348,7 +349,7 @@ async def update_profile(
         select(StyleProfile)
         .where(StyleProfile.id == profile_id)
         .where(StyleProfile.org_id == org_id)
-        .where(StyleProfile.deleted_at == None)
+        .where(StyleProfile.deleted_at.is_(None))
     )
     result = await db.execute(stmt)
     profile = result.scalar_one_or_none()

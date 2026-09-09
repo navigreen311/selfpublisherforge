@@ -27,7 +27,6 @@ from app.database import BaseModel, TenantModel
 
 # Re-export canonical enums/models so existing imports keep working
 from app.models.audiobook import AudiobookStatus
-from app.models.audiobook import ChapterAudioStatus as ChapterStatus
 
 
 class MasteringStatus(str, enum.Enum):

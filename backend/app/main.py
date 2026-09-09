@@ -19,13 +19,13 @@ def _log_startup_config_warnings() -> None:
     s = get_settings()
 
     # --- Critical service credentials still using placeholders ---
-    if s.AWS_ACCESS_KEY_ID == "YOUR_AWS_ACCESS_KEY_HERE" or s.AWS_SECRET_ACCESS_KEY == "YOUR_AWS_SECRET_KEY_HERE":  # noqa: S105 - placeholder sentinel, not a secret
+    if s.AWS_ACCESS_KEY_ID == "YOUR_AWS_ACCESS_KEY_HERE" or s.AWS_SECRET_ACCESS_KEY == "YOUR_AWS_SECRET_KEY_HERE":  # noqa: S105  # not a secret: placeholder sentinel or OAuth endpoint URL
         logger.warning("S3/AWS credentials are still using placeholder values — file storage will not work")
 
-    if s.STRIPE_SECRET_KEY == "YOUR_STRIPE_SECRET_KEY_HERE":  # noqa: S105 - placeholder sentinel, not a secret
+    if s.STRIPE_SECRET_KEY == "YOUR_STRIPE_SECRET_KEY_HERE":  # noqa: S105  # not a secret: placeholder sentinel or OAuth endpoint URL
         logger.warning("Stripe secret key is a placeholder — billing will not work")
 
-    if s.STRIPE_WEBHOOK_SECRET == "YOUR_STRIPE_WEBHOOK_SECRET_HERE":  # noqa: S105 - placeholder sentinel, not a secret
+    if s.STRIPE_WEBHOOK_SECRET == "YOUR_STRIPE_WEBHOOK_SECRET_HERE":  # noqa: S105  # not a secret: placeholder sentinel or OAuth endpoint URL
         logger.warning("Stripe webhook secret is a placeholder — webhook verification will fail")
 
     # --- Email provider ---

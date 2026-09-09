@@ -469,14 +469,14 @@ async def test_quality_check_enforces_max_word_overlap():
             book_id=book.id,
             puzzle_number=1,
             content_hash="hash1",
-            word_list=shared_words + ["elderberry"],
+            word_list=[*shared_words, "elderberry"],
             difficulty=Difficulty.easy,
         ),
         _make_puzzle(
             book_id=book.id,
             puzzle_number=2,
             content_hash="hash2",
-            word_list=shared_words + ["fig"],
+            word_list=[*shared_words, "fig"],
             difficulty=Difficulty.medium,
         ),
         _make_puzzle(

@@ -21,6 +21,11 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
+from app.modules.specialty.models.childrens import (
+    ChildrensBook,
+    ChildrensBookCharacter,
+    ChildrensBookPage,
+)
 from app.modules.specialty.models.enums import (
     AgeRange,
     BookStatus,
@@ -33,11 +38,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # ORM models — imported from the canonical models module
 # ---------------------------------------------------------------------------
-from app.modules.specialty.models.childrens import (
-    ChildrensBook,
-    ChildrensBookCharacter,
-    ChildrensBookPage,
-)
 
 # ---------------------------------------------------------------------------
 # Age-band readability constraints (from blueprint section 3.5)

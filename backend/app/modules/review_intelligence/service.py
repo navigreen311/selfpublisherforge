@@ -474,7 +474,7 @@ async def compute_reputation_score(db: AsyncSession, org_id: UUID, book_id: UUID
         and_(
             BookReview.org_id == org_id,
             BookReview.book_id == book_id,
-            BookReview.is_competitor == False,
+            BookReview.is_competitor.is_(False),
             BookReview.deleted_at.is_(None),
         )
     )
@@ -498,7 +498,7 @@ async def compute_reputation_score(db: AsyncSession, org_id: UUID, book_id: UUID
             and_(
                 BookReview.org_id == org_id,
                 BookReview.book_id == book_id,
-                BookReview.is_competitor == False,
+                BookReview.is_competitor.is_(False),
                 BookReview.deleted_at.is_(None),
             )
         )

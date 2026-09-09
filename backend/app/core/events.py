@@ -14,6 +14,8 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
+from pydantic import ValidationError
+
 from app.core.event_types import BaseEvent, EventPublisher, EventType
 
 try:
@@ -26,7 +28,6 @@ except ImportError:
     RedisError = Exception  # type: ignore[misc,assignment]
     ResponseError = Exception  # type: ignore[misc,assignment]
 
-from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 

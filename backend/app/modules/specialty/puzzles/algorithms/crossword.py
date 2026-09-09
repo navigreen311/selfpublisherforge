@@ -300,7 +300,7 @@ def generate_crossword(
     best_result = None
     best_placed_count = 0
 
-    for attempt in range(max_attempts):
+    for _attempt in range(max_attempts):
         grid: dict[tuple[int, int], str] = {}
         placed: list[dict] = []
 

@@ -24,14 +24,15 @@ from typing import Any
 
 import httpx
 
-logger = logging.getLogger(__name__)
-
 from app.modules.market_intelligence.schemas import (
     BSRHistoryPoint,
     CompetitorSummary,
     KeywordData,
     TrendDirection,
 )
+
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Abstract base

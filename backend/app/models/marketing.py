@@ -20,9 +20,9 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
+from app.modules.advertising.models import AdCreative, Campaign
 
 # Import canonical Campaign and AdCreative from the advertising module
-from app.modules.advertising.models import AdCreative, Campaign
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -398,3 +398,28 @@ class ARCRecipient(BaseModel):
 
     # Relationships
     campaign: Mapped["ARCCampaign"] = relationship("ARCCampaign", back_populates="recipients")
+
+
+__all__ = [
+    "ARCCampaign",
+    "ARCCampaignStatus",
+    "ARCRecipient",
+    "ARCRecipientStatus",
+    "AdCreative",
+    "Campaign",
+    "EmailSendStatus",
+    "EmailSequence",
+    "EmailSequenceStatus",
+    "EmailTemplate",
+    "EmailTemplateType",
+    "LaunchPhase",
+    "LaunchPhaseType",
+    "LaunchPlan",
+    "LaunchPlanStatus",
+    "PhaseTask",
+    "PhaseTaskStatus",
+    "ReaderPanel",
+    "SocialPlatform",
+    "SocialPost",
+    "SocialPostStatus",
+]

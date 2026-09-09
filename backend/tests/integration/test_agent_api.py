@@ -573,7 +573,7 @@ class TestAuditTrail:
         user_id: uuid.UUID,
     ):
         # Create multiple audit entries
-        for i in range(5):
+        for _i in range(5):
             entry = AuditTrail(
                 org_id=org_id,
                 action="config_updated",

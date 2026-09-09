@@ -20,19 +20,6 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError
-
-logger = logging.getLogger(__name__)
-
-WORD_COUNT_MULTIPLIER = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
-
-# Auto-save versioning thresholds
-_VERSION_TIME_THRESHOLD = timedelta(minutes=5)
-_VERSION_WORD_CHANGE_THRESHOLD = 100
-
-# ---------------------------------------------------------------------------
-# Canonical ORM models -- imported from the shared models registry so that
-# SQLAlchemy sees a single table definition for each table name.
-# ---------------------------------------------------------------------------
 from app.models.content import (
     Chapter,
     ChapterVersion,
@@ -62,6 +49,19 @@ from app.modules.ai_writing.schemas import (
     WritingSessionCreate,
     WritingSessionRecord,
 )
+
+logger = logging.getLogger(__name__)
+
+WORD_COUNT_MULTIPLIER = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
+
+# Auto-save versioning thresholds
+_VERSION_TIME_THRESHOLD = timedelta(minutes=5)
+_VERSION_WORD_CHANGE_THRESHOLD = 100
+
+# ---------------------------------------------------------------------------
+# Canonical ORM models -- imported from the shared models registry so that
+# SQLAlchemy sees a single table definition for each table name.
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Manuscript helpers

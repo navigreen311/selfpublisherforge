@@ -17,6 +17,8 @@ from app.database import BaseModel
 from app.models.dictation import (
     DictationCommand,
     DictationSession,
+)
+from app.models.dictation import (
     DictationSessionStatus as SessionStatus,
 )
 

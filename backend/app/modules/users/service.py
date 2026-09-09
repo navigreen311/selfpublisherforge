@@ -14,10 +14,10 @@ from uuid import UUID, uuid4
 from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.organization import Organization as _OrgModel
-from app.core.sql import assert_known_columns
-from app.models.user import User as _UserModel
 from app.core.exceptions import AppException
+from app.core.sql import assert_known_columns
+from app.models.organization import Organization as _OrgModel
+from app.models.user import User as _UserModel
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ class UserService:
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["user_id"] = user_id
         await db.execute(
-            sa_text(f"UPDATE users SET {set_clause} WHERE id = :user_id"),  # noqa: S608 - column names validated by assert_known_columns; values are bound
+            sa_text(f"UPDATE users SET {set_clause} WHERE id = :user_id"),  # noqa: S608  # column names validated by assert_known_columns; values are bound
             data,
         )
         await db.flush()
@@ -201,7 +201,7 @@ class UserService:
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["oid"] = org_id
         await db.execute(
-            sa_text(f"UPDATE organizations SET {set_clause} WHERE id = :oid"),  # noqa: S608 - column names validated by assert_known_columns; values are bound
+            sa_text(f"UPDATE organizations SET {set_clause} WHERE id = :oid"),  # noqa: S608  # column names validated by assert_known_columns; values are bound
             data,
         )
         await db.flush()

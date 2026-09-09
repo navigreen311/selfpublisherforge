@@ -11,8 +11,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +38,9 @@ from app.modules.agent_system.schemas import (
     WorkflowCreate,
 )
 from app.modules.agent_system.workflow_engine import WorkflowEngine
+
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Default agent definitions (seeded per-org on first access)

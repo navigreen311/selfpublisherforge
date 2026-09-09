@@ -7,8 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
@@ -47,6 +45,10 @@ from app.modules.advertising.schemas import (
     PerformanceQuery,
     SearchTermResponse,
 )
+from app.modules.advertising.service import AdvertisingService
+
+logger = logging.getLogger(__name__)
+
 
 try:
     from app.modules.advertising.facebook_ads import FacebookAdsClient
@@ -56,7 +58,6 @@ except (ImportError, ModuleNotFoundError) as e:
     logger.warning("Facebook Ads client not available: %s", e)
     _facebook_client = None
 
-from app.modules.advertising.service import AdvertisingService
 
 router = APIRouter()
 

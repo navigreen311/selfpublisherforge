@@ -225,7 +225,7 @@ async def run_quality_pipeline(
         _step_background(page_data),
     ]
     qc = _step_quality_check(steps_2_6)
-    all_steps = [gen] + steps_2_6 + [qc]
+    all_steps = [gen, *steps_2_6, qc]
     overall_passed = qc.passed
     cleaned_url = (
         f"https://cdn.selfpublisherforge.com/coloring/{book_id}/{page_id}/cleaned.png" if overall_passed else None

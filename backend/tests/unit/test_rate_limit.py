@@ -166,7 +166,7 @@ class TestSlidingWindow:
 
     @pytest.mark.asyncio
     async def test_requests_up_to_limit_allowed(self, limiter: SlidingWindowRateLimiter) -> None:
-        for i in range(60):
+        for _i in range(60):
             allowed, _ = await limiter.check("user:2", RateLimitTier.FREE)
             assert allowed is True
 
@@ -606,7 +606,7 @@ class TestConcurrentRequests:
         results = await asyncio.gather(*tasks)
 
         # All 10 should be allowed (well within the 60 limit)
-        for allowed, headers in results:
+        for allowed, _headers in results:
             assert allowed is True
 
         # After 10 concurrent requests, remaining should reflect them

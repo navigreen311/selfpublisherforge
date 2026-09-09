@@ -48,13 +48,13 @@ settings = get_settings()
 _LLM_PROVIDER: str  # "anthropic" | "openai"
 
 try:
-    import anthropic
+    import anthropic  # noqa: F401
 
     _LLM_PROVIDER = "anthropic"
     logger.info("Using Anthropic SDK for LLM generation")
 except ImportError:
     try:
-        import openai
+        import openai  # noqa: F401
 
         _LLM_PROVIDER = "openai"
         logger.info("Anthropic SDK not found; falling back to OpenAI SDK for LLM generation")

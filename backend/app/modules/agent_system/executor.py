@@ -13,10 +13,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-AGENT_QUALITY_WEIGHT = float(os.environ.get("AGENT_QUALITY_WEIGHT", "0.5"))
-AGENT_SPEED_WEIGHT = float(os.environ.get("AGENT_SPEED_WEIGHT", "0.25"))
-AGENT_COST_WEIGHT = float(os.environ.get("AGENT_COST_WEIGHT", "0.25"))
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,6 +49,11 @@ from app.modules.llm_orchestration.router_config import (
     ProviderName,
     TaskType,
 )
+
+AGENT_QUALITY_WEIGHT = float(os.environ.get("AGENT_QUALITY_WEIGHT", "0.5"))
+AGENT_SPEED_WEIGHT = float(os.environ.get("AGENT_SPEED_WEIGHT", "0.25"))
+AGENT_COST_WEIGHT = float(os.environ.get("AGENT_COST_WEIGHT", "0.25"))
+
 
 logger = logging.getLogger(__name__)
 

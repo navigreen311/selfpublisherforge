@@ -74,7 +74,7 @@ class AmazonAdsClient:
 
     BASE_URL = "https://advertising-api.amazon.com"
     API_VERSION = "v3"
-    TOKEN_URL = "https://api.amazon.com/auth/o2/token"  # noqa: S105 - OAuth token endpoint URL, not a password
+    TOKEN_URL = "https://api.amazon.com/auth/o2/token"  # noqa: S105
 
     def __init__(
         self,

@@ -45,3 +45,22 @@ class ActorType(str, enum.Enum):
     USER = "user"
     AGENT = "agent"
     SYSTEM = "system"
+
+
+# Declared so the re-exports above are not read as unused imports, and so the
+# shim's public surface is explicit. See app/modules/dictation/models.py for
+# the same pattern and the reason it is not a trailing `# `.
+__all__ = [
+    "ActorType",
+    "Agent",
+    "AgentBudget",
+    "AgentTask",
+    "AgentTaskStatus",
+    "AgentType",
+    "AgentWorkflow",
+    "AuditTrail",
+    "BudgetType",
+    "PermissionLevel",
+    "TaskStatus",
+    "WorkflowStatus",
+]

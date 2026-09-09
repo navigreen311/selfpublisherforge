@@ -76,8 +76,6 @@ def _patch_for_sqlite(target, connection, **kw):
             table.indexes.discard(idx)
 
 
-import app.modules.specialty_books.models_accessibility
-
 ORG_ID = uuid.uuid4()
 
 

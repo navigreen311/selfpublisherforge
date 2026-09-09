@@ -37,6 +37,38 @@ ignore = [
     "B008",   # allow function calls in default arguments (FastAPI Depends)
     "RET504", # allow assignment before return
     "ARG001", # allow unused function arguments (common in FastAPI deps)
+
+    # --- Disabled deliberately, with reasons. Reviewed 2026-09-09. ---
+
+    # `ruff format` owns line length and breaks what can be broken. What E501
+    # still reports is content it cannot split: long URLs, long single-token
+    # string literals, and prompt text. Enforcing it would mean hand-wrapping
+    # strings, which hurts readability rather than helping it.
+    "E501",
+
+    # ARG001 is already disabled above; ARG002 is the same concern for methods
+    # and fires on interface conformance — overrides that must accept an
+    # argument they do not use.
+    "ARG002",
+
+    # Every S311 site was reviewed: puzzle generation (maze, sudoku, crossword,
+    # word search, cryptogram), simulated marketplace metrics, and sampling in
+    # LLM quality scoring. No auth, token, session or password path uses the
+    # random module — those use `secrets`. Puzzle generators need a seedable
+    # PRNG, which is what `random` is for.
+    "S311",
+
+    # High false-positive rate against this codebase's conventions: route
+    # banner comments ("# PUT /feature-flags/{flag_key}") and ordinary prose
+    # ("# Chat (multi-turn)") are read as commented-out code.
+    "ERA001",
+
+    # The codebase writes prose with em dashes and typographic quotes in
+    # docstrings and comments. That is a deliberate style, not an attempt to
+    # smuggle look-alike characters into identifiers.
+    "RUF001",
+    "RUF002",
+    "RUF003",
 ]
 
 [tool.ruff.lint.isort]
@@ -47,6 +79,7 @@ known-first-party = ["app", "shared"]
 # rules describe production concerns that do not apply to it.
 "tests/**/*.py" = [
     "S101",    # assert is the point of a test
+    "S108",    # /tmp paths in fixtures are test scaffolding
     "S105",    # "hardcoded password" — these are fixture tokens, not secrets
     "S106",    #   ditto, passed as a function argument
     "S311",    # random for fixture data, never for security

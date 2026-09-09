@@ -17,10 +17,10 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.modules.analytics.models import Report, RoyaltyRecord
 from app.modules.analytics.schemas import OutputFormat, ReportStatus, ReportType
+
+logger = logging.getLogger(__name__)
 
 
 class ReportGenerationError(Exception):
@@ -448,7 +448,14 @@ def _build_xlsx(title: str, data: dict[str, Any]) -> bytes:
     """
     try:
         from openpyxl import Workbook
-        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side, numbers
+        from openpyxl.styles import (  # noqa: F401
+            Alignment,
+            Border,
+            Font,
+            PatternFill,
+            Side,
+            numbers,
+        )
         from openpyxl.utils import get_column_letter
     except ImportError as exc:
         raise ReportGenerationError(

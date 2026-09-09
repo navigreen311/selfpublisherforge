@@ -20,10 +20,6 @@ from app.database import async_session
 from app.models.market import CompetitorBook
 from app.models.project import Book
 from app.modules.analytics.models import AnalyticsEvent, RoyaltyRecord
-from app.modules.review_intelligence.models import BookReview
-
-logger = logging.getLogger(__name__)
-
 from app.modules.portfolio_economics.schemas import (
     AlsoBoughtIntelligence,
     AlsoBoughtItem,
@@ -35,6 +31,10 @@ from app.modules.portfolio_economics.schemas import (
     ChurnPredictionResult,
     ChurnRisk,
 )
+from app.modules.review_intelligence.models import BookReview
+
+logger = logging.getLogger(__name__)
+
 
 # ─── Genre Persona Templates ─────────────────────────────────────────────────
 

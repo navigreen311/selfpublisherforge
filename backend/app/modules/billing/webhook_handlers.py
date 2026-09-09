@@ -583,7 +583,7 @@ async def _update_org(
     params = {**data, "org_id": str(org_id)}
     # Dynamic column names, but values are parameterized (safe from SQL injection)
     await db.execute(
-        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608 - column names validated by assert_known_columns; values are bound
+        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608  # column names validated by assert_known_columns; values are bound
         params,
     )
     await db.flush()

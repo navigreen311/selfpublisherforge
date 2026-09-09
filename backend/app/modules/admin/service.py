@@ -176,7 +176,7 @@ async def get_platform_stats(db: AsyncSession) -> PlatformStatsResponse:
     users_total = await db.scalar(users_total_query) or 0
 
     # Count active users (simplified - would need last_active tracking)
-    users_active_query = select(func.count()).select_from(User).where(User.is_active == True)
+    users_active_query = select(func.count()).select_from(User).where(User.is_active.is_(True))
     users_active_week = await db.scalar(users_active_query) or 0
 
     # Count organizations

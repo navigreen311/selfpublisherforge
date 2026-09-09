@@ -58,7 +58,6 @@ _PLATFORM_ALIASES: dict[str, Platform] = {
     "amazon_kdp": Platform.KDP,
     "kindle": Platform.KDP,
     "ingram": Platform.INGRAM_SPARK,
-    "draft2digital": Platform.DRAFT2DIGITAL,
     "other": Platform.KDP,  # fallback: treat as KDP format
 }
 

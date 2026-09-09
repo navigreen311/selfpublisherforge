@@ -122,7 +122,7 @@ def generate_dyslexia_variant(book_data: dict) -> dict:
     changes.append(f"Font changed to {settings['font_family']}")
     changes.append(f"Background set to {settings['background_color']}")
 
-    for page_idx, page in enumerate(variant.get("pages", [])):
+    for _page_idx, page in enumerate(variant.get("pages", [])):
         # Font
         page["font_family"] = settings["font_family"]
 

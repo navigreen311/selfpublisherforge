@@ -238,7 +238,7 @@ async def step_3_stroke_uniformity(
     try:
         import io
 
-        from PIL import Image, ImageFilter, ImageMorph
+        from PIL import Image, ImageFilter, ImageMorph  # noqa: F401
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
 

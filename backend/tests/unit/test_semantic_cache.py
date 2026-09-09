@@ -193,7 +193,7 @@ class TestCacheHitMiss:
         # Verify TTL was set to 86400 (24h)
         stored_ttls = mock_redis._ttls
         assert len(stored_ttls) == 1
-        ttl = list(stored_ttls.values())[0]
+        ttl = next(iter(stored_ttls.values()))
         assert ttl == 86400
 
     async def test_invalidate_removes_entry(self, cache: SemanticCache, mock_redis: AsyncMock):

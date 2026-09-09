@@ -106,7 +106,7 @@ class TestGetGenreData:
         assert data1 == data2
 
     def test_all_genres_have_required_fields(self):
-        for genre, data in GENRE_MARKET_DATA.items():
+        for _genre, data in GENRE_MARKET_DATA.items():
             assert "monthly_searches" in data
             assert "avg_price" in data
             assert "competition" in data

@@ -189,7 +189,7 @@ class TestCrossword:
         occupied: dict[tuple[int, int], list[str]] = {}
         for p in placements:
             word = p["word"]
-            for i, letter in enumerate(word):
+            for i, _letter in enumerate(word):
                 pos = (p["row"], p["col"] + i) if p["direction"] == "across" else (p["row"] + i, p["col"])
                 occupied.setdefault(pos, []).append(word)
 

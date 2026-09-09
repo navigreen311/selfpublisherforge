@@ -291,7 +291,7 @@ def _generate_crossword(
     for word in sorted_words[1:]:
         word_upper = word.upper()
         best = None
-        for pi, pl in enumerate(placed):
+        for _pi, pl in enumerate(placed):
             pl_word = pl["word"].upper()
             for wi, wch in enumerate(word_upper):
                 for pi2, pch in enumerate(pl_word):
@@ -434,7 +434,7 @@ def _generate_maze(
             nr, nc = r + dr, c + dc
             if 0 <= nr < rows and 0 <= nc < cols and not cells[r][c][d] and not visited_bfs[nr][nc]:
                 visited_bfs[nr][nc] = True
-                queue.append((nr, nc, path + [(nr, nc)]))
+                queue.append((nr, nc, [*path, (nr, nc)]))
 
     # Count dead ends for difficulty metadata
     dead_end_count = 0

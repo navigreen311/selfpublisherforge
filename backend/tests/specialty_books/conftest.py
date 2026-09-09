@@ -39,12 +39,11 @@ def _uuid_sqlite(type_, compiler, **kw):
 # ---------------------------------------------------------------------------
 # Import models so they register with Base.metadata
 # ---------------------------------------------------------------------------
-import app.modules.specialty_books.models_coloring
+import contextlib
+
 from app.database import Base
 
-try:
-    import app.modules.specialty_books.models_puzzle
-except (ImportError, ModuleNotFoundError):
+with contextlib.suppress(ImportError, ModuleNotFoundError):
     pass
 
 

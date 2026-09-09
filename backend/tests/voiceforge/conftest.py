@@ -109,7 +109,6 @@ def _patch_for_sqlite(target, connection, **kw):
 # Ensure relevant models are registered on Base.metadata
 # ---------------------------------------------------------------------------
 
-import app.modules.dictation.models
 
 # ---------------------------------------------------------------------------
 # Fixtures

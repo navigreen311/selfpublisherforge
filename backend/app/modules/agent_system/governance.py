@@ -10,8 +10,6 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +24,9 @@ from app.modules.agent_system.models import (
     TaskStatus,
     WorkflowStatus,
 )
+
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Permission enforcement

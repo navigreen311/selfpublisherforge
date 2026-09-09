@@ -244,7 +244,7 @@ class TestSlidingWindowLimiter:
 
     @pytest.mark.asyncio
     async def test_requests_up_to_limit_allowed(self, limiter: SlidingWindowRateLimiter) -> None:
-        for i in range(10):
+        for _i in range(10):
             result = await limiter.check("test:2", limit=10, window_seconds=60)
             assert result.allowed is True
 
@@ -571,7 +571,7 @@ class TestAllTiers:
             (PlanTier.ENTERPRISE, 500),  # 50x
         ]
 
-        for tier, expected_limit in tiers_and_expected:
+        for tier, _expected_limit in tiers_and_expected:
             # Use find_rate_limit with a simple pattern
             limit, _ = find_rate_limit("POST", "/test/endpoint", tier)
 

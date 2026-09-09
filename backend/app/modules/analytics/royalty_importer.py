@@ -16,12 +16,12 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.analytics.models import RoyaltyRecord
 from app.modules.analytics.schemas import Platform, RoyaltyImportResponse
+
+logger = logging.getLogger(__name__)
 
 
 class RoyaltyParseError(Exception):

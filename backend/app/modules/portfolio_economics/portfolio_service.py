@@ -328,7 +328,7 @@ def generate_portfolio_recommendations(
 
     # Diversification analysis
     if overview.total_books > 0 and len(overview.genre_distribution) == 1:
-        genre = list(overview.genre_distribution.keys())[0]
+        genre = next(iter(overview.genre_distribution.keys()))
         recommendations.append(
             PortfolioRecommendation(
                 category="diversification",

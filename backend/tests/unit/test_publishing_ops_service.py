@@ -598,7 +598,7 @@ class TestListTemplates:
         names = [t.name for t in result]
         assert "My Custom" in names
         # Verify the custom one is not builtin
-        custom = [t for t in result if t.name == "My Custom"][0]
+        custom = next(t for t in result if t.name == "My Custom")
         assert custom.is_builtin is False
 
     @pytest.mark.asyncio

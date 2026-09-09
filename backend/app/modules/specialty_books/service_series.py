@@ -420,7 +420,7 @@ async def create_bundle(
     combined_toc: list[dict[str, Any]] = []
     section_dividers: list[dict[str, Any]] = []
 
-    for idx, vid in enumerate(volume_ids):
+    for idx, _vid in enumerate(volume_ids):
         vol_info = (
             volume_page_counts[idx]
             if idx < len(volume_page_counts)
@@ -749,7 +749,7 @@ async def run_distributor_preflight(
         "trim_size": "8.5x11",
     }
 
-    for check_name, description in check_defs:
+    for check_name, _description in check_defs:
         passed, details = _run_single_check(check_name, book_info, distributor)
         checks_result.append(
             {

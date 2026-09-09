@@ -21,7 +21,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
 
-# Import canonical PricingRule from the pricing_automation module
+# Import canonical PricingRule from the pricing_automation module.
+# Re-exported: app/models/__init__.py imports it from here.
 from app.modules.pricing_automation.models import PricingRule
 
 
@@ -197,3 +198,18 @@ class ComplianceScan(BaseModel):
         Index("ix_compliance_scans_findings_gin", "findings", postgresql_using="gin"),
         Index("ix_compliance_scans_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
+
+
+__all__ = [
+    "ComplianceScan",
+    "Listing",
+    "ListingStatus",
+    "PricingRule",
+    "PublishingAccount",
+    "PublishingAccountStatus",
+    "PublishingPlatform",
+    "RiskLevel",
+    "ScanType",
+    "UploadValidation",
+    "ValidationType",
+]

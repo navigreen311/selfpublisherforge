@@ -81,7 +81,7 @@ class _WorkingGrid:
         dr, dc = (0, 1) if direction == "across" else (1, 0)
 
         has_intersection = False
-        for i, (r, c, ch) in enumerate(cells):
+        for _i, (r, c, ch) in enumerate(cells):
             existing = self.get(r, c)
             if existing is not None:
                 if existing != ch:

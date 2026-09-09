@@ -126,7 +126,7 @@ def _build_content_opf(
             '<item id="cover-image" href="images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>'
         )
 
-    for i, ch in enumerate(chapters):
+    for i, _ch in enumerate(chapters):
         item_id = f"chapter{i + 1}"
         manifest_items.append(
             f'<item id="{item_id}" href="chapters/{item_id}.xhtml" media-type="application/xhtml+xml"/>'

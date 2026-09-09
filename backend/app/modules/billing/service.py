@@ -13,10 +13,10 @@ from uuid import UUID
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.sql import assert_known_columns
-from app.models.organization import Organization as _OrgModel
 from app.config import get_settings
 from app.core.exceptions import AppException
+from app.core.sql import assert_known_columns
+from app.models.organization import Organization as _OrgModel
 from app.modules.billing.plans import (
     PLAN_DEFINITIONS,
     get_plan_limits,
@@ -581,7 +581,7 @@ async def _update_org(
     set_clauses = ", ".join(f"{key} = :{key}" for key in data)
     params = {**data, "org_id": str(org_id)}
     await db.execute(
-        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608 - column names validated by assert_known_columns; values are bound
+        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608  # column names validated by assert_known_columns; values are bound
         params,
     )
     await db.flush()

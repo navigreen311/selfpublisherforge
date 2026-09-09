@@ -112,7 +112,7 @@ def detect_anomalies(data_points: list[VelocityDataPoint], z_threshold: float = 
         spread = mad_scaled
 
     anomalies = []
-    for i, dp in enumerate(data_points):
+    for _i, dp in enumerate(data_points):
         z_score = (dp.review_count - center) / spread
         if abs(z_score) > z_threshold:
             anomalies.append(

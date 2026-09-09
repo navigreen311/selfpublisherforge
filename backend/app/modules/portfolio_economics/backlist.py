@@ -86,7 +86,7 @@ def _calculate_series_read_through(
     additional_revenue = 0.0
     current_read_through = SERIES_READ_THROUGH_BASE
 
-    for position in range(2, book_count + 1):
+    for _position in range(2, book_count + 1):
         additional_units = int(book1_monthly_units * current_read_through)
         additional_revenue += additional_units * avg_price * royalty_rate
         current_read_through *= SERIES_READ_THROUGH_DECAY

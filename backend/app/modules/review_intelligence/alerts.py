@@ -319,7 +319,7 @@ async def check_competitor_surge(
         and_(
             BookReview.org_id == org_id,
             BookReview.book_id == book_id,
-            BookReview.is_competitor == False,
+            BookReview.is_competitor.is_(False),
             BookReview.review_date >= current_start,
             BookReview.review_date < now,
             BookReview.deleted_at.is_(None),
@@ -332,7 +332,7 @@ async def check_competitor_surge(
     comp_stmt = select(func.count(BookReview.id)).where(
         and_(
             BookReview.org_id == org_id,
-            BookReview.is_competitor == True,
+            BookReview.is_competitor.is_(True),
             BookReview.review_date >= current_start,
             BookReview.review_date < now,
             BookReview.deleted_at.is_(None),
