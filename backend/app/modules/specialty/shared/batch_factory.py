@@ -141,7 +141,7 @@ async def process_batch(
         return {
             "job_id": job_id,
             "status": job.status,
-            "message": f"Job already {job.status.value}.",
+            "message": f"Job already {job.status}.",
         }
 
     # Transition to running

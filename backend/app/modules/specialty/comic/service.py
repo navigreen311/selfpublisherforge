@@ -49,8 +49,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     try:
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
         from app.modules.llm_orchestration.service import LLMOrchestrationService
 
@@ -58,8 +58,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt,
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=max_tokens),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=max_tokens),
         )
         response = await svc.complete(request)
         return response.content
@@ -96,8 +96,8 @@ async def _llm_generate_image(prompt: str) -> dict[str, str]:
     try:
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
         from app.modules.llm_orchestration.service import LLMOrchestrationService
 
@@ -105,8 +105,8 @@ async def _llm_generate_image(prompt: str) -> dict[str, str]:
         request = CompletionRequest(
             prompt=f"Generate a comic panel illustration: {prompt}",
             system_prompt="You are an image generation dispatcher. Return a JSON object with 'image_url' key.",
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=500),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=500),
         )
         response = await svc.complete(request)
         try:
@@ -144,20 +144,20 @@ def _comic_to_dict(comic: Comic) -> dict[str, Any]:
         "artist": comic.artist,
         "letterer": comic.letterer,
         "colorist": comic.colorist,
-        "art_style": comic.art_style.value if comic.art_style else None,
-        "format": comic.format.value if comic.format else None,
-        "color_mode": comic.color_mode.value if comic.color_mode else None,
-        "ink_style": comic.ink_style.value if comic.ink_style else None,
-        "pacing": comic.pacing.value if comic.pacing else None,
-        "status": comic.status.value if comic.status else None,
+        "art_style": comic.art_style,
+        "format": comic.format,
+        "color_mode": comic.color_mode,
+        "ink_style": comic.ink_style,
+        "pacing": comic.pacing,
+        "status": comic.status,
         "genre": comic.genre,
         "premise": comic.premise,
         "script_text": comic.script_text,
         "trim_size": comic.trim_size,
         "page_count": comic.page_count,
         "target_audience": comic.target_audience,
-        "border_style": comic.border_style.value if comic.border_style else None,
-        "gutter_style": comic.gutter_style.value if comic.gutter_style else None,
+        "border_style": comic.border_style,
+        "gutter_style": comic.gutter_style,
         "content_rating": comic.content_rating,
         "violence_level": comic.violence_level,
         "language_level": comic.language_level,
@@ -189,7 +189,7 @@ def _panel_to_dict(panel: ComicPanel) -> dict[str, Any]:
         "id": str(panel.id),
         "page_id": str(panel.page_id),
         "panel_order": panel.panel_order,
-        "panel_type": panel.panel_type.value if panel.panel_type else None,
+        "panel_type": panel.panel_type,
         "description": panel.description,
         "art_prompt": panel.art_prompt,
         "art_url": panel.art_url,
@@ -198,7 +198,7 @@ def _panel_to_dict(panel: ComicPanel) -> dict[str, Any]:
         "y": panel.y,
         "width": panel.width,
         "height": panel.height,
-        "border_style": panel.border_style.value if panel.border_style else None,
+        "border_style": panel.border_style,
         "background_color": panel.background_color,
         "created_at": panel.created_at.isoformat() if panel.created_at else None,
         "updated_at": panel.updated_at.isoformat() if panel.updated_at else None,
@@ -210,7 +210,7 @@ def _bubble_to_dict(bubble: ComicBubble) -> dict[str, Any]:
         "id": str(bubble.id),
         "panel_id": str(bubble.panel_id),
         "bubble_order": bubble.bubble_order,
-        "bubble_type": bubble.bubble_type.value if bubble.bubble_type else None,
+        "bubble_type": bubble.bubble_type,
         "text": bubble.text,
         "character_name": bubble.character_name,
         "font": bubble.font,
@@ -968,7 +968,7 @@ async def expand_panel(
     if panel is None:
         raise NotFoundError("ComicPanel", f"Panel {panel_id} not found")
 
-    style = comic.art_style.value if comic.art_style else "american_classic"
+    style = comic.art_style
     description = payload.get("description", panel.description or "")
 
     system_prompt = (
@@ -1011,7 +1011,7 @@ async def generate_next_page(db: AsyncSession, org_id: UUID, comic_id: UUID, pay
 
     system_prompt = (
         f"You are a comic book writer continuing an existing story.\n"
-        f"Art style: {comic.art_style.value if comic.art_style else 'american_classic'}.\n"
+        f"Art style: {comic.art_style}.\n"
         f"Genre: {comic.genre or 'action'}."
     )
 
@@ -1205,7 +1205,7 @@ async def generate_character_references(
     comic = await _get_comic_or_404(db, org_id, comic_id)
     char = await _get_character_or_404(db, org_id, comic_id, char_id)
 
-    style = comic.art_style.value if comic.art_style else "american_classic"
+    style = comic.art_style
     base_desc = f"{char.description or char.name}"
     if char.visual_description:
         base_desc += f", {char.visual_description}"

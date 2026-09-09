@@ -49,8 +49,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     try:
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
         from app.modules.llm_orchestration.service import LLMOrchestrationService
 
@@ -58,8 +58,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt,
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=max_tokens),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=max_tokens),
         )
         response = await svc.complete(request)
         return response.content
@@ -88,15 +88,15 @@ def _cookbook_to_dict(cb: Cookbook) -> dict[str, Any]:
         "title": cb.title,
         "subtitle": cb.subtitle,
         "author": cb.author,
-        "cookbook_type": cb.cookbook_type.value if cb.cookbook_type else None,
-        "status": cb.status.value if cb.status else None,
+        "cookbook_type": cb.cookbook_type,
+        "status": cb.status,
         "cuisine": cb.cuisine,
         "target_audience": cb.target_audience,
         "description": cb.description,
-        "chapter_organization": cb.chapter_organization.value if cb.chapter_organization else None,
-        "recipe_layout": cb.recipe_layout.value if cb.recipe_layout else None,
-        "illustration_method": cb.illustration_method.value if cb.illustration_method else None,
-        "interior_type": cb.interior_type.value if cb.interior_type else None,
+        "chapter_organization": cb.chapter_organization,
+        "recipe_layout": cb.recipe_layout,
+        "illustration_method": cb.illustration_method,
+        "interior_type": cb.interior_type,
         "trim_size": cb.trim_size,
         "page_count": cb.page_count,
         "include_nutrition": cb.include_nutrition,
@@ -120,7 +120,7 @@ def _chapter_to_dict(ch: CookbookChapter) -> dict[str, Any]:
         "description": ch.description,
         "introduction_text": ch.introduction_text,
         "chapter_order": ch.chapter_order,
-        "chapter_type": ch.chapter_type.value if ch.chapter_type else None,
+        "chapter_type": ch.chapter_type,
         "created_at": ch.created_at.isoformat() if ch.created_at else None,
         "updated_at": ch.updated_at.isoformat() if ch.updated_at else None,
     }
@@ -132,7 +132,7 @@ def _recipe_to_dict(r: Recipe) -> dict[str, Any]:
         "chapter_id": str(r.chapter_id),
         "title": r.title,
         "description": r.description,
-        "difficulty": r.difficulty.value if r.difficulty else None,
+        "difficulty": r.difficulty,
         "prep_time_minutes": r.prep_time_minutes,
         "cook_time_minutes": r.cook_time_minutes,
         "total_time_minutes": r.total_time_minutes,
@@ -161,7 +161,7 @@ def _meal_plan_to_dict(mp: MealPlan) -> dict[str, Any]:
         "cookbook_id": str(mp.cookbook_id),
         "title": mp.title,
         "description": mp.description,
-        "plan_type": mp.plan_type.value if mp.plan_type else None,
+        "plan_type": mp.plan_type,
         "days": mp.days or [],
         "total_calories_target": mp.total_calories_target,
         "dietary_goals": mp.dietary_goals or {},
@@ -1165,7 +1165,7 @@ async def generate_front_matter(
     system_prompt = "You are a professional cookbook editor. Write engaging front matter sections."
     prompt = (
         f"Write front matter for a cookbook titled '{cb.title}'.\n"
-        f"Type: {cb.cookbook_type.value if cb.cookbook_type else 'general'}\n"
+        f"Type: {cb.cookbook_type}\n"
         f"Cuisine: {cb.cuisine or 'various'}\n"
         f"Author: {author_bio}\n"
         f"Inspiration: {inspiration}\n"

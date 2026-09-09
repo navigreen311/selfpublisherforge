@@ -138,8 +138,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     try:
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
         from app.modules.llm_orchestration.service import LLMOrchestrationService
 
@@ -147,8 +147,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt,
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=max_tokens),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=max_tokens),
         )
         response = await svc.complete(request)
         return response.content
@@ -185,8 +185,8 @@ async def _llm_generate_image(prompt: str) -> dict[str, str]:
     try:
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
         from app.modules.llm_orchestration.service import LLMOrchestrationService
 
@@ -194,8 +194,8 @@ async def _llm_generate_image(prompt: str) -> dict[str, str]:
         request = CompletionRequest(
             prompt=f"Generate an illustration: {prompt}",
             system_prompt="You are an image generation dispatcher. Return a JSON object with 'image_url' key.",
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=500),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=500),
         )
         response = await svc.complete(request)
         try:
@@ -229,18 +229,18 @@ def _book_to_dict(book: ChildrensBook) -> dict[str, Any]:
         "org_id": str(book.org_id),
         "title": book.title,
         "subtitle": book.subtitle,
-        "author_name": book.author_name,
-        "age_range": book.age_range.value if book.age_range else None,
-        "status": book.status.value if book.status else None,
+        "author_name": book.author,
+        "age_range": book.age_range,
+        "status": book.status,
         "page_count": book.page_count,
         "trim_size": book.trim_size,
-        "illustration_style": book.illustration_style.value if book.illustration_style else None,
+        "illustration_style": book.illustration_style,
         "color_palette": book.color_palette,
         "story_prompt": book.story_prompt,
         "theme": book.theme,
         "tone": book.tone,
         "story_mode": book.story_mode,
-        "bilingual": book.bilingual,
+        "bilingual": book.is_bilingual,
         "bilingual_language": book.bilingual_language,
         "bilingual_layout": book.bilingual_layout,
         "fear_intensity": book.fear_intensity,
@@ -258,8 +258,8 @@ def _page_to_dict(page: ChildrensBookPage) -> dict[str, Any]:
         "page_number": page.page_number,
         "text_content": page.text_content,
         "illustration_prompt": page.illustration_prompt,
-        "layout": page.layout.value if page.layout else None,
-        "image_url": page.image_url,
+        "layout": page.layout,
+        "image_url": page.illustration_url,
         "thumbnail_url": page.thumbnail_url,
         "font_size": page.font_size,
         "text_position": page.text_position,
@@ -700,7 +700,7 @@ async def generate_character_references(db: AsyncSession, org_id: UUID, book_id:
     book = await _get_book_or_404(db, org_id, book_id)
     char = await _get_character_or_404(db, org_id, book_id, char_id)
 
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
     base_desc = f"{char.description or char.name}"
     if char.clothing_rules:
         base_desc += f", wearing {char.clothing_rules}"
@@ -739,10 +739,10 @@ async def generate_story(db: AsyncSession, org_id: UUID, book_id: UUID, options:
     """
     book = await _get_book_or_404(db, org_id, book_id)
     characters = await list_characters(db, org_id, book_id)
-    rules = AGE_BAND_RULES.get(book.age_range.value if book.age_range else "preschool", AGE_BAND_RULES["preschool"])
+    rules = AGE_BAND_RULES.get(book.age_range, AGE_BAND_RULES["preschool"])
 
     target_pages = options.get("target_pages", book.page_count or 24)
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
 
     char_descriptions = (
         "\n".join(f"- {c['name']}: {c.get('description', '')} {c.get('clothing_rules', '')}" for c in characters)
@@ -750,7 +750,7 @@ async def generate_story(db: AsyncSession, org_id: UUID, book_id: UUID, options:
     )
 
     system_prompt = (
-        f"You are a children's book author. Write for age range: {book.age_range.value if book.age_range else 'preschool'}.\n"
+        f"You are a children's book author. Write for age range: {book.age_range}.\n"
         f"Rules: max {rules['max_sentence_words']} words per sentence, "
         f"max {rules['max_word_length']} letters per word (0=no limit), "
         f"total words between {rules['total_words_min']}-{rules['total_words_max']}.\n"
@@ -803,7 +803,7 @@ async def generate_story(db: AsyncSession, org_id: UUID, book_id: UUID, options:
     # Run readability check on generated content
     readability = _analyze_readability(
         [p.get("text_content", "") for p in created_pages],
-        book.age_range.value if book.age_range else "preschool",
+        book.age_range,
     )
 
     return {
@@ -1017,7 +1017,7 @@ async def analyze_text(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[st
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
     texts = [p.get("text_content", "") or "" for p in pages]
-    age = book.age_range.value if book.age_range else "preschool"
+    age = book.age_range
     return _analyze_readability(texts, age)
 
 
@@ -1289,7 +1289,7 @@ async def translate_book(db: AsyncSession, org_id: UUID, book_id: UUID, options:
     result = await db.execute(stmt)
     page_records = result.scalars().all()
 
-    age = book.age_range.value if book.age_range else "preschool"
+    age = book.age_range
     rules = AGE_BAND_RULES.get(age, AGE_BAND_RULES["preschool"])
 
     system_prompt = (
@@ -1329,7 +1329,7 @@ async def translate_book(db: AsyncSession, org_id: UUID, book_id: UUID, options:
         )
 
     # Update book bilingual settings
-    book.bilingual = True
+    book.is_bilingual = True
     book.bilingual_language = target_language
     book.bilingual_layout = layout_mode
     await db.flush()
@@ -1365,7 +1365,7 @@ async def generate_illustration(
     characters = await list_characters(db, org_id, book_id)
 
     prompt = page.illustration_prompt or f"Illustration for: {page.text_content or ''}"
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
 
     # Append character consistency descriptors
     prompt_lower = prompt.lower()
@@ -1389,7 +1389,7 @@ async def generate_illustration(
 
     result = await _llm_generate_image(full_prompt)
 
-    page.image_url = result.get("image_url", "")
+    page.illustration_url = result.get("image_url", "")
     page.metadata_json = page.metadata_json or {}
     page.metadata_json["illustration_prompt_used"] = full_prompt
     page.metadata_json["generation_timestamp"] = datetime.now(UTC).isoformat()
@@ -1403,7 +1403,7 @@ async def generate_illustration(
 
     return {
         "page_id": str(page_id),
-        "image_url": page.image_url,
+        "image_url": page.illustration_url,
         "prompt_used": full_prompt,
         "provenance": page.metadata_json.get("provenance", {}),
     }
@@ -1421,7 +1421,7 @@ async def generate_illustration_variations(
     page = await _get_page_or_404(db, org_id, book_id, page_id)
 
     base_prompt = page.illustration_prompt or f"Illustration for: {page.text_content or ''}"
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
 
     variation_modifiers = [
         "slightly zoomed in, warm lighting",
@@ -1468,7 +1468,7 @@ async def upload_page_image(
     # Placeholder URL (production would use storage service)
     image_url = f"uploads/childrens/{book_id}/{page_id}/{filename}"
 
-    page.image_url = image_url
+    page.illustration_url = image_url
     page.metadata_json = page.metadata_json or {}
     page.metadata_json["upload"] = {
         "filename": filename,
@@ -1501,7 +1501,7 @@ async def run_preflight(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[s
     """
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
-    age = book.age_range.value if book.age_range else "preschool"
+    age = book.age_range
     rules = AGE_BAND_RULES.get(age, AGE_BAND_RULES["preschool"])
 
     checks: list[dict[str, Any]] = []
@@ -1680,7 +1680,7 @@ async def export_book(db: AsyncSession, org_id: UUID, book_id: UUID, options: di
     book_data: dict[str, Any] = {
         "id": str(book_id),
         "title": book.title,
-        "author": book.author_name or "",
+        "author": book.author or "",
         "trim_size": book.trim_size or "8.5x8.5",
         "interior_type": "color",
         "pages": pages,
@@ -1752,7 +1752,7 @@ async def export_kindle(db: AsyncSession, org_id: UUID, book_id: UUID, options: 
     book_data: dict[str, Any] = {
         "id": str(book_id),
         "title": book.title,
-        "author": book.author_name or "",
+        "author": book.author or "",
         "trim_size": book.trim_size or "8.5x8.5",
         "interior_type": "color",
         "pages": pages,
@@ -1816,8 +1816,8 @@ async def export_kindle(db: AsyncSession, org_id: UUID, book_id: UUID, options: 
         },
         "opf_metadata": {
             "dc:title": book.title,
-            "dc:creator": book.author_name or "",
-            "dc:language": book.bilingual_language if book.bilingual else "en",
+            "dc:creator": book.author or "",
+            "dc:language": book.bilingual_language if book.is_bilingual else "en",
             "meta_fixed_layout": "true",
             "meta_original_resolution": f"{viewport_w}x{viewport_h}",
         },
@@ -1825,7 +1825,7 @@ async def export_kindle(db: AsyncSession, org_id: UUID, book_id: UUID, options: 
         "total_pages": pdf_manifest["total_pages"],
         "page_counts": pdf_manifest["page_counts"],
         "metadata": metadata,
-        "read_aloud_ready": book.bilingual or False,
+        "read_aloud_ready": book.is_bilingual or False,
         "status": "processing",
         "created_at": datetime.now(UTC).isoformat(),
     }

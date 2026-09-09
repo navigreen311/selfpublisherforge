@@ -336,7 +336,7 @@ async def get_manuscript_by_id(db: AsyncSession, manuscript_id: _uuid.UUID) -> d
                 "title": ch.title,
                 "order": ch.order_index,
                 "word_count": ch.word_count,
-                "status": ch.status.value if ch.status else "outline",
+                "status": ch.status,
                 "created_at": ch.created_at,
                 "updated_at": ch.updated_at,
             }

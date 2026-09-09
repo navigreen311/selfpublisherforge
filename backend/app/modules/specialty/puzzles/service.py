@@ -1194,8 +1194,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     try:
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
         from app.modules.llm_orchestration.service import LLMOrchestrationService
 
@@ -1203,8 +1203,8 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt,
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=max_tokens),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=max_tokens),
         )
         response = await svc.complete(request)
         return response.content

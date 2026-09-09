@@ -70,7 +70,7 @@ async def list_users(
     user_items = []
     for user in users:
         # Get user's organization to determine tier
-        org_query = select(Organization).where(Organization.id == user.organization_id)
+        org_query = select(Organization).where(Organization.id == user.org_id)
         org_result = await db.execute(org_query)
         org = org_result.scalar_one_or_none()
 
@@ -260,7 +260,7 @@ async def get_user_detail(db: AsyncSession, user_id: UUID) -> AdminUserDetail:
         raise AppException(status_code=404, code="USER_NOT_FOUND", message="User not found")
 
     # Get organization
-    org_query = select(Organization).where(Organization.id == user.organization_id)
+    org_query = select(Organization).where(Organization.id == user.org_id)
     org_result = await db.execute(org_query)
     org = org_result.scalar_one_or_none()
 
@@ -274,7 +274,7 @@ async def get_user_detail(db: AsyncSession, user_id: UUID) -> AdminUserDetail:
         name=user.name,
         role=user.role,
         status="active" if user.is_active else "inactive",
-        org_id=user.organization_id,
+        org_id=user.org_id,
         org_name=org.name if org else "Unknown",
         last_active=None,  # Would need tracking
         books_count=books_count,
@@ -405,14 +405,14 @@ async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
     org_details = []
     for org in orgs:
         # Count members
-        members_query = select(func.count()).select_from(User).where(User.organization_id == org.id)
+        members_query = select(func.count()).select_from(User).where(User.org_id == org.id)
         member_count = await db.scalar(members_query) or 0
 
         # Count books
         books_count = 0
 
         # Get owner
-        owner_query = select(User).where(User.organization_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
+        owner_query = select(User).where(User.org_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
         owner_result = await db.execute(owner_query)
         owner = owner_result.scalar_one_or_none()
 
@@ -456,14 +456,14 @@ async def get_org_detail(db: AsyncSession, org_id: UUID) -> AdminOrgDetail:
         raise AppException(status_code=404, code="ORG_NOT_FOUND", message="Organization not found")
 
     # Count members
-    members_query = select(func.count()).select_from(User).where(User.organization_id == org.id)
+    members_query = select(func.count()).select_from(User).where(User.org_id == org.id)
     member_count = await db.scalar(members_query) or 0
 
     # Count books
     books_count = 0
 
     # Get owner
-    owner_query = select(User).where(User.organization_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
+    owner_query = select(User).where(User.org_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
     owner_result = await db.execute(owner_query)
     owner = owner_result.scalar_one_or_none()
 

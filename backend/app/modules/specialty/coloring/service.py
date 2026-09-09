@@ -474,7 +474,7 @@ async def generate_line_art(
     page.illustration_prompt = final_prompt
     page.illustration_model = "line-art-v1"
     page.illustration_seed = secrets.randbelow(2**32)
-    page.qa_score = pipeline_result.report.score
+    page.quality_score = pipeline_result.report.score
     page.qa_issues = [
         {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]
@@ -545,7 +545,7 @@ async def upload_page_art(
 
     page.illustration_url = illustration_url
     page.cleaned_url = cleaned_url
-    page.qa_score = pipeline_result.report.score
+    page.quality_score = pipeline_result.report.score
     page.qa_issues = [
         {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]
@@ -611,7 +611,7 @@ async def clean_lines(
         ext="cleaned.png",
     )
     page.cleaned_url = cleaned_url
-    page.qa_score = pipeline_result.report.score
+    page.quality_score = pipeline_result.report.score
     page.qa_issues = [
         {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]
@@ -727,7 +727,7 @@ async def quality_check_page(
 
     pipeline_result = await run_full_pipeline(image_data)
 
-    page.qa_score = pipeline_result.report.score
+    page.quality_score = pipeline_result.report.score
     page.qa_issues = [
         {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
     ]

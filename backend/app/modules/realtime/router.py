@@ -19,9 +19,8 @@ from typing import Any
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 
-from app.config import get_settings
 from app.core.security import decode_token
-from app.modules.realtime.manager import ConnectionManager
+from app.modules.realtime.manager import connection_manager
 from app.modules.realtime.schemas import WSChannel
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ router = APIRouter()
 
 # Module-level singleton.  ``startup`` / ``shutdown`` events wire it up
 # with Redis when the application boots.
-manager = ConnectionManager(redis_url=get_settings().REDIS_URL)
+manager = connection_manager
 
 
 # ---------------------------------------------------------------------------

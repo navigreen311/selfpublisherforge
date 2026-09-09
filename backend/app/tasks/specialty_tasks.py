@@ -938,7 +938,7 @@ async def _process_batch_factory_async(task, job_id: str):
                 logger.info(
                     "Batch job %s already %s, skipping.",
                     job_id,
-                    job.status.value,
+                    job.status,
                 )
                 return
 

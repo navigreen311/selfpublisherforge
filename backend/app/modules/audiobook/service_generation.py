@@ -149,9 +149,9 @@ async def generate_chapter_audio(
     await db.flush()
 
     # Dispatch Celery task (lazy import to avoid circular deps)
-    from app.tasks.audiobook_tasks import generate_chapter_audio_task
+    from app.tasks.audiobook_tasks import generate_chapter_audio
 
-    task = generate_chapter_audio_task.delay(str(job.id), str(chapter_id))
+    task = generate_chapter_audio.delay(str(job.id), str(chapter_id))
     job.celery_task_id = task.id
     await db.flush()
 
@@ -204,7 +204,7 @@ async def generate_all_chapters(
             message="No chapters with 'pending' status found for generation.",
         )
 
-    from app.tasks.audiobook_tasks import generate_chapter_audio_task
+    from app.tasks.audiobook_tasks import generate_chapter_audio
 
     job_cls = _job_model()
     jobs: list[GenerationJobResponse] = []
@@ -230,7 +230,7 @@ async def generate_all_chapters(
         db.add(job)
         await db.flush()
 
-        task = generate_chapter_audio_task.delay(str(job.id), str(chapter.id))
+        task = generate_chapter_audio.delay(str(job.id), str(chapter.id))
         job.celery_task_id = task.id
         await db.flush()
 
@@ -333,9 +333,9 @@ async def regenerate_chapter_audio(
     db.add(job)
     await db.flush()
 
-    from app.tasks.audiobook_tasks import generate_chapter_audio_task
+    from app.tasks.audiobook_tasks import generate_chapter_audio
 
-    task = generate_chapter_audio_task.delay(str(job.id), str(chapter_id))
+    task = generate_chapter_audio.delay(str(job.id), str(chapter_id))
     job.celery_task_id = task.id
     await db.flush()
 
