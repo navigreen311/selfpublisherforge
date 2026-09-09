@@ -185,10 +185,19 @@ async def _get_cookbook_or_404(db: AsyncSession, org_id: UUID, cookbook_id: UUID
 
 
 async def _get_chapter_or_404(db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID) -> CookbookChapter:
-    stmt = select(CookbookChapter).where(
-        CookbookChapter.id == chapter_id,
-        CookbookChapter.cookbook_id == cookbook_id,
-        CookbookChapter.deleted_at.is_(None),
+    # Only Cookbook carries org_id, so tenant scoping has to join through it.
+    # Filtering on the caller-supplied cookbook_id alone let any authenticated
+    # user reach another organisation's chapters.
+    stmt = (
+        select(CookbookChapter)
+        .join(Cookbook, CookbookChapter.cookbook_id == Cookbook.id)
+        .where(
+            CookbookChapter.id == chapter_id,
+            CookbookChapter.cookbook_id == cookbook_id,
+            CookbookChapter.deleted_at.is_(None),
+            Cookbook.org_id == org_id,
+            Cookbook.deleted_at.is_(None),
+        )
     )
     result = await db.execute(stmt)
     ch = result.scalar_one_or_none()
@@ -198,9 +207,20 @@ async def _get_chapter_or_404(db: AsyncSession, org_id: UUID, cookbook_id: UUID,
 
 
 async def _get_recipe_or_404(db: AsyncSession, org_id: UUID, recipe_id: UUID) -> Recipe:
-    stmt = select(Recipe).where(
-        Recipe.id == recipe_id,
-        Recipe.deleted_at.is_(None),
+    # Recipe -> CookbookChapter -> Cookbook is the only path to org_id. Without
+    # this join the lookup matched on recipe id alone, so a recipe UUID from
+    # any tenant resolved for any caller.
+    stmt = (
+        select(Recipe)
+        .join(CookbookChapter, Recipe.chapter_id == CookbookChapter.id)
+        .join(Cookbook, CookbookChapter.cookbook_id == Cookbook.id)
+        .where(
+            Recipe.id == recipe_id,
+            Recipe.deleted_at.is_(None),
+            CookbookChapter.deleted_at.is_(None),
+            Cookbook.org_id == org_id,
+            Cookbook.deleted_at.is_(None),
+        )
     )
     result = await db.execute(stmt)
     r = result.scalar_one_or_none()
@@ -210,10 +230,16 @@ async def _get_recipe_or_404(db: AsyncSession, org_id: UUID, recipe_id: UUID) ->
 
 
 async def _get_meal_plan_or_404(db: AsyncSession, org_id: UUID, cookbook_id: UUID, plan_id: UUID) -> MealPlan:
-    stmt = select(MealPlan).where(
-        MealPlan.id == plan_id,
-        MealPlan.cookbook_id == cookbook_id,
-        MealPlan.deleted_at.is_(None),
+    stmt = (
+        select(MealPlan)
+        .join(Cookbook, MealPlan.cookbook_id == Cookbook.id)
+        .where(
+            MealPlan.id == plan_id,
+            MealPlan.cookbook_id == cookbook_id,
+            MealPlan.deleted_at.is_(None),
+            Cookbook.org_id == org_id,
+            Cookbook.deleted_at.is_(None),
+        )
     )
     result = await db.execute(stmt)
     mp = result.scalar_one_or_none()
