@@ -2,6 +2,7 @@
 
 import { ProfileForm } from "@/modules/users/components/ProfileForm";
 import { DangerZone } from "@/modules/users/components/DangerZone";
+import { PenNamesSection } from "@/modules/pen_names";
 import { Separator } from "@/components/ui/separator";
 import { useTranslations } from "@/hooks/use-translations";
 
@@ -23,6 +24,15 @@ export default function ProfileSettingsPage() {
         className="rounded-lg border bg-card p-6"
       >
         <ProfileForm />
+      </section>
+
+      <Separator />
+
+      <section
+        aria-labelledby="pen-names-heading"
+        className="rounded-lg border bg-card p-6"
+      >
+        <PenNamesSection />
       </section>
 
       <Separator />
