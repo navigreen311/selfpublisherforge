@@ -118,6 +118,32 @@ class ReviewVelocitySnapshot(TenantModel):
     )
 
 
+class ReviewWidget(TenantModel):
+    """Configuration for an embeddable review widget (Feature 9)."""
+
+    __tablename__ = "review_widgets"
+
+    book_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), index=True)
+    style: Mapped[str] = mapped_column(
+        String(50), default="card_grid", server_default="card_grid"
+    )  # card_grid, carousel, compact_list
+    theme: Mapped[str] = mapped_column(
+        String(20), default="light", server_default="light"
+    )  # light, dark, auto
+    max_reviews: Mapped[int] = mapped_column(Integer, default=3, server_default="3")
+    min_rating: Mapped[int] = mapped_column(Integer, default=4, server_default="4")
+    show_options: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    __table_args__ = (
+        Index("ix_review_widgets_org_book", "org_id", "book_id"),
+    )
+
+
 class ReputationScore(TenantModel):
     """Computed reputation scores for books."""
 
