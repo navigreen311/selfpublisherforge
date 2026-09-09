@@ -25,8 +25,19 @@ const PricingTab = lazyLoadNamed(
   () => import("@/modules/publishing/components/PricingTab"),
   "PricingTab"
 );
+const ProofOrdersTab = lazyLoadNamed(
+  () => import("@/modules/publishing/components/ProofOrdersTab"),
+  "ProofOrdersTab"
+);
 
-const TAB_VALUES = ["accounts", "exports", "listings", "isbns", "pricing"] as const;
+const TAB_VALUES = [
+  "accounts",
+  "exports",
+  "listings",
+  "isbns",
+  "pricing",
+  "proofs",
+] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 interface PublishingTabsProps {
@@ -57,6 +68,7 @@ export function PublishingTabs({ defaultTab = "accounts" }: PublishingTabsProps)
         <TabsTrigger value="listings">Listings</TabsTrigger>
         <TabsTrigger value="isbns">ISBNs</TabsTrigger>
         <TabsTrigger value="pricing">Pricing</TabsTrigger>
+        <TabsTrigger value="proofs">Proof Orders</TabsTrigger>
       </TabsList>
 
       <TabsContent value="accounts">
@@ -73,6 +85,9 @@ export function PublishingTabs({ defaultTab = "accounts" }: PublishingTabsProps)
       </TabsContent>
       <TabsContent value="pricing">
         <PricingTab />
+      </TabsContent>
+      <TabsContent value="proofs">
+        <ProofOrdersTab />
       </TabsContent>
     </Tabs>
   );

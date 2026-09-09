@@ -180,6 +180,9 @@ def _register_routers(app: FastAPI):
     app.include_router(publishing_router, prefix=f"{prefix}/publishing", tags=["publishing"])
     app.include_router(publishing_metadata_router, prefix=prefix, tags=["publishing"])
 
+    from app.modules.proof_orders.router import router as proof_orders_router
+    app.include_router(proof_orders_router, prefix=f"{prefix}/proof-orders", tags=["proof-orders"])
+
     from app.modules.kdp_validation.router import router as kdp_router
     app.include_router(kdp_router, prefix=prefix, tags=["kdp-validation"])
 
