@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,7 +65,7 @@ def _relative_luminance(hex_color: str) -> float:
     r, g, b = (int(hex_color[i : i + 2], 16) / 255.0 for i in (0, 2, 4))
 
     def linearize(c: float) -> float:
-        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        return cast("float", c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4)
 
     return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
 

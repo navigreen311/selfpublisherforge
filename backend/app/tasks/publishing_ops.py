@@ -22,6 +22,7 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import Any, cast
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -408,4 +409,4 @@ def task_sync_listing(
         logger.error("Listing sync failed for listing_id=%s: %s", listing_id, exc, exc_info=True)
         raise self.retry(exc=exc) from exc
 
-    return result
+    return cast("dict[Any, Any]", result)

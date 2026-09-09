@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid as _uuid
+from typing import cast
 from uuid import UUID
 
 import boto3
@@ -44,7 +45,7 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> KnowledgeService:
 
 
 def _org_id(current_user: dict) -> UUID:
-    return current_user["org_id"]
+    return cast("UUID", current_user["org_id"])
 
 
 # ── Full-text search ─────────────────────────────────────────────

@@ -23,6 +23,7 @@ import asyncio
 import logging
 import statistics
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -244,7 +245,7 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
             result["competitors_checked"],
             result["competitors_updated"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -447,7 +448,7 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
             result["rules_evaluated"],
             result["rules_triggered"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -548,7 +549,7 @@ def activate_scheduled_promotions(self) -> dict:
             "Promotion activation check completed: %d activated",
             result["promotions_activated"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -660,7 +661,7 @@ def complete_expired_promotions(self) -> dict:
             "Promotion expiration check completed: %d completed",
             result["promotions_completed"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)

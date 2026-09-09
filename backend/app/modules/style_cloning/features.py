@@ -10,6 +10,7 @@ import statistics
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, cast
 
 from app.modules.style_cloning.ingestion import SegmentedText
 from app.modules.style_cloning.schemas import (
@@ -66,7 +67,7 @@ def _load_feature_words() -> dict:
         with open(_CONFIG_PATH, encoding="utf-8") as f:
             data = json.load(f)
         logger.debug("Loaded feature words from %s", _CONFIG_PATH)
-        return data
+        return cast("dict[Any, Any]", data)
     except FileNotFoundError:
         logger.warning(
             "Feature words config not found at %s; using hardcoded defaults",

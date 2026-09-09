@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from python_http_client.exceptions import (
     BadRequestsError,
@@ -142,7 +142,7 @@ def send_transactional_email(
             template_name,
             response.status_code,
         )
-        return 200 <= response.status_code < 300
+        return cast("bool", 200 <= response.status_code < 300)
     except UnauthorizedError:
         logger.error(
             "SendGrid authentication failed sending to %s (template=%s). Check SENDGRID_API_KEY.",

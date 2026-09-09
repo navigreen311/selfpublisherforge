@@ -12,7 +12,7 @@ Credentials are read from environment variables:
 
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -144,7 +144,7 @@ class FacebookAdsClient:
                 fb_error=fb_error if isinstance(fb_error, dict) else {"message": str(fb_error)},
             )
 
-        return response.json()
+        return cast("dict[Any, Any]", response.json())
 
     # ─── Campaign Management ─────────────────────────────────────────────
 

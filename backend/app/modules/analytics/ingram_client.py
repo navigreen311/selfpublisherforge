@@ -26,7 +26,7 @@ import os
 import time
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -320,7 +320,7 @@ class IngramSparkClient:
         """
         if isinstance(data, list):
             return data
-        return data.get("reports", data.get("compensations", []))
+        return cast("list[dict[str, Any]]", data.get("reports", data.get("compensations", [])))
 
     # -- Public interface --------------------------------------------------
 

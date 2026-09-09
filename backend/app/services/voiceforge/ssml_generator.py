@@ -25,7 +25,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from defusedxml import ElementTree  # hardened parser: SSML can be user-submitted
 
@@ -613,7 +613,7 @@ class SSMLGenerator:
             content = re.sub(r"^```(?:json)?\s*", "", content)
             content = re.sub(r"\s*```$", "", content)
 
-        return json.loads(content)
+        return cast("dict[Any, Any]", json.loads(content))
 
     def _regex_analyze(self, text: str) -> dict:
         """Regex-based fallback analysis when LLM is unavailable."""
@@ -977,7 +977,7 @@ class SSMLGenerator:
             num = int(match.group(1))
             if 1000 <= num <= 2100:
                 return f'<say-as interpret-as="date" format="y">{match.group(1)}</say-as>'
-            return match.group(0)
+            return cast("str", match.group(0))
 
         # Only replace years that are not already inside a tag
         text = re.sub(
@@ -992,7 +992,7 @@ class SSMLGenerator:
             # Skip if already inside a tag
             before = text[max(0, match.start() - 1) : match.start()]
             if before in ('"', ">"):
-                return num_str
+                return cast("str", num_str)
             return f'<say-as interpret-as="cardinal">{num_str}</say-as>'
 
         return re.sub(

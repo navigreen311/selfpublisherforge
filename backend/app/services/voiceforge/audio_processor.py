@@ -23,7 +23,7 @@ import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -783,7 +783,7 @@ class AudioProcessor:
     def _ensure_mono(data: np.ndarray) -> np.ndarray:
         """Convert multi-channel audio to mono by averaging channels."""
         if data.ndim > 1:
-            return data.mean(axis=1)
+            return cast("np.ndarray", data.mean(axis=1))
         return data
 
     def _temp_path(self, original: Path, suffix: str = "") -> Path:

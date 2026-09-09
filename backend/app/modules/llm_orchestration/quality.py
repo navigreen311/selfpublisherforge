@@ -16,6 +16,7 @@ import re
 import struct
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -469,7 +470,7 @@ class QualityAssurance:
         """Deterministically hash a word-tuple to a 32-bit unsigned int."""
         raw = " ".join(shingle).encode("utf-8")
         digest = hashlib.sha256(raw).digest()
-        return struct.unpack("<I", digest[:4])[0]
+        return cast("int", struct.unpack("<I", digest[:4])[0])
 
     @staticmethod
     def _minhash_jaccard(sig_a: list[int], sig_b: list[int]) -> float:

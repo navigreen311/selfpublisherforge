@@ -11,7 +11,7 @@ import html as _html
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +162,7 @@ def _extract_text(node: dict) -> str:
     text = node.get("text", "")
 
     if node_type == "text":
-        return text
+        return cast("str", text)
 
     parts = [_extract_text(child) for child in children]
     inner = "".join(parts)

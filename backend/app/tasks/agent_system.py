@@ -20,7 +20,7 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC
-from typing import Any
+from typing import Any, cast
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
@@ -59,7 +59,7 @@ def execute_agent_task(self, task_id: str, user_role: str = "viewer") -> dict[st
     Returns:
         Dict with task_id, status, and optional error.
     """
-    return _run_async(_execute_agent_task_async(task_id, user_role))
+    return cast("dict[str, Any]", _run_async(_execute_agent_task_async(task_id, user_role)))
 
 
 async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, Any]:
@@ -149,7 +149,7 @@ def execute_agent_workflow(
     Returns:
         Dict with workflow_id, status, and optional error.
     """
-    return _run_async(_execute_agent_workflow_async(workflow_id, user_role))
+    return cast("dict[str, Any]", _run_async(_execute_agent_workflow_async(workflow_id, user_role)))
 
 
 async def _execute_agent_workflow_async(
@@ -236,7 +236,7 @@ def reset_daily_budgets(self) -> dict[str, Any]:
 
     Intended to be scheduled via Celery Beat (e.g., daily at midnight UTC).
     """
-    return _run_async(_reset_daily_budgets_async())
+    return cast("dict[str, Any]", _run_async(_reset_daily_budgets_async()))
 
 
 async def _reset_daily_budgets_async() -> dict[str, Any]:
@@ -274,7 +274,7 @@ def reset_monthly_budgets(self) -> dict[str, Any]:
 
     Intended to be scheduled via Celery Beat (e.g., 1st of each month).
     """
-    return _run_async(_reset_monthly_budgets_async())
+    return cast("dict[str, Any]", _run_async(_reset_monthly_budgets_async()))
 
 
 async def _reset_monthly_budgets_async() -> dict[str, Any]:

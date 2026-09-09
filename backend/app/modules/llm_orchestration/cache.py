@@ -13,6 +13,7 @@ import json
 import logging
 import time
 from collections import OrderedDict
+from typing import Any, cast
 
 import redis.asyncio as aioredis
 
@@ -165,7 +166,7 @@ class SemanticCache:
                     data = json.loads(raw)
                     # Populate memory cache for faster subsequent hits
                     self._memory.set(key, data, ttl)
-                    return data
+                    return cast("dict[Any, Any] | None", data)
                 logger.debug("Cache MISS (Redis) for key %s", key)
         except (ConnectionError, aioredis.RedisError, OSError):
             logger.warning(

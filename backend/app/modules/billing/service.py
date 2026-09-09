@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import stripe
@@ -530,7 +530,7 @@ async def _ensure_stripe_customer(
     row = await _get_org_row(db, org_id)
     existing_customer_id = row.get("stripe_customer_id")
     if existing_customer_id:
-        return existing_customer_id
+        return cast("str", existing_customer_id)
 
     customer = stripe.Customer.create(
         email=email,

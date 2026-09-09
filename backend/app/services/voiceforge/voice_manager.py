@@ -12,6 +12,7 @@ Features:
 import logging
 import uuid
 from pathlib import Path
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -390,6 +391,6 @@ class VoiceManager:
             import soundfile as sf
 
             data, rate = sf.read(str(audio_path))
-            return len(data) / rate
+            return cast("float", len(data) / rate)
         except Exception:
             return 0.0

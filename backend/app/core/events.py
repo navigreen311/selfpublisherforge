@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -94,7 +94,7 @@ class RedisStreamPublisher:
         if isinstance(msg_id, bytes):
             msg_id = msg_id.decode()
         logger.info("Event published | type=%s stream_id=%s", event.event_type.value, msg_id)
-        return msg_id
+        return cast("str", msg_id)
 
 
 class RedisEventPublisher(EventPublisher):

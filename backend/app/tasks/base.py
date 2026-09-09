@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from celery import Task
 
@@ -108,7 +108,7 @@ class TrackedTask(Task):
         """Calculate exponential backoff countdown based on current retry number."""
         retries = self.request.retries or 0
         base = 60  # 1-minute base
-        return min(base * (2**retries), policy.get("retry_backoff_max", 300))
+        return cast("int", min(base * (2**retries), policy.get("retry_backoff_max", 300)))
 
 
 class OrgScopedTask(TrackedTask):

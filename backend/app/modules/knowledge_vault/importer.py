@@ -6,7 +6,7 @@ import base64
 import io
 import logging
 import re
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -257,7 +257,7 @@ async def suggest_research(existing_tags: list[str], recent_titles: list[str]) -
         data = json.loads(raw_text)
         if isinstance(data, list):
             return data
-        return data.get("suggestions", [])
+        return cast("list[dict[str, str]]", data.get("suggestions", []))
     except (ConnectionError, anthropic.APIConnectionError, anthropic.APITimeoutError):
         logger.error("AI suggestion failed due to connection issue", exc_info=True)
         return []

@@ -20,6 +20,7 @@ import asyncio
 import logging
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from typing import Any, cast
 from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -276,7 +277,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
             snapshot.get("monthly_revenue", 0.0),
         )
 
-        return snapshot
+        return cast("dict[Any, Any]", snapshot)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -430,7 +431,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
             result["personas_updated"],
         )
 
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -667,7 +668,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
             result["books_analyzed"],
         )
 
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -782,7 +783,7 @@ def update_seasonal_calendar(self) -> dict:
             result["years_updated"],
         )
 
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)

@@ -26,7 +26,7 @@ import os
 import time
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import httpx
@@ -137,7 +137,7 @@ def daily_metric_aggregation(self, org_id: str | None = None) -> dict[str, Any]:
     try:
         result = _run_async(_aggregate())
         logger.info("Daily metric aggregation complete: %s", result)
-        return result
+        return cast("dict[str, Any]", result)
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
@@ -199,7 +199,7 @@ def scheduled_report_generation(self, report_id: str) -> dict[str, Any]:
     try:
         result = _run_async(_generate())
         logger.info("Report generation complete: %s", result)
-        return result
+        return cast("dict[str, Any]", result)
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
@@ -398,7 +398,7 @@ def royalty_sync(self, org_id: str, platform: str | None = None) -> dict[str, An
     try:
         result = _run_async(_sync())
         logger.info("Royalty sync complete for org %s: %s", org_id, result)
-        return result
+        return cast("dict[str, Any]", result)
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
@@ -700,7 +700,7 @@ async def _kdp_api_request(
                 )
 
             if response.status_code == 200:
-                return response.json()
+                return cast("dict[str, Any] | None", response.json())
 
             # Retriable server errors
             if response.status_code in (429, 500, 502, 503, 504):
@@ -1022,7 +1022,7 @@ async def _ingramspark_api_request(
                 response = await client.get(url, headers=headers, params=params)
 
             if response.status_code == 200:
-                return response.json()
+                return cast("dict[str, Any] | list[Any] | None", response.json())
 
             # Retriable server / rate-limit errors
             if response.status_code in (429, 500, 502, 503, 504):
@@ -1316,7 +1316,7 @@ async def _d2d_api_request(
                 response = await client.get(url, headers=headers, params=params)
 
             if response.status_code == 200:
-                return response.json()
+                return cast("dict[str, Any] | list[Any] | None", response.json())
 
             # Retriable server / rate-limit errors
             if response.status_code in (429, 500, 502, 503, 504):

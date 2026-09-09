@@ -13,7 +13,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 # ---------------------------------------------------------------------------
 # KDP Print Cost Formulas (USD, as of 2026)
@@ -210,7 +210,7 @@ def ink_coverage_factor(pages_data: list[dict[str, Any]]) -> float:
         return 1.0
     # Scale: every +20% coverage adds ~5% to cost, capped at 1.25
     factor = 1.0 + ((avg_coverage - 20.0) / 20.0) * 0.05
-    return round(min(factor, 1.25), 4)
+    return cast("float", round(min(factor, 1.25), 4))
 
 
 # ---------------------------------------------------------------------------

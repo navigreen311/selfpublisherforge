@@ -13,6 +13,7 @@ import logging
 import os
 import time
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 import httpx
 
@@ -597,9 +598,9 @@ class AmazonAdsClient:
                 if dl_resp.status_code == 200:
                     try:
                         decompressed = gzip.decompress(dl_resp.content)
-                        return json.loads(decompressed)
+                        return cast("dict[Any, Any] | None", json.loads(decompressed))
                     except (gzip.BadGzipFile, OSError):
-                        return dl_resp.json()
+                        return cast("dict[Any, Any] | None", dl_resp.json())
                 logger.error("Failed to download completed report: %s", dl_resp.status_code)
                 return None
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import random
 import uuid
+from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -120,7 +121,7 @@ def _score_keyword(kw: dict, title: str, genre: str) -> float:
     volume = kw["search_volume"]
     comp_map = {"low": 1, "medium": 2, "high": 3}
     competition = comp_map.get(kw["competition"], 2)
-    return relevance * (volume / 1000) / competition
+    return cast("float", relevance * (volume / 1000) / competition)
 
 
 async def optimize_keywords(

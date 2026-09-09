@@ -15,7 +15,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -251,7 +251,7 @@ class KindleValidationResponse(BaseModel):
 
 def _resolve_trim_size(book_data: dict) -> str:
     """Extract trim size from book data, defaulting to 8.5x11."""
-    return book_data.get("trim_size", "8.5x11")
+    return cast("str", book_data.get("trim_size", "8.5x11"))
 
 
 def _viewport_for_trim(trim_size: str) -> tuple[int, int]:

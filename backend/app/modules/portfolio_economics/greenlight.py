@@ -12,6 +12,7 @@ Factors considered:
 """
 
 from datetime import UTC, datetime
+from typing import cast
 
 from app.modules.portfolio_economics.schemas import (
     ConfidenceLevel,
@@ -71,7 +72,7 @@ def _estimate_market_size(request: GreenlightRequest, genre_data: dict) -> int:
     """Estimate monthly market size for the book."""
     if request.market_size_estimate is not None and request.market_size_estimate > 0:
         return request.market_size_estimate
-    return genre_data["monthly_searches"]
+    return cast("int", genre_data["monthly_searches"])
 
 
 def _calculate_capture_rate(
@@ -104,7 +105,7 @@ def _calculate_capture_rate(
         rate *= 1.05
 
     # Cap the capture rate at a reasonable maximum
-    return min(rate, 0.005)
+    return cast("float", min(rate, 0.005))
 
 
 def _calculate_series_multiplier(request: GreenlightRequest) -> float:
