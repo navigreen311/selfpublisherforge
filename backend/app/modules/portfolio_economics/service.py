@@ -26,9 +26,9 @@ from app.modules.portfolio_economics.portfolio_service import (
 
 # Re-export seasonal service functions
 from app.modules.portfolio_economics.seasonal_service import (
-    generate_launch_recommendations,
-    generate_seasonal_calendar,
     get_niche_seasonality,
+    get_seasonal_calendar,
+    recommend_launch_date,
 )
 
 # Re-export backlist and greenlight utilities
@@ -46,9 +46,9 @@ __all__ = [
     "calculate_kill_scale",
     "generate_portfolio_recommendations",
     # Seasonal
-    "generate_launch_recommendations",
-    "generate_seasonal_calendar",
     "get_niche_seasonality",
+    "get_seasonal_calendar",
+    "recommend_launch_date",
     # Utilities
     "calculate_backlist_projection",
     "calculate_greenlight",

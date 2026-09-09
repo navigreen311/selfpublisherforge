@@ -240,19 +240,19 @@ class TestGeneratePortfolioRecommendations:
 
 
 # ===========================================================================
-# Tests: generate_seasonal_calendar
+# Tests: get_seasonal_calendar
 # ===========================================================================
 
 class TestGenerateSeasonalCalendar:
-    """Tests for service.generate_seasonal_calendar."""
+    """Tests for service.get_seasonal_calendar."""
 
     @pytest.mark.asyncio
-    @patch("app.modules.portfolio_economics.seasonal_service.generate_seasonal_calendar")
+    @patch("app.modules.portfolio_economics.seasonal_service.get_seasonal_calendar")
     async def test_returns_seasonal_calendar(
         self,
         mock_generate_calendar,
     ):
-        """generate_seasonal_calendar should return calendar with peak periods."""
+        """get_seasonal_calendar should return calendar with peak periods."""
         mock_generate_calendar.return_value = MagicMock(
             niche="romance",
             peak_months=["February", "December"],
@@ -266,7 +266,7 @@ class TestGenerateSeasonalCalendar:
             ],
         )
 
-        result = await service.generate_seasonal_calendar(niche="romance", year=2025)
+        result = await service.get_seasonal_calendar(niche="romance", year=2025)
 
         assert result.niche == "romance"
         assert len(result.peak_months) == 2
@@ -306,20 +306,20 @@ class TestGetNicheSeasonality:
 
 
 # ===========================================================================
-# Tests: generate_launch_recommendations
+# Tests: recommend_launch_date
 # ===========================================================================
 
 class TestGenerateLaunchRecommendations:
-    """Tests for service.generate_launch_recommendations."""
+    """Tests for service.recommend_launch_date."""
 
     @pytest.mark.asyncio
-    @patch("app.modules.portfolio_economics.seasonal_service.generate_launch_recommendations")
+    @patch("app.modules.portfolio_economics.seasonal_service.recommend_launch_date")
     async def test_returns_launch_recommendations(
         self,
-        mock_generate_launch_recommendations,
+        mock_recommend_launch_date,
     ):
-        """generate_launch_recommendations should return recommended launch dates."""
-        mock_generate_launch_recommendations.return_value = [
+        """recommend_launch_date should return recommended launch dates."""
+        mock_recommend_launch_date.return_value = [
             MagicMock(
                 recommended_date=datetime(2025, 10, 1, tzinfo=UTC),
                 reasoning="High seasonal demand for thriller genre",
@@ -327,14 +327,14 @@ class TestGenerateLaunchRecommendations:
             ),
         ]
 
-        result = await service.generate_launch_recommendations(
+        result = await service.recommend_launch_date(
             niche="thriller",
             current_date=datetime(2025, 8, 1, tzinfo=UTC),
         )
 
         assert len(result) == 1
         assert result[0].reasoning is not None
-        mock_generate_launch_recommendations.assert_awaited_once()
+        mock_recommend_launch_date.assert_awaited_once()
 
 
 # ===========================================================================

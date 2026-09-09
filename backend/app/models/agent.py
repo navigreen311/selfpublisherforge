@@ -12,8 +12,12 @@ from app.modules.agent_system.models import (  # noqa: F401
     Agent,
     AgentBudget,
     AgentTask,
+    AgentType,
     AgentWorkflow,
     AuditTrail,
+    PermissionLevel,
+    TaskStatus,
+    WorkflowStatus,
 )
 
 # ── Enums unique to the central models layer ──────────────────────────

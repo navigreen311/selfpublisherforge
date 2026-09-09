@@ -26,7 +26,7 @@ from app.modules.advertising.schemas import (
     CampaignUpdate,
     CreativeGenerateRequest,
     FacebookCampaignCreate,
-    FacebookCampaignObjective,
+    FacebookObjective,
     FacebookCampaignStatus,
     FacebookCampaignUpdate,
     KeywordBidBulkUpdate,
@@ -547,7 +547,7 @@ class TestFacebookAds:
 
         data = FacebookCampaignCreate(
             name="FB Campaign",
-            objective=FacebookCampaignObjective.CONVERSIONS,
+            objective=FacebookObjective.OUTCOME_SALES,
             daily_budget=Decimal("50.00"),
             status=FacebookCampaignStatus.ACTIVE,
         )

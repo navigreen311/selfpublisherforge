@@ -48,7 +48,7 @@ def _make_user_row(
     email: str = "user@test.com",
     name: str = "Test User",
     org_id: uuid.UUID | None = None,
-    role: UserRole = UserRole.MEMBER,
+    role: UserRole = UserRole.EDITOR,
     created_at: datetime | None = None,
 ) -> dict:
     """Build a dict that mimics a row from the users table."""
@@ -284,7 +284,7 @@ class TestListMembers:
                 email="user2@test.com",
                 name="User Two",
                 org_id=org_id,
-                role=UserRole.MEMBER
+                role=UserRole.EDITOR
             ),
         ]
         mock_db = _mock_db_with_users(user_rows)

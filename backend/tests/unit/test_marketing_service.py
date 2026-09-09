@@ -29,9 +29,9 @@ from app.modules.marketing.schemas import (
     EmailTemplateCreate,
     LaunchPlanCreate,
     LaunchPlanUpdate,
-    PhaseCreate,
+    LaunchPhaseCreate,
     SocialPostCreate,
-    TaskCreate,
+    PhaseTaskCreate,
 )
 from app.modules.marketing.service import MarketingService
 
@@ -109,7 +109,7 @@ class TestCreateLaunchPlan:
             budget=5000.00,
             goals=["Sell 1000 copies in first month"],
             phases=[
-                PhaseCreate(
+                LaunchPhaseCreate(
                     phase_type="pre_launch",
                     name="Pre-Launch",
                     description="Build hype",
@@ -117,7 +117,7 @@ class TestCreateLaunchPlan:
                     end_date=datetime(2025, 5, 31, tzinfo=UTC),
                     order_index=1,
                     tasks=[
-                        TaskCreate(
+                        PhaseTaskCreate(
                             title="Build ARC team",
                             description="Recruit 50 ARC readers",
                             status="pending",
