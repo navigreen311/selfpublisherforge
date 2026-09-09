@@ -450,7 +450,8 @@ class MarketIntelligenceService:
 
     @staticmethod
     def _generate_gap_analysis(
-        products: list[CompetitorSummary], scores: NicheMetrics | object
+        products: list[CompetitorSummary],
+        scores: NicheMetrics | object,  # noqa: ARG004  # part of the scorer signature; this strategy ignores it
     ) -> list[GapAnalysisItem]:
         gaps: list[GapAnalysisItem] = []
         if not products:

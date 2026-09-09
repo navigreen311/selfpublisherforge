@@ -69,6 +69,35 @@ ignore = [
     "RUF001",
     "RUF002",
     "RUF003",
+
+    # Readability preferences, not defects. Restructuring working conditionals
+    # and context managers to satisfy them risks behaviour changes for no
+    # functional gain, and the expanded forms often carry explanatory comments
+    # between the branches.
+    "SIM102",  # collapsible if
+    "SIM108",  # if/else that could be a ternary
+    "SIM117",  # nested with statements
+
+    # Naming conventions this codebase has already settled on:
+    #   N806  - PascalCase locals holding a model or class reference in factories
+    #   N817  - acronym import aliases (import x as ABC)
+    #   N818  - AppException is the base exception name used in every module;
+    #           renaming it to AppError is a repo-wide refactor with no
+    #           functional benefit and a large conflict surface.
+    "N806",
+    "N817",
+    "N818",
+
+    # Callback signatures are fixed by their caller, so some parameters and
+    # loop variables are necessarily unused.
+    "ARG005",
+    "B007",
+
+    # os.path is used in a handful of scripts, migrations and generators where
+    # it reads fine; the async-critical path was converted to pathlib.
+    "PTH118",
+    "PTH120",
+    "PTH123",
 ]
 
 [tool.ruff.lint.isort]
@@ -80,6 +109,11 @@ known-first-party = ["app", "shared"]
 "tests/**/*.py" = [
     "S101",    # assert is the point of a test
     "S108",    # /tmp paths in fixtures are test scaffolding
+    "S107",    # fixture password defaults
+    "S307",    # eval in a test asserting on an expression evaluator
+    "S314",    # tests parse XML they authored in the same file
+    "B017",    # pytest.raises(Exception) is sometimes exactly the assertion
+    "RUF012",  # Locust user classes and expected-value constants
     "S105",    # "hardcoded password" — these are fixture tokens, not secrets
     "S106",    #   ditto, passed as a function argument
     "S311",    # random for fixture data, never for security
@@ -110,6 +144,7 @@ known-first-party = ["app", "shared"]
     "S110",
     "SIM105",
     "UP035",
+    "S608",    # data migrations build SQL from developer-authored literals
 ]
 
 [tool.pytest.ini_options]

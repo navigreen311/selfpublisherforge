@@ -123,15 +123,6 @@ class ProjectListResponse(BaseModel):
 # ── Statistics & List schemas ────────────────────────────────────────────
 
 
-class AudiobookStatsResponse(BaseModel):
-    """Statistics summary for audiobook projects."""
-
-    total_projects: int = Field(..., description="Total number of audiobook projects.")
-    in_progress: int = Field(..., description="Number of projects in progress.")
-    completed: int = Field(..., description="Number of completed projects.")
-    total_duration_seconds: int = Field(..., description="Total duration of all audiobooks in seconds.")
-
-
 class AudiobookProjectListItem(BaseModel):
     """Compact audiobook project item for list views."""
 
@@ -207,14 +198,6 @@ class VoiceSampleResponse(BaseModel):
     price_per_minute: float = Field(..., description="Price per minute of audio generation.", ge=0)
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class VoicePreviewRequest(BaseModel):
-    """Request body for generating a voice preview."""
-
-    voice_id: str = Field(..., description="Voice ID to preview.")
-    text: str = Field(..., min_length=1, max_length=500, description="Text to synthesize for preview.")
-    tier: str = Field(..., description="Service tier.", pattern="^(standard|premium)$")
 
 
 class VoicePreviewResponse(BaseModel):

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import io
 import logging
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 import httpx
@@ -23,6 +23,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
 from app.modules.cover_design.models import Cover
+
+if TYPE_CHECKING:  # annotations only; reportlab is an optional dependency
+    from reportlab.pdfgen import canvas
 
 logger = logging.getLogger(__name__)
 

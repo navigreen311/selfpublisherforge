@@ -932,7 +932,7 @@ def _score_pacing(text: str) -> float:
     lengths = [len(p.split()) for p in paragraphs]
     if len(lengths) > 1:
         avg_length = sum(lengths) / len(lengths)
-        variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
+        variance = sum((length - avg_length) ** 2 for length in lengths) / len(lengths)
         # Some variance is good (varied pacing)
         if variance > 100:
             score += 15
@@ -946,7 +946,7 @@ def _score_pacing(text: str) -> float:
         score += 10
 
     # Short paragraphs for tension
-    short_paras = sum(1 for l in lengths if l <= 15)
+    short_paras = sum(1 for length in lengths if length <= 15)
     if short_paras > 0:
         score += 5
 

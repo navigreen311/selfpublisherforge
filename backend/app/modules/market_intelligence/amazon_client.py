@@ -71,7 +71,7 @@ class AmazonClientBase(ABC):
 
 def _seed_from(text: str) -> int:
     """Return a stable integer seed from an arbitrary string."""
-    return int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+    return int(hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()[:8], 16)
 
 
 # ---------------------------------------------------------------------------

@@ -49,7 +49,7 @@ def generate_cryptogram(phrase, difficulty="medium", seed=None):
     encoded = _apply_cipher(phrase, cm)
     inv = {v: k for k, v in cm.items()}
     used = {ch.upper() for ch in phrase if ch.isalpha()}
-    eu = [cm[l] for l in used if l in cm]
+    eu = [cm[letter] for letter in used if letter in cm]
     hints = []
     if difficulty == "easy":
         n = min(3, len(eu))

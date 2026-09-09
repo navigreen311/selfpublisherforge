@@ -5,9 +5,12 @@ Generates structured A+ content module plans for Amazon listings.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 # Default A+ module specifications
 DEFAULT_MODULES = [
@@ -94,7 +97,8 @@ async def generate_aplus_plan(
         await db.refresh(plan)
         plan_id = str(plan.id)
     except Exception:
-        pass  # Model may not exist yet
+        # Swallowing this hides a real persistence failure, so record it.
+        logger.warning("Could not persist A+ plan; continuing without an id", exc_info=True)
 
     return {
         "id": plan_id,

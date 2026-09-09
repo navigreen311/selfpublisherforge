@@ -30,10 +30,18 @@ from app.modules.publishing_ops.schemas import (
 )
 
 try:
-    from reportlab.lib.colors import HexColor, black, gray, white  # noqa: F401  # optional dependency availability probe
+    from reportlab.lib.colors import (  # noqa: F401  # optional dependency availability probe
+        HexColor,
+        black,
+        gray,
+        white,
+    )
     from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
     from reportlab.lib.pagesizes import A4, inch, letter  # noqa: F401  # optional dependency availability probe
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet  # noqa: F401  # optional dependency availability probe
+    from reportlab.lib.styles import (  # noqa: F401  # optional dependency availability probe
+        ParagraphStyle,
+        getSampleStyleSheet,
+    )
     from reportlab.lib.units import inch as rl_inch  # noqa: F401  # optional dependency availability probe
     from reportlab.lib.units import mm
     from reportlab.pdfbase import pdfmetrics  # noqa: F401  # optional dependency availability probe

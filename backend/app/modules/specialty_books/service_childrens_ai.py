@@ -681,7 +681,7 @@ def _compute_rhythm_score(pages_text: list[str]) -> RhythmScore:
     # Cadence: low sentence-length variance = better cadence
     lengths = [len(_tokenize_words(s)) for s in sentences]
     mean_len = sum(lengths) / len(lengths) if lengths else 0
-    variance = sum((l - mean_len) ** 2 for l in lengths) / len(lengths) if lengths else 0
+    variance = sum((length - mean_len) ** 2 for length in lengths) / len(lengths) if lengths else 0
     cadence = max(0, 100 - variance * 5)
 
     # Repetition: repeated words boost score for young readers

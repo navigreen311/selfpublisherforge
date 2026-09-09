@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from xml.etree import ElementTree
 
+from defusedxml import ElementTree  # hardened parser: SSML can be user-submitted
+from defusedxml.common import DefusedXmlException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -273,5 +274,7 @@ def _validate_ssml(ssml_text: str) -> dict:
     try:
         ElementTree.fromstring(ssml_text)
         return {"valid": True, "error": None}
-    except ElementTree.ParseError as e:
+    except (ElementTree.ParseError, DefusedXmlException) as e:
+        # DefusedXmlException covers entity declarations and other XXE
+        # constructs the hardened parser refuses outright.
         return {"valid": False, "error": str(e)}

@@ -6,11 +6,12 @@ marketing ROI, and portfolio overviews.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
-import os
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import and_, func, select
@@ -64,15 +65,14 @@ async def generate_report(
             extension = "pdf"
 
         # Store file to local disk (in production, upload to S3)
-        reports_dir = os.path.join(os.getcwd(), "generated_reports")
-        os.makedirs(reports_dir, exist_ok=True)
-        file_name = f"{report.id}.{extension}"
-        file_path = os.path.join(reports_dir, file_name)
+        reports_dir = Path.cwd() / "generated_reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        file_path = reports_dir / f"{report.id}.{extension}"
 
-        with open(file_path, "wb") as f:
-            f.write(file_bytes)
+        # write_bytes blocks; keep it off the event loop
+        await asyncio.to_thread(file_path.write_bytes, file_bytes)
 
-        report.file_path = file_path
+        report.file_path = str(file_path)
         report.file_size = len(file_bytes)
         report.status = ReportStatus.COMPLETED.value
         report.generated_at = datetime.now(UTC)

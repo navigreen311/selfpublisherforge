@@ -13,7 +13,7 @@ from __future__ import annotations
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 
 @dataclass
@@ -183,7 +183,7 @@ class PenetrationStrategy(PricingStrategy):
             Default milestones at 10, 25, 50, 100 reviews.
     """
 
-    DEFAULT_MILESTONES = [
+    DEFAULT_MILESTONES: ClassVar[list] = [
         {"reviews": 10, "price_pct": 0.50},
         {"reviews": 25, "price_pct": 0.70},
         {"reviews": 50, "price_pct": 0.85},

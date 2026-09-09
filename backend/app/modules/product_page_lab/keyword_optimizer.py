@@ -5,10 +5,13 @@ Recommends backend keywords for KDP based on genre, title, and current keywords.
 
 from __future__ import annotations
 
+import logging
 import random
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 # Genre-specific keyword pools for realistic recommendations
 GENRE_KEYWORDS: dict[str, list[dict]] = {
@@ -181,7 +184,7 @@ async def optimize_keywords(
         db.add(record)
         await db.flush()
     except Exception:
-        pass  # Model may not exist yet during migration
+        logger.warning("Could not persist keyword record; continuing", exc_info=True)
 
     return {
         "recommended": recommended,

@@ -26,7 +26,8 @@ import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from xml.etree import ElementTree
+
+from defusedxml import ElementTree  # hardened parser: SSML can be user-submitted
 
 logger = logging.getLogger(__name__)
 
@@ -501,7 +502,7 @@ class SSMLGenerator:
 
         # Attempt XML parse
         try:
-            root = ElementTree.fromstring(ssml_text)  # — validating our own SSML output
+            root = ElementTree.fromstring(ssml_text)
         except ElementTree.ParseError as exc:
             errors.append(f"XML parse error: {exc}")
             return {

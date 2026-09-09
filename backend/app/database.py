@@ -22,12 +22,12 @@ if _is_sqlite:
     import sqlalchemy.dialects.postgresql as _pg_dialect
     from sqlalchemy import JSON as _JSON
     from sqlalchemy import Uuid as _GenericUuid
-    from sqlalchemy.types import TypeDecorator as _TD
+    from sqlalchemy.types import TypeDecorator as _TypeDecorator
 
     class _PortableJSONB(_JSON):
         """Drop-in for JSONB that works on any backend."""
 
-    class _PortableARRAY(_TD):
+    class _PortableARRAY(_TypeDecorator):
         """Drop-in for ARRAY that stores as JSON text on SQLite."""
 
         impl = _JSON
@@ -164,7 +164,7 @@ async def init_db():
                 try:
                     await conn.run_sync(table.create, checkfirst=True)
                 except Exception:
-                    pass  # table/index already exists — fine for dev
+                    logger.debug("Table %s already exists; skipping create", table.name)
         logger.info("SQLite dev database initialised (tables auto-created)")
     else:
         async with engine.connect() as conn:

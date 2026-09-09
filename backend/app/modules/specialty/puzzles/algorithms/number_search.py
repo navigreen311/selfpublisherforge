@@ -33,7 +33,8 @@ _DIRECTIONS_4 = [
     (-1, 0),  # up
 ]
 
-_DIRECTIONS_8 = _DIRECTIONS_4 + [
+_DIRECTIONS_8 = [
+    *_DIRECTIONS_4,
     (1, 1),  # down-right
     (1, -1),  # down-left
     (-1, 1),  # up-right

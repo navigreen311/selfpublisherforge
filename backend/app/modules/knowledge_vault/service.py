@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 import httpx
@@ -28,7 +28,7 @@ class KnowledgeService:
     """Encapsulates all Knowledge Vault operations."""
 
     # Class-level set of entry IDs that failed ES indexing and need retry.
-    _pending_reindex: set[str] = set()
+    _pending_reindex: ClassVar[set[str]] = set()
 
     def __init__(self, db: AsyncSession, search: KnowledgeSearchService | None = None):
         self.db = db

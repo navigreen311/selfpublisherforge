@@ -1441,7 +1441,7 @@ async def run_preflight(
     for p in pages:
         # Use illustration prompt as a simple proxy for similarity
         prompt = getattr(p, "illustration_prompt", "") or ""
-        prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:8]
+        prompt_hash = hashlib.md5(prompt.encode(), usedforsecurity=False).hexdigest()[:8]
         if prompt_hash in page_hashes and prompt:
             duplicate_pairs.append(
                 {

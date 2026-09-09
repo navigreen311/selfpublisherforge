@@ -121,6 +121,7 @@ async def _get_revenue_trend(db: AsyncSession, org_id: UUID) -> list[RevenuePoin
                 try:
                     d = date.fromisoformat(d)
                 except Exception:
+                    logger.debug("Skipping row with unparseable date: %r", d)
                     continue
             elif isinstance(d, datetime):
                 d = d.date()

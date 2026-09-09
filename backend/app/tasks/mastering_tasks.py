@@ -125,9 +125,10 @@ def master_audiobook_task(self, job_id: str, project_id: str) -> dict:
             chapter_paths = [
                 Path(
                     ch.audio_url.replace(
-                        "s3://", "/tmp/"
-                    )  # stub: s3:// URL treated as a local path  # noqa: S108  # stub: s3:// URL treated as a local path pending real S3 download
-                )  # — TODO: download from S3
+                        "s3://",
+                        "/tmp/",  # noqa: S108  # stub: pending real S3 download
+                    )
+                )
                 for ch in chapters
             ]
 

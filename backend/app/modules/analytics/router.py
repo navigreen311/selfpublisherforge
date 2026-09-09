@@ -15,8 +15,8 @@ Endpoints:
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, date, datetime
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -211,7 +211,7 @@ async def download_report(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Report is not ready for download",
         )
-    if not os.path.exists(report.file_path):
+    if not Path(report.file_path).exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Report file not found on disk",
