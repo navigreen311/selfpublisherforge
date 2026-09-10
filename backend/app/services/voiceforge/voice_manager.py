@@ -364,8 +364,10 @@ class VoiceManager:
         segments = await gen.detect_dialogue(chapter_text)
         characters: dict[str, int] = {}
         for seg in segments:
-            if seg.get("character") and seg["character"] != "narrator":
-                characters[seg["character"]] = characters.get(seg["character"], 0) + 1
+            # DialogueSegment is a dataclass; the mapping access here raised
+            # TypeError, so character detection never returned anything.
+            if seg.character and seg.character != "narrator":
+                characters[seg.character] = characters.get(seg.character, 0) + 1
         return [
             {"name": name, "dialogue_count": count} for name, count in sorted(characters.items(), key=lambda x: -x[1])
         ]

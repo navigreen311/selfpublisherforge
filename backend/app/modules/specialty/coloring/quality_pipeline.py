@@ -165,6 +165,8 @@ async def step_2_auto_clean(image_data: bytes) -> tuple[bytes, list[QualityIssue
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         pixels = img.load()
+        if pixels is None:  # PIL returns None if the image cannot be loaded
+            raise ValueError("Could not load image pixel data")
         width, height = img.size
 
         gray_pixel_count = 0
@@ -441,6 +443,8 @@ async def step_5_speck_removal(
         img = Image.open(io.BytesIO(image_data)).convert("L")
         width, height = img.size
         pixels = img.load()
+        if pixels is None:  # PIL returns None if the image cannot be loaded
+            raise ValueError("Could not load image pixel data")
 
         visited = [[False] * width for _ in range(height)]
         specks_removed = 0
@@ -526,6 +530,8 @@ async def step_6_background_check(image_data: bytes) -> tuple[bytes, list[Qualit
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         pixels = img.load()
+        if pixels is None:  # PIL returns None if the image cannot be loaded
+            raise ValueError("Could not load image pixel data")
         width, height = img.size
 
         off_white_count = 0

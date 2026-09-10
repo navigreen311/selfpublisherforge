@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid as _uuid
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -876,6 +877,18 @@ async def batch_calculate_nutrition(db: AsyncSession, org_id: UUID, cookbook_id:
 # ---------------------------------------------------------------------------
 
 
+def _servings_count(raw: str | None, default: int = 4) -> int:
+    """Read a serving count out of the free-text `servings` column.
+
+    The column is String(50) and holds values like "4", "4-6" or "Serves 8",
+    so callers that treated it as a number raised TypeError.
+    """
+    if not raw:
+        return default
+    digits = re.search(r"\d+", str(raw))
+    return int(digits.group()) if digits else default
+
+
 async def scale_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID, factor: float) -> dict[str, Any]:
     """Scale a recipe's ingredients by a factor (e.g., 2.0 = double)."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
@@ -888,7 +901,7 @@ async def scale_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID, factor: 
             scaled["amount"] = round(scaled["amount"] * factor, 2)
         scaled_ingredients.append(scaled)
 
-    original_servings = r.servings or 4
+    original_servings = _servings_count(r.servings)
     new_servings = round(original_servings * factor)
 
     return {
@@ -1107,7 +1120,7 @@ async def generate_recipe_shopping_list(
     """Generate a shopping list for a single recipe."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
 
-    original_servings = r.servings or 4
+    original_servings = _servings_count(r.servings)
     factor = servings / original_servings if original_servings else 1
 
     items = []

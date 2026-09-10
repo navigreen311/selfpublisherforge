@@ -230,7 +230,9 @@ class SocialContentGenerator:
                 messages=[{"role": "user", "content": prompt}],
             )
 
-            content = message.content[0].text
+            block = message.content[0]
+            # Only a TextBlock carries .text; a ToolUseBlock would raise.
+            content = block.text if hasattr(block, "text") else ""
             posts_data = json.loads(content)
             return self._parse_llm_social_response(request, posts_data)
 
