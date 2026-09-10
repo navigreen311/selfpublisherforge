@@ -176,11 +176,11 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
             # Create white background
             rgb_img = Image.new("RGB", img.size, (255, 255, 255))
             if img.mode == "P":
-                img = img.convert("RGBA")
+                img = img.convert("RGBA")  # type: ignore[assignment]
             rgb_img.paste(img, mask=img.split()[3] if img.mode == "RGBA" else None)
             return rgb_img
         if img.mode != "RGB":
-            img = img.convert("RGB")
+            img = img.convert("RGB")  # type: ignore[assignment]
         return img
     except (OSError, ValueError) as exc:
         logger.exception("Failed to open cover image: %s", exc)
@@ -262,7 +262,9 @@ async def _export_jpeg(cover: Cover, include_bleed: bool, quality: int = 85) -> 
 
     # Ensure RGB mode (JPEG doesn't support transparency)
     if img.mode != "RGB":
-        img = img.convert("RGB")
+        img = img.convert(  # type: ignore[assignment]  # ImageFile -> Image
+            "RGB"
+        )
 
     # Save to bytes
     buf = io.BytesIO()

@@ -225,7 +225,7 @@ async def check_gutter_collisions(
     """
     page_count = 30  # default; in production fetched from book record
 
-    simulated_page_elements = [
+    simulated_page_elements: list[dict[str, Any]] = [
         {"page": 3, "type": "text", "distance_from_gutter": 0.2},
         {"page": 5, "type": "face", "distance_from_gutter": 0.4},
         {"page": 8, "type": "illustration", "distance_from_gutter": 0.15},

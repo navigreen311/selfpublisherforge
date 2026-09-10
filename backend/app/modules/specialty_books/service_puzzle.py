@@ -274,9 +274,9 @@ async def verify_puzzle(db: AsyncSession, puzzle: Puzzle) -> dict[str, Any]:
         "difficulty_match": 0.9,
         "clue_quality": 0.85 if puzzle.clues else None,
     }
-    scores = {k: v for k, v in scores.items() if v is not None}
-    passed = all(v >= 0.7 for v in scores.values())
-    puzzle.qa_scores = scores
+    graded: dict[str, float] = {k: v for k, v in scores.items() if v is not None}
+    passed = all(v >= 0.7 for v in graded.values())
+    puzzle.qa_scores = graded
     puzzle.qa_passed = passed
     await db.flush()
     return {"puzzle_id": str(puzzle.id), "scores": scores, "passed": passed}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -378,7 +379,9 @@ async def create_project_from_wizard(
         chapter_count += 1
 
     base_cost_per_1000_words = 0.10
-    estimated_cost = (total_word_count / 1000.0) * base_cost_per_1000_words * tier_config["cost_multiplier"]
+    estimated_cost = (
+        (total_word_count / 1000.0) * base_cost_per_1000_words * cast("float", tier_config["cost_multiplier"])
+    )
     if budget and estimated_cost > budget:
         logger.warning(
             "Estimated cost %.2f exceeds budget %.2f for project %s",

@@ -1061,18 +1061,19 @@ async def generate_puzzle(
             message=f"{puzzle_type} puzzles require a non-empty word_list",
         )
 
+    words: list[str] = word_list or []  # guarded above for the word-based types
     if puzzle_type in (PuzzleType.word_search, PuzzleType.word_connect):
-        gen_data = _generate_word_search(grid_size, word_list, difficulty)
+        gen_data = _generate_word_search(grid_size, words, difficulty)
     elif puzzle_type == PuzzleType.crossword:
-        gen_data = _generate_crossword(word_list, difficulty)
+        gen_data = _generate_crossword(words, difficulty)
     elif puzzle_type == PuzzleType.maze:
         gen_data = _generate_maze(grid_size, difficulty)
     elif puzzle_type == PuzzleType.sudoku:
         gen_data = _generate_sudoku(grid_size, difficulty)
     elif puzzle_type == PuzzleType.word_scramble:
-        gen_data = _generate_word_scramble(word_list)
+        gen_data = _generate_word_scramble(words)
     elif puzzle_type == PuzzleType.cryptogram:
-        gen_data = _generate_cryptogram(word_list)
+        gen_data = _generate_cryptogram(words)
     elif puzzle_type == PuzzleType.number_search:
         gen_data = _generate_number_search(grid_size, difficulty)
     else:

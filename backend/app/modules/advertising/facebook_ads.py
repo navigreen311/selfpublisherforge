@@ -59,7 +59,7 @@ class FacebookAdsClient:
         app_secret: str | None = None,
     ):
         self.access_token = access_token or os.environ.get("FACEBOOK_ACCESS_TOKEN", "")
-        self.ad_account_id: str = ad_account_id or os.environ.get("FACEBOOK_AD_ACCOUNT_ID", "")
+        self.ad_account_id: str = ad_account_id or os.environ.get("FACEBOOK_AD_ACCOUNT_ID") or ""
         self.app_id = app_id or os.environ.get("FACEBOOK_APP_ID", "")
         self.app_secret = app_secret or os.environ.get("FACEBOOK_APP_SECRET", "")
 

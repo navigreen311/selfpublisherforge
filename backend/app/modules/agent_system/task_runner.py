@@ -11,7 +11,7 @@ import logging
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -96,7 +96,7 @@ async def execute_task(
         steps[i]["status"] = "running"
 
         # Simulate processing
-        await asyncio.sleep(step_config["duration"])
+        await asyncio.sleep(float(cast("float", step_config["duration"])))
 
         # Mark step as complete with output
         steps[i]["status"] = "complete"
@@ -179,7 +179,7 @@ async def stream_task_execution(
         yield f"data: {json.dumps({'event': 'step_start', 'step': step_config['name'], 'progress': progress})}\n\n"
 
         # Simulate processing
-        await asyncio.sleep(step_config["duration"])
+        await asyncio.sleep(float(cast("float", step_config["duration"])))
 
         # Send step complete event
         yield f"data: {json.dumps({'event': 'step_complete', 'step': step_config['name']})}\n\n"
