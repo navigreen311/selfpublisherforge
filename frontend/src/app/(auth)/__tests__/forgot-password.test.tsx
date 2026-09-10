@@ -214,7 +214,7 @@ describe("ForgotPasswordPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("myemail@domain.com")).toBeInTheDocument();
+      expect(screen.getByText(/If an account exists for myemail@domain\.com/)).toBeInTheDocument();
     });
   });
 
