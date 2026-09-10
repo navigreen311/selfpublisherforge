@@ -84,7 +84,7 @@ async def import_manuscript(
             ),
         )
 
-    raw_bytes = file.read() if hasattr(file, "read") else file  # type: ignore[arg-type]
+    raw_bytes: bytes = file.read() if hasattr(file, "read") else file  # type: ignore[assignment]
     if isinstance(raw_bytes, memoryview):
         raw_bytes = bytes(raw_bytes)
 

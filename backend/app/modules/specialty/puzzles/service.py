@@ -21,7 +21,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import AppException, NotFoundError, ValidationError
 from app.modules.specialty.models.enums import (
     AnswerKeyPosition,
     BookStatus,
@@ -1047,6 +1047,20 @@ async def generate_puzzle(
     next_number = existing_count + 1
 
     # Generate puzzle data via the appropriate algorithm
+    word_based = (
+        PuzzleType.word_search,
+        PuzzleType.word_connect,
+        PuzzleType.crossword,
+        PuzzleType.word_scramble,
+        PuzzleType.cryptogram,
+    )
+    if puzzle_type in word_based and not word_list:
+        raise AppException(
+            status_code=400,
+            code="WORD_LIST_REQUIRED",
+            message=f"{puzzle_type} puzzles require a non-empty word_list",
+        )
+
     if puzzle_type in (PuzzleType.word_search, PuzzleType.word_connect):
         gen_data = _generate_word_search(grid_size, word_list, difficulty)
     elif puzzle_type == PuzzleType.crossword:

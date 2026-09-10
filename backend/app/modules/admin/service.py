@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppException
 from app.models.organization import Organization
 from app.models.project import Book
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.modules.admin.schemas import (
     ActivityLogEntry,
     ActivityLogFilters,
@@ -344,7 +344,7 @@ async def update_user(
 
     # Update fields
     if data.role is not None:
-        user.role = data.role
+        user.role = UserRole(data.role)
     if data.status is not None:
         user.is_active = data.status == "active"
 

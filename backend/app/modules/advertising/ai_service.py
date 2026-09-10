@@ -2,6 +2,7 @@
 
 import random
 from datetime import datetime, timedelta
+from typing import cast
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -279,7 +280,7 @@ async def suggest_keywords(db: AsyncSession, org_id, book_id=None) -> list[dict]
                     )
 
     # Sort by search volume descending and limit
-    suggestions.sort(key=lambda x: x["search_volume"], reverse=True)
+    suggestions.sort(key=lambda x: cast("int", x["search_volume"]), reverse=True)
     return suggestions[:20]
 
 

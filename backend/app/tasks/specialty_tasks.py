@@ -41,6 +41,7 @@ import logging
 import secrets
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select
@@ -596,7 +597,7 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
 
                         image_url = page.cleaned_url or page.illustration_url or ""
                         image_data = (
-                            await _fetch_specialty_asset(book.org_id, "coloring", book_id, page.id)
+                            await _fetch_specialty_asset(book.org_id, "coloring", UUID(book_id), page.id)
                             if image_url
                             else b""
                         )
