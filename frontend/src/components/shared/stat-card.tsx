@@ -1,3 +1,4 @@
+import * as React from "react";
 "use client";
 
 import { type LucideIcon } from "lucide-react";
@@ -6,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   icon: LucideIcon;
   trend?: {
     value: number;

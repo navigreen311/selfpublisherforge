@@ -201,7 +201,7 @@ describe("Export Page", () => {
     render(<ExportPage />);
 
     const selector = screen.getByRole("combobox", {
-      name: /select a book to export/i,
+      name: /select a book/i,
     });
     expect(selector).toBeInTheDocument();
 
@@ -226,7 +226,7 @@ describe("Export Page", () => {
 
     // Book selector should NOT be present
     expect(
-      screen.queryByRole("combobox", { name: /select a book to export/i })
+      screen.queryByRole("combobox", { name: /select a book/i })
     ).not.toBeInTheDocument();
   });
 
@@ -289,7 +289,7 @@ describe("Export Page", () => {
     render(<ExportPage />);
 
     const selector = screen.getByRole("combobox", {
-      name: /select a book to export/i,
+      name: /select a book/i,
     });
 
     await userEvent.selectOptions(selector, "book-1");
@@ -310,7 +310,7 @@ describe("Export Page", () => {
     render(<ExportPage />);
 
     const selector = screen.getByRole("combobox", {
-      name: /select a book to export/i,
+      name: /select a book/i,
     });
     await userEvent.selectOptions(selector, "book-1");
 
@@ -343,7 +343,7 @@ describe("Export Page", () => {
     render(<ExportPage />);
 
     const selector = screen.getByRole("combobox", {
-      name: /select a book to export/i,
+      name: /select a book/i,
     });
     await userEvent.selectOptions(selector, "book-1");
 
@@ -364,7 +364,7 @@ describe("Export Page", () => {
     render(<ExportPage />);
 
     const selector = screen.getByRole("combobox", {
-      name: /select a book to export/i,
+      name: /select a book/i,
     });
     await userEvent.selectOptions(selector, "book-1");
 
@@ -398,28 +398,26 @@ describe("Export Page", () => {
     render(<ExportPage />);
 
     const selector = screen.getByRole("combobox", {
-      name: /select a book to export/i,
+      name: /select a book/i,
     });
     await userEvent.selectOptions(selector, "book-1");
 
     // Find the wrapper around ExportWizard
     const wizard = screen.getByTestId("export-wizard");
     const wrapper = wizard.parentElement;
+    // bg-card, not bg-white: the surface follows the theme token.
     expect(wrapper).toHaveClass(
       "rounded-lg",
       "border",
-      "bg-white",
+      "bg-card",
       "p-6",
       "shadow-sm"
     );
 
-    // Should display the exporting info text with book title and chapter count
-    // The book title appears in both the <option> and the info <span>, so
-    // narrow to the <span> wrapper that the page uses for emphasis.
-    const titleSpan = screen.getByText(/my first novel/i, {
-      selector: "span.font-semibold",
-    });
-    expect(titleSpan).toBeInTheDocument();
-    expect(screen.getByText(/2 chapter/i)).toBeInTheDocument();
+    // The title and chapter count are one interpolated sentence now, not a
+    // bolded span inside surrounding text.
+    expect(
+      screen.getByText("Exporting My First Novel (2 chapters)")
+    ).toBeInTheDocument();
   });
 });

@@ -18,6 +18,12 @@ export default function PublishingDashboardPage() {
     isError: listingsError,
   } = useListings();
 
+  // The card is labelled "Active Listings"; it was being handed every listing,
+  // drafts included.
+  const activeListingCount = listings.filter(
+    (listing) => listing.status === "active"
+  ).length;
+
   return (
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0">
       {/* Header */}
@@ -41,9 +47,11 @@ export default function PublishingDashboardPage() {
       {/* Stats */}
       <StatsCards
         accountCount={accounts.length}
-        activeListingCount={listings.length}
+        activeListingCount={activeListingCount}
         pendingExportCount={0}
         totalRevenue={0}
+        listingsLoading={listingsLoading}
+        listingsError={listingsError}
       />
 
       {/* Tabs: Listings & Accounts */}
