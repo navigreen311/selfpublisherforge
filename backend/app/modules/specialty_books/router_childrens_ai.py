@@ -111,7 +111,7 @@ async def generate_story_endpoint(
     illustration prompts plus character description sheets.
     """
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await generate_story(db, book_id, org_id, request)
     except AppException:
         raise
@@ -137,7 +137,7 @@ async def analyze_text_endpoint(
 ) -> TextAnalysisResponse:
     """Analyze text for reading level, pacing, rhythm, and hook strength."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await analyze_text(
             db,
             book_id,
@@ -169,7 +169,7 @@ async def continuity_check_endpoint(
 ) -> ContinuityCheckResponse:
     """Analyze illustration prompts for character consistency issues."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await check_continuity(
             db,
             book_id,
@@ -201,7 +201,7 @@ async def auto_fix_prompts_endpoint(
 ) -> AutoFixResponse:
     """Batch-update all illustration prompts to match character rules."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await auto_fix_prompts(
             db,
             book_id,
@@ -233,7 +233,7 @@ async def translate_book_endpoint(
 ) -> TranslateResponse:
     """AI translation with cultural adaptation and reading-level validation."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         translate_req = TranslateRequest(
             target_language=request.target_language,
             layout_mode=request.layout_mode,

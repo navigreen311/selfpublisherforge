@@ -25,12 +25,14 @@ async def get_current_user(
 ) -> dict:
     """Extract and validate the current user from a JWT bearer token.
 
-    Returns a dict with ``user_id``, ``org_id``, and ``role`` keys.
+    Returns a dict with ``user_id``, ``org_id``, and ``role`` keys. ``org_id``
+    is always a UUID, never None — see below.
 
     Raises
     ------
     HTTPException(401)
-        If the token is missing, invalid, or does not contain a subject.
+        If the token is missing, invalid, lacks a subject, or carries no
+        organization.
     """
     try:
         payload = decode_token(credentials.credentials)
@@ -41,9 +43,20 @@ async def get_current_user(
                 detail="Invalid token: missing subject",
             )
         org_id_raw = payload.get("org_id", "")
+        if not org_id_raw:
+            # Every tenant-scoped query in this codebase reads
+            # current_user["org_id"] and passes it straight into a filter.
+            # Returning None here meant those became `org_id IS NULL` rather
+            # than a refusal, across ~470 call sites. A token with no
+            # organization cannot be used for anything, so reject it at the
+            # boundary instead.
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: missing organization",
+            )
         return {
             "user_id": UUID(user_id),
-            "org_id": UUID(org_id_raw) if org_id_raw else None,
+            "org_id": UUID(org_id_raw),
             "role": payload.get("role", "viewer"),
         }
     except ValueError as e:
