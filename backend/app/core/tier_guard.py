@@ -34,6 +34,7 @@ MODULE_TIERS: dict[str, PlanTier] = {
     "admin": PlanTier.FREE,  # all tiers can reach admin (role check happens inside)
     "settings": PlanTier.FREE,
     "agents": PlanTier.FREE,
+    "notifications": PlanTier.FREE,
     "market-intelligence": PlanTier.FREE,
     "knowledge-vault": PlanTier.FREE,
     "ai-writing": PlanTier.FREE,
@@ -95,8 +96,15 @@ def require_module(module_slug: str) -> Callable:
 
     Returns:
         A FastAPI dependency function
+
+    Raises:
+        ValueError: If the slug is not in MODULE_TIERS. Defaulting an unknown
+            slug to FREE would let a typo in a router quietly open a paid
+            module to every tier, so this fails loudly at import time.
     """
-    required_tier = MODULE_TIERS.get(module_slug, PlanTier.FREE)
+    if module_slug not in MODULE_TIERS:
+        raise ValueError(f"Unknown module slug: {module_slug}")
+    required_tier = MODULE_TIERS[module_slug]
 
     async def _tier_checker(
         current_user: dict = Depends(get_current_user),
