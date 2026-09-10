@@ -417,9 +417,9 @@ async def get_budgets(
     description="Update budget limits for a specific agent. Requires admin or owner role.",
 )
 async def update_budgets(
+    payload: BudgetUpdate,
+    request: Request,
     agent_id: UUID = Query(...),
-    payload: BudgetUpdate = ...,
-    request: Request = ...,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role("admin", "owner")),
 ):

@@ -20,18 +20,13 @@ class PricingStrategyType(str, Enum):
     PROMOTIONAL = "promotional"
 
 
-class RuleStatus(str, Enum):
-    DRAFT = "draft"
-    ACTIVE = "active"
-    PAUSED = "paused"
-    ARCHIVED = "archived"
-
-
-class PromotionStatus(str, Enum):
-    SCHEDULED = "scheduled"
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+# Re-exported from the models layer rather than redeclared. Both copies had
+# identical members, but they were distinct types, so a router typed with the
+# schema enum could not be passed to a service typed with the model one.
+from app.modules.pricing_automation.models import (  # noqa: E402
+    PromotionStatus,
+    RuleStatus,
+)
 
 
 class ABTestStatus(str, Enum):
