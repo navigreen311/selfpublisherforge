@@ -252,6 +252,15 @@ function setupDefaultMocks(overrides?: {
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * The detail page is an editor now: Delete and AI Summary live behind the
+ * "More actions" dropdown rather than sitting on the toolbar.
+ */
+async function openMoreActions(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  await screen.findByRole("menu");
+}
+
 describe("KnowledgeEntryDetailPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -274,12 +283,10 @@ describe("KnowledgeEntryDetailPage", () => {
   it("displays the entry title and content when loaded", () => {
     render(<KnowledgeEntryDetailPage />);
 
-    expect(
-      screen.getByRole("heading", { name: /Research on Publishing Trends/i })
-    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Research on Publishing Trends")).toBeInTheDocument();
 
     expect(
-      screen.getByText(/detailed content of the knowledge entry/i)
+      screen.getByDisplayValue(/detailed content of the knowledge entry/i)
     ).toBeInTheDocument();
   });
 
@@ -349,8 +356,8 @@ describe("KnowledgeEntryDetailPage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     // Click the delete button
-    const deleteButton = screen.getByRole("button", { name: /delete/i });
-    await user.click(deleteButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     // ConfirmDialog should now be visible
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -367,8 +374,8 @@ describe("KnowledgeEntryDetailPage", () => {
     render(<KnowledgeEntryDetailPage />);
 
     // Open the confirm dialog
-    const deleteButton = screen.getByRole("button", { name: /delete/i });
-    await user.click(deleteButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
@@ -392,8 +399,8 @@ describe("KnowledgeEntryDetailPage", () => {
     render(<KnowledgeEntryDetailPage />);
 
     // Open the confirm dialog
-    const deleteButton = screen.getByRole("button", { name: /delete/i });
-    await user.click(deleteButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     // Click the confirm/Delete button in the dialog
     // The ConfirmDialog has confirmText="Delete"
@@ -444,8 +451,8 @@ describe("KnowledgeEntryDetailPage", () => {
     const user = userEvent.setup();
     render(<KnowledgeEntryDetailPage />);
 
-    const summaryButton = screen.getByRole("button", { name: /ai summary/i });
-    await user.click(summaryButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /ai summary/i }));
 
     await waitFor(() => {
       expect(mockSummarizeMutateAsync).toHaveBeenCalledTimes(1);
@@ -459,8 +466,8 @@ describe("KnowledgeEntryDetailPage", () => {
     const user = userEvent.setup();
     render(<KnowledgeEntryDetailPage />);
 
-    const summaryButton = screen.getByRole("button", { name: /ai summary/i });
-    await user.click(summaryButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /ai summary/i }));
 
     await waitFor(() => {
       expect(
