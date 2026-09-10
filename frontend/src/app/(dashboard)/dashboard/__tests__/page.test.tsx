@@ -226,10 +226,10 @@ describe("DashboardPage", () => {
       )
     ).toBeInTheDocument();
 
-    // Quick actions are rendered even in skeleton (there are two "New Project" texts:
-    // one in the header button and one in the quick actions grid)
-    expect(screen.getAllByText("New Project").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Quick Actions")).toBeInTheDocument();
+    // The skeleton keeps the header CTA; the body is placeholder blocks, so
+    // Quick Actions itself does not render until the data lands.
+    expect(screen.getByText("+ New Project")).toBeInTheDocument();
+    expect(screen.queryByText("Quick Actions")).not.toBeInTheDocument();
   });
 
   // ── 2. Error State ──────────────────────────────────────────────────
@@ -350,7 +350,7 @@ describe("DashboardPage", () => {
 
     renderWithProviders(<DashboardPage />);
 
-    expect(screen.getByText("Top Books")).toBeInTheDocument();
+    expect(screen.getByText("Top Performing Books")).toBeInTheDocument();
     expect(screen.getByText("My First Book")).toBeInTheDocument();
     expect(screen.getByText("My Second Book")).toBeInTheDocument();
     expect(screen.getByText("Draft Novel")).toBeInTheDocument();
@@ -375,9 +375,9 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("Quick Actions")).toBeInTheDocument();
 
-    // "New Project" appears both in the header button and the quick actions grid
-    const newProjectElements = screen.getAllByText("New Project");
-    expect(newProjectElements.length).toBe(2);
+    // The header CTA reads "+ New Project"; the quick-action tile "New Project".
+    expect(screen.getByText("+ New Project")).toBeInTheDocument();
+    expect(screen.getByText("New Project")).toBeInTheDocument();
 
     expect(screen.getByText("View Projects")).toBeInTheDocument();
     expect(screen.getByText("AI Agents")).toBeInTheDocument();
@@ -420,11 +420,10 @@ describe("DashboardPage", () => {
 
     renderWithProviders(<DashboardPage />);
 
-    expect(
-      screen.getByText(
-        "No KPI data available yet. Import royalty data to get started."
-      )
-    ).toBeInTheDocument();
+    // The empty KPI state is four zeroed stat cards, not a sentence.
+    expect(screen.getByText("Active Projects")).toBeInTheDocument();
+    expect(screen.getByText("Books Published")).toBeInTheDocument();
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(3);
   });
 
   // ── 10. Empty State: No Activity ────────────────────────────────────
@@ -449,7 +448,7 @@ describe("DashboardPage", () => {
 
     expect(
       screen.getByText(
-        "No recent activity. Import your first royalty report to see data here."
+        "No recent activity yet. Create your first project to get started!"
       )
     ).toBeInTheDocument();
   });
@@ -476,7 +475,7 @@ describe("DashboardPage", () => {
 
     expect(
       screen.getByText(
-        "No book data available yet. Import royalty data to see your top performers."
+        "No published books yet. Your top performers will appear here."
       )
     ).toBeInTheDocument();
   });
@@ -535,10 +534,9 @@ describe("DashboardPage", () => {
     // With undefined data and no error/loading, the page should render
     // the empty state messages via the ?? [] fallbacks
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "No KPI data available yet. Import royalty data to get started."
-      )
-    ).toBeInTheDocument();
+    // The empty KPI state is four zeroed stat cards, not a sentence.
+    expect(screen.getByText("Active Projects")).toBeInTheDocument();
+    expect(screen.getByText("Books Published")).toBeInTheDocument();
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(3);
   });
 });

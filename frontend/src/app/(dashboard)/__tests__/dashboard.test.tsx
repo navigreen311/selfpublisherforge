@@ -243,11 +243,11 @@ describe("DashboardPage", () => {
       )
     ).toBeInTheDocument();
 
-    // Quick Actions card is rendered even in skeleton mode
-    expect(screen.getByText("Quick Actions")).toBeInTheDocument();
+    // The skeleton body is placeholder blocks; Quick Actions arrives with data.
+    expect(screen.queryByText("Quick Actions")).not.toBeInTheDocument();
 
-    // "New Project" appears in the skeleton header button
-    expect(screen.getAllByText("New Project").length).toBeGreaterThanOrEqual(1);
+    // The skeleton keeps the header CTA, which reads "+ New Project".
+    expect(screen.getByText("+ New Project")).toBeInTheDocument();
   });
 
   // 3. Displays recent projects (top books)
@@ -261,7 +261,7 @@ describe("DashboardPage", () => {
 
     renderWithProviders(<DashboardPage />);
 
-    expect(screen.getByText("Top Books")).toBeInTheDocument();
+    expect(screen.getByText("Top Performing Books")).toBeInTheDocument();
     expect(screen.getByText("My First Book")).toBeInTheDocument();
     expect(screen.getByText("My Second Book")).toBeInTheDocument();
     expect(screen.getByText("Draft Novel")).toBeInTheDocument();
@@ -288,9 +288,9 @@ describe("DashboardPage", () => {
     expect(screen.getByText("AI Agents")).toBeInTheDocument();
     expect(screen.getByText("Analytics")).toBeInTheDocument();
 
-    // New Project appears in both header and quick actions
-    const newProjectElements = screen.getAllByText("New Project");
-    expect(newProjectElements.length).toBe(2);
+    // The header CTA reads "+ New Project"; the quick-action tile "New Project".
+    expect(screen.getByText("+ New Project")).toBeInTheDocument();
+    expect(screen.getByText("New Project")).toBeInTheDocument();
   });
 
   // 5. Navigation links work
@@ -371,11 +371,9 @@ describe("DashboardPage", () => {
 
     renderWithProviders(<DashboardPage />);
 
-    expect(
-      screen.getByText(
-        "No KPI data available yet. Import royalty data to get started."
-      )
-    ).toBeInTheDocument();
+    // The empty KPI state is four zeroed stat cards, not a sentence.
+    expect(screen.getByText("Active Projects")).toBeInTheDocument();
+    expect(screen.getByText("Books Published")).toBeInTheDocument();
   });
 
   it("renders empty state when no recent activity exists", () => {
@@ -398,7 +396,7 @@ describe("DashboardPage", () => {
 
     expect(
       screen.getByText(
-        "No recent activity. Import your first royalty report to see data here."
+        "No recent activity yet. Create your first project to get started!"
       )
     ).toBeInTheDocument();
   });
