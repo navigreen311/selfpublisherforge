@@ -14,7 +14,11 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.modules.advertising.amazon_ads import AmazonAdsClient, AmazonAdsError
+from app.modules.advertising.amazon_ads import (
+    AmazonAdsClient,
+    AmazonAdsError,
+    AmazonAdsNotConfiguredError,
+)
 from app.modules.advertising.creative_generator import AdCreativeGenerator
 from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
 from app.modules.advertising.models import (
@@ -193,7 +197,13 @@ class AdvertisingService:
                 )
                 campaign.external_campaign_id = ext_result.get("external_campaign_id")
             await self.db.flush()
-        except (AmazonAdsError, FacebookAdsError, httpx.HTTPError, OSError) as e:
+        except (
+            AmazonAdsError,
+            AmazonAdsNotConfiguredError,
+            FacebookAdsError,
+            httpx.HTTPError,
+            OSError,
+        ) as e:
             logger.warning("Failed to sync campaign to external platform: %s", e)
 
         # Create keyword bids from targeting keywords
