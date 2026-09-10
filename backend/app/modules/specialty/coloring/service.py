@@ -1046,7 +1046,7 @@ async def run_quality_dashboard(
             all_issues.extend(page_issues)
 
     # Categorize issues
-    issue_categories = {}
+    issue_categories: dict[str, int] = {}
     for issue in all_issues:
         step = issue.get("step", "unknown") if isinstance(issue, dict) else "unknown"
         issue_categories[step] = issue_categories.get(step, 0) + 1

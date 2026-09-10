@@ -13,6 +13,7 @@ from app.models.organization import Organization
 from app.models.project import Book
 from app.models.user import User
 from app.modules.admin.schemas import (
+    ActivityLogEntry,
     ActivityLogFilters,
     ActivityLogResponse,
     AdminOrgDetail,
@@ -228,7 +229,7 @@ async def get_activity_log(
         a dedicated activity_log table or audit system.
     """
     # Return mock data for now
-    activities = []
+    activities: list[ActivityLogEntry] = []
     total = 0
 
     return ActivityLogResponse(activities=activities, total=total)

@@ -985,7 +985,7 @@ def _compute_rhythm_score(
     if word_list:
         # Check for bigram repetition
         bigrams = [f"{word_list[i]} {word_list[i+1]}" for i in range(len(word_list) - 1)]
-        bigram_counts = {}
+        bigram_counts: dict[str, int] = {}
         for bg in bigrams:
             bigram_counts[bg] = bigram_counts.get(bg, 0) + 1
         repeated = sum(1 for c in bigram_counts.values() if c >= 3)

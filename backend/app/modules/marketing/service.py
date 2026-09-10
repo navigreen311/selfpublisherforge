@@ -13,6 +13,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.exceptions import AppException
 from app.models.marketing import (
     ARCCampaign,
     ARCCampaignStatus,
@@ -98,7 +99,12 @@ class MarketingService:
                 self.db.add(task)
 
         await self.db.flush()
-        return await self.get_launch_plan(plan.id, org_id)
+        created = await self.get_launch_plan(plan.id, org_id)
+        if created is None:  # only reachable if the org scope disagrees
+            raise AppException(
+                status_code=404, code="LAUNCH_PLAN_NOT_FOUND", message="Launch plan not found after create"
+            )
+        return created
 
     async def get_launch_plan(self, plan_id: uuid.UUID, org_id: uuid.UUID) -> LaunchPlan | None:
         """Get a launch plan with all phases and tasks."""
@@ -174,7 +180,12 @@ class MarketingService:
         if ai_metadata:
             plan.ai_metadata = ai_metadata
             await self.db.flush()
-        return await self.get_launch_plan(plan.id, org_id)
+        created = await self.get_launch_plan(plan.id, org_id)
+        if created is None:  # only reachable if the org scope disagrees
+            raise AppException(
+                status_code=404, code="LAUNCH_PLAN_NOT_FOUND", message="Launch plan not found after create"
+            )
+        return created
 
     # ------------------------------------------------------------------
     # Email Sequences
@@ -215,7 +226,12 @@ class MarketingService:
             self.db.add(template)
 
         await self.db.flush()
-        return await self.get_email_sequence(sequence.id, org_id)
+        created = await self.get_email_sequence(sequence.id, org_id)
+        if created is None:
+            raise AppException(
+                status_code=404, code="EMAIL_SEQUENCE_NOT_FOUND", message="Email sequence not found after create"
+            )
+        return created
 
     async def get_email_sequence(self, sequence_id: uuid.UUID, org_id: uuid.UUID) -> EmailSequence | None:
         """Get an email sequence with all templates."""
@@ -442,7 +458,12 @@ class MarketingService:
             self.db.add(recipient)
 
         await self.db.flush()
-        return await self.get_arc_campaign(campaign.id, org_id)
+        created = await self.get_arc_campaign(campaign.id, org_id)
+        if created is None:
+            raise AppException(
+                status_code=404, code="ARC_CAMPAIGN_NOT_FOUND", message="ARC campaign not found after create"
+            )
+        return created
 
     async def get_arc_campaign(self, campaign_id: uuid.UUID, org_id: uuid.UUID) -> ARCCampaign | None:
         """Get an ARC campaign with all recipients."""

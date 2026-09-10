@@ -270,7 +270,7 @@ def _solve_bfs(
 
     Returns list of (row, col) tuples from entrance to exit.
     """
-    queue = deque()
+    queue: deque[tuple[int, int]] = deque()
     queue.append(entrance)
     came_from: dict[tuple[int, int], tuple[int, int] | None] = {entrance: None}
 

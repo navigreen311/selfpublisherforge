@@ -40,11 +40,12 @@ def tiptap_to_html(content: dict | str | None) -> str:
         return ""
 
     if isinstance(content, str):
+        raw = content
         try:
-            content = json.loads(content)
+            content = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
             # If it's already plain HTML/text, return as-is
-            return content
+            return raw
 
     if not isinstance(content, dict):
         return str(content)

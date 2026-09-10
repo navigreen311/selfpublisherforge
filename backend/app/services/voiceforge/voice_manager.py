@@ -268,7 +268,7 @@ class VoiceManager:
         voices = result.scalars().all()
         if not voices:
             voices = await self._seed_system_voices(db)
-        return voices
+        return list(voices)  # .all() returns a Sequence
 
     async def get_org_voices(self, db: AsyncSession, org_id: uuid.UUID) -> list[AudiobookVoice]:
         """Return org-specific custom voices + system voices."""
