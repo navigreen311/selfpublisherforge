@@ -1,15 +1,12 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import "@testing-library/jest-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, within } from "@testing-library/react";
 
 // ── Mocks ────────────────────────────────────────────────────────────────
 
-const mockUseDashboard = jest.fn();
+const mockUseEnhancedDashboard = jest.fn();
 
 jest.mock("@/modules/analytics/hooks", () => ({
-  useDashboard: (...args: unknown[]) => mockUseDashboard(...args),
-  useEnhancedDashboard: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useEnhancedDashboard: (...args: unknown[]) => mockUseEnhancedDashboard(...args),
 }));
 
 jest.mock("next/link", () => {
@@ -20,329 +17,188 @@ jest.mock("next/link", () => {
   );
 });
 
-jest.mock("@/modules/analytics/components/KPICard", () => ({
-  KPICard: ({ kpi }: { kpi: { label: string; value: string } }) => (
-    <div data-testid="kpi-card">
-      <span>{kpi.label}</span>
-      <span>{kpi.value}</span>
+// The overview tab renders three recharts-backed panels. They have their own
+// suites; here they only need to be identifiable.
+jest.mock("@/modules/analytics/components/RevenueOverviewChart", () => ({
+  RevenueOverviewChart: ({ data }: { data: unknown[] }) => (
+    <div data-testid="revenue-overview-chart">{data?.length ?? 0} points</div>
+  ),
+}));
+
+jest.mock("@/modules/analytics/components/RevenueBreakdownCharts", () => ({
+  RevenueBreakdownCharts: ({
+    revenueByBook,
+    revenueByFormat,
+  }: {
+    revenueByBook: unknown[];
+    revenueByFormat: unknown[];
+  }) => (
+    <div data-testid="revenue-breakdown-charts">
+      {revenueByBook?.length ?? 0}/{revenueByFormat?.length ?? 0}
     </div>
   ),
 }));
 
-jest.mock("@/modules/analytics/components/RevenueChart", () => ({
-  RevenueChart: ({ data }: { data: unknown[] }) => (
-    <div data-testid="revenue-chart">
-      Revenue Chart ({data?.length || 0} points)
-    </div>
-  ),
-}));
-
-jest.mock("@/modules/analytics/components/PortfolioTable", () => ({
-  PortfolioTable: ({ books }: { books: unknown[] }) => (
-    <div data-testid="portfolio-table">
-      Portfolio Table ({books?.length || 0} books)
-    </div>
+jest.mock("@/modules/analytics/components/AnalyticsInsightsPanel", () => ({
+  AnalyticsInsightsPanel: ({ insights }: { insights: unknown[] }) => (
+    <div data-testid="analytics-insights">{insights?.length ?? 0} insights</div>
   ),
 }));
 
 jest.mock("@/components/ui/skeleton", () => ({
-  Skeleton: ({ className, ...props }: { className?: string }) => (
-    <div data-testid="skeleton" className={className} {...props} />
+  Skeleton: ({ className }: { className?: string }) => (
+    <div data-testid="skeleton" className={className} />
   ),
 }));
 
-// ── Import component under test (after mocks) ───────────────────────────
+// ── Import component under test (after mocks) ────────────────────────────
 
 import AnalyticsDashboardPage from "../page";
 
-// ── Helpers ──────────────────────────────────────────────────────────────
+// ── Test data ────────────────────────────────────────────────────────────
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-}
-
-function renderWithProviders(ui: React.ReactElement) {
-  const queryClient = createQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
-}
-
-// ── Test Data ────────────────────────────────────────────────────────────
-
-const mockKpis = [
-  {
-    label: "Total Revenue",
-    value: "$12,450.00",
-    change_percent: 12.5,
-    change_direction: "up",
-    period: "last_30_days",
-  },
-  {
-    label: "Units Sold",
-    value: "1,230",
-    change_percent: 8.3,
-    change_direction: "up",
-    period: "last_30_days",
-  },
-  {
-    label: "Total Books",
-    value: "15",
-    change_percent: null,
-    change_direction: null,
-    period: "all_time",
-  },
-  {
-    label: "Avg Revenue",
-    value: "$830.00",
-    change_percent: 3.2,
-    change_direction: "down",
-    period: "last_30_days",
-  },
-];
-
-const mockRevenueChart = [
-  { period: "2025-01-01", revenue: 500, units: 50 },
-  { period: "2025-02-01", revenue: 700, units: 65 },
-  { period: "2025-03-01", revenue: 600, units: 55 },
-];
-
-const mockTopBooks = [
-  { title: "My First Book", revenue: 685.3, units: 98 },
-  { title: "My Second Book", revenue: 412.23, units: 50 },
-];
-
-const fullDashboardData = {
-  kpis: mockKpis,
-  revenue_chart: mockRevenueChart,
-  top_books: mockTopBooks,
-  platform_breakdown: { kdp: 685.3, ingram_spark: 412.23 },
-  recent_royalties: [],
-  period_start: "2025-01-01",
-  period_end: "2025-03-31",
+const dashboardData = {
+  stats: [
+    { label: "Total Revenue", value: "$12,450.00", change_percent: 12.5, change_direction: "up" },
+    { label: "Units Sold", value: "1,230", change_percent: 8.3, change_direction: "up" },
+    { label: "Royalties", value: "$8,715.00", change_percent: -3.2, change_direction: "down" },
+    { label: "Total Books", value: "15", change_percent: null, change_direction: null },
+  ],
+  trend_data: [
+    { period: "2025-01-01", revenue: 500 },
+    { period: "2025-02-01", revenue: 700 },
+  ],
+  revenue_by_book: [{ title: "My First Book", revenue: 685.3 }],
+  revenue_by_format: [{ format: "ebook", revenue: 500 }],
+  insights: [{ title: "Revenue is up" }],
 };
+
+function loaded(data: unknown = dashboardData) {
+  mockUseEnhancedDashboard.mockReturnValue({ data, isLoading: false, error: null });
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 // ── Tests ────────────────────────────────────────────────────────────────
 
 describe("AnalyticsDashboardPage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+  describe("page shell", () => {
+    it("renders the heading and subtitle", () => {
+      loaded();
+      render(<AnalyticsDashboardPage />);
 
-  // 1. Renders analytics dashboard
-  it("renders the analytics dashboard with heading", () => {
-    mockUseDashboard.mockReturnValue({
-      data: fullDashboardData,
-      isLoading: false,
-      error: null,
+      expect(
+        screen.getByRole("heading", { name: "Analytics Dashboard" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Track your revenue, sales, and book performance")
+      ).toBeInTheDocument();
     });
 
-    renderWithProviders(<AnalyticsDashboardPage />);
+    it("links to the revenue details and reports pages", () => {
+      loaded();
+      render(<AnalyticsDashboardPage />);
 
-    expect(screen.getByText("Analytics Dashboard")).toBeInTheDocument();
+      const nav = screen.getByRole("navigation", { name: "Analytics navigation" });
+      expect(within(nav).getByRole("link", { name: /revenue analytics/i })).toHaveAttribute(
+        "href",
+        "/analytics/revenue"
+      );
+      expect(within(nav).getByRole("link", { name: /reports/i })).toHaveAttribute(
+        "href",
+        "/analytics/reports"
+      );
+    });
   });
 
-  // 2. Revenue cards display
-  it("renders KPI cards when dashboard data is loaded", () => {
-    mockUseDashboard.mockReturnValue({
-      data: fullDashboardData,
-      isLoading: false,
-      error: null,
+  describe("dashboard states", () => {
+    it("renders skeletons while loading", () => {
+      mockUseEnhancedDashboard.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+      });
+      render(<AnalyticsDashboardPage />);
+
+      expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
+      expect(screen.queryByText("Total Revenue")).not.toBeInTheDocument();
     });
 
-    renderWithProviders(<AnalyticsDashboardPage />);
+    it("renders an error message when the query fails", () => {
+      mockUseEnhancedDashboard.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error("boom"),
+      });
+      render(<AnalyticsDashboardPage />);
 
-    const kpiCards = screen.getAllByTestId("kpi-card");
-    expect(kpiCards).toHaveLength(4);
-
-    expect(screen.getByText("Total Revenue")).toBeInTheDocument();
-    expect(screen.getByText("$12,450.00")).toBeInTheDocument();
-    expect(screen.getByText("Units Sold")).toBeInTheDocument();
-    expect(screen.getByText("1,230")).toBeInTheDocument();
-    expect(screen.getByText("Total Books")).toBeInTheDocument();
-    expect(screen.getByText("15")).toBeInTheDocument();
-    expect(screen.getByText("Avg Revenue")).toBeInTheDocument();
-    expect(screen.getByText("$830.00")).toBeInTheDocument();
-  });
-
-  // 3. Charts section renders
-  it("renders the revenue chart with data", () => {
-    mockUseDashboard.mockReturnValue({
-      data: fullDashboardData,
-      isLoading: false,
-      error: null,
+      expect(
+        screen.getByText("Failed to load dashboard data. Please try again.")
+      ).toBeInTheDocument();
+      // The heading belongs to the page, not the dashboard, so it survives.
+      expect(
+        screen.getByRole("heading", { name: "Analytics Dashboard" })
+      ).toBeInTheDocument();
     });
 
-    renderWithProviders(<AnalyticsDashboardPage />);
+    it("renders a stat card per stat, with its change percentage", () => {
+      loaded();
+      render(<AnalyticsDashboardPage />);
 
-    const chart = screen.getByTestId("revenue-chart");
-    expect(chart).toBeInTheDocument();
-    expect(chart).toHaveTextContent("3 points");
-  });
-
-  // 4. Reports section accessible
-  it("renders a link to the reports page", () => {
-    mockUseDashboard.mockReturnValue({
-      data: fullDashboardData,
-      isLoading: false,
-      error: null,
+      expect(screen.getByText("Total Revenue")).toBeInTheDocument();
+      expect(screen.getByText("$12,450.00")).toBeInTheDocument();
+      expect(screen.getByText("12.5%")).toBeInTheDocument();
+      // A negative change is rendered as its absolute value.
+      expect(screen.getByText("3.2%")).toBeInTheDocument();
+      // Total Books has no change_percent, so no percentage row.
+      expect(screen.getByText("15")).toBeInTheDocument();
     });
 
-    renderWithProviders(<AnalyticsDashboardPage />);
+    it("falls back to four empty cards when there are no stats", () => {
+      loaded({ ...dashboardData, stats: [] });
+      render(<AnalyticsDashboardPage />);
 
-    const reportsLink = screen.getByText("Reports");
-    expect(reportsLink).toBeInTheDocument();
-    expect(reportsLink.closest("a")).toHaveAttribute("href", "/analytics/reports");
-  });
-
-  it("renders a link to the revenue details page", () => {
-    mockUseDashboard.mockReturnValue({
-      data: fullDashboardData,
-      isLoading: false,
-      error: null,
+      expect(screen.getAllByText("No data available")).toHaveLength(4);
     });
 
-    renderWithProviders(<AnalyticsDashboardPage />);
+    it("passes the dashboard data through to the overview panels", () => {
+      loaded();
+      render(<AnalyticsDashboardPage />);
 
-    const revenueLink = screen.getByText("Revenue Details");
-    expect(revenueLink).toBeInTheDocument();
-    expect(revenueLink.closest("a")).toHaveAttribute("href", "/analytics/revenue");
-  });
-
-  // 5. Date range selector works (platform breakdown displayed)
-  it("renders the platform breakdown section with data", () => {
-    mockUseDashboard.mockReturnValue({
-      data: fullDashboardData,
-      isLoading: false,
-      error: null,
+      expect(screen.getByTestId("revenue-overview-chart")).toHaveTextContent("2 points");
+      expect(screen.getByTestId("revenue-breakdown-charts")).toHaveTextContent("1/1");
+      expect(screen.getByTestId("analytics-insights")).toHaveTextContent("1 insights");
     });
 
-    renderWithProviders(<AnalyticsDashboardPage />);
+    it("does not crash when the dashboard payload is undefined", () => {
+      mockUseEnhancedDashboard.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: null,
+      });
+      render(<AnalyticsDashboardPage />);
 
-    expect(screen.getByText("Platform Breakdown")).toBeInTheDocument();
-    // Platform names are capitalized with underscore replaced
-    expect(screen.getByText("kdp")).toBeInTheDocument();
-    expect(screen.getByText("ingram spark")).toBeInTheDocument();
-  });
-
-  it("shows no platform data message when platform_breakdown is empty", () => {
-    mockUseDashboard.mockReturnValue({
-      data: {
-        ...fullDashboardData,
-        platform_breakdown: {},
-      },
-      isLoading: false,
-      error: null,
+      expect(screen.getAllByText("No data available")).toHaveLength(4);
+      expect(screen.getByTestId("revenue-overview-chart")).toHaveTextContent("0 points");
     });
 
-    renderWithProviders(<AnalyticsDashboardPage />);
+    it("renders every analytics tab", () => {
+      loaded();
+      render(<AnalyticsDashboardPage />);
 
-    expect(screen.getByText("No platform data available")).toBeInTheDocument();
-  });
-
-  // 6. Loading states
-  it("renders loading skeletons when data is loading", () => {
-    mockUseDashboard.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
+      for (const tab of ["Overview", "Sales", "Books", "Advertising", "KDP Reports"]) {
+        expect(screen.getByRole("tab", { name: tab })).toBeInTheDocument();
+      }
     });
 
-    const { container } = renderWithProviders(<AnalyticsDashboardPage />);
+    it("defaults to the 30-day period with comparison off", () => {
+      loaded();
+      render(<AnalyticsDashboardPage />);
 
-    expect(screen.getByText("Analytics Dashboard")).toBeInTheDocument();
-    const skeletons = container.querySelectorAll('[data-testid="skeleton"]');
-    expect(skeletons.length).toBeGreaterThanOrEqual(4);
-  });
-
-  // 6b. Error state
-  it("renders error state when fetch fails", () => {
-    mockUseDashboard.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("Network error"),
+      expect(mockUseEnhancedDashboard).toHaveBeenCalledWith("30d", "none");
+      expect(screen.getByLabelText("Compare with previous period")).not.toBeChecked();
     });
-
-    renderWithProviders(<AnalyticsDashboardPage />);
-
-    expect(screen.getByText("Analytics Dashboard")).toBeInTheDocument();
-    expect(
-      screen.getByText("Failed to load analytics data. Please try again.")
-    ).toBeInTheDocument();
-  });
-
-  it("renders portfolio table with top books data", () => {
-    mockUseDashboard.mockReturnValue({
-      data: fullDashboardData,
-      isLoading: false,
-      error: null,
-    });
-
-    renderWithProviders(<AnalyticsDashboardPage />);
-
-    const table = screen.getByTestId("portfolio-table");
-    expect(table).toBeInTheDocument();
-    expect(table).toHaveTextContent("2 books");
-  });
-
-  it("renders revenue chart with empty array when no chart data", () => {
-    mockUseDashboard.mockReturnValue({
-      data: {
-        ...fullDashboardData,
-        revenue_chart: [],
-      },
-      isLoading: false,
-      error: null,
-    });
-
-    renderWithProviders(<AnalyticsDashboardPage />);
-
-    const chart = screen.getByTestId("revenue-chart");
-    expect(chart).toHaveTextContent("0 points");
-  });
-
-  it("does not render KPI cards or navigation links in loading state", () => {
-    mockUseDashboard.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-    });
-
-    renderWithProviders(<AnalyticsDashboardPage />);
-
-    expect(screen.queryByTestId("kpi-card")).not.toBeInTheDocument();
-    expect(screen.queryByText("Revenue Details")).not.toBeInTheDocument();
-    expect(screen.queryByText("Reports")).not.toBeInTheDocument();
-  });
-
-  it("does not render KPI cards or navigation links in error state", () => {
-    mockUseDashboard.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error("fail"),
-    });
-
-    renderWithProviders(<AnalyticsDashboardPage />);
-
-    expect(screen.queryByTestId("kpi-card")).not.toBeInTheDocument();
-    expect(screen.queryByText("Revenue Details")).not.toBeInTheDocument();
-  });
-
-  it("handles undefined dashboard data gracefully (no crash)", () => {
-    mockUseDashboard.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    });
-
-    // Should not throw: the page checks isLoading/error first,
-    // but with both false and no data the success branch is rendered
-    // with optional chaining on dashboard?.kpis
-    renderWithProviders(<AnalyticsDashboardPage />);
-    expect(screen.getByText("Analytics Dashboard")).toBeInTheDocument();
   });
 });

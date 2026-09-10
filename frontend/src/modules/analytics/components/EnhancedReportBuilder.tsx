@@ -603,7 +603,7 @@ export function EnhancedReportBuilder() {
       </div>
 
       {/* Right Panel - Generated Reports List */}
-      <div role="region" aria-label="Generated Reports">
+      <div role="region" aria-label="Generated Reports" aria-live="polite" aria-atomic="false">
         <GeneratedReportsList />
       </div>
     </div>
