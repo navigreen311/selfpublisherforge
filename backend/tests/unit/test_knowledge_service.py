@@ -8,13 +8,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tests.conftest import populate_server_defaults
-
 from app.modules.knowledge_vault.schemas import (
     CreateEntryRequest,
     UpdateEntryRequest,
 )
 from app.modules.knowledge_vault.service import KnowledgeService
+from tests.conftest import populate_server_defaults
 
 # ── Fixtures ─────────────────────────────────────────────────────
 

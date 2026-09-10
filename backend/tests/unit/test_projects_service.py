@@ -13,11 +13,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.conftest import populate_server_defaults
-
 from app.core.exceptions import AppException
 from app.modules.projects import service
 from app.modules.projects.schemas import ProjectListRequest
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers

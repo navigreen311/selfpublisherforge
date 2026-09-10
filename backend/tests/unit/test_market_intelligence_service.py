@@ -18,8 +18,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.conftest import populate_server_defaults
-
 from app.core.exceptions import AppException
 from app.modules.market_intelligence.schemas import (
     CompetitorDetail,
@@ -28,6 +26,7 @@ from app.modules.market_intelligence.schemas import (
     MarketSnapshot,
 )
 from app.modules.market_intelligence.service import MarketIntelligenceService
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers / Factories

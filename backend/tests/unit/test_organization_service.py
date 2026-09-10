@@ -12,12 +12,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.conftest import populate_server_defaults
-
 from app.core.exceptions import AppException
 from app.models.user import UserRole
 from app.modules.organization import service
 from shared.types.enums import PlanTier
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers

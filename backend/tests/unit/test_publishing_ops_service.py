@@ -13,8 +13,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tests.conftest import populate_server_defaults
-
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
     BookMetadataUpdate,
@@ -46,6 +44,7 @@ from app.modules.publishing_ops.service import (
     sync_listing,
     update_metadata,
 )
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers

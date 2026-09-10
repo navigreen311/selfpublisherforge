@@ -95,11 +95,17 @@ class FakePipeline:
                 results.append(0)
             elif op == "zadd":
                 key, mapping = args
-                if key not in self._redis._store:
-                    self._redis._store[key] = []
+                entries = self._redis._store.setdefault(key, [])
+                added = 0
                 for member, score in mapping.items():
-                    self._redis._store[key].append((score, member))
-                results.append(len(mapping))
+                    for i, (_s, m) in enumerate(entries):
+                        if m == member:
+                            entries[i] = (score, member)
+                            break
+                    else:
+                        entries.append((score, member))
+                        added += 1
+                results.append(added)
             elif op == "zcard":
                 (key,) = args
                 results.append(len(self._redis._store.get(key, [])))
@@ -468,13 +474,34 @@ class TestRateLimitTierEnum:
 # ---------------------------------------------------------------------------
 
 
+class LegacyLimiterStub:
+    """Minimal object exposing the legacy `check(identifier, tier, path)` API.
+
+    `AsyncMock(spec=SlidingWindowRateLimiter)` satisfies `isinstance`, so the
+    middleware took the wrapper branch and reached for `._limiter`, which is
+    set in `__init__` and therefore absent from the spec. A plain AsyncMock has
+    the opposite problem: it answers `hasattr(..., "check_request")` too, so it
+    lands on the new-API branch. A real object with just the legacy method
+    lands where these tests mean it to.
+    """
+
+    def __init__(self, result: tuple[bool, dict[str, str]]) -> None:
+        self._result = result
+        self.calls: list[tuple] = []
+
+    async def check(self, identifier: str, tier=None, path: str = "/"):
+        self.calls.append((identifier, tier, path))
+        if isinstance(self._result, Exception):
+            raise self._result
+        return self._result
+
+
 class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_passes_allowed_request(self) -> None:
         """When the limiter allows, the middleware should call_next and attach headers."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(
-            return_value=(
+        mock_limiter = LegacyLimiterStub(
+            (
                 True,
                 {
                     "X-RateLimit-Limit": "60",
@@ -503,9 +530,8 @@ class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_returns_429_when_denied(self) -> None:
         """When the limiter denies, the middleware returns a 429 JSON response."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(
-            return_value=(
+        mock_limiter = LegacyLimiterStub(
+            (
                 False,
                 {
                     "X-RateLimit-Limit": "60",
@@ -531,7 +557,7 @@ class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_skips_health_endpoint(self) -> None:
         """Requests to /health should bypass rate limiting entirely."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
+        mock_limiter = LegacyLimiterStub((True, {}))
 
         response = MagicMock()
         call_next = AsyncMock(return_value=response)
@@ -540,9 +566,9 @@ class TestRateLimitMiddlewareDispatch:
         request.url.path = "/health"
 
         middleware = RateLimitMiddleware(app=MagicMock(), limiter=mock_limiter)
-        result = await middleware.dispatch(request, call_next)
+        await middleware.dispatch(request, call_next)
 
-        mock_limiter.check.assert_not_awaited()
+        assert mock_limiter.calls == []
         call_next.assert_awaited_once_with(request)
 
     @pytest.mark.asyncio
@@ -550,8 +576,7 @@ class TestRateLimitMiddlewareDispatch:
         """If Redis is unreachable, the middleware should allow the request through."""
         from redis.exceptions import ConnectionError as RedisConnectionError
 
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(side_effect=RedisConnectionError("down"))
+        mock_limiter = LegacyLimiterStub(RedisConnectionError("down"))
 
         response = MagicMock()
         response.headers = {}
@@ -572,8 +597,7 @@ class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_allows_on_timeout_error(self) -> None:
         """If Redis times out, the middleware should allow the request through."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(side_effect=TimeoutError("timeout"))
+        mock_limiter = LegacyLimiterStub(TimeoutError("timeout"))
 
         response = MagicMock()
         response.headers = {}

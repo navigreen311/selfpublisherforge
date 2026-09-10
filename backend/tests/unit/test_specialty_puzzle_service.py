@@ -16,8 +16,6 @@ from uuid import uuid4
 
 import pytest
 
-from tests.conftest import populate_server_defaults
-
 from app.modules.specialty.models.enums import (
     AnswerKeyPosition,
     BookStatus,
@@ -28,6 +26,7 @@ from app.modules.specialty.models.enums import (
 
 # Import the service module so we can call its functions directly.
 from app.modules.specialty.puzzles import service
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers

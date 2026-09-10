@@ -10,7 +10,7 @@ import statistics
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.pricing_automation.ku_calculator import calculate_ku_vs_wide
@@ -60,7 +60,12 @@ class PricingAutomationService:
     ) -> tuple[list[PricingRuleResponse], int]:
         """List pricing rules for an organization with optional filters."""
         query = select(PricingRule).where(PricingRule.org_id == org_id).where(PricingRule.deleted_at.is_(None))
-        count_query = select(PricingRule).where(PricingRule.org_id == org_id).where(PricingRule.deleted_at.is_(None))
+        count_query = (
+            select(func.count())
+            .select_from(PricingRule)
+            .where(PricingRule.org_id == org_id)
+            .where(PricingRule.deleted_at.is_(None))
+        )
 
         if status is not None:
             query = query.where(PricingRule.status == status)
@@ -71,7 +76,7 @@ class PricingAutomationService:
 
         # Get total count
         count_result = await self.db.execute(count_query)
-        total_count = len(count_result.scalars().all())
+        total_count = count_result.scalar() or 0
 
         # Fetch paginated results
         query = query.order_by(PricingRule.created_at.desc()).offset(offset).limit(limit)
@@ -250,7 +255,12 @@ class PricingAutomationService:
     ) -> tuple[list[PromotionResponse], int]:
         """List promotional calendar entries for an organization."""
         query = select(Promotion).where(Promotion.org_id == org_id).where(Promotion.deleted_at.is_(None))
-        count_query = select(Promotion).where(Promotion.org_id == org_id).where(Promotion.deleted_at.is_(None))
+        count_query = (
+            select(func.count())
+            .select_from(Promotion)
+            .where(Promotion.org_id == org_id)
+            .where(Promotion.deleted_at.is_(None))
+        )
 
         if book_id is not None:
             query = query.where(Promotion.book_id == book_id)
@@ -260,7 +270,7 @@ class PricingAutomationService:
             count_query = count_query.where(Promotion.status == status)
 
         count_result = await self.db.execute(count_query)
-        total_count = len(count_result.scalars().all())
+        total_count = count_result.scalar() or 0
 
         query = query.order_by(Promotion.start_date.asc()).offset(offset).limit(limit)
         result = await self.db.execute(query)

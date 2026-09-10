@@ -13,8 +13,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.conftest import populate_server_defaults
-
 from app.modules.style_cloning.schemas import (
     ConformityCheckResult,
     CreateProfileRequest,
@@ -25,6 +23,7 @@ from app.modules.style_cloning.schemas import (
     StyleCard,
     VoiceFingerprint,
 )
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers
