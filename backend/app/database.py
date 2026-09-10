@@ -58,7 +58,7 @@ if _is_sqlite:
                 return result
         return _orig_get_col_spec(self, column, **kw)
 
-    SQLiteDDLCompiler.get_column_specification = _patched_get_col_spec
+    SQLiteDDLCompiler.get_column_specification = _patched_get_col_spec  # type: ignore[method-assign]  # deliberate SQLite portability patch
 
 del _settings_tmp
 
@@ -76,7 +76,7 @@ def _patched_enum_init(self, *enums, **kw):
     _orig_enum_init(self, *enums, **kw)
 
 
-_SAEnum.__init__ = _patched_enum_init
+_SAEnum.__init__ = _patched_enum_init  # type: ignore[method-assign]  # force .value over .name for PEP-435 enums
 
 logger = logging.getLogger(__name__)
 

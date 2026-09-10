@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models.marketing import SocialPlatform
+from app.models.marketing import SocialPlatform, SocialPostStatus
 from app.modules.marketing.schemas import (
     GenerateSocialContentRequest,
     SocialPostCreate,
@@ -329,7 +329,7 @@ async def update_social_post(
     if scheduled_at is not None:
         post.scheduled_at = scheduled_at
     if status is not None:
-        post.status = status
+        post.status = SocialPostStatus(status)
 
     await db.flush()
     await db.refresh(post)

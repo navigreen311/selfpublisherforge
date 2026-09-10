@@ -83,7 +83,7 @@ class TextPosition(str, enum.Enum):
     bottom = "bottom"
     left = "left"
     right = "right"
-    center = "center"
+    center = "center"  # type: ignore[assignment]  # shadows str.center; domain value
     overlay = "overlay"
 
 
@@ -290,7 +290,7 @@ class ChapterType(str, enum.Enum):
     techniques = "techniques"
     ingredients_guide = "ingredients_guide"
     meal_plans = "meal_plans"
-    index = "index"
+    index = "index"  # type: ignore[assignment]  # shadows str.index; domain value
     about_author = "about_author"
     acknowledgments = "acknowledgments"
     conversion_charts = "conversion_charts"

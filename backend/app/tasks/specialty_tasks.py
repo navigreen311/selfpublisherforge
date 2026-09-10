@@ -384,6 +384,7 @@ async def _export_book_async(
             )
 
             # Resolve book model based on type
+            book: Any  # reused across the per-book-type branches below
             if book_type == "coloring":
                 from app.modules.specialty.models.coloring import ColoringBook, ColoringBookPage
 
@@ -570,6 +571,7 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
             pages_checked = 0
             scores: list[float] = []
 
+            book: Any  # reused across the per-book-type branches below
             if book_type == "coloring":
                 from app.modules.specialty.models.coloring import ColoringBook, ColoringBookPage
 

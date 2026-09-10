@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.models.project import Project
+from app.models.project import Project, ProjectStatus
 from app.modules.projects.schemas import (
     ProjectListItem,
     ProjectListRequest,
@@ -312,7 +312,7 @@ async def update_project(
     if target_launch_date is not None:
         project.target_launch_date = target_launch_date
     if status is not None:
-        project.status = status
+        project.status = ProjectStatus(status)
     if genre is not None:
         project.genre = genre
     if subgenre is not None:

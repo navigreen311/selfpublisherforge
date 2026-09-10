@@ -113,7 +113,7 @@ def create_app() -> FastAPI:
     #   - Structured tag descriptions for all 22 module groups
     #   - BearerAuth security scheme applied globally
     #   - Rich API overview with tier-based module table
-    app.openapi = custom_openapi_schema(app)
+    app.openapi = custom_openapi_schema(app)  # type: ignore[method-assign]  # FastAPI's documented override point
 
     return app
 

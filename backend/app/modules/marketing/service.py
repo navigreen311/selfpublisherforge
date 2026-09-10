@@ -18,6 +18,7 @@ from app.models.marketing import (
     ARCCampaignStatus,
     ARCRecipient,
     ARCRecipientStatus,
+    EmailSendStatus,
     EmailSequence,
     EmailSequenceStatus,
     EmailTemplate,
@@ -299,7 +300,7 @@ class MarketingService:
 
         # Mark templates as scheduled
         for template in sequence.emails:
-            template.send_status = "scheduled"
+            template.send_status = EmailSendStatus.SCHEDULED
             if schedule_at:
                 template.scheduled_at = schedule_at
 

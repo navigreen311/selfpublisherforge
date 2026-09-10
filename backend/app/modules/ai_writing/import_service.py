@@ -107,7 +107,7 @@ async def import_manuscript(
     # Create the Manuscript
     manuscript = Manuscript(
         id=_uuid.uuid4(),
-        book_id=None,  # type: ignore[arg-type]  — will be linked later or left orphaned for import
+        book_id=None,  # type: ignore[arg-type]  # linked later, or left orphaned on import
         content_type=ContentType.FICTION,
         status=ManuscriptStatus.DRAFT,
     )

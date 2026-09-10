@@ -473,7 +473,7 @@ async def generate_line_art(
     page.cleaned_url = cleaned_url
     page.illustration_prompt = final_prompt
     page.illustration_model = "line-art-v1"
-    page.illustration_seed = secrets.randbelow(2**32)
+    page.illustration_seed = str(secrets.randbelow(2**32))  # column is String(50)
     page.quality_score = pipeline_result.report.score
     page.qa_issues = [
         {"step": i.step, "severity": i.severity.value, "message": i.message} for i in pipeline_result.report.issues
