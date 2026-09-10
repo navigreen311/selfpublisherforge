@@ -176,7 +176,7 @@ function BookReviewCard({
           <div
             className={`flex items-center gap-1.5 rounded-md px-2 py-1 font-medium ${getSentimentBg(book.sentiment_score)} ${getSentimentColor(book.sentiment_score)}`}
           >
-            <span>{t("books.sentimentScore")}</span>
+            <span>{t("stats.sentimentScore")}</span>
             <span className="font-bold">{book.sentiment_score}</span>
           </div>
 
@@ -184,7 +184,7 @@ function BookReviewCard({
           <div className="flex items-center gap-1 text-muted-foreground">
             <TrendingUp className="h-3.5 w-3.5" />
             <span>
-              {book.velocity.toFixed(1)} {t("books.perWeek")}
+              {book.velocity.toFixed(1)} {t("stats.perWeek")}
             </span>
           </div>
 
@@ -192,7 +192,7 @@ function BookReviewCard({
           <div className="flex items-center gap-1 text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" />
             <span>
-              {book.this_month} {t("books.thisMonth")}
+              {book.this_month} {t("books.thisMonthLabel")}
             </span>
           </div>
         </div>
@@ -234,7 +234,7 @@ function BookReviewCard({
         <div className="space-y-1">
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>{t("books.positive")} {book.positive_pct}%</span>
-            <span>{t("books.negative")} {negativePct}%</span>
+            <span>{t("books.negativeThemes")} {negativePct}%</span>
           </div>
           <div className="flex h-2 w-full overflow-hidden rounded-full bg-red-200">
             <div
@@ -262,7 +262,7 @@ function BookReviewCard({
             onClick={() => onRunAnalysis(book.book_id)}
           >
             <Brain className="mr-1 h-3.5 w-3.5" />
-            {t("books.runAnalysis")}
+            {t("books.runAIAnalysis")}
           </Button>
           <Button
             variant="outline"
@@ -271,7 +271,7 @@ function BookReviewCard({
             onClick={() => onAcquisition(book.book_id)}
           >
             <MessageSquarePlus className="mr-1 h-3.5 w-3.5" />
-            {t("books.acquisition")}
+            {t("books.reviewAcquisition")}
           </Button>
         </div>
       </CardContent>
@@ -321,7 +321,7 @@ export function BookReviewCards({
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 px-6">
         <BookOpen className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-sm text-muted-foreground text-center max-w-md">
-          {t("books.emptyState")}
+          {t("books.noBooks")}
         </p>
       </div>
     );

@@ -29,10 +29,10 @@ export function ReviewAcquisition({ bookId }: ReviewAcquisitionProps) {
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
         <div className="space-y-1">
           <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-            {t("acquisition.complianceNotice.title")}
+            {t("acquisition.complianceTitle")}
           </p>
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            {t("acquisition.complianceNotice.description")}
+            {t("acquisition.complianceNote")}
           </p>
         </div>
       </div>

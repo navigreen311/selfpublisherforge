@@ -97,5 +97,6 @@
     "loadingWorkflows": "Loading workflows...",
     "noWorkflows": "No workflows created yet. Click \"New Workflow\" to get started.",
     "stepsCount": "{count} steps"
-  }
+  },
+  "createAgent": "New Agent"
 }

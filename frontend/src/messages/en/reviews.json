@@ -3,7 +3,6 @@
   "subtitle": "Monitor reviews, extract insights, and protect your reputation.",
   "analytics": "Analytics",
   "failedToLoad": "Failed to load review data. Please try again.",
-
   "stats": {
     "totalReviews": "Total Reviews",
     "acrossAllBooks": "across {count} books",
@@ -21,7 +20,6 @@
     "needsAttention": "Needs Attention",
     "lowRatedReviews": "1-2 star reviews"
   },
-
   "tabs": {
     "yourBooks": "Your Books",
     "reviewFeed": "Review Feed",
@@ -29,7 +27,6 @@
     "acquisition": "Acquisition",
     "alerts": "Alerts"
   },
-
   "charts": {
     "sentimentTrend": "Sentiment Trend",
     "ratingDistribution": "Rating Distribution",
@@ -43,7 +40,6 @@
     "totalReviews": "Total: {count} reviews",
     "filterByBook": "All Books"
   },
-
   "books": {
     "title": "Your Books",
     "published": "{count} published",
@@ -61,7 +57,6 @@
     "noBooks": "No published books yet. Once you publish, your reviews will appear here automatically.",
     "goToPublishing": "Go to Publishing"
   },
-
   "feed": {
     "title": "Review Feed",
     "noReviews": "No reviews found. Once your books receive reviews, they'll appear here.",
@@ -87,7 +82,6 @@
     "hoursAgo": "{count}h ago",
     "justNow": "Just now"
   },
-
   "insights": {
     "title": "AI Review Insights",
     "lastAnalyzed": "Last analyzed: {time}",
@@ -105,9 +99,11 @@
     "applyToUpdates": "Apply to Book Updates",
     "createRevisionTask": "Create Revision Task",
     "noInsights": "No insights available yet. Click Refresh Analysis to generate.",
-    "analyzing": "Analyzing reviews..."
+    "analyzing": "Analyzing reviews...",
+    "yourReviews": "Your reviews",
+    "actionItems": "Action Items",
+    "noThemes": "No themes identified yet."
   },
-
   "acquisition": {
     "title": "Review Acquisition",
     "subtitle": "Ethically grow your review count using Amazon-compliant strategies.",
@@ -141,9 +137,14 @@
     "edit": "Edit",
     "generateSequence": "Generate New Sequence",
     "customizeTiming": "Customize Timing",
-    "complianceNote": "Amazon Compliance Note: Never offer incentives for reviews. Never ask for positive reviews. Only ask for honest reviews. These tools are designed to comply with Amazon's review policies."
+    "complianceNote": "Amazon Compliance Note: Never offer incentives for reviews. Never ask for positive reviews. Only ask for honest reviews. These tools are designed to comply with Amazon's review policies.",
+    "arcEmptyState": "No ARC campaigns yet. Create one to start collecting advance reviews.",
+    "daysRemaining": "{count} days left",
+    "pastDeadline": "past deadline",
+    "dayLabel": "Day {day}",
+    "generatedEmails": "Generated Emails",
+    "complianceTitle": "Amazon Compliance Notice"
   },
-
   "alerts": {
     "title": "Review Alerts",
     "createAlert": "Create Alert",
@@ -170,7 +171,6 @@
     "threshold": "Threshold",
     "notifyImmediately": "Notify immediately when triggered"
   },
-
   "reviewByBook": "Review by Book",
   "reviewByBookDescription": "Select a book to view detailed review analytics, sentiment trends, and alerts.",
   "bookTitle1": "Book Title 1",
@@ -184,7 +184,6 @@
   "ofTotal": "% of total",
   "negativeReviews": "Negative Reviews",
   "requiresAttention": "Requires attention",
-
   "detail": {
     "backToAllReviews": "Back to All Reviews",
     "bookTitle": "Book {id}"

@@ -149,7 +149,7 @@ export function NicheScorecard({
               {analysis.niche}
             </CardTitle>
             <CardDescription className="mt-1">
-              {t("scores.analyzedBooks", {
+              {t("analyzed", {
                 count: totalBooks,
                 fallback: `Analyzed ${totalBooks} competing titles`,
               })}{" "}

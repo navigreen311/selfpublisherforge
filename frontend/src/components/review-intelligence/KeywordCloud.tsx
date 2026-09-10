@@ -54,7 +54,7 @@ export function KeywordCloud({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">
-          {t("charts.keywordCloud")}
+          {t("insights.keywordCloud")}
         </CardTitle>
       </CardHeader>
 
@@ -78,7 +78,7 @@ export function KeywordCloud({
         ) : (
           <div className="flex h-[200px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
-              {t("charts.keywordCloud")} &mdash; No data available
+              {t("insights.keywordCloud")} &mdash; No data available
             </p>
           </div>
         )}

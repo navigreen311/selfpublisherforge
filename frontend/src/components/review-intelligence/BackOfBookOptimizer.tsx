@@ -70,12 +70,12 @@ export function BackOfBookOptimizer({ bookId }: BackOfBookOptimizerProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">
-            {t("acquisition.backOfBook.title")}
+            {t("acquisition.backOfBook")}
           </CardTitle>
           {currentScore !== null && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {t("acquisition.backOfBook.aiScore")}
+                {t("acquisition.aiScore")}
               </span>
               <Badge className={getScoreColor(currentScore)}>
                 {currentScore}/100
@@ -89,12 +89,12 @@ export function BackOfBookOptimizer({ bookId }: BackOfBookOptimizerProps) {
         {/* Current back-of-book text */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">
-            {t("acquisition.backOfBook.currentTextLabel")}
+            {t("acquisition.currentText")}
           </label>
           <Textarea
             value={currentText}
             onChange={(e) => setCurrentText(e.target.value)}
-            placeholder={t("acquisition.backOfBook.currentTextPlaceholder")}
+            placeholder={t("acquisition.currentTextPlaceholder")}
             rows={6}
             className="resize-y"
           />
@@ -109,12 +109,12 @@ export function BackOfBookOptimizer({ bookId }: BackOfBookOptimizerProps) {
           {optimizeMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t("acquisition.backOfBook.generating")}
+              {t("acquisition.generating")}
             </>
           ) : (
             <>
               <Sparkles className="mr-2 h-4 w-4" />
-              {t("acquisition.backOfBook.generateButton")}
+              {t("acquisition.generateBetter")}
             </>
           )}
         </Button>
@@ -124,7 +124,7 @@ export function BackOfBookOptimizer({ bookId }: BackOfBookOptimizerProps) {
           <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold text-foreground">
-                {t("acquisition.backOfBook.generatedVersionTitle")}
+                {t("acquisition.aiGenerated")}
               </h4>
               {generatedScore !== null && (
                 <Badge className={getScoreColor(generatedScore)}>
@@ -146,18 +146,18 @@ export function BackOfBookOptimizer({ bookId }: BackOfBookOptimizerProps) {
                 {copied ? (
                   <>
                     <Check className="mr-1.5 h-3.5 w-3.5" />
-                    {t("acquisition.backOfBook.copied")}
+                    {t("acquisition.copied")}
                   </>
                 ) : (
                   <>
                     <Copy className="mr-1.5 h-3.5 w-3.5" />
-                    {t("acquisition.backOfBook.copyButton")}
+                    {t("acquisition.copy")}
                   </>
                 )}
               </Button>
               <Button size="sm" onClick={handleUseVersion}>
                 <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
-                {t("acquisition.backOfBook.useVersionButton")}
+                {t("acquisition.useVersion")}
               </Button>
             </div>
           </div>
@@ -167,7 +167,7 @@ export function BackOfBookOptimizer({ bookId }: BackOfBookOptimizerProps) {
         <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
           <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
           <p className="text-sm text-blue-800 dark:text-blue-300">
-            {t("acquisition.backOfBook.tip")}
+            {t("acquisition.tip")}
           </p>
         </div>
       </CardContent>
