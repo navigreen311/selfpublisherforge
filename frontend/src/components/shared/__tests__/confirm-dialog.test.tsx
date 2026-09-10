@@ -6,6 +6,10 @@ import "@testing-library/jest-dom";
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   X: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="x-icon" {...props} />
   ),

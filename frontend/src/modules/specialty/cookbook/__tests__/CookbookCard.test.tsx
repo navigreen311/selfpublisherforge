@@ -11,6 +11,10 @@ jest.mock("next/link", () => {
 });
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   UtensilsCrossed: (props: React.SVGAttributes<SVGElement>) => <svg data-testid="utensils-icon" {...props} />,
   Image: (props: React.SVGAttributes<SVGElement>) => <svg data-testid="image-icon" {...props} />,
 }));

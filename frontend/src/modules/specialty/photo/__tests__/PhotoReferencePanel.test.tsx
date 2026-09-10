@@ -13,6 +13,10 @@ jest.mock("../components/PhotoUploadDropzone", () => ({
   PhotoUploadDropzone: () => <div data-testid="upload-dropzone">Upload</div>,
 }));
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Image: (props: React.SVGAttributes<SVGElement>) => <svg data-testid="image-icon" {...props} />,
   Search: (props: React.SVGAttributes<SVGElement>) => <svg {...props} />,
   Grid: (props: React.SVGAttributes<SVGElement>) => <svg {...props} />,
