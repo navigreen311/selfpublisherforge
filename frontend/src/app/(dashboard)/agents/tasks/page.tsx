@@ -13,7 +13,17 @@ import {
 import { RecentTasksList } from "@/modules/agents/components/RecentTasksList";
 import { TaskExecutionView } from "@/modules/agents/components/TaskExecutionView";
 import { NewTaskModal } from "@/modules/agents/components/NewTaskModal";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -31,6 +41,9 @@ export default function TasksPage() {
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [showNewTask, setShowNewTask] = useState(false);
+  const [approvingTaskId, setApprovingTaskId] = useState<string | null>(null);
+  const [rejectingTaskId, setRejectingTaskId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const STATUS_FILTERS: { value: TaskStatus | "all"; label: string }[] = [
     { value: "all", label: "All" },
@@ -41,6 +54,8 @@ export default function TasksPage() {
   ];
 
   const { data: agentsData } = useAgents();
+  const approveTask = useApproveTask();
+  const rejectTask = useRejectTask();
   const { data: tasksData, isLoading } = useTasks(
     statusFilter !== "all" ? { status: statusFilter as TaskStatus } : undefined
   );
@@ -55,6 +70,36 @@ export default function TasksPage() {
 
   const handleTaskClick = (taskId: string) => {
     setActiveTaskId(taskId);
+  };
+
+  const isProcessing = approveTask.isPending || rejectTask.isPending;
+
+  const handleApproveConfirm = () => {
+    if (!approvingTaskId) return;
+    approveTask.mutate(
+      { taskId: approvingTaskId },
+      {
+        onSuccess: () => setApprovingTaskId(null),
+        onError: () => setApprovingTaskId(null),
+      }
+    );
+  };
+
+  const handleRejectConfirm = () => {
+    if (!rejectingTaskId || !rejectionReason.trim()) return;
+    rejectTask.mutate(
+      { taskId: rejectingTaskId, reason: rejectionReason.trim() },
+      {
+        onSuccess: () => {
+          setRejectingTaskId(null);
+          setRejectionReason("");
+        },
+        onError: () => {
+          setRejectingTaskId(null);
+          setRejectionReason("");
+        },
+      }
+    );
   };
 
   // Show task execution view if active task is set
@@ -76,7 +121,11 @@ export default function TasksPage() {
             {t("tasks.subtitle")}
           </p>
         </div>
-        <Button onClick={() => setShowNewTask(true)} className="inline-flex items-center gap-2">
+        <Button
+          onClick={() => setShowNewTask(true)}
+          aria-label={t("tasks.createNewTask")}
+          className="inline-flex items-center gap-2"
+        >
           <Plus className="h-4 w-4" />
           {t("tasks.newTask")}
         </Button>
@@ -85,7 +134,11 @@ export default function TasksPage() {
       {/* Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Status filter pills */}
-        <div className="flex flex-wrap gap-2">
+        <div
+          role="group"
+          aria-label={t("tasks.filterByStatus")}
+          className="flex flex-wrap gap-2"
+        >
           {STATUS_FILTERS.map((filter) => (
             <button
               key={filter.value}
@@ -123,7 +176,7 @@ export default function TasksPage() {
 
       {/* Task count */}
       <div className="text-sm text-muted-foreground">
-        Showing {filteredTasks.length} of {tasksData?.total_count ?? 0} tasks
+        {t("tasks.totalTasks", { count: tasksData?.total_count ?? 0 })}
       </div>
 
       {/* Task list */}
@@ -147,8 +200,65 @@ export default function TasksPage() {
         <RecentTasksList
           tasks={filteredTasks}
           onViewOutput={handleTaskClick}
+          onApprove={setApprovingTaskId}
+          onReject={setRejectingTaskId}
         />
       )}
+
+      {/* Approval gate */}
+      <ConfirmDialog
+        open={approvingTaskId !== null}
+        onOpenChange={(open) => !open && setApprovingTaskId(null)}
+        title={t("tasks.approveTask")}
+        description={t("tasks.approveDescription")}
+        confirmText={t("tasks.approve")}
+        loading={approveTask.isPending}
+        onConfirm={handleApproveConfirm}
+      />
+
+      <Dialog
+        open={rejectingTaskId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectingTaskId(null);
+            setRejectionReason("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("tasks.rejectTask")}</DialogTitle>
+            <DialogDescription>{t("tasks.rejectDescription")}</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder={t("tasks.rejectionReasonPlaceholder")}
+            aria-label={t("tasks.rejectionReason")}
+            rows={4}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectingTaskId(null);
+                setRejectionReason("");
+              }}
+              aria-label={t("tasks.cancelRejection")}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectConfirm}
+              disabled={isProcessing || !rejectionReason.trim()}
+              aria-label={t("tasks.confirmRejection")}
+            >
+              {isProcessing ? t("tasks.processing") : t("tasks.reject")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New task modal */}
       <NewTaskModal

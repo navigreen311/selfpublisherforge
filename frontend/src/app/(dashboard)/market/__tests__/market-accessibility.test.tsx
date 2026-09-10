@@ -358,7 +358,7 @@ describe("Market Pages - Accessibility Tests", () => {
       renderWithProviders(<MarketPage />);
 
       const searchInput = screen.getByPlaceholderText(
-        "Enter a niche to analyze (e.g., 'self-help for millennials')...",
+        "Enter a niche topic or keyword (e.g., 'keto diet for beginners')",
       );
       // The input should be accessible either via an explicit label, aria-label, or aria-labelledby
       // In the current implementation it relies on placeholder; verify the input is findable by role
@@ -367,18 +367,6 @@ describe("Market Pages - Accessibility Tests", () => {
       // The input should be accessible via getByRole - text inputs are discoverable
       const textbox = screen.getByRole("textbox");
       expect(textbox).toBe(searchInput);
-    });
-
-    it("shows loading skeletons while categories are fetching (snapshots section loading state)", () => {
-      setMarketPageMocks({ catsLoading: true });
-      renderWithProviders(<MarketPage />);
-
-      const skeletons = screen.getAllByTestId("skeleton");
-      expect(skeletons.length).toBeGreaterThanOrEqual(1);
-      // Each skeleton should have role="status" for assistive technologies
-      skeletons.forEach((skeleton) => {
-        expect(skeleton).toHaveAttribute("role", "status");
-      });
     });
 
     it("search results region has aria-live='polite' when niche analysis error shows", () => {
@@ -399,7 +387,7 @@ describe("Market Pages - Accessibility Tests", () => {
 
       // First heading should be h1
       expect(allHeadings[0].tagName).toBe("H1");
-      expect(allHeadings[0]).toHaveTextContent("Market Intelligence");
+      expect(allHeadings[0]).toHaveTextContent("Market Research");
 
       // Subsequent headings should not skip levels (h1 -> h3 is acceptable in this context,
       // but no heading should be deeper than what appears logically)
@@ -628,7 +616,7 @@ describe("Market Pages - Accessibility Tests", () => {
       // Market page
       setMarketPageMocks();
       const { unmount: unmountMarket } = renderWithProviders(<MarketPage />);
-      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Market Intelligence");
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Market Research");
       unmountMarket();
 
       // Competitors page

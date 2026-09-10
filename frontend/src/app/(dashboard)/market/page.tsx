@@ -166,6 +166,7 @@ export default function MarketResearchPage() {
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="text"
+                aria-label={t("nicheSearchLabel")}
                 placeholder={t("nicheSearchPlaceholder")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
