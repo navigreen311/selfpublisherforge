@@ -3,7 +3,7 @@
  * Tests that dashboard and module pages render properly at mobile breakpoints
  */
 
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@/test-utils";
 import "@testing-library/jest-dom";
 
 // Mock Next.js router
