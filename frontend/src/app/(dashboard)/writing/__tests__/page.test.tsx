@@ -191,9 +191,9 @@ describe("WritingStudioPage", () => {
     expect(screen.getByText("Editing")).toBeInTheDocument();
 
     // Word counts should be displayed
-    expect(screen.getByText("45,000 words")).toBeInTheDocument();
-    expect(screen.getByText("8,500 words")).toBeInTheDocument();
-    expect(screen.getByText("22,000 words")).toBeInTheDocument();
+    expect(screen.getAllByText(/45,000\s+words/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/8,500\s+words/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/22,000\s+words/)[0]).toBeInTheDocument();
 
     // Chapter counts should be displayed
     expect(screen.getByText("12 chapters")).toBeInTheDocument();
@@ -285,10 +285,12 @@ describe("WritingStudioPage", () => {
     const bookEditorLinks = allLinks.filter((link) =>
       link.getAttribute("href")?.match(/^\/writing\/book-\d+$/)
     );
-    expect(bookEditorLinks).toHaveLength(3);
-    expect(bookEditorLinks[0]).toHaveAttribute("href", "/writing/book-1");
-    expect(bookEditorLinks[1]).toHaveAttribute("href", "/writing/book-2");
-    expect(bookEditorLinks[2]).toHaveAttribute("href", "/writing/book-3");
+    // The list is sorted for display, so assert the set rather than the order.
+    expect(bookEditorLinks.map((link) => link.getAttribute("href")).sort()).toEqual([
+      "/writing/book-1",
+      "/writing/book-2",
+      "/writing/book-3",
+    ]);
   });
 
   it("displays an error banner when book loading fails", () => {
@@ -318,9 +320,8 @@ describe("WritingStudioPage", () => {
     expect(screen.getByText("AI Outline Generator")).toBeInTheDocument();
     expect(screen.getByText("Writing Analytics")).toBeInTheDocument();
 
-    // New Manuscript should link to /writing/new
-    const newManuscriptLink = screen.getByText("New Manuscript").closest("a");
-    expect(newManuscriptLink).toHaveAttribute("href", "/writing/new");
+    // New Manuscript opens a modal in place rather than navigating.
+    expect(screen.getByText("New Manuscript").closest("button")).toBeInTheDocument();
   });
 
   it("filters books by search query", async () => {

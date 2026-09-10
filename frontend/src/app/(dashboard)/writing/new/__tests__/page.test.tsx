@@ -320,7 +320,7 @@ describe("NewManuscriptPage", () => {
   it("renders the genre selection field", () => {
     render(<NewManuscriptPage />);
 
-    expect(screen.getByText(/genre/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/genre/i)).toBeInTheDocument();
   });
 
   // -----------------------------------------------------------------------

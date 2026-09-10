@@ -146,7 +146,10 @@ export default function CoverDesignPage() {
           </div>
 
           {/* Cover Gallery or Empty State */}
-          {hasCovers ? (
+          {/* While the query is in flight `covers` is undefined, which used to
+              fall through to the empty state — the page claimed "No covers yet"
+              before it had asked. CoverGallery renders its own loading state. */}
+          {isPending || hasCovers ? (
             <CoverGallery
               covers={filteredCovers}
               isLoading={isPending}

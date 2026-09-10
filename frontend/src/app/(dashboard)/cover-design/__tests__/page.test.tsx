@@ -82,7 +82,8 @@ describe("CoverDesignPage", () => {
     expect(
       screen.getByText(/Create stunning book covers with AI-powered design/i)
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /generate new cover/i })).toBeInTheDocument();
+    // One in the header, one in the empty state.
+    expect(screen.getAllByRole("button", { name: /generate cover/i })).toHaveLength(2);
   });
 
   it("shows loading state", () => {
@@ -106,9 +107,11 @@ describe("CoverDesignPage", () => {
 
     renderWithProviders(<CoverDesignPage />);
 
-    expect(screen.getByTestId("cover-gallery-empty")).toBeInTheDocument();
+    // With no covers at all the page shows its own empty state rather than the
+    // gallery's; the gallery's empty message covers the filtered-to-nothing case.
+    expect(screen.getByText("No covers yet")).toBeInTheDocument();
     expect(
-      screen.getByText(/No covers yet. Click 'Generate Cover' to create your first design./i)
+      screen.getByText("Generate your first AI cover or start from a template.")
     ).toBeInTheDocument();
   });
 
