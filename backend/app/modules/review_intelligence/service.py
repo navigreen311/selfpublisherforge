@@ -745,10 +745,17 @@ Return ONLY valid JSON."""
         )
     except ImportError:
         logger.info("Anthropic SDK not available, using default tips")
+    except TypeError as e:
+        # anthropic raises TypeError when no api_key/auth_token is configured.
+        logger.info("Anthropic client could not be built, using default tips: %s", e)
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         logger.warning("LLM acquisition tips response parsing failed, using defaults: %s", e)
     except OSError as e:
         logger.warning("LLM acquisition tips network request failed, using defaults: %s", e)
+    except Exception as e:  # anthropic.AnthropicError and friends
+        if type(e).__module__.split(".")[0] != "anthropic":
+            raise
+        logger.warning("LLM acquisition tips call failed, using defaults: %s", e)
 
     # Fallback tips
     return _default_acquisition_tips(request)

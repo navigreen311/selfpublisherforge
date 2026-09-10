@@ -23,6 +23,7 @@ from app.modules.cover_design.schemas import (
     CoverPlatform,
 )
 from app.modules.cover_design.templates import (
+    FORMAT_DIMENSIONS,
     get_dimensions_for_platform,
     get_template_by_id,
 )
@@ -55,13 +56,6 @@ class ArtStyle:
 
 
 # Format-specific dimensions
-FORMAT_DIMENSIONS: dict[str, CoverDimensions] = {
-    CoverFormat.EBOOK: CoverDimensions(width_px=2560, height_px=1600, dpi=300, bleed_px=0),
-    CoverFormat.AUDIOBOOK: CoverDimensions(width_px=3000, height_px=3000, dpi=300, bleed_px=0),
-    # Paperback requires dynamic spine calculation
-}
-
-
 # Art style prompt guidance
 ART_STYLE_PROMPTS: dict[str, str] = {
     ArtStyle.MINIMAL: (

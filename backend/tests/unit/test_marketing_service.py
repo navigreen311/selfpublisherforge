@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -107,7 +108,7 @@ class TestCreateLaunchPlan:
             genre="thriller",
             target_audience="Adult readers",
             budget=5000.00,
-            goals=["Sell 1000 copies in first month"],
+            goals={"first_month_sales": 1000},
             phases=[
                 LaunchPhaseCreate(
                     phase_type="pre_launch",
@@ -242,7 +243,7 @@ class TestCreateEmailSequence:
     ):
         """create_email_sequence should create sequence with email templates."""
         # Mock the get_email_sequence call at the end
-        mock_sequence = MagicMock(
+        mock_sequence = SimpleNamespace(
             id=uuid.uuid4(),
             name="Welcome Series",
             status=EmailSequenceStatus.DRAFT,
@@ -267,7 +268,7 @@ class TestCreateEmailSequence:
                     delay_days=0,
                     delay_hours=0,
                     order_index=1,
-                    personalization_fields={"name": "{{name}}"},
+                    personalization_fields=["name"],
                 ),
             ],
         )
@@ -457,7 +458,7 @@ class TestCreateARCCampaign:
     ):
         """create_arc_campaign should create campaign with recipients."""
         # Mock the get_arc_campaign call at the end
-        mock_campaign = MagicMock(
+        mock_campaign = SimpleNamespace(
             id=uuid.uuid4(),
             name="ARC Campaign 2025",
             status=ARCCampaignStatus.DRAFT,

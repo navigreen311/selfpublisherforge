@@ -421,9 +421,12 @@ class CompetitorFinderService:
 
     @staticmethod
     def _compute_overall_score(result: AnalysisResult) -> float:
-        """Compute an overall competitor quality score (0-100).
+        """Compute an overall competitor quality score.
 
-        Higher score = stronger competitor = harder to beat.
+        Higher score = stronger competitor = harder to beat. The result is
+        clamped to 0-100, but note the components cap out at 70 in practice
+        (50 sentiment + 20 strength bonus, before the weakness penalty), so a
+        score above 70 is not reachable with the current weights.
         """
         # Sentiment contribution (0-50)
         sentiment_component = result.sentiment_score * 50

@@ -82,6 +82,12 @@ async def _seed_task(
     db.add(task)
     await db.flush()
     await db.refresh(task)
+    # The task is created straight from its FK rather than through
+    # Pipeline.tasks, so an already-loaded parent collection would not see it.
+    # A real request gets a fresh session; expire the collection to match.
+    parent = await db.get(Pipeline, pipeline_id)
+    if parent is not None:
+        db.expire(parent, ["tasks"])
     return task
 
 
@@ -357,8 +363,12 @@ class TestUpdateTask:
         pipeline = await _seed_pipeline(db_session, org_id)
         task = await _seed_task(db_session, org_id, pipeline.id)
 
-        payload = UpdateTask(status=TaskStatus.COMPLETED)
-        result = await service.update_task(db_session, pipeline.id, task.id, org_id, payload)
+        # TASK_TRANSITIONS only allows pending -> in_progress -> completed;
+        # jumping straight to completed is rejected by design.
+        await service.update_task(db_session, pipeline.id, task.id, org_id, UpdateTask(status=TaskStatus.IN_PROGRESS))
+        result = await service.update_task(
+            db_session, pipeline.id, task.id, org_id, UpdateTask(status=TaskStatus.COMPLETED)
+        )
 
         assert result.status == TaskStatus.COMPLETED
         assert result.completed_at is not None

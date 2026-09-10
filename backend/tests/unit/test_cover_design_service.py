@@ -5,6 +5,7 @@ and cover queries.
 """
 
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -211,13 +212,13 @@ class TestListTemplates:
         """Should return all templates when no genre filter."""
         with patch("app.modules.cover_design.service.get_all_templates") as mock_get:
             mock_get.return_value = [
-                MagicMock(
+                SimpleNamespace(
                     id="tmpl1",
                     name="Template 1",
                     genre=CoverGenre.FANTASY,
                     description="A fantasy template",
                     thumbnail_url="https://example.com/t1.jpg",
-                    dimensions={"width": 1600, "height": 2560},
+                    dimensions={"width_px": 1600, "height_px": 2560},
                     font_recommendations=["Arial"],
                     layout_guidance="Center aligned",
                     tags=["epic"],
@@ -234,13 +235,13 @@ class TestListTemplates:
         """Should filter templates by genre."""
         with patch("app.modules.cover_design.service.get_templates_by_genre") as mock_get:
             mock_get.return_value = [
-                MagicMock(
+                SimpleNamespace(
                     id="tmpl2",
                     name="Romance Template",
                     genre=CoverGenre.ROMANCE,
                     description="A romance template",
                     thumbnail_url="https://example.com/t2.jpg",
-                    dimensions={"width": 1600, "height": 2560},
+                    dimensions={"width_px": 1600, "height_px": 2560},
                     font_recommendations=["Georgia"],
                     layout_guidance="Centered title",
                     tags=["romance"],

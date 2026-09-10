@@ -28,7 +28,7 @@ PLATFORM_DIMENSIONS: dict[CoverPlatform, CoverDimensions] = {
 
 # Format-specific dimension presets
 FORMAT_DIMENSIONS: dict[str, CoverDimensions] = {
-    "ebook": CoverDimensions(width_px=2560, height_px=1600, dpi=300, bleed_px=0),
+    "ebook": CoverDimensions(width_px=1600, height_px=2560, dpi=300, bleed_px=0),
     "paperback_6x9": CoverDimensions(width_px=1800, height_px=2700, dpi=300, bleed_px=38),
     "paperback_5x8": CoverDimensions(width_px=1500, height_px=2400, dpi=300, bleed_px=38),
     "paperback_8x10": CoverDimensions(width_px=2400, height_px=3000, dpi=300, bleed_px=38),

@@ -373,7 +373,10 @@ class TestGenerateAcquisitionTips:
             budget="medium",
         )
 
-        result = await service.generate_acquisition_tips(request)
+        # No network: without a key the service falls back to its defaults,
+        # and this suite must not depend on one being present either way.
+        with patch.object(service.settings, "ANTHROPIC_API_KEY", ""):
+            result = await service.generate_acquisition_tips(request)
 
         assert result.book_id == request.book_id
         assert len(result.tips) > 0
