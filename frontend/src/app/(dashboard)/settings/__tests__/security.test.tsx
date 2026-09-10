@@ -10,6 +10,13 @@ const mockGet = jest.fn();
 const mockInvalidateQueries = jest.fn();
 
 // Mock next/link
+// The security page now also renders SecurityTab (password, active sessions,
+// login history). Those read react-query directly, which this suite stubs
+// wholesale; they have their own coverage, so stand the tab in.
+jest.mock("@/modules/settings/components/SecurityTab", () => ({
+  SecurityTab: () => <div data-testid="security-tab" />,
+}));
+
 jest.mock("next/link", () => {
   return function MockLink({
     children,
@@ -384,7 +391,7 @@ describe("SecuritySettingsPage", () => {
     );
 
     await waitFor(() => {
-      const qrImg = screen.getByAltText("MFA QR Code");
+      const qrImg = screen.getByAltText(/scan this qr code with your authenticator app/i);
       expect(qrImg).toBeInTheDocument();
       expect(qrImg).toHaveAttribute("src", mockSetupResponse.qr_code_url);
     });

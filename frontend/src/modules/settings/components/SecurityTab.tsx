@@ -9,8 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   useChangePassword,
-  useEnable2FA,
-  useDisable2FA,
   useSessions,
   useRevokeSession,
   useRevokeAllSessions,
@@ -25,23 +23,12 @@ export function SecurityTab() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  // 2FA state
-  const [show2FASetup, setShow2FASetup] = useState(false);
-  const [twoFAError, setTwoFAError] = useState("");
-  const [twoFASuccess, setTwoFASuccess] = useState("");
-
   // Hooks
   const changePassword = useChangePassword();
-  const enable2FA = useEnable2FA();
-  const disable2FA = useDisable2FA();
   const { data: sessions = [] } = useSessions();
   const revokeSession = useRevokeSession();
   const revokeAllSessions = useRevokeAllSessions();
   const { data: loginHistory = [] } = useLoginHistory();
-
-  // Mock 2FA status (in real app, this would come from user data)
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-  const [mockSecret, setMockSecret] = useState("");
 
   const handleChangePassword = async () => {
     setPasswordError("");
@@ -74,36 +61,6 @@ export function SecurityTab() {
       setConfirmPassword("");
     } catch (error: any) {
       setPasswordError(error.message || "Failed to update password");
-    }
-  };
-
-  const handleEnable2FA = async () => {
-    setTwoFAError("");
-    setTwoFASuccess("");
-
-    try {
-      const result = await enable2FA.mutateAsync();
-      // Mock secret for display
-      setMockSecret(result?.secret || "JBSWY3DPEHPK3PXP");
-      setShow2FASetup(true);
-      setIs2FAEnabled(true);
-      setTwoFASuccess("2FA enabled successfully");
-    } catch (error: any) {
-      setTwoFAError(error.message || "Failed to enable 2FA");
-    }
-  };
-
-  const handleDisable2FA = async () => {
-    setTwoFAError("");
-    setTwoFASuccess("");
-
-    try {
-      await disable2FA.mutateAsync();
-      setIs2FAEnabled(false);
-      setShow2FASetup(false);
-      setTwoFASuccess("2FA disabled successfully");
-    } catch (error: any) {
-      setTwoFAError(error.message || "Failed to disable 2FA");
     }
   };
 
@@ -175,75 +132,6 @@ export function SecurityTab() {
           >
             {changePassword.isPending ? "Updating..." : "Update Password"}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Section 2: Two-Factor Authentication */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Two-Factor Authentication</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Status:</span>
-            {is2FAEnabled ? (
-              <span className="text-sm text-green-600">✅ Enabled</span>
-            ) : (
-              <span className="text-sm text-red-600">❌ Not enabled</span>
-            )}
-          </div>
-
-          <p className="text-sm text-gray-600">
-            Two-factor authentication adds an extra layer of security to your
-            account by requiring a verification code in addition to your
-            password when signing in.
-          </p>
-
-          {show2FASetup && is2FAEnabled && (
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-48 h-48 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-400 text-sm text-center px-4">
-                    QR Code Placeholder
-                    <br />
-                    Scan with authenticator app
-                  </span>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium mb-1">
-                    Or enter this code manually:
-                  </p>
-                  <code className="text-sm bg-white px-3 py-1 rounded border">
-                    {mockSecret}
-                  </code>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {twoFAError && (
-            <p className="text-sm text-red-600">{twoFAError}</p>
-          )}
-          {twoFASuccess && (
-            <p className="text-sm text-green-600">{twoFASuccess}</p>
-          )}
-
-          {is2FAEnabled ? (
-            <Button
-              variant="destructive"
-              onClick={handleDisable2FA}
-              disabled={disable2FA.isPending}
-            >
-              {disable2FA.isPending ? "Disabling..." : "Disable 2FA"}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleEnable2FA}
-              disabled={enable2FA.isPending}
-            >
-              {enable2FA.isPending ? "Enabling..." : "Enable 2FA"}
-            </Button>
-          )}
         </CardContent>
       </Card>
 
