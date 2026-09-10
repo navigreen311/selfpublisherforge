@@ -3,8 +3,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NotificationSettingsPage from "../page";
 
 // Mock the NotificationPreferences component
-jest.mock("@/modules/notifications/components/NotificationPreferences", () => ({
-  NotificationPreferences: () => <div data-testid="notification-preferences">Preferences</div>,
+// The page renders the settings module's NotificationsTab. Note that this and
+// @/modules/notifications/components/NotificationPreferences are two complete
+// implementations of the same screen against two different endpoints — see the
+// note in the commit that restored this page's heading.
+jest.mock("@/modules/settings/components/NotificationsTab", () => ({
+  NotificationsTab: () => <div data-testid="notifications-tab">Preferences</div>,
 }));
 
 describe("NotificationSettingsPage", () => {
@@ -33,9 +37,9 @@ describe("NotificationSettingsPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the NotificationPreferences component", () => {
+  it("renders the notification preferences form", () => {
     render(<NotificationSettingsPage />, { wrapper: createWrapper() });
-    expect(screen.getByTestId("notification-preferences")).toBeInTheDocument();
+    expect(screen.getByTestId("notifications-tab")).toBeInTheDocument();
   });
 
   it("has proper heading hierarchy with id for accessibility", () => {
