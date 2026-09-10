@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -424,11 +424,12 @@ class StorageService:
         return f"orgs/{org_id}/{asset_type.value}/{asset_id}/{safe_name}"
 
     def _generate_download_url(self, s3_key: str, expires_in: int = 3600) -> str:
-        return self.s3.generate_presigned_url(
+        url = self.s3.generate_presigned_url(  # boto3 is untyped
             ClientMethod="get_object",
             Params={"Bucket": self.bucket, "Key": s3_key},
             ExpiresIn=expires_in,
         )
+        return cast("str", url)
 
     @staticmethod
     def _to_response(asset: ContentAsset, *, download_url: str | None = None) -> AssetResponse:

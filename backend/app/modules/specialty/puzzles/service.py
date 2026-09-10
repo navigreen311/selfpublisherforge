@@ -513,9 +513,19 @@ def _generate_sudoku(
 
     # Determine target givens
     if n == 9:
-        target = {Difficulty.easy: 40, Difficulty.medium: 31, Difficulty.hard: 25, Difficulty.expert: 22}
+        target: dict[str, int] = {
+            Difficulty.easy: 40,
+            Difficulty.medium: 31,
+            Difficulty.hard: 25,
+            Difficulty.expert: 22,
+        }
     elif n == 6:
-        target = {Difficulty.easy: 20, Difficulty.medium: 15, Difficulty.hard: 12, Difficulty.expert: 10}
+        target = {
+            Difficulty.easy: 20,
+            Difficulty.medium: 15,
+            Difficulty.hard: 12,
+            Difficulty.expert: 10,
+        }
     else:
         target = {Difficulty.easy: 10, Difficulty.medium: 8, Difficulty.hard: 6, Difficulty.expert: 5}
 
@@ -618,10 +628,14 @@ def _generate_number_search(
     rows, cols = int(parts[0]), int(parts[1])
 
     # Generate random number sequences to find
-    seq_count = {Difficulty.easy: 10, Difficulty.medium: 15, Difficulty.hard: 20}.get(difficulty, 15)
-    seq_len_range = {Difficulty.easy: (3, 5), Difficulty.medium: (4, 7), Difficulty.hard: (5, 9)}.get(
-        difficulty, (4, 7)
-    )
+    seq_counts: dict[str, int] = {Difficulty.easy: 10, Difficulty.medium: 15, Difficulty.hard: 20}
+    seq_count = seq_counts.get(difficulty, 15)
+    seq_len_ranges: dict[str, tuple[int, int]] = {
+        Difficulty.easy: (3, 5),
+        Difficulty.medium: (4, 7),
+        Difficulty.hard: (5, 9),
+    }
+    seq_len_range = seq_len_ranges.get(difficulty, (4, 7))
     sequences: list[str] = []
     for _ in range(seq_count):
         length = random.randint(*seq_len_range)

@@ -56,7 +56,7 @@ try:
     _facebook_client = FacebookAdsClient()
 except (ImportError, ModuleNotFoundError) as e:
     logger.warning("Facebook Ads client not available: %s", e)
-    _facebook_client = None
+    _facebook_client = None  # type: ignore[assignment]  # optional dependency
 
 
 router = APIRouter()

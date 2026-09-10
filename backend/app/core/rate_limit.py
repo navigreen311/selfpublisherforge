@@ -173,7 +173,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self._legacy_limiter = None
         elif hasattr(limiter, "check_request"):
             # Already a new limiter instance (has check_request method)
-            self.limiter = limiter
+            self.limiter = limiter  # type: ignore[assignment]  # duck-typed limiter instance
             self._legacy_limiter = None
         elif isinstance(limiter, SlidingWindowRateLimiter):
             # Legacy wrapper - use its internal new limiter
