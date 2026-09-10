@@ -10,6 +10,22 @@ const mockUseCurrentUser = jest.fn();
 const mockUseUpdateProfile = jest.fn();
 
 // Mock the users hooks module
+// The pages call useRouter/useSearchParams; without a mock next throws
+// "invariant expected app router to be mounted" and the render dies.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 jest.mock("@/modules/users/hooks", () => ({
   useCurrentUser: (...args: unknown[]) => mockUseCurrentUser(...args),
   useUpdateProfile: (...args: unknown[]) => mockUseUpdateProfile(...args),

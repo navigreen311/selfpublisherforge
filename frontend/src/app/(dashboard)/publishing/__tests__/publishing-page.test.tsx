@@ -12,6 +12,22 @@ const mockUseListings = jest.fn();
 const mockUseDeleteAccount = jest.fn();
 const mockUseSyncListing = jest.fn();
 
+// The pages call useRouter/useSearchParams; without a mock next throws
+// "invariant expected app router to be mounted" and the render dies.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 jest.mock("@/modules/publishing/hooks", () => ({
   usePublishingAccounts: (...args: unknown[]) => mockUsePublishingAccounts(...args),
   useCreateAccount: (...args: unknown[]) => mockUseCreateAccount(...args),
