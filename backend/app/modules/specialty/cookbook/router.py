@@ -463,7 +463,7 @@ async def batch_nutrition(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.batch_nutrition(
+    result = await service.batch_calculate_nutrition(
         db,
         current_user["org_id"],
         cookbook_id,

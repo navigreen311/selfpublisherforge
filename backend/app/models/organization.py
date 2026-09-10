@@ -3,7 +3,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, String
+from sqlalchemy import Boolean, DateTime, Index, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -32,6 +32,9 @@ class Organization(BaseModel):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    # OrganizationResponse has always declared it, and the settings screen
+    # reads and writes it.
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     plan_tier: Mapped[PlanTier] = mapped_column(
         SAEnum(PlanTier, name="plan_tier", create_constraint=True),
         default=PlanTier.FREE,

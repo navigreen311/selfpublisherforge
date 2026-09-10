@@ -93,7 +93,7 @@ class Chapter(BaseModel):
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    content: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    content: Mapped[dict | str | None] = mapped_column(JSONB, nullable=True, default=None)
     word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     target_word_count: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     status: Mapped[str] = mapped_column(
@@ -131,7 +131,7 @@ class ChapterVersion(BaseModel):
         ForeignKey("chapters.id", ondelete="CASCADE"),
         nullable=False,
     )
-    content: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    content: Mapped[dict | str | None] = mapped_column(JSONB, nullable=True, default=None)
     word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Enum,
     Float,
@@ -93,6 +95,8 @@ class ColoringBookPage(BaseModel):
     illustration_model: Mapped[str | None] = mapped_column(String(50), nullable=True)
     illustration_seed: Mapped[str | None] = mapped_column(String(50), nullable=True)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Per-issue detail behind quality_score, written by the QA pipeline.
+    qa_issues: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     closed_shapes_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     speck_free: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     stroke_uniform: Mapped[bool | None] = mapped_column(Boolean, nullable=True)

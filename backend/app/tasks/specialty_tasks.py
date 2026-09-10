@@ -953,7 +953,7 @@ async def _process_batch_factory_async(task, job_id: str):
             job.status = BatchStatus.running
             await db.flush()
 
-            book_type = job.book_type if isinstance(job.book_type, str) else job.book_type.value
+            book_type = getattr(job.book_type, "value", job.book_type)
             config = job.batch_config or {}
             volumes_total = job.volumes_total
             page_count_per_volume = config.get("page_count_per_volume", 30)

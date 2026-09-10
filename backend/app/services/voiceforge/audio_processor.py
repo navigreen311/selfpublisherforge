@@ -399,7 +399,14 @@ class AudioProcessor:
         except Exception:
             # File may not have existing ID3 tags
             audio = MP3(str(audio_path))
+
+        # Opening succeeds on a file with no ID3 frames at all, leaving `tags`
+        # as None; only the except branch used to create them.
+        if audio.tags is None:
             audio.add_tags()
+        tags = audio.tags
+        if tags is None:  # pragma: no cover - add_tags() always populates it
+            raise RuntimeError(f"Could not create ID3 tags for {audio_path}")
 
         tag_map: dict[str, Any] = {
             "title": lambda v: TIT2(encoding=3, text=[v]),
@@ -413,7 +420,7 @@ class AudioProcessor:
 
         for key, value in metadata.items():
             if value and key in tag_map:
-                audio.tags.add(tag_map[key](value))
+                tags.add(tag_map[key](value))
             elif key not in tag_map:
                 logger.warning("Unknown metadata key ignored: %s", key)
 

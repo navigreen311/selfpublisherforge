@@ -156,8 +156,8 @@ async def stream_task_execution(
         return
 
     # Get agent
-    result = await db.execute(select(Agent).where(Agent.id == task.agent_id))
-    agent = result.scalar_one_or_none()
+    agent_result = await db.execute(select(Agent).where(Agent.id == task.agent_id))
+    agent = agent_result.scalar_one_or_none()
 
     if not agent:
         yield f"data: {json.dumps({'error': 'Agent not found'})}\n\n"

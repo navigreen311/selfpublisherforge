@@ -620,7 +620,7 @@ async def reorder_chapters(
 async def create_version_snapshot(
     db: AsyncSession,
     chapter_id: _uuid.UUID,
-    content: str,
+    content: dict | str | None,
     word_count: int,
     user_id: _uuid.UUID | None = None,
 ) -> dict:
@@ -836,7 +836,7 @@ async def prune_old_versions(
 async def save_chapter_content(
     db: AsyncSession,
     chapter_id: _uuid.UUID,
-    content: str,
+    content: dict | str,
     word_count: int,
     user_id: _uuid.UUID | None = None,
 ) -> dict:
@@ -891,7 +891,7 @@ async def save_chapter_content(
     version_id = None
     if should_snapshot:
         # Snapshot the CURRENT content before replacing
-        snapshot = await create_version_snapshot(db, chapter_id, chapter.content or "", chapter.word_count, user_id)
+        snapshot = await create_version_snapshot(db, chapter_id, chapter.content, chapter.word_count, user_id)
         version_id = snapshot["id"]
 
     # Update chapter content

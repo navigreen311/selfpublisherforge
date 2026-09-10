@@ -17,10 +17,11 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import UploadFile
-from sqlalchemy import func, select, update
+from sqlalchemy import Select, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
+from app.core.sql import assert_known_columns
 from app.modules.specialty.models.childrens import (
     ChildrensBook,
     ChildrensBookCharacter,
@@ -229,7 +230,7 @@ def _book_to_dict(book: ChildrensBook) -> dict[str, Any]:
         "org_id": str(book.org_id),
         "title": book.title,
         "subtitle": book.subtitle,
-        "author_name": book.author,
+        "author": book.author,
         "age_range": book.age_range,
         "status": book.status,
         "page_count": book.page_count,
@@ -237,15 +238,14 @@ def _book_to_dict(book: ChildrensBook) -> dict[str, Any]:
         "illustration_style": book.illustration_style,
         "color_palette": book.color_palette,
         "story_prompt": book.story_prompt,
-        "theme": book.theme,
+        "theme_moral": book.theme_moral,
         "tone": book.tone,
         "story_mode": book.story_mode,
-        "bilingual": book.is_bilingual,
+        "is_bilingual": book.is_bilingual,
         "bilingual_language": book.bilingual_language,
         "bilingual_layout": book.bilingual_layout,
         "fear_intensity": book.fear_intensity,
         "qa_score": book.qa_score,
-        "metadata": book.metadata_json or {},
         "created_at": book.created_at.isoformat() if book.created_at else None,
         "updated_at": book.updated_at.isoformat() if book.updated_at else None,
     }
@@ -258,12 +258,18 @@ def _page_to_dict(page: ChildrensBookPage) -> dict[str, Any]:
         "page_number": page.page_number,
         "text_content": page.text_content,
         "illustration_prompt": page.illustration_prompt,
+        "page_type": page.page_type,
         "layout": page.layout,
-        "image_url": page.illustration_url,
-        "thumbnail_url": page.thumbnail_url,
-        "font_size": page.font_size,
+        "illustration_url": page.illustration_url,
+        "illustration_model": page.illustration_model,
+        "illustration_seed": page.illustration_seed,
+        "text_font": page.text_font,
+        "text_size": page.text_size,
+        "text_color": page.text_color,
         "text_position": page.text_position,
-        "dpi": page.dpi,
+        "text_plate_enabled": page.text_plate_enabled,
+        "contrast_score": page.contrast_score,
+        "gutter_safe": page.gutter_safe,
         "translated_text": page.translated_text,
         "metadata": page.metadata_json or {},
         "created_at": page.created_at.isoformat() if page.created_at else None,
@@ -276,14 +282,14 @@ def _char_to_dict(char: ChildrensBookCharacter) -> dict[str, Any]:
         "id": str(char.id),
         "book_id": str(char.book_id),
         "name": char.name,
-        "species_type": char.species,
+        "species": char.species,
         "description": char.description,
-        "clothing_rules": char.clothing_rules,
-        "scale_rules": char.scale_rules,
-        "setting_continuity": char.setting_continuity,
-        "time_of_day_rules": char.time_rules,
+        "auto_append": char.auto_append,
+        "clothing_rules": char.clothing_rules or {},
+        "scale_rules": char.scale_rules or {},
+        "setting_continuity_rules": char.setting_rules or {},
+        "time_of_day_rules": char.time_rules or {},
         "reference_images": char.reference_images or [],
-        "metadata": char.metadata_json or {},
         "created_at": char.created_at.isoformat() if char.created_at else None,
         "updated_at": char.updated_at.isoformat() if char.updated_at else None,
     }
@@ -302,11 +308,23 @@ async def _get_book_or_404(db: AsyncSession, org_id: UUID, book_id: UUID) -> Chi
     return book
 
 
+def _org_book_ids(org_id: UUID) -> Select[tuple[UUID]]:
+    """Sub-select of the org's live book ids.
+
+    Pages and characters carry no org_id of their own, so every query against
+    them is scoped by their parent book.
+    """
+    return select(ChildrensBook.id).where(
+        ChildrensBook.org_id == org_id,
+        ChildrensBook.deleted_at.is_(None),
+    )
+
+
 async def _get_page_or_404(db: AsyncSession, org_id: UUID, book_id: UUID, page_id: UUID) -> ChildrensBookPage:
     stmt = select(ChildrensBookPage).where(
         ChildrensBookPage.id == page_id,
         ChildrensBookPage.book_id == book_id,
-        ChildrensBookPage.org_id == org_id,
+        ChildrensBookPage.book_id.in_(_org_book_ids(org_id)),
         ChildrensBookPage.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -320,7 +338,7 @@ async def _get_character_or_404(db: AsyncSession, org_id: UUID, book_id: UUID, c
     stmt = select(ChildrensBookCharacter).where(
         ChildrensBookCharacter.id == char_id,
         ChildrensBookCharacter.book_id == book_id,
-        ChildrensBookCharacter.org_id == org_id,
+        ChildrensBookCharacter.book_id.in_(_org_book_ids(org_id)),
         ChildrensBookCharacter.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -444,7 +462,7 @@ async def create_book(db: AsyncSession, org_id: UUID, data: dict[str, Any]) -> d
         org_id=org_id,
         title=data["title"],
         subtitle=data.get("subtitle"),
-        author_name=data.get("author_name"),
+        author=data.get("author") or data.get("author_name"),
         age_range=data.get("age_range", AgeRange.preschool.value),
         status=BookStatus.draft.value,
         page_count=data.get("page_count", 0),
@@ -452,14 +470,13 @@ async def create_book(db: AsyncSession, org_id: UUID, data: dict[str, Any]) -> d
         illustration_style=data.get("illustration_style"),
         color_palette=data.get("color_palette"),
         story_prompt=data.get("story_prompt"),
-        theme=data.get("theme"),
+        theme_moral=data.get("theme_moral") or data.get("theme"),
         tone=data.get("tone"),
         story_mode=data.get("story_mode"),
-        bilingual=data.get("bilingual", False),
+        is_bilingual=data.get("is_bilingual", data.get("bilingual", False)),
         bilingual_language=data.get("bilingual_language"),
         bilingual_layout=data.get("bilingual_layout"),
         fear_intensity=data.get("fear_intensity", "none"),
-        metadata_json=data.get("metadata", {}),
     )
     db.add(book)
     await db.flush()
@@ -477,7 +494,7 @@ async def update_book(db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[
     allowed = {
         "title",
         "subtitle",
-        "author_name",
+        "author",
         "age_range",
         "status",
         "page_count",
@@ -485,19 +502,18 @@ async def update_book(db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[
         "illustration_style",
         "color_palette",
         "story_prompt",
-        "theme",
+        "theme_moral",
         "tone",
         "story_mode",
-        "bilingual",
+        "is_bilingual",
         "bilingual_language",
         "bilingual_layout",
         "fear_intensity",
-        "metadata",
     }
+    assert_known_columns(ChildrensBook, allowed)
     for key, value in data.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(book, col, value)
+            setattr(book, key, value)
     await db.flush()
     await db.refresh(book)
     return _book_to_dict(book)
@@ -521,7 +537,6 @@ async def list_pages(db: AsyncSession, org_id: UUID, book_id: UUID) -> list[dict
         select(ChildrensBookPage)
         .where(
             ChildrensBookPage.book_id == book_id,
-            ChildrensBookPage.org_id == org_id,
             ChildrensBookPage.deleted_at.is_(None),
         )
         .order_by(ChildrensBookPage.page_number)
@@ -615,7 +630,6 @@ async def reorder_pages(db: AsyncSession, org_id: UUID, book_id: UUID, page_ids:
             .where(
                 ChildrensBookPage.id == UUID(str(pid)),
                 ChildrensBookPage.book_id == book_id,
-                ChildrensBookPage.org_id == org_id,
             )
             .values(page_number=idx)
         )
@@ -634,7 +648,6 @@ async def list_characters(db: AsyncSession, org_id: UUID, book_id: UUID) -> list
         select(ChildrensBookCharacter)
         .where(
             ChildrensBookCharacter.book_id == book_id,
-            ChildrensBookCharacter.org_id == org_id,
             ChildrensBookCharacter.deleted_at.is_(None),
         )
         .order_by(ChildrensBookCharacter.created_at)
@@ -762,7 +775,7 @@ async def generate_story(db: AsyncSession, org_id: UUID, book_id: UUID, options:
     prompt = (
         f"Write a {target_pages}-page children's book.\n"
         f"Title: {book.title}\n"
-        f"Theme/Moral: {book.theme or 'Not specified'}\n"
+        f"Theme/Moral: {book.theme_moral or 'Not specified'}\n"
         f"Story Prompt: {book.story_prompt or 'Not specified'}\n"
         f"Characters:\n{char_descriptions}\n\n"
         f"For each page, output in this exact format:\n"
@@ -1125,7 +1138,6 @@ async def auto_fix_prompts(db: AsyncSession, org_id: UUID, book_id: UUID) -> dic
 
     stmt = select(ChildrensBookPage).where(
         ChildrensBookPage.book_id == book_id,
-        ChildrensBookPage.org_id == org_id,
         ChildrensBookPage.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1281,7 +1293,6 @@ async def translate_book(db: AsyncSession, org_id: UUID, book_id: UUID, options:
         select(ChildrensBookPage)
         .where(
             ChildrensBookPage.book_id == book_id,
-            ChildrensBookPage.org_id == org_id,
             ChildrensBookPage.deleted_at.is_(None),
         )
         .order_by(ChildrensBookPage.page_number)

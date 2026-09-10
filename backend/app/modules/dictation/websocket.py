@@ -22,8 +22,12 @@ import contextlib
 import json
 import logging
 import time
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+if TYPE_CHECKING:
+    from app.services.voiceforge.asr_engine import ASREngine
 
 logger = logging.getLogger(__name__)
 
@@ -156,14 +160,14 @@ async def dictation_ws(websocket: WebSocket, session_id: str) -> None:
 
 async def _flush_and_send_metrics(
     websocket: WebSocket,
-    asr: object,
+    asr: ASREngine,
     session_id: str,
     words_count: int,
     confidence_scores: list[float],
     start_time: float,
 ) -> None:
     """Process remaining ASR buffer and send session metrics."""
-    final = await asr.end_session(session_id)  # type: ignore[union-attr]
+    final = await asr.end_session(session_id)
     if final and final.text:
         words_count += len(final.text.split())
         confidence_scores.append(final.confidence)

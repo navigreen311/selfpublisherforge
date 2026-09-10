@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.orm import class_mapper
 
 
 def assert_known_columns(model: type, keys: Iterable[str]) -> None:
@@ -24,7 +24,7 @@ def assert_known_columns(model: type, keys: Iterable[str]) -> None:
         model: A mapped SQLAlchemy class.
         keys: Column names about to be interpolated into a statement.
     """
-    allowed = {col.key for col in sa_inspect(model).mapper.column_attrs}
+    allowed = {col.key for col in class_mapper(model).column_attrs}
     unknown = sorted(set(keys) - allowed)
     if unknown:
         raise ValueError(f"Refusing to build SQL for unknown {model.__name__} column(s): {', '.join(unknown)}")

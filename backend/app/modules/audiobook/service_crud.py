@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 from app.models.audiobook import AudiobookChapter, AudiobookProject
 from app.models.content import Chapter, Manuscript
 from app.models.project import Book, Project
+from app.modules.ai_writing.tiptap_converter import tiptap_to_text
 
 logger = logging.getLogger(__name__)
 
@@ -100,13 +101,14 @@ async def create_project(
         chapters = list(ch_result.scalars().all())
 
         for ch in chapters:
-            word_count = ch.word_count or (len(ch.content.split()) if ch.content else 0)
+            source_text = tiptap_to_text(ch.content)
+            word_count = ch.word_count or len(source_text.split())
             ab_chapter = AudiobookChapter(
                 audiobook_project_id=project.id,
                 chapter_id=ch.id,
                 chapter_number=ch.order_index + 1,
                 chapter_title=ch.title,
-                source_text=ch.content or "",
+                source_text=source_text,
                 word_count=word_count,
                 status="pending",
             )
@@ -364,13 +366,14 @@ async def create_project_from_wizard(
     chapter_count = 0
 
     for ch in chapters:
-        word_count = ch.word_count or (len(ch.content.split()) if ch.content else 0)
+        source_text = tiptap_to_text(ch.content)
+        word_count = ch.word_count or len(source_text.split())
         ab_chapter = AudiobookChapter(
             audiobook_project_id=project.id,
             chapter_id=ch.id,
             chapter_number=ch.order_index + 1,
             chapter_title=ch.title,
-            source_text=ch.content or "",
+            source_text=source_text,
             word_count=word_count,
             status="pending",
         )

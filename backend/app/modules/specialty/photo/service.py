@@ -216,7 +216,7 @@ def _photo_to_dict(photo: PhotoReference) -> dict[str, Any]:
         "mime_type": photo.mime_type,
         "width": photo.width,
         "height": photo.height,
-        "usage_type": photo.usage_type if isinstance(photo.usage_type, str) else photo.usage_type.value,
+        "usage_type": getattr(photo.usage_type, "value", photo.usage_type),
         "tags": photo.tags,
         "metadata_json": photo.metadata_json,
         "book_type": photo.book_type,

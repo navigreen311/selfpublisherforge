@@ -44,6 +44,13 @@ class DictationSession(TenantModel):
         default=None,
         index=True,
     )
+    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active", server_default="active")
     duration_seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     words_dictated: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -85,6 +92,7 @@ class DictationCommand(TenantModel):
 
     command_phrase: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
 

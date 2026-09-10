@@ -694,7 +694,7 @@ async def check_font_licensing(
     result = await db.execute(stmt)
     registered_fonts = {
         fl.font_name.lower(): {
-            "license_type": (fl.license_type if isinstance(fl.license_type, str) else fl.license_type.value),
+            "license_type": getattr(fl.license_type, "value", fl.license_type),
             "commercial_print": fl.commercial_print,
             "source": fl.source,
         }

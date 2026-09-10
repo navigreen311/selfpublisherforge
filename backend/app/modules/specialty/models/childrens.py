@@ -62,6 +62,11 @@ class ChildrensBook(TenantModel):
         nullable=False,
         default=StoryMode.ai_generated,
     )
+    # Fed to the AI story generator and scanned for trademarks; the create and
+    # update payloads have always carried them.
+    story_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    theme_moral: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    tone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_bilingual: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     bilingual_language: Mapped[str | None] = mapped_column(String(50), nullable=True)
     bilingual_layout: Mapped[str | None] = mapped_column(
@@ -128,6 +133,9 @@ class ChildrensBookPage(BaseModel):
     illustration_seed: Mapped[str | None] = mapped_column(String(50), nullable=True)
     contrast_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     gutter_safe: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # Illustration provenance (model, prompt hash, generation date) and upload
+    # details, written by generate_illustration and upload_page_image.
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
     book: Mapped[ChildrensBook] = relationship("ChildrensBook", back_populates="pages")
