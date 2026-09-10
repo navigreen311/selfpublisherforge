@@ -591,7 +591,13 @@ class SSMLGenerator:
             f"TEXT:\n{analysis_text}"
         )
 
-        result = await self._orchestrator.generate(
+        # _analyze_text is the only caller and guards on this, but the
+        # narrowing does not cross the method boundary — state it here.
+        orchestrator = self._orchestrator
+        if orchestrator is None:
+            raise RuntimeError("_llm_analyze requires a configured orchestrator")
+
+        result = await orchestrator.generate(
             task_type="long_form_writing",
             prompt=prompt,
             options=GenerationOptions(

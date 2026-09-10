@@ -611,8 +611,10 @@ async def _get_org_owner(
     )
     row = result.mappings().first()
     if row:
-        user_id_value = row.get("id") or row.get(0)
-        email_value = row.get("email") or row.get(1)
+        # result.mappings() is keyed by column name; the positional
+        # fallbacks that used to be here could never match.
+        user_id_value = row.get("id")
+        email_value = row.get("email")
         if user_id_value and email_value:
             return UUID(str(user_id_value)), email_value
     return None, None

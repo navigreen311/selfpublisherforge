@@ -122,8 +122,8 @@ class AmazonAdsClient:
     async def _get_headers(self) -> dict[str, str]:
         """Build request headers with auth token."""
         return {
-            "Amazon-Advertising-API-ClientId": self.client_id,
-            "Amazon-Advertising-API-Scope": self.profile_id,
+            "Amazon-Advertising-API-ClientId": self.client_id or "",
+            "Amazon-Advertising-API-Scope": self.profile_id or "",
             "Authorization": f"Bearer {self._access_token or ''}",
             "Content-Type": "application/vnd.spCampaign.v3+json",
             "Accept": "application/vnd.spCampaign.v3+json",
