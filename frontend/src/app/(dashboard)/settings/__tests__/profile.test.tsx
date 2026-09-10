@@ -153,10 +153,10 @@ describe("ProfileSettingsPage", () => {
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({
-        name: "New Name",
-        avatar_url: null,
-      });
+      // The form also submits the preferences block (bio, pen names, links).
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "New Name", avatar_url: null })
+      );
     });
   });
 

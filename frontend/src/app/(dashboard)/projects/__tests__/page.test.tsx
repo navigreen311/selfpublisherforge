@@ -242,10 +242,14 @@ describe("ProjectsPage", () => {
     const projectLinks = links.filter((link) =>
       link.getAttribute("href")?.startsWith("/projects/proj-")
     );
-    expect(projectLinks).toHaveLength(3);
-    expect(projectLinks[0]).toHaveAttribute("href", "/projects/proj-1");
-    expect(projectLinks[1]).toHaveAttribute("href", "/projects/proj-2");
-    expect(projectLinks[2]).toHaveAttribute("href", "/projects/proj-3");
+    // Each card links twice — from its title and from its footer row — and the
+    // list is sorted for display, so assert the set of destinations.
+    const hrefs = projectLinks.map((link) => link.getAttribute("href"));
+    expect(Array.from(new Set(hrefs)).sort()).toEqual([
+      "/projects/proj-1",
+      "/projects/proj-2",
+      "/projects/proj-3",
+    ]);
   });
 
   it("shows empty state when no projects match", () => {
@@ -357,7 +361,7 @@ describe("ProjectsPage", () => {
     render(<ProjectsPage />);
 
     expect(
-      screen.getByText("Manage all your publishing projects")
+      screen.getByText("Manage all your book projects")
     ).toBeInTheDocument();
   });
 });

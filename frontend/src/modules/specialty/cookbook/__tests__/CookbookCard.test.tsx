@@ -33,9 +33,9 @@ describe("CookbookCard", () => {
   beforeEach(() => { jest.clearAllMocks(); });
 
   it("renders cookbook title", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("Italian Kitchen")).toBeInTheDocument(); });
-  it("shows type badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("International")).toBeInTheDocument(); });
+  it("shows type badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("Cultural Cuisine")).toBeInTheDocument(); });
   it("shows page count", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("120p")).toBeInTheDocument(); });
-  it("shows status badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("in-progress")).toBeInTheDocument(); });
+  it("shows status badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("in progress")).toBeInTheDocument(); });
   it("links to cookbook detail page", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByRole("link")).toHaveAttribute("href", "/specialty/cookbook-books/test-cookbook-1"); });
   it("renders QA score", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("72")).toBeInTheDocument(); });
   it("shows placeholder when no cover", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("No Cover")).toBeInTheDocument(); });

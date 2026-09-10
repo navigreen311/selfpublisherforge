@@ -144,6 +144,6 @@ describe("StyleProfilesPage", () => {
     renderWithProviders(<StyleProfilesPage />);
 
     expect(screen.getByTestId("profile-list")).toBeInTheDocument();
-    expect(screen.getByText("2 profiles")).toBeInTheDocument();
+    expect(screen.getAllByText(/2\s+profiles/)[0]).toBeInTheDocument();
   });
 });

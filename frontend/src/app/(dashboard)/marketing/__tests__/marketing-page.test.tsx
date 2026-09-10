@@ -55,6 +55,9 @@ jest.mock("@/modules/marketing/hooks", () => ({
   useSocialCalendar: (...args: unknown[]) => mockUseSocialCalendar(...args),
   useARCCampaigns: (...args: unknown[]) => mockUseARCCampaigns(...args),
   useRecentActivity: (...args: unknown[]) => mockUseRecentActivity(...args),
+  useGenerateSocialPosts: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useUpdateSocialPost: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useCreateARCCampaign: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock shared components
