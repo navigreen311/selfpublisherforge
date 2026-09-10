@@ -17,7 +17,7 @@ export default function DashboardNotFound() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center pb-4">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <FileQuestion className="h-8 w-8 text-muted-foreground" />
+            <FileQuestion className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
           </div>
         </CardHeader>
         <CardContent className="text-center space-y-2">

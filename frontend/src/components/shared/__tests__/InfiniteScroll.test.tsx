@@ -15,15 +15,20 @@ jest.mock("lucide-react", () => ({
   ),
 }));
 
-// Mock IntersectionObserver
+// Mock IntersectionObserver. `observe` is shared on the prototype so a test can
+// assert on it: as a per-instance field it was never reachable from
+// `MockIntersectionObserver.prototype`, and the assertion read `undefined`.
+const observeSpy = jest.fn();
+const disconnectSpy = jest.fn();
+
 class MockIntersectionObserver {
-  observe = jest.fn();
-  disconnect = jest.fn();
-  unobserve = jest.fn();
-  takeRecords = jest.fn();
   root = null;
   rootMargin = "";
   thresholds = [];
+  observe = observeSpy;
+  unobserve = jest.fn();
+  disconnect = disconnectSpy;
+  takeRecords = jest.fn();
 }
 
 global.IntersectionObserver = MockIntersectionObserver as any;
@@ -33,6 +38,8 @@ describe("InfiniteScroll", () => {
 
   beforeEach(() => {
     mockOnLoadMore.mockClear();
+    observeSpy.mockClear();
+    disconnectSpy.mockClear();
   });
 
   it("renders children correctly", () => {
@@ -195,13 +202,10 @@ describe("InfiniteScroll", () => {
         </InfiniteScroll>
       );
 
-      expect(MockIntersectionObserver.prototype.observe).toHaveBeenCalled();
+      expect(observeSpy).toHaveBeenCalled();
     });
 
     it("does not set up IntersectionObserver when using button mode", () => {
-      const observeSpy = jest.spyOn(MockIntersectionObserver.prototype, "observe");
-      observeSpy.mockClear();
-
       render(
         <InfiniteScroll
           onLoadMore={mockOnLoadMore}

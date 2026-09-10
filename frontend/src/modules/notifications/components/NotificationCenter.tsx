@@ -76,8 +76,17 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          <NotificationBadge count={unreadCount} />
-          <span className="sr-only">Notifications</span>
+          {/* The badge is decorative here: its number is already carried in the
+              button's accessible name below, and leaving it exposed made the
+              name read "2 Notifications (2 unread)". */}
+          <span aria-hidden="true">
+            <NotificationBadge count={unreadCount} />
+          </span>
+          <span className="sr-only">
+            {unreadCount > 0
+              ? `Notifications (${unreadCount} unread)`
+              : "Notifications"}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-96 p-0">

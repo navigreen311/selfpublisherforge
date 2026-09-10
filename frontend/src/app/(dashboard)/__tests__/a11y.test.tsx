@@ -39,10 +39,20 @@ jest.mock("@/hooks/use-theme", () => ({
   }),
 }));
 
+// The unread count comes from the notifications module now, not the UI store,
+// and the header only mounts the bell for a user with an id.
+jest.mock("@/modules/notifications/hooks", () => ({
+  useNotifications: () => ({ data: { items: [] }, isLoading: false }),
+  useUnreadCount: () => ({ data: { unread_count: 2 } }),
+  useMarkAllAsRead: () => ({ mutate: jest.fn(), isPending: false }),
+  useMarkAsRead: () => ({ mutate: jest.fn(), isPending: false }),
+  useNotificationSubscription: () => undefined,
+}));
+
 jest.mock("@/lib/store", () => ({
   useAuthStore: (selector: any) => {
     const store = {
-      user: { name: "Test User", email: "test@example.com" },
+      user: { id: "user-1", name: "Test User", email: "test@example.com" },
       logout: jest.fn(),
     };
     return selector ? selector(store) : store;
@@ -355,7 +365,9 @@ describe("Accessibility - Interactive Elements", () => {
     );
 
     // Since there are 2 unread notifications in the mock
-    const notifButton = screen.getByLabelText("Notifications (2 unread)");
+    const notifButton = screen.getByRole("button", {
+      name: "Notifications (2 unread)",
+    });
     expect(notifButton).toBeInTheDocument();
   });
 

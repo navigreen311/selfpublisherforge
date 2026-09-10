@@ -211,7 +211,7 @@ describe("API client (axios instance)", () => {
     await expect(api.get("/api/v1/protected")).rejects.toThrow();
 
     expect(mockLogout).toHaveBeenCalled();
-    expect(window.location.href).toBe("/login");
+    expect(window.location.href).toMatch(/^\/login(\?returnTo=.*)?$/);
   });
 
   // 6. Handles network errors gracefully
@@ -287,6 +287,6 @@ describe("API client (axios instance)", () => {
     // fetch should not have been called (no token to refresh with)
     expect(mockFetch).not.toHaveBeenCalled();
     expect(mockLogout).toHaveBeenCalled();
-    expect(window.location.href).toBe("/login");
+    expect(window.location.href).toMatch(/^\/login(\?returnTo=.*)?$/);
   });
 });

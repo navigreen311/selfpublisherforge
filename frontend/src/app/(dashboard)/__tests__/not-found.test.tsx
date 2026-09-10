@@ -53,13 +53,9 @@ describe("DashboardNotFound", () => {
   });
 
   it("displays file question icon", () => {
-    render(<DashboardNotFound />);
-
-    // The FileQuestion icon should be present
-    const heading = screen.getByRole("heading", { name: "404" });
-    const container = heading.parentElement;
-    const icon = container?.querySelector("svg");
-    expect(icon).toBeInTheDocument();
+    // The icon sits in the card header, above the 404 heading's own section.
+    const { container } = render(<DashboardNotFound />);
+    expect(container.querySelector("svg[aria-hidden=true]")).toBeInTheDocument();
   });
 
   it("renders with proper button variants", () => {
