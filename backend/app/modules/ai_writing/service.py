@@ -1104,15 +1104,33 @@ async def record_writing_session(
     db: AsyncSession,
     user_id: _uuid.UUID,
     data: WritingSessionCreate,
+    org_id: _uuid.UUID | None = None,
 ) -> WritingSessionRecord:
     """Record a writing session.
 
     The canonical WritingSession model stores duration in seconds, so we
     convert from the API's minutes representation.
+
+    ``org_id`` is required by the WritingSession table; it was neither a
+    parameter here nor passed by the route, so every recorded session violated
+    the NOT NULL constraint.
     """
+    # writing_sessions.manuscript_id is NOT NULL, but the request only carries
+    # a book_id, so resolve the book's manuscript rather than failing on the
+    # constraint.
+    manuscript_id = await db.scalar(select(Manuscript.id).where(Manuscript.book_id == data.book_id).limit(1))
+    if manuscript_id is None:
+        raise AppException(
+            status_code=422,
+            code="NO_MANUSCRIPT_FOR_BOOK",
+            message="Cannot record a writing session for a book that has no manuscript yet.",
+        )
+
     session = WritingSession(
         id=_uuid.uuid4(),
+        org_id=org_id,
         user_id=user_id,
+        manuscript_id=manuscript_id,
         book_id=data.book_id,
         chapter_id=data.chapter_id,
         words_written=data.words_written,

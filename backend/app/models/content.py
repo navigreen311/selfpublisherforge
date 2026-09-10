@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    func,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -225,7 +226,7 @@ class WritingSession(BaseModel):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default="now()",
+        server_default=func.now(),
     )
     ended_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

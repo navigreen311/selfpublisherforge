@@ -193,7 +193,9 @@ async def seed_marketing(
             body_text=None,  # Could strip HTML for plain text version
             order_index=idx,
             delay_days=template_data["delay_days"],
-            settings={
+            # EmailTemplate has no settings column; tracking flags go with the
+            # rest of the per-template configuration.
+            personalization_fields={
                 "track_opens": True,
                 "track_clicks": True,
             },

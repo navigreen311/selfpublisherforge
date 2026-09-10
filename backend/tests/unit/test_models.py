@@ -1357,7 +1357,8 @@ class TestABTest:
         assert ab.completed_at is None
 
     def test_tablename(self):
-        assert ABTest.__tablename__ == "ab_tests"
+        # Split from cover_design's ABTest, which now owns cover_ab_tests.
+        assert ABTest.__tablename__ == "listing_ab_tests"
 
 
 class TestABTestStatusEnum:

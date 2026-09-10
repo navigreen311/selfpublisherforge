@@ -331,7 +331,7 @@ class TestGenerateOutline:
             "summary": "An epic tale of discovery"
         }"""
 
-        with patch("app.modules.ai_writing.service._call_llm", new_callable=AsyncMock) as mock_llm:
+        with patch("app.modules.ai_writing.generator._call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = mock_llm_response
 
             result = await service.generate_outline(db_session, book_id, request)
@@ -351,7 +351,7 @@ class TestGenerateOutline:
             num_chapters=3,
         )
 
-        with patch("app.modules.ai_writing.service._call_llm", new_callable=AsyncMock) as mock_llm:
+        with patch("app.modules.ai_writing.generator._call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = "This is not JSON"
 
             result = await service.generate_outline(db_session, book_id, request)
@@ -386,7 +386,7 @@ class TestGenerateOutlineStandalone:
             "synopsis": "A thrilling spy novel"
         }"""
 
-        with patch("app.modules.ai_writing.service._call_llm", new_callable=AsyncMock) as mock_llm:
+        with patch("app.modules.ai_writing.generator._call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = mock_llm_response
 
             result = await service.generate_outline_standalone(request, db_session)
@@ -403,13 +403,33 @@ class TestGenerateOutlineStandalone:
 # ---------------------------------------------------------------------------
 
 
+async def _seed_book_with_manuscript(db_session) -> tuple[uuid.UUID, uuid.UUID]:
+    """Create a book and its manuscript; return (book_id, manuscript_id).
+
+    writing_sessions.manuscript_id is NOT NULL and the service resolves it from
+    the book, so a session needs a book that actually has one.
+    """
+    from app.models.content import ContentType, Manuscript, ManuscriptStatus
+
+    book_id = uuid.uuid4()
+    manuscript = Manuscript(
+        id=uuid.uuid4(),
+        book_id=book_id,
+        content_type=ContentType.FICTION,
+        status=ManuscriptStatus.DRAFT,
+    )
+    db_session.add(manuscript)
+    await db_session.flush()
+    return book_id, manuscript.id
+
+
 class TestRecordWritingSession:
     @pytest.mark.asyncio
     async def test_record_session_success(self, db_session):
         """Should record a writing session and convert minutes to seconds."""
         user_id = uuid.uuid4()
-        book_id = uuid.uuid4()
-        chapter_id = uuid.uuid4()
+        book_id, _ = await _seed_book_with_manuscript(db_session)
+        chapter_id = None
 
         data = WritingSessionCreate(
             book_id=book_id,
@@ -419,7 +439,7 @@ class TestRecordWritingSession:
             notes="Good writing session",
         )
 
-        result = await service.record_writing_session(db_session, user_id, data)
+        result = await service.record_writing_session(db_session, user_id, data, org_id=uuid.uuid4())
 
         assert result.user_id == user_id
         assert result.book_id == book_id
@@ -430,7 +450,7 @@ class TestRecordWritingSession:
     async def test_record_session_no_chapter(self, db_session):
         """Should allow recording session without specific chapter."""
         user_id = uuid.uuid4()
-        book_id = uuid.uuid4()
+        book_id, _ = await _seed_book_with_manuscript(db_session)
 
         data = WritingSessionCreate(
             book_id=book_id,
@@ -438,7 +458,7 @@ class TestRecordWritingSession:
             duration_minutes=20,
         )
 
-        result = await service.record_writing_session(db_session, user_id, data)
+        result = await service.record_writing_session(db_session, user_id, data, org_id=uuid.uuid4())
 
         assert result.chapter_id is None
         assert result.words_written == 300

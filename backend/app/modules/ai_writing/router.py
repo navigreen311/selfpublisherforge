@@ -327,7 +327,7 @@ async def record_writing_session(
 ):
     """Record a writing session."""
     user_id = current_user["user_id"]
-    return await service.record_writing_session(db, user_id, data)
+    return await service.record_writing_session(db, user_id, data, org_id=current_user["org_id"])
 
 
 # ===========================================================================
