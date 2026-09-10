@@ -60,6 +60,15 @@ if _is_sqlite:
 
     SQLiteDDLCompiler.get_column_specification = _patched_get_col_spec  # type: ignore[method-assign]  # deliberate SQLite portability patch
 
+    # A few partial-update helpers build their statement with sqlalchemy.text()
+    # and bind a uuid.UUID straight in. psycopg adapts those; sqlite3 refuses
+    # with "type 'UUID' is not supported". Store them the way the Uuid column
+    # type already does on SQLite — 32-char hex — so the two agree.
+    import sqlite3 as _sqlite3
+    import uuid as _uuid
+
+    _sqlite3.register_adapter(_uuid.UUID, lambda u: u.hex)
+
 del _settings_tmp
 
 # ---------------------------------------------------------------------------

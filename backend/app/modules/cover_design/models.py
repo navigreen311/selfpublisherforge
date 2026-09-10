@@ -136,9 +136,13 @@ class CoverEditorState(BaseModel):
 
 
 class ABTest(TenantModel):
-    """A/B test for comparing multiple covers."""
+    """A/B test for comparing multiple covers.
 
-    __tablename__ = "ab_tests"
+    Table name is `cover_ab_tests`: product_page_lab has its own, unrelated
+    ABTest for listing blurbs, and both used to claim `ab_tests`.
+    """
+
+    __tablename__ = "cover_ab_tests"
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     cover_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
@@ -155,7 +159,7 @@ class ABTestVote(BaseModel):
 
     test_id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
-        ForeignKey("ab_tests.id", ondelete="CASCADE"),
+        ForeignKey("cover_ab_tests.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

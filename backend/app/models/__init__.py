@@ -34,7 +34,7 @@ from app.models.marketing import (
     PhaseTask,
     SocialPost,
 )
-from app.models.organization import Organization
+from app.models.organization import Invitation, Organization
 from app.models.project import Book, BookVersion, PenName, Project, Series
 from app.models.publishing import ComplianceScan, Listing, PublishingAccount, UploadValidation
 from app.models.publishing import PricingRule as PublishingPricingRule
@@ -65,6 +65,7 @@ from app.modules.review_intelligence.models import BookReview, ReputationScore, 
 
 __all__ = [
     # Domain models
+    "Invitation",
     "Organization",
     "User",
     "ApiKey",

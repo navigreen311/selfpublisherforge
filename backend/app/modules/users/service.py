@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,6 +94,7 @@ class UserService:
             data,
         )
         await db.flush()
+        db.expire_all()
         return await UserService.get_user_profile(db, user_id)
 
     @staticmethod
@@ -102,17 +104,13 @@ class UserService:
         preferences: dict[str, Any],
     ) -> dict[str, Any]:
         """Merge-update the JSONB preferences column."""
-        await db.execute(
-            sa_text(
-                "UPDATE users SET preferences = COALESCE(preferences, '{}'::jsonb) || :prefs::jsonb, "
-                "updated_at = :now WHERE id = :user_id"
-            ),
-            {
-                "prefs": json.dumps(preferences),
-                "now": datetime.now(UTC),
-                "user_id": user_id,
-            },
-        )
+        result = await db.execute(select(_UserModel).where(_UserModel.id == user_id))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise AppException(status_code=404, code="USER_NOT_FOUND", message="User not found")
+
+        user.preferences = {**(user.preferences or {}), **preferences}
+        user.updated_at = datetime.now(UTC)
         await db.flush()
         return await UserService.get_user_profile(db, user_id)
 

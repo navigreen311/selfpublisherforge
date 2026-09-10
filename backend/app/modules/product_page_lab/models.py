@@ -22,7 +22,7 @@ class ABTest(TenantModel):
     which converts better.
     """
 
-    __tablename__ = "ab_tests"
+    __tablename__ = "listing_ab_tests"
 
     book_id: Mapped[uuid.UUID] = mapped_column(index=True)
     name: Mapped[str] = mapped_column(String(200))

@@ -1,9 +1,10 @@
 """Organization model."""
 
 import enum
+import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -183,3 +184,38 @@ class Organization(BaseModel):
         Index("ix_organizations_limits_gin", "limits", postgresql_using="gin"),
         Index("ix_organizations_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
+
+
+class Invitation(BaseModel):
+    """Pending invitation for someone to join an organization.
+
+    UserService.invite_member has always INSERTed into `invitations`, but no
+    model or migration ever created the table, so inviting a member failed with
+    "relation invitations does not exist".
+    """
+
+    __tablename__ = "invitations"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="pending",
+        server_default="pending",
+        index=True,
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("ix_invitations_org_email", "org_id", "email"),)
