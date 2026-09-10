@@ -16,6 +16,8 @@ from uuid import uuid4
 
 import pytest
 
+from tests.conftest import populate_server_defaults
+
 from app.modules.specialty.models.enums import (
     AnswerKeyPosition,
     BookStatus,
@@ -324,7 +326,7 @@ async def test_generate_large_print_scales_grid_sizes():
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=populate_server_defaults)
 
     # Only the puzzle-list query goes through db.execute (book lookup is patched)
     puzzle_scalars = MagicMock()

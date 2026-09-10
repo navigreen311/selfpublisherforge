@@ -13,6 +13,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from tests.conftest import populate_server_defaults
+
 from app.modules.publishing_ops.schemas import (
     BookMetadata,
     BookMetadataUpdate,
@@ -57,7 +59,7 @@ def _make_db() -> AsyncMock:
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=populate_server_defaults)
     db.execute = AsyncMock()
     return db
 

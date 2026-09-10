@@ -13,6 +13,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.conftest import populate_server_defaults
+
 from app.modules.style_cloning.schemas import (
     ConformityCheckResult,
     CreateProfileRequest,
@@ -111,7 +113,7 @@ def _mock_db() -> AsyncMock:
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=populate_server_defaults)
     return db
 
 

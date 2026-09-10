@@ -15,10 +15,11 @@ os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
 os.environ.setdefault("ENVIRONMENT", "test")
 
 import asyncio
+import contextlib
 import logging
 import uuid
 from collections.abc import AsyncGenerator, Generator
-from datetime import UTC
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -270,3 +271,20 @@ def make_review(
         review_date=review_date or datetime.now(UTC),
         **kwargs,
     )
+
+
+async def populate_server_defaults(obj, *_args, **_kwargs):
+    """Stand in for what a real flush + refresh fills in.
+
+    Suites that mock the session with ``AsyncMock`` get a no-op ``refresh``, so
+    a freshly added model still has ``id``/``created_at``/``updated_at`` set to
+    None — and the service then hands that to a response schema that requires
+    all three. Wire this in as ``db.refresh``'s side effect:
+
+        db.refresh = AsyncMock(side_effect=populate_server_defaults)
+    """
+    now = datetime.now(UTC)
+    for attr, value in (("id", uuid.uuid4()), ("created_at", now), ("updated_at", now)):
+        if getattr(obj, attr, None) is None:
+            with contextlib.suppress(AttributeError):
+                setattr(obj, attr, value)

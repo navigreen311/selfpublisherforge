@@ -8,9 +8,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+from tests.conftest import populate_server_defaults
 
 from app.core.exceptions import AppException
 from app.modules.projects import service
@@ -47,12 +50,27 @@ def _make_project_row(
     }
 
 
-def _mock_project_orm(row: dict) -> MagicMock:
-    """Create a mock Project ORM object from a row dict."""
-    project = MagicMock()
-    for key, value in row.items():
-        setattr(project, key, value)
-    return project
+def _mock_project_orm(row: dict) -> SimpleNamespace:
+    """Create a stand-in Project ORM object from a row dict."""
+    defaults = {
+        "book_type": None,
+        "target_launch_date": None,
+        "genre": None,
+        "subgenre": None,
+        "target_audience": None,
+        "keywords": None,
+        "target_word_count": None,
+        "target_date": None,
+        "marketplace": None,
+        "template": None,
+        "cover_image_url": None,
+        "language": None,
+        "content_rating": None,
+        "has_ai_content": False,
+        "is_public_domain": False,
+    }
+    defaults.update(row)
+    return SimpleNamespace(**defaults)
 
 
 def _mock_db_for_create() -> AsyncMock:
@@ -60,7 +78,7 @@ def _mock_db_for_create() -> AsyncMock:
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
     mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
+    mock_db.refresh = AsyncMock(side_effect=populate_server_defaults)
     return mock_db
 
 
@@ -78,7 +96,7 @@ def _mock_db_with_project(project_row: dict | None) -> AsyncMock:
 
     mock_db.execute = AsyncMock(return_value=result)
     mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
+    mock_db.refresh = AsyncMock(side_effect=populate_server_defaults)
 
     return mock_db
 
@@ -87,25 +105,15 @@ def _mock_db_with_projects(project_rows: list[dict]) -> AsyncMock:
     """Return a mock db session that returns given projects."""
     mock_db = AsyncMock()
 
-    # For count query
-    count_result = MagicMock()
-    count_result.scalar.return_value = len(project_rows)
-
     # For projects query
     project_scalars = MagicMock()
     project_scalars.all.return_value = [_mock_project_orm(row) for row in project_rows]
     project_result = MagicMock()
     project_result.scalars.return_value = project_scalars
 
-    call_count = {"count": 0}
-
-    def execute_side_effect(query):
-        call_count["count"] += 1
-        if call_count["count"] == 1:
-            return count_result
-        return project_result
-
-    mock_db.execute = AsyncMock(side_effect=execute_side_effect)
+    # list_projects takes its total from db.scalar(count_query) and only ever
+    # calls execute() for the rows, so execute must not hand back the count.
+    mock_db.execute = AsyncMock(return_value=project_result)
     mock_db.scalar = AsyncMock(return_value=len(project_rows))
 
     return mock_db
@@ -268,12 +276,12 @@ class TestUpdateProject:
             user_role="admin",
             title="New Title",
             description="New Description",
-            status="published",
+            status="active",
         )
 
         assert result.title == "New Title"
         assert result.description == "New Description"
-        assert result.status == "published"
+        assert result.status == "active"
         mock_db.commit.assert_called_once()
         mock_db.refresh.assert_called_once()
 
@@ -298,9 +306,9 @@ class TestUpdateProject:
         project_row = _make_project_row(project_id=project_id, org_id=org_id, status="draft")
         mock_db = _mock_db_with_project(project_row)
 
-        result = await service.update_project(mock_db, project_id, org_id, user_role="owner", status="published")
+        result = await service.update_project(mock_db, project_id, org_id, user_role="owner", status="active")
 
-        assert result.status == "published"
+        assert result.status == "active"
 
     @pytest.mark.asyncio
     async def test_project_not_found_raises_404(self):
@@ -347,7 +355,7 @@ class TestListProjects:
         project_rows = [
             _make_project_row(title="Project 1", org_id=org_id),
             _make_project_row(title="Project 2", org_id=org_id, project_type="series"),
-            _make_project_row(title="Project 3", org_id=org_id, status="published"),
+            _make_project_row(title="Project 3", org_id=org_id, status="active"),
         ]
         mock_db = _mock_db_with_projects(project_rows)
 

@@ -18,6 +18,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.conftest import populate_server_defaults
+
 from app.core.exceptions import AppException
 from app.modules.market_intelligence.schemas import (
     CompetitorDetail,
@@ -124,7 +126,7 @@ def mock_db():
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=populate_server_defaults)
     return db
 
 

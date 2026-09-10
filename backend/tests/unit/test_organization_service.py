@@ -12,6 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.conftest import populate_server_defaults
+
 from app.core.exceptions import AppException
 from app.models.user import UserRole
 from app.modules.organization import service
@@ -91,7 +93,7 @@ def _mock_db_with_org(org_row: dict | None) -> AsyncMock:
 
     mock_db.execute = AsyncMock(return_value=result)
     mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
+    mock_db.refresh = AsyncMock(side_effect=populate_server_defaults)
 
     return mock_db
 

@@ -15,6 +15,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from tests.conftest import populate_server_defaults
+
 from app.modules.pricing_automation.models import ABTestStatus, RuleStatus
 from app.modules.pricing_automation.schemas import (
     ABTestCreate,
@@ -48,7 +50,7 @@ def mock_db():
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=populate_server_defaults)
     db.execute = AsyncMock()
     return db
 
