@@ -510,7 +510,7 @@ async def _handle_invoice_payment_failed(
         invoice_id = invoice.get("id")
 
         # Get attempt count for this invoice
-        attempt_count = await get_payment_attempt_count(db, org_id, invoice_id)
+        attempt_count = await get_payment_attempt_count(db, org_id, str(invoice_id))
 
         await handle_payment_failure(db, org_id, invoice, attempt_count)
 

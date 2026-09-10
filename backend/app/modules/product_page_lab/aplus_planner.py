@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,10 +76,10 @@ async def generate_aplus_plan(
 
     Returns a structured plan with module specs, suggested copy, and image dimensions.
     """
-    modules = []
+    modules: list[dict[str, Any]] = []
     for template in DEFAULT_MODULES:
-        module = dict(template)
-        module["ai_copy"] = _generate_module_copy(module["module_type"], book_title or "Your Book", genre)
+        module: dict[str, Any] = dict(template)
+        module["ai_copy"] = _generate_module_copy(str(module["module_type"]), book_title or "Your Book", genre)
         modules.append(module)
 
     # Persist to DB

@@ -436,10 +436,10 @@ def generate_crossword(
     for r in range(actual_height):
         for c in range(actual_width):
             if grid_2d[r][c] is not None:
-                num = number_positions.get((r, c))
+                cell_number = number_positions.get((r, c))
                 numbered_grid[r][c] = {
                     "letter": "",
-                    "number": num,
+                    "number": cell_number,
                 }
 
     return {

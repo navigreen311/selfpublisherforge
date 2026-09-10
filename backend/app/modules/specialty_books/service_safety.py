@@ -228,18 +228,25 @@ async def _get_book_record(db: AsyncSession, book_type: str, book_id: uuid.UUID,
 
 async def _get_book_pages(db: AsyncSession, book_type: str, book_id: uuid.UUID, org_id: uuid.UUID) -> list[Any]:
     """Retrieve pages/puzzles for a book."""
+    # One name bound to three different model classes; declare it once so the
+    # branches are reassignments rather than conflicting imports.
+    PageModel: Any
     if book_type == "childrens":
-        from app.modules.specialty_books.models_childrens import ChildrensBookPage as PageModel
+        from app.modules.specialty_books.models_childrens import ChildrensBookPage
+
+        PageModel = ChildrensBookPage
     elif book_type == "coloring":
         try:
-            from app.modules.specialty_books.models_coloring import (
-                ColoringBookPage as PageModel,  # type: ignore[assignment]
-            )
+            from app.modules.specialty_books.models_coloring import ColoringBookPage
+
+            PageModel = ColoringBookPage
         except ImportError:
             return []
     elif book_type == "puzzle":
         try:
-            from app.modules.specialty_books.models_puzzle import Puzzle as PageModel  # type: ignore[assignment]
+            from app.modules.specialty_books.models_puzzle import Puzzle
+
+            PageModel = Puzzle
         except ImportError:
             return []
     else:
