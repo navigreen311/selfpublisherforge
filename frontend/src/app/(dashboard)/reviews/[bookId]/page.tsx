@@ -1,17 +1,12 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { ReviewDashboard } from "@/modules/reviews/components/ReviewDashboard";
 import Link from "next/link";
 import { useTranslations } from "@/hooks/use-translations";
 
-interface BookReviewPageProps {
-  params: {
-    bookId: string;
-  };
-}
-
-export default function BookReviewPage({ params }: BookReviewPageProps) {
-  const { bookId } = params;
+export default function BookReviewPage() {
+  const { bookId } = useParams<{ bookId: string }>();
   const t = useTranslations("reviews");
 
   return (

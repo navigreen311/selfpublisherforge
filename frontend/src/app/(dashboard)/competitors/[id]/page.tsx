@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useCompetitorAnalysis, useWeaknesses, useOpportunity } from "@/modules/competitors/hooks";
 import { OpportunityCard } from "@/modules/competitors/components/OpportunityCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,12 +9,8 @@ import { cn } from "@/lib/utils";
 import type { WeaknessSignal } from "@/modules/competitors/types";
 import { useTranslations } from "@/hooks/use-translations";
 
-interface CompetitorDetailPageProps {
-  params: { id: string };
-}
-
-export default function CompetitorDetailPage({ params }: CompetitorDetailPageProps) {
-  const { id } = params;
+export default function CompetitorDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const t = useTranslations("competitors");
   const { data: analysis, isLoading: analysisLoading } = useCompetitorAnalysis(id);
   const { data: weaknesses = [], isLoading: weaknessesLoading } = useWeaknesses(id);
