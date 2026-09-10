@@ -27,6 +27,24 @@ jest.mock("lucide-react", () => ({
   BarChart3: (props: React.SVGAttributes<SVGElement>) => <svg {...props} />,
 }));
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLDivElement>) => {
     if (React.isValidElement(children)) return React.cloneElement(children, { ...props, ref } as Record<string, unknown>);
     return <div ref={ref} {...props}>{children}</div>;

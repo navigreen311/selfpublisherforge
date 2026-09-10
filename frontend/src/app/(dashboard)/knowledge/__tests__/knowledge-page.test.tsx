@@ -71,6 +71,7 @@ jest.mock("@/modules/knowledge/hooks", () => ({
   useKnowledgeTags: (...args: unknown[]) => mockUseKnowledgeTags(...args),
   useKnowledgeSearch: (...args: unknown[]) => mockUseKnowledgeSearch(...args),
   useCreateEntry: (...args: unknown[]) => mockUseCreateEntry(...args),
+  useDeleteEntry: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock SearchBar component

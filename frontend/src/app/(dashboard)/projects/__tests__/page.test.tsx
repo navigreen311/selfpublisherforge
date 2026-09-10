@@ -115,6 +115,8 @@ const mockUseProjects = jest.fn();
 jest.mock("@/modules/projects/hooks", () => ({
   useProjects: (...args: unknown[]) => mockUseProjects(...args),
   // Re-export the Project type as a no-op; TypeScript types are erased at runtime
+  useDeleteProject: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useUpdateProject: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // ---------------------------------------------------------------------------

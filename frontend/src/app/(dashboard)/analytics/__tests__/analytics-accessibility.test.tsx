@@ -21,6 +21,8 @@ jest.mock("@/modules/analytics/hooks", () => ({
   usePortfolioMetrics: () => mockUsePortfolioMetrics(),
   useGenerateReport: () => mockUseGenerateReport(),
   useImportRoyalties: () => mockUseImportRoyalties(),
+  useEnhancedDashboard: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useGenerateEnhancedReport: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // ── Mock: next/link ─────────────────────────────────────────────────────

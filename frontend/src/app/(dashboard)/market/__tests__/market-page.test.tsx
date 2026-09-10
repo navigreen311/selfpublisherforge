@@ -26,6 +26,8 @@ jest.mock("@/modules/market/hooks", () => ({
   useNicheAnalysis: (...args: unknown[]) => mockUseNicheAnalysis(...args),
   useMarketTrends: (...args: unknown[]) => mockUseMarketTrends(...args),
   useMarketSnapshots: (...args: unknown[]) => mockUseMarketSnapshots(...args),
+  useTrackCompetitor: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useAIMarketSummary: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
 }));
 
 // Mock market components to simple stubs

@@ -13,6 +13,9 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/.next/',
+    // Playwright specs. They import from '@playwright/test', which has no jest
+    // runner, so jest collected them and reported four suites that can never run.
+    '<rootDir>/e2e/',
     // See tsconfig.json: these suites import ../components/PuzzleBookList and
     // ../components/CreatePuzzleBookWizard, neither of which has ever existed
     // on any branch. They fail at import, so they cannot be skipped in-file.

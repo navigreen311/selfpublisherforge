@@ -64,6 +64,21 @@ export const supportedNamespaces = [
   "market",
   "marketing",
   "pipeline",
+  // These namespace files exist under messages/{locale}/ and are requested by
+  // live components (useTranslations("reviews"), ("cover-design"), ...) but
+  // were never listed here, so request.ts skipped them and the pages rendered
+  // raw key paths.
+  "admin",
+  "advertising",
+  "agents",
+  "audiobook",
+  "competitors",
+  "cover-design",
+  "knowledge",
+  "publishing",
+  "reviews",
+  "style-profiles",
+  "writing",
 ] as const;
 
 export type Namespace = (typeof supportedNamespaces)[number];

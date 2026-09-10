@@ -13,6 +13,7 @@ const mockUseUpdateProfile = jest.fn();
 jest.mock("@/modules/users/hooks", () => ({
   useCurrentUser: (...args: unknown[]) => mockUseCurrentUser(...args),
   useUpdateProfile: (...args: unknown[]) => mockUseUpdateProfile(...args),
+  useDeleteAccount: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock sonner toast

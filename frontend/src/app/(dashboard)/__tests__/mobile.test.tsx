@@ -14,6 +14,7 @@ jest.mock("next/navigation", () => ({
     prefetch: jest.fn(),
   }),
   usePathname: () => "/dashboard",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock API hooks
@@ -33,6 +34,7 @@ jest.mock("@/modules/analytics/hooks", () => ({
     error: null,
     refetch: jest.fn(),
   }),
+  useEnhancedDashboard: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
 }));
 
 jest.mock("@/modules/projects/hooks", () => ({
@@ -147,6 +149,7 @@ jest.mock("@/modules/knowledge/hooks", () => ({
   useDeleteEntry: () => ({
     mutateAsync: jest.fn(),
   }),
+  useImportEntry: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Helper to set viewport size

@@ -34,6 +34,10 @@ jest.mock("@/modules/agents/hooks", () => ({
   useTasks: (...args: unknown[]) => mockUseTasks(...args),
   useBudgets: (...args: unknown[]) => mockUseBudgets(...args),
   useEmergencyStop: (...args: unknown[]) => mockUseEmergencyStop(...args),
+  useAgentUsage: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useCreateTask: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useConfigureAgent: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useCreateCustomAgent: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock AgentCard to a simple stub

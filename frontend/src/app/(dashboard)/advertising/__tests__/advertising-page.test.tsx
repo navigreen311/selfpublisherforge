@@ -20,6 +20,7 @@ const mockUseAdDashboard = jest.fn();
 
 jest.mock("@/modules/advertising/hooks", () => ({
   useAdDashboard: (...args: unknown[]) => mockUseAdDashboard(...args),
+  useEnhancedDashboard: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
 }));
 
 // Mock the CampaignCard component

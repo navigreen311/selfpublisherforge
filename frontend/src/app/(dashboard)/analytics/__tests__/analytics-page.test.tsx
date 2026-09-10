@@ -9,6 +9,7 @@ const mockUseDashboard = jest.fn();
 
 jest.mock("@/modules/analytics/hooks", () => ({
   useDashboard: (...args: unknown[]) => mockUseDashboard(...args),
+  useEnhancedDashboard: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
 }));
 
 jest.mock("next/link", () => {

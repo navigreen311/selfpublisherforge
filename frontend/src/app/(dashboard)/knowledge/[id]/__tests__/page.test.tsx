@@ -79,6 +79,7 @@ jest.mock("@/modules/knowledge/hooks", () => ({
   useKnowledgeEntry: (...args: unknown[]) => mockUseKnowledgeEntry(...args),
   useDeleteEntry: (...args: unknown[]) => mockUseDeleteEntry(...args),
   useSummarizeEntry: (...args: unknown[]) => mockUseSummarizeEntry(...args),
+  useUpdateEntry: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock Radix UI Dialog primitives for ConfirmDialog
@@ -143,6 +144,24 @@ jest.mock("@radix-ui/react-dialog", () => ({
 
 // Mock Radix Slot so that Button renders correctly
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {

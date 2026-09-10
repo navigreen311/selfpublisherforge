@@ -15,6 +15,14 @@ jest.mock("../../hooks", () => ({
     isPending: false,
     isError: false,
   }),
+  useCreateEntry: () => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn().mockResolvedValue({}),
+    isPending: false,
+    isError: false,
+    error: null,
+    reset: jest.fn(),
+  }),
 }));
 
 // Mock lucide-react icons to simple spans

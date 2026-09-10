@@ -7,6 +7,15 @@ import ReviewsPage from "../page";
 jest.mock("@/modules/reviews/hooks", () => ({
   useAlerts: jest.fn(),
   useReviews: jest.fn(),
+  useReviewStats: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useSentimentTrend: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useBookReviewSummaries: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useReviewInsights: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useRefreshInsights: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useAlertNotifications: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useMarkReviewRead: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useFlagReview: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useDeleteReviewAlert: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 jest.mock("next/link", () => {
