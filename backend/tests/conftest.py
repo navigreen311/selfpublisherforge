@@ -288,3 +288,19 @@ async def populate_server_defaults(obj, *_args, **_kwargs):
         if getattr(obj, attr, None) is None:
             with contextlib.suppress(AttributeError):
                 setattr(obj, attr, value)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Dispose the test engine so the process can actually exit.
+
+    aiosqlite runs each connection on its own **non-daemon** thread. Pooled
+    connections are never closed on their own, so those threads sit blocked on
+    their queue forever and CPython refuses to exit while they live: pytest
+    prints its summary, returns its exit code, and the process then hangs.
+
+    On a developer's machine that looks like a slow test run. In CI it burned
+    the job's entire six-hour budget after a session that took sixteen seconds.
+    """
+    import asyncio
+
+    asyncio.run(engine.dispose())
