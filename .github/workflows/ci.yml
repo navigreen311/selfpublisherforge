@@ -123,6 +123,8 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           pytest tests/ -v \
+            --timeout=120 \
+            --timeout-method=thread \
             --cov=app \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
