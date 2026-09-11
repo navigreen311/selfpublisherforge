@@ -50,6 +50,13 @@ class User(BaseModel):
     )
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Platform administration is not an organization role. Every /admin
+    # endpoint is platform-wide — list_users does `select(User)` with no org
+    # filter, and the feature flags are global — so guarding them with
+    # require_role("admin", "owner") let any org owner read every tenant's
+    # users and flip flags for all of them. This bit is the real guard, and it
+    # is granted deliberately: nobody has it by default.
+    is_platform_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     onboarding_state: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)

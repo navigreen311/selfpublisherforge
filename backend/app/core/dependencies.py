@@ -87,3 +87,31 @@ def require_role(*roles: str):
         return current_user
 
     return role_checker
+
+
+async def require_platform_admin(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Require the caller to be a platform administrator.
+
+    Distinct from ``require_role("admin", "owner")``, which asks about a role
+    *within an organization*. Everything under ``/admin`` is platform-wide —
+    it lists users across every tenant and sets global feature flags — so an
+    organization role is the wrong question to ask there.
+
+    The bit is read from the database rather than the token, so revoking it
+    takes effect on the next request instead of whenever the access token
+    happens to expire.
+    """
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    result = await db.execute(select(User.is_platform_admin).where(User.id == current_user["user_id"]))
+    if not result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform administrator access required",
+        )
+    return current_user

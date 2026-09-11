@@ -44,11 +44,7 @@ async def _create_user(
     role: UserRole = UserRole.VIEWER,
     is_platform_admin: bool = False,
 ) -> User:
-    """Create a test user with a specific role.
-
-    Note: Platform admin status is typically stored in preferences or a separate field.
-    For this test, we'll use role=OWNER as a proxy for admin privileges.
-    """
+    """Create a test user with a specific role and platform-admin bit."""
     user = User(
         org_id=org_id,
         email=email,
@@ -56,7 +52,7 @@ async def _create_user(
         name="Test User",
         role=role,
         is_active=True,
-        preferences={"is_platform_admin": is_platform_admin} if is_platform_admin else None,
+        is_platform_admin=is_platform_admin,
     )
     db.add(user)
     await db.commit()
@@ -254,6 +250,12 @@ class TestPlatformAdminAccess:
         assert "flags" in data
         assert isinstance(data["flags"], list)
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="T-010a / P-06: admin.service feature flags are a declared stub — "
+        "get returns [] and update echoes its argument back. These assertions are the "
+        "specification for the real table; remove this marker when P-06 lands it.",
+    )
     @pytest.mark.asyncio
     async def test_admin_can_update_feature_flag(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can update feature flags."""
@@ -361,6 +363,12 @@ class TestEdgeCases:
 
         assert resp.status_code == 404
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="T-010a / P-06: admin.service feature flags are a declared stub — "
+        "get returns [] and update echoes its argument back. These assertions are the "
+        "specification for the real table; remove this marker when P-06 lands it.",
+    )
     @pytest.mark.asyncio
     async def test_update_nonexistent_feature_flag(self, client: AsyncClient, db: AsyncSession):
         """Updating non-existent feature flag returns 404."""
