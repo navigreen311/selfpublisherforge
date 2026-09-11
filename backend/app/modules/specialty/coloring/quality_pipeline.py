@@ -261,8 +261,11 @@ async def step_3_stroke_uniformity(
         result = Image.eval(opened, lambda px: 255 - px)
 
         # Measure uniformity: compare original vs processed black pixel counts
-        orig_black = sum(1 for px in img.getdata() if px == 0)
-        new_black = sum(1 for px in result.getdata() if px == 0)
+        # histogram()[0] is the count of value-0 (pure black) pixels in an "L"
+        # image — the same number the old per-pixel scan produced, without
+        # materialising every pixel.
+        orig_black = img.histogram()[0]
+        new_black = result.histogram()[0]
         if orig_black > 0:
             change_pct = abs(new_black - orig_black) / orig_black * 100
             if change_pct > 20:

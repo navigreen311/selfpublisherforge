@@ -264,10 +264,18 @@ class AudioProcessor:
 
         threshold_linear = 10.0 ** (threshold_db / 20.0)
 
-        compressed = np.copy(data)
-        mask = np.abs(data) > threshold_linear
-        above = np.abs(data[mask]) - threshold_linear
-        compressed[mask] = np.sign(data[mask]) * (threshold_linear + above / ratio)
+        magnitude = np.abs(data)
+        above = magnitude - threshold_linear
+        # np.where rather than a boolean-mask assignment: same result, and it
+        # keeps the sample dtype instead of silently promoting to float64.
+        compressed = np.asarray(
+            np.where(
+                magnitude > threshold_linear,
+                np.sign(data) * (threshold_linear + above / ratio),
+                data,
+            ),
+            dtype=data.dtype,
+        )
 
         out_path = self._temp_path(audio_path, "_compressed")
         sf.write(str(out_path), compressed, rate)
@@ -344,8 +352,8 @@ class AudioProcessor:
         head_samples = int(rate * head_seconds)
         tail_samples = int(rate * tail_seconds)
 
-        head = rng.normal(0, 0.0001, head_samples).astype(data.dtype)
-        tail = rng.normal(0, 0.0001, tail_samples).astype(data.dtype)
+        head = np.asarray(rng.normal(0, 0.0001, head_samples), dtype=data.dtype)
+        tail = np.asarray(rng.normal(0, 0.0001, tail_samples), dtype=data.dtype)
 
         result = np.concatenate([head, data, tail])
 

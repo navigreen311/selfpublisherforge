@@ -1,17 +1,25 @@
-fastapi==0.115.0
+fastapi==0.141.1
+# Pinned directly: FastAPI's floor (>=0.46.0) still admits versions with known
+# advisories; 1.3.1 is the first release clear of all of them.
+starlette==1.6.0
 uvicorn[standard]==0.30.0
 sqlalchemy==2.0.35
 alembic==1.13.0
 asyncpg>=0.30.0
 pydantic==2.9.0
 pydantic-settings==2.5.0
-python-jose[cryptography]==3.3.0
+# python-jose was dropped: its 3.3.0 CVEs are fixed in 3.4.0, but PYSEC-2025-185
+# has no fix at all, and it hard-depends on `ecdsa`, whose Minerva timing
+# advisory (PYSEC-2026-1325) the maintainers have declined to fix. PyJWT covers
+# the HS256 signing this codebase actually uses.
+pyjwt==2.13.0
+cryptography==50.0.1
 passlib[bcrypt]==1.7.4
 celery[redis]==5.4.0
 redis==5.1.0
 python-json-logger==2.0.7
 httpx==0.27.0
-python-multipart==0.0.12
+python-multipart==0.0.31
 boto3==1.35.0
 stripe==10.0.0
 anthropic==0.34.0
@@ -19,26 +27,35 @@ openai==1.50.0
 langchain>=0.3.7
 elasticsearch==8.15.0
 sendgrid==6.11.0
-pillow==10.4.0
+pillow==12.3.0
 python-barcode==0.15.1
 python-docx==1.1.0
 ebooklib==0.18
 # weasyprint==62.0  # Commented out: requires GTK on Windows, optional (PDF export)
 flower==2.0.0
-pytest==8.3.0
-pytest-asyncio==0.24.0
-httpx==0.27.0
+pytest==9.1.1
+pytest-asyncio==1.4.0
 defusedxml==0.7.1
 mypy==1.11.2
 ruff==0.6.0
 locust==2.31.0
 
+# Transitive pins — floors raised only to clear known advisories. Each of these
+# is pulled in by something above; remove a pin once its parent's own floor
+# passes it.
+langsmith>=0.8.18     # via langchain
+msgpack>=1.2.1        # via celery / cachecontrol
+tornado>=6.5.8        # via flower / locust
+
 # VoiceForge Integration
 pydub>=0.25.1
 pyloudnorm>=0.1.1
 soundfile>=0.12.1
-numpy>=2.1.0
-scipy>=1.12.0
+# Pinned, not floored: mypy type-checks against whatever numpy stubs are
+# installed, so an open floor lets a numpy release turn the lint job red
+# overnight with no code change — which is exactly what happened.
+numpy==2.5.3
+scipy==1.18.1
 websockets>=12.0
 mutagen>=1.47.0
 ffmpeg-python>=0.2.0

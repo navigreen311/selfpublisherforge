@@ -100,7 +100,7 @@ def test_authenticate_ws_rejects_expired_token() -> None:
 def test_authenticate_ws_rejects_token_without_subject() -> None:
     """Test token missing 'sub' claim raises ValueError."""
     # Create token without sub claim (using dict manipulation)
-    from jose import jwt
+    import jwt
 
     from app.config import get_settings
 
@@ -113,7 +113,7 @@ def test_authenticate_ws_rejects_token_without_subject() -> None:
 
 def test_authenticate_ws_rejects_wrong_signature() -> None:
     """Test token signed with wrong key raises ValueError."""
-    from jose import jwt
+    import jwt
 
     payload = {"sub": "user-123", "exp": 9999999999}
     token = jwt.encode(payload, "wrong-secret-key", algorithm="HS256")

@@ -1,8 +1,7 @@
 """
 Security utilities: JWT token creation/validation and password hashing.
 
-Uses ``python-jose`` for JWT operations and ``passlib`` with bcrypt for
-password hashing.
+Uses ``PyJWT`` for JWT operations and bcrypt for password hashing.
 """
 
 from __future__ import annotations
@@ -12,7 +11,8 @@ from typing import Any, cast
 from uuid import uuid4
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 
 from app.config import get_settings
 
@@ -71,5 +71,5 @@ def decode_token(token: str) -> dict[str, Any]:
     settings = get_settings()
     try:
         return cast("dict[str, Any]", jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM]))
-    except JWTError as exc:
+    except PyJWTError as exc:
         raise ValueError(f"Invalid token: {exc}") from exc
