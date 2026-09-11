@@ -62,27 +62,28 @@ def other_org_id() -> uuid.UUID:
     return uuid.uuid4()
 
 
-def _strip_pg_only(metadata):
-    """Remove PostgreSQL-only index kwargs and server_defaults that SQLite cannot handle."""
-    for table in metadata.tables.values():
-        for col in table.columns:
-            if col.server_default is not None:
-                col.server_default = None
-        idxs_to_drop = []
-        for idx in table.indexes:
-            if getattr(idx, "dialect_options", {}).get("postgresql", {}):
-                pass  # keep but strip options
-            idx.dialect_options = {}
-        for idx in idxs_to_drop:
-            table.indexes.discard(idx)
+# `_strip_pg_only` used to live here. It did three destructive things to the
+# shared `Base.metadata`, permanently and for the whole process:
+#
+#   * `idx.dialect_options = {}` on *every* index of *every* table, replacing
+#     SQLAlchemy's lazily-populating PopulateDict with a plain dict. After
+#     that, `index.dialect_options["sqlite"]` — which the SQLite DDL compiler
+#     reads for every CREATE INDEX — raises KeyError: 'sqlite' forever. That
+#     single line accounted for 372 errors across suites that never import
+#     anything from this directory.
+#   * `col.server_default = None` on every column of every table, so later
+#     tests lost defaults they relied on.
+#   * built an `idxs_to_drop` list, never appended to it, and looped over it.
+#
+# The root tests/conftest.py already registers a `before_create` listener that
+# does this correctly and only for the duration of the DDL. Nothing needs to be
+# stripped here.
 
 
 @pytest_asyncio.fixture
 async def db():
     """Yield an async SQLite session with tables created."""
     engine = create_async_engine("sqlite+aiosqlite://", echo=False)
-
-    _strip_pg_only(Base.metadata)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

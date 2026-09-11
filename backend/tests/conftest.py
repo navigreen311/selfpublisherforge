@@ -10,9 +10,17 @@ import os
 # DATABASE_URL. get_settings() is lru_cached, so this has to be set before the
 # first `app.*` import or the shim never engages and Postgres-only types reach
 # the SQLite driver — which is why binding a uuid.UUID used to fail outright.
+#
+# It is assigned, not setdefault'ed. The engine below is unconditionally
+# SQLite, so the environment must say so unconditionally too. CI exports a
+# Postgres DATABASE_URL for the migration-validation step, and with setdefault
+# that value survived into the pytest process: the shim stayed off, the SQLite
+# engine was handed real JSONB/ARRAY/UUID types, and ~200 tests failed on
+# "type 'UUID' is not supported" — none of which reproduced locally, because
+# locally nothing exported DATABASE_URL.
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
-os.environ.setdefault("ENVIRONMENT", "test")
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["ENVIRONMENT"] = "test"
 
 import asyncio
 import contextlib
