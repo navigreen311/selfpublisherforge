@@ -65,7 +65,7 @@ class ColoringBook(TenantModel):
 
     # Relationships
     pages: Mapped[list[ColoringBookPage]] = relationship(
-        "ColoringBookPage",
+        "app.modules.specialty.models.coloring.ColoringBookPage",
         back_populates="book",
         cascade="all, delete-orphan",
     )
@@ -104,4 +104,7 @@ class ColoringBookPage(BaseModel):
     bg_pure_white: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # Relationships
-    book: Mapped[ColoringBook] = relationship("ColoringBook", back_populates="pages")
+    book: Mapped[ColoringBook] = relationship(
+        "app.modules.specialty.models.coloring.ColoringBook",
+        back_populates="pages",
+    )

@@ -38,10 +38,16 @@ class ChildrensBook(TenantModel):
 
     # Relationships
     pages: Mapped[list[ChildrensBookPage]] = relationship(
-        back_populates="book", cascade="all, delete-orphan", lazy="selectin"
+        "app.modules.specialty_books.models_childrens.ChildrensBookPage",
+        back_populates="book",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     characters: Mapped[list[ChildrensBookCharacter]] = relationship(
-        back_populates="book", cascade="all, delete-orphan", lazy="selectin"
+        "app.modules.specialty_books.models_childrens.ChildrensBookCharacter",
+        back_populates="book",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
 
@@ -67,7 +73,9 @@ class ChildrensBookPage(BaseModel):
     text_plate: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Relationships
-    book: Mapped[ChildrensBook] = relationship(back_populates="pages")
+    book: Mapped[ChildrensBook] = relationship(
+        "app.modules.specialty_books.models_childrens.ChildrensBook", back_populates="pages"
+    )
 
 
 class ChildrensBookCharacter(BaseModel):
@@ -85,4 +93,6 @@ class ChildrensBookCharacter(BaseModel):
     scale_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
-    book: Mapped[ChildrensBook] = relationship(back_populates="characters")
+    book: Mapped[ChildrensBook] = relationship(
+        "app.modules.specialty_books.models_childrens.ChildrensBook", back_populates="characters"
+    )

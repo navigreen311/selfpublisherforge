@@ -75,7 +75,7 @@ class PuzzleBook(TenantModel):
 
     # Relationships
     puzzles: Mapped[list[Puzzle]] = relationship(
-        "Puzzle",
+        "app.modules.specialty.models.puzzles.Puzzle",
         back_populates="book",
         cascade="all, delete-orphan",
     )
@@ -114,4 +114,4 @@ class Puzzle(BaseModel):
     has_unique_solution: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # Relationships
-    book: Mapped[PuzzleBook] = relationship("PuzzleBook", back_populates="puzzles")
+    book: Mapped[PuzzleBook] = relationship("app.modules.specialty.models.puzzles.PuzzleBook", back_populates="puzzles")

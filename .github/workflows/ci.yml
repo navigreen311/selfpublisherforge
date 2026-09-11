@@ -56,6 +56,10 @@ jobs:
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
+    # The test session itself takes about a minute. This ceiling exists because
+    # pytest has twice finished its run and then failed to exit, burning the
+    # full six-hour default before the runner cancelled it.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: backend

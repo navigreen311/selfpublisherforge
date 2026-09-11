@@ -95,13 +95,13 @@ class Cookbook(TenantModel):
 
     # Relationships
     chapters: Mapped[list[CookbookChapter]] = relationship(
-        "CookbookChapter",
+        "app.modules.specialty.models.cookbook.CookbookChapter",
         back_populates="cookbook",
         cascade="all, delete-orphan",
         order_by="CookbookChapter.chapter_order",
     )
     meal_plans: Mapped[list[MealPlan]] = relationship(
-        "MealPlan",
+        "app.modules.specialty.models.cookbook.MealPlan",
         back_populates="cookbook",
         cascade="all, delete-orphan",
     )
@@ -129,9 +129,12 @@ class CookbookChapter(BaseModel):
     )
 
     # Relationships
-    cookbook: Mapped[Cookbook] = relationship("Cookbook", back_populates="chapters")
+    cookbook: Mapped[Cookbook] = relationship(
+        "app.modules.specialty.models.cookbook.Cookbook",
+        back_populates="chapters",
+    )
     recipes: Mapped[list[Recipe]] = relationship(
-        "Recipe",
+        "app.modules.specialty.models.cookbook.Recipe",
         back_populates="chapter",
         cascade="all, delete-orphan",
         order_by="Recipe.recipe_order",
@@ -186,7 +189,10 @@ class Recipe(BaseModel):
     scaling_factor: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     # Relationships
-    chapter: Mapped[CookbookChapter] = relationship("CookbookChapter", back_populates="recipes")
+    chapter: Mapped[CookbookChapter] = relationship(
+        "app.modules.specialty.models.cookbook.CookbookChapter",
+        back_populates="recipes",
+    )
 
 
 class MealPlan(BaseModel):
@@ -215,4 +221,7 @@ class MealPlan(BaseModel):
     shopping_list: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    cookbook: Mapped[Cookbook] = relationship("Cookbook", back_populates="meal_plans")
+    cookbook: Mapped[Cookbook] = relationship(
+        "app.modules.specialty.models.cookbook.Cookbook",
+        back_populates="meal_plans",
+    )

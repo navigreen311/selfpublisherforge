@@ -89,12 +89,12 @@ class ChildrensBook(TenantModel):
 
     # Relationships
     pages: Mapped[list[ChildrensBookPage]] = relationship(
-        "ChildrensBookPage",
+        "app.modules.specialty.models.childrens.ChildrensBookPage",
         back_populates="book",
         cascade="all, delete-orphan",
     )
     characters: Mapped[list[ChildrensBookCharacter]] = relationship(
-        "ChildrensBookCharacter",
+        "app.modules.specialty.models.childrens.ChildrensBookCharacter",
         back_populates="book",
         cascade="all, delete-orphan",
     )
@@ -139,7 +139,10 @@ class ChildrensBookPage(BaseModel):
     metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    book: Mapped[ChildrensBook] = relationship("ChildrensBook", back_populates="pages")
+    book: Mapped[ChildrensBook] = relationship(
+        "app.modules.specialty.models.childrens.ChildrensBook",
+        back_populates="pages",
+    )
 
 
 class ChildrensBookCharacter(BaseModel):
@@ -164,4 +167,7 @@ class ChildrensBookCharacter(BaseModel):
     time_rules: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
-    book: Mapped[ChildrensBook] = relationship("ChildrensBook", back_populates="characters")
+    book: Mapped[ChildrensBook] = relationship(
+        "app.modules.specialty.models.childrens.ChildrensBook",
+        back_populates="characters",
+    )

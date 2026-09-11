@@ -209,8 +209,10 @@ class ChildrensBook(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    pages = relationship("ChildrensBookPage", back_populates="book", lazy="selectin")
-    characters = relationship("ChildrensBookCharacter", back_populates="book", lazy="selectin")
+    pages = relationship("app.modules.specialty_books.models.ChildrensBookPage", back_populates="book", lazy="selectin")
+    characters = relationship(
+        "app.modules.specialty_books.models.ChildrensBookCharacter", back_populates="book", lazy="selectin"
+    )
 
     __table_args__ = (
         Index("ix_childrens_books_org_status", "org_id", "status"),
@@ -250,7 +252,7 @@ class ChildrensBookPage(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    book = relationship("ChildrensBook", back_populates="pages")
+    book = relationship("app.modules.specialty_books.models.ChildrensBook", back_populates="pages")
 
     __table_args__ = (
         Index("ix_cb_pages_org_status", "org_id", "page_type"),
@@ -279,7 +281,7 @@ class ChildrensBookCharacter(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    book = relationship("ChildrensBook", back_populates="characters")
+    book = relationship("app.modules.specialty_books.models.ChildrensBook", back_populates="characters")
 
     __table_args__ = (
         Index("ix_cb_chars_org_id", "org_id"),
@@ -323,7 +325,7 @@ class ColoringBook(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    pages = relationship("ColoringBookPage", back_populates="book", lazy="selectin")
+    pages = relationship("app.modules.specialty_books.models.ColoringBookPage", back_populates="book", lazy="selectin")
 
     __table_args__ = (
         Index("ix_coloring_books_org_status", "org_id", "status"),
@@ -359,7 +361,7 @@ class ColoringBookPage(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    book = relationship("ColoringBook", back_populates="pages")
+    book = relationship("app.modules.specialty_books.models.ColoringBook", back_populates="pages")
 
     __table_args__ = (
         Index("ix_clr_pages_org_id", "org_id"),
@@ -402,7 +404,7 @@ class PuzzleBook(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    puzzles = relationship("Puzzle", back_populates="book", lazy="selectin")
+    puzzles = relationship("app.modules.specialty_books.models.Puzzle", back_populates="book", lazy="selectin")
 
     __table_args__ = (
         Index("ix_puzzle_books_org_status", "org_id", "status"),
@@ -443,7 +445,7 @@ class Puzzle(TenantModel):
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    book = relationship("PuzzleBook", back_populates="puzzles")
+    book = relationship("app.modules.specialty_books.models.PuzzleBook", back_populates="puzzles")
 
     __table_args__ = (
         Index("ix_puzzles_org_id", "org_id"),
@@ -705,7 +707,7 @@ class BookBundle(TenantModel):
     total_pages: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
     # Relationships
-    series = relationship("BookSeries", foreign_keys=[series_id])
+    series = relationship("app.modules.specialty_books.models.BookSeries", foreign_keys=[series_id])
 
     __table_args__ = (
         Index("ix_book_bundles_org_type", "org_id", "book_type"),

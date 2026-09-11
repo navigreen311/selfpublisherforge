@@ -25,6 +25,7 @@ class PuzzleBook(TenantModel):
     status: Mapped[str | None] = mapped_column(String(20), default="draft")
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     puzzles: Mapped[list[Puzzle]] = relationship(
+        "app.modules.specialty_books.models_puzzle.Puzzle",
         back_populates="book",
         cascade="all, delete-orphan",
         lazy="selectin",
@@ -51,4 +52,6 @@ class Puzzle(TenantModel):
     qa_scores: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
     qa_passed: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
-    book: Mapped[PuzzleBook] = relationship(back_populates="puzzles")
+    book: Mapped[PuzzleBook] = relationship(
+        "app.modules.specialty_books.models_puzzle.PuzzleBook", back_populates="puzzles"
+    )
