@@ -5,22 +5,26 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
+    Numeric,
     String,
     Text,
+    Uuid,
     func,
     text,
 )
 from sqlalchemy import (
     Enum as SAEnum,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -115,7 +119,9 @@ class Agent(Base):
         default=uuid.uuid4,
         server_default=text("gen_random_uuid()"),
     )
-    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False
+    )
     agent_type: Mapped[AgentType] = mapped_column(
         SAEnum(AgentType, name="agent_type_enum", create_constraint=False),
         nullable=False,
@@ -131,7 +137,7 @@ class Agent(Base):
     model_id: Mapped[str] = mapped_column(String(255), default="claude-sonnet-4-5-20250929", nullable=False)
     system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096, nullable=False)
-    temperature: Mapped[float] = mapped_column(Float, default=0.7, nullable=False)
+    temperature: Mapped[float] = mapped_column(Float, default=0.7, nullable=False, server_default=text("0.7"))
     config: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -148,6 +154,27 @@ class Agent(Base):
         back_populates="agents",
         primaryjoin="Agent.org_id == Organization.id",
         foreign_keys="[Agent.org_id]",
+    )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    configuration: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    icon: Mapped[str | None] = mapped_column(String(10), nullable=True, default=None)
+    default_execution_mode: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    task_types: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    context_sources: Mapped[list | None] = mapped_column(ARRAY(Text()), nullable=True, default=None)
+    budget_per_task: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
+    monthly_budget: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
+    is_system: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+
+    __table_args__ = (
+        Index("ix_agents_active", "active"),
+        Index("ix_agents_agent_type", "agent_type"),
+        Index("ix_agents_configuration_gin", "configuration", postgresql_using="gin"),
+        Index("ix_agents_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_agents_org_id_created_at", "org_id", "created_at"),
+        Index("ix_agents_permission_level", "permission_level"),
     )
 
 
@@ -186,8 +213,8 @@ class AgentTask(Base):
     output_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    tokens_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    cost_usd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    tokens_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default=text("0"))
+    cost_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
@@ -205,6 +232,37 @@ class AgentTask(Base):
     # Relationships
     agent: Mapped[Agent] = relationship(back_populates="tasks", lazy="selectin")
     workflow: Mapped[AgentWorkflow | None] = relationship(back_populates="tasks", lazy="selectin")
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    # NOT NULL in the database with no default, and nothing writes it — so
+    # every insert into this table against the migrated schema failed. It
+    # is superseded by `type`; relaxed rather than dropped.
+    task_type: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    input: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    output: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    cost_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    book_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("books.id", ondelete="SET NULL"), nullable=True, default=None
+    )
+    instructions: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    execution_mode: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    max_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    output_format: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    steps: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    cost: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True, default=None)
+    execution_time_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    rating: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    applied_to: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+
+    __table_args__ = (
+        Index("idx_agent_tasks_agent", "agent_id", "status"),
+        Index("ix_agent_tasks_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_agent_tasks_input_gin", "input", postgresql_using="gin"),
+        Index("ix_agent_tasks_output_gin", "output", postgresql_using="gin"),
+        Index("ix_agent_tasks_task_type", "task_type"),
+    )
 
 
 class AgentWorkflow(Base):
@@ -218,7 +276,9 @@ class AgentWorkflow(Base):
         default=uuid.uuid4,
         server_default=text("gen_random_uuid()"),
     )
-    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False
+    )
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[WorkflowStatus] = mapped_column(
@@ -251,6 +311,19 @@ class AgentWorkflow(Base):
         primaryjoin="AgentWorkflow.org_id == Organization.id",
         foreign_keys="[AgentWorkflow.org_id]",
     )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    trigger_conditions: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+
+    __table_args__ = (
+        Index("ix_agent_workflows_active", "active"),
+        Index("ix_agent_workflows_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_agent_workflows_org_id_created_at", "org_id", "created_at"),
+        Index("ix_agent_workflows_steps_gin", "steps", postgresql_using="gin"),
+        Index("ix_agent_workflows_trigger_conditions_gin", "trigger_conditions", postgresql_using="gin"),
+    )
 
 
 class AgentBudget(Base):
@@ -264,7 +337,9 @@ class AgentBudget(Base):
         default=uuid.uuid4,
         server_default=text("gen_random_uuid()"),
     )
-    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False
+    )
     agent_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agents.id"), unique=True, nullable=False
     )
@@ -295,6 +370,26 @@ class AgentBudget(Base):
         primaryjoin="AgentBudget.org_id == Organization.id",
         foreign_keys="[AgentBudget.org_id]",
     )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    # NOT NULL in the database with no default, and nothing writes it — so
+    # every insert into this table against the migrated schema failed. It
+    # is superseded by `period` + `limit_tokens`/`limit_usd`; relaxed rather than dropped.
+    budget_type: Mapped[str | None] = mapped_column(
+        ENUM(name="budget_type", create_type=False), nullable=True, default=None
+    )
+    limit_value: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True, default=None)
+    spent_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default=text("0"))
+    period: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    alerts_sent: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
+    __table_args__ = (
+        Index("ix_agent_budgets_budget_type", "budget_type"),
+        Index("ix_agent_budgets_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_agent_budgets_org_id_created_at", "org_id", "created_at"),
+    )
 
 
 class AuditTrail(Base):
@@ -308,7 +403,9 @@ class AuditTrail(Base):
         default=uuid.uuid4,
         server_default=text("gen_random_uuid()"),
     )
-    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False
+    )
     action: Mapped[AuditAction] = mapped_column(
         SAEnum(AuditAction, name="audit_action_enum", create_constraint=False),
         nullable=False,
@@ -333,4 +430,21 @@ class AuditTrail(Base):
         back_populates="audit_trails",
         primaryjoin="AuditTrail.org_id == Organization.id",
         foreign_keys="[AuditTrail.org_id]",
+    )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
+    __table_args__ = (
+        Index("ix_audit_trail_actor_id", "actor_id"),
+        Index("ix_audit_trail_actor_type", "actor_type"),
+        Index("ix_audit_trail_details_gin", "details", postgresql_using="gin"),
+        Index("ix_audit_trail_org_id_action", "org_id", "action"),
+        Index("ix_audit_trail_org_id_created_at", "org_id", "created_at"),
+        Index("ix_audit_trail_resource_id", "resource_id"),
+        Index("ix_audit_trail_resource_type", "resource_type"),
+        Index("ix_audit_trail_timestamp_brin", "timestamp", postgresql_using="brin"),
     )

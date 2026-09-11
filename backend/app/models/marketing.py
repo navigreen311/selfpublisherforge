@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     Uuid,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -130,8 +131,8 @@ class LaunchPlan(TenantModel):
     budget: Mapped[float | None] = mapped_column(Float, nullable=True)
     goals: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     phases_json: Mapped[dict | None] = mapped_column("phases_data", JSON, nullable=True)
-    checklist: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    ai_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    checklist: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ai_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
 
     # Relationships
@@ -141,6 +142,24 @@ class LaunchPlan(TenantModel):
         back_populates="launch_plan",
         cascade="all, delete-orphan",
         order_by="LaunchPhase.order_index",
+    )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    # Superseded. The database has both "phases" and "phases_data"; the code
+    # writes phases_data (mapped above as phases_json), and "phases" is left
+    # over from migration 001. It is declared so the schema is not a surprise,
+    # under a name that collides with neither the relationship nor phases_json.
+    legacy_phases: Mapped[dict | None] = mapped_column("phases", JSONB, nullable=True, default=None)
+    channels: Mapped[list | None] = mapped_column(ARRAY(Text()), nullable=True, default=None)
+
+    __table_args__ = (
+        Index("idx_launch_plans_book_id", "book_id"),
+        Index("ix_launch_plans_checklist_gin", "checklist", postgresql_using="gin"),
+        Index("ix_launch_plans_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_launch_plans_launch_date", "launch_date"),
+        Index("ix_launch_plans_phases_gin", "phases", postgresql_using="gin"),
+        Index("ix_launch_plans_status", "status"),
     )
 
 
@@ -206,6 +225,10 @@ class EmailSequence(TenantModel):
 
     __tablename__ = "email_sequences"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     launch_plan_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid,
         ForeignKey("launch_plans.id", ondelete="SET NULL"),
@@ -241,6 +264,22 @@ class EmailSequence(TenantModel):
         back_populates="sequence",
         cascade="all, delete-orphan",
         order_by="EmailTemplate.order_index",
+    )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    trigger: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    # Superseded, exactly as launch_plans.phases is: the code writes
+    # "emails_data" and this older "emails" column is unread.
+    legacy_emails: Mapped[dict | None] = mapped_column("emails", JSONB, nullable=True, default=None)
+    performance: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+
+    __table_args__ = (
+        Index("ix_email_sequences_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_email_sequences_emails_gin", "emails", postgresql_using="gin"),
+        Index("ix_email_sequences_org_id_created_at", "org_id", "created_at"),
+        Index("ix_email_sequences_performance_gin", "performance", postgresql_using="gin"),
+        Index("ix_email_sequences_trigger", "trigger"),
     )
 
 
@@ -282,6 +321,10 @@ class ReaderPanel(TenantModel):
     """A panel of beta readers or ARC reviewers."""
 
     __tablename__ = "reader_panels"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     panel_size: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

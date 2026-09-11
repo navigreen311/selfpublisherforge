@@ -15,8 +15,10 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
@@ -43,7 +45,7 @@ class Cover(TenantModel):
     dpi: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
     bleed_px: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     platform: Mapped[str] = mapped_column(String(30), nullable=False, default="amazon-kdp")
-    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True, default=dict)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=dict)
     parent_cover_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid,
         ForeignKey("covers.id", ondelete="SET NULL"),
@@ -76,10 +78,10 @@ class ExtractedProduct(TenantModel):
     price: Mapped[float | None] = mapped_column(Float, nullable=True)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
     bsr: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    bsr_categories: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    categories: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    keywords: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    reviews_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    bsr_categories: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    categories: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    keywords: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    reviews_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     page_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     marketplace: Mapped[str] = mapped_column(String(30), nullable=False, default="amazon.com")
@@ -89,7 +91,7 @@ class ExtractedProduct(TenantModel):
     dimensions: Mapped[str | None] = mapped_column(String(100), nullable=True)
     isbn: Mapped[str | None] = mapped_column(String(20), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    tags: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
 
 
 class KnowledgeClip(TenantModel):
@@ -101,7 +103,7 @@ class KnowledgeClip(TenantModel):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    tags: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
@@ -114,8 +116,8 @@ class GenerationJob(TenantModel):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending", server_default="pending", index=True
     )
-    request_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-    result_cover_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    request_data: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    result_cover_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -132,7 +134,7 @@ class CoverEditorState(BaseModel):
         unique=True,
         index=True,
     )
-    state_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    state_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
 
 class ABTest(TenantModel):
@@ -146,10 +148,12 @@ class ABTest(TenantModel):
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     cover_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
-    share_token: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    share_token: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", server_default="active")
     winner_cover_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (UniqueConstraint("share_token", name="uq_cover_ab_tests_share_token"),)
 
 
 class ABTestVote(BaseModel):

@@ -11,6 +11,7 @@ import logging
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any, cast
 
 from sqlalchemy import select
@@ -118,7 +119,7 @@ async def execute_task(
         "steps": steps,
     }
     task.tokens_used = total_tokens
-    task.cost_usd = total_cost
+    task.cost_usd = Decimal(str(total_cost))
     await db.commit()
     await db.refresh(task)
 

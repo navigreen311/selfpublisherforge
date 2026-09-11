@@ -35,6 +35,13 @@ ebooklib==0.18
 flower==2.0.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
+# All three were imported but never declared; local virtualenvs happened to
+# have them, so CI was the only place it showed. pytest-cov backs the
+# --cov flags the test job passes, EmailStr needs email-validator, and the
+# test fixtures run on SQLite.
+pytest-cov==7.0.0
+email-validator==2.3.0
+aiosqlite==0.22.1
 defusedxml==0.7.1
 mypy==1.11.2
 ruff==0.6.0

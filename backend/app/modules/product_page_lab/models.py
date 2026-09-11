@@ -8,8 +8,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import DateTime, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import TenantModel
@@ -51,9 +51,11 @@ class ListingAnalysisRecord(TenantModel):
     asin: Mapped[str | None] = mapped_column(String(20), nullable=True)
     url: Mapped[str | None] = mapped_column(Text, nullable=True)
     overall_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    scores: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
-    findings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
-    suggestions: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
+    scores: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    findings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    suggestions: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+
+    __table_args__ = (Index("idx_listing_analyses_asin", "asin"),)
 
 
 class GeneratedBlurb(TenantModel):
@@ -79,7 +81,7 @@ class KeywordAnalysisRecord(TenantModel):
 
     book_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
     current_keywords: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
-    recommended: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recommended: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     optimal_seven: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
@@ -90,5 +92,5 @@ class APlusPlan(TenantModel):
     __tablename__ = "aplus_plans"
 
     book_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
-    modules: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=list)
+    modules: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=list)
     status: Mapped[str] = mapped_column(String(50), default="draft", server_default="draft")

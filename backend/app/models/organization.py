@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, Uuid
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -32,7 +32,7 @@ class Organization(BaseModel):
     __tablename__ = "organizations"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     # OrganizationResponse has always declared it, and the settings screen
     # reads and writes it.
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -178,6 +178,7 @@ class Organization(BaseModel):
     )
 
     __table_args__ = (
+        UniqueConstraint("slug", name="organizations_slug_key"),
         Index("ix_organizations_plan_tier", "plan_tier"),
         Index("ix_organizations_subscription_status", "subscription_status"),
         Index("ix_organizations_settings_gin", "settings", postgresql_using="gin"),

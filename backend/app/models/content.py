@@ -145,18 +145,20 @@ class ChapterVersion(BaseModel):
     user = relationship("User")
 
     __table_args__ = (
-        Index(
-            "idx_chapter_versions_chapter",
-            "chapter_id",
-            "created_at",
-            postgresql_ops={"created_at": "DESC"},
-        ),
+        # No DESC: a btree index scans backwards just as well, and
+        # postgresql_ops is not what the database reports back, so the
+        # declaration and the reflected index never compared equal.
+        Index("idx_chapter_versions_chapter", "chapter_id", "created_at"),
         Index("ix_chapter_versions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
 
 
 class StyleProfile(TenantModel):
     __tablename__ = "style_profiles"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     voice_fingerprint: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
@@ -324,6 +326,10 @@ class EditorSettings(BaseModel):
 
 class ContentAsset(TenantModel):
     __tablename__ = "content_assets"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     asset_type: Mapped[str] = mapped_column(
         String(50),

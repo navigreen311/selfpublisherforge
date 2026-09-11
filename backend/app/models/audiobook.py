@@ -15,6 +15,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -99,6 +100,9 @@ class AudiobookVoice(TenantModel):
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     __table_args__ = (
+        Index("ix_audiobook_voices_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_voices_org_id_created_at", "org_id", "created_at"),
+        Index("ix_audiobook_voices_voice_settings_gin", "voice_settings", postgresql_using="gin"),
         Index("ix_audiobook_voices_provider", "provider"),
         Index("ix_audiobook_voices_voice_type", "voice_type"),
         Index("ix_audiobook_voices_active", "active"),
@@ -144,6 +148,13 @@ class AudiobookProject(TenantModel):
     )
 
     __table_args__ = (
+        Index("ix_audiobook_projects_character_voices_gin", "character_voices", postgresql_using="gin"),
+        Index("ix_audiobook_projects_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_projects_metadata_gin", "metadata", postgresql_using="gin"),
+        Index("ix_audiobook_projects_narration_style_gin", "narration_style", postgresql_using="gin"),
+        Index("ix_audiobook_projects_org_id_created_at", "org_id", "created_at"),
+        Index("ix_audiobook_projects_settings_gin", "settings", postgresql_using="gin"),
+        Index("ix_audiobook_projects_target_platform", "target_platform"),
         Index("ix_audiobook_projects_org_book", "org_id", "book_id"),
         Index("ix_audiobook_projects_status", "status"),
     )
@@ -185,6 +196,10 @@ class AudiobookChapter(BaseModel):
     project: Mapped["AudiobookProject"] = relationship("AudiobookProject", back_populates="chapters")
 
     __table_args__ = (
+        Index("ix_audiobook_chapters_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_chapters_generation_params_gin", "generation_params", postgresql_using="gin"),
+        Index("ix_audiobook_chapters_quality_metrics_gin", "quality_metrics", postgresql_using="gin"),
+        Index("ix_audiobook_chapters_status", "status"),
         Index("ix_audiobook_chapters_project_status", "audiobook_project_id", "status"),
         Index("ix_audiobook_chapters_chapter_number", "chapter_number"),
     )
@@ -206,6 +221,10 @@ class AudiobookPronunciation(TenantModel):
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     __table_args__ = (
+        Index("ix_audiobook_pronunciation_active", "active"),
+        Index("ix_audiobook_pronunciation_audiobook_project_id", "audiobook_project_id"),
+        Index("ix_audiobook_pronunciation_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_pronunciation_org_id_created_at", "org_id", "created_at"),
         Index("ix_audiobook_pronunciation_org", "org_id"),
         Index("ix_audiobook_pronunciation_project", "audiobook_project_id"),
         Index("ix_audiobook_pronunciation_word", "word"),
@@ -240,6 +259,9 @@ class AudiobookGenerationJob(BaseModel):
     celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     __table_args__ = (
+        Index("ix_audiobook_generation_jobs_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_generation_jobs_input_params_gin", "input_params", postgresql_using="gin"),
+        Index("ix_audiobook_generation_jobs_output_gin", "output", postgresql_using="gin"),
         Index("ix_audiobook_generation_jobs_status", "status"),
         Index("ix_audiobook_generation_jobs_job_type", "job_type"),
         Index("ix_audiobook_generation_jobs_priority", "priority"),

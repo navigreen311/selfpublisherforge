@@ -60,6 +60,10 @@ class SeriesStatus(str, enum.Enum):
 class Project(TenantModel):
     __tablename__ = "projects"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     type: Mapped[ProjectType] = mapped_column(
@@ -107,6 +111,7 @@ class Project(TenantModel):
     books = relationship("Book", back_populates="project", lazy="selectin")
 
     __table_args__ = (
+        Index("ix_projects_org_id_status", "org_id", "status"),
         Index("ix_projects_type", "type"),
         Index("ix_projects_status", "status"),
         Index("ix_projects_settings_gin", "settings", postgresql_using="gin"),
@@ -178,6 +183,10 @@ class Book(BaseModel):
 class Series(TenantModel):
     __tablename__ = "series"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     genre_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, default=None)
     book_order: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
@@ -197,6 +206,7 @@ class Series(TenantModel):
     )
 
     __table_args__ = (
+        Index("ix_series_genre_id", "genre_id"),
         Index("ix_series_status", "status"),
         Index("ix_series_book_order_gin", "book_order", postgresql_using="gin"),
         Index("ix_series_reading_order_gin", "reading_order", postgresql_using="gin"),
@@ -207,6 +217,10 @@ class Series(TenantModel):
 
 class PenName(TenantModel):
     __tablename__ = "pen_names"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)

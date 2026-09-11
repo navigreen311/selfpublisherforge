@@ -71,6 +71,10 @@ class RiskLevel(str, enum.Enum):
 class PublishingAccount(TenantModel):
     __tablename__ = "publishing_accounts"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     platform: Mapped[PublishingPlatform] = mapped_column(
         SAEnum(PublishingPlatform, name="publishing_platform", create_constraint=True),
         nullable=False,

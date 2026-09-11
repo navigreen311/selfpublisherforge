@@ -6,7 +6,6 @@ import uuid
 from typing import Any
 
 from sqlalchemy import (
-    JSON,
     Boolean,
     Enum,
     Float,
@@ -16,6 +15,7 @@ from sqlalchemy import (
     Text,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import BaseModel, TenantModel
@@ -52,7 +52,7 @@ class AssetProvenance(TenantModel):
     prompt_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     prompt_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     seed: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    settings: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     generation_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cost_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
@@ -81,7 +81,7 @@ class BatchJob(TenantModel):
         Enum(BookType, name="book_type", native_enum=True, create_type=False),
         nullable=False,
     )
-    batch_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    batch_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     budget_limit_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
     spent_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     status: Mapped[str] = mapped_column(
@@ -111,7 +111,7 @@ class ContentFingerprint(TenantModel):
     phash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     data_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     ngram_fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    jaccard_vector: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    jaccard_vector: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
 
 class OriginalityReport(TenantModel):
@@ -125,8 +125,8 @@ class OriginalityReport(TenantModel):
     )
     book_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
     overall_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    component_scores: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    cross_book_similarities: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    component_scores: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    cross_book_similarities: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     spam_risk_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
@@ -141,7 +141,7 @@ class BookSeries(TenantModel):
         nullable=False,
     )
     naming_format: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    branding_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    branding_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     branding_locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     volume_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
@@ -198,8 +198,8 @@ class DistributorPreflight(BaseModel):
         default=PreflightStatus.pending,
         server_default="pending",
     )
-    checks: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    issues: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    checks: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    issues: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     exported_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
@@ -213,13 +213,13 @@ class BookBundle(TenantModel):
         Enum(BookType, name="book_type", native_enum=True, create_type=False),
         nullable=False,
     )
-    volume_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    volume_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     series_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid,
         ForeignKey("book_series.id", ondelete="SET NULL"),
         nullable=True,
     )
-    config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     total_pages: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
@@ -238,7 +238,7 @@ class AccessibilityVariant(BaseModel):
         nullable=False,
     )
     variant_book_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
-    settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    settings: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
 
 class WordListSource(TenantModel):

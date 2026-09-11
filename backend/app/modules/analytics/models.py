@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    JSON,
+    Date,
     DateTime,
+    ForeignKey,
     Index,
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -25,6 +30,10 @@ class AnalyticsEvent(TenantModel):
     """Raw analytics events captured from user actions, system events, etc."""
 
     __tablename__ = "analytics_events"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     event_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     event_source: Mapped[str] = mapped_column(String(100), nullable=False, default="system")
@@ -43,7 +52,18 @@ class AnalyticsEvent(TenantModel):
         foreign_keys="[AnalyticsEvent.org_id]",
     )
 
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
     __table_args__ = (
+        Index("ix_analytics_events_data_gin", "data", postgresql_using="gin"),
+        Index("ix_analytics_events_entity_id", "entity_id"),
+        Index("ix_analytics_events_entity_type", "entity_type"),
+        Index("ix_analytics_events_org_id_created_at", "org_id", "created_at"),
+        Index("ix_analytics_events_org_id_event_type", "org_id", "event_type"),
+        Index("ix_analytics_events_timestamp_brin", "timestamp", postgresql_using="brin"),
         Index("ix_analytics_events_org_occurred", "org_id", "occurred_at"),
         Index("ix_analytics_events_type_occurred", "event_type", "occurred_at"),
         {"extend_existing": True},
@@ -55,7 +75,11 @@ class RoyaltyRecord(TenantModel):
 
     __tablename__ = "royalty_records"
 
-    book_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True, index=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+
+    book_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     platform: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     marketplace: Mapped[str] = mapped_column(String(100), nullable=False, default="US")
     title: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -83,7 +107,15 @@ class RoyaltyRecord(TenantModel):
         foreign_keys="[RoyaltyRecord.book_id]",
     )
 
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    revenue: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default=text("0"))
+    royalty: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default=text("0"))
+
     __table_args__ = (
+        Index("ix_royalty_records_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_royalty_records_period_end", "period_end"),
         Index("ix_royalty_records_org_period", "org_id", "period_start"),
         Index("ix_royalty_records_platform_period", "platform", "period_start"),
         {"extend_existing": True},
@@ -94,6 +126,10 @@ class PortfolioMetricSnapshot(TenantModel):
     """Point-in-time snapshots of portfolio-level metrics (computed daily)."""
 
     __tablename__ = "portfolio_metrics"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     snapshot_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     total_books: Mapped[int] = mapped_column(nullable=False, default=0)
@@ -115,7 +151,17 @@ class PortfolioMetricSnapshot(TenantModel):
         foreign_keys="[PortfolioMetricSnapshot.org_id]",
     )
 
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    roi_by_book: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    projections: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+
     __table_args__ = (
+        Index("ix_portfolio_metrics_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_portfolio_metrics_org_id_created_at", "org_id", "created_at"),
+        Index("ix_portfolio_metrics_projections_gin", "projections", postgresql_using="gin"),
+        Index("ix_portfolio_metrics_roi_by_book_gin", "roi_by_book", postgresql_using="gin"),
         Index("ix_portfolio_metrics_org_date", "org_id", "snapshot_date"),
         {"extend_existing": True},
     )
@@ -125,6 +171,10 @@ class Report(TenantModel):
     """Generated reports (PDF, XLSX) stored for download."""
 
     __tablename__ = "reports"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     report_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
@@ -145,7 +195,20 @@ class Report(TenantModel):
         foreign_keys="[Report.org_id]",
     )
 
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    generated_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    period_start: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    period_end: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    book_ids: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)
+    sections: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)
+
     __table_args__ = (
+        Index("ix_reports_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_reports_org_id_created_at", "org_id", "created_at"),
+        Index("ix_reports_parameters_gin", "parameters", postgresql_using="gin"),
+        Index("ix_reports_status", "status"),
         Index("ix_reports_org_type", "org_id", "report_type"),
         {"extend_existing": True},
     )
@@ -166,6 +229,11 @@ class SalesData(TenantModel):
     kenp_read: Mapped[int] = mapped_column(nullable=False, default=0)
 
     __table_args__ = (
+        UniqueConstraint(
+            "org_id", "book_id", "date", "marketplace", "format", name="uq_sales_data_org_book_date_mp_fmt"
+        ),
+        Index("idx_sales_data_book", "book_id"),
+        Index("idx_sales_data_org_date", "org_id", "date"),
         Index("ix_sales_data_org_date", "org_id", "date"),
         Index("ix_sales_data_book_date", "book_id", "date"),
         {"extend_existing": True},
@@ -185,6 +253,7 @@ class BSRTracking(TenantModel):
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     __table_args__ = (
+        Index("idx_bsr_tracking_book", "book_id"),
         Index("ix_bsr_tracking_book_recorded", "book_id", "recorded_at"),
         {"extend_existing": True},
     )

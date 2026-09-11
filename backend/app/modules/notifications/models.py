@@ -2,15 +2,17 @@
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
 from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    ForeignKey,
     Index,
     String,
     Text,
+    Time,
     UniqueConstraint,
     func,
     text,
@@ -96,6 +98,7 @@ class NotificationPreference(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     channel: Mapped[NotificationChannel] = mapped_column(
@@ -109,4 +112,15 @@ class NotificationPreference(Base):
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    __table_args__ = (UniqueConstraint("user_id", "channel", "category", name="uq_user_channel_category"),)
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    preferences: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'"))
+    quiet_hours_start: Mapped[time | None] = mapped_column(Time, nullable=True, default=None)
+    quiet_hours_end: Mapped[time | None] = mapped_column(Time, nullable=True, default=None)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", name="notification_preferences_user_id_key"),
+        UniqueConstraint("user_id", "channel", "category", name="uq_user_channel_category"),
+    )

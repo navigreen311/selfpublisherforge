@@ -11,6 +11,9 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    UniqueConstraint,
+    Uuid,
+    text,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -37,7 +40,7 @@ class User(BaseModel):
         nullable=False,
         index=True,
     )
-    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
@@ -72,6 +75,7 @@ class User(BaseModel):
     book_versions = relationship("BookVersion", back_populates="created_by_user", lazy="selectin")
 
     __table_args__ = (
+        UniqueConstraint("email", name="users_email_key"),
         Index("ix_users_role", "role"),
         Index("ix_users_preferences_gin", "preferences", postgresql_using="gin"),
         Index("ix_users_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
@@ -131,7 +135,18 @@ class ApiKey(BaseModel):
     organization = relationship("Organization", back_populates="api_keys")
     user = relationship("User", back_populates="api_keys", foreign_keys=[created_by])
 
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    # NOT NULL in the database with no default, and nothing writes it — so
+    # every insert into this table against the migrated schema failed. It
+    # is superseded by `created_by`; relaxed rather than dropped.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, default=None
+    )
+
     __table_args__ = (
+        Index("ix_api_keys_user_id", "user_id"),
         Index("ix_api_keys_scopes_gin", "scopes", postgresql_using="gin"),
         Index("ix_api_keys_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
         Index("ix_api_keys_is_active", "is_active"),
@@ -162,4 +177,28 @@ class UserSession(BaseModel):
         Index("ix_user_sessions_device_info_gin", "device_info", postgresql_using="gin"),
         Index("ix_user_sessions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
         Index("ix_user_sessions_revoked_at", "revoked_at"),
+    )
+
+
+class RefreshToken(BaseModel):
+    """A persisted refresh token, for revocation.
+
+    Migration 002 created this table and nothing has ever read it — refresh
+    tokens are signed JWTs and are not looked up anywhere. It is declared here
+    so the schema is visible in the model layer rather than existing only in
+    the database, and so `alembic check` compares like with like. Session
+    revocation (T-004) is what would use it.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="refresh_tokens_token_hash_key"),
+        Index("ix_refresh_tokens_user_active", "user_id", "revoked"),
+        Index("ix_refresh_tokens_active", "id", postgresql_where=text("deleted_at IS NULL")),
     )

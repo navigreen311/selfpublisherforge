@@ -6,7 +6,6 @@ import uuid
 from typing import Any
 
 from sqlalchemy import (
-    JSON,
     Boolean,
     Enum,
     Float,
@@ -15,6 +14,7 @@ from sqlalchemy import (
     String,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
@@ -41,13 +41,13 @@ class PuzzleBook(TenantModel):
         nullable=False,
         default=Audience.adults,
     )
-    puzzle_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    puzzle_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     difficulty_mode: Mapped[str] = mapped_column(
         Enum(DifficultyMode, name="difficulty_mode", native_enum=True),
         nullable=False,
         default=DifficultyMode.progressive,
     )
-    themes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    themes: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     seasonal_theme: Mapped[str | None] = mapped_column(String(50), nullable=True)
     word_difficulty: Mapped[str | None] = mapped_column(
         Enum(WordDifficulty, name="word_difficulty", native_enum=True),
@@ -105,10 +105,10 @@ class Puzzle(BaseModel):
     )
     difficulty_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     grid_size: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    grid_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    word_list: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    clues: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    answer_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    grid_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    word_list: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    clues: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    answer_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     has_unique_solution: Mapped[bool | None] = mapped_column(Boolean, nullable=True)

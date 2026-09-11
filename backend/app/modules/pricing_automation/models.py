@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
@@ -12,10 +13,13 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
+    Numeric,
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -66,7 +70,9 @@ class PricingRule(TenantModel):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    book_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    book_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     strategy: Mapped[PricingStrategyType] = mapped_column(
         Enum(PricingStrategyType, name="pricing_strategy_type"), nullable=False
     )
@@ -99,6 +105,18 @@ class PricingRule(TenantModel):
     promotions: Mapped[list[Promotion]] = relationship("Promotion", back_populates="pricing_rule", lazy="selectin")
     ab_tests: Mapped[list[PricingABTest]] = relationship(
         "PricingABTest", back_populates="pricing_rule", lazy="selectin"
+    )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    current_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
+    last_adjusted: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
+    __table_args__ = (
+        Index("ix_pricing_rules_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_pricing_rules_rules_gin", "rules", postgresql_using="gin"),
+        Index("ix_pricing_rules_strategy", "strategy"),
     )
 
 
@@ -213,6 +231,8 @@ class PricingStrategy(TenantModel):
     last_run_at = mapped_column(DateTime(timezone=True), nullable=True)
     next_run_at = mapped_column(DateTime(timezone=True), nullable=True)
 
+    __table_args__ = (Index("idx_pricing_strategies_org", "org_id"),)
+
 
 class ScheduledPriceChange(TenantModel):
     """Scheduled future price change."""
@@ -220,14 +240,16 @@ class ScheduledPriceChange(TenantModel):
     __tablename__ = "scheduled_price_changes"
 
     book_id = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
-    current_price = mapped_column(Float, nullable=True)
-    new_price = mapped_column(Float, nullable=False)
+    current_price = mapped_column(Numeric(10, 2), nullable=True)
+    new_price = mapped_column(Numeric(10, 2), nullable=False)
     reason = mapped_column(String(255), nullable=True)
     execute_at = mapped_column(DateTime(timezone=True), nullable=False)
-    revert_price = mapped_column(Float, nullable=True)
+    revert_price = mapped_column(Numeric(10, 2), nullable=True)
     revert_at = mapped_column(DateTime(timezone=True), nullable=True)
     status = mapped_column(String(50), nullable=False, default="pending")
     executed_at = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("idx_scheduled_changes_execute", "execute_at"),)
 
 
 class PriceChangeHistory(TenantModel):
@@ -236,8 +258,10 @@ class PriceChangeHistory(TenantModel):
     __tablename__ = "price_change_history"
 
     book_id = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
-    old_price = mapped_column(Float, nullable=True)
-    new_price = mapped_column(Float, nullable=False)
+    old_price = mapped_column(Numeric(10, 2), nullable=True)
+    new_price = mapped_column(Numeric(10, 2), nullable=False)
     reason = mapped_column(String(255), nullable=True)
     source = mapped_column(String(50), nullable=False, default="manual")
     revenue_impact_pct = mapped_column(Float, nullable=True)
+
+    __table_args__ = (Index("idx_price_history_book", "book_id"),)

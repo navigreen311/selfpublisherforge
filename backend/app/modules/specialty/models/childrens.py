@@ -16,6 +16,7 @@ from sqlalchemy import (
     Text,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
@@ -155,12 +156,12 @@ class ChildrensBookCharacter(BaseModel):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     species: Mapped[str | None] = mapped_column(String(50), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    reference_images: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    reference_images: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     auto_append: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    clothing_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    scale_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    setting_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    time_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    clothing_rules: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    scale_rules: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    setting_rules: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    time_rules: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     book: Mapped[ChildrensBook] = relationship("ChildrensBook", back_populates="characters")
