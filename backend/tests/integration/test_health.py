@@ -109,11 +109,11 @@ class TestHealthReady:
 
 class TestHealthDetailed:
     @pytest.mark.asyncio
-    async def test_unauthenticated_returns_403(self, client: AsyncClient) -> None:
+    async def test_unauthenticated_returns_401(self, client: AsyncClient) -> None:
         """Without auth, the endpoint should return 401 or 403."""
         resp = await client.get("/health/detailed")
         # HTTPBearer returns 403 when no credentials are provided
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_authenticated_admin_returns_200(self, test_app: FastAPI) -> None:

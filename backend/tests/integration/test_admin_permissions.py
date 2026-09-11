@@ -94,13 +94,13 @@ class TestUnauthenticatedAccess:
     async def test_list_users_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot list users."""
         resp = await client.get(f"{PREFIX}/users")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_get_feature_flags_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot get feature flags."""
         resp = await client.get(f"{PREFIX}/feature-flags")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_update_feature_flag_requires_auth(self, client: AsyncClient):
@@ -109,14 +109,14 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/feature-flags/test-flag",
             json={"enabled": True, "description": "Test"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_deactivate_user_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot deactivate users."""
         user_id = uuid.uuid4()
         resp = await client.delete(f"{PREFIX}/users/{user_id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------

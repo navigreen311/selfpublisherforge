@@ -240,7 +240,7 @@ class TestMFAEndpoints:
             f"{PREFIX}/mfa/disable",
             json={"password": VALID_PASSWORD},
         )
-        assert resp.status_code == 403  # no auth header
+        assert resp.status_code == 401  # no auth header
 
     @pytest.mark.asyncio
     async def test_mfa_disable_not_enabled(self, client: AsyncClient):

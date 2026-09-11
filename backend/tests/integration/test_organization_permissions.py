@@ -88,7 +88,7 @@ class TestUnauthenticatedAccess:
         """Unauthenticated user cannot get organization details."""
         org = await _create_org(db)
         resp = await client.get(f"{PREFIX}/{org.id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_update_org_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -98,14 +98,14 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/{org.id}",
             json={"name": "Updated Name", "description": "Test"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_members_requires_auth(self, client: AsyncClient, db: AsyncSession):
         """Unauthenticated user cannot list organization members."""
         org = await _create_org(db)
         resp = await client.get(f"{PREFIX}/{org.id}/members")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_create_invitation_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -115,14 +115,14 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/{org.id}/invitations",
             json={"email": "invite@test.com", "role": "viewer"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_invitations_requires_auth(self, client: AsyncClient, db: AsyncSession):
         """Unauthenticated user cannot list invitations."""
         org = await _create_org(db)
         resp = await client.get(f"{PREFIX}/{org.id}/invitations")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_remove_member_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -130,7 +130,7 @@ class TestUnauthenticatedAccess:
         org = await _create_org(db)
         user_id = uuid.uuid4()
         resp = await client.delete(f"{PREFIX}/{org.id}/members/{user_id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------

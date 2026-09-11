@@ -114,13 +114,13 @@ class TestUnauthenticatedAccess:
                 "project_type": "book",
             },
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_projects_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot list projects."""
         resp = await client.get(f"{PREFIX}/")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_get_project_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -129,7 +129,7 @@ class TestUnauthenticatedAccess:
         project = await _create_project(db, org.id)
 
         resp = await client.get(f"{PREFIX}/{project.id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_update_project_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -141,7 +141,7 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/{project.id}",
             json={"title": "Hacked Title"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_delete_project_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -150,7 +150,7 @@ class TestUnauthenticatedAccess:
         project = await _create_project(db, org.id)
 
         resp = await client.delete(f"{PREFIX}/{project.id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------
