@@ -15,20 +15,10 @@ def upgrade() -> None:
     # 1. CREATE NEW TABLES
     # ─────────────────────────────────────────────────────────────────────
 
-    # activity_log table
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS activity_log (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-            user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-            action VARCHAR(100) NOT NULL,
-            resource_type VARCHAR(100),
-            resource_id UUID,
-            details JSONB,
-            ip_address VARCHAR(45),
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        )
-    """)
+    # activity_log is created by migration 020, in the shape the ActivityLog
+    # model actually declares (description + metadata, org_id NOT NULL). The
+    # version that used to be created here had a different shape — details and
+    # ip_address, nullable org_id — and nothing maps to it.
 
     # invoices table
     op.execute("""
@@ -143,17 +133,6 @@ def upgrade() -> None:
     # ─────────────────────────────────────────────────────────────────────
     # 4. CREATE INDEXES
     # ─────────────────────────────────────────────────────────────────────
-
-    # Indexes for activity_log
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_activity_log_org
-        ON activity_log(org_id, created_at DESC)
-    """)
-
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_activity_log_user
-        ON activity_log(user_id, created_at DESC)
-    """)
 
     # Indexes for agent_tasks (org_id needs to exist first)
     op.execute("""

@@ -101,7 +101,7 @@ class Comic(TenantModel):
     safety_settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     status: Mapped[str] = mapped_column(
-        Enum(BookStatus, name="book_status", native_enum=True, create_constraint=False),
+        Enum(BookStatus, name="specialty_book_status", native_enum=True, create_constraint=False),
         nullable=False,
         default=BookStatus.draft,
         server_default="draft",

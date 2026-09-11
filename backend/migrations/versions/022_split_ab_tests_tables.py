@@ -27,6 +27,7 @@ Create Date: 2026-09-10
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers
 revision = "022_split_ab_tests_tables"
@@ -56,19 +57,13 @@ def upgrade() -> None:
     op.create_index("ix_cover_ab_tests_org_id", "cover_ab_tests", ["org_id"])
     op.create_index("ix_cover_ab_tests_share_token", "cover_ab_tests", ["share_token"])
 
-    # Carry over the rows that were actually cover tests.
-    op.execute(
-        """
-        INSERT INTO cover_ab_tests
-            (id, org_id, name, cover_ids, share_token, status, winner_cover_id,
-             ended_at, created_at, updated_at, deleted_at)
-        SELECT id, org_id, name, cover_ids, share_token,
-               COALESCE(status::text, 'active'), winner_cover_id,
-               ended_at, created_at, updated_at, deleted_at
-        FROM ab_tests
-        WHERE cover_ids IS NOT NULL AND share_token IS NOT NULL
-        """
-    )
+    # No rows are carried over. The generic `ab_tests` table has no org_id
+    # column — migration 001 created it with entity_type/entity_id and 011
+    # bolted the cover columns on without one — so there is no tenant to
+    # assign a migrated row to, and cover_ab_tests.org_id is NOT NULL.
+    # It is also moot: the migration chain has been unrunnable since 012
+    # (which extends a `pipelines` table nothing ever created), so no database
+    # has ever reached this point with rows in it.
 
     # ── product_page_lab.ABTest ────────────────────────────────────────────
     op.create_table(
@@ -113,7 +108,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Recreates the generic shape from migration 001 plus migration 011's
     # cover columns. Listing tests have nowhere to go and are not carried back.
-    ab_test_status = sa.Enum(
+    # postgresql.ENUM, not sa.Enum: create_type=False is a dialect-level flag
+    # and sa.Enum drops it, so the CREATE TYPE is emitted anyway and the
+    # downgrade fails on a type migration 001 already created.
+    ab_test_status = postgresql.ENUM(
         "draft",
         "running",
         "paused",
@@ -124,7 +122,6 @@ def downgrade() -> None:
     op.create_table(
         "ab_tests",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("org_id", sa.Uuid(), nullable=True),
         sa.Column("entity_type", sa.String(100), nullable=True),
         sa.Column("entity_id", sa.Uuid(), nullable=True),
         sa.Column("variants", sa.JSON(), nullable=True),
@@ -142,16 +139,7 @@ def downgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.execute(
-        """
-        INSERT INTO ab_tests
-            (id, org_id, name, cover_ids, share_token, status, winner_cover_id,
-             ended_at, created_at, updated_at, deleted_at)
-        SELECT id, org_id, name, cover_ids, share_token, 'draft', winner_cover_id,
-               ended_at, created_at, updated_at, deleted_at
-        FROM cover_ab_tests
-        """
-    )
+    # Nothing is carried back for the same reason nothing was carried over.
 
     op.drop_constraint("ab_test_votes_test_id_fkey", "ab_test_votes", type_="foreignkey")
     op.create_foreign_key(

@@ -26,11 +26,14 @@ def upgrade() -> None:
     # ---------------------------------------------------------------
     # 1. Alter chapters table
     # ---------------------------------------------------------------
+    # Drop the old GIN trigram index on text content first: gin_trgm_ops does
+    # not accept jsonb, so Postgres refuses the ALTER while the index still
+    # depends on the column. The downgrade already does this in the right
+    # order; the upgrade had it backwards.
+    op.execute("DROP INDEX IF EXISTS ix_chapters_content_fulltext")
+
     # Convert content from TEXT to JSONB (TipTap JSON storage)
     op.execute("ALTER TABLE chapters " "ALTER COLUMN content TYPE JSONB USING content::jsonb")
-
-    # Drop the old GIN trigram index on text content (incompatible with JSONB)
-    op.execute("DROP INDEX IF EXISTS ix_chapters_content_fulltext")
 
     # Create a standard GIN index for JSONB content
     op.create_index(
@@ -264,7 +267,11 @@ def downgrade() -> None:
     op.drop_column("writing_sessions", "org_id")
 
     # Revert chapters changes
+    # Drop the varchar default first: Postgres cannot cast an existing
+    # text default to the enum type, and the upgrade above set one.
+    op.execute("ALTER TABLE chapters ALTER COLUMN status DROP DEFAULT")
     op.execute("ALTER TABLE chapters ALTER COLUMN status TYPE chapter_status " "USING status::chapter_status")
+    op.execute("ALTER TABLE chapters ALTER COLUMN status SET DEFAULT 'outline'::chapter_status")
     op.drop_column("chapters", "chapter_type")
     op.drop_column("chapters", "target_word_count")
 

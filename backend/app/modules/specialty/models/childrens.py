@@ -79,7 +79,7 @@ class ChildrensBook(TenantModel):
         default=FearIntensity.none,
     )
     status: Mapped[str] = mapped_column(
-        Enum(BookStatus, name="book_status", native_enum=True),
+        Enum(BookStatus, name="specialty_book_status", native_enum=True),
         nullable=False,
         default=BookStatus.draft,
         server_default="draft",

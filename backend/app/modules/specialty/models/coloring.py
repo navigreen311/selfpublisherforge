@@ -56,7 +56,7 @@ class ColoringBook(TenantModel):
         index=True,
     )
     status: Mapped[str] = mapped_column(
-        Enum(BookStatus, name="book_status", native_enum=True, create_type=False),
+        Enum(BookStatus, name="specialty_book_status", native_enum=True, create_type=False),
         nullable=False,
         default=BookStatus.draft,
         server_default="draft",

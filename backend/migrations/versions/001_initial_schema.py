@@ -18,6 +18,12 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # ── Extensions ─────────────────────────────────────────────────────
+    # pg_trgm supplies the gin_trgm_ops operator class the chapters
+    # full-text index below asks for. Without it this migration fails on a
+    # clean database, which is every CI run.
+    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+
     # ── Enums ──────────────────────────────────────────────────────────
     plan_tier = postgresql.ENUM(
         "free",

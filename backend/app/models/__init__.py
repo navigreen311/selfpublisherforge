@@ -46,6 +46,14 @@ from app.modules.advertising.models import AdCreative, CampaignPerformance, Keyw
 from app.modules.advertising.models import Campaign as AdCampaign
 from app.modules.agent_system.models import Agent, AgentBudget, AgentTask, AgentWorkflow, AuditTrail
 from app.modules.analytics.models import AnalyticsEvent, PortfolioMetricSnapshot, Report, RoyaltyRecord
+
+# Imported for their side effect on Base.metadata: these modules declare tables
+# that were missing from the barrel, so `alembic check` compared the database
+# against an incomplete picture and autogenerate would have proposed dropping
+# every table they own. `specialty_books/` is deliberately still absent — it is
+# unreachable from main.py and its disposition is decision D-1.
+from app.modules.audiobook import models as _audiobook_models  # noqa: F401
+from app.modules.billing import models as _billing_models  # noqa: F401
 from app.modules.competitor_finder.models import (
     CompetitorAlert,
     CompetitorAnalysis,
@@ -62,6 +70,7 @@ from app.modules.product_page_lab.models import ABTest
 from app.modules.production_pipeline.models import Pipeline, PipelineTask, PipelineTemplate
 from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
 from app.modules.review_intelligence.models import BookReview, ReputationScore, ReviewAlert, ReviewVelocitySnapshot
+from app.modules.specialty.models import childrens as _specialty_models  # noqa: F401
 
 __all__ = [
     # Domain models

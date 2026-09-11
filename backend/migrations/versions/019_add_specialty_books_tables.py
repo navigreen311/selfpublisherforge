@@ -91,7 +91,7 @@ def upgrade() -> None:
         "approved",
         "exported",
         "published",
-        name="book_status",
+        name="specialty_book_status",
     )
     audience = sa.Enum(
         "kids",
@@ -176,7 +176,7 @@ def upgrade() -> None:
         "puzzle_grid",
         "cover",
         "reference_image",
-        name="asset_type",
+        name="specialty_asset_type",
     )
     batch_status = sa.Enum(
         "pending",
@@ -654,7 +654,7 @@ def downgrade() -> None:
         "distributor_name",
         "isbn_status",
         "batch_status",
-        "asset_type",
+        "specialty_asset_type",
         "book_type",
         "answer_key_position",
         "word_difficulty",
@@ -665,7 +665,7 @@ def downgrade() -> None:
         "coloring_page_type",
         "line_style",
         "audience",
-        "book_status",
+        "specialty_book_status",
         "text_position",
         "page_layout",
         "fear_intensity",

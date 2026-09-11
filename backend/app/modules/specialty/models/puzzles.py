@@ -66,7 +66,7 @@ class PuzzleBook(TenantModel):
     has_hints: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     layout_mode: Mapped[str | None] = mapped_column(String(30), nullable=True)
     status: Mapped[str] = mapped_column(
-        Enum(BookStatus, name="book_status", native_enum=True, create_type=False),
+        Enum(BookStatus, name="specialty_book_status", native_enum=True, create_type=False),
         nullable=False,
         default=BookStatus.draft,
         server_default="draft",

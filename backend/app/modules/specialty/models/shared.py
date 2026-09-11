@@ -45,7 +45,7 @@ class AssetProvenance(TenantModel):
     book_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
     page_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     asset_type: Mapped[str] = mapped_column(
-        Enum(AssetType, name="asset_type", native_enum=True),
+        Enum(AssetType, name="specialty_asset_type", native_enum=True),
         nullable=False,
     )
     model: Mapped[str | None] = mapped_column(String(50), nullable=True)
