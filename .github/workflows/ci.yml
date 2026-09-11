@@ -299,6 +299,7 @@ jobs:
           # Base-image CVEs with no upstream patch cannot be acted on here; the
           # gate stays meaningful for everything that has a fix.
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Scan frontend image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -310,6 +311,7 @@ jobs:
           # Base-image CVEs with no upstream patch cannot be acted on here; the
           # gate stays meaningful for everything that has a fix.
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
   # ---------------------------------------------------------------------------
   # Integration Tests

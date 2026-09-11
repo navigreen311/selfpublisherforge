@@ -28,11 +28,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim AS runtime
 
-# The base image ships its own pip and setuptools, which nothing here runs (the
-# venv below is what lands on PATH) but which the image scanner still reports.
-# Done before PATH points at the venv, so this is the system pip.
-RUN pip install --no-cache-dir --upgrade pip setuptools
-
 # Install only runtime system libraries (no build tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
@@ -48,6 +43,18 @@ WORKDIR /app
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# A runtime image has no use for a package installer, and pip is the only
+# reason the scanner reports msgpack 1.1.2 and setuptools 70.3.0: both are
+# entries in pip/_vendor/vendor.txt, in every pip release up to and including
+# 26.2.1, so no upgrade can clear them. The venv installs msgpack 1.2.2 for the
+# application itself; this removes the shadow copies nothing imports.
+RUN rm -rf /usr/local/lib/python3.12/site-packages/pip \
+           /usr/local/lib/python3.12/site-packages/pip-*.dist-info \
+           /opt/venv/lib/python3.12/site-packages/pip \
+           /opt/venv/lib/python3.12/site-packages/pip-*.dist-info \
+           /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12 \
+           /opt/venv/bin/pip /opt/venv/bin/pip3 /opt/venv/bin/pip3.12
 
 # Copy application code
 COPY --chown=appuser:appuser . .
