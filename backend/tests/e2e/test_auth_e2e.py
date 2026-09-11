@@ -263,7 +263,10 @@ class TestInvalidCredentialsRejected:
     async def test_access_protected_route_without_token(self, client: AsyncClient):
         """Accessing /users/me with no Authorization header should be rejected."""
         resp = await client.get(f"{USERS_PREFIX}/me")
-        assert resp.status_code == 403  # HTTPBearer returns 403 when header is missing
+        # 401, not 403: a missing Authorization header is unauthenticated.
+        # FastAPI's HTTPBearer used to answer 403 here, which this test was
+        # written against; it returns 401 since 0.12x, per RFC 7235.
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_access_protected_route_with_bogus_token(self, client: AsyncClient):

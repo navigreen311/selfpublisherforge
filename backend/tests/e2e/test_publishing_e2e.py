@@ -680,4 +680,7 @@ class TestPublishingAccountErrors:
     ):
         """Accessing listings without a token should be rejected."""
         resp = await client.get(f"{PUB_PREFIX}/listings")
-        assert resp.status_code == 403  # HTTPBearer returns 403 when header missing
+        # 401, not 403: a missing Authorization header is unauthenticated.
+        # FastAPI's HTTPBearer used to answer 403 here, which this test was
+        # written against; it returns 401 since 0.12x, per RFC 7235.
+        assert resp.status_code == 401
