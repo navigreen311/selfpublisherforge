@@ -28,6 +28,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim AS runtime
 
+# The base image ships its own pip and setuptools, which nothing here runs (the
+# venv below is what lands on PATH) but which the image scanner still reports.
+# Done before PATH points at the venv, so this is the system pip.
+RUN pip install --no-cache-dir --upgrade pip setuptools
+
 # Install only runtime system libraries (no build tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
