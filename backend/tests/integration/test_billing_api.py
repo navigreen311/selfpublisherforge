@@ -54,6 +54,12 @@ def _make_mock_db():
     mock_db = AsyncMock()
     mock_result = MagicMock()
     mock_result.mappings.return_value.first.return_value = TEST_ORG_ROW
+    # An unset MagicMock answers scalar_one_or_none() with another MagicMock,
+    # which `is not None` — so `is_event_processed` reported every webhook as
+    # already seen and the handler returned "duplicate" for events it had
+    # never processed. The default for a stand-in database is no rows.
+    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalar.return_value = None
     mock_db.execute = AsyncMock(return_value=mock_result)
     mock_db.flush = AsyncMock()
     mock_db.commit = AsyncMock()
@@ -316,6 +322,12 @@ class TestWebhookEndpoint:
     @patch("app.modules.billing.service.stripe")
     def test_webhook_processes_event(self, mock_stripe, client):
         mock_stripe.Webhook.construct_event.return_value = {
+            # Real Stripe events carry a top-level evt_ id, and the handler
+            # dedupes on it — billing_events has a unique constraint. The mock
+            # omitted it entirely, so the webhook raised KeyError; a fixed
+            # literal then collided with whatever earlier test had recorded it,
+            # and the handler correctly answered "duplicate".
+            "id": f"evt_test_{uuid.uuid4()}",
             "type": "customer.subscription.created",
             "data": {
                 "object": {
