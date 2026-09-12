@@ -15,7 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import TenantModel
+from app.database import BaseModel, TenantModel
 
 
 class DictationSessionStatus(str, enum.Enum):
@@ -87,8 +87,22 @@ class DictationSession(TenantModel):
     )
 
 
-class DictationCommand(TenantModel):
+class DictationCommand(BaseModel):
+    """A voice command. System commands are global; custom ones are org-scoped.
+
+    Deliberately not a TenantModel: that contract says every row belongs to an
+    organization, and the built-in commands do not.
+    """
+
     __tablename__ = "dictation_commands"
+
+    # The built-in commands belong to no organization: `list_commands` selects
+    # `is_system IS TRUE OR org_id = :org`, so a system row is meant to be
+    # visible to every tenant. TenantModel makes org_id NOT NULL, which made
+    # that impossible to insert — the seeder passed org_id=None and the column
+    # refused it. Overridden as nullable for the system rows only; a custom
+    # command still carries its org, and no org-scoped query can match NULL.
+    org_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, index=True)
 
     command_phrase: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(100), nullable=False)

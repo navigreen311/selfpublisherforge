@@ -334,7 +334,11 @@ async def _ensure_system_commands(db: AsyncSession) -> None:
 
     for trigger, action, desc in SYSTEM_COMMANDS:
         cmd = DictationCommand(
-            trigger_phrase=trigger,
+            # The column is command_phrase; trigger_phrase is the API field.
+            # This constructor used the API name, so seeding the built-in
+            # commands raised TypeError every time it was called — which is
+            # why `list_commands` has only ever returned an org's own.
+            command_phrase=trigger,
             action=action,
             description=desc,
             is_system=True,

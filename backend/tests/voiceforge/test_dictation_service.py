@@ -85,7 +85,10 @@ async def _create_db_session(
         language="en",
         status=status,
         raw_transcript=raw_transcript,
-        word_count=len(raw_transcript.split()) if raw_transcript else 0,
+        # The ORM column is words_dictated; word_count is the API field name.
+        # DictationSessionResponse maps one to the other — this helper builds a
+        # row, so it has to use the column.
+        words_dictated=len(raw_transcript.split()) if raw_transcript else 0,
     )
     db.add(session)
     await db.commit()
