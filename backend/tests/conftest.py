@@ -153,7 +153,11 @@ def _patch_for_sqlite(target, connection, **kw):
 
                 # Strip PG-only function calls in server_default
                 pg_functions = ["gen_random_uuid", "uuid_generate"]
-                if any(fn in sd_text.lower() for fn in pg_functions):
+                if (
+                    any(fn in sd_text.lower() for fn in pg_functions)
+                    or isinstance(column.type, PG_ARRAY | SA_ARRAY)
+                    and sd_text.strip().strip("'\"") in ("{}", "[]")
+                ):
                     column.server_default = None
 
         # ---- Remove PG-only indexes ----

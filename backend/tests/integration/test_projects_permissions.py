@@ -178,8 +178,8 @@ class TestCrossOrganizationAccess:
         data = resp.json()
 
         # Should only see org1's project
-        assert len(data) == 1
-        assert data[0]["title"] == "Org1 Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Org1 Project"
 
     @pytest.mark.asyncio
     async def test_cannot_get_other_org_project(self, client: AsyncClient, db: AsyncSession):
@@ -361,7 +361,7 @@ class TestSoftDeletedProjects:
         resp = await client.get(f"{PREFIX}/", headers=_auth_headers(token))
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 2
+        assert len(data["projects"]) == 2
 
         # Delete one project
         resp = await client.delete(
@@ -374,8 +374,8 @@ class TestSoftDeletedProjects:
         resp = await client.get(f"{PREFIX}/", headers=_auth_headers(token))
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Active Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Active Project"
 
     @pytest.mark.asyncio
     async def test_deleted_project_not_accessible(self, client: AsyncClient, db: AsyncSession):
@@ -429,8 +429,8 @@ class TestProjectFiltering:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Book Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Book Project"
 
     @pytest.mark.asyncio
     async def test_filter_by_status(self, client: AsyncClient, db: AsyncSession):
@@ -452,5 +452,5 @@ class TestProjectFiltering:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Active Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Active Project"
