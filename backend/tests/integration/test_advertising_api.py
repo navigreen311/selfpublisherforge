@@ -11,8 +11,8 @@ from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base, get_db
-from app.models.organization import Organization
 from app.main import create_app
+from app.models.organization import Organization
 from app.modules.advertising.models import (
     AdCreative,
     Campaign,
