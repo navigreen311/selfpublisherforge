@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -76,8 +77,15 @@ async def _create_db_session(
     raw_transcript: str | None = None,
     title: str | None = "Test Session",
     status: SessionStatus = SessionStatus.ACTIVE,
+    created_at: datetime | None = None,
 ) -> DictationSession:
-    """Insert a DictationSession row and return the refreshed ORM object."""
+    """Insert a DictationSession row and return the refreshed ORM object.
+
+    `created_at` is settable because `list_sessions` orders by it descending.
+    Rows inserted in a loop all take the same server-side timestamp, which
+    leaves the order undefined — a test asserting "newest first" against them
+    passes or fails on luck, not behaviour.
+    """
     session = DictationSession(
         user_id=user_id,
         org_id=org_id,
@@ -89,6 +97,7 @@ async def _create_db_session(
         # DictationSessionResponse maps one to the other — this helper builds a
         # row, so it has to use the column.
         words_dictated=len(raw_transcript.split()) if raw_transcript else 0,
+        **({"created_at": created_at} if created_at is not None else {}),
     )
     db.add(session)
     await db.commit()
@@ -157,8 +166,9 @@ async def test_get_session_access_denied(db: AsyncSession, user_id: uuid.UUID, o
 @pytest.mark.asyncio
 async def test_list_sessions(db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID):
     """list_sessions returns paginated results for the given user."""
+    base = datetime(2026, 1, 1, tzinfo=UTC)
     for i in range(3):
-        await _create_db_session(db, user_id, org_id, title=f"Session {i}")
+        await _create_db_session(db, user_id, org_id, title=f"Session {i}", created_at=base + timedelta(minutes=i))
 
     result = await list_sessions(db, user_id, page=1, page_size=10)
 

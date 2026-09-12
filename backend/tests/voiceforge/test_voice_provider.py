@@ -18,6 +18,7 @@ from app.services.voiceforge.provider_router import (
     ProviderRouter,
     RequestType,
 )
+from app.services.voiceforge.ssml_generator import DialogueSegment
 from app.services.voiceforge.voice_manager import SYSTEM_VOICES, VoiceManager
 
 # ---------------------------------------------------------------------------
@@ -269,12 +270,16 @@ class TestDetectCharacters:
     @pytest.mark.asyncio
     async def test_detect_characters_returns_sorted(self, voice_manager: VoiceManager) -> None:
         """Characters are returned sorted by dialogue_count descending."""
+        # DialogueSegment, not dicts. `detect_dialogue` returns the dataclass
+        # and `detect_characters` reads `seg.character`; a dict mock made the
+        # production code raise AttributeError, which is a mock that disagrees
+        # with the thing it stands in for.
         mock_segments = [
-            {"character": "Alice", "text": "Hello!"},
-            {"character": "Bob", "text": "Hi there!"},
-            {"character": "Alice", "text": "How are you?"},
-            {"character": "Alice", "text": "I'm fine."},
-            {"character": "narrator", "text": "She said."},
+            DialogueSegment(character="Alice", text="Hello!"),
+            DialogueSegment(character="Bob", text="Hi there!"),
+            DialogueSegment(character="Alice", text="How are you?"),
+            DialogueSegment(character="Alice", text="I'm fine."),
+            DialogueSegment(character="narrator", text="She said."),
         ]
         with patch("app.services.voiceforge.ssml_generator.SSMLGenerator") as MockSSML:
             mock_gen = MockSSML.return_value
@@ -291,9 +296,13 @@ class TestDetectCharacters:
     @pytest.mark.asyncio
     async def test_detect_characters_excludes_narrator(self, voice_manager: VoiceManager) -> None:
         """Narrator segments are not included in character results."""
+        # DialogueSegment, not dicts. `detect_dialogue` returns the dataclass
+        # and `detect_characters` reads `seg.character`; a dict mock made the
+        # production code raise AttributeError, which is a mock that disagrees
+        # with the thing it stands in for.
         mock_segments = [
-            {"character": "narrator", "text": "Once upon a time."},
-            {"character": "narrator", "text": "The end."},
+            DialogueSegment(character="narrator", text="Once upon a time."),
+            DialogueSegment(character="narrator", text="The end."),
         ]
         with patch("app.services.voiceforge.ssml_generator.SSMLGenerator") as MockSSML:
             mock_gen = MockSSML.return_value
