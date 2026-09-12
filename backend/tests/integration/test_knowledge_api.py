@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -37,15 +38,21 @@ def _make_mock_entry(**overrides):
         "tags": ["test"],
         "credibility_score": 0.9,
         "metadata_": {"key": "value"},
+        "metadata": {"key": "value"},
+        "category": None,
+        "project_id": None,
         "created_at": datetime.now(UTC),
         "updated_at": datetime.now(UTC),
         "deleted_at": None,
     }
     defaults.update(overrides)
-    entry = MagicMock()
-    for k, v in defaults.items():
-        setattr(entry, k, v)
-    entry.to_dict.return_value = {
+    # SimpleNamespace, not MagicMock. KnowledgeEntryResponse reads its fields
+    # off this object via from_attributes, and a MagicMock answers *any*
+    # attribute with another MagicMock — so `category` and `project_id`, which
+    # this dict never set, arrived at the response model as mocks and failed
+    # validation. A namespace raises AttributeError instead, which is the
+    # failure you want: it names the field the stand-in is missing.
+    payload = {
         "id": str(defaults["id"]),
         "org_id": str(defaults["org_id"]),
         "title": defaults["title"],
@@ -57,6 +64,7 @@ def _make_mock_entry(**overrides):
         "created_at": defaults["created_at"].isoformat() if defaults["created_at"] else None,
         "updated_at": defaults["updated_at"].isoformat() if defaults["updated_at"] else None,
     }
+    entry = SimpleNamespace(**defaults, to_dict=lambda: payload)
     return entry, defaults
 
 

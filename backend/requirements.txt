@@ -25,7 +25,13 @@ stripe==10.0.0
 anthropic==0.34.0
 openai==1.50.0
 langchain>=0.3.7
+# The async client is what app/ actually constructs — health.py and
+# knowledge_vault/search.py both build AsyncElasticsearch — and its default
+# transport needs aiohttp, which elasticsearch does not pull in. Without it
+# every knowledge-vault request dies on
+# "You must have 'aiohttp' installed to use AiohttpHttpNode".
 elasticsearch==8.15.0
+aiohttp==3.13.2
 sendgrid==6.11.0
 pillow==12.3.0
 python-barcode==0.15.1

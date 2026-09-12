@@ -11,6 +11,7 @@ from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base, get_db
+from app.models.organization import Organization
 from app.main import create_app
 from app.modules.advertising.models import (
     AdCreative,
@@ -59,6 +60,26 @@ async def test_db():
 @pytest.fixture
 def org_id():
     return uuid4()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _organization_row(test_db, org_id):
+    """Persist the organization every row in this module points at.
+
+    The fixtures here invented an org_id and never created the organization.
+    That worked only while `Campaign.org_id` carried no ForeignKey in the
+    model; the database has had one since migration 004, and declaring it made
+    SQLite enforce what Postgres always would have — every insert now fails
+    with FOREIGN KEY constraint failed.
+    """
+    org = Organization(
+        id=org_id,
+        name="Advertising Test Org",
+        slug=f"advertising-test-{org_id.hex[:8]}",
+    )
+    test_db.add(org)
+    await test_db.flush()
+    return org
 
 
 @pytest.fixture
