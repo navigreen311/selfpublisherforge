@@ -6,35 +6,33 @@ price analysis, mobile checking, and blurb generation.
 
 from __future__ import annotations
 
-import pytest
-
 from app.modules.product_page_lab.analyzer import (
+    _calculate_readability,
+    _count_syllables,
+    _has_hook,
     analyze_blurb,
     analyze_category,
     analyze_keywords,
     analyze_listing,
     analyze_price,
     analyze_title,
-    _count_syllables,
-    _calculate_readability,
-    _has_hook,
-)
-from app.modules.product_page_lab.mobile_checker import (
-    check_mobile_display,
-    _check_truncation,
-    _strip_html,
-    _has_above_fold_hook,
 )
 from app.modules.product_page_lab.blurb_generator import (
     build_blurb_generation_prompt,
     generate_blurb_variants_local,
 )
+from app.modules.product_page_lab.mobile_checker import (
+    _check_truncation,
+    _has_above_fold_hook,
+    _strip_html,
+    check_mobile_display,
+)
 from app.modules.product_page_lab.schemas import Genre
-
 
 # ===========================================================================
 # Title analysis tests
 # ===========================================================================
+
 
 class TestTitleAnalysis:
     """Tests for analyze_title()."""
@@ -108,6 +106,7 @@ class TestTitleAnalysis:
 # Blurb analysis tests
 # ===========================================================================
 
+
 class TestBlurbAnalysis:
     """Tests for analyze_blurb()."""
 
@@ -175,8 +174,7 @@ class TestBlurbAnalysis:
 
     def test_no_bullet_points_flagged(self):
         blurb = (
-            "Discover the truth! A compelling narrative about love and betrayal. "
-            "Join the adventure today. Buy now!"
+            "Discover the truth! A compelling narrative about love and betrayal. " "Join the adventure today. Buy now!"
         )
         result = analyze_blurb(blurb)
         assert result.has_bullet_points is False
@@ -204,6 +202,7 @@ class TestBlurbAnalysis:
 # ===========================================================================
 # Keyword analysis tests
 # ===========================================================================
+
 
 class TestKeywordAnalysis:
     """Tests for analyze_keywords()."""
@@ -246,6 +245,7 @@ class TestKeywordAnalysis:
 # Category analysis tests
 # ===========================================================================
 
+
 class TestCategoryAnalysis:
     """Tests for analyze_category()."""
 
@@ -281,6 +281,7 @@ class TestCategoryAnalysis:
 # Price analysis tests
 # ===========================================================================
 
+
 class TestPriceAnalysis:
     """Tests for analyze_price()."""
 
@@ -315,6 +316,7 @@ class TestPriceAnalysis:
 # ===========================================================================
 # Full listing analysis tests
 # ===========================================================================
+
 
 class TestListingAnalysis:
     """Tests for analyze_listing() end-to-end."""
@@ -376,6 +378,7 @@ class TestListingAnalysis:
 # ===========================================================================
 # Mobile checker tests
 # ===========================================================================
+
 
 class TestMobileChecker:
     """Tests for mobile_checker module."""
@@ -466,6 +469,7 @@ class TestMobileChecker:
 # Blurb generator tests
 # ===========================================================================
 
+
 class TestBlurbGenerator:
     """Tests for blurb_generator module."""
 
@@ -542,6 +546,7 @@ class TestBlurbGenerator:
 # ===========================================================================
 # Helper function tests
 # ===========================================================================
+
 
 class TestHelpers:
     """Tests for internal helper functions."""

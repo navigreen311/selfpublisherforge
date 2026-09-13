@@ -8,14 +8,15 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.core.exceptions import AppException
-from app.modules.projects.schemas import ProjectListRequest
 from app.modules.projects import service
-
+from app.modules.projects.schemas import ProjectListRequest
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -48,12 +49,27 @@ def _make_project_row(
     }
 
 
-def _mock_project_orm(row: dict) -> MagicMock:
-    """Create a mock Project ORM object from a row dict."""
-    project = MagicMock()
-    for key, value in row.items():
-        setattr(project, key, value)
-    return project
+def _mock_project_orm(row: dict) -> SimpleNamespace:
+    """Create a stand-in Project ORM object from a row dict."""
+    defaults = {
+        "book_type": None,
+        "target_launch_date": None,
+        "genre": None,
+        "subgenre": None,
+        "target_audience": None,
+        "keywords": None,
+        "target_word_count": None,
+        "target_date": None,
+        "marketplace": None,
+        "template": None,
+        "cover_image_url": None,
+        "language": None,
+        "content_rating": None,
+        "has_ai_content": False,
+        "is_public_domain": False,
+    }
+    defaults.update(row)
+    return SimpleNamespace(**defaults)
 
 
 def _mock_db_for_create() -> AsyncMock:
@@ -61,7 +77,7 @@ def _mock_db_for_create() -> AsyncMock:
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
     mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
+    mock_db.refresh = AsyncMock(side_effect=populate_server_defaults)
     return mock_db
 
 
@@ -79,7 +95,7 @@ def _mock_db_with_project(project_row: dict | None) -> AsyncMock:
 
     mock_db.execute = AsyncMock(return_value=result)
     mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
+    mock_db.refresh = AsyncMock(side_effect=populate_server_defaults)
 
     return mock_db
 
@@ -88,25 +104,15 @@ def _mock_db_with_projects(project_rows: list[dict]) -> AsyncMock:
     """Return a mock db session that returns given projects."""
     mock_db = AsyncMock()
 
-    # For count query
-    count_result = MagicMock()
-    count_result.scalar.return_value = len(project_rows)
-
     # For projects query
     project_scalars = MagicMock()
     project_scalars.all.return_value = [_mock_project_orm(row) for row in project_rows]
     project_result = MagicMock()
     project_result.scalars.return_value = project_scalars
 
-    call_count = {"count": 0}
-
-    def execute_side_effect(query):
-        call_count["count"] += 1
-        if call_count["count"] == 1:
-            return count_result
-        return project_result
-
-    mock_db.execute = AsyncMock(side_effect=execute_side_effect)
+    # list_projects takes its total from db.scalar(count_query) and only ever
+    # calls execute() for the rows, so execute must not hand back the count.
+    mock_db.execute = AsyncMock(return_value=project_result)
     mock_db.scalar = AsyncMock(return_value=len(project_rows))
 
     return mock_db
@@ -127,11 +133,7 @@ class TestCreateProject:
         org_id = uuid.uuid4()
 
         result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="My Book Project",
-            description="A great book",
-            project_type="book"
+            mock_db, organization_id=org_id, title="My Book Project", description="A great book", project_type="book"
         )
 
         assert result.title == "My Book Project"
@@ -151,11 +153,7 @@ class TestCreateProject:
         mock_db = _mock_db_for_create()
         org_id = uuid.uuid4()
 
-        result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="Simple Project"
-        )
+        result = await service.create_project(mock_db, organization_id=org_id, title="Simple Project")
 
         assert result.title == "Simple Project"
         assert result.description is None
@@ -168,10 +166,7 @@ class TestCreateProject:
         org_id = uuid.uuid4()
 
         result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="Book Series",
-            project_type="series"
+            mock_db, organization_id=org_id, title="Book Series", project_type="series"
         )
 
         assert result.project_type == "series"
@@ -183,10 +178,7 @@ class TestCreateProject:
         org_id = uuid.uuid4()
 
         result = await service.create_project(
-            mock_db,
-            organization_id=org_id,
-            title="Online Course",
-            project_type="course"
+            mock_db, organization_id=org_id, title="Online Course", project_type="course"
         )
 
         assert result.project_type == "course"
@@ -205,11 +197,7 @@ class TestGetProject:
         """Should return project details when found."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            title="Found Project",
-            org_id=org_id
-        )
+        project_row = _make_project_row(project_id=project_id, title="Found Project", org_id=org_id)
         mock_db = _mock_db_with_project(project_row)
 
         result = await service.get_project(mock_db, project_id, org_id)
@@ -252,10 +240,7 @@ class TestGetProject:
         project_org_id = uuid.uuid4()
         user_org_id = uuid.uuid4()
 
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=project_org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=project_org_id)
         mock_db = _mock_db_with_project(project_row)
 
         with pytest.raises(AppException) as exc_info:
@@ -279,11 +264,7 @@ class TestUpdateProject:
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
         project_row = _make_project_row(
-            project_id=project_id,
-            title="Old Title",
-            description="Old Desc",
-            status="draft",
-            org_id=org_id
+            project_id=project_id, title="Old Title", description="Old Desc", status="draft", org_id=org_id
         )
         mock_db = _mock_db_with_project(project_row)
 
@@ -294,12 +275,12 @@ class TestUpdateProject:
             user_role="admin",
             title="New Title",
             description="New Description",
-            status="published"
+            status="active",
         )
 
         assert result.title == "New Title"
         assert result.description == "New Description"
-        assert result.status == "published"
+        assert result.status == "active"
         mock_db.commit.assert_called_once()
         mock_db.refresh.assert_called_once()
 
@@ -308,19 +289,10 @@ class TestUpdateProject:
         """Should update only title when other fields are None."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=org_id)
         mock_db = _mock_db_with_project(project_row)
 
-        result = await service.update_project(
-            mock_db,
-            project_id,
-            org_id,
-            user_role="editor",
-            title="Updated Title"
-        )
+        result = await service.update_project(mock_db, project_id, org_id, user_role="editor", title="Updated Title")
 
         assert result.title == "Updated Title"
         mock_db.commit.assert_called_once()
@@ -330,22 +302,12 @@ class TestUpdateProject:
         """Should update only status."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=org_id,
-            status="draft"
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=org_id, status="draft")
         mock_db = _mock_db_with_project(project_row)
 
-        result = await service.update_project(
-            mock_db,
-            project_id,
-            org_id,
-            user_role="owner",
-            status="published"
-        )
+        result = await service.update_project(mock_db, project_id, org_id, user_role="owner", status="active")
 
-        assert result.status == "published"
+        assert result.status == "active"
 
     @pytest.mark.asyncio
     async def test_project_not_found_raises_404(self):
@@ -355,13 +317,7 @@ class TestUpdateProject:
         mock_db = _mock_db_with_project(None)
 
         with pytest.raises(AppException) as exc_info:
-            await service.update_project(
-                mock_db,
-                project_id,
-                org_id,
-                user_role="admin",
-                title="New Title"
-            )
+            await service.update_project(mock_db, project_id, org_id, user_role="admin", title="New Title")
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.code == "PROJECT_NOT_FOUND"
@@ -373,20 +329,11 @@ class TestUpdateProject:
         project_org_id = uuid.uuid4()
         user_org_id = uuid.uuid4()
 
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=project_org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=project_org_id)
         mock_db = _mock_db_with_project(project_row)
 
         with pytest.raises(AppException) as exc_info:
-            await service.update_project(
-                mock_db,
-                project_id,
-                user_org_id,
-                user_role="admin",
-                title="New Title"
-            )
+            await service.update_project(mock_db, project_id, user_org_id, user_role="admin", title="New Title")
 
         assert exc_info.value.status_code == 403
         assert exc_info.value.code == "ACCESS_DENIED"
@@ -407,7 +354,7 @@ class TestListProjects:
         project_rows = [
             _make_project_row(title="Project 1", org_id=org_id),
             _make_project_row(title="Project 2", org_id=org_id, project_type="series"),
-            _make_project_row(title="Project 3", org_id=org_id, status="published"),
+            _make_project_row(title="Project 3", org_id=org_id, status="active"),
         ]
         mock_db = _mock_db_with_projects(project_rows)
 
@@ -454,10 +401,7 @@ class TestListProjects:
     async def test_pagination(self):
         """Should apply limit and offset."""
         org_id = uuid.uuid4()
-        project_rows = [
-            _make_project_row(title=f"Project {i}", org_id=org_id)
-            for i in range(5)
-        ]
+        project_rows = [_make_project_row(title=f"Project {i}", org_id=org_id) for i in range(5)]
         mock_db = _mock_db_with_projects(project_rows)
 
         request = ProjectListRequest(limit=2, offset=1)
@@ -492,18 +436,10 @@ class TestDeleteProject:
         """Should set deleted_at timestamp on project."""
         project_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=org_id)
         mock_db = _mock_db_with_project(project_row)
 
-        await service.delete_project(
-            mock_db,
-            project_id,
-            org_id,
-            user_role="owner"
-        )
+        await service.delete_project(mock_db, project_id, org_id, user_role="owner")
 
         mock_db.commit.assert_called_once()
 
@@ -515,12 +451,7 @@ class TestDeleteProject:
         mock_db = _mock_db_with_project(None)
 
         with pytest.raises(AppException) as exc_info:
-            await service.delete_project(
-                mock_db,
-                project_id,
-                org_id,
-                user_role="admin"
-            )
+            await service.delete_project(mock_db, project_id, org_id, user_role="admin")
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.code == "PROJECT_NOT_FOUND"
@@ -532,19 +463,11 @@ class TestDeleteProject:
         project_org_id = uuid.uuid4()
         user_org_id = uuid.uuid4()
 
-        project_row = _make_project_row(
-            project_id=project_id,
-            org_id=project_org_id
-        )
+        project_row = _make_project_row(project_id=project_id, org_id=project_org_id)
         mock_db = _mock_db_with_project(project_row)
 
         with pytest.raises(AppException) as exc_info:
-            await service.delete_project(
-                mock_db,
-                project_id,
-                user_org_id,
-                user_role="admin"
-            )
+            await service.delete_project(mock_db, project_id, user_org_id, user_role="admin")
 
         assert exc_info.value.status_code == 403
         assert exc_info.value.code == "ACCESS_DENIED"
@@ -558,12 +481,7 @@ class TestDeleteProject:
         mock_db = _mock_db_with_project(None)
 
         with pytest.raises(AppException) as exc_info:
-            await service.delete_project(
-                mock_db,
-                project_id,
-                org_id,
-                user_role="owner"
-            )
+            await service.delete_project(mock_db, project_id, org_id, user_role="owner")
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.code == "PROJECT_NOT_FOUND"

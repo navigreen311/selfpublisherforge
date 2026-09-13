@@ -1,4 +1,5 @@
 """Seed demo market intelligence data."""
+
 import random
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -141,9 +142,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
         org_id: Organization ID
     """
     # Check if data already exists
-    existing = await db.execute(
-        select(CompetitorBook).where(CompetitorBook.org_id == org_id).limit(1)
-    )
+    existing = await db.execute(select(CompetitorBook).where(CompetitorBook.org_id == org_id).limit(1))
     if existing.scalar_one_or_none():
         print("✓ Market data already exists, skipping")
         return
@@ -159,9 +158,7 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
         bsr_history = {}
         current_bsr = book_data["bsr"]
         for day in range(30):
-            date_key = (
-                datetime.now(UTC) - timedelta(days=30 - day)
-            ).strftime("%Y-%m-%d")
+            date_key = (datetime.now(UTC) - timedelta(days=30 - day)).strftime("%Y-%m-%d")
             # BSR fluctuates
             fluctuation = random.randint(-500, 500)
             bsr_history[date_key] = max(100, current_bsr + fluctuation)
@@ -179,18 +176,20 @@ async def seed_market(db: AsyncSession, org_id: uuid.UUID) -> None:
             rating=book_data["rating"],
             category="Fantasy",
             category_ids=["17220", "17300"],
-            publication_date=datetime.now(UTC) - timedelta(days=random.randint(180, 730)),
-            description=f"An epic {book_data['title'].lower()} story...",
-            keywords=["fantasy", "adventure", "magic"],
-            page_count=random.randint(250, 450),
-            formats=["ebook", "paperback"],
-            series_info={
-                "is_series": random.choice([True, False]),
-                "book_number": random.randint(1, 3) if random.choice([True, False]) else None,
-            },
+            # CompetitorBook has no columns for the scraped extras below; they
+            # live in metadata_json, which is what it is for.
             metadata_json={
                 "scraped_at": datetime.now(UTC).isoformat(),
                 "source": "amazon",
+                "publication_date": (datetime.now(UTC) - timedelta(days=random.randint(180, 730))).isoformat(),
+                "description": f"An epic {book_data['title'].lower()} story...",
+                "keywords": ["fantasy", "adventure", "magic"],
+                "page_count": random.randint(250, 450),
+                "formats": ["ebook", "paperback"],
+                "series_info": {
+                    "is_series": random.choice([True, False]),
+                    "book_number": random.randint(1, 3) if random.choice([True, False]) else None,
+                },
             },
         )
         db.add(competitor)

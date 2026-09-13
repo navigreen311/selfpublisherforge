@@ -138,7 +138,7 @@ export default function ExportPage() {
           role="alert"
           className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
         >
-          <p className="font-medium">{t("export.error.failedToLoad")}</p>
+          <p className="font-medium">{t("export.error.failedToLoadChapters")}</p>
           <p className="mt-1 text-red-600">
             {chaptersError instanceof Error
               ? chaptersError.message

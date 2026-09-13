@@ -10,6 +10,7 @@ from app.schemas.common import PlanTier, TimestampMixin, UserRole
 
 # ─── User Profile ────────────────────────────────────────────────────────────
 
+
 class UserProfile(TimestampMixin):
     """Full user profile returned by GET /users/me."""
 
@@ -41,6 +42,7 @@ class UpdatePreferencesRequest(BaseModel):
 
 # ─── Sessions ────────────────────────────────────────────────────────────────
 
+
 class SessionResponse(BaseModel):
     """Representation of an active user session."""
 
@@ -54,6 +56,7 @@ class SessionResponse(BaseModel):
 
 
 # ─── Organization ────────────────────────────────────────────────────────────
+
 
 class OrgDetails(TimestampMixin):
     """Organization details returned by GET /orgs/{id}."""
@@ -112,6 +115,7 @@ class ChangeRoleRequest(BaseModel):
 
 
 # ─── API Keys ────────────────────────────────────────────────────────────────
+
 
 class ApiKeyCreate(BaseModel):
     """Payload to create a new API key."""

@@ -8,17 +8,15 @@ and budget enforcement.
 
 from __future__ import annotations
 
-from typing import AsyncIterator
-from unittest.mock import AsyncMock, MagicMock
+from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock
 
 import pytest
-import pytest_asyncio
 
 from app.modules.llm_orchestration.cache import SemanticCache
-from app.modules.llm_orchestration.cost_tracker import BudgetAlertLevel, CostTracker
+from app.modules.llm_orchestration.cost_tracker import CostTracker
 from app.modules.llm_orchestration.orchestrator import (
     GenerationOptions,
-    GenerationResult,
     LLMOrchestrator,
 )
 from app.modules.llm_orchestration.providers.base import (
@@ -35,10 +33,10 @@ from app.modules.llm_orchestration.router_config import (
     TaskType,
 )
 
-
 # -------------------------------------------------------------------
 # Mock provider factory
 # -------------------------------------------------------------------
+
 
 def make_mock_provider(
     provider_name: str,
@@ -71,13 +69,9 @@ def make_mock_provider(
             words = content.split()
             for word in words:
                 yield LLMStreamChunk(delta=word + " ", model_id=request.model_id)
-            yield LLMStreamChunk(
-                delta="", finish_reason="end_turn", model_id=request.model_id
-            )
+            yield LLMStreamChunk(delta="", finish_reason="end_turn", model_id=request.model_id)
         else:
-            yield LLMStreamChunk(
-                delta="", finish_reason="error", model_id=request.model_id
-            )
+            yield LLMStreamChunk(delta="", finish_reason="error", model_id=request.model_id)
 
     provider.generate_stream = _stream
     provider.health_check = AsyncMock(return_value=True)
@@ -88,6 +82,7 @@ def make_mock_provider(
 # -------------------------------------------------------------------
 # Mock Redis for cache
 # -------------------------------------------------------------------
+
 
 def make_mock_redis() -> AsyncMock:
     redis = AsyncMock()
@@ -118,6 +113,7 @@ def make_mock_redis() -> AsyncMock:
 # -------------------------------------------------------------------
 # Fixtures
 # -------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_anthropic() -> BaseLLMProvider:
@@ -181,6 +177,7 @@ def orchestrator_with_failing_primary(
 # Basic generation flow
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestBasicGeneration:
     """End-to-end generation with mocked providers."""
@@ -230,13 +227,12 @@ class TestBasicGeneration:
 # Fallback behaviour
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestFallbackBehaviour:
     """Test fallback to secondary models when primary fails."""
 
-    async def test_falls_back_on_primary_failure(
-        self, orchestrator_with_failing_primary: LLMOrchestrator
-    ):
+    async def test_falls_back_on_primary_failure(self, orchestrator_with_failing_primary: LLMOrchestrator):
         # Blurb: primary=Sonnet(anthropic, fails) -> fallback=GPT-4(openai, succeeds)
         result = await orchestrator_with_failing_primary.generate(
             task_type=TaskType.BLURB_AD_COPY.value,
@@ -246,9 +242,7 @@ class TestFallbackBehaviour:
         assert result.fallback_used is True
         assert result.attempts >= 2
 
-    async def test_all_models_fail_returns_empty(
-        self, mock_redis: AsyncMock
-    ):
+    async def test_all_models_fail_returns_empty(self, mock_redis: AsyncMock):
         failing_a = make_mock_provider("anthropic", succeed=False)
         failing_o = make_mock_provider("openai", succeed=False)
         cache = SemanticCache(redis_client=mock_redis)
@@ -271,13 +265,12 @@ class TestFallbackBehaviour:
 # Caching integration
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestCachingIntegration:
     """Test that caching correctly stores and retrieves responses."""
 
-    async def test_second_call_is_cache_hit(
-        self, orchestrator: LLMOrchestrator, mock_anthropic: BaseLLMProvider
-    ):
+    async def test_second_call_is_cache_hit(self, orchestrator: LLMOrchestrator, mock_anthropic: BaseLLMProvider):
         # Market analysis has caching enabled (TTL=24h)
         prompt = "Analyze the thriller genre"
         r1 = await orchestrator.generate(
@@ -311,9 +304,7 @@ class TestCachingIntegration:
         )
         assert r2.cache_hit is False
 
-    async def test_skip_cache_flag(
-        self, orchestrator: LLMOrchestrator, mock_anthropic: BaseLLMProvider
-    ):
+    async def test_skip_cache_flag(self, orchestrator: LLMOrchestrator, mock_anthropic: BaseLLMProvider):
         prompt = "Analyze market"
         await orchestrator.generate(
             task_type=TaskType.MARKET_ANALYSIS.value,
@@ -331,6 +322,7 @@ class TestCachingIntegration:
 # Cost tracking integration
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestCostTrackingIntegration:
     """Test cost tracking through the orchestrator."""
@@ -347,15 +339,11 @@ class TestCostTrackingIntegration:
         assert summary["request_count"] == 1
         assert summary["total_cost_usd"] > 0
 
-    async def test_budget_exceeded_blocks_generation(
-        self, orchestrator: LLMOrchestrator
-    ):
+    async def test_budget_exceeded_blocks_generation(self, orchestrator: LLMOrchestrator):
         org_id = "org-broke"
         orchestrator._cost_tracker.set_budget(org_id, 0.0001)
         # Spend past budget
-        await orchestrator._cost_tracker.record_usage(
-            org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000
-        )
+        await orchestrator._cost_tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000)
         opts = GenerationOptions(org_id=org_id)
         result = await orchestrator.generate(
             task_type=TaskType.BLURB_AD_COPY.value,
@@ -369,6 +357,7 @@ class TestCostTrackingIntegration:
 # -------------------------------------------------------------------
 # Quality assurance integration
 # -------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 class TestQualityIntegration:
@@ -391,9 +380,7 @@ class TestQualityIntegration:
         )
         assert result.quality_report is None
 
-    async def test_progressive_enhancement_escalates(
-        self, mock_redis: AsyncMock
-    ):
+    async def test_progressive_enhancement_escalates(self, mock_redis: AsyncMock):
         """If Haiku returns low-quality content, orchestrator escalates to Sonnet."""
         # Haiku returns very short (low quality) content
         poor_anthropic = AsyncMock(spec=BaseLLMProvider)
@@ -415,22 +402,21 @@ class TestQualityIntegration:
                     latency_ms=10.0,
                     finish_reason="end_turn",
                 )
-            else:
-                # Second call (Sonnet) — good quality
-                return LLMResponse(
-                    model_id=request.model_id,
-                    content=(
-                        "The sentiment analysis reveals predominantly positive reviews "
-                        "with strong themes of character development and plot pacing. "
-                        "Readers consistently praise the atmospheric setting and the "
-                        "author's ability to create tension throughout the narrative."
-                    ),
-                    input_tokens=50,
-                    output_tokens=100,
-                    total_tokens=150,
-                    latency_ms=80.0,
-                    finish_reason="end_turn",
-                )
+            # Second call (Sonnet) — good quality
+            return LLMResponse(
+                model_id=request.model_id,
+                content=(
+                    "The sentiment analysis reveals predominantly positive reviews "
+                    "with strong themes of character development and plot pacing. "
+                    "Readers consistently praise the atmospheric setting and the "
+                    "author's ability to create tension throughout the narrative."
+                ),
+                input_tokens=50,
+                output_tokens=100,
+                total_tokens=150,
+                latency_ms=80.0,
+                finish_reason="end_turn",
+            )
 
         poor_anthropic.generate = AsyncMock(side_effect=_generate)
 
@@ -457,6 +443,7 @@ class TestQualityIntegration:
 # Streaming
 # -------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 class TestStreamingGeneration:
     """Test streaming generation through the orchestrator."""
@@ -472,9 +459,7 @@ class TestStreamingGeneration:
         content = "".join(c.delta for c in chunks)
         assert len(content) > 0
 
-    async def test_stream_fallback_on_failure(
-        self, orchestrator_with_failing_primary: LLMOrchestrator
-    ):
+    async def test_stream_fallback_on_failure(self, orchestrator_with_failing_primary: LLMOrchestrator):
         chunks = []
         async for chunk in orchestrator_with_failing_primary.generate_stream(
             task_type=TaskType.BLURB_AD_COPY.value,
@@ -487,9 +472,7 @@ class TestStreamingGeneration:
     async def test_stream_budget_exceeded(self, orchestrator: LLMOrchestrator):
         org_id = "org-stream-broke"
         orchestrator._cost_tracker.set_budget(org_id, 0.0001)
-        await orchestrator._cost_tracker.record_usage(
-            org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000
-        )
+        await orchestrator._cost_tracker.record_usage(org_id, ModelID.CLAUDE_OPUS.value, "test", 10000, 10000)
         opts = GenerationOptions(org_id=org_id)
         chunks = []
         async for chunk in orchestrator.generate_stream(
@@ -504,6 +487,7 @@ class TestStreamingGeneration:
 # -------------------------------------------------------------------
 # Provider registration
 # -------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 class TestProviderRegistration:

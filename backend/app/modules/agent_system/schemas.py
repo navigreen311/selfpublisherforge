@@ -21,6 +21,7 @@ from app.modules.agent_system.models import (
 # Agent schemas
 # ---------------------------------------------------------------------------
 
+
 class AgentBase(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
@@ -42,6 +43,7 @@ class AgentCreate(AgentBase):
 
 class AgentConfigUpdate(BaseModel):
     """Partial update for agent configuration."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -72,6 +74,7 @@ class AgentListResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Task schemas
 # ---------------------------------------------------------------------------
+
 
 class TaskCreate(BaseModel):
     agent_id: UUID
@@ -139,6 +142,7 @@ class TaskListParams(BaseModel):
 # Workflow schemas
 # ---------------------------------------------------------------------------
 
+
 class WorkflowStepDefinition(BaseModel):
     agent_id: UUID
     title: str = Field(..., min_length=1, max_length=500)
@@ -185,6 +189,7 @@ class WorkflowListResponse(BaseModel):
 # Budget schemas
 # ---------------------------------------------------------------------------
 
+
 class BudgetUpdate(BaseModel):
     daily_token_limit: int | None = Field(default=None, ge=0)
     daily_usd_limit: float | None = Field(default=None, ge=0.0)
@@ -219,6 +224,7 @@ class BudgetListResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Audit schemas
 # ---------------------------------------------------------------------------
+
 
 class AuditEntry(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -255,6 +261,7 @@ class AuditListParams(BaseModel):
 # Emergency stop
 # ---------------------------------------------------------------------------
 
+
 class EmergencyStopResponse(BaseModel):
     tasks_cancelled: int
     workflows_cancelled: int
@@ -265,6 +272,7 @@ class EmergencyStopResponse(BaseModel):
 # Generic message
 # ---------------------------------------------------------------------------
 
+
 class MessageResponse(BaseModel):
     message: str
 
@@ -273,8 +281,10 @@ class MessageResponse(BaseModel):
 # Extended task execution schemas (Worker 02)
 # ---------------------------------------------------------------------------
 
+
 class TaskCreateRequest(BaseModel):
     """Request to create and execute a task."""
+
     agent_id: UUID
     task_type: str
     book_id: UUID | None = None
@@ -286,6 +296,7 @@ class TaskCreateRequest(BaseModel):
 
 class TaskExecutionResponse(BaseModel):
     """Real-time task execution status and progress."""
+
     model_config = ConfigDict(from_attributes=True)
 
     task_id: UUID
@@ -300,11 +311,13 @@ class TaskExecutionResponse(BaseModel):
 
 class TaskRateRequest(BaseModel):
     """Request to rate task output quality."""
+
     rating: int = Field(..., ge=1, le=5)
 
 
 class TaskApproveResponse(BaseModel):
     """Response after approving a task."""
+
     model_config = ConfigDict(from_attributes=True)
 
     task_id: UUID
@@ -314,6 +327,7 @@ class TaskApproveResponse(BaseModel):
 
 class AgentUsageResponse(BaseModel):
     """Agent usage statistics and costs."""
+
     model_config = ConfigDict(from_attributes=True)
 
     total_tasks: int
@@ -325,6 +339,7 @@ class AgentUsageResponse(BaseModel):
 
 class AgentConfigureRequest(BaseModel):
     """Request to configure an existing agent."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     name: str | None = None
@@ -342,6 +357,7 @@ class AgentConfigureRequest(BaseModel):
 
 class CustomAgentCreateRequest(BaseModel):
     """Request to create a custom agent."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     name: str = Field(..., min_length=1, max_length=255)

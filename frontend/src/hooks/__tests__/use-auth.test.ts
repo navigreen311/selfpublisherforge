@@ -128,8 +128,12 @@ describe("useAuth hook", () => {
   it("login stores token and user data, then redirects to dashboard", async () => {
     mockApiPost.mockResolvedValueOnce({
       data: {
-        access_token: "at-new",
-        refresh_token: "rt-new",
+        tokens: {
+          access_token: "at-new",
+          refresh_token: "rt-new",
+          token_type: "bearer",
+          expires_in: 3600,
+        },
         user: fakeUser,
       },
     });
@@ -157,8 +161,12 @@ describe("useAuth hook", () => {
   it("login with MFA code passes mfa_code to the API", async () => {
     mockApiPost.mockResolvedValueOnce({
       data: {
-        access_token: "at-mfa",
-        refresh_token: "rt-mfa",
+        tokens: {
+          access_token: "at-mfa",
+          refresh_token: "rt-mfa",
+          token_type: "bearer",
+          expires_in: 3600,
+        },
         user: fakeUser,
       },
     });
@@ -214,8 +222,12 @@ describe("useAuth hook", () => {
   it("register creates account, stores tokens, and redirects to onboarding", async () => {
     mockApiPost.mockResolvedValueOnce({
       data: {
-        access_token: "at-reg",
-        refresh_token: "rt-reg",
+        tokens: {
+          access_token: "at-reg",
+          refresh_token: "rt-reg",
+          token_type: "bearer",
+          expires_in: 3600,
+        },
         user: fakeUser,
       },
     });
@@ -336,8 +348,12 @@ describe("useAuth hook", () => {
   it("handleOAuthCallback exchanges code for tokens and redirects", async () => {
     mockApiPost.mockResolvedValueOnce({
       data: {
-        access_token: "at-oauth",
-        refresh_token: "rt-oauth",
+        tokens: {
+          access_token: "at-oauth",
+          refresh_token: "rt-oauth",
+          token_type: "bearer",
+          expires_in: 3600,
+        },
         user: fakeUser,
       },
     });

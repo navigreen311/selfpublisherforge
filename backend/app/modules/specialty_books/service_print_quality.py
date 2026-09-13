@@ -81,9 +81,21 @@ BLEED_SIZE = 0.125
 MAX_FILE_SIZE_MB = 650
 
 KDP_ACCEPTED_TRIM_SIZES = [
-    "5x8", "5.06x7.81", "5.25x8", "5.5x8.5", "6x9", "6.14x9.21",
-    "6.69x9.61", "7x10", "7.44x9.69", "7.5x9.25", "8x10", "8.25x6",
-    "8.25x8.25", "8.5x8.5", "8.5x11",
+    "5x8",
+    "5.06x7.81",
+    "5.25x8",
+    "5.5x8.5",
+    "6x9",
+    "6.14x9.21",
+    "6.69x9.61",
+    "7x10",
+    "7.44x9.69",
+    "7.5x9.25",
+    "8x10",
+    "8.25x6",
+    "8.25x8.25",
+    "8.5x8.5",
+    "8.5x11",
 ]
 
 
@@ -126,13 +138,15 @@ def calculate_print_cost(
         royalty_35 = round(price * KDP_ROYALTY_35 - total_cost, 2)
         royalty_70 = round(price * KDP_ROYALTY_70 - total_cost, 2)
         effective_margin = round(royalty_70 / price * 100, 2) if price > 0 else 0.0
-        scenarios.append({
-            "target_margin": f"{int(margin_pct * 100)}%",
-            "price": price,
-            "royalty_35": royalty_35,
-            "royalty_70": royalty_70,
-            "margin": effective_margin,
-        })
+        scenarios.append(
+            {
+                "target_margin": f"{int(margin_pct * 100)}%",
+                "price": price,
+                "royalty_35": royalty_35,
+                "royalty_70": royalty_70,
+                "margin": effective_margin,
+            }
+        )
 
     recommended_price: float | None = None
     if category and category in CATEGORY_NORMS:
@@ -141,8 +155,7 @@ def calculate_print_cost(
         recommended_price = mid
         if mid < total_cost * 1.3:
             warnings.append(
-                f"Category norm mid-price ${mid} may not provide 30% margin "
-                f"over printing cost ${total_cost}."
+                f"Category norm mid-price ${mid} may not provide 30% margin " f"over printing cost ${total_cost}."
             )
     else:
         recommended_price = round(total_cost / 0.50, 2)
@@ -151,9 +164,7 @@ def calculate_print_cost(
         warnings.append("Recommended price is below printing cost.")
     breakeven_price = round(total_cost / 0.60, 2)
     if recommended_price is not None and recommended_price < breakeven_price:
-        warnings.append(
-            f"Suggested price ${recommended_price} is below breakeven (${breakeven_price} at 60% royalty)."
-        )
+        warnings.append(f"Suggested price ${recommended_price} is below breakeven (${breakeven_price} at 60% royalty).")
 
     return {
         "base_cost": round(base_cost, 2),
@@ -183,19 +194,21 @@ def analyze_ink_coverage(pages_data: list[dict[str, Any]]) -> dict[str, Any]:
         page_num = page.get("page_num", 0)
         if "coverage_pct" in page and page["coverage_pct"] is not None:
             coverage = float(page["coverage_pct"])
-        elif "pixel_data" in page and page["pixel_data"]:
+        elif page.get("pixel_data"):
             pixels = page["pixel_data"]
             inked = sum(1 for p in pixels if p < 128)
             coverage = round((inked / len(pixels)) * 100, 2)
         else:
             coverage = 0.0
 
-        per_page.append({
-            "page_num": page_num,
-            "coverage_pct": round(coverage, 2),
-            "heavy_warning": coverage > HEAVY_INK_THRESHOLD,
-            "light_warning": coverage < LIGHT_INK_THRESHOLD,
-        })
+        per_page.append(
+            {
+                "page_num": page_num,
+                "coverage_pct": round(coverage, 2),
+                "heavy_warning": coverage > HEAVY_INK_THRESHOLD,
+                "light_warning": coverage < LIGHT_INK_THRESHOLD,
+            }
+        )
         coverages.append(coverage)
 
     avg = round(sum(coverages) / len(coverages), 2) if coverages else 0.0
@@ -259,27 +272,41 @@ def generate_soft_proof(
         r, g, b = px.get("r", 0), px.get("g", 0), px.get("b", 0)
         page, x, y = px.get("page", 1), px.get("x", 0), px.get("y", 0)
         cmyk = _rgb_to_cmyk(r, g, b)
-        nearest_rgb = _cmyk_to_rgb(*cmyk)
+        _cmyk_to_rgb(*cmyk)
 
         if _is_out_of_gamut(r, g, b):
-            out_of_gamut_areas.append({
-                "page": page, "x": x, "y": y,
-                "original_rgb": [r, g, b],
-                "nearest_cmyk": list(cmyk),
-            })
+            out_of_gamut_areas.append(
+                {
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                    "original_rgb": [r, g, b],
+                    "nearest_cmyk": list(cmyk),
+                }
+            )
 
         luminance = 0.299 * r + 0.587 * g + 0.114 * b
         if luminance < SHADOW_CRUSH_LUMINANCE and (r > 0 or g > 0 or b > 0):
-            shadow_crush_warnings.append({
-                "page": page, "x": x, "y": y, "luminance": round(luminance, 2),
-            })
+            shadow_crush_warnings.append(
+                {
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                    "luminance": round(luminance, 2),
+                }
+            )
 
         density = _ink_density(*cmyk)
         if density > MAX_INK_DENSITY_PCT:
-            ink_density_issues.append({
-                "page": page, "x": x, "y": y,
-                "density": round(density, 2), "cmyk": list(cmyk),
-            })
+            ink_density_issues.append(
+                {
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                    "density": round(density, 2),
+                    "cmyk": list(cmyk),
+                }
+            )
 
     return {
         "cmyk_preview_url": f"/api/v1/specialty/color/preview/{profile}/cmyk_proof.png",
@@ -308,10 +335,16 @@ def auto_adjust_color(image_data: list[dict[str, Any]]) -> dict[str, Any]:
 
         if _is_out_of_gamut(r, g, b):
             r, g, b = _cmyk_to_rgb(*cmyk)
-            changes_log.append({
-                "page": page, "x": x, "y": y, "type": "gamut_mapping",
-                "original": original, "adjusted": {"r": r, "g": g, "b": b},
-            })
+            changes_log.append(
+                {
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                    "type": "gamut_mapping",
+                    "original": original,
+                    "adjusted": {"r": r, "g": g, "b": b},
+                }
+            )
 
         luminance = 0.299 * r + 0.587 * g + 0.114 * b
         if luminance < SHADOW_CRUSH_LUMINANCE and (r > 0 or g > 0 or b > 0):
@@ -319,21 +352,32 @@ def auto_adjust_color(image_data: list[dict[str, Any]]) -> dict[str, Any]:
             r = min(255, int(r * scale))
             g = min(255, int(g * scale))
             b = min(255, int(b * scale))
-            changes_log.append({
-                "page": page, "x": x, "y": y, "type": "shadow_lighten",
-                "original": original, "adjusted": {"r": r, "g": g, "b": b},
-            })
+            changes_log.append(
+                {
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                    "type": "shadow_lighten",
+                    "original": original,
+                    "adjusted": {"r": r, "g": g, "b": b},
+                }
+            )
 
         cmyk = _rgb_to_cmyk(r, g, b)
         density = _ink_density(*cmyk)
         if density > MAX_INK_DENSITY_PCT:
             reduction = density / MAX_INK_DENSITY_PCT
             r, g, b = _cmyk_to_rgb(cmyk[0] / reduction, cmyk[1] / reduction, cmyk[2] / reduction, cmyk[3] / reduction)
-            changes_log.append({
-                "page": page, "x": x, "y": y, "type": "ink_density_reduction",
-                "original_density": round(density, 2),
-                "adjusted": {"r": r, "g": g, "b": b},
-            })
+            changes_log.append(
+                {
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                    "type": "ink_density_reduction",
+                    "original_density": round(density, 2),
+                    "adjusted": {"r": r, "g": g, "b": b},
+                }
+            )
 
         adjusted.append({"page": page, "x": x, "y": y, "r": r, "g": g, "b": b})
 
@@ -373,10 +417,16 @@ def generate_grayscale_preview(image_data: list[dict[str, Any]]) -> dict[str, An
     for px in image_data:
         r, g, b = px.get("r", 0), px.get("g", 0), px.get("b", 0)
         gray = max(0, min(255, int(round(0.299 * r + 0.587 * g + 0.114 * b))))
-        grayscale_pixels.append({
-            "page": px.get("page", 1), "x": px.get("x", 0), "y": px.get("y", 0),
-            "r": gray, "g": gray, "b": gray,
-        })
+        grayscale_pixels.append(
+            {
+                "page": px.get("page", 1),
+                "x": px.get("x", 0),
+                "y": px.get("y", 0),
+                "r": gray,
+                "g": gray,
+                "b": gray,
+            }
+        )
     return {"grayscale_pixels": grayscale_pixels, "total_pixels": len(grayscale_pixels)}
 
 
@@ -404,7 +454,14 @@ async def validate_print_specs(
 
     # DPI
     dpi_pass = dpi >= MIN_DPI
-    checks.append({"name": "dpi_check", "passed": dpi_pass, "detail": f"DPI={dpi}, required>={MIN_DPI}", "severity": "error" if not dpi_pass else "info"})
+    checks.append(
+        {
+            "name": "dpi_check",
+            "passed": dpi_pass,
+            "detail": f"DPI={dpi}, required>={MIN_DPI}",
+            "severity": "error" if not dpi_pass else "info",
+        }
+    )
 
     # Margins
     if margins is None:
@@ -422,26 +479,56 @@ async def validate_print_specs(
         ("margin_gutter", gutter, required_gutter),
     ]:
         p = val >= req
-        checks.append({"name": name, "passed": p, "detail": f"{name}={val}, required>={req}", "severity": "error" if not p else "info"})
+        checks.append(
+            {
+                "name": name,
+                "passed": p,
+                "detail": f"{name}={val}, required>={req}",
+                "severity": "error" if not p else "info",
+            }
+        )
 
     # Bleed
     if has_bleed:
         bp = abs(bleed_size - BLEED_SIZE) < 0.01
-        checks.append({"name": "bleed_check", "passed": bp, "detail": f"bleed={bleed_size}, required={BLEED_SIZE}", "severity": "error" if not bp else "info"})
+        checks.append(
+            {
+                "name": "bleed_check",
+                "passed": bp,
+                "detail": f"bleed={bleed_size}, required={BLEED_SIZE}",
+                "severity": "error" if not bp else "info",
+            }
+        )
     else:
         checks.append({"name": "bleed_check", "passed": True, "detail": "No bleed specified", "severity": "info"})
 
     # Trim size
     tp = trim_size in KDP_ACCEPTED_TRIM_SIZES
-    checks.append({"name": "trim_size", "passed": tp, "detail": f"trim={trim_size}", "severity": "error" if not tp else "info"})
+    checks.append(
+        {"name": "trim_size", "passed": tp, "detail": f"trim={trim_size}", "severity": "error" if not tp else "info"}
+    )
 
     # Page count
     pp = KDP_MIN_PAGES <= page_count <= KDP_MAX_PAGES
-    checks.append({"name": "page_count", "passed": pp, "detail": f"pages={page_count}, range={KDP_MIN_PAGES}-{KDP_MAX_PAGES}", "severity": "error" if not pp else "info"})
+    checks.append(
+        {
+            "name": "page_count",
+            "passed": pp,
+            "detail": f"pages={page_count}, range={KDP_MIN_PAGES}-{KDP_MAX_PAGES}",
+            "severity": "error" if not pp else "info",
+        }
+    )
 
     # File size
     fp = file_size_mb <= MAX_FILE_SIZE_MB
-    checks.append({"name": "file_size", "passed": fp, "detail": f"size={file_size_mb}MB, max={MAX_FILE_SIZE_MB}MB", "severity": "error" if not fp else "info"})
+    checks.append(
+        {
+            "name": "file_size",
+            "passed": fp,
+            "detail": f"size={file_size_mb}MB, max={MAX_FILE_SIZE_MB}MB",
+            "severity": "error" if not fp else "info",
+        }
+    )
 
     all_passed = all(c["passed"] for c in checks)
     return {

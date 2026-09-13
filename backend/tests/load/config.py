@@ -2,6 +2,7 @@
 
 Defines load profiles, environment settings, and test parameters.
 """
+
 from __future__ import annotations
 
 import os
@@ -89,10 +90,7 @@ def get_active_profile() -> LoadProfile:
     """Get the active load profile from environment variable."""
     profile_name = os.getenv("LOAD_PROFILE", "smoke")
     if profile_name not in LOAD_PROFILES:
-        raise ValueError(
-            f"Invalid LOAD_PROFILE: {profile_name}. "
-            f"Valid options: {', '.join(LOAD_PROFILES.keys())}"
-        )
+        raise ValueError(f"Invalid LOAD_PROFILE: {profile_name}. " f"Valid options: {', '.join(LOAD_PROFILES.keys())}")
     return LOAD_PROFILES[profile_name]  # type: ignore
 
 

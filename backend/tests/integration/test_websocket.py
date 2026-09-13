@@ -7,10 +7,7 @@ lifecycle, and message broadcasting.
 
 from __future__ import annotations
 
-import asyncio
-import json
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
@@ -22,10 +19,10 @@ from app.modules.realtime.manager import ConnectionManager
 from app.modules.realtime.router import router
 from app.modules.realtime.schemas import WSChannel
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def test_manager() -> ConnectionManager:
@@ -69,11 +66,10 @@ def expired_token() -> str:
 # Connection tests
 # ---------------------------------------------------------------------------
 
+
 class TestWritingChannel:
     def test_connect_with_valid_token(self, client: TestClient, valid_token: str) -> None:
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             # First message should be the "connected" welcome message.
             msg = ws.receive_json()
             assert msg["type"] == "connected"
@@ -83,23 +79,18 @@ class TestWritingChannel:
 
     def test_reject_without_token(self, client: TestClient) -> None:
         # WebSocket should close with policy violation.
-        with pytest.raises(Exception):
-            with client.websocket_connect("/api/v1/ws/writing/book-1") as ws:
-                ws.receive_json()
+        with pytest.raises(Exception), client.websocket_connect("/api/v1/ws/writing/book-1") as ws:
+            ws.receive_json()
 
     def test_reject_with_invalid_token(self, client: TestClient) -> None:
         with pytest.raises(Exception):
-            with client.websocket_connect(
-                "/api/v1/ws/writing/book-1?token=bad-token-value"
-            ) as ws:
+            with client.websocket_connect("/api/v1/ws/writing/book-1?token=bad-token-value") as ws:
                 ws.receive_json()
 
 
 class TestAgentsChannel:
     def test_connect_agents(self, client: TestClient, valid_token: str) -> None:
-        with client.websocket_connect(
-            f"/api/v1/ws/agents/org-456?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/agents/org-456?token={valid_token}") as ws:
             msg = ws.receive_json()
             assert msg["type"] == "connected"
             assert msg["channel"] == "agents"
@@ -108,9 +99,7 @@ class TestAgentsChannel:
 
 class TestAnalyticsChannel:
     def test_connect_analytics(self, client: TestClient, valid_token: str) -> None:
-        with client.websocket_connect(
-            f"/api/v1/ws/analytics/org-456?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/analytics/org-456?token={valid_token}") as ws:
             msg = ws.receive_json()
             assert msg["type"] == "connected"
             assert msg["channel"] == "analytics"
@@ -119,9 +108,7 @@ class TestAnalyticsChannel:
 
 class TestPublishingChannel:
     def test_connect_publishing(self, client: TestClient, valid_token: str) -> None:
-        with client.websocket_connect(
-            f"/api/v1/ws/publishing/book-99?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/publishing/book-99?token={valid_token}") as ws:
             msg = ws.receive_json()
             assert msg["type"] == "connected"
             assert msg["channel"] == "publishing"
@@ -132,13 +119,12 @@ class TestPublishingChannel:
 # Message broadcast tests
 # ---------------------------------------------------------------------------
 
+
 class TestBroadcast:
     def test_send_message_is_broadcast(self, client: TestClient, valid_token: str) -> None:
         """When a client sends a message it should be broadcast back (echo
         to the room).  With a single connection the sender receives it."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             # Consume the welcome message.
             ws.receive_json()
 
@@ -155,17 +141,16 @@ class TestBroadcast:
 # Edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
-    def test_different_rooms_isolated(self, client: TestClient, valid_token: str, test_manager: ConnectionManager) -> None:
+    def test_different_rooms_isolated(
+        self, client: TestClient, valid_token: str, test_manager: ConnectionManager
+    ) -> None:
         """Messages in room-A should not appear in room-B."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-a?token={valid_token}"
-        ) as ws_a:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-a?token={valid_token}") as ws_a:
             ws_a.receive_json()  # welcome
 
-            with client.websocket_connect(
-                f"/api/v1/ws/writing/book-b?token={valid_token}"
-            ) as ws_b:
+            with client.websocket_connect(f"/api/v1/ws/writing/book-b?token={valid_token}") as ws_b:
                 ws_b.receive_json()  # welcome
 
                 # Send in room-a

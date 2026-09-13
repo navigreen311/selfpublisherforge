@@ -7,6 +7,13 @@ from app.models.agent import AgentTask as DomainAgentTask
 from app.models.agent import AgentWorkflow as DomainAgentWorkflow
 from app.models.agent import AuditTrail as DomainAuditTrail
 from app.models.analytics import ABTestStatus, PortfolioMetric, ReportStatus
+from app.models.audiobook import (
+    AudiobookChapter,
+    AudiobookGenerationJob,
+    AudiobookProject,
+    AudiobookPronunciation,
+    AudiobookVoice,
+)
 from app.models.content import (
     Chapter,
     ChapterVersion,
@@ -27,15 +34,26 @@ from app.models.marketing import (
     PhaseTask,
     SocialPost,
 )
-from app.models.organization import Organization
+from app.models.organization import Invitation, Organization
 from app.models.project import Book, BookVersion, PenName, Project, Series
 from app.models.publishing import ComplianceScan, Listing, PublishingAccount, UploadValidation
 from app.models.publishing import PricingRule as PublishingPricingRule
 from app.models.user import ApiKey, OAuthAccount, User, UserSession
+
+# Module-specific models
+from app.modules.activity.models import ActivityLog
 from app.modules.advertising.models import AdCreative, CampaignPerformance, KeywordBid
 from app.modules.advertising.models import Campaign as AdCampaign
 from app.modules.agent_system.models import Agent, AgentBudget, AgentTask, AgentWorkflow, AuditTrail
 from app.modules.analytics.models import AnalyticsEvent, PortfolioMetricSnapshot, Report, RoyaltyRecord
+
+# Imported for their side effect on Base.metadata: these modules declare tables
+# that were missing from the barrel, so `alembic check` compared the database
+# against an incomplete picture and autogenerate would have proposed dropping
+# every table they own. `specialty_books/` is deliberately still absent — it is
+# unreachable from main.py and its disposition is decision D-1.
+from app.modules.audiobook import models as _audiobook_models  # noqa: F401
+from app.modules.billing import models as _billing_models  # noqa: F401
 from app.modules.competitor_finder.models import (
     CompetitorAlert,
     CompetitorAnalysis,
@@ -45,52 +63,108 @@ from app.modules.competitor_finder.models import (
 )
 from app.modules.cover_design.models import Cover, ExtractedProduct, KnowledgeClip
 from app.modules.dictation.models import DictationCommand, DictationSession, DictationSettings
-from app.models.audiobook import (
-    AudiobookChapter,
-    AudiobookGenerationJob,
-    AudiobookPronunciation,
-    AudiobookProject,
-    AudiobookVoice,
-)
 from app.modules.knowledge_vault.models import KnowledgeEntry
-
-# Module-specific models
-from app.modules.activity.models import ActivityLog
 from app.modules.notifications.models import Notification, NotificationPreference
 from app.modules.pricing_automation.models import CompetitorPrice, PricingABTest, PricingRule, Promotion
 from app.modules.product_page_lab.models import ABTest
 from app.modules.production_pipeline.models import Pipeline, PipelineTask, PipelineTemplate
 from app.modules.publishing_ops.models import ExportJob, FormattingTemplateModel
 from app.modules.review_intelligence.models import BookReview, ReputationScore, ReviewAlert, ReviewVelocitySnapshot
+from app.modules.specialty.models import childrens as _specialty_models  # noqa: F401
 
 __all__ = [
     # Domain models
-    "Organization", "User", "ApiKey", "UserSession", "OAuthAccount",
-    "Project", "Book", "Series", "PenName", "BookVersion",
-    "Manuscript", "Chapter", "ChapterVersion", "StyleProfile", "WritingSession",
-    "EditorSettings", "ContentAsset",
-    "MarketCategory", "MarketKeyword", "CompetitorBook", "CompetitorReview", "MarketSnapshot",
-    "PublishingAccount", "Listing", "UploadValidation", "ComplianceScan", "PublishingPricingRule",
-    "LaunchPlan", "LaunchPhase", "PhaseTask", "EmailSequence", "EmailTemplate",
-    "SocialPost", "ARCCampaign", "ARCRecipient",
-    "DomainAgent", "DomainAgentTask", "DomainAgentWorkflow", "DomainAgentBudget", "DomainAuditTrail",
-    "PortfolioMetric", "ABTestStatus", "ReportStatus",
+    "Invitation",
+    "Organization",
+    "User",
+    "ApiKey",
+    "UserSession",
+    "OAuthAccount",
+    "Project",
+    "Book",
+    "Series",
+    "PenName",
+    "BookVersion",
+    "Manuscript",
+    "Chapter",
+    "ChapterVersion",
+    "StyleProfile",
+    "WritingSession",
+    "EditorSettings",
+    "ContentAsset",
+    "MarketCategory",
+    "MarketKeyword",
+    "CompetitorBook",
+    "CompetitorReview",
+    "MarketSnapshot",
+    "PublishingAccount",
+    "Listing",
+    "UploadValidation",
+    "ComplianceScan",
+    "PublishingPricingRule",
+    "LaunchPlan",
+    "LaunchPhase",
+    "PhaseTask",
+    "EmailSequence",
+    "EmailTemplate",
+    "SocialPost",
+    "ARCCampaign",
+    "ARCRecipient",
+    "DomainAgent",
+    "DomainAgentTask",
+    "DomainAgentWorkflow",
+    "DomainAgentBudget",
+    "DomainAuditTrail",
+    "PortfolioMetric",
+    "ABTestStatus",
+    "ReportStatus",
     # Module models
     "ActivityLog",
-    "Notification", "NotificationPreference",
+    "Notification",
+    "NotificationPreference",
     "KnowledgeEntry",
-    "Pipeline", "PipelineTask", "PipelineTemplate",
-    "PricingRule", "CompetitorPrice", "Promotion", "PricingABTest",
+    "Pipeline",
+    "PipelineTask",
+    "PipelineTemplate",
+    "PricingRule",
+    "CompetitorPrice",
+    "Promotion",
+    "PricingABTest",
     "ABTest",
-    "Cover", "ExtractedProduct", "KnowledgeClip",
-    "AdCampaign", "CampaignPerformance", "KeywordBid", "AdCreative",
-    "Agent", "AgentTask", "AgentWorkflow", "AgentBudget", "AuditTrail",
-    "AnalyticsEvent", "RoyaltyRecord", "PortfolioMetricSnapshot", "Report",
-    "BookReview", "ReviewAlert", "ReviewVelocitySnapshot", "ReputationScore",
-    "CompetitorAnalysis", "WeaknessSignal", "OpportunityBlueprint", "GapAnalysisResult", "CompetitorAlert",
-    "ExportJob", "FormattingTemplateModel",
-    "DictationSession", "DictationCommand", "DictationSettings",
+    "Cover",
+    "ExtractedProduct",
+    "KnowledgeClip",
+    "AdCampaign",
+    "CampaignPerformance",
+    "KeywordBid",
+    "AdCreative",
+    "Agent",
+    "AgentTask",
+    "AgentWorkflow",
+    "AgentBudget",
+    "AuditTrail",
+    "AnalyticsEvent",
+    "RoyaltyRecord",
+    "PortfolioMetricSnapshot",
+    "Report",
+    "BookReview",
+    "ReviewAlert",
+    "ReviewVelocitySnapshot",
+    "ReputationScore",
+    "CompetitorAnalysis",
+    "WeaknessSignal",
+    "OpportunityBlueprint",
+    "GapAnalysisResult",
+    "CompetitorAlert",
+    "ExportJob",
+    "FormattingTemplateModel",
+    "DictationSession",
+    "DictationCommand",
+    "DictationSettings",
     # Audiobook models
-    "AudiobookVoice", "AudiobookProject", "AudiobookChapter",
-    "AudiobookPronunciation", "AudiobookGenerationJob",
+    "AudiobookVoice",
+    "AudiobookProject",
+    "AudiobookChapter",
+    "AudiobookPronunciation",
+    "AudiobookGenerationJob",
 ]

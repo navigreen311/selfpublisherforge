@@ -30,7 +30,7 @@ from app.models.content import (
     Manuscript,
     ManuscriptStatus,
 )
-from app.modules.ai_writing.tiptap_converter import html_to_tiptap, text_to_tiptap
+from app.modules.ai_writing.tiptap_converter import text_to_tiptap
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ SUPPORTED_IMPORT_EXTENSIONS: set[str] = {".docx", ".epub", ".txt", ".md", ".mark
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def import_manuscript(
     db: AsyncSession,
@@ -79,12 +80,11 @@ async def import_manuscript(
             status_code=400,
             code="UNSUPPORTED_FORMAT",
             message=(
-                f"Unsupported import format: '{ext}'. "
-                f"Supported: {', '.join(sorted(SUPPORTED_IMPORT_EXTENSIONS))}"
+                f"Unsupported import format: '{ext}'. " f"Supported: {', '.join(sorted(SUPPORTED_IMPORT_EXTENSIONS))}"
             ),
         )
 
-    raw_bytes = file.read() if hasattr(file, "read") else file  # type: ignore[arg-type]
+    raw_bytes: bytes = file.read() if hasattr(file, "read") else file  # type: ignore[assignment]
     if isinstance(raw_bytes, memoryview):
         raw_bytes = bytes(raw_bytes)
 
@@ -107,7 +107,7 @@ async def import_manuscript(
     # Create the Manuscript
     manuscript = Manuscript(
         id=_uuid.uuid4(),
-        book_id=None,  # type: ignore[arg-type]  — will be linked later or left orphaned for import
+        book_id=None,  # type: ignore[arg-type]  # linked later, or left orphaned on import
         content_type=ContentType.FICTION,
         status=ManuscriptStatus.DRAFT,
     )
@@ -149,6 +149,7 @@ async def import_manuscript(
 # Format detection
 # ---------------------------------------------------------------------------
 
+
 def _get_extension(filename: str) -> str:
     """Return the lowercased file extension including the leading dot."""
     idx = filename.rfind(".")
@@ -169,6 +170,7 @@ def _title_from_filename(filename: str) -> str:
 # DOCX parser
 # ---------------------------------------------------------------------------
 
+
 def _parse_docx(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
     """Parse a DOCX file into chapters by splitting on Heading 1 styles."""
     try:
@@ -177,11 +179,8 @@ def _parse_docx(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
         raise AppException(
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
-            message=(
-                "DOCX import requires the 'python-docx' library. "
-                "Install it with: pip install python-docx"
-            ),
-        )
+            message=("DOCX import requires the 'python-docx' library. " "Install it with: pip install python-docx"),
+        ) from None
 
     buf = io.BytesIO(raw_bytes)
     doc = Document(buf)
@@ -227,6 +226,7 @@ def _parse_docx(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
 # EPUB parser
 # ---------------------------------------------------------------------------
 
+
 def _parse_epub(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
     """Parse an EPUB file into chapters from its spine."""
     try:
@@ -235,11 +235,8 @@ def _parse_epub(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
         raise AppException(
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
-            message=(
-                "EPUB import requires the 'ebooklib' library. "
-                "Install it with: pip install ebooklib"
-            ),
-        )
+            message=("EPUB import requires the 'ebooklib' library. " "Install it with: pip install ebooklib"),
+        ) from None
 
     buf = io.BytesIO(raw_bytes)
     book = epub.read_epub(buf)
@@ -304,6 +301,7 @@ def _strip_html_tags(html_text: str) -> str:
 # TXT parser
 # ---------------------------------------------------------------------------
 
+
 def _parse_txt(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
     """Parse a plain-text file into chapters.
 
@@ -364,6 +362,7 @@ def _parse_txt(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
 # ---------------------------------------------------------------------------
 # Markdown parser
 # ---------------------------------------------------------------------------
+
 
 def _parse_markdown(raw_bytes: bytes) -> tuple[str, list[tuple[str, str]]]:
     """Parse a Markdown file into chapters by splitting on ``#`` headings.

@@ -17,6 +17,7 @@ settings = get_settings()
 # Opaque token helpers (email verification, password reset)
 # ---------------------------------------------------------------------------
 
+
 def generate_token(nbytes: int = 32) -> str:
     """Generate a cryptographically-secure URL-safe token."""
     return secrets.token_urlsafe(nbytes)
@@ -36,6 +37,7 @@ def token_expiry(hours: int = 24) -> datetime:
 # Backup codes
 # ---------------------------------------------------------------------------
 
+
 def generate_backup_codes(count: int = 8) -> list[str]:
     """Generate a list of one-time-use backup codes (8-char hex strings)."""
     return [secrets.token_hex(4).upper() for _ in range(count)]
@@ -53,6 +55,7 @@ _TOTP_SKEW = 1  # allow +/- 1 period
 def generate_totp_secret(nbytes: int = 20) -> str:
     """Generate a random base32-encoded TOTP secret."""
     import base64
+
     raw = secrets.token_bytes(nbytes)
     return base64.b32encode(raw).decode("ascii").rstrip("=")
 
@@ -60,14 +63,15 @@ def generate_totp_secret(nbytes: int = 20) -> str:
 def _hotp(secret_b32: str, counter: int) -> str:
     """Compute a 6-digit HOTP value (RFC 4226)."""
     import base64
+
     # Pad the base32 secret
     padded = secret_b32 + "=" * (-len(secret_b32) % 8)
     key = base64.b32decode(padded.upper())
     msg = struct.pack(">Q", counter)
     h = hmac.new(key, msg, hashlib.sha1).digest()
     offset = h[-1] & 0x0F
-    truncated = struct.unpack(">I", h[offset:offset + 4])[0] & 0x7FFFFFFF
-    return str(truncated % (10 ** _TOTP_DIGITS)).zfill(_TOTP_DIGITS)
+    truncated = struct.unpack(">I", h[offset : offset + 4])[0] & 0x7FFFFFFF
+    return str(truncated % (10**_TOTP_DIGITS)).zfill(_TOTP_DIGITS)
 
 
 def verify_totp(secret_b32: str, code: str) -> bool:

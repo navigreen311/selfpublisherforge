@@ -149,9 +149,9 @@ async def generate_chapter_audio(
     await db.flush()
 
     # Dispatch Celery task (lazy import to avoid circular deps)
-    from app.tasks.audiobook_tasks import generate_chapter_audio_task
+    from app.tasks.audiobook_tasks import generate_chapter_audio
 
-    task = generate_chapter_audio_task.delay(str(job.id), str(chapter_id))
+    task = generate_chapter_audio.delay(str(job.id), str(chapter_id))
     job.celery_task_id = task.id
     await db.flush()
 
@@ -204,7 +204,7 @@ async def generate_all_chapters(
             message="No chapters with 'pending' status found for generation.",
         )
 
-    from app.tasks.audiobook_tasks import generate_chapter_audio_task
+    from app.tasks.audiobook_tasks import generate_chapter_audio
 
     job_cls = _job_model()
     jobs: list[GenerationJobResponse] = []
@@ -230,7 +230,7 @@ async def generate_all_chapters(
         db.add(job)
         await db.flush()
 
-        task = generate_chapter_audio_task.delay(str(job.id), str(chapter.id))
+        task = generate_chapter_audio.delay(str(job.id), str(chapter.id))
         job.celery_task_id = task.id
         await db.flush()
 
@@ -333,9 +333,9 @@ async def regenerate_chapter_audio(
     db.add(job)
     await db.flush()
 
-    from app.tasks.audiobook_tasks import generate_chapter_audio_task
+    from app.tasks.audiobook_tasks import generate_chapter_audio
 
-    task = generate_chapter_audio_task.delay(str(job.id), str(chapter_id))
+    task = generate_chapter_audio.delay(str(job.id), str(chapter_id))
     job.celery_task_id = task.id
     await db.flush()
 
@@ -417,11 +417,8 @@ async def regenerate_segment(
 ) -> GenerationJobResponse:
     """Regenerate a specific segment (sentence/paragraph) of a chapter.
 
-    Steps:
-        1. Get chapter and validate it has audio
-        2. Create a segment_regenerate job
-        3. Dispatch Celery task
-        4. The task will splice new audio into the existing chapter audio
+    Not implemented: see the comment below. Validates the request, then raises
+    a 501 rather than queueing work that has no worker.
     """
     await _get_project_or_404(db, project_id, org_id)
     chapter = await _get_chapter_or_404(db, project_id, chapter_id)
@@ -441,42 +438,19 @@ async def regenerate_segment(
     if request.voice_id:
         input_params["voice_id"] = str(request.voice_id)
 
-    job = _job_model()(
-        audiobook_project_id=project_id,
-        chapter_id=chapter_id,
-        job_type="segment_regenerate",
-        status="queued",
-        priority=3,
-        input_params=input_params,
-    )
-    db.add(job)
-    await db.flush()
-
-    from app.tasks.audiobook_tasks import regenerate_segment_task
-
-    task = regenerate_segment_task.delay(str(job.id), str(chapter_id), segment_index)
-    job.celery_task_id = task.id
-    await db.flush()
-
-    # Track the edit in the chapter's audio_edits JSONB
-    edits = chapter.audio_edits or []
-    edits.append(
-        {
-            "segment_index": segment_index,
-            "job_id": str(job.id),
-            "timestamp": datetime.now(UTC).isoformat(),
-            "replacement_text": request.replacement_text,
-        }
-    )
-    chapter.audio_edits = edits
-    chapter.updated_at = datetime.now(UTC)
-
-    logger.info(
-        "Queued segment regeneration: project=%s chapter=%s segment=%d job=%s",
+    # The worker half of this feature does not exist: app/tasks/audiobook_tasks.py
+    # defines generate_chapter_audio and generate_all_chapters only, and nothing
+    # in the schema records per-segment audio boundaries, so there is nothing to
+    # splice a regenerated segment back into. Enqueuing raised ImportError at
+    # call time; fail honestly instead of writing a job row nothing will run.
+    logger.warning(
+        "Segment regeneration requested but unimplemented: project=%s chapter=%s segment=%d",
         project_id,
         chapter_id,
         segment_index,
-        job.id,
     )
-
-    return GenerationJobResponse.model_validate(job)
+    raise AppException(
+        status_code=501,
+        code="SEGMENT_REGENERATE_NOT_IMPLEMENTED",
+        message=("Segment regeneration is not available yet. Regenerate the whole chapter instead."),
+    )

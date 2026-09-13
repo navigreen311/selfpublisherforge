@@ -1,4 +1,5 @@
 """Seed demo analytics, revenue, and royalty data."""
+
 import random
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -10,9 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.analytics.models import PortfolioMetricSnapshot, RoyaltyRecord
 
 
-async def seed_analytics(
-    db: AsyncSession, org_id: uuid.UUID, book_ids: dict[str, uuid.UUID]
-) -> None:
+async def seed_analytics(db: AsyncSession, org_id: uuid.UUID, book_ids: dict[str, uuid.UUID]) -> None:
     """Seed 12 months of revenue and royalty data.
 
     Args:
@@ -28,9 +27,7 @@ async def seed_analytics(
 
     # Check if data already exists
     existing = await db.execute(
-        select(RoyaltyRecord)
-        .where(RoyaltyRecord.org_id == org_id, RoyaltyRecord.book_id == published_book)
-        .limit(1)
+        select(RoyaltyRecord).where(RoyaltyRecord.org_id == org_id, RoyaltyRecord.book_id == published_book).limit(1)
     )
     if existing.scalar_one_or_none():
         print("✓ Analytics data already exists, skipping")
@@ -56,9 +53,7 @@ async def seed_analytics(
                 base_units = random.randint(20, 100)
                 # Add some seasonal variation
                 month = current_date.month
-                seasonal_multiplier = (
-                    1.5 if month in [11, 12] else 0.8 if month in [6, 7, 8] else 1.0
-                )
+                seasonal_multiplier = 1.5 if month in [11, 12] else 0.8 if month in [6, 7, 8] else 1.0
                 units_sold = int(base_units * seasonal_multiplier)
                 units_refunded = random.randint(0, int(units_sold * 0.05))
                 net_units = units_sold - units_refunded
@@ -74,9 +69,7 @@ async def seed_analytics(
                     list_price = Decimal("4.49")
 
                 # Royalty rates
-                royalty_rate = (
-                    Decimal("0.70") if platform == "KDP" else Decimal("0.60")
-                )
+                royalty_rate = Decimal("0.70") if platform == "KDP" else Decimal("0.60")
 
                 gross_revenue = list_price * net_units
                 net_revenue = gross_revenue * royalty_rate
@@ -119,8 +112,7 @@ async def seed_analytics(
             select(PortfolioMetricSnapshot).where(
                 PortfolioMetricSnapshot.org_id == org_id,
                 PortfolioMetricSnapshot.snapshot_date >= current_date,
-                PortfolioMetricSnapshot.snapshot_date
-                < current_date + timedelta(days=30),
+                PortfolioMetricSnapshot.snapshot_date < current_date + timedelta(days=30),
             )
         )
         if existing_snapshot.scalar_one_or_none():

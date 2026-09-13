@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"  # "development", "staging", "production"
+
+    # Observability. Metrics are always served; error tracking activates only
+    # when a DSN is present, so a developer without one gets no network calls
+    # and no behaviour change.
+    SENTRY_DSN: str | None = None
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0
     API_V1_PREFIX: str = "/api/v1"
     FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 

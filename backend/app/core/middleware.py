@@ -25,6 +25,7 @@ logger = logging.getLogger("spf.middleware")
 # Correlation ID
 # ---------------------------------------------------------------------------
 
+
 class CorrelationIDMiddleware(BaseHTTPMiddleware):
     """
     Generate or propagate an ``X-Request-ID`` header.
@@ -34,9 +35,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
     ``request.state.correlation_id`` so downstream code can access it.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         correlation_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.correlation_id = correlation_id
 
@@ -49,12 +48,11 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
 # Request Timing
 # ---------------------------------------------------------------------------
 
+
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     """Add an ``X-Response-Time`` header (in milliseconds)."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000
@@ -66,15 +64,14 @@ class RequestTimingMiddleware(BaseHTTPMiddleware):
 # Request Logging
 # ---------------------------------------------------------------------------
 
+
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
     Log every request with method, path, status, duration and optional
     user context.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start = time.perf_counter()
         response = await call_next(request)
         duration_ms = (time.perf_counter() - start) * 1000
@@ -126,9 +123,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.headers = headers or _DEFAULT_SECURITY_HEADERS
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
         for name, value in self.headers.items():
             response.headers[name] = value

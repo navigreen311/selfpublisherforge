@@ -7,19 +7,21 @@ from pydantic import BaseModel, Field
 
 from app.schemas.common import PlanTier
 
-
 # ---------------------------------------------------------------------------
 # Requests
 # ---------------------------------------------------------------------------
 
+
 class OrganizationUpdateRequest(BaseModel):
     """Request to update organization details."""
+
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
 
 
 class InvitationCreateRequest(BaseModel):
     """Request to invite a user to the organization."""
+
     email: str
     role: str = Field(default="member", pattern="^(admin|member|viewer)$")
 
@@ -28,8 +30,10 @@ class InvitationCreateRequest(BaseModel):
 # Responses
 # ---------------------------------------------------------------------------
 
+
 class OrganizationResponse(BaseModel):
     """Organization details."""
+
     id: UUID
     name: str
     description: str | None
@@ -40,6 +44,7 @@ class OrganizationResponse(BaseModel):
 
 class MemberResponse(BaseModel):
     """Organization member details."""
+
     id: UUID
     user_id: UUID
     email: str
@@ -50,12 +55,14 @@ class MemberResponse(BaseModel):
 
 class MemberListResponse(BaseModel):
     """Response containing list of organization members."""
+
     members: list[MemberResponse]
     total: int
 
 
 class InvitationResponse(BaseModel):
     """Organization invitation details."""
+
     id: UUID
     email: str
     role: str
@@ -66,5 +73,6 @@ class InvitationResponse(BaseModel):
 
 class InvitationListResponse(BaseModel):
     """Response containing list of pending invitations."""
+
     invitations: list[InvitationResponse]
     total: int

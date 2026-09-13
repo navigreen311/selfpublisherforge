@@ -56,14 +56,8 @@ class ValidationService:
         if request.compliance_scan is not None:
             results.append(self.scan_compliance(request.compliance_scan))
 
-        total_errors = sum(
-            sum(1 for i in r.issues if i.severity == Severity.ERROR)
-            for r in results
-        )
-        total_warnings = sum(
-            sum(1 for i in r.issues if i.severity == Severity.WARNING)
-            for r in results
-        )
+        total_errors = sum(sum(1 for i in r.issues if i.severity == Severity.ERROR) for r in results)
+        total_warnings = sum(sum(1 for i in r.issues if i.severity == Severity.WARNING) for r in results)
 
         overall_status = self._aggregate_status(results)
 

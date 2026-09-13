@@ -13,22 +13,18 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.modules.realtime.events import publish_to_channel, subscribe_to_channel
 from app.modules.realtime.manager import ConnectionManager
 from app.modules.realtime.schemas import WSChannel
-
 
 # ---------------------------------------------------------------------------
 # Test Helpers
 # ---------------------------------------------------------------------------
+
 
 class FakeWebSocket:
     """Minimal WebSocket for testing."""
@@ -38,6 +34,7 @@ class FakeWebSocket:
         self.sent_messages: list[dict[str, Any]] = []
 
         from starlette.websockets import WebSocketState
+
         self.client_state = WebSocketState.CONNECTED
 
     async def accept(self) -> None:
@@ -50,6 +47,7 @@ class FakeWebSocket:
 # ---------------------------------------------------------------------------
 # Tests — Channel Subscription
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_subscribe_to_writing_channel() -> None:
@@ -113,6 +111,7 @@ async def test_subscribe_to_multiple_channels() -> None:
 # Tests — Unsubscribe from Channel
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_unsubscribe_from_channel() -> None:
     """Test unsubscribing removes connection from channel."""
@@ -147,6 +146,7 @@ async def test_unsubscribe_cleans_up_channel() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Channel Message Routing
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_message_routes_to_correct_channel() -> None:
@@ -205,6 +205,7 @@ async def test_broadcast_to_all_in_same_channel() -> None:
 # Tests — WRITING Channel (Manuscript Editing)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_writing_channel_cursor_move() -> None:
     """Test cursor_move events on writing channel."""
@@ -212,11 +213,15 @@ async def test_writing_channel_cursor_move() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.WRITING, "book-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.WRITING, "book-1", {
-        "type": "cursor_move",
-        "user_id": "user-1",
-        "position": 42,
-    })
+    await mgr.broadcast(
+        WSChannel.WRITING,
+        "book-1",
+        {
+            "type": "cursor_move",
+            "user_id": "user-1",
+            "position": 42,
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "cursor_move"
@@ -229,14 +234,18 @@ async def test_writing_channel_text_change() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.WRITING, "book-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.WRITING, "book-1", {
-        "type": "text_change",
-        "user_id": "user-1",
-        "offset": 10,
-        "length": 5,
-        "text": "hello",
-        "revision": 3,
-    })
+    await mgr.broadcast(
+        WSChannel.WRITING,
+        "book-1",
+        {
+            "type": "text_change",
+            "user_id": "user-1",
+            "offset": 10,
+            "length": 5,
+            "text": "hello",
+            "revision": 3,
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     msg = ws.sent_messages[0]
@@ -250,13 +259,17 @@ async def test_writing_channel_ai_suggestion() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.WRITING, "book-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.WRITING, "book-1", {
-        "type": "ai_suggestion",
-        "suggestion_id": "sug-1",
-        "text": "Consider rephrasing...",
-        "position": 100,
-        "confidence": 0.85,
-    })
+    await mgr.broadcast(
+        WSChannel.WRITING,
+        "book-1",
+        {
+            "type": "ai_suggestion",
+            "suggestion_id": "sug-1",
+            "text": "Consider rephrasing...",
+            "position": 100,
+            "confidence": 0.85,
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "ai_suggestion"
@@ -269,11 +282,15 @@ async def test_writing_channel_save_ack() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.WRITING, "book-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.WRITING, "book-1", {
-        "type": "save_ack",
-        "revision": 5,
-        "saved_at": datetime.now(timezone.utc).isoformat(),
-    })
+    await mgr.broadcast(
+        WSChannel.WRITING,
+        "book-1",
+        {
+            "type": "save_ack",
+            "revision": 5,
+            "saved_at": datetime.now(UTC).isoformat(),
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "save_ack"
@@ -283,6 +300,7 @@ async def test_writing_channel_save_ack() -> None:
 # Tests — AGENTS Channel (Notifications)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_agents_channel_task_started() -> None:
     """Test task_started events on agents channel."""
@@ -290,12 +308,16 @@ async def test_agents_channel_task_started() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.AGENTS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.AGENTS, "org-1", {
-        "type": "task_started",
-        "task_id": "task-1",
-        "task_type": "content_generation",
-        "agent_name": "writer_agent",
-    })
+    await mgr.broadcast(
+        WSChannel.AGENTS,
+        "org-1",
+        {
+            "type": "task_started",
+            "task_id": "task-1",
+            "task_type": "content_generation",
+            "agent_name": "writer_agent",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "task_started"
@@ -308,12 +330,16 @@ async def test_agents_channel_task_progress() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.AGENTS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.AGENTS, "org-1", {
-        "type": "task_progress",
-        "task_id": "task-1",
-        "progress": 50.0,
-        "message": "Halfway done",
-    })
+    await mgr.broadcast(
+        WSChannel.AGENTS,
+        "org-1",
+        {
+            "type": "task_progress",
+            "task_id": "task-1",
+            "progress": 50.0,
+            "message": "Halfway done",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     msg = ws.sent_messages[0]
@@ -327,11 +353,15 @@ async def test_agents_channel_task_completed() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.AGENTS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.AGENTS, "org-1", {
-        "type": "task_completed",
-        "task_id": "task-1",
-        "result_summary": "Generated 5000 words",
-    })
+    await mgr.broadcast(
+        WSChannel.AGENTS,
+        "org-1",
+        {
+            "type": "task_completed",
+            "task_id": "task-1",
+            "result_summary": "Generated 5000 words",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "task_completed"
@@ -344,11 +374,15 @@ async def test_agents_channel_task_failed() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.AGENTS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.AGENTS, "org-1", {
-        "type": "task_failed",
-        "task_id": "task-1",
-        "error": "API rate limit exceeded",
-    })
+    await mgr.broadcast(
+        WSChannel.AGENTS,
+        "org-1",
+        {
+            "type": "task_failed",
+            "task_id": "task-1",
+            "error": "API rate limit exceeded",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "task_failed"
@@ -361,12 +395,16 @@ async def test_agents_channel_budget_alert() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.AGENTS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.AGENTS, "org-1", {
-        "type": "budget_alert",
-        "current_spend": 95.0,
-        "budget_limit": 100.0,
-        "alert_type": "warning",
-    })
+    await mgr.broadcast(
+        WSChannel.AGENTS,
+        "org-1",
+        {
+            "type": "budget_alert",
+            "current_spend": 95.0,
+            "budget_limit": 100.0,
+            "alert_type": "warning",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "budget_alert"
@@ -376,6 +414,7 @@ async def test_agents_channel_budget_alert() -> None:
 # Tests — ANALYTICS Channel (Pricing Updates)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_analytics_channel_metric_update() -> None:
     """Test metric_update events on analytics channel."""
@@ -383,12 +422,16 @@ async def test_analytics_channel_metric_update() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.ANALYTICS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.ANALYTICS, "org-1", {
-        "type": "metric_update",
-        "metric_name": "sales",
-        "value": 150.0,
-        "dimensions": {"book_id": "book-1", "platform": "amazon"},
-    })
+    await mgr.broadcast(
+        WSChannel.ANALYTICS,
+        "org-1",
+        {
+            "type": "metric_update",
+            "metric_name": "sales",
+            "value": 150.0,
+            "dimensions": {"book_id": "book-1", "platform": "amazon"},
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "metric_update"
@@ -401,12 +444,16 @@ async def test_analytics_channel_alert_triggered() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.ANALYTICS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.ANALYTICS, "org-1", {
-        "type": "alert_triggered",
-        "alert_id": "alert-1",
-        "severity": "high",
-        "message": "Sales dropped below threshold",
-    })
+    await mgr.broadcast(
+        WSChannel.ANALYTICS,
+        "org-1",
+        {
+            "type": "alert_triggered",
+            "alert_id": "alert-1",
+            "severity": "high",
+            "message": "Sales dropped below threshold",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "alert_triggered"
@@ -419,12 +466,16 @@ async def test_analytics_channel_report_ready() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.ANALYTICS, "org-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.ANALYTICS, "org-1", {
-        "type": "report_ready",
-        "report_id": "report-1",
-        "report_type": "monthly_sales",
-        "download_url": "https://example.com/report.pdf",
-    })
+    await mgr.broadcast(
+        WSChannel.ANALYTICS,
+        "org-1",
+        {
+            "type": "report_ready",
+            "report_id": "report-1",
+            "report_type": "monthly_sales",
+            "download_url": "https://example.com/report.pdf",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "report_ready"
@@ -434,6 +485,7 @@ async def test_analytics_channel_report_ready() -> None:
 # Tests — PUBLISHING Channel (Updates)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_publishing_channel_validation_progress() -> None:
     """Test validation_progress events on publishing channel."""
@@ -441,14 +493,18 @@ async def test_publishing_channel_validation_progress() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.PUBLISHING, "book-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.PUBLISHING, "book-1", {
-        "type": "validation_progress",
-        "step": "checking_cover",
-        "total_steps": 5,
-        "current_step": 2,
-        "passed": True,
-        "message": "Cover dimensions valid",
-    })
+    await mgr.broadcast(
+        WSChannel.PUBLISHING,
+        "book-1",
+        {
+            "type": "validation_progress",
+            "step": "checking_cover",
+            "total_steps": 5,
+            "current_step": 2,
+            "passed": True,
+            "message": "Cover dimensions valid",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "validation_progress"
@@ -461,12 +517,16 @@ async def test_publishing_channel_upload_progress() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.PUBLISHING, "book-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.PUBLISHING, "book-1", {
-        "type": "upload_progress",
-        "platform": "amazon",
-        "progress": 75.0,
-        "file_name": "book.epub",
-    })
+    await mgr.broadcast(
+        WSChannel.PUBLISHING,
+        "book-1",
+        {
+            "type": "upload_progress",
+            "platform": "amazon",
+            "progress": 75.0,
+            "file_name": "book.epub",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "upload_progress"
@@ -479,12 +539,16 @@ async def test_publishing_channel_listing_synced() -> None:
     ws = FakeWebSocket()
 
     await mgr.connect(ws, WSChannel.PUBLISHING, "book-1")  # type: ignore[arg-type]
-    await mgr.broadcast(WSChannel.PUBLISHING, "book-1", {
-        "type": "listing_synced",
-        "platform": "amazon",
-        "listing_url": "https://amazon.com/dp/B123",
-        "status": "live",
-    })
+    await mgr.broadcast(
+        WSChannel.PUBLISHING,
+        "book-1",
+        {
+            "type": "listing_synced",
+            "platform": "amazon",
+            "listing_url": "https://amazon.com/dp/B123",
+            "status": "live",
+        },
+    )
 
     assert len(ws.sent_messages) == 1
     assert ws.sent_messages[0]["type"] == "listing_synced"
@@ -493,6 +557,7 @@ async def test_publishing_channel_listing_synced() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Channel Permissions (Organization Scoping)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_channel_isolation_between_orgs() -> None:
@@ -552,6 +617,7 @@ async def test_multiple_orgs_same_channel() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Message Ordering
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_message_ordering_preserved() -> None:

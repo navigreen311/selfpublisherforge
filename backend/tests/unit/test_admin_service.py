@@ -7,16 +7,16 @@ and user management operations using mocked database calls.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.core.exceptions import AppException
-from app.modules.admin.schemas import UserListRequest
 from app.modules.admin import service
+from app.modules.admin.schemas import UserListRequest
 from shared.types.enums import PlanTier
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -37,8 +37,9 @@ def _make_user_row(
         "email": email,
         "name": name,
         "is_active": is_active,
-        "organization_id": org_id or uuid.uuid4(),
-        "created_at": created_at or datetime.now(timezone.utc),
+        # The column is org_id — list_users reads user.org_id.
+        "org_id": org_id or uuid.uuid4(),
+        "created_at": created_at or datetime.now(UTC),
     }
 
 
@@ -49,16 +50,14 @@ def _make_org_row(
     """Build a dict that mimics a row from the organizations table."""
     return {
         "id": org_id or uuid.uuid4(),
-        "tier": tier,
+        # The column is plan_tier — list_users reads org.plan_tier.
+        "plan_tier": tier,
     }
 
 
-def _mock_user_orm(row: dict) -> MagicMock:
-    """Create a mock User ORM object from a row dict."""
-    user = MagicMock()
-    for key, value in row.items():
-        setattr(user, key, value)
-    return user
+def _mock_user_orm(row: dict) -> SimpleNamespace:
+    """Create a stand-in User ORM object from a row dict."""
+    return SimpleNamespace(**row)
 
 
 def _mock_db_with_users(user_rows: list[dict], org_rows: list[dict]) -> AsyncMock:
@@ -75,9 +74,7 @@ def _mock_db_with_users(user_rows: list[dict], org_rows: list[dict]) -> AsyncMoc
     org_results = []
     for org_row in org_rows:
         org_scalar = MagicMock()
-        org_mock = MagicMock()
-        for key, value in org_row.items():
-            setattr(org_mock, key, value)
+        org_mock = SimpleNamespace(**org_row)
         org_scalar.scalar_one_or_none.return_value = org_mock
         org_results.append(org_scalar)
 
@@ -89,20 +86,15 @@ def _mock_db_with_users(user_rows: list[dict], org_rows: list[dict]) -> AsyncMoc
 
     def execute_side_effect(query):
         call_count["count"] += 1
-        # First call: count query
+        # list_users takes its total from db.scalar(count_query), so the first
+        # execute() is the user query, not the count.
         if call_count["count"] == 1:
-            result = MagicMock()
-            result.scalar.return_value = count_scalar
-            return result
-        # Second call: user query
-        elif call_count["count"] == 2:
             return user_result
-        # Subsequent calls: org queries
-        else:
-            idx = call_count["count"] - 3
-            if idx < len(org_results):
-                return org_results[idx]
-            return org_results[-1] if org_results else MagicMock()
+        # Subsequent calls: one org lookup per user
+        idx = call_count["count"] - 2
+        if idx < len(org_results):
+            return org_results[idx]
+        return org_results[-1] if org_results else MagicMock()
 
     mock_db.execute = AsyncMock(side_effect=execute_side_effect)
     mock_db.scalar = AsyncMock(return_value=count_scalar)
@@ -254,10 +246,6 @@ class TestListUsers:
 
         mock_db = AsyncMock()
 
-        # Count query
-        count_result = MagicMock()
-        count_result.scalar.return_value = 1
-
         # User query
         user_scalars = MagicMock()
         user_scalars.all.return_value = [_mock_user_orm(user_rows[0])]
@@ -272,12 +260,11 @@ class TestListUsers:
 
         def execute_side_effect(query):
             call_count["count"] += 1
+            # The total comes from db.scalar, so execute() starts with the
+            # user query.
             if call_count["count"] == 1:
-                return count_result
-            elif call_count["count"] == 2:
                 return user_result
-            else:
-                return org_result
+            return org_result
 
         mock_db.execute = AsyncMock(side_effect=execute_side_effect)
         mock_db.scalar = AsyncMock(return_value=1)
@@ -309,10 +296,7 @@ class TestFeatureFlags:
         """Should return the updated flag (stub implementation)."""
         mock_db = AsyncMock()
         result = await service.update_feature_flag(
-            mock_db,
-            flag_key="test_feature",
-            enabled=True,
-            description="Test feature flag"
+            mock_db, flag_key="test_feature", enabled=True, description="Test feature flag"
         )
         assert result.key == "test_feature"
         assert result.enabled is True
@@ -322,11 +306,7 @@ class TestFeatureFlags:
     async def test_update_feature_flag_without_description(self):
         """Should update flag without description."""
         mock_db = AsyncMock()
-        result = await service.update_feature_flag(
-            mock_db,
-            flag_key="another_feature",
-            enabled=False
-        )
+        result = await service.update_feature_flag(mock_db, flag_key="another_feature", enabled=False)
         assert result.key == "another_feature"
         assert result.enabled is False
         assert result.description is None

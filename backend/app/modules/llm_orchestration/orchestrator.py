@@ -84,9 +84,7 @@ class LLMOrchestrator:
         self._cost_tracker = cost_tracker or CostTracker()
         self._quality = quality or QualityAssurance()
 
-    def register_provider(
-        self, name: ProviderName, provider: BaseLLMProvider
-    ) -> None:
+    def register_provider(self, name: ProviderName, provider: BaseLLMProvider) -> None:
         """Register a provider implementation."""
         self._providers[name] = provider
 
@@ -281,7 +279,7 @@ class LLMOrchestrator:
         chain = self._router.get_full_chain(task)
         max_tokens = opts.max_tokens or self._router.get_max_tokens(task)
 
-        for i, model_id in enumerate(chain):
+        for _i, model_id in enumerate(chain):
             provider_name = self._router.get_provider(model_id)
             provider = self._providers.get(provider_name)
             if provider is None:

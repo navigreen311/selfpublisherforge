@@ -12,6 +12,7 @@ Features:
 import logging
 import uuid
 from pathlib import Path
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,27 +24,237 @@ logger = logging.getLogger(__name__)
 
 # System voice catalog — built-in voices available to all users
 SYSTEM_VOICES = [
-    {"name": "Marcus (Narrator)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "male", "age_range": "middle_aged", "accent": "american", "language": "en", "quality_score": 82.0, "cost_per_minute": 0.001},
-    {"name": "Elena (Narrator)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "female", "age_range": "young_adult", "accent": "american", "language": "en", "quality_score": 85.0, "cost_per_minute": 0.001},
-    {"name": "James (British)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "male", "age_range": "middle_aged", "accent": "british", "language": "en", "quality_score": 80.0, "cost_per_minute": 0.001},
-    {"name": "Sophie (British)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "female", "age_range": "young_adult", "accent": "british", "language": "en", "quality_score": 83.0, "cost_per_minute": 0.001},
-    {"name": "David (Premium)", "provider": "elevenlabs", "voice_type": "narrator", "gender": "male", "age_range": "middle_aged", "accent": "american", "language": "en", "quality_score": 95.0, "cost_per_minute": 0.03},
-    {"name": "Rachel (Premium)", "provider": "elevenlabs", "voice_type": "narrator", "gender": "female", "age_range": "young_adult", "accent": "american", "language": "en", "quality_score": 96.0, "cost_per_minute": 0.03},
-    {"name": "Arthur (Premium British)", "provider": "elevenlabs", "voice_type": "narrator", "gender": "male", "age_range": "elderly", "accent": "british", "language": "en", "quality_score": 94.0, "cost_per_minute": 0.03},
-    {"name": "Isabella (Premium British)", "provider": "elevenlabs", "voice_type": "narrator", "gender": "female", "age_range": "middle_aged", "accent": "british", "language": "en", "quality_score": 93.0, "cost_per_minute": 0.03},
-    {"name": "Carlos (Spanish Accent)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "male", "age_range": "young_adult", "accent": "spanish", "language": "en", "quality_score": 78.0, "cost_per_minute": 0.001},
-    {"name": "Anika (Indian Accent)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "female", "age_range": "young_adult", "accent": "indian", "language": "en", "quality_score": 77.0, "cost_per_minute": 0.001},
-    {"name": "Chen Wei (Mandarin)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "male", "age_range": "middle_aged", "accent": "chinese", "language": "zh", "quality_score": 76.0, "cost_per_minute": 0.001},
-    {"name": "Yuki (Japanese)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "female", "age_range": "young_adult", "accent": "japanese", "language": "ja", "quality_score": 75.0, "cost_per_minute": 0.001},
-    {"name": "Hans (German)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "male", "age_range": "middle_aged", "accent": "german", "language": "de", "quality_score": 79.0, "cost_per_minute": 0.001},
-    {"name": "Marie (French)", "provider": "coqui_xtts", "voice_type": "narrator", "gender": "female", "age_range": "young_adult", "accent": "french", "language": "fr", "quality_score": 80.0, "cost_per_minute": 0.001},
-    {"name": "Old Sage", "provider": "coqui_xtts", "voice_type": "character", "gender": "male", "age_range": "elderly", "accent": "british", "language": "en", "quality_score": 74.0, "cost_per_minute": 0.001},
-    {"name": "Young Hero", "provider": "coqui_xtts", "voice_type": "character", "gender": "male", "age_range": "young_adult", "accent": "american", "language": "en", "quality_score": 76.0, "cost_per_minute": 0.001},
-    {"name": "Villainess", "provider": "coqui_xtts", "voice_type": "character", "gender": "female", "age_range": "middle_aged", "accent": "british", "language": "en", "quality_score": 75.0, "cost_per_minute": 0.001},
-    {"name": "Child Voice", "provider": "coqui_xtts", "voice_type": "character", "gender": "neutral", "age_range": "child", "accent": "american", "language": "en", "quality_score": 70.0, "cost_per_minute": 0.001},
-    {"name": "Deep Narrator", "provider": "elevenlabs", "voice_type": "narrator", "gender": "male", "age_range": "elderly", "accent": "american", "language": "en", "quality_score": 92.0, "cost_per_minute": 0.03},
-    {"name": "Warm Storyteller", "provider": "elevenlabs", "voice_type": "narrator", "gender": "female", "age_range": "middle_aged", "accent": "american", "language": "en", "quality_score": 91.0, "cost_per_minute": 0.03},
-    {"name": "Quick Preview", "provider": "piper", "voice_type": "narrator", "gender": "neutral", "age_range": "middle_aged", "accent": "american", "language": "en", "quality_score": 65.0, "cost_per_minute": 0.0001},
+    {
+        "name": "Marcus (Narrator)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "middle_aged",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 82.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Elena (Narrator)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "young_adult",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 85.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "James (British)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "middle_aged",
+        "accent": "british",
+        "language": "en",
+        "quality_score": 80.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Sophie (British)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "young_adult",
+        "accent": "british",
+        "language": "en",
+        "quality_score": 83.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "David (Premium)",
+        "provider": "elevenlabs",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "middle_aged",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 95.0,
+        "cost_per_minute": 0.03,
+    },
+    {
+        "name": "Rachel (Premium)",
+        "provider": "elevenlabs",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "young_adult",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 96.0,
+        "cost_per_minute": 0.03,
+    },
+    {
+        "name": "Arthur (Premium British)",
+        "provider": "elevenlabs",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "elderly",
+        "accent": "british",
+        "language": "en",
+        "quality_score": 94.0,
+        "cost_per_minute": 0.03,
+    },
+    {
+        "name": "Isabella (Premium British)",
+        "provider": "elevenlabs",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "middle_aged",
+        "accent": "british",
+        "language": "en",
+        "quality_score": 93.0,
+        "cost_per_minute": 0.03,
+    },
+    {
+        "name": "Carlos (Spanish Accent)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "young_adult",
+        "accent": "spanish",
+        "language": "en",
+        "quality_score": 78.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Anika (Indian Accent)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "young_adult",
+        "accent": "indian",
+        "language": "en",
+        "quality_score": 77.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Chen Wei (Mandarin)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "middle_aged",
+        "accent": "chinese",
+        "language": "zh",
+        "quality_score": 76.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Yuki (Japanese)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "young_adult",
+        "accent": "japanese",
+        "language": "ja",
+        "quality_score": 75.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Hans (German)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "middle_aged",
+        "accent": "german",
+        "language": "de",
+        "quality_score": 79.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Marie (French)",
+        "provider": "coqui_xtts",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "young_adult",
+        "accent": "french",
+        "language": "fr",
+        "quality_score": 80.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Old Sage",
+        "provider": "coqui_xtts",
+        "voice_type": "character",
+        "gender": "male",
+        "age_range": "elderly",
+        "accent": "british",
+        "language": "en",
+        "quality_score": 74.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Young Hero",
+        "provider": "coqui_xtts",
+        "voice_type": "character",
+        "gender": "male",
+        "age_range": "young_adult",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 76.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Villainess",
+        "provider": "coqui_xtts",
+        "voice_type": "character",
+        "gender": "female",
+        "age_range": "middle_aged",
+        "accent": "british",
+        "language": "en",
+        "quality_score": 75.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Child Voice",
+        "provider": "coqui_xtts",
+        "voice_type": "character",
+        "gender": "neutral",
+        "age_range": "child",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 70.0,
+        "cost_per_minute": 0.001,
+    },
+    {
+        "name": "Deep Narrator",
+        "provider": "elevenlabs",
+        "voice_type": "narrator",
+        "gender": "male",
+        "age_range": "elderly",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 92.0,
+        "cost_per_minute": 0.03,
+    },
+    {
+        "name": "Warm Storyteller",
+        "provider": "elevenlabs",
+        "voice_type": "narrator",
+        "gender": "female",
+        "age_range": "middle_aged",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 91.0,
+        "cost_per_minute": 0.03,
+    },
+    {
+        "name": "Quick Preview",
+        "provider": "piper",
+        "voice_type": "narrator",
+        "gender": "neutral",
+        "age_range": "middle_aged",
+        "accent": "american",
+        "language": "en",
+        "quality_score": 65.0,
+        "cost_per_minute": 0.0001,
+    },
 ]
 
 
@@ -53,25 +264,18 @@ class VoiceManager:
 
     async def get_system_voices(self, db: AsyncSession) -> list[AudiobookVoice]:
         """Return built-in system voices. Seed them if not present."""
-        result = await db.execute(
-            select(AudiobookVoice).where(AudiobookVoice.is_system_voice == True)  # noqa: E712
-        )
+        result = await db.execute(select(AudiobookVoice).where(AudiobookVoice.is_system_voice.is_(True)))
         voices = result.scalars().all()
         if not voices:
             voices = await self._seed_system_voices(db)
-        return voices
+        return list(voices)  # .all() returns a Sequence
 
-    async def get_org_voices(
-        self, db: AsyncSession, org_id: uuid.UUID
-    ) -> list[AudiobookVoice]:
+    async def get_org_voices(self, db: AsyncSession, org_id: uuid.UUID) -> list[AudiobookVoice]:
         """Return org-specific custom voices + system voices."""
         result = await db.execute(
             select(AudiobookVoice)
-            .where(
-                (AudiobookVoice.org_id == org_id)
-                | (AudiobookVoice.is_system_voice == True)  # noqa: E712
-            )
-            .where(AudiobookVoice.active == True)  # noqa: E712
+            .where((AudiobookVoice.org_id == org_id) | (AudiobookVoice.is_system_voice.is_(True)))
+            .where(AudiobookVoice.active.is_(True))
         )
         return list(result.scalars().all())
 
@@ -93,8 +297,7 @@ class VoiceManager:
         total_seconds = sum(self._get_duration(p) for p in audio_samples)
         if total_seconds < self.settings.VOICE_CLONE_MIN_AUDIO_SECONDS:
             raise ValueError(
-                f"Need at least {self.settings.VOICE_CLONE_MIN_AUDIO_SECONDS}s of audio, "
-                f"got {total_seconds:.0f}s"
+                f"Need at least {self.settings.VOICE_CLONE_MIN_AUDIO_SECONDS}s of audio, " f"got {total_seconds:.0f}s"
             )
 
         # Clone via provider
@@ -115,15 +318,13 @@ class VoiceManager:
         await db.flush()
         return voice
 
-    async def delete_clone(
-        self, db: AsyncSession, voice_id: uuid.UUID, org_id: uuid.UUID
-    ) -> bool:
+    async def delete_clone(self, db: AsyncSession, voice_id: uuid.UUID, org_id: uuid.UUID) -> bool:
         """Soft-delete a custom voice."""
         result = await db.execute(
             select(AudiobookVoice).where(
                 AudiobookVoice.id == voice_id,
                 AudiobookVoice.org_id == org_id,
-                AudiobookVoice.is_system_voice == False,  # noqa: E712
+                AudiobookVoice.is_system_voice.is_(False),
             )
         )
         voice = result.scalar_one_or_none()
@@ -133,16 +334,12 @@ class VoiceManager:
         await db.flush()
         return True
 
-    async def preview_voice(
-        self, db: AsyncSession, voice_id: uuid.UUID, sample_text: str
-    ) -> dict:
+    async def preview_voice(self, db: AsyncSession, voice_id: uuid.UUID, sample_text: str) -> dict:
         """Generate a short preview of a voice."""
         # Lazy import to avoid circular imports
         from app.services.voiceforge.tts_engine import TTSEngine
 
-        result = await db.execute(
-            select(AudiobookVoice).where(AudiobookVoice.id == voice_id)
-        )
+        result = await db.execute(select(AudiobookVoice).where(AudiobookVoice.id == voice_id))
         voice = result.scalar_one_or_none()
         if not voice:
             raise ValueError(f"Voice {voice_id} not found")
@@ -167,11 +364,12 @@ class VoiceManager:
         segments = await gen.detect_dialogue(chapter_text)
         characters: dict[str, int] = {}
         for seg in segments:
-            if seg.get("character") and seg["character"] != "narrator":
-                characters[seg["character"]] = characters.get(seg["character"], 0) + 1
+            # DialogueSegment is a dataclass; the mapping access here raised
+            # TypeError, so character detection never returned anything.
+            if seg.character and seg.character != "narrator":
+                characters[seg.character] = characters.get(seg.character, 0) + 1
         return [
-            {"name": name, "dialogue_count": count}
-            for name, count in sorted(characters.items(), key=lambda x: -x[1])
+            {"name": name, "dialogue_count": count} for name, count in sorted(characters.items(), key=lambda x: -x[1])
         ]
 
     async def _seed_system_voices(self, db: AsyncSession) -> list[AudiobookVoice]:
@@ -195,6 +393,6 @@ class VoiceManager:
             import soundfile as sf
 
             data, rate = sf.read(str(audio_path))
-            return len(data) / rate
+            return cast("float", len(data) / rate)
         except Exception:
             return 0.0

@@ -321,7 +321,8 @@
     "loading": "Loading books...",
     "error": {
       "failedToLoad": "Failed to load books",
-      "unexpectedError": "An unexpected error occurred."
+      "unexpectedError": "An unexpected error occurred.",
+      "failedToLoadChapters": "Failed to load chapters"
     },
     "empty": {
       "noBooksTitle": "No books found",

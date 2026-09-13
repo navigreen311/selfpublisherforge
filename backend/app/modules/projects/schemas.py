@@ -5,22 +5,20 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Requests
 # ---------------------------------------------------------------------------
 
+
 class ProjectCreateRequest(BaseModel):
     """Request to create a new project."""
+
     title: str = Field(..., min_length=1, max_length=500)
     description: str | None = None
     project_type: str = Field(default="book", pattern="^(book|series|course)$")
     book_type: str | None = Field(
         None,
-        description=(
-            "Project book type: nonfiction, fiction, childrens, coloring, "
-            "puzzle, comic, cookbook, other."
-        ),
+        description=("Project book type: nonfiction, fiction, childrens, coloring, " "puzzle, comic, cookbook, other."),
     )
     target_launch_date: date | None = None
     genre: str | None = None
@@ -41,6 +39,7 @@ class ProjectCreateRequest(BaseModel):
 
 class ProjectUpdateRequest(BaseModel):
     """Request to update project details."""
+
     title: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = None
     book_type: str | None = None
@@ -63,6 +62,7 @@ class ProjectUpdateRequest(BaseModel):
 
 class ProjectListRequest(BaseModel):
     """Request parameters for listing projects."""
+
     limit: int = Field(default=50, ge=1, le=500)
     offset: int = Field(default=0, ge=0)
     project_type: str | None = None
@@ -79,8 +79,10 @@ class ProjectListRequest(BaseModel):
 # Responses
 # ---------------------------------------------------------------------------
 
+
 class ProjectModuleProgress(BaseModel):
     """Linked module summary for a project."""
+
     module_type: str
     status: str
     progress_pct: int = 0
@@ -89,6 +91,7 @@ class ProjectModuleProgress(BaseModel):
 
 class ProjectResponse(BaseModel):
     """Project details."""
+
     id: UUID
     title: str
     description: str | None
@@ -117,6 +120,7 @@ class ProjectResponse(BaseModel):
 
 class ProjectListItem(BaseModel):
     """Project summary for list view."""
+
     id: UUID
     title: str
     project_type: str
@@ -132,5 +136,6 @@ class ProjectListItem(BaseModel):
 
 class ProjectListResponse(BaseModel):
     """Response containing list of projects."""
+
     projects: list[ProjectListItem]
     total: int

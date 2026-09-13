@@ -15,6 +15,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -95,12 +96,13 @@ class AudiobookVoice(TenantModel):
     voice_settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     cost_per_minute: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True)
-    is_system_voice: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    is_system_voice: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     __table_args__ = (
+        Index("ix_audiobook_voices_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_voices_org_id_created_at", "org_id", "created_at"),
+        Index("ix_audiobook_voices_voice_settings_gin", "voice_settings", postgresql_using="gin"),
         Index("ix_audiobook_voices_provider", "provider"),
         Index("ix_audiobook_voices_voice_type", "voice_type"),
         Index("ix_audiobook_voices_active", "active"),
@@ -112,63 +114,29 @@ class AudiobookProject(TenantModel):
 
     __tablename__ = "audiobook_projects"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("books.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(50), default="draft", server_default="draft"
-    )
+    status: Mapped[str] = mapped_column(String(50), default="draft", server_default="draft")
     narrator_voice_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("audiobook_voices.id", ondelete="SET NULL"), nullable=True
     )
-    character_voices: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, default=dict
-    )
-    narration_style: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, default=dict
-    )
-    output_format: Mapped[str] = mapped_column(
-        String(20), default="mp3", server_default="mp3"
-    )
-    sample_rate: Mapped[int] = mapped_column(
-        Integer, default=44100, server_default="44100"
-    )
-    bit_rate: Mapped[int] = mapped_column(
-        Integer, default=192, server_default="192"
-    )
-    channels: Mapped[int] = mapped_column(
-        Integer, default=1, server_default="1"
-    )
-    target_platform: Mapped[str] = mapped_column(
-        String(50), default="acx", server_default="acx"
-    )
-    total_chapters: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0"
-    )
-    completed_chapters: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0"
-    )
-    total_duration_seconds: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0"
-    )
-    estimated_cost: Mapped[float | None] = mapped_column(
-        Numeric(10, 2), nullable=True
-    )
-    actual_cost: Mapped[float] = mapped_column(
-        Numeric(10, 2), default=0, server_default="0"
-    )
+    character_voices: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    narration_style: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    output_format: Mapped[str] = mapped_column(String(20), default="mp3", server_default="mp3")
+    sample_rate: Mapped[int] = mapped_column(Integer, default=44100, server_default="44100")
+    bit_rate: Mapped[int] = mapped_column(Integer, default=192, server_default="192")
+    channels: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    target_platform: Mapped[str] = mapped_column(String(50), default="acx", server_default="acx")
+    total_chapters: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    completed_chapters: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    total_duration_seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    estimated_cost: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    actual_cost: Mapped[float] = mapped_column(Numeric(10, 2), default=0, server_default="0")
     master_audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     cover_audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metadata_: Mapped[dict | None] = mapped_column(
-        "metadata", JSONB, nullable=True, default=dict
-    )
-    settings: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, default=dict
-    )
-    created_by: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
+    metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, default=dict)
+    settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     chapters: Mapped[list["AudiobookChapter"]] = relationship(
@@ -180,6 +148,13 @@ class AudiobookProject(TenantModel):
     )
 
     __table_args__ = (
+        Index("ix_audiobook_projects_character_voices_gin", "character_voices", postgresql_using="gin"),
+        Index("ix_audiobook_projects_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_projects_metadata_gin", "metadata", postgresql_using="gin"),
+        Index("ix_audiobook_projects_narration_style_gin", "narration_style", postgresql_using="gin"),
+        Index("ix_audiobook_projects_org_id_created_at", "org_id", "created_at"),
+        Index("ix_audiobook_projects_settings_gin", "settings", postgresql_using="gin"),
+        Index("ix_audiobook_projects_target_platform", "target_platform"),
         Index("ix_audiobook_projects_org_book", "org_id", "book_id"),
         Index("ix_audiobook_projects_status", "status"),
     )
@@ -195,16 +170,12 @@ class AudiobookChapter(BaseModel):
         nullable=False,
         index=True,
     )
-    chapter_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True
-    )
+    chapter_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True)
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     chapter_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source_text: Mapped[str] = mapped_column(Text, nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    status: Mapped[str] = mapped_column(
-        String(50), default="pending", server_default="pending"
-    )
+    status: Mapped[str] = mapped_column(String(50), default="pending", server_default="pending")
     voice_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("audiobook_voices.id", ondelete="SET NULL"), nullable=True
     )
@@ -212,31 +183,23 @@ class AudiobookChapter(BaseModel):
     audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     waveform_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     duration_seconds: Mapped[float] = mapped_column(Float, default=0, server_default="0")
-    file_size_bytes: Mapped[int] = mapped_column(
-        BigInteger, default=0, server_default="0"
-    )
-    generation_attempts: Mapped[int] = mapped_column(
-        Integer, default=0, server_default="0"
-    )
-    generation_params: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, default=dict
-    )
-    quality_metrics: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, default=dict
-    )
+    file_size_bytes: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    generation_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    generation_params: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    quality_metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
     review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     audio_edits: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
     cost_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    cost_usd: Mapped[float] = mapped_column(
-        Numeric(10, 4), default=0, server_default="0"
-    )
+    cost_usd: Mapped[float] = mapped_column(Numeric(10, 4), default=0, server_default="0")
 
     # Relationships
-    project: Mapped["AudiobookProject"] = relationship(
-        "AudiobookProject", back_populates="chapters"
-    )
+    project: Mapped["AudiobookProject"] = relationship("AudiobookProject", back_populates="chapters")
 
     __table_args__ = (
+        Index("ix_audiobook_chapters_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_chapters_generation_params_gin", "generation_params", postgresql_using="gin"),
+        Index("ix_audiobook_chapters_quality_metrics_gin", "quality_metrics", postgresql_using="gin"),
+        Index("ix_audiobook_chapters_status", "status"),
         Index("ix_audiobook_chapters_project_status", "audiobook_project_id", "status"),
         Index("ix_audiobook_chapters_chapter_number", "chapter_number"),
     )
@@ -258,6 +221,10 @@ class AudiobookPronunciation(TenantModel):
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     __table_args__ = (
+        Index("ix_audiobook_pronunciation_active", "active"),
+        Index("ix_audiobook_pronunciation_audiobook_project_id", "audiobook_project_id"),
+        Index("ix_audiobook_pronunciation_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_pronunciation_org_id_created_at", "org_id", "created_at"),
         Index("ix_audiobook_pronunciation_org", "org_id"),
         Index("ix_audiobook_pronunciation_project", "audiobook_project_id"),
         Index("ix_audiobook_pronunciation_word", "word"),
@@ -278,9 +245,7 @@ class AudiobookGenerationJob(BaseModel):
         ForeignKey("audiobook_chapters.id", ondelete="SET NULL"), nullable=True
     )
     job_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50), default="queued", server_default="queued"
-    )
+    status: Mapped[str] = mapped_column(String(50), default="queued", server_default="queued")
     priority: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
     provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     input_params: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -288,18 +253,15 @@ class AudiobookGenerationJob(BaseModel):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     max_retries: Mapped[int] = mapped_column(Integer, default=3, server_default="3")
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    cost_usd: Mapped[float] = mapped_column(
-        Numeric(10, 4), default=0, server_default="0"
-    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cost_usd: Mapped[float] = mapped_column(Numeric(10, 4), default=0, server_default="0")
     celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     __table_args__ = (
+        Index("ix_audiobook_generation_jobs_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_audiobook_generation_jobs_input_params_gin", "input_params", postgresql_using="gin"),
+        Index("ix_audiobook_generation_jobs_output_gin", "output", postgresql_using="gin"),
         Index("ix_audiobook_generation_jobs_status", "status"),
         Index("ix_audiobook_generation_jobs_job_type", "job_type"),
         Index("ix_audiobook_generation_jobs_priority", "priority"),

@@ -8,16 +8,15 @@ from __future__ import annotations
 
 import pytest
 
-from app.modules.style_cloning.ingestion import ingest_text, SegmentedText
 from app.modules.style_cloning.features import (
     extract_all_features,
-    extract_vocabulary,
-    extract_sentence_metrics,
+    extract_dialogue_metrics,
     extract_paragraph_metrics,
     extract_rhetorical_metrics,
-    extract_dialogue_metrics,
+    extract_sentence_metrics,
+    extract_vocabulary,
 )
-
+from app.modules.style_cloning.ingestion import SegmentedText, ingest_text
 
 # ---------------------------------------------------------------------------
 # Fixtures — sample texts of varying styles
@@ -56,7 +55,7 @@ DIALOGUE_HEAVY = (
     '"Yes," she said firmly. "Especially in times like these."\n\n'
     'He turned away, staring out the window. "You don\'t understand."\n\n'
     '"I understand perfectly," she said. "That\'s what frightens me."\n\n'
-    'Silence fell between them. The clock ticked loudly on the wall.\n\n'
+    "Silence fell between them. The clock ticked loudly on the wall.\n\n"
     '"We need to talk about what happens next," he said finally.\n\n'
     '"There is no next," she replied. "This is the end."'
 )
@@ -105,8 +104,8 @@ def extended_segmented() -> SegmentedText:
 # Ingestion tests
 # ===================================================================
 
-class TestIngestion:
 
+class TestIngestion:
     def test_ingest_produces_sentences(self, simple_segmented: SegmentedText):
         assert len(simple_segmented.sentences) > 0
 
@@ -128,8 +127,8 @@ class TestIngestion:
 # Vocabulary analysis tests
 # ===================================================================
 
-class TestVocabularyExtraction:
 
+class TestVocabularyExtraction:
     def test_total_word_count(self, simple_segmented: SegmentedText):
         vocab = extract_vocabulary(simple_segmented)
         assert vocab.total_word_count > 0
@@ -190,8 +189,8 @@ class TestVocabularyExtraction:
 # Sentence metrics tests
 # ===================================================================
 
-class TestSentenceExtraction:
 
+class TestSentenceExtraction:
     def test_avg_length_positive(self, simple_segmented: SegmentedText):
         metrics = extract_sentence_metrics(simple_segmented)
         assert metrics.avg_length > 0
@@ -244,8 +243,8 @@ class TestSentenceExtraction:
 # Paragraph metrics tests
 # ===================================================================
 
-class TestParagraphExtraction:
 
+class TestParagraphExtraction:
     def test_avg_length_positive(self, simple_segmented: SegmentedText):
         metrics = extract_paragraph_metrics(simple_segmented)
         assert metrics.avg_length >= 0
@@ -282,8 +281,8 @@ class TestParagraphExtraction:
 # Rhetorical metrics tests
 # ===================================================================
 
-class TestRhetoricalExtraction:
 
+class TestRhetoricalExtraction:
     def test_emotional_intensity_bounded(self, emotional_segmented: SegmentedText):
         metrics = extract_rhetorical_metrics(emotional_segmented)
         assert 0.0 <= metrics.emotional_intensity <= 1.0
@@ -325,8 +324,8 @@ class TestRhetoricalExtraction:
 # Dialogue metrics tests
 # ===================================================================
 
-class TestDialogueExtraction:
 
+class TestDialogueExtraction:
     def test_dialogue_detected(self, dialogue_segmented: SegmentedText):
         metrics = extract_dialogue_metrics(dialogue_segmented)
         assert metrics.dialogue_ratio > 0
@@ -362,8 +361,8 @@ class TestDialogueExtraction:
 # Full pipeline test
 # ===================================================================
 
-class TestFullExtraction:
 
+class TestFullExtraction:
     def test_extract_all_features(self, simple_segmented: SegmentedText):
         features = extract_all_features(simple_segmented)
         assert features.vocabulary.total_word_count > 0

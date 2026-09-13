@@ -5,7 +5,7 @@ Verifies USD cost calculation, usage recording, budget thresholds,
 and alert levels at 50/75/90/100%.
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -13,15 +13,14 @@ from app.modules.llm_orchestration.cost_tracker import (
     MODEL_PRICING,
     BudgetAlertLevel,
     CostTracker,
-    ModelPricing,
     OrgBudget,
 )
 from app.modules.llm_orchestration.router_config import ModelID
 
-
 # -------------------------------------------------------------------
 # Fixtures
 # -------------------------------------------------------------------
+
 
 @pytest.fixture
 def tracker() -> CostTracker:
@@ -41,6 +40,7 @@ def org_id() -> str:
 # -------------------------------------------------------------------
 # Cost calculation
 # -------------------------------------------------------------------
+
 
 class TestCostCalculation:
     """Verify per-model token cost calculations."""
@@ -91,6 +91,7 @@ class TestCostCalculation:
 # Usage recording
 # -------------------------------------------------------------------
 
+
 class TestUsageRecording:
     """Verify that usage records are created and budgets updated."""
 
@@ -136,6 +137,7 @@ class TestUsageRecording:
 # Budget management
 # -------------------------------------------------------------------
 
+
 class TestBudgetManagement:
     """Verify per-org budget tracking and checks."""
 
@@ -173,6 +175,7 @@ class TestBudgetManagement:
 # -------------------------------------------------------------------
 # Alert levels
 # -------------------------------------------------------------------
+
 
 class TestAlertLevels:
     """Verify budget alert thresholds at 50/75/90/100%."""
@@ -232,6 +235,7 @@ class TestAlertLevels:
 # -------------------------------------------------------------------
 # OrgBudget dataclass
 # -------------------------------------------------------------------
+
 
 class TestOrgBudget:
     """Test OrgBudget property calculations."""

@@ -10,6 +10,7 @@ Usage::
     density = calculate_ink_density(c, m, y, k)
     report = analyze_ink_coverage(pages_data)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -45,6 +46,7 @@ _KNOWN_OOG_RANGES: list[dict[str, Any]] = [
 # ---------------------------------------------------------------------------
 # RGB → CMYK Conversion
 # ---------------------------------------------------------------------------
+
 
 def rgb_to_cmyk(r: int, g: int, b: int) -> tuple[float, float, float, float]:
     """Convert an RGB colour (0-255 per channel) to CMYK (0-100 per channel).
@@ -85,6 +87,7 @@ def rgb_to_cmyk(r: int, g: int, b: int) -> tuple[float, float, float, float]:
 # Ink Density
 # ---------------------------------------------------------------------------
 
+
 def calculate_ink_density(c: float, m: float, y: float, k: float) -> float:
     """Calculate total ink coverage percentage.
 
@@ -104,6 +107,7 @@ def calculate_ink_density(c: float, m: float, y: float, k: float) -> float:
 # ---------------------------------------------------------------------------
 # Gamut Checking
 # ---------------------------------------------------------------------------
+
 
 def _is_out_of_gamut(r: int, g: int, b: int) -> bool:
     """Quick heuristic check whether an RGB colour is likely out of CMYK gamut."""
@@ -128,7 +132,9 @@ def _is_out_of_gamut(r: int, g: int, b: int) -> bool:
 
 
 def _suggest_cmyk_alternative(
-    r: int, g: int, b: int,
+    r: int,
+    g: int,
+    b: int,
 ) -> dict[str, Any]:
     """Suggest a CMYK-safe alternative for an out-of-gamut RGB colour.
 
@@ -180,6 +186,7 @@ def check_gamut(
 # Ink Coverage Analysis (per-page)
 # ---------------------------------------------------------------------------
 
+
 def analyze_ink_coverage(
     pages_data: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -211,20 +218,20 @@ def analyze_ink_coverage(
             # Distribute evenly across channels (rough estimate)
             c = m = y = coverage * 0.25
             k = coverage * 0.25
-            c, m, y, k = (
-                round(c, 2), round(m, 2), round(y, 2), round(k, 2)
-            )
+            c, m, y, k = (round(c, 2), round(m, 2), round(y, 2), round(k, 2))
 
         density = calculate_ink_density(c, m, y, k)
-        results.append({
-            "page_number": page_num,
-            "ink_density": density,
-            "within_limit": density <= MAX_INK_DENSITY,
-            "c": c,
-            "m": m,
-            "y": y,
-            "k": k,
-        })
+        results.append(
+            {
+                "page_number": page_num,
+                "ink_density": density,
+                "within_limit": density <= MAX_INK_DENSITY,
+                "c": c,
+                "m": m,
+                "y": y,
+                "k": k,
+            }
+        )
 
     return results
 
@@ -232,6 +239,7 @@ def analyze_ink_coverage(
 # ---------------------------------------------------------------------------
 # Shadow Crush Detection
 # ---------------------------------------------------------------------------
+
 
 def check_shadow_crush(
     colors: list[tuple[int, int, int]],
@@ -256,22 +264,25 @@ def check_shadow_crush(
         c, m, y, k = rgb_to_cmyk(r, g, b)
         density = calculate_ink_density(c, m, y, k)
         if density > SHADOW_CRUSH_THRESHOLD:
-            flagged.append({
-                "rgb": (r, g, b),
-                "cmyk": (c, m, y, k),
-                "ink_density": density,
-                "warning": (
-                    f"Total ink density {density:.1f}% exceeds "
-                    f"{SHADOW_CRUSH_THRESHOLD}% threshold. "
-                    "Dark detail may be lost in print."
-                ),
-            })
+            flagged.append(
+                {
+                    "rgb": (r, g, b),
+                    "cmyk": (c, m, y, k),
+                    "ink_density": density,
+                    "warning": (
+                        f"Total ink density {density:.1f}% exceeds "
+                        f"{SHADOW_CRUSH_THRESHOLD}% threshold. "
+                        "Dark detail may be lost in print."
+                    ),
+                }
+            )
     return flagged
 
 
 # ---------------------------------------------------------------------------
 # Soft-Proof Data
 # ---------------------------------------------------------------------------
+
 
 def soft_proof_data(page_data: dict[str, Any]) -> dict[str, Any]:
     """Generate soft-proof simulation data for a single page.
@@ -302,28 +313,23 @@ def soft_proof_data(page_data: dict[str, Any]) -> dict[str, Any]:
         r, g, b = rgb[0], rgb[1], rgb[2]
         c, m, y, k = rgb_to_cmyk(r, g, b)
         density = calculate_ink_density(c, m, y, k)
-        cmyk_colors.append({
-            "rgb": (r, g, b),
-            "cmyk": (c, m, y, k),
-            "ink_density": density,
-        })
+        cmyk_colors.append(
+            {
+                "rgb": (r, g, b),
+                "cmyk": (c, m, y, k),
+                "ink_density": density,
+            }
+        )
         if _is_out_of_gamut(r, g, b):
             alt = _suggest_cmyk_alternative(r, g, b)
             oog_areas.append(alt)
             issues.append(
-                f"RGB({r},{g},{b}) is out of CMYK gamut — "
-                f"suggested alternative: RGB{alt['adjusted_rgb']}"
+                f"RGB({r},{g},{b}) is out of CMYK gamut — " f"suggested alternative: RGB{alt['adjusted_rgb']}"
             )
         if density > MAX_INK_DENSITY:
-            issues.append(
-                f"RGB({r},{g},{b}) → ink density {density:.1f}% "
-                f"exceeds {MAX_INK_DENSITY}% limit."
-            )
+            issues.append(f"RGB({r},{g},{b}) → ink density {density:.1f}% " f"exceeds {MAX_INK_DENSITY}% limit.")
         if density > SHADOW_CRUSH_THRESHOLD:
-            issues.append(
-                f"RGB({r},{g},{b}) may cause shadow crush "
-                f"(ink density {density:.1f}%)."
-            )
+            issues.append(f"RGB({r},{g},{b}) may cause shadow crush " f"(ink density {density:.1f}%).")
 
     # Overall page ink density
     page_cmyk = page_data.get("avg_cmyk")
@@ -344,6 +350,7 @@ def soft_proof_data(page_data: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Auto-Adjust Colours
 # ---------------------------------------------------------------------------
+
 
 def auto_adjust_colors(page_data: dict[str, Any]) -> dict[str, Any]:
     """Adjust page colours to be CMYK-safe.
@@ -377,9 +384,7 @@ def auto_adjust_colors(page_data: dict[str, Any]) -> dict[str, Any]:
         if _is_out_of_gamut(r, g, b):
             alt = _suggest_cmyk_alternative(r, g, b)
             r, g, b = alt["adjusted_rgb"]
-            changes.append(
-                f"Desaturated RGB{rgb[:3]} → RGB({r},{g},{b}) for gamut safety."
-            )
+            changes.append(f"Desaturated RGB{rgb[:3]} → RGB({r},{g},{b}) for gamut safety.")
             modified = True
 
         # 2. Ink density fix
@@ -401,10 +406,7 @@ def auto_adjust_colors(page_data: dict[str, Any]) -> dict[str, Any]:
                 max(0, min(255, g2)),
                 max(0, min(255, b2)),
             )
-            changes.append(
-                f"Reduced ink density from {density:.1f}% → "
-                f"≤{MAX_INK_DENSITY}% on RGB({r},{g},{b})."
-            )
+            changes.append(f"Reduced ink density from {density:.1f}% → " f"≤{MAX_INK_DENSITY}% on RGB({r},{g},{b}).")
             modified = True
 
         # 3. Shadow crush fix
@@ -421,10 +423,7 @@ def auto_adjust_colors(page_data: dict[str, Any]) -> dict[str, Any]:
             r = max(0, min(255, int(round(r * lighten))))
             g = max(0, min(255, int(round(g * lighten))))
             b = max(0, min(255, int(round(b * lighten))))
-            changes.append(
-                f"Lightened dark colour to avoid shadow crush → "
-                f"RGB({r},{g},{b})."
-            )
+            changes.append(f"Lightened dark colour to avoid shadow crush → " f"RGB({r},{g},{b}).")
 
         adjusted.append((r, g, b))
 

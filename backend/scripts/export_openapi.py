@@ -8,10 +8,10 @@ repository root / working directory).
 """
 
 import json
-import os
 from pathlib import Path
 
 from app.main import app
+
 
 def main() -> None:
     schema = app.openapi()

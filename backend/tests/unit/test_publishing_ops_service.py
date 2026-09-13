@@ -8,7 +8,7 @@ orchestration, template CRUD, book metadata, and listing sync.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -44,13 +44,13 @@ from app.modules.publishing_ops.service import (
     sync_listing,
     update_metadata,
 )
-
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_NOW = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+_NOW = datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_db() -> AsyncMock:
@@ -58,7 +58,7 @@ def _make_db() -> AsyncMock:
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=populate_server_defaults)
     db.execute = AsyncMock()
     return db
 
@@ -337,6 +337,7 @@ class TestCreateAccount:
         assert result.platform == PlatformType.SMASHWORDS
         # The DB model should have been added with KDP as fallback
         from app.models.publishing import PublishingPlatform
+
         assert added_objects[0].platform == PublishingPlatform.KDP
 
 
@@ -598,7 +599,7 @@ class TestListTemplates:
         names = [t.name for t in result]
         assert "My Custom" in names
         # Verify the custom one is not builtin
-        custom = [t for t in result if t.name == "My Custom"][0]
+        custom = next(t for t in result if t.name == "My Custom")
         assert custom.is_builtin is False
 
     @pytest.mark.asyncio
@@ -1034,6 +1035,7 @@ class TestSyncListing:
         # The fallback path should update last_synced and status
         assert row.last_synced is not None
         from app.models.publishing import ListingStatus as ListingStatusEnum
+
         assert row.status == ListingStatusEnum.LIVE
         db.flush.assert_awaited_once()
 

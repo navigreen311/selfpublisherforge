@@ -32,7 +32,7 @@ interface VelocityChartProps {
 export function VelocityChart({ data, title }: VelocityChartProps) {
   const t = useTranslations("reviews");
 
-  const chartTitle = title ?? t("charts.reviewVelocity");
+  const chartTitle = title ?? t("insights.velocityChart");
   const hasData = data && data.length > 0;
 
   return (
@@ -78,7 +78,7 @@ export function VelocityChart({ data, title }: VelocityChartProps) {
               <Line
                 type="monotone"
                 dataKey="yours"
-                name={t("charts.yourBooks")}
+                name={t("insights.yourBooks")}
                 stroke="#3b82f6"
                 strokeWidth={2}
                 fill="#3b82f6"

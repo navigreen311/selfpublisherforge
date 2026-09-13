@@ -9,13 +9,12 @@ from __future__ import annotations
 import logging
 import random
 from datetime import datetime, timedelta
-from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.analytics.models import BSRTracking, SalesData, RoyaltyRecord
+from app.modules.analytics.models import BSRTracking, SalesData
 
 logger = logging.getLogger(__name__)
 
@@ -82,11 +81,13 @@ async def get_book_performance(
         )
         rev_result = await db.execute(rev_stmt)
         for row in rev_result.all():
-            revenue_breakdown.append({
-                "format": row.format or "Unknown",
-                "revenue": float(row.revenue),
-                "units": int(row.units),
-            })
+            revenue_breakdown.append(
+                {
+                    "format": row.format or "Unknown",
+                    "revenue": float(row.revenue),
+                    "units": int(row.units),
+                }
+            )
     except Exception:
         logger.warning("Failed to query revenue breakdown for book %s", book_id, exc_info=True)
 
@@ -133,6 +134,7 @@ async def get_book_performance(
 
 # ---------- Mock data helpers ----------
 
+
 def _mock_bsr_history(days: int) -> list[dict]:
     """Generate realistic-looking BSR history mock data."""
     now = datetime.utcnow()
@@ -141,12 +143,14 @@ def _mock_bsr_history(days: int) -> list[dict]:
     for i in range(0, days, max(days // 30, 1)):
         bsr = max(1000, bsr + random.randint(-5000, 5000))
         recorded = now - timedelta(days=days - i)
-        data.append({
-            "recorded_at": recorded.isoformat(),
-            "bsr": bsr,
-            "category_rank": max(1, bsr // 100),
-            "category_name": "Kindle Store > Self-Help",
-        })
+        data.append(
+            {
+                "recorded_at": recorded.isoformat(),
+                "bsr": bsr,
+                "category_rank": max(1, bsr // 100),
+                "category_name": "Kindle Store > Self-Help",
+            }
+        )
     return data
 
 
@@ -169,9 +173,11 @@ def _mock_review_trend(days: int) -> list[dict]:
         total_reviews += random.randint(0, 5)
         avg_rating = round(max(3.0, min(5.0, avg_rating + random.uniform(-0.1, 0.1))), 1)
         recorded = now - timedelta(days=days - i)
-        data.append({
-            "date": recorded.strftime("%Y-%m-%d"),
-            "total_reviews": total_reviews,
-            "avg_rating": avg_rating,
-        })
+        data.append(
+            {
+                "date": recorded.strftime("%Y-%m-%d"),
+                "total_reviews": total_reviews,
+                "avg_rating": avg_rating,
+            }
+        )
     return data

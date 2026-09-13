@@ -1,8 +1,9 @@
 """Shared fixtures for unit tests."""
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -31,7 +32,7 @@ def user_id() -> uuid.UUID:
 @pytest.fixture
 def sample_agent(org_id: uuid.UUID) -> Agent:
     """Return a detached Agent instance for pure-unit tests."""
-    agent = Agent(
+    return Agent(
         id=uuid.uuid4(),
         org_id=org_id,
         agent_type=AgentType.RESEARCH,
@@ -43,7 +44,6 @@ def sample_agent(org_id: uuid.UUID) -> Agent:
         temperature=0.7,
         is_enabled=True,
     )
-    return agent
 
 
 @pytest_asyncio.fixture
@@ -84,8 +84,8 @@ async def sample_budget(
         usd_used_this_month=0.0,
         total_tokens_used=0,
         total_usd_used=0.0,
-        last_reset_daily=datetime.now(timezone.utc),
-        last_reset_monthly=datetime.now(timezone.utc),
+        last_reset_daily=datetime.now(UTC),
+        last_reset_monthly=datetime.now(UTC),
     )
     db.add(budget)
     await db.flush()

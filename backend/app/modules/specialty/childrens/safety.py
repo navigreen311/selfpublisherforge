@@ -9,10 +9,9 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Trademark blocklist
@@ -101,6 +100,7 @@ _STYLE_OF_PATTERNS: list[re.Pattern[str]] = [
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 class IssueSeverity(str, Enum):
     critical = "critical"
@@ -248,22 +248,34 @@ _FONT_LICENSE_REGISTRY: dict[str, FontLicenseInfo] = {
 # ---------------------------------------------------------------------------
 
 _VIOLENCE_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(?:gun|rifle|pistol|sword|dagger|knife|weapon|stab|shoot|kill|murder|blood|bleeding|wound)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:gun|rifle|pistol|sword|dagger|knife|weapon|stab|shoot|kill|murder|blood|bleeding|wound)\b", re.IGNORECASE
+    ),
     re.compile(r"\b(?:punch|hit|slap|beat|attack|fight|battle|war|destroy|explode)\b", re.IGNORECASE),
 ]
 
 _FEAR_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(?:terrif(?:y|ied|ying)|horrif(?:y|ied|ying)|nightmare|scream(?:ing)?|demon|devil|ghost|haunted|creepy|sinister|menacing)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:terrif(?:y|ied|ying)|horrif(?:y|ied|ying)|nightmare|scream(?:ing)?|demon|devil|ghost|haunted|creepy|sinister|menacing)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\b(?:dark\s+shadow|lurking|stalking|threatening|ominous|dread|panic)\b", re.IGNORECASE),
 ]
 
 _STEREOTYPE_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(?:savage|primitive|exotic|oriental|gypsy|eskimo|redskin|squaw|chief\s+[\w]+\s+feather)\b", re.IGNORECASE),
-    re.compile(r"\b(?:boys\s+don't\s+cry|girls\s+can't|only\s+boys|only\s+girls|real\s+men|real\s+women)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:savage|primitive|exotic|oriental|gypsy|eskimo|redskin|squaw|chief\s+[\w]+\s+feather)\b", re.IGNORECASE
+    ),
+    re.compile(
+        r"\b(?:boys\s+don't\s+cry|girls\s+can't|only\s+boys|only\s+girls|real\s+men|real\s+women)\b", re.IGNORECASE
+    ),
 ]
 
 _MATURE_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(?:drunk|alcohol|beer|wine|cigarette|smoking|drug|cocaine|marijuana|sexy|seductive|nude|naked)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:drunk|alcohol|beer|wine|cigarette|smoking|drug|cocaine|marijuana|sexy|seductive|nude|naked)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\b(?:suicide|self-harm|abuse|molest|rape|prostitut)\b", re.IGNORECASE),
 ]
 
@@ -281,6 +293,7 @@ _YOUNG_AGE_RANGES = {"0-3", "3-5", "board", "picture"}
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def scan_trademarks(text: str) -> list[TrademarkIssue]:
     """Scan *text* for trademarked terms and artist-style patterns.
@@ -381,7 +394,7 @@ def scan_content_sensitivity(
                         category=category,
                         description=(
                             f"Found '{matched_text}' in context: "
-                            f"\"{context}\". "
+                            f'"{context}". '
                             f"Review for age-appropriateness ({age_range})."
                         ),
                         severity=severity,
@@ -427,7 +440,7 @@ def generate_provenance_record(
     in the record to keep it lightweight and privacy-friendly.
     """
     prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-    generated_date = datetime.now(timezone.utc).isoformat()
+    generated_date = datetime.now(UTC).isoformat()
 
     return ProvenanceRecord(
         model=model,

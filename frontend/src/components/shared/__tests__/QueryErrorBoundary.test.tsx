@@ -54,30 +54,28 @@ describe("QueryErrorBoundary", () => {
   it("resets error boundary when Try again is clicked", async () => {
     const user = userEvent.setup();
 
-    // Create a component that tracks render count
-    let renderCount = 0;
-    function TrackingComponent({ shouldThrow }: { shouldThrow: boolean }) {
-      renderCount++;
-      if (shouldThrow && renderCount === 1) {
-        throw new Error("First render error");
-      }
-      return <div>Render count: {renderCount}</div>;
+    // Drive the throw from a flag the test owns. Counting renders instead was
+    // timing-dependent: React re-renders the child while the boundary settles,
+    // so the "throw only on render 1" trick had already recovered on its own
+    // before the first assertion ran.
+    let shouldThrow = true;
+    function MaybeThrow() {
+      if (shouldThrow) throw new Error("First render error");
+      return <div>Recovered</div>;
     }
 
     render(
       <QueryErrorBoundary>
-        <TrackingComponent shouldThrow={true} />
+        <MaybeThrow />
       </QueryErrorBoundary>
     );
 
-    // Should show error on first render
     expect(screen.getByText("First render error")).toBeInTheDocument();
 
-    // Click try again
+    shouldThrow = false;
     await user.click(screen.getByRole("button", { name: /try again/i }));
 
-    // Should render children again (error was reset)
-    expect(screen.getByText(/Render count: 2/)).toBeInTheDocument();
+    expect(await screen.findByText("Recovered")).toBeInTheDocument();
   });
 
   it("renders custom fallback when provided", () => {
@@ -99,7 +97,7 @@ describe("QueryErrorBoundary", () => {
   });
 
   it("shows default message when error has no message", () => {
-    function ThrowEmptyError() {
+    function ThrowEmptyError(): React.JSX.Element {
       throw new Error();
     }
 

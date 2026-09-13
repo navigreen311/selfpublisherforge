@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
@@ -24,6 +24,10 @@ jest.mock("next/navigation", () => ({
 
 // Mock lucide-react icons to simple elements
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Rocket: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="rocket-icon" {...props} />
   ),
@@ -51,6 +55,9 @@ jest.mock("@/modules/marketing/hooks", () => ({
   useSocialCalendar: (...args: unknown[]) => mockUseSocialCalendar(...args),
   useARCCampaigns: (...args: unknown[]) => mockUseARCCampaigns(...args),
   useRecentActivity: (...args: unknown[]) => mockUseRecentActivity(...args),
+  useGenerateSocialPosts: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useUpdateSocialPost: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useCreateARCCampaign: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock shared components

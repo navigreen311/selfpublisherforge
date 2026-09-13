@@ -12,7 +12,7 @@ Tests cover:
 from __future__ import annotations
 
 from datetime import timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import WebSocket, status
@@ -20,10 +20,10 @@ from fastapi import WebSocket, status
 from app.core.security import create_access_token
 from app.modules.realtime.router import _authenticate_ws
 
-
 # ---------------------------------------------------------------------------
 # Tests — Valid Token Authentication
 # ---------------------------------------------------------------------------
+
 
 def test_authenticate_ws_with_valid_token() -> None:
     """Test valid JWT token is accepted."""
@@ -67,6 +67,7 @@ def test_authenticate_ws_with_minimal_claims() -> None:
 # Tests — Token Rejection Cases
 # ---------------------------------------------------------------------------
 
+
 def test_authenticate_ws_rejects_missing_token() -> None:
     """Test missing token raises ValueError."""
     with pytest.raises(ValueError, match="Missing authentication token"):
@@ -99,8 +100,9 @@ def test_authenticate_ws_rejects_expired_token() -> None:
 def test_authenticate_ws_rejects_token_without_subject() -> None:
     """Test token missing 'sub' claim raises ValueError."""
     # Create token without sub claim (using dict manipulation)
+    import jwt
+
     from app.config import get_settings
-    from jose import jwt
 
     payload = {"exp": 9999999999, "type": "access"}  # No "sub"
     token = jwt.encode(payload, get_settings().SECRET_KEY, algorithm="HS256")
@@ -111,7 +113,7 @@ def test_authenticate_ws_rejects_token_without_subject() -> None:
 
 def test_authenticate_ws_rejects_wrong_signature() -> None:
     """Test token signed with wrong key raises ValueError."""
-    from jose import jwt
+    import jwt
 
     payload = {"sub": "user-123", "exp": 9999999999}
     token = jwt.encode(payload, "wrong-secret-key", algorithm="HS256")
@@ -124,6 +126,7 @@ def test_authenticate_ws_rejects_wrong_signature() -> None:
 # Tests — WebSocket Closure on Auth Failure
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_ws_handler_closes_on_missing_token() -> None:
     """Test WebSocket handler closes connection when token missing."""
@@ -134,10 +137,7 @@ async def test_ws_handler_closes_on_missing_token() -> None:
 
     await _ws_handler(mock_ws, WSChannel.WRITING, "book-1", token=None)
 
-    mock_ws.close.assert_called_once_with(
-        code=status.WS_1008_POLICY_VIOLATION,
-        reason="Missing authentication token"
-    )
+    mock_ws.close.assert_called_once_with(code=status.WS_1008_POLICY_VIOLATION, reason="Missing authentication token")
 
 
 @pytest.mark.asyncio
@@ -177,6 +177,7 @@ async def test_ws_handler_closes_on_expired_token() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Token Payload Validation
 # ---------------------------------------------------------------------------
+
 
 def test_authenticate_ws_preserves_all_claims() -> None:
     """Test all token claims are preserved in payload."""
@@ -227,6 +228,7 @@ def test_authenticate_ws_with_role() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Edge Cases
 # ---------------------------------------------------------------------------
+
 
 def test_authenticate_ws_with_unicode_subject() -> None:
     """Test token with unicode characters in subject."""
@@ -293,6 +295,7 @@ def test_authenticate_ws_with_jwt_injection_attempt() -> None:
 # ---------------------------------------------------------------------------
 # Tests — Token Refresh During Session (Future Enhancement)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_token_refresh_message_handling() -> None:

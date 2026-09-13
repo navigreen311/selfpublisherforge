@@ -7,18 +7,16 @@ word count.
 """
 
 import hashlib
-import json
 import random
-from typing import Optional
 
-from .utils import generate_content_hash, svg_header, svg_footer, svg_text, svg_rect
+from .utils import generate_content_hash, svg_footer, svg_header, svg_rect, svg_text
 
 
 def generate_word_connect(
     word_pairs: list[tuple[str, str]],
     difficulty: str = "medium",
-    distractors: Optional[list[str]] = None,
-    seed: Optional[int] = None,
+    distractors: list[str] | None = None,
+    seed: int | None = None,
 ) -> dict:
     """
     Generate a Word Connect puzzle.
@@ -90,12 +88,14 @@ def generate_word_connect(
     for l_word, r_word in clean_pairs:
         l_idx = left_words.index(l_word)
         r_idx = right_words.index(r_word)
-        solution_pairs.append({
-            "left_index": l_idx,
-            "right_index": r_idx,
-            "left_word": l_word,
-            "right_word": r_word,
-        })
+        solution_pairs.append(
+            {
+                "left_index": l_idx,
+                "right_index": r_idx,
+                "left_word": l_word,
+                "right_word": r_word,
+            }
+        )
 
     # Difficulty score
     difficulty_score = calculate_difficulty(
@@ -193,27 +193,47 @@ def render_to_svg(
 
     # Title
     title_y = padding + 10
-    parts.append(svg_text(
-        svg_w // 2, title_y, "Word Connect",
-        font_size=18, anchor="middle", font_family=font_family,
-        font_weight="bold",
-    ))
+    parts.append(
+        svg_text(
+            svg_w // 2,
+            title_y,
+            "Word Connect",
+            font_size=18,
+            anchor="middle",
+            font_family=font_family,
+            font_weight="bold",
+        )
+    )
 
     # Column headers
     header_y = title_y + 30
     left_x = padding + 10
     right_x = padding + column_width + gap + 10
 
-    parts.append(svg_text(
-        left_x, header_y, "Column A",
-        font_size=13, anchor="start", font_family=font_family,
-        font_weight="bold", fill="#555555",
-    ))
-    parts.append(svg_text(
-        right_x, header_y, "Column B",
-        font_size=13, anchor="start", font_family=font_family,
-        font_weight="bold", fill="#555555",
-    ))
+    parts.append(
+        svg_text(
+            left_x,
+            header_y,
+            "Column A",
+            font_size=13,
+            anchor="start",
+            font_family=font_family,
+            font_weight="bold",
+            fill="#555555",
+        )
+    )
+    parts.append(
+        svg_text(
+            right_x,
+            header_y,
+            "Column B",
+            font_size=13,
+            anchor="start",
+            font_family=font_family,
+            font_weight="bold",
+            fill="#555555",
+        )
+    )
 
     content_start_y = header_y + 28
 
@@ -222,10 +242,16 @@ def render_to_svg(
     for i, word in enumerate(left_words):
         y = content_start_y + i * row_height
         label = f"{i + 1}. {word}"
-        parts.append(svg_text(
-            left_x, y, _escape_xml(label),
-            font_size=14, anchor="start", font_family=font_family,
-        ))
+        parts.append(
+            svg_text(
+                left_x,
+                y,
+                _escape_xml(label),
+                font_size=14,
+                anchor="start",
+                font_family=font_family,
+            )
+        )
         # Connection point at right edge of left column
         left_positions.append((padding + column_width - 5, y))
 
@@ -235,19 +261,37 @@ def render_to_svg(
         y = content_start_y + i * row_height
         letter_label = chr(65 + i) if i < 26 else str(i + 1)
         label = f"{letter_label}. {word}"
-        parts.append(svg_text(
-            right_x, y, _escape_xml(label),
-            font_size=14, anchor="start", font_family=font_family,
-        ))
+        parts.append(
+            svg_text(
+                right_x,
+                y,
+                _escape_xml(label),
+                font_size=14,
+                anchor="start",
+                font_family=font_family,
+            )
+        )
         # Connection point at left edge of right column
         right_positions.append((padding + column_width + gap + 5, y))
 
     # Draw solution lines if requested
     if show_solution:
         colors = [
-            "#E74C3C", "#3498DB", "#2ECC71", "#F39C12", "#9B59B6",
-            "#1ABC9C", "#E67E22", "#34495E", "#16A085", "#C0392B",
-            "#2980B9", "#27AE60", "#D35400", "#8E44AD", "#F1C40F",
+            "#E74C3C",
+            "#3498DB",
+            "#2ECC71",
+            "#F39C12",
+            "#9B59B6",
+            "#1ABC9C",
+            "#E67E22",
+            "#34495E",
+            "#16A085",
+            "#C0392B",
+            "#2980B9",
+            "#27AE60",
+            "#D35400",
+            "#8E44AD",
+            "#F1C40F",
         ]
         for idx, sol in enumerate(solution_pairs):
             l_idx = sol["left_index"]
@@ -264,12 +308,17 @@ def render_to_svg(
 
     # Instructions at bottom
     instr_y = content_start_y + max_rows * row_height + 10
-    parts.append(svg_text(
-        svg_w // 2, instr_y,
-        "Draw a line from each word on the left to its match on the right.",
-        font_size=11, anchor="middle", font_family=font_family,
-        fill="#888888",
-    ))
+    parts.append(
+        svg_text(
+            svg_w // 2,
+            instr_y,
+            "Draw a line from each word on the left to its match on the right.",
+            font_size=11,
+            anchor="middle",
+            font_family=font_family,
+            fill="#888888",
+        )
+    )
 
     parts.append(svg_footer())
     return "".join(parts)
@@ -278,6 +327,7 @@ def render_to_svg(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _empty_result() -> dict:
     """Return an empty puzzle result when no valid pairs are provided."""
@@ -301,12 +351,7 @@ def _sanitize(word: str) -> str:
 
 def _escape_xml(text: str) -> str:
     """Escape XML special characters."""
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _derange(shuffled: list[str], original: list[str]) -> list[str]:
@@ -352,10 +397,26 @@ def _auto_distractors(
     # Build distractors from a pool of generic decoy words
     # These are thematically neutral so they work across topics
     decoy_pool = [
-        "PHANTOM", "RIDDLE", "PRISM", "VORTEX", "NEBULA",
-        "CIPHER", "QUARTZ", "MOSAIC", "RELIC", "SPHINX",
-        "BEACON", "MIRAGE", "ZENITH", "FOSSIL", "NEXUS",
-        "AURORA", "TEMPO", "FLUX", "MATRIX", "ORBIT",
+        "PHANTOM",
+        "RIDDLE",
+        "PRISM",
+        "VORTEX",
+        "NEBULA",
+        "CIPHER",
+        "QUARTZ",
+        "MOSAIC",
+        "RELIC",
+        "SPHINX",
+        "BEACON",
+        "MIRAGE",
+        "ZENITH",
+        "FOSSIL",
+        "NEXUS",
+        "AURORA",
+        "TEMPO",
+        "FLUX",
+        "MATRIX",
+        "ORBIT",
     ]
 
     # Exclude words already used

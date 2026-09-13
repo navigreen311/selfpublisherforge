@@ -11,11 +11,9 @@ from ``conftest.py``.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
 
 import pytest
-import pytest_asyncio
 
 from app.core.exceptions import NotFoundError, ValidationError
 from app.modules.product_page_lab import service
@@ -32,7 +30,6 @@ from app.modules.product_page_lab.schemas import (
     LookInsideAnalyzeRequest,
     MobileCheckRequest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -64,22 +61,22 @@ def _make_create_request(
 
 async def _seed_ab_test(db, *, status: str = "draft", **overrides) -> ABTest:
     """Insert an ABTest row directly into the DB and return the ORM object."""
-    defaults = dict(
-        id=uuid.uuid4(),
-        org_id=ORG_ID,
-        book_id=BOOK_ID,
-        name="Seed Test",
-        status=status,
-        variant_a_content=VARIANT_A,
-        variant_b_content=VARIANT_B,
-        variant_a_impressions=0,
-        variant_a_clicks=0,
-        variant_b_impressions=0,
-        variant_b_clicks=0,
-        duration_days=7,
-        started_at=None,
-        completed_at=None,
-    )
+    defaults = {
+        "id": uuid.uuid4(),
+        "org_id": ORG_ID,
+        "book_id": BOOK_ID,
+        "name": "Seed Test",
+        "status": status,
+        "variant_a_content": VARIANT_A,
+        "variant_b_content": VARIANT_B,
+        "variant_a_impressions": 0,
+        "variant_a_clicks": 0,
+        "variant_b_impressions": 0,
+        "variant_b_clicks": 0,
+        "duration_days": 7,
+        "started_at": None,
+        "completed_at": None,
+    }
     defaults.update(overrides)
     ab = ABTest(**defaults)
     db.add(ab)
@@ -185,7 +182,7 @@ class TestGetABTest:
         """get_ab_test should raise NotFoundError for soft-deleted records."""
         ab = await _seed_ab_test(db_session)
         # Soft-delete the record
-        ab.deleted_at = datetime.now(timezone.utc)
+        ab.deleted_at = datetime.now(UTC)
         await db_session.flush()
 
         with pytest.raises(NotFoundError):
@@ -216,7 +213,7 @@ class TestListABTests:
     async def test_excludes_soft_deleted(self, db_session):
         """list_ab_tests should exclude soft-deleted records."""
         ab = await _seed_ab_test(db_session, name="Deleted One")
-        ab.deleted_at = datetime.now(timezone.utc)
+        ab.deleted_at = datetime.now(UTC)
         await db_session.flush()
 
         await _seed_ab_test(db_session, name="Active One")
@@ -243,7 +240,9 @@ class TestListABTests:
         await _seed_ab_test(db_session, name="Running", status=ABTestStatus.RUNNING.value)
 
         results = await service.list_ab_tests(
-            ORG_ID, db_session, status=ABTestStatus.RUNNING,
+            ORG_ID,
+            db_session,
+            status=ABTestStatus.RUNNING,
         )
         assert len(results) == 1
         assert results[0].name == "Running"
@@ -284,7 +283,7 @@ class TestStartABTest:
     async def test_start_raises_not_found_for_soft_deleted(self, db_session):
         """Starting a soft-deleted test should raise NotFoundError."""
         ab = await _seed_ab_test(db_session)
-        ab.deleted_at = datetime.now(timezone.utc)
+        ab.deleted_at = datetime.now(UTC)
         await db_session.flush()
 
         with pytest.raises(NotFoundError):
@@ -296,7 +295,7 @@ class TestStartABTest:
         ab = await _seed_ab_test(
             db_session,
             status=ABTestStatus.COMPLETED.value,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         with pytest.raises(ValidationError):
             await service.start_ab_test(ab.id, db_session)
@@ -345,7 +344,7 @@ class TestUpdateABTest:
         ab = await _seed_ab_test(
             db_session,
             status=ABTestStatus.COMPLETED.value,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         update_req = ABTestUpdateRequest(status=ABTestStatus.DRAFT)
         with pytest.raises(ValidationError):
@@ -373,8 +372,8 @@ class TestGetTestResults:
         )
         result = await service.get_ab_test(ab.id, db_session)
 
-        assert result.variant_a.click_through_rate == 5.0   # 50/1000 * 100
-        assert result.variant_b.click_through_rate == 7.5   # 75/1000 * 100
+        assert result.variant_a.click_through_rate == 5.0  # 50/1000 * 100
+        assert result.variant_b.click_through_rate == 7.5  # 75/1000 * 100
 
     @pytest.mark.asyncio
     async def test_winner_determination_variant_b(self, db_session):
@@ -383,10 +382,10 @@ class TestGetTestResults:
             db_session,
             status=ABTestStatus.COMPLETED.value,
             variant_a_impressions=500,
-            variant_a_clicks=25,   # 5% CTR
+            variant_a_clicks=25,  # 5% CTR
             variant_b_impressions=500,
-            variant_b_clicks=50,   # 10% CTR
-            completed_at=datetime.now(timezone.utc),
+            variant_b_clicks=50,  # 10% CTR
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -401,10 +400,10 @@ class TestGetTestResults:
             db_session,
             status=ABTestStatus.COMPLETED.value,
             variant_a_impressions=500,
-            variant_a_clicks=60,   # 12% CTR
+            variant_a_clicks=60,  # 12% CTR
             variant_b_impressions=500,
-            variant_b_clicks=25,   # 5% CTR
-            completed_at=datetime.now(timezone.utc),
+            variant_b_clicks=25,  # 5% CTR
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -420,7 +419,7 @@ class TestGetTestResults:
             variant_a_clicks=10,
             variant_b_impressions=100,
             variant_b_clicks=10,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -452,7 +451,7 @@ class TestGetTestResults:
             variant_a_clicks=0,
             variant_b_impressions=0,
             variant_b_clicks=0,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -472,7 +471,7 @@ class TestGetTestResults:
             variant_a_clicks=5,
             variant_b_impressions=50,
             variant_b_clicks=15,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result_small = await service.get_ab_test(ab_small.id, db_session)
 
@@ -484,7 +483,7 @@ class TestGetTestResults:
             variant_a_clicks=500,
             variant_b_impressions=5000,
             variant_b_clicks=1500,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result_large = await service.get_ab_test(ab_large.id, db_session)
 
@@ -502,7 +501,7 @@ class TestGetTestResults:
             variant_a_clicks=10_000,
             variant_b_impressions=100_000,
             variant_b_clicks=5_000,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_ab_test(ab.id, db_session)
 
@@ -524,7 +523,8 @@ class TestGetDetailedResults:
         # Use naive datetimes because SQLite strips timezone info,
         # and the service uses datetime.now(timezone.utc) for comparisons.
         from unittest.mock import patch as _patch
-        now_utc = datetime.now(timezone.utc)
+
+        now_utc = datetime.now(UTC)
         started = now_utc - timedelta(days=7)
 
         ab = await _seed_ab_test(
@@ -563,7 +563,7 @@ class TestGetDetailedResults:
             variant_a_clicks=2,
             variant_b_impressions=20,
             variant_b_clicks=5,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_test_results(ab.id, db_session)
 
@@ -589,8 +589,8 @@ class TestGenerateBlurbVariants:
         """Should return the requested number of blurb variants."""
         request = BlurbGenerateRequest(
             current_blurb="A gripping thriller about a detective who discovers a dark secret in a small town. "
-                          "She must confront her own past to solve the case. "
-                          "Buy now to find out the shocking truth.",
+            "She must confront her own past to solve the case. "
+            "Buy now to find out the shocking truth.",
             genre=Genre.THRILLER,
             num_variants=3,
         )
@@ -603,8 +603,8 @@ class TestGenerateBlurbVariants:
         """Every variant should have non-empty content."""
         request = BlurbGenerateRequest(
             current_blurb="A heartwarming romance about finding love when you least expect it. "
-                          "Two strangers meet in Paris and their lives are changed forever. "
-                          "Scroll up and grab your copy today!",
+            "Two strangers meet in Paris and their lives are changed forever. "
+            "Scroll up and grab your copy today!",
             genre=Genre.ROMANCE,
             num_variants=2,
         )
@@ -621,8 +621,8 @@ class TestGenerateBlurbVariants:
         """Response should include a score for the original blurb."""
         request = BlurbGenerateRequest(
             current_blurb="A compelling mystery where nothing is as it seems. "
-                          "Discover the truth behind the disappearance that "
-                          "shook a quiet community. Read now!",
+            "Discover the truth behind the disappearance that "
+            "shook a quiet community. Read now!",
             genre=Genre.MYSTERY,
             num_variants=1,
         )
@@ -636,8 +636,8 @@ class TestGenerateBlurbVariants:
         """generation_metadata should indicate the generation method."""
         request = BlurbGenerateRequest(
             current_blurb="An epic fantasy adventure that will transport you to another world. "
-                          "Join the hero on a quest that will determine the fate of kingdoms. "
-                          "Get your copy today!",
+            "Join the hero on a quest that will determine the fate of kingdoms. "
+            "Get your copy today!",
             genre=Genre.FANTASY,
             num_variants=1,
         )
@@ -662,9 +662,9 @@ class TestAnalyzeListing:
         result = await service.analyze_listing_with_data(
             title="The Secret Garden: A Captivating Journey of Discovery",
             blurb="Discover the untold story of a hidden garden that changes everything. "
-                  "A heartwarming tale of love, loss, and redemption. "
-                  "- Beautiful prose\n- Compelling characters\n"
-                  "<b>Buy now</b> and start reading!",
+            "A heartwarming tale of love, loss, and redemption. "
+            "- Beautiful prose\n- Compelling characters\n"
+            "<b>Buy now</b> and start reading!",
             keywords=["garden", "discovery", "heartwarming"],
             genre="literary_fiction",
             price=4.99,
@@ -690,7 +690,8 @@ class TestAnalyzeListing:
     async def test_asin_extraction_from_url(self, db_session):
         """analyze_amazon_listing should extract ASIN from a URL."""
         # Seed a Book with matching ASIN so the DB lookup succeeds
-        from app.models.project import Book, Project, ProjectType, ProjectStatus, BookFormat, BookStatus
+        from app.models.project import Book, BookFormat, BookStatus, Project, ProjectStatus, ProjectType
+
         project = Project(
             org_id=ORG_ID,
             title="Test Project",
@@ -709,9 +710,7 @@ class TestAnalyzeListing:
         db_session.add(book)
         await db_session.flush()
 
-        request = ListingAnalyzeRequest(
-            url="https://www.amazon.com/dp/B09V2KKG1D"
-        )
+        request = ListingAnalyzeRequest(url="https://www.amazon.com/dp/B09V2KKG1D")
         result = await service.analyze_amazon_listing(request, db_session)
 
         assert result.asin == "B09V2KKG1D"
@@ -797,7 +796,9 @@ class TestCheckMobileListing:
     @pytest.mark.asyncio
     async def test_long_title_truncated(self):
         """A very long title should be flagged as truncated on mobile."""
-        long_title = "An Extremely Long Book Title That Will Certainly Be Truncated On Mobile Devices Due To Screen Width"
+        long_title = (
+            "An Extremely Long Book Title That Will Certainly Be Truncated On Mobile Devices Due To Screen Width"
+        )
         request = MobileCheckRequest(
             title=long_title,
             blurb="A compelling blurb about the book with enough detail for the mobile check.",
@@ -850,10 +851,10 @@ class TestGetConversionScores:
             book_id=book,
             status=ABTestStatus.COMPLETED.value,
             variant_a_impressions=1000,
-            variant_a_clicks=80,   # 8% CTR -> score 80
+            variant_a_clicks=80,  # 8% CTR -> score 80
             variant_b_impressions=1000,
-            variant_b_clicks=50,   # 5% CTR -> score 50
-            completed_at=datetime.now(timezone.utc),
+            variant_b_clicks=50,  # 5% CTR -> score 50
+            completed_at=datetime.now(UTC),
         )
         result = await service.get_conversion_scores(book, db_session)
 
@@ -875,15 +876,11 @@ class TestExtractAsin:
         assert asin == "B09V2KKG1D"
 
     def test_gp_product_pattern(self):
-        asin = service._extract_asin_from_url(
-            "https://www.amazon.com/gp/product/B09V2KKG1D/ref=..."
-        )
+        asin = service._extract_asin_from_url("https://www.amazon.com/gp/product/B09V2KKG1D/ref=...")
         assert asin == "B09V2KKG1D"
 
     def test_asin_query_param_pattern(self):
-        asin = service._extract_asin_from_url(
-            "https://www.amazon.com/something?asin=B09V2KKG1D&other=1"
-        )
+        asin = service._extract_asin_from_url("https://www.amazon.com/something?asin=B09V2KKG1D&other=1")
         assert asin == "B09V2KKG1D"
 
     def test_no_asin_returns_none(self):

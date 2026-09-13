@@ -56,6 +56,7 @@ logger = logging.getLogger(__name__)
 
 # ---------- Dashboard ----------
 
+
 async def get_dashboard(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -71,9 +72,7 @@ async def get_dashboard(
 
     # Parallel data gathering
     kpis = await compute_kpis(db, org_id, period_start, period_end)
-    revenue_chart = await aggregate_revenue(
-        db, org_id, period_start, period_end, AggregationPeriod.DAILY
-    )
+    revenue_chart = await aggregate_revenue(db, org_id, period_start, period_end, AggregationPeriod.DAILY)
     top_books = await aggregate_revenue_by_book(db, org_id, period_start, period_end, limit=5)
     platform_breakdown = await aggregate_revenue_by_platform(db, org_id, period_start, period_end)
 
@@ -90,10 +89,7 @@ async def get_dashboard(
         .limit(5)
     )
     royalties_result = await db.execute(royalties_query)
-    recent_royalties = [
-        RoyaltyRecordResponse.model_validate(r)
-        for r in royalties_result.scalars().all()
-    ]
+    recent_royalties = [RoyaltyRecordResponse.model_validate(r) for r in royalties_result.scalars().all()]
 
     return DashboardData(
         kpis=kpis,
@@ -108,6 +104,7 @@ async def get_dashboard(
 
 # ---------- Revenue ----------
 
+
 async def get_revenue(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -115,7 +112,11 @@ async def get_revenue(
 ) -> RevenueResponse:
     """Get revenue data with optional filters."""
     now = datetime.now(UTC)
-    start = datetime.combine(params.start_date, datetime.min.time()).replace(tzinfo=UTC) if params.start_date else now - timedelta(days=365)
+    start = (
+        datetime.combine(params.start_date, datetime.min.time()).replace(tzinfo=UTC)
+        if params.start_date
+        else now - timedelta(days=365)
+    )
     end = datetime.combine(params.end_date, datetime.max.time()).replace(tzinfo=UTC) if params.end_date else now
 
     platform_str = params.platform.value if params.platform else None
@@ -144,6 +145,7 @@ async def get_revenue(
 
 # ---------- Royalties ----------
 
+
 async def get_royalties(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -164,10 +166,7 @@ async def get_royalties(
         except ValueError:
             logger.warning("Failed to parse timezone value, using default UTC")
 
-    count_query = (
-        select(func.count(RoyaltyRecord.id))
-        .where(and_(*[c for c in conditions if "id <" not in str(c)]))
-    )
+    select(func.count(RoyaltyRecord.id)).where(and_(*[c for c in conditions if "id <" not in str(c)]))
     count_result = await db.execute(
         select(func.count(RoyaltyRecord.id)).where(
             and_(
@@ -179,12 +178,7 @@ async def get_royalties(
     )
     total = count_result.scalar() or 0
 
-    query = (
-        select(RoyaltyRecord)
-        .where(and_(*conditions))
-        .order_by(desc(RoyaltyRecord.created_at))
-        .limit(limit + 1)
-    )
+    query = select(RoyaltyRecord).where(and_(*conditions)).order_by(desc(RoyaltyRecord.created_at)).limit(limit + 1)
     result = await db.execute(query)
     records = result.scalars().all()
 
@@ -218,12 +212,11 @@ async def import_royalty_data(
             platform=request.platform.value,
         )
 
-    return await import_royalties(
-        db, org_id, request.platform, request.file_content
-    )
+    return await import_royalties(db, org_id, request.platform, request.file_content)
 
 
 # ---------- Portfolio ----------
+
 
 async def get_portfolio_metrics(
     db: AsyncSession,
@@ -234,6 +227,7 @@ async def get_portfolio_metrics(
 
 
 # ---------- Reports ----------
+
 
 async def create_report(
     db: AsyncSession,
@@ -264,8 +258,7 @@ async def create_report(
         )
     except (ConnectionError, OSError, BrokerOperationalError):
         logger.exception(
-            "Failed to dispatch Celery task for report_id=%s; "
-            "falling back to synchronous generation.",
+            "Failed to dispatch Celery task for report_id=%s; " "falling back to synchronous generation.",
             report.id,
         )
         async with db.begin():
@@ -301,12 +294,7 @@ async def list_reports(
     )
     total = total_result.scalar() or 0
 
-    query = (
-        select(Report)
-        .where(and_(*conditions))
-        .order_by(desc(Report.created_at))
-        .limit(limit + 1)
-    )
+    query = select(Report).where(and_(*conditions)).order_by(desc(Report.created_at)).limit(limit + 1)
     result = await db.execute(query)
     records = result.scalars().all()
 
@@ -331,14 +319,11 @@ async def get_report_by_id(
     report_id: uuid.UUID,
 ) -> Report | None:
     """Fetch a single report by ID, scoped to the org."""
-    query = (
-        select(Report)
-        .where(
-            and_(
-                Report.id == report_id,
-                Report.org_id == org_id,
-                Report.deleted_at.is_(None),
-            )
+    query = select(Report).where(
+        and_(
+            Report.id == report_id,
+            Report.org_id == org_id,
+            Report.deleted_at.is_(None),
         )
     )
     result = await db.execute(query)
@@ -346,6 +331,7 @@ async def get_report_by_id(
 
 
 # ---------- Events ----------
+
 
 async def record_event(
     db: AsyncSession,
@@ -371,6 +357,7 @@ async def record_event(
 
 # ---------- Trends ----------
 
+
 async def get_trends(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -386,6 +373,4 @@ async def get_trends(
     if period_start is None:
         period_start = now - timedelta(days=365)
 
-    return await compute_revenue_trend(
-        db, org_id, period_start, period_end, aggregation
-    )
+    return await compute_revenue_trend(db, org_id, period_start, period_end, aggregation)

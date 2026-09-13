@@ -45,7 +45,8 @@ class SeriesCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     book_type: BookType
     naming_format: str | None = Field(
-        None, max_length=255,
+        None,
+        max_length=255,
         description="Template for volume titles, e.g. '{Series Name} Vol. {N}: {Subtitle}'",
     )
     branding_config: dict[str, Any] | None = None
@@ -233,8 +234,7 @@ async def create_series(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.create_series(db, user["org_id"], body.model_dump())
-    return result
+    return await service_series.create_series(db, user["org_id"], body.model_dump())
 
 
 @router.get(
@@ -266,7 +266,7 @@ async def check_coherence(
     try:
         result = await service_series.check_series_coherence(db, series_id, user["org_id"])
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {
         "series_id": series_id,
         "score": result["score"],
@@ -292,7 +292,11 @@ async def generate_back_matter(
 ):
     templates = [t.model_dump() for t in body.templates]
     pages = await service_series.generate_back_matter(
-        db, book_type, book_id, user["org_id"], templates,
+        db,
+        book_type,
+        book_id,
+        user["org_id"],
+        templates,
     )
     return {"pages": pages}
 
@@ -309,7 +313,9 @@ async def generate_qr_code(
     user: dict = Depends(get_current_user),
 ):
     result = service_series.generate_qr_code(
-        body.url, body.size_px, body.error_correction,
+        body.url,
+        body.size_px,
+        body.error_correction,
     )
     return {
         "qr_code_url": result["qr_code_data_uri"],
@@ -332,8 +338,7 @@ async def create_bundle(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.create_bundle(db, user["org_id"], body.model_dump())
-    return result
+    return await service_series.create_bundle(db, user["org_id"], body.model_dump())
 
 
 @router.get(
@@ -366,11 +371,12 @@ async def add_isbns(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.manage_isbn(
-        db, user["org_id"], "add_to_pool",
+    return await service_series.manage_isbn(
+        db,
+        user["org_id"],
+        "add_to_pool",
         {"isbns": body.isbns, "publisher_name": body.publisher_name},
     )
-    return result
 
 
 @router.get(
@@ -384,10 +390,13 @@ async def get_isbn_pool(
 ):
     try:
         return await service_series.manage_isbn(
-            db, user["org_id"], "get_status", {"isbn": isbn},
+            db,
+            user["org_id"],
+            "get_status",
+            {"isbn": isbn},
         )
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post(
@@ -403,7 +412,9 @@ async def assign_isbn(
 ):
     try:
         result = await service_series.manage_isbn(
-            db, user["org_id"], "assign",
+            db,
+            user["org_id"],
+            "assign",
             {
                 "isbn": body.isbn,
                 "book_type": body.book_type.value,
@@ -411,7 +422,7 @@ async def assign_isbn(
             },
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return result
 
 
@@ -431,7 +442,10 @@ async def distributor_preflight(
     user: dict = Depends(get_current_user),
 ):
     result = await service_series.run_distributor_preflight(
-        db, book_type, book_id, user["org_id"],
+        db,
+        book_type,
+        book_id,
+        user["org_id"],
         body.distributor.value,
         page_count=body.page_count,
     )
@@ -463,7 +477,10 @@ async def review_feedback(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    result = await service_series.process_review_feedback(
-        db, book_type, book_id, user["org_id"], body.complaints,
+    return await service_series.process_review_feedback(
+        db,
+        book_type,
+        book_id,
+        user["org_id"],
+        body.complaints,
     )
-    return result

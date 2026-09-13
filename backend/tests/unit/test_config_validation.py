@@ -6,13 +6,12 @@ model validators defined in ``app.config.Settings``.
 
 from __future__ import annotations
 
+import os
 import warnings
-from typing import Any
 
 import pytest
 
 from app.config import Settings
-
 
 # ---------------------------------------------------------------------------
 # All 8 placeholder secrets that must be caught by the validator
@@ -44,14 +43,25 @@ def _real_secret_overrides() -> dict[str, str]:
     }
 
 
+_AMBIENT_ENV = dict(os.environ)
+
+
 def _build_settings(monkeypatch, extra_env: dict[str, str] | None = None) -> Settings:
     """Construct a fresh Settings instance with monkeypatched env vars.
 
     Prevents pydantic-settings from reading a real ``.env`` file by
     pointing to a non-existent path, and sets all supplied env vars.
     """
-    # Prevent loading real .env
-    monkeypatch.setenv("ENV_FILE", "/dev/null")
+    # Settings hardcodes env_file=".env" in its model_config, so setting an
+    # ENV_FILE variable does not stop it being read — these tests passed only
+    # on a machine without one. Clear every field the suite asserts on out of
+    # the environment, then construct with _env_file=None so nothing is loaded
+    # from disk.
+    # Drop only the values that leaked in from the ambient environment, so a
+    # variable this test set for itself survives.
+    for field_name in Settings.model_fields:
+        if field_name in _AMBIENT_ENV and os.environ.get(field_name) == _AMBIENT_ENV[field_name]:
+            monkeypatch.delenv(field_name, raising=False)
 
     if extra_env:
         for key, value in extra_env.items():
@@ -59,9 +69,10 @@ def _build_settings(monkeypatch, extra_env: dict[str, str] | None = None) -> Set
 
     # Clear lru_cache so Settings() reads fresh env
     from app.config import get_settings
+
     get_settings.cache_clear()
 
-    return Settings()
+    return Settings(_env_file=None)
 
 
 # ---------------------------------------------------------------------------
@@ -115,9 +126,7 @@ class TestProductionModePlaceholderRejection:
         list(PLACEHOLDER_SECRETS.items()),
         ids=list(PLACEHOLDER_SECRETS.keys()),
     )
-    def test_single_placeholder_raises_in_production(
-        self, monkeypatch, secret_name: str, placeholder_value: str
-    ):
+    def test_single_placeholder_raises_in_production(self, monkeypatch, secret_name: str, placeholder_value: str):
         """Each individual placeholder must be caught when all others are real."""
         monkeypatch.setenv("ENVIRONMENT", "production")
 
@@ -145,9 +154,7 @@ class TestProductionModePlaceholderRejection:
 
         error_msg = str(exc_info.value)
         for secret_name in PLACEHOLDER_SECRETS:
-            assert secret_name in error_msg, (
-                f"Expected '{secret_name}' to appear in the error message"
-            )
+            assert secret_name in error_msg, f"Expected '{secret_name}' to appear in the error message"
 
 
 # ---------------------------------------------------------------------------
@@ -229,8 +236,7 @@ class TestProductionOptionalWarnings:
 
         user_warnings = [w for w in caught if issubclass(w.category, UserWarning)]
         assert len(user_warnings) == 0, (
-            f"Expected no UserWarnings but got: "
-            f"{[str(w.message) for w in user_warnings]}"
+            f"Expected no UserWarnings but got: " f"{[str(w.message) for w in user_warnings]}"
         )
 
     def test_warning_mentions_unavailable_features(self, monkeypatch):

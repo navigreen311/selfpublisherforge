@@ -8,13 +8,11 @@ Validates:
   - Dead letter queue operations
   - Base task class behaviour (TrackedTask lifecycle)
 """
+
 from __future__ import annotations
 
 import json
-import time
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # 1. Celery app is properly created and configured
@@ -22,7 +20,6 @@ import pytest
 
 
 class TestCeleryAppConfig:
-
     def test_celery_app_exists_and_has_correct_name(self):
         """The Celery app must be importable and named 'selfpublisherforge'."""
         from app.tasks import celery_app
@@ -76,7 +73,6 @@ class TestCeleryAppConfig:
 
 
 class TestBeatSchedule:
-
     def test_beat_schedule_is_dict(self):
         from app.tasks import celery_app
 
@@ -106,7 +102,6 @@ class TestBeatSchedule:
 
 
 class TestRetryPolicy:
-
     def test_ai_task_policy_resolves(self):
         from app.tasks.config import get_retry_policy
 
@@ -121,7 +116,7 @@ class TestRetryPolicy:
         assert policy["max_retries"] == 5
 
     def test_unknown_task_gets_default_policy(self):
-        from app.tasks.config import get_retry_policy, RETRY_POLICIES
+        from app.tasks.config import RETRY_POLICIES, get_retry_policy
 
         policy = get_retry_policy("app.tasks.unknown_module.do_stuff")
         assert policy == RETRY_POLICIES["default"]
@@ -133,7 +128,6 @@ class TestRetryPolicy:
 
 
 class TestQueueConfig:
-
     def test_task_queues_defined(self):
         from app.tasks.config import TASK_QUEUES
 
@@ -160,7 +154,6 @@ class TestQueueConfig:
 
 
 class TestDeadLetterQueue:
-
     def _make_redis_mock(self):
         mock = MagicMock()
         pipe = MagicMock()
@@ -238,18 +231,13 @@ class TestDeadLetterQueue:
 
 
 class TestTrackedTaskLifecycle:
-
     def _build_task(self, cls, **kwargs):
-        from app.tasks.base import TrackedTask
-
         task = cls.__new__(cls)
         task.name = kwargs.pop("task_name", "test.task")
 
         mock_req = MagicMock()
         mock_req.retries = kwargs.get("retries", 0)
-        mock_req.get = lambda key, default=None: {
-            "correlation_id": kwargs.get("correlation_id")
-        }.get(key, default)
+        mock_req.get = lambda key, default=None: {"correlation_id": kwargs.get("correlation_id")}.get(key, default)
         mock_req.headers = kwargs.get("headers", {})
 
         object.__setattr__(task, "_request", mock_req)
@@ -266,6 +254,7 @@ class TestTrackedTaskLifecycle:
 
     def test_tracked_task_generates_correlation_id(self):
         import uuid
+
         from app.tasks.base import TrackedTask
 
         task = self._build_task(TrackedTask)
@@ -306,7 +295,6 @@ class TestTrackedTaskLifecycle:
 
 
 class TestModuleScheduleIsolation:
-
     def test_advertising_exports_schedule_dict(self):
         """advertising.py should export a dict, not mutate celery_app.conf."""
         from app.tasks.advertising import ADVERTISING_BEAT_SCHEDULE

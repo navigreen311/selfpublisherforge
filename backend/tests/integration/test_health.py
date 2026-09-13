@@ -8,15 +8,13 @@ tests can run without external dependencies.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 from app.api.v1.health import router as health_router
-from app.config import get_settings
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -94,7 +92,9 @@ class TestHealthReady:
         with (
             patch("app.api.v1.health.get_db", return_value=_async_gen(mock_db)),
             patch("app.api.v1.health._check_db", return_value={"status": "healthy"}),
-            patch("app.api.v1.health._check_redis", return_value={"status": "unhealthy", "error": "Connection refused"}),
+            patch(
+                "app.api.v1.health._check_redis", return_value={"status": "unhealthy", "error": "Connection refused"}
+            ),
             patch("app.api.v1.health._check_elasticsearch", return_value={"status": "healthy"}),
         ):
             resp = await client.get("/health/ready")
@@ -109,17 +109,21 @@ class TestHealthReady:
 
 class TestHealthDetailed:
     @pytest.mark.asyncio
-    async def test_unauthenticated_returns_403(self, client: AsyncClient) -> None:
+    async def test_unauthenticated_returns_401(self, client: AsyncClient) -> None:
         """Without auth, the endpoint should return 401 or 403."""
         resp = await client.get("/health/detailed")
         # HTTPBearer returns 403 when no credentials are provided
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_authenticated_admin_returns_200(self, test_app: FastAPI) -> None:
         """An admin user should get the full report."""
         mock_db = AsyncMock()
-        admin_user = {"user_id": "00000000-0000-0000-0000-000000000001", "org_id": "00000000-0000-0000-0000-000000000002", "role": "admin"}
+        admin_user = {
+            "user_id": "00000000-0000-0000-0000-000000000001",
+            "org_id": "00000000-0000-0000-0000-000000000002",
+            "role": "admin",
+        }
 
         from app.core.dependencies import require_role
 

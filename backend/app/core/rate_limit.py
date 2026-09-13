@@ -171,9 +171,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if limiter is None:
             self.limiter = _get_new_limiter()
             self._legacy_limiter = None
-        elif hasattr(limiter, 'check_request'):
+        elif hasattr(limiter, "check_request"):
             # Already a new limiter instance (has check_request method)
-            self.limiter = limiter
+            self.limiter = limiter  # type: ignore[assignment]  # duck-typed limiter instance
             self._legacy_limiter = None
         elif isinstance(limiter, SlidingWindowRateLimiter):
             # Legacy wrapper - use its internal new limiter
@@ -184,9 +184,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self._legacy_limiter = limiter
             self.limiter = None
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Skip rate limiting for health endpoints
         if request.url.path.startswith("/health"):
             return await call_next(request)

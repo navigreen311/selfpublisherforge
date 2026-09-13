@@ -11,16 +11,17 @@ Usage::
     status = await get_batch_status(db, job_id)
     await cancel_batch(db, job_id)
 """
+
 from __future__ import annotations
 
 import logging
 import uuid
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.specialty.models.enums import BatchStatus, BookType
+from app.modules.specialty.models.enums import BatchStatus
 from app.modules.specialty.models.shared import BatchJob
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ DEFAULT_BUDGET_LIMIT_CENTS = 10_000
 # ---------------------------------------------------------------------------
 # Create
 # ---------------------------------------------------------------------------
+
 
 async def create_batch_job(
     db: AsyncSession,
@@ -69,11 +71,7 @@ async def create_batch_job(
     volumes_total = config.get("volumes_total", 1)
     pages_total = config.get("pages_total", volumes_total * config.get("page_count_per_volume", 30))
 
-    effective_budget = (
-        budget_limit_cents
-        if budget_limit_cents is not None
-        else DEFAULT_BUDGET_LIMIT_CENTS
-    )
+    effective_budget = budget_limit_cents if budget_limit_cents is not None else DEFAULT_BUDGET_LIMIT_CENTS
 
     job = BatchJob(
         org_id=org_id,
@@ -92,7 +90,10 @@ async def create_batch_job(
 
     logger.info(
         "Created batch job %s for org %s: %d volumes, budget %d cents",
-        job.id, org_id, volumes_total, effective_budget,
+        job.id,
+        org_id,
+        volumes_total,
+        effective_budget,
     )
 
     return {
@@ -107,6 +108,7 @@ async def create_batch_job(
 # ---------------------------------------------------------------------------
 # Process (orchestration skeleton)
 # ---------------------------------------------------------------------------
+
 
 async def process_batch(
     db: AsyncSession,
@@ -139,7 +141,7 @@ async def process_batch(
         return {
             "job_id": job_id,
             "status": job.status,
-            "message": f"Job already {job.status.value}.",
+            "message": f"Job already {job.status}.",
         }
 
     # Transition to running
@@ -152,15 +154,14 @@ async def process_batch(
 
     for vol_idx in range(volumes_completed, volumes_total):
         # --- Budget guardrail ---
-        if (
-            job.budget_limit_cents is not None
-            and job.spent_cents >= job.budget_limit_cents
-        ):
+        if job.budget_limit_cents is not None and job.spent_cents >= job.budget_limit_cents:
             job.status = BatchStatus.paused
             await db.flush()
             logger.warning(
                 "Batch job %s paused: spent %d cents >= budget %d cents",
-                job_id, job.spent_cents, job.budget_limit_cents,
+                job_id,
+                job.spent_cents,
+                job.budget_limit_cents,
             )
             return {
                 "job_id": job_id,
@@ -196,7 +197,10 @@ async def process_batch(
 
         logger.info(
             "Batch job %s: completed volume %d/%d (spent %d cents)",
-            job_id, vol_idx + 1, volumes_total, job.spent_cents,
+            job_id,
+            vol_idx + 1,
+            volumes_total,
+            job.spent_cents,
         )
 
     # All volumes completed
@@ -216,6 +220,7 @@ async def process_batch(
 # ---------------------------------------------------------------------------
 # Status
 # ---------------------------------------------------------------------------
+
 
 async def get_batch_status(
     db: AsyncSession,
@@ -255,6 +260,7 @@ async def get_batch_status(
 # Cancel
 # ---------------------------------------------------------------------------
 
+
 async def cancel_batch(
     db: AsyncSession,
     job_id: uuid.UUID,
@@ -293,6 +299,7 @@ async def cancel_batch(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 async def _get_job(
     db: AsyncSession,

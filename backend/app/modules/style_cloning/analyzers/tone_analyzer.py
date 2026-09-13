@@ -8,6 +8,7 @@ from typing import TypedDict
 
 class ToneMetrics(TypedDict):
     """Tone analysis results."""
+
     formality_score: float
     emotional_valence: float
     contraction_usage_rate: float
@@ -38,8 +39,7 @@ _SECOND_PERSON = re.compile(
     re.IGNORECASE,
 )
 _THIRD_PERSON = re.compile(
-    r"\b(?:he|him|his|himself|she|her|hers|herself|it|its|itself|"
-    r"they|them|their|theirs|themselves)\b",
+    r"\b(?:he|him|his|himself|she|her|hers|herself|it|its|itself|" r"they|them|their|theirs|themselves)\b",
     re.IGNORECASE,
 )
 
@@ -55,21 +55,25 @@ _HEDGING = re.compile(
 )
 
 # Emotional valence indicators
-_POSITIVE_WORDS = frozenset((
-    "love happy joy wonderful great excellent amazing fantastic beautiful "
-    "brilliant delightful pleased excited thrilled ecstatic glad cheerful "
-    "pleasant satisfied content grateful blessed fortunate lucky successful "
-    "perfect marvelous magnificent superb splendid terrific awesome fabulous "
-    "good better best nice fine well"
-).split())
+_POSITIVE_WORDS = frozenset(
+    (
+        "love happy joy wonderful great excellent amazing fantastic beautiful "
+        "brilliant delightful pleased excited thrilled ecstatic glad cheerful "
+        "pleasant satisfied content grateful blessed fortunate lucky successful "
+        "perfect marvelous magnificent superb splendid terrific awesome fabulous "
+        "good better best nice fine well"
+    ).split()
+)
 
-_NEGATIVE_WORDS = frozenset((
-    "hate sad anger fear terrible awful horrible dreadful bad worse worst "
-    "poor terrible miserable unhappy depressed disappointed frustrated "
-    "angry furious upset annoyed irritated disturbed worried anxious "
-    "concerned troubled distressed painful hurt suffering difficult hard "
-    "wrong failed failure problem issue mistake error"
-).split())
+_NEGATIVE_WORDS = frozenset(
+    (
+        "hate sad anger fear terrible awful horrible dreadful bad worse worst "
+        "poor terrible miserable unhappy depressed disappointed frustrated "
+        "angry furious upset annoyed irritated disturbed worried anxious "
+        "concerned troubled distressed painful hurt suffering difficult hard "
+        "wrong failed failure problem issue mistake error"
+    ).split()
+)
 
 # Formal vs informal indicators
 _FORMAL_INDICATORS = re.compile(
@@ -167,11 +171,7 @@ class ToneAnalyzer:
         negative_count = sum(1 for w in words_lower if w in _NEGATIVE_WORDS)
 
         emotional_count = positive_count + negative_count
-        emotional_valence = (
-            (positive_count - negative_count) / emotional_count
-            if emotional_count > 0
-            else 0.0
-        )
+        emotional_valence = (positive_count - negative_count) / emotional_count if emotional_count > 0 else 0.0
 
         return ToneMetrics(
             formality_score=formality_score,

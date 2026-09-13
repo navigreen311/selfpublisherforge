@@ -13,10 +13,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-AGENT_QUALITY_WEIGHT = float(os.environ.get("AGENT_QUALITY_WEIGHT", "0.5"))
-AGENT_SPEED_WEIGHT = float(os.environ.get("AGENT_SPEED_WEIGHT", "0.25"))
-AGENT_COST_WEIGHT = float(os.environ.get("AGENT_COST_WEIGHT", "0.25"))
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,6 +50,11 @@ from app.modules.llm_orchestration.router_config import (
     TaskType,
 )
 
+AGENT_QUALITY_WEIGHT = float(os.environ.get("AGENT_QUALITY_WEIGHT", "0.5"))
+AGENT_SPEED_WEIGHT = float(os.environ.get("AGENT_SPEED_WEIGHT", "0.25"))
+AGENT_COST_WEIGHT = float(os.environ.get("AGENT_COST_WEIGHT", "0.25"))
+
+
 logger = logging.getLogger(__name__)
 
 # Mapping from AgentType to the orchestrator's TaskType so that the model
@@ -73,19 +74,19 @@ def _get_orchestrator() -> LLMOrchestrator:
     underlying Anthropic SDK client manages its own connection pool.
     """
     anthropic_provider = AnthropicProvider()
-    orchestrator = LLMOrchestrator(
+    return LLMOrchestrator(
         providers={ProviderName.ANTHROPIC: anthropic_provider},
         router=ModelRouter(),
         cache=SemanticCache(),
         cost_tracker=CostTracker(),
         quality=QualityAssurance(),
     )
-    return orchestrator
 
 
 # ---------------------------------------------------------------------------
 # LLM execution via the orchestration layer
 # ---------------------------------------------------------------------------
+
 
 async def _call_llm(
     model_id: str,
@@ -164,9 +165,7 @@ async def _call_llm(
                 "model": response.model_id or model_id,
             }
 
-        raise RuntimeError(
-            f"LLM provider returned an error: {response.metadata.get('error', response.finish_reason)}"
-        )
+        raise RuntimeError(f"LLM provider returned an error: {response.metadata.get('error', response.finish_reason)}")
     except Exception as exc:
         logger.exception("Direct LLM provider call failed")
         raise RuntimeError(f"LLM execution failed: {exc}") from exc
@@ -175,6 +174,7 @@ async def _call_llm(
 # ---------------------------------------------------------------------------
 # Quality evaluation via heuristics
 # ---------------------------------------------------------------------------
+
 
 async def _compute_quality_score(
     output_text: str,
@@ -206,16 +206,13 @@ async def _compute_quality_score(
     # --- 1. Length adequacy (0.0 - 1.0), weight 0.30 ---
     # Ramp linearly up to the expected minimum, then cap at 1.0 for
     # outputs up to 4x the minimum (very long isn't necessarily better).
-    if word_count >= expected_min_words:
-        length_score = 1.0
-    else:
-        length_score = word_count / expected_min_words
+    length_score = 1.0 if word_count >= expected_min_words else word_count / expected_min_words
     # Slight penalty for extremely short outputs even relative to minimum
     if word_count < 20:
         length_score *= 0.6
 
     # --- 2. Sentence structure (0.0 - 1.0), weight 0.25 ---
-    sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
+    sentences = [s.strip() for s in re.split(r"[.!?]+", text) if s.strip()]
     sentence_count = len(sentences)
     if sentence_count == 0:
         structure_score = 0.1
@@ -230,7 +227,7 @@ async def _compute_quality_score(
             structure_score = 0.4
 
     # --- 3. Vocabulary richness / coherence (0.0 - 1.0), weight 0.20 ---
-    unique_words = set(w.lower() for w in words)
+    unique_words = {w.lower() for w in words}
     if word_count > 0:
         ttr = len(unique_words) / word_count  # type-token ratio
     else:
@@ -248,9 +245,9 @@ async def _compute_quality_score(
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     if len(paragraphs) > 1:
         formatting_score += 0.2  # multi-paragraph structure
-    if re.search(r'(?m)^[-*]\s', text):
+    if re.search(r"(?m)^[-*]\s", text):
         formatting_score += 0.15  # bullet/list items
-    if re.search(r'(?m)^#{1,6}\s', text):
+    if re.search(r"(?m)^#{1,6}\s", text):
         formatting_score += 0.15  # markdown headings
     formatting_score = min(formatting_score, 1.0)
 
@@ -279,6 +276,7 @@ async def _compute_quality_score(
 # ---------------------------------------------------------------------------
 # Main executor
 # ---------------------------------------------------------------------------
+
 
 class TaskExecutor:
     """Orchestrates the end-to-end lifecycle of a single agent task."""
@@ -362,9 +360,7 @@ class TaskExecutor:
             # Extract keywords from the task title and input data for relevance scoring.
             quality_keywords: list[str] = []
             if task.title:
-                quality_keywords.extend(
-                    w for w in task.title.split() if len(w) > 3
-                )
+                quality_keywords.extend(w for w in task.title.split() if len(w) > 3)
             if task.input_data:
                 kw_field = task.input_data.get("keywords")
                 if isinstance(kw_field, list):
@@ -387,12 +383,12 @@ class TaskExecutor:
             except QualityBelowSLA:
                 logger.warning(
                     "Task %s quality score %.2f below threshold %.2f — routing to approval",
-                    task.id, quality, threshold,
+                    task.id,
+                    quality,
+                    threshold,
                 )
                 task.status = TaskStatus.AWAITING_APPROVAL
-                task.output_data["quality_warning"] = (
-                    f"Quality score {quality:.2f} below threshold {threshold:.2f}"
-                )
+                task.output_data["quality_warning"] = f"Quality score {quality:.2f} below threshold {threshold:.2f}"
 
             # 7. Determine final status
             if task.status != TaskStatus.AWAITING_APPROVAL:
@@ -458,9 +454,7 @@ class TaskExecutor:
         return task
 
     async def _load_agent(self, agent_id: uuid.UUID) -> Agent:
-        result = await self.db.execute(
-            select(Agent).where(Agent.id == agent_id)
-        )
+        result = await self.db.execute(select(Agent).where(Agent.id == agent_id))
         agent = result.scalar_one_or_none()
         if agent is None:
             raise ValueError(f"Agent {agent_id} not found")

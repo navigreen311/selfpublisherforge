@@ -5,9 +5,7 @@ import os
 CHROME_EXTENSION_ID = os.environ.get("CHROME_EXTENSION_ID", "")
 
 CHROME_WEBSTORE_URL = (
-    f"https://chromewebstore.google.com/detail/selfpublisherforge/{CHROME_EXTENSION_ID}"
-    if CHROME_EXTENSION_ID
-    else ""
+    f"https://chromewebstore.google.com/detail/selfpublisherforge/{CHROME_EXTENSION_ID}" if CHROME_EXTENSION_ID else ""
 )
 
 # Current extension version info served by the /version endpoint.

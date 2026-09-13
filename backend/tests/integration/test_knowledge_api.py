@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.main import create_app
-from app.database import get_db
 from app.core.dependencies import get_current_user
-
+from app.database import get_db
+from app.main import create_app
 
 # ── Fixtures ─────────────────────────────────────────────────────
 
@@ -38,15 +38,21 @@ def _make_mock_entry(**overrides):
         "tags": ["test"],
         "credibility_score": 0.9,
         "metadata_": {"key": "value"},
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "metadata": {"key": "value"},
+        "category": None,
+        "project_id": None,
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
         "deleted_at": None,
     }
     defaults.update(overrides)
-    entry = MagicMock()
-    for k, v in defaults.items():
-        setattr(entry, k, v)
-    entry.to_dict.return_value = {
+    # SimpleNamespace, not MagicMock. KnowledgeEntryResponse reads its fields
+    # off this object via from_attributes, and a MagicMock answers *any*
+    # attribute with another MagicMock — so `category` and `project_id`, which
+    # this dict never set, arrived at the response model as mocks and failed
+    # validation. A namespace raises AttributeError instead, which is the
+    # failure you want: it names the field the stand-in is missing.
+    payload = {
         "id": str(defaults["id"]),
         "org_id": str(defaults["org_id"]),
         "title": defaults["title"],
@@ -58,6 +64,7 @@ def _make_mock_entry(**overrides):
         "created_at": defaults["created_at"].isoformat() if defaults["created_at"] else None,
         "updated_at": defaults["updated_at"].isoformat() if defaults["updated_at"] else None,
     }
+    entry = SimpleNamespace(**defaults, to_dict=lambda: payload)
     return entry, defaults
 
 
@@ -92,6 +99,7 @@ async def client(test_app):
 
 
 # ── Tests: POST /api/v1/knowledge ────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_create_entry_success(client):
@@ -131,6 +139,7 @@ async def test_create_entry_validation_error(client):
 
 # ── Tests: GET /api/v1/knowledge ─────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_list_entries_success(client):
     """GET /api/v1/knowledge should return paginated entries."""
@@ -155,6 +164,7 @@ async def test_list_entries_success(client):
 
 
 # ── Tests: GET /api/v1/knowledge/{id} ────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_get_entry_success(client):
@@ -187,6 +197,7 @@ async def test_get_entry_not_found(client):
 
 
 # ── Tests: PUT /api/v1/knowledge/{id} ────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_update_entry_success(client):
@@ -225,6 +236,7 @@ async def test_update_entry_not_found(client):
 
 # ── Tests: DELETE /api/v1/knowledge/{id} ─────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_delete_entry_success(client):
     """DELETE /api/v1/knowledge/{id} should return 204."""
@@ -252,6 +264,7 @@ async def test_delete_entry_not_found(client):
 
 
 # ── Tests: POST /api/v1/knowledge/search ─────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_search_entries_success(client):
@@ -299,6 +312,7 @@ async def test_search_entries_empty_query(client):
 
 # ── Tests: POST /api/v1/knowledge/import ─────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_import_from_url_success(client):
     """POST /api/v1/knowledge/import with URL should return 201."""
@@ -337,6 +351,7 @@ async def test_import_no_source_returns_400(client):
 
 # ── Tests: POST /api/v1/knowledge/{id}/summarize ────────────────
 
+
 @pytest.mark.asyncio
 async def test_summarize_entry_success(client):
     """POST /api/v1/knowledge/{id}/summarize should return summary."""
@@ -374,6 +389,7 @@ async def test_summarize_entry_not_found(client):
 
 # ── Tests: GET /api/v1/knowledge/tags ────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_list_tags_success(client):
     """GET /api/v1/knowledge/tags should return tags and counts."""
@@ -394,6 +410,7 @@ async def test_list_tags_success(client):
 
 
 # ── Tests: GET /api/v1/knowledge/suggestions ─────────────────────
+
 
 @pytest.mark.asyncio
 async def test_suggestions_success(client):

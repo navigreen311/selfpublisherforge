@@ -64,7 +64,8 @@ class TaskResponse(TaskBase):
     status: TaskStatus
     completed_at: datetime | None = None
     stage_id: uuid.UUID | None = None
-    priority: str | None = "medium"
+    # priority, checklist, links and blocked_by come from TaskBase, which
+    # already gives them defaults and a validation pattern.
     checklist: list[dict] | None = []
     links: list[dict] | None = []
     blocked_by: list[uuid.UUID] | None = []
@@ -256,9 +257,7 @@ class StageResponse(BaseModel):
 class StageReorderRequest(BaseModel):
     """Request body for reordering stages."""
 
-    stage_ids: list[uuid.UUID] = Field(
-        ..., description="Ordered list of stage IDs in their new order"
-    )
+    stage_ids: list[uuid.UUID] = Field(..., description="Ordered list of stage IDs in their new order")
 
 
 # ── Checklist Schemas ────────────────────────────────────────────────────

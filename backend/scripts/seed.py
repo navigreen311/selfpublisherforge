@@ -7,6 +7,7 @@ Usage:
     python -m scripts.seed --module users     # Seed only users
     python -m scripts.seed --module projects  # Seed only projects
 """
+
 import argparse
 import asyncio
 import sys
@@ -17,13 +18,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import text
 
-from app.database import async_session, engine, Base
-from scripts.seeds.users import seed_users
-from scripts.seeds.projects import seed_projects
-from scripts.seeds.content import seed_content
+from app.database import Base, async_session, engine
 from scripts.seeds.analytics import seed_analytics
+from scripts.seeds.content import seed_content
 from scripts.seeds.market import seed_market
 from scripts.seeds.marketing import seed_marketing
+from scripts.seeds.projects import seed_projects
+from scripts.seeds.users import seed_users
 
 
 async def reset_database():
@@ -90,9 +91,7 @@ async def seed_module(module_name: str):
 
         elif module_name == "projects":
             # Need to get org_id first
-            result = await db.execute(
-                text("SELECT id FROM organizations WHERE slug = 'janes-publishing'")
-            )
+            result = await db.execute(text("SELECT id FROM organizations WHERE slug = 'janes-publishing'"))
             row = result.first()
             if not row:
                 print("❌ Jane's org not found. Run 'users' module first.")
@@ -123,9 +122,7 @@ async def seed_module(module_name: str):
 
         elif module_name == "analytics":
             # Get org and book IDs
-            result = await db.execute(
-                text("SELECT id FROM organizations WHERE slug = 'janes-publishing'")
-            )
+            result = await db.execute(text("SELECT id FROM organizations WHERE slug = 'janes-publishing'"))
             row = result.first()
             if not row:
                 print("❌ Jane's org not found.")
@@ -148,9 +145,7 @@ async def seed_module(module_name: str):
             await seed_analytics(db, jane_org_id, book_ids)
 
         elif module_name == "market":
-            result = await db.execute(
-                text("SELECT id FROM organizations WHERE slug = 'janes-publishing'")
-            )
+            result = await db.execute(text("SELECT id FROM organizations WHERE slug = 'janes-publishing'"))
             row = result.first()
             if not row:
                 print("❌ Jane's org not found.")

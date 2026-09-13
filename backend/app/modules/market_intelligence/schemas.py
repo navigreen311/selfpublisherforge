@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class TrendDirection(str, Enum):
     UP = "up"
     DOWN = "down"
@@ -21,6 +22,7 @@ class TrendDirection(str, Enum):
 # ---------------------------------------------------------------------------
 # Category schemas
 # ---------------------------------------------------------------------------
+
 
 class CategoryNode(BaseModel):
     id: str = Field(..., description="Amazon browse-node ID")
@@ -52,6 +54,7 @@ class CategoryAnalysis(BaseModel):
 # ---------------------------------------------------------------------------
 # Keyword schemas
 # ---------------------------------------------------------------------------
+
 
 class KeywordResearchRequest(BaseModel):
     keywords: list[str] = Field(..., min_length=1, max_length=20)
@@ -87,6 +90,7 @@ class KeywordSuggestionsParams(BaseModel):
 # Niche analysis schemas
 # ---------------------------------------------------------------------------
 
+
 class NicheAnalysisRequest(BaseModel):
     niche: str = Field(..., min_length=2, max_length=200)
     category_id: str | None = None
@@ -115,6 +119,7 @@ class NicheAnalysisResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Competitor schemas
 # ---------------------------------------------------------------------------
+
 
 class CompetitorSummary(BaseModel):
     asin: str
@@ -176,6 +181,7 @@ class CompetitorListItem(BaseModel):
 # Trends / Snapshots
 # ---------------------------------------------------------------------------
 
+
 class TrendDataPoint(BaseModel):
     date: datetime
     value: float
@@ -187,9 +193,7 @@ class MarketTrend(BaseModel):
     keyword: str | None = None
     direction: TrendDirection
     data_points: list[TrendDataPoint] = Field(default_factory=list)
-    change_pct: float = Field(
-        default=0, description="Percentage change over period"
-    )
+    change_pct: float = Field(default=0, description="Percentage change over period")
 
 
 class MarketTrendsResponse(BaseModel):

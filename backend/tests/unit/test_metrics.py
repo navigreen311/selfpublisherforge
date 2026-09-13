@@ -7,9 +7,9 @@ and helper functions.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -23,7 +23,6 @@ from app.modules.analytics.metrics import (
     compute_revenue_trend,
 )
 from app.modules.analytics.schemas import AggregationPeriod
-
 
 # ---------- Helper function tests ----------
 
@@ -126,8 +125,7 @@ class TestComputePortfolioMetrics:
 
     @pytest.fixture
     def mock_db(self):
-        db = AsyncMock()
-        return db
+        return AsyncMock()
 
     @pytest.mark.asyncio
     async def test_returns_portfolio_metrics_structure(self, mock_db, org_id):
@@ -212,7 +210,7 @@ class TestComputeKPIs:
     @pytest.mark.asyncio
     async def test_returns_four_kpi_cards(self, mock_db, org_id):
         """Verify that compute_kpis returns exactly 4 KPI cards."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         period_start = now - timedelta(days=30)
         period_end = now
 
@@ -247,7 +245,7 @@ class TestComputeKPIs:
     @pytest.mark.asyncio
     async def test_kpi_change_direction(self, mock_db, org_id):
         """Verify change direction is computed correctly."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         current_row = MagicMock()
         current_row.revenue = Decimal("2000.00")
@@ -291,15 +289,13 @@ class TestComputeRevenueTrend:
     @pytest.mark.asyncio
     async def test_empty_trend(self, mock_db, org_id):
         """When no data exists, returns empty trend."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         result_mock = MagicMock()
         result_mock.all.return_value = []
         mock_db.execute = AsyncMock(return_value=result_mock)
 
-        trend = await compute_revenue_trend(
-            mock_db, org_id, now - timedelta(days=30), now
-        )
+        trend = await compute_revenue_trend(mock_db, org_id, now - timedelta(days=30), now)
 
         assert trend.metric == "revenue"
         assert len(trend.data_points) == 0
@@ -310,7 +306,7 @@ class TestComputeRevenueTrend:
     @pytest.mark.asyncio
     async def test_trend_with_data(self, mock_db, org_id):
         """Verify trend calculation with multiple data points."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         row1 = MagicMock()
         row1.period = now - timedelta(days=60)
@@ -328,9 +324,7 @@ class TestComputeRevenueTrend:
         result_mock.all.return_value = [row1, row2, row3]
         mock_db.execute = AsyncMock(return_value=result_mock)
 
-        trend = await compute_revenue_trend(
-            mock_db, org_id, now - timedelta(days=90), now
-        )
+        trend = await compute_revenue_trend(mock_db, org_id, now - timedelta(days=90), now)
 
         assert len(trend.data_points) == 3
         assert trend.total == Decimal("2250.00")

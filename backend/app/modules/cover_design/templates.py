@@ -4,6 +4,7 @@ Each template includes dimension specs, font recommendations, and layout guidanc
 for common self-publishing platforms. Templates now include Fabric.js editor_state
 for direct visual editing.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -27,7 +28,7 @@ PLATFORM_DIMENSIONS: dict[CoverPlatform, CoverDimensions] = {
 
 # Format-specific dimension presets
 FORMAT_DIMENSIONS: dict[str, CoverDimensions] = {
-    "ebook": CoverDimensions(width_px=2560, height_px=1600, dpi=300, bleed_px=0),
+    "ebook": CoverDimensions(width_px=1600, height_px=2560, dpi=300, bleed_px=0),
     "paperback_6x9": CoverDimensions(width_px=1800, height_px=2700, dpi=300, bleed_px=38),
     "paperback_5x8": CoverDimensions(width_px=1500, height_px=2400, dpi=300, bleed_px=38),
     "paperback_8x10": CoverDimensions(width_px=2400, height_px=3000, dpi=300, bleed_px=38),
@@ -37,7 +38,13 @@ FORMAT_DIMENSIONS: dict[str, CoverDimensions] = {
 
 # Font recommendations by genre
 GENRE_FONTS: dict[CoverGenre, list[str]] = {
-    CoverGenre.ROMANCE: ["Playfair Display", "Great Vibes", "Cormorant Garamond", "Libre Baskerville", "Dancing Script"],
+    CoverGenre.ROMANCE: [
+        "Playfair Display",
+        "Great Vibes",
+        "Cormorant Garamond",
+        "Libre Baskerville",
+        "Dancing Script",
+    ],
     CoverGenre.THRILLER: ["Oswald", "Anton", "Impact", "Bebas Neue", "Roboto Condensed"],
     CoverGenre.MYSTERY: ["Quicksand", "Fredoka One", "Poppins", "Merriweather", "Lato"],
     CoverGenre.SCI_FI: ["Orbitron", "Exo 2", "Rajdhani", "Share Tech Mono", "Audiowide"],
@@ -55,8 +62,6 @@ GENRE_FONTS: dict[CoverGenre, list[str]] = {
 }
 
 
-
-
 # ---------------------------------------------------------------------------
 # Template dataclass
 # ---------------------------------------------------------------------------
@@ -69,9 +74,7 @@ class CoverTemplate:
     genre: CoverGenre
     description: str
     thumbnail_url: str | None = None
-    dimensions: CoverDimensions = field(
-        default_factory=lambda: PLATFORM_DIMENSIONS[CoverPlatform.AMAZON_KDP]
-    )
+    dimensions: CoverDimensions = field(default_factory=lambda: PLATFORM_DIMENSIONS[CoverPlatform.AMAZON_KDP])
     font_recommendations: list[str] = field(default_factory=list)
     layout_guidance: str = ""
     tags: list[str] = field(default_factory=list)
@@ -311,14 +314,14 @@ def list_templates(
         templates = [t for t in templates if t.genre == genre]
 
     if style:
-        templates = [t for t in templates if hasattr(t, 'style') and t.style.lower() == style.lower()]
+        templates = [t for t in templates if hasattr(t, "style") and t.style.lower() == style.lower()]
 
     if format and format in FORMAT_DIMENSIONS:
         target_dims = FORMAT_DIMENSIONS[format]
         templates = [
-            t for t in templates
-            if t.dimensions.width_px == target_dims.width_px
-            and t.dimensions.height_px == target_dims.height_px
+            t
+            for t in templates
+            if t.dimensions.width_px == target_dims.width_px and t.dimensions.height_px == target_dims.height_px
         ]
 
     return templates

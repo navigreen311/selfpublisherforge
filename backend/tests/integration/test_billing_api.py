@@ -8,19 +8,18 @@ router endpoints end-to-end via the test client.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.billing.router import router
+from app.core.dependencies import get_current_user, require_role
 from app.core.error_handler import register_error_handlers
 from app.database import get_db
-from app.core.dependencies import get_current_user, require_role
+from app.modules.billing.router import router
 from app.schemas.common import PlanTier
-
 
 # ===========================================================================
 # Fixtures
@@ -42,8 +41,8 @@ TEST_ORG_ROW = {
     "subscription_status": "active",
     "stripe_subscription_id": "sub_test_123",
     "stripe_customer_id": "cus_test_456",
-    "current_period_start": datetime(2024, 1, 1, tzinfo=timezone.utc),
-    "current_period_end": datetime(2024, 2, 1, tzinfo=timezone.utc),
+    "current_period_start": datetime(2024, 1, 1, tzinfo=UTC),
+    "current_period_end": datetime(2024, 2, 1, tzinfo=UTC),
     "cancel_at_period_end": False,
     "projects_count": 10,
     "ai_generations_today": 42,
@@ -55,6 +54,12 @@ def _make_mock_db():
     mock_db = AsyncMock()
     mock_result = MagicMock()
     mock_result.mappings.return_value.first.return_value = TEST_ORG_ROW
+    # An unset MagicMock answers scalar_one_or_none() with another MagicMock,
+    # which `is not None` — so `is_event_processed` reported every webhook as
+    # already seen and the handler returned "duplicate" for events it had
+    # never processed. The default for a stand-in database is no rows.
+    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalar.return_value = None
     mock_db.execute = AsyncMock(return_value=mock_result)
     mock_db.flush = AsyncMock()
     mock_db.commit = AsyncMock()
@@ -81,6 +86,7 @@ def _create_test_app() -> FastAPI:
     def override_require_role(*roles):
         async def checker():
             return TEST_USER
+
         return checker
 
     app.dependency_overrides[get_db] = override_get_db
@@ -316,6 +322,12 @@ class TestWebhookEndpoint:
     @patch("app.modules.billing.service.stripe")
     def test_webhook_processes_event(self, mock_stripe, client):
         mock_stripe.Webhook.construct_event.return_value = {
+            # Real Stripe events carry a top-level evt_ id, and the handler
+            # dedupes on it — billing_events has a unique constraint. The mock
+            # omitted it entirely, so the webhook raised KeyError; a fixed
+            # literal then collided with whatever earlier test had recorded it,
+            # and the handler correctly answered "duplicate".
+            "id": f"evt_test_{uuid.uuid4()}",
             "type": "customer.subscription.created",
             "data": {
                 "object": {

@@ -15,6 +15,7 @@ Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
   - V. Long (full analytics aggregation):       soft=3300, hard=3600
 Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
+
 from __future__ import annotations
 
 import logging
@@ -70,9 +71,7 @@ def process_single_analysis(
         async with async_session() as db:
             try:
                 # Fetch the analysis record
-                stmt = select(CompetitorAnalysis).where(
-                    CompetitorAnalysis.id == UUID(analysis_id)
-                )
+                stmt = select(CompetitorAnalysis).where(CompetitorAnalysis.id == UUID(analysis_id))
                 result = await db.execute(stmt)
                 analysis = result.scalar_one_or_none()
 
@@ -104,22 +103,17 @@ def process_single_analysis(
                 }
             except SQLAlchemyError as e:
                 await db.rollback()
-                logger.error(
-                    "Database error in analysis task: %s", e, exc_info=True
-                )
+                logger.error("Database error in analysis task: %s", e, exc_info=True)
                 raise
             except (ValueError, KeyError) as e:
                 await db.rollback()
-                logger.error(
-                    "Validation error in analysis task: %s", e, exc_info=True
-                )
+                logger.error("Validation error in analysis task: %s", e, exc_info=True)
                 raise
 
     try:
         loop = asyncio.new_event_loop()
         try:
-            result = loop.run_until_complete(_run())
-            return result
+            return loop.run_until_complete(_run())
         finally:
             loop.close()
     except SoftTimeLimitExceeded:
@@ -127,7 +121,7 @@ def process_single_analysis(
         raise
     except Exception as exc:
         logger.error("Task failed, retrying: %s", exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -210,9 +204,9 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
     logger.info("Running competitor alert check, org_id=%s", org_id)
 
     # Alert thresholds
-    PRICE_CHANGE_THRESHOLD = 0.20   # 20% price change
+    PRICE_CHANGE_THRESHOLD = 0.20  # 20% price change
     BSR_IMPROVEMENT_THRESHOLD = 50  # 50 positions improvement
-    RATING_DROP_THRESHOLD = 0.3     # 0.3 star drop
+    RATING_DROP_THRESHOLD = 0.3  # 0.3 star drop
 
     async def _run():
         async with async_session() as db:
@@ -250,22 +244,14 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                     snapshot_rating = meta.get("last_rating")
 
                     # --- Price change detection (>20% change) ---
-                    if (
-                        book.price is not None
-                        and snapshot_price is not None
-                        and float(snapshot_price) > 0
-                    ):
+                    if book.price is not None and snapshot_price is not None and float(snapshot_price) > 0:
                         current_price = float(book.price)
                         previous_price = float(snapshot_price)
                         price_pct_change = abs(current_price - previous_price) / previous_price
 
                         if price_pct_change > PRICE_CHANGE_THRESHOLD:
                             direction = "increased" if current_price > previous_price else "decreased"
-                            severity = (
-                                AlertSeverity.CRITICAL
-                                if price_pct_change > 0.50
-                                else AlertSeverity.WARNING
-                            )
+                            severity = AlertSeverity.CRITICAL if price_pct_change > 0.50 else AlertSeverity.WARNING
                             alert = CompetitorAlert(
                                 org_id=book.org_id,
                                 book_id=book.id,
@@ -286,18 +272,12 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                             )
                             db.add(alert)
                             alerts_created += 1
-                            msg = (
-                                f"Price {direction} {price_pct_change:.0%} for "
-                                f"'{book.title}' (ASIN: {book.asin})"
-                            )
+                            msg = f"Price {direction} {price_pct_change:.0%} for " f"'{book.title}' (ASIN: {book.asin})"
                             alert_summary.append(msg)
                             logger.info("Alert generated: %s", msg)
 
                     # --- BSR improvement detection (>50 positions) ---
-                    if (
-                        book.bsr_current is not None
-                        and snapshot_bsr is not None
-                    ):
+                    if book.bsr_current is not None and snapshot_bsr is not None:
                         current_bsr = int(book.bsr_current)
                         previous_bsr = int(snapshot_bsr)
                         bsr_improvement = previous_bsr - current_bsr
@@ -337,16 +317,9 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                             logger.info("Alert generated: %s", msg)
 
                     # --- New reviews detection (review count increase) ---
-                    if (
-                        snapshot_reviews_count is not None
-                        and book.reviews_count > int(snapshot_reviews_count)
-                    ):
+                    if snapshot_reviews_count is not None and book.reviews_count > int(snapshot_reviews_count):
                         new_review_count = book.reviews_count - int(snapshot_reviews_count)
-                        severity = (
-                            AlertSeverity.WARNING
-                            if new_review_count >= 10
-                            else AlertSeverity.INFO
-                        )
+                        severity = AlertSeverity.WARNING if new_review_count >= 10 else AlertSeverity.INFO
                         alert = CompetitorAlert(
                             org_id=book.org_id,
                             book_id=book.id,
@@ -366,28 +339,18 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                         )
                         db.add(alert)
                         alerts_created += 1
-                        msg = (
-                            f"{new_review_count} new review(s) for "
-                            f"'{book.title}' (ASIN: {book.asin})"
-                        )
+                        msg = f"{new_review_count} new review(s) for " f"'{book.title}' (ASIN: {book.asin})"
                         alert_summary.append(msg)
                         logger.info("Alert generated: %s", msg)
 
                     # --- Rating drop detection (>0.3 stars) ---
-                    if (
-                        book.rating is not None
-                        and snapshot_rating is not None
-                    ):
+                    if book.rating is not None and snapshot_rating is not None:
                         current_rating = float(book.rating)
                         previous_rating = float(snapshot_rating)
                         rating_drop = previous_rating - current_rating
 
                         if rating_drop > RATING_DROP_THRESHOLD:
-                            severity = (
-                                AlertSeverity.CRITICAL
-                                if rating_drop > 1.0
-                                else AlertSeverity.WARNING
-                            )
+                            severity = AlertSeverity.CRITICAL if rating_drop > 1.0 else AlertSeverity.WARNING
                             alert = CompetitorAlert(
                                 org_id=book.org_id,
                                 book_id=book.id,
@@ -408,8 +371,7 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
                             db.add(alert)
                             alerts_created += 1
                             msg = (
-                                f"Rating dropped by {rating_drop:.1f} stars for "
-                                f"'{book.title}' (ASIN: {book.asin})"
+                                f"Rating dropped by {rating_drop:.1f} stars for " f"'{book.title}' (ASIN: {book.asin})"
                             )
                             alert_summary.append(msg)
                             logger.info("Alert generated: %s", msg)
@@ -456,7 +418,7 @@ def check_competitor_alerts(self, org_id: str | None = None) -> dict:
         raise
     except Exception as exc:
         logger.error("Alert check task failed: %s", exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------

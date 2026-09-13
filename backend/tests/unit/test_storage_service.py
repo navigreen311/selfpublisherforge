@@ -18,14 +18,14 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from botocore.exceptions import BotoCoreError, ClientError
 
 from app.core.exceptions import AppException
-from app.modules.storage.schemas import AssetStatus, AssetType, UploadResponse
+from app.modules.storage.schemas import AssetStatus, AssetType
 from app.modules.storage.service import StorageService, check_s3_connectivity
 from app.modules.storage.validators import (
     ALLOWED_MIME_TYPES,
@@ -33,10 +33,10 @@ from app.modules.storage.validators import (
     validate_file,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _fake_s3_client() -> MagicMock:
     """Return a mock boto3 S3 client."""
@@ -83,8 +83,8 @@ def _make_fake_asset(
     asset.mime_type = None
     asset.file_size = None
     asset.file_url = None
-    asset.created_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-    asset.updated_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    asset.created_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC)
+    asset.updated_at = datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC)
     asset.deleted_at = None
     return asset
 
@@ -624,7 +624,7 @@ class TestTriggerProcessing:
         with patch.object(
             StorageService,
             "_extract_metadata",
-            side_effect=IOError("metadata extraction boom"),
+            side_effect=OSError("metadata extraction boom"),
         ):
             with pytest.raises(AppException) as exc_info:
                 await svc.trigger_processing(asset_id=asset.id, org_id=ORG_ID)
@@ -814,8 +814,9 @@ class TestGetAsset:
         await svc.get_asset(asset_id=asset.id, org_id=ORG_ID)
 
         call_kwargs = s3.generate_presigned_url.call_args
-        assert call_kwargs.kwargs.get("ClientMethod") == "get_object" or \
-               call_kwargs[1].get("ClientMethod") == "get_object"
+        assert (
+            call_kwargs.kwargs.get("ClientMethod") == "get_object" or call_kwargs[1].get("ClientMethod") == "get_object"
+        )
 
 
 # ===========================================================================
@@ -873,9 +874,7 @@ class TestExtractMetadata:
 
     def test_options_passed_through(self):
         asset = _make_fake_asset(content_type="image/png", file_name="img.png")
-        metadata = StorageService._extract_metadata(
-            asset, action="resize", options={"width": 800}
-        )
+        metadata = StorageService._extract_metadata(asset, action="resize", options={"width": 800})
         assert metadata["action"] == "resize"
         assert metadata["options"] == {"width": 800}
 

@@ -11,6 +11,10 @@ jest.mock("next/link", () => {
 });
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   UtensilsCrossed: (props: React.SVGAttributes<SVGElement>) => <svg data-testid="utensils-icon" {...props} />,
   Image: (props: React.SVGAttributes<SVGElement>) => <svg data-testid="image-icon" {...props} />,
 }));
@@ -21,7 +25,7 @@ const mockCookbook: Cookbook = {
   recipe_layout: "classic", illustration_method: "ai_generated", interior_type: "full_color",
   page_count: 120, trim_size: "8x10", include_nutrition: true, include_meal_plans: false,
   include_shopping_lists: false, include_index: true, include_conversion_charts: true,
-  dietary_tags: [], status: "in-progress", qa_score: 72,
+  dietary_tags: [], status: "in_progress", qa_score: 72,
   created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z",
 };
 
@@ -29,9 +33,9 @@ describe("CookbookCard", () => {
   beforeEach(() => { jest.clearAllMocks(); });
 
   it("renders cookbook title", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("Italian Kitchen")).toBeInTheDocument(); });
-  it("shows type badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("International")).toBeInTheDocument(); });
+  it("shows type badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("Cultural Cuisine")).toBeInTheDocument(); });
   it("shows page count", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("120p")).toBeInTheDocument(); });
-  it("shows status badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("in-progress")).toBeInTheDocument(); });
+  it("shows status badge", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("in progress")).toBeInTheDocument(); });
   it("links to cookbook detail page", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByRole("link")).toHaveAttribute("href", "/specialty/cookbook-books/test-cookbook-1"); });
   it("renders QA score", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("72")).toBeInTheDocument(); });
   it("shows placeholder when no cover", () => { render(<CookbookCard cookbook={mockCookbook} />); expect(screen.getByText("No Cover")).toBeInTheDocument(); });

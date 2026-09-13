@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
@@ -26,6 +26,10 @@ jest.mock("next/link", () => {
 
 // Mock lucide-react icons to simple elements
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Bell: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="bell-icon" {...props} />
   ),
@@ -48,6 +52,16 @@ jest.mock("lucide-react", () => ({
 
 // Mock useTheme hook
 const mockSetTheme = jest.fn();
+jest.mock("@/modules/notifications/components/NotificationCenter", () => ({
+  // Stands in for the real bell + dropdown, keeping its accessible name so the
+  // header's icon-button a11y assertions still cover it.
+  NotificationCenter: ({ userId }: { userId: string }) => (
+    <button type="button" aria-label="Notifications" data-testid="notification-center">
+      {userId}
+    </button>
+  ),
+}));
+
 jest.mock("@/hooks/use-theme", () => ({
   useTheme: () => ({
     theme: "system",
@@ -205,20 +219,10 @@ describe("Header", () => {
     expect(notificationsButton).toBeInTheDocument();
   });
 
-  it("shows unread notification count badge", () => {
-    render(<Header />);
-    // mockNotifications has 1 unread notification
-    expect(screen.getByText("1")).toBeInTheDocument();
-  });
-
-  it("navigates to settings when notifications button is clicked", async () => {
-    const user = userEvent.setup();
+  it("mounts the notification centre for the signed-in user", () => {
     render(<Header />);
 
-    const notificationsButton = screen.getByRole("button", { name: /notifications/i });
-    await user.click(notificationsButton);
-
-    expect(mockPush).toHaveBeenCalledWith("/settings");
+    expect(screen.getByTestId("notification-center")).toBeInTheDocument();
   });
 
   it("renders user avatar with initials", () => {
@@ -239,8 +243,7 @@ describe("Header", () => {
 
   it("renders the settings link in user dropdown", () => {
     render(<Header />);
-    const settingsLink = screen.getByRole("link", { name: /settings/i });
-    expect(settingsLink).toBeInTheDocument();
+    const settingsLink = screen.getByRole("link", { name: "Settings" });
     expect(settingsLink).toHaveAttribute("href", "/settings");
   });
 

@@ -55,6 +55,10 @@ jest.mock("@/hooks/use-auth", () => ({
 }));
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Eye: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="eye-icon" {...props} />
   ),
@@ -79,6 +83,24 @@ jest.mock("lucide-react", () => ({
 }));
 
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -147,14 +169,14 @@ jest.mock("@radix-ui/react-select", () => {
   }) => (
     <div data-testid="select-root" data-value={value}>
       {typeof children === "function"
-        ? children({ value, onValueChange })
+        ? (children as (a: unknown) => React.ReactNode)({ value, onValueChange })
         : children}
     </div>
   );
 
   const Trigger = React.forwardRef(
     (
-      { children, ...props }: { children: React.ReactNode } & Record<string, unknown>,
+      { children, ...props }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLButtonElement>
     ) => (
       <button ref={ref} {...props}>
@@ -176,10 +198,7 @@ jest.mock("@radix-ui/react-select", () => {
         children,
         value,
         ...props
-      }: {
-        children: React.ReactNode;
-        value: string;
-      } & Record<string, unknown>,
+      }: { children?: React.ReactNode; value?: string } & Record<string, unknown>,
       ref: React.Ref<HTMLDivElement>
     ) => (
       <div ref={ref} data-value={value} {...props}>

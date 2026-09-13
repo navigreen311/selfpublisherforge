@@ -59,6 +59,7 @@ router = APIRouter()
 # Listing analysis
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/analyze",
     response_model=SuccessResponse[ListingAnalysis],
@@ -82,6 +83,7 @@ async def analyze_listing(
 # Blurb generation
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/blurb/generate",
     response_model=SuccessResponse[BlurbGenerateResponse],
@@ -99,6 +101,7 @@ async def generate_blurb(
 # ---------------------------------------------------------------------------
 # A/B testing
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/blurb/ab-test",
@@ -125,9 +128,7 @@ async def create_ab_test(
 )
 async def list_ab_tests(
     book_id: UUID | None = Query(None, description="Filter by book ID"),
-    test_status: ABTestStatus | None = Query(
-        None, alias="status", description="Filter by test status"
-    ),
+    test_status: ABTestStatus | None = Query(None, alias="status", description="Filter by test status"),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> SuccessResponse[list[ABTestResponse]]:
@@ -200,6 +201,7 @@ async def get_ab_test_results(
 # Look Inside analysis
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/look-inside/analyze",
     response_model=SuccessResponse[LookInsideAnalysis],
@@ -217,6 +219,7 @@ async def analyze_look_inside(
 # ---------------------------------------------------------------------------
 # Mobile check
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/mobile-check",
@@ -236,6 +239,7 @@ async def mobile_check(
 # Conversion scores
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/scores/{book_id}",
     response_model=SuccessResponse[ConversionScores],
@@ -254,6 +258,7 @@ async def get_scores(
 # ---------------------------------------------------------------------------
 # Keyword optimization
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/optimize-keywords",
@@ -284,6 +289,7 @@ async def optimize_keywords(
 # Enhanced blurb generation (3 versions)
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/generate-blurb",
     status_code=status.HTTP_200_OK,
@@ -311,27 +317,32 @@ async def generate_blurb_versions(
             )
             if result and result.variants:
                 v = result.variants[0]
-                versions.append({
-                    "style": style,
-                    "html_content": f"<p>{v.content}</p>",
-                    "plain_content": v.content,
-                    "score": int(v.estimated_conversion_score),
-                    "word_count": len(v.content.split()),
-                })
+                versions.append(
+                    {
+                        "style": style,
+                        "html_content": f"<p>{v.content}</p>",
+                        "plain_content": v.content,
+                        "score": int(v.estimated_conversion_score),
+                        "word_count": len(v.content.split()),
+                    }
+                )
         except Exception:
-            versions.append({
-                "style": style,
-                "html_content": f"<p>Generated {style.replace('_', ' ')} blurb for your book.</p>",
-                "plain_content": f"Generated {style.replace('_', ' ')} blurb for your book.",
-                "score": 75,
-                "word_count": 10,
-            })
+            versions.append(
+                {
+                    "style": style,
+                    "html_content": f"<p>Generated {style.replace('_', ' ')} blurb for your book.</p>",
+                    "plain_content": f"Generated {style.replace('_', ' ')} blurb for your book.",
+                    "score": 75,
+                    "word_count": 10,
+                }
+            )
     return SuccessResponse(data={"versions": versions})
 
 
 # ---------------------------------------------------------------------------
 # Listing analyses CRUD
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/analyses",
@@ -356,15 +367,17 @@ async def list_analyses(
         )
         result = await db.execute(stmt)
         items = result.scalars().all()
-        return SuccessResponse(data=[
-            {
-                "id": str(a.id),
-                "asin": a.asin,
-                "overall_score": a.overall_score,
-                "created_at": a.created_at.isoformat(),
-            }
-            for a in items
-        ])
+        return SuccessResponse(
+            data=[
+                {
+                    "id": str(a.id),
+                    "asin": a.asin,
+                    "overall_score": a.overall_score,
+                    "created_at": a.created_at.isoformat(),
+                }
+                for a in items
+            ]
+        )
     except Exception:
         return SuccessResponse(data=[])
 
@@ -385,24 +398,27 @@ async def get_analysis(
         record = await db.get(ListingAnalysisRecord, analysis_id)
         if not record:
             raise HTTPException(status_code=404, detail="Analysis not found")
-        return SuccessResponse(data={
-            "id": str(record.id),
-            "asin": record.asin,
-            "overall_score": record.overall_score,
-            "scores": record.scores,
-            "findings": record.findings,
-            "suggestions": record.suggestions,
-            "created_at": record.created_at.isoformat(),
-        })
+        return SuccessResponse(
+            data={
+                "id": str(record.id),
+                "asin": record.asin,
+                "overall_score": record.overall_score,
+                "scores": record.scores,
+                "findings": record.findings,
+                "suggestions": record.suggestions,
+                "created_at": record.created_at.isoformat(),
+            }
+        )
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=404, detail="Analysis not found")
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail="Analysis not found") from exc
 
 
 # ---------------------------------------------------------------------------
 # Generated blurbs list
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/blurbs",
@@ -427,16 +443,18 @@ async def list_blurbs(
         )
         result = await db.execute(stmt)
         items = result.scalars().all()
-        return SuccessResponse(data=[
-            {
-                "id": str(b.id),
-                "style": b.style,
-                "score": b.score,
-                "plain_content": b.plain_content[:200] if b.plain_content else "",
-                "created_at": b.created_at.isoformat(),
-            }
-            for b in items
-        ])
+        return SuccessResponse(
+            data=[
+                {
+                    "id": str(b.id),
+                    "style": b.style,
+                    "score": b.score,
+                    "plain_content": b.plain_content[:200] if b.plain_content else "",
+                    "created_at": b.created_at.isoformat(),
+                }
+                for b in items
+            ]
+        )
     except Exception:
         return SuccessResponse(data=[])
 
@@ -444,6 +462,7 @@ async def list_blurbs(
 # ---------------------------------------------------------------------------
 # A+ Content Plan
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/aplus-plan",

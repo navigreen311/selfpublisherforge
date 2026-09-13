@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import io
 import logging
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 import httpx
@@ -23,6 +23,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
 from app.modules.cover_design.models import Cover
+
+if TYPE_CHECKING:  # annotations only; reportlab is an optional dependency
+    from reportlab.pdfgen import canvas
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +45,7 @@ BLEED_INCHES = 0.125
 async def export_cover(
     db: AsyncSession,
     cover_id: UUID,
-    format: ExportFormat,  # noqa: A002 — shadows built-in intentionally for API clarity
+    format: ExportFormat,  # â€” shadows built-in intentionally for API clarity
     include_bleed: bool = False,
 ) -> tuple[bytes, str, str]:
     """Export a cover in the requested format.
@@ -140,7 +143,10 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
         # For now, we use a simplified approach: extract background image if present
         # A full implementation would require fabric.js server-side rendering or conversion
         # For this implementation, we fall through to the image_url
-        logger.info("Editor state found for cover %s, but server-side Fabric.js rendering not yet implemented. Using image_url.", cover.id)
+        logger.info(
+            "Editor state found for cover %s, but server-side Fabric.js rendering not yet implemented. Using image_url.",
+            cover.id,
+        )
 
     # Fallback to downloading from image_url
     if not cover.image_url:
@@ -160,8 +166,8 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
         raise AppException(
             status_code=400,
             code="IMAGE_DOWNLOAD_FAILED",
-            message=f"Failed to download cover image: {exc\!s}",
-        )
+            message=f"Failed to download cover image: {exc!s}",
+        ) from exc
 
     try:
         img = Image.open(io.BytesIO(image_data))
@@ -170,19 +176,19 @@ async def _get_cover_image(cover: Cover) -> Image.Image:
             # Create white background
             rgb_img = Image.new("RGB", img.size, (255, 255, 255))
             if img.mode == "P":
-                img = img.convert("RGBA")
+                img = img.convert("RGBA")  # type: ignore[assignment]
             rgb_img.paste(img, mask=img.split()[3] if img.mode == "RGBA" else None)
             return rgb_img
-        if img.mode \!= "RGB":
-            img = img.convert("RGB")
+        if img.mode != "RGB":
+            img = img.convert("RGB")  # type: ignore[assignment]
         return img
     except (OSError, ValueError) as exc:
         logger.exception("Failed to open cover image: %s", exc)
         raise AppException(
             status_code=400,
             code="IMAGE_OPEN_FAILED",
-            message=f"Failed to open cover image: {exc\!s}",
-        )
+            message=f"Failed to open cover image: {exc!s}",
+        ) from exc
 
 
 def _add_bleed_area(img: Image.Image, dpi: int) -> Image.Image:
@@ -207,7 +213,7 @@ def _resize_with_dpi(img: Image.Image, target_dpi: int, current_dpi: int | None 
     If current_dpi is provided and different from target_dpi, scale the image.
     Otherwise, just set the DPI metadata.
     """
-    if current_dpi and current_dpi \!= target_dpi:
+    if current_dpi and current_dpi != target_dpi:
         # Calculate new dimensions
         scale_factor = target_dpi / current_dpi
         new_width = int(img.width * scale_factor)
@@ -256,7 +262,9 @@ async def _export_jpeg(cover: Cover, include_bleed: bool, quality: int = 85) -> 
 
     # Ensure RGB mode (JPEG doesn't support transparency)
     if img.mode != "RGB":
-        img = img.convert("RGB")
+        img = img.convert(  # type: ignore[assignment]  # ImageFile -> Image
+            "RGB"
+        )
 
     # Save to bytes
     buf = io.BytesIO()
@@ -273,11 +281,8 @@ async def _export_pdf(cover: Cover, include_bleed: bool) -> bytes:
         raise AppException(
             status_code=400,
             code="LIBRARY_NOT_AVAILABLE",
-            message=(
-                "PDF export requires the 'reportlab' library. "
-                "Install it with: pip install reportlab"
-            ),
-        )
+            message=("PDF export requires the 'reportlab' library. " "Install it with: pip install reportlab"),
+        ) from None
 
     img = await _get_cover_image(cover)
 
@@ -328,7 +333,7 @@ async def _export_pdf(cover: Cover, include_bleed: bool) -> bytes:
 
 
 def _add_trim_marks(
-    c: "canvas.Canvas",  # noqa: F821
+    c: canvas.Canvas,
     width_inches: float,
     height_inches: float,
     bleed_inches: float,

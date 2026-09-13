@@ -26,6 +26,7 @@ def _base_system_prompt(genre: str = "", tone: str = "") -> str:
 # Outline
 # ---------------------------------------------------------------------------
 
+
 def outline_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Return (system, user) prompt pair for outline generation."""
     genre = context.get("genre", "")
@@ -61,6 +62,7 @@ def outline_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # Chapter writing
 # ---------------------------------------------------------------------------
 
+
 def chapter_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Return (system, user) prompt pair for chapter generation."""
     genre = context.get("genre", "")
@@ -73,7 +75,7 @@ def chapter_prompt(context: dict[str, Any]) -> tuple[str, str]:
 
     system = _base_system_prompt(genre, tone)
     user_parts = [
-        f"Write a full chapter titled \"{chapter_title}\".",
+        f'Write a full chapter titled "{chapter_title}".',
         f"Target word count: approximately {target_words} words.",
     ]
     if synopsis:
@@ -88,6 +90,7 @@ def chapter_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # Blurb
 # ---------------------------------------------------------------------------
+
 
 def blurb_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Return (system, user) prompt pair for blurb / book description."""
@@ -105,15 +108,14 @@ def blurb_prompt(context: dict[str, Any]) -> tuple[str, str]:
         user_parts.append(f"Synopsis: {synopsis}")
     if instructions:
         user_parts.append(f"Special instructions: {instructions}")
-    user_parts.append(
-        "The blurb should hook the reader, hint at conflict, and end with intrigue."
-    )
+    user_parts.append("The blurb should hook the reader, hint at conflict, and end with intrigue.")
     return system, "\n".join(user_parts)
 
 
 # ---------------------------------------------------------------------------
 # Title suggestions
 # ---------------------------------------------------------------------------
+
 
 def title_suggestions_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Return (system, user) prompt pair for title suggestions."""
@@ -131,15 +133,14 @@ def title_suggestions_prompt(context: dict[str, Any]) -> tuple[str, str]:
         user_parts.append(f"Synopsis: {synopsis}")
     if instructions:
         user_parts.append(f"Special instructions: {instructions}")
-    user_parts.append(
-        "\nReturn ONLY a JSON array of strings: [\"Title 1\", \"Title 2\", ...]"
-    )
+    user_parts.append('\nReturn ONLY a JSON array of strings: ["Title 1", "Title 2", ...]')
     return system, "\n".join(user_parts)
 
 
 # ---------------------------------------------------------------------------
 # Continue writing
 # ---------------------------------------------------------------------------
+
 
 def continue_writing_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Return (system, user) prompt pair for continuing existing text."""
@@ -151,8 +152,7 @@ def continue_writing_prompt(context: dict[str, Any]) -> tuple[str, str]:
 
     system = _base_system_prompt(genre, tone)
     user_parts = [
-        "Continue writing from where the text left off. "
-        "Maintain the same style, voice, and narrative thread.",
+        "Continue writing from where the text left off. " "Maintain the same style, voice, and narrative thread.",
         f"Target approximately {target_words} additional words.",
     ]
     if existing_text:
@@ -165,6 +165,7 @@ def continue_writing_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # Edit selection
 # ---------------------------------------------------------------------------
+
 
 def edit_selection_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Return (system, user) prompt pair for editing a selected passage."""
@@ -189,6 +190,7 @@ def edit_selection_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # Tone adjustment
 # ---------------------------------------------------------------------------
+
 
 def tone_adjustment_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Return (system, user) prompt pair for adjusting the tone of text."""
@@ -266,6 +268,7 @@ def _action_system_base(
 # Action: write — Generate new content
 # ---------------------------------------------------------------------------
 
+
 def action_write_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Build prompts for the 'write' action: generate new content.
 
@@ -283,15 +286,11 @@ def action_write_prompt(context: dict[str, Any]) -> tuple[str, str]:
 
     system_parts = [_action_system_base(style_profile=style_profile, tone=tone, genre=genre)]
     if chapter_outline:
-        system_parts.append(
-            f"\n\nCHAPTER OUTLINE:\n{chapter_outline}"
-        )
+        system_parts.append(f"\n\nCHAPTER OUTLINE:\n{chapter_outline}")
     if previous_content:
         # Truncate to last 1000 chars to stay within context limits
         prev_snippet = previous_content[-2000:] if len(previous_content) > 2000 else previous_content
-        system_parts.append(
-            f"\n\nPREVIOUS CONTENT (for continuity):\n{prev_snippet}"
-        )
+        system_parts.append(f"\n\nPREVIOUS CONTENT (for continuity):\n{prev_snippet}")
     system = "\n".join(system_parts)
 
     length_hint = _LENGTH_GUIDANCE.get(length, _LENGTH_GUIDANCE["medium"])
@@ -309,6 +308,7 @@ def action_write_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # Action: rewrite — Improve selected text
 # ---------------------------------------------------------------------------
+
 
 def action_rewrite_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Build prompts for the 'rewrite' action: improve selected text.
@@ -342,6 +342,7 @@ def action_rewrite_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # Action: expand — Add detail to selection
 # ---------------------------------------------------------------------------
+
 
 def action_expand_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Build prompts for the 'expand' action: add detail and elaboration.
@@ -386,6 +387,7 @@ def action_expand_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # Action: shorten — Condense selection
 # ---------------------------------------------------------------------------
 
+
 def action_shorten_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Build prompts for the 'shorten' action: condense text.
 
@@ -411,8 +413,7 @@ def action_shorten_prompt(context: dict[str, Any]) -> tuple[str, str]:
     user_parts = []
     if selected_text:
         user_parts.append(
-            f"Shorten the following text while preserving its key content:\n\n"
-            f"---\n{selected_text}\n---"
+            f"Shorten the following text while preserving its key content:\n\n" f"---\n{selected_text}\n---"
         )
     if instruction:
         user_parts.append(f"\nAdditional instructions: {instruction}")
@@ -423,6 +424,7 @@ def action_shorten_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # Action: continue — Generate from cursor position
 # ---------------------------------------------------------------------------
+
 
 def action_continue_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Build prompts for the 'continue' action: write from cursor position.
@@ -469,6 +471,7 @@ def action_continue_prompt(context: dict[str, Any]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 # Action: ideas — Brainstorm bullet points
 # ---------------------------------------------------------------------------
+
 
 def action_ideas_prompt(context: dict[str, Any]) -> tuple[str, str]:
     """Build prompts for the 'ideas' action: brainstorm directions.
@@ -551,7 +554,6 @@ def get_action_prompt(action: str, context: dict[str, Any]) -> tuple[str, str]:
     builder = ACTION_PROMPT_REGISTRY.get(action)
     if builder is None:
         raise ValueError(
-            f"Unknown writing action: {action}. "
-            f"Valid actions: {', '.join(ACTION_PROMPT_REGISTRY.keys())}"
+            f"Unknown writing action: {action}. " f"Valid actions: {', '.join(ACTION_PROMPT_REGISTRY.keys())}"
         )
     return builder(context)

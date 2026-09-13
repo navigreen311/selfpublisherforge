@@ -16,23 +16,10 @@ import os
 import uuid as _uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError
-
-logger = logging.getLogger(__name__)
-
-WORD_COUNT_MULTIPLIER = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
-
-# Auto-save versioning thresholds
-_VERSION_TIME_THRESHOLD = timedelta(minutes=5)
-_VERSION_WORD_CHANGE_THRESHOLD = 100
-
-# ---------------------------------------------------------------------------
-# Canonical ORM models -- imported from the shared models registry so that
-# SQLAlchemy sees a single table definition for each table name.
-# ---------------------------------------------------------------------------
 from app.models.content import (
     Chapter,
     ChapterVersion,
@@ -62,6 +49,19 @@ from app.modules.ai_writing.schemas import (
     WritingSessionCreate,
     WritingSessionRecord,
 )
+
+logger = logging.getLogger(__name__)
+
+WORD_COUNT_MULTIPLIER = float(os.environ.get("AI_WORD_COUNT_MULTIPLIER", "0.5"))
+
+# Auto-save versioning thresholds
+_VERSION_TIME_THRESHOLD = timedelta(minutes=5)
+_VERSION_WORD_CHANGE_THRESHOLD = 100
+
+# ---------------------------------------------------------------------------
+# Canonical ORM models -- imported from the shared models registry so that
+# SQLAlchemy sees a single table definition for each table name.
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Manuscript helpers
@@ -146,9 +146,8 @@ async def list_manuscripts(
 
     # Filter by org: books belong to projects which belong to orgs
     from app.models.project import Project
-    stmt = stmt.join(Project, Book.project_id == Project.id).where(
-        Project.org_id == org_id
-    )
+
+    stmt = stmt.join(Project, Book.project_id == Project.id).where(Project.org_id == org_id)
 
     if status:
         try:
@@ -189,17 +188,19 @@ async def list_manuscripts(
         )
         chapter_count = ch_count_result.scalar() or 0
 
-        manuscripts.append({
-            "id": manuscript.id,
-            "book_id": manuscript.book_id,
-            "title": book_title or "",
-            "status": manuscript.status.value if manuscript.status else "draft",
-            "content_type": manuscript.content_type.value if manuscript.content_type else "fiction",
-            "word_count": manuscript.word_count,
-            "chapter_count": chapter_count,
-            "created_at": manuscript.created_at,
-            "updated_at": manuscript.updated_at,
-        })
+        manuscripts.append(
+            {
+                "id": manuscript.id,
+                "book_id": manuscript.book_id,
+                "title": book_title or "",
+                "status": manuscript.status.value if manuscript.status else "draft",
+                "content_type": manuscript.content_type.value if manuscript.content_type else "fiction",
+                "word_count": manuscript.word_count,
+                "chapter_count": chapter_count,
+                "created_at": manuscript.created_at,
+                "updated_at": manuscript.updated_at,
+            }
+        )
 
     return manuscripts
 
@@ -335,7 +336,7 @@ async def get_manuscript_by_id(db: AsyncSession, manuscript_id: _uuid.UUID) -> d
                 "title": ch.title,
                 "order": ch.order_index,
                 "word_count": ch.word_count,
-                "status": ch.status.value if ch.status else "outline",
+                "status": ch.status,
                 "created_at": ch.created_at,
                 "updated_at": ch.updated_at,
             }
@@ -363,7 +364,7 @@ async def update_manuscript(
                 status_code=422,
                 code="VALIDATION_ERROR",
                 message=f"Invalid status: {data['status']}",
-            )
+            ) from None
 
     if "content_type" in data:
         try:
@@ -373,7 +374,7 @@ async def update_manuscript(
                 status_code=422,
                 code="VALIDATION_ERROR",
                 message=f"Invalid content_type: {data['content_type']}",
-            )
+            ) from None
 
     await db.flush()
     await db.refresh(manuscript)
@@ -482,6 +483,7 @@ async def archive_manuscript(db: AsyncSession, manuscript_id: _uuid.UUID) -> dic
 # Manuscript / chapter CRUD (existing)
 # ---------------------------------------------------------------------------
 
+
 def _chapter_to_schema(ch: Chapter, book_id: _uuid.UUID) -> ChapterContent:
     """Map a canonical Chapter ORM instance to the API schema."""
     return ChapterContent(
@@ -512,9 +514,7 @@ async def list_chapters(db: AsyncSession, book_id: _uuid.UUID) -> list[ChapterCo
     return [_chapter_to_schema(ch, book_id) for ch in chapters]
 
 
-async def get_chapter(
-    db: AsyncSession, book_id: _uuid.UUID, chapter_id: _uuid.UUID
-) -> ChapterContent:
+async def get_chapter(db: AsyncSession, book_id: _uuid.UUID, chapter_id: _uuid.UUID) -> ChapterContent:
     """Fetch a single chapter."""
     manuscript = await _get_or_create_manuscript(db, book_id)
     result = await db.execute(
@@ -534,9 +534,7 @@ async def get_chapter(
     return _chapter_to_schema(ch, book_id)
 
 
-async def create_chapter(
-    db: AsyncSession, book_id: _uuid.UUID, data: ChapterCreate
-) -> ChapterContent:
+async def create_chapter(db: AsyncSession, book_id: _uuid.UUID, data: ChapterCreate) -> ChapterContent:
     """Create a new chapter for a book."""
     manuscript = await _get_or_create_manuscript(db, book_id)
     word_count = len(data.content.split()) if data.content else 0
@@ -622,7 +620,7 @@ async def reorder_chapters(
 async def create_version_snapshot(
     db: AsyncSession,
     chapter_id: _uuid.UUID,
-    content: str,
+    content: dict | str | None,
     word_count: int,
     user_id: _uuid.UUID | None = None,
 ) -> dict:
@@ -656,7 +654,7 @@ async def create_version_snapshot(
         "id": version.id,
         "chapter_id": version.chapter_id,
         "word_count": version.word_count,
-        "snapshot_by": version.snapshot_by,
+        "snapshot_by": version.created_by,
         "created_at": version.created_at,
     }
 
@@ -683,7 +681,7 @@ async def list_versions(db: AsyncSession, chapter_id: _uuid.UUID) -> list[dict]:
             "id": v.id,
             "chapter_id": v.chapter_id,
             "word_count": v.word_count,
-            "snapshot_by": v.snapshot_by,
+            "snapshot_by": v.created_by,
             "created_at": v.created_at,
         }
         for v in versions
@@ -714,7 +712,7 @@ async def get_version(db: AsyncSession, version_id: _uuid.UUID) -> dict:
         "chapter_id": version.chapter_id,
         "content": version.content,
         "word_count": version.word_count,
-        "snapshot_by": version.snapshot_by,
+        "snapshot_by": version.created_by,
         "created_at": version.created_at,
     }
 
@@ -838,7 +836,7 @@ async def prune_old_versions(
 async def save_chapter_content(
     db: AsyncSession,
     chapter_id: _uuid.UUID,
-    content: str,
+    content: dict | str,
     word_count: int,
     user_id: _uuid.UUID | None = None,
 ) -> dict:
@@ -880,20 +878,20 @@ async def save_chapter_content(
         # No versions yet -- always snapshot
         should_snapshot = True
     else:
-        time_since_last = now - last_version.created_at.replace(tzinfo=UTC) if last_version.created_at.tzinfo is None else now - last_version.created_at
+        time_since_last = (
+            now - last_version.created_at.replace(tzinfo=UTC)
+            if last_version.created_at.tzinfo is None
+            else now - last_version.created_at
+        )
         word_delta = abs(word_count - (last_version.word_count or 0))
 
-        if time_since_last >= _VERSION_TIME_THRESHOLD:
-            should_snapshot = True
-        elif word_delta >= _VERSION_WORD_CHANGE_THRESHOLD:
+        if time_since_last >= _VERSION_TIME_THRESHOLD or word_delta >= _VERSION_WORD_CHANGE_THRESHOLD:
             should_snapshot = True
 
     version_id = None
     if should_snapshot:
         # Snapshot the CURRENT content before replacing
-        snapshot = await create_version_snapshot(
-            db, chapter_id, chapter.content or "", chapter.word_count, user_id
-        )
+        snapshot = await create_version_snapshot(db, chapter_id, chapter.content, chapter.word_count, user_id)
         version_id = snapshot["id"]
 
     # Update chapter content
@@ -979,9 +977,7 @@ async def heartbeat_session(
     Returns:
         Dict with updated session details.
     """
-    result = await db.execute(
-        select(WritingSession).where(WritingSession.id == session_id)
-    )
+    result = await db.execute(select(WritingSession).where(WritingSession.id == session_id))
     session = result.scalar_one_or_none()
     if not session:
         raise NotFoundError("WritingSession", f"Session {session_id} not found")
@@ -1014,9 +1010,7 @@ async def end_session(
     Returns:
         Dict with completed session details.
     """
-    result = await db.execute(
-        select(WritingSession).where(WritingSession.id == session_id)
-    )
+    result = await db.execute(select(WritingSession).where(WritingSession.id == session_id))
     session = result.scalar_one_or_none()
     if not session:
         raise NotFoundError("WritingSession", f"Session {session_id} not found")
@@ -1060,19 +1054,14 @@ async def list_sessions(
     """
     from app.models.project import Book
 
-    stmt = (
-        select(
-            WritingSession,
-            Book.title.label("book_title"),
-        )
-        .join(Book, WritingSession.book_id == Book.id)
-    )
+    stmt = select(
+        WritingSession,
+        Book.title.label("book_title"),
+    ).join(Book, WritingSession.book_id == Book.id)
 
     if manuscript_id:
         # Resolve book_id from manuscript
-        ms_result = await db.execute(
-            select(Manuscript.book_id).where(Manuscript.id == manuscript_id)
-        )
+        ms_result = await db.execute(select(Manuscript.book_id).where(Manuscript.id == manuscript_id))
         book_id = ms_result.scalar_one_or_none()
         if book_id:
             stmt = stmt.where(WritingSession.book_id == book_id)
@@ -1090,23 +1079,23 @@ async def list_sessions(
         # Resolve chapter title if applicable
         chapter_title = None
         if session.chapter_id:
-            ch_result = await db.execute(
-                select(Chapter.title).where(Chapter.id == session.chapter_id)
-            )
+            ch_result = await db.execute(select(Chapter.title).where(Chapter.id == session.chapter_id))
             chapter_title = ch_result.scalar_one_or_none()
 
-        sessions.append({
-            "id": session.id,
-            "user_id": session.user_id,
-            "book_id": session.book_id,
-            "book_title": book_title or "",
-            "chapter_id": session.chapter_id,
-            "chapter_title": chapter_title,
-            "words_written": session.words_written,
-            "duration_seconds": session.duration_seconds,
-            "duration_minutes": session.duration_seconds // 60,
-            "started_at": session.created_at,
-        })
+        sessions.append(
+            {
+                "id": session.id,
+                "user_id": session.user_id,
+                "book_id": session.book_id,
+                "book_title": book_title or "",
+                "chapter_id": session.chapter_id,
+                "chapter_title": chapter_title,
+                "words_written": session.words_written,
+                "duration_seconds": session.duration_seconds,
+                "duration_minutes": session.duration_seconds // 60,
+                "started_at": session.created_at,
+            }
+        )
 
     return sessions
 
@@ -1115,15 +1104,33 @@ async def record_writing_session(
     db: AsyncSession,
     user_id: _uuid.UUID,
     data: WritingSessionCreate,
+    org_id: _uuid.UUID | None = None,
 ) -> WritingSessionRecord:
     """Record a writing session.
 
     The canonical WritingSession model stores duration in seconds, so we
     convert from the API's minutes representation.
+
+    ``org_id`` is required by the WritingSession table; it was neither a
+    parameter here nor passed by the route, so every recorded session violated
+    the NOT NULL constraint.
     """
+    # writing_sessions.manuscript_id is NOT NULL, but the request only carries
+    # a book_id, so resolve the book's manuscript rather than failing on the
+    # constraint.
+    manuscript_id = await db.scalar(select(Manuscript.id).where(Manuscript.book_id == data.book_id).limit(1))
+    if manuscript_id is None:
+        raise AppException(
+            status_code=422,
+            code="NO_MANUSCRIPT_FOR_BOOK",
+            message="Cannot record a writing session for a book that has no manuscript yet.",
+        )
+
     session = WritingSession(
         id=_uuid.uuid4(),
+        org_id=org_id,
         user_id=user_id,
+        manuscript_id=manuscript_id,
         book_id=data.book_id,
         chapter_id=data.chapter_id,
         words_written=data.words_written,
@@ -1150,9 +1157,7 @@ async def record_writing_session(
 # ---------------------------------------------------------------------------
 
 
-async def get_readability_score(
-    db: AsyncSession, book_id: _uuid.UUID
-) -> ReadabilityScore:
+async def get_readability_score(db: AsyncSession, book_id: _uuid.UUID) -> ReadabilityScore:
     """Compute readability metrics for the full manuscript."""
     manuscript = await _get_or_create_manuscript(db, book_id)
     result = await db.execute(
@@ -1199,9 +1204,7 @@ async def get_computed_readability(text: str) -> dict:
     }
 
 
-async def analyze_manuscript(
-    db: AsyncSession, book_id: _uuid.UUID
-) -> ManuscriptAnalysis:
+async def analyze_manuscript(db: AsyncSession, book_id: _uuid.UUID) -> ManuscriptAnalysis:
     """Full manuscript analysis including readability, pacing, word count."""
     readability = await get_readability_score(db, book_id)
 
@@ -1230,13 +1233,9 @@ async def analyze_manuscript(
 
         for ch in chapters:
             if ch.word_count > 0 and ch.word_count < avg_chapter_wc * WORD_COUNT_MULTIPLIER:
-                pacing_notes.append(
-                    f"Chapter '{ch.title}' (#{ch.order_index}) is significantly shorter than average."
-                )
+                pacing_notes.append(f"Chapter '{ch.title}' (#{ch.order_index}) is significantly shorter than average.")
             elif ch.word_count > avg_chapter_wc * 1.5:
-                pacing_notes.append(
-                    f"Chapter '{ch.title}' (#{ch.order_index}) is significantly longer than average."
-                )
+                pacing_notes.append(f"Chapter '{ch.title}' (#{ch.order_index}) is significantly longer than average.")
 
     return ManuscriptAnalysis(
         book_id=book_id,
@@ -1251,6 +1250,7 @@ async def analyze_manuscript(
 # ---------------------------------------------------------------------------
 # Outline generation
 # ---------------------------------------------------------------------------
+
 
 async def generate_outline(
     db: AsyncSession,
@@ -1283,11 +1283,9 @@ async def generate_outline(
     except json.JSONDecodeError:
         # Try to extract JSON from markdown code blocks
         import re
+
         json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
-        if json_match:
-            data = json.loads(json_match.group(1))
-        else:
-            data = {"chapters": [], "summary": raw}
+        data = json.loads(json_match.group(1)) if json_match else {"chapters": [], "summary": raw}
 
     chapters = [
         OutlineChapter(
@@ -1366,11 +1364,9 @@ async def generate_outline_standalone(
         data = json.loads(raw)
     except json.JSONDecodeError:
         import re as _re
+
         json_match = _re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, _re.DOTALL)
-        if json_match:
-            data = json.loads(json_match.group(1))
-        else:
-            data = {"chapters": [], "synopsis": raw}
+        data = json.loads(json_match.group(1)) if json_match else {"chapters": [], "synopsis": raw}
 
     chapters = [
         ChapterOutline(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid as _uuid
+from typing import cast
 from uuid import UUID
 
 import boto3
@@ -44,7 +45,7 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> KnowledgeService:
 
 
 def _org_id(current_user: dict) -> UUID:
-    return current_user["org_id"]
+    return cast("UUID", current_user["org_id"])
 
 
 # ── Full-text search ─────────────────────────────────────────────
@@ -52,6 +53,7 @@ def _org_id(current_user: dict) -> UUID:
 # registered before the parameterised /{entry_id} routes.  FastAPI matches
 # top-to-bottom, so a GET /tags would otherwise be captured by
 # GET /{entry_id} and fail UUID validation with a 422.
+
 
 @router.post(
     "/search",
@@ -81,6 +83,7 @@ async def search_entries(
 
 # ── Import ───────────────────────────────────────────────────────
 
+
 @router.post(
     "/import",
     response_model=ImportResponse,
@@ -102,7 +105,7 @@ async def import_entry(
             extract_facts=payload.extract_facts,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return ImportResponse(
         entry_id=entry.id,
@@ -114,6 +117,7 @@ async def import_entry(
 
 
 # ── Import from URL (simplified) ─────────────────────────────────
+
 
 @router.post(
     "/import-url",
@@ -135,9 +139,9 @@ async def import_from_url(
             extract_facts=True,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch URL: {exc}")
+        raise HTTPException(status_code=502, detail=f"Failed to fetch URL: {exc}") from exc
 
     return ImportResponse(
         entry_id=entry.id,
@@ -149,6 +153,7 @@ async def import_from_url(
 
 
 # ── Tags ─────────────────────────────────────────────────────────
+
 
 @router.get(
     "/tags",
@@ -165,6 +170,7 @@ async def list_tags(
 
 # ── AI Suggestions ───────────────────────────────────────────────
 
+
 @router.get(
     "/suggestions",
     response_model=SuggestionsResponse,
@@ -180,6 +186,7 @@ async def get_suggestions(
 
 
 # ── Create ───────────────────────────────────────────────────────
+
 
 @router.post(
     "",
@@ -198,6 +205,7 @@ async def create_entry(
 
 
 # ── List (paginated, filterable) ─────────────────────────────────
+
 
 @router.get(
     "",
@@ -232,6 +240,7 @@ async def list_entries(
 
 # ── Get detail ───────────────────────────────────────────────────
 
+
 @router.get(
     "/{entry_id}",
     response_model=KnowledgeEntryResponse,
@@ -250,6 +259,7 @@ async def get_entry(
 
 
 # ── Update ───────────────────────────────────────────────────────
+
 
 @router.put(
     "/{entry_id}",
@@ -271,6 +281,7 @@ async def update_entry(
 
 # ── Delete (soft) ────────────────────────────────────────────────
 
+
 @router.delete(
     "/{entry_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -288,6 +299,7 @@ async def delete_entry(
 
 
 # ── Summarize ────────────────────────────────────────────────────
+
 
 @router.post(
     "/{entry_id}/summarize",
@@ -359,9 +371,9 @@ async def upload_attachment(
             Body=content,
             ContentType=mime_type,
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("Failed to upload attachment to S3")
-        raise HTTPException(status_code=502, detail="Failed to upload file to storage")
+        raise HTTPException(status_code=502, detail="Failed to upload file to storage") from exc
 
     # Generate a presigned download URL
     file_url = s3.generate_presigned_url(
@@ -474,6 +486,7 @@ async def delete_attachment(
 
 
 # ── Helpers ──────────────────────────────────────────────────────
+
 
 def _entry_response(entry) -> dict:
     """Convert a KnowledgeEntry ORM instance to a response dict."""

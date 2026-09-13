@@ -4,11 +4,10 @@ Tests for core infrastructure modules.
 Covers: security (JWT + password hashing), exceptions, pagination,
 error_handler, middleware, logging sanitization, and versioning.
 """
+
 from __future__ import annotations
 
-import time
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -25,9 +24,8 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.logging import sanitize
-from app.core.pagination import CursorParams, PaginatedResponse, get_pagination_params
+from app.core.pagination import CursorParams, PaginatedResponse
 from app.core.security import (
-    ALGORITHM,
     create_access_token,
     create_refresh_token,
     decode_token,
@@ -35,7 +33,6 @@ from app.core.security import (
     verify_password,
 )
 from app.core.versioning import APIVersion, extract_version
-
 
 # ---------------------------------------------------------------------------
 # 1. Security — JWT token creation and validation
@@ -65,9 +62,7 @@ class TestJWTTokens:
 
     def test_access_token_custom_expiry(self):
         """Custom expiration delta is respected."""
-        token = create_access_token(
-            {"sub": "user1"}, expires_delta=timedelta(minutes=5)
-        )
+        token = create_access_token({"sub": "user1"}, expires_delta=timedelta(minutes=5))
         payload = decode_token(token)
         assert payload["sub"] == "user1"
 

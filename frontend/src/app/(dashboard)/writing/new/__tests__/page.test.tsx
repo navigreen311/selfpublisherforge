@@ -37,6 +37,10 @@ jest.mock("next/link", () => {
 
 // Mock lucide-react icons
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   ArrowLeft: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="icon-arrow-left" {...props} />
   ),
@@ -105,8 +109,8 @@ jest.mock("@radix-ui/react-select", () => {
     HTMLButtonElement,
     { children: React.ReactNode; className?: string; id?: string; [key: string]: unknown }
   >(({ children, className, ...props }, ref) => (
-    <button ref={ref} className={className} {...props}>
-      {children}
+    <button ref={ref} className={className as string} {...props}>
+      {children as React.ReactNode}
     </button>
   ));
   MockTrigger.displayName = "SelectTrigger";
@@ -193,6 +197,24 @@ jest.mock("@radix-ui/react-select", () => {
 
 // Mock Radix Slot so that Button asChild renders correctly
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -298,7 +320,7 @@ describe("NewManuscriptPage", () => {
   it("renders the genre selection field", () => {
     render(<NewManuscriptPage />);
 
-    expect(screen.getByText(/genre/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/genre/i)).toBeInTheDocument();
   });
 
   // -----------------------------------------------------------------------

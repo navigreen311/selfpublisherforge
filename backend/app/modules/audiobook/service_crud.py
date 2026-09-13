@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from sqlalchemy.orm import selectinload
 from app.models.audiobook import AudiobookChapter, AudiobookProject
 from app.models.content import Chapter, Manuscript
 from app.models.project import Book, Project
+from app.modules.ai_writing.tiptap_converter import tiptap_to_text
 
 logger = logging.getLogger(__name__)
 
@@ -99,13 +101,14 @@ async def create_project(
         chapters = list(ch_result.scalars().all())
 
         for ch in chapters:
-            word_count = ch.word_count or (len(ch.content.split()) if ch.content else 0)
+            source_text = tiptap_to_text(ch.content)
+            word_count = ch.word_count or len(source_text.split())
             ab_chapter = AudiobookChapter(
                 audiobook_project_id=project.id,
                 chapter_id=ch.id,
                 chapter_number=ch.order_index + 1,
                 chapter_title=ch.title,
-                source_text=ch.content or "",
+                source_text=source_text,
                 word_count=word_count,
                 status="pending",
             )
@@ -271,6 +274,7 @@ async def delete_project(
 
 # Create from Wizard
 
+
 async def create_project_from_wizard(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -299,9 +303,7 @@ async def create_project_from_wizard(
     result = await db.execute(manuscript_stmt)
     manuscript = result.scalar_one_or_none()
     if not manuscript:
-        raise ValueError(
-            f"Manuscript {manuscript_id} not found or does not belong to this org"
-        )
+        raise ValueError(f"Manuscript {manuscript_id} not found or does not belong to this org")
 
     book = manuscript.book
 
@@ -364,13 +366,14 @@ async def create_project_from_wizard(
     chapter_count = 0
 
     for ch in chapters:
-        word_count = ch.word_count or (len(ch.content.split()) if ch.content else 0)
+        source_text = tiptap_to_text(ch.content)
+        word_count = ch.word_count or len(source_text.split())
         ab_chapter = AudiobookChapter(
             audiobook_project_id=project.id,
             chapter_id=ch.id,
             chapter_number=ch.order_index + 1,
             chapter_title=ch.title,
-            source_text=ch.content or "",
+            source_text=source_text,
             word_count=word_count,
             status="pending",
         )
@@ -380,9 +383,7 @@ async def create_project_from_wizard(
 
     base_cost_per_1000_words = 0.10
     estimated_cost = (
-        (total_word_count / 1000.0)
-        * base_cost_per_1000_words
-        * tier_config["cost_multiplier"]
+        (total_word_count / 1000.0) * base_cost_per_1000_words * cast("float", tier_config["cost_multiplier"])
     )
     if budget and estimated_cost > budget:
         logger.warning(
@@ -407,29 +408,42 @@ async def create_project_from_wizard(
 
 # Stats
 
+
 async def get_audiobook_stats(
     db: AsyncSession,
     org_id: uuid.UUID,
 ) -> dict:
-    total_stmt = select(func.count()).select_from(AudiobookProject).where(
-        AudiobookProject.org_id == org_id,
-        AudiobookProject.deleted_at.is_(None),
+    total_stmt = (
+        select(func.count())
+        .select_from(AudiobookProject)
+        .where(
+            AudiobookProject.org_id == org_id,
+            AudiobookProject.deleted_at.is_(None),
+        )
     )
     total_projects = (await db.execute(total_stmt)).scalar() or 0
 
     in_progress_statuses = ["configuring", "generating", "reviewing", "mastering"]
-    in_progress_stmt = select(func.count()).select_from(AudiobookProject).where(
-        AudiobookProject.org_id == org_id,
-        AudiobookProject.status.in_(in_progress_statuses),
-        AudiobookProject.deleted_at.is_(None),
+    in_progress_stmt = (
+        select(func.count())
+        .select_from(AudiobookProject)
+        .where(
+            AudiobookProject.org_id == org_id,
+            AudiobookProject.status.in_(in_progress_statuses),
+            AudiobookProject.deleted_at.is_(None),
+        )
     )
     in_progress = (await db.execute(in_progress_stmt)).scalar() or 0
 
     completed_statuses = ["complete", "published"]
-    completed_stmt = select(func.count()).select_from(AudiobookProject).where(
-        AudiobookProject.org_id == org_id,
-        AudiobookProject.status.in_(completed_statuses),
-        AudiobookProject.deleted_at.is_(None),
+    completed_stmt = (
+        select(func.count())
+        .select_from(AudiobookProject)
+        .where(
+            AudiobookProject.org_id == org_id,
+            AudiobookProject.status.in_(completed_statuses),
+            AudiobookProject.deleted_at.is_(None),
+        )
     )
     completed = (await db.execute(completed_stmt)).scalar() or 0
 
@@ -448,6 +462,7 @@ async def get_audiobook_stats(
 
 
 # Pause/Resume
+
 
 async def pause_project(
     db: AsyncSession,

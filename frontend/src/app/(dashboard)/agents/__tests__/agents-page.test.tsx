@@ -34,18 +34,28 @@ jest.mock("@/modules/agents/hooks", () => ({
   useTasks: (...args: unknown[]) => mockUseTasks(...args),
   useBudgets: (...args: unknown[]) => mockUseBudgets(...args),
   useEmergencyStop: (...args: unknown[]) => mockUseEmergencyStop(...args),
+  useAgentUsage: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useCreateTask: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useConfigureAgent: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useCreateCustomAgent: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock AgentCard to a simple stub
-jest.mock("@/modules/agents/components/AgentCard", () => ({
-  AgentCard: ({
+jest.mock("@/modules/agents/components/EnhancedAgentCard", () => ({
+  EnhancedAgentCard: ({
     agent,
-    onCreateTask,
+    onNewTask,
     onConfigure,
   }: {
-    agent: { id: string; name: string; agent_type: string; is_enabled: boolean; permission_level: string };
-    onCreateTask: (agent: unknown) => void;
-    onConfigure: (agent: unknown) => void;
+    agent: {
+      id: string;
+      name: string;
+      agent_type: string;
+      is_enabled: boolean;
+      permission_level: string;
+    };
+    onNewTask: () => void;
+    onConfigure: () => void;
   }) => (
     <div data-testid={`agent-card-${agent.id}`}>
       <span>{agent.name}</span>
@@ -54,41 +64,38 @@ jest.mock("@/modules/agents/components/AgentCard", () => ({
         {agent.is_enabled ? "enabled" : "disabled"}
       </span>
       <span data-testid={`agent-permission-${agent.id}`}>{agent.permission_level}</span>
-      <button data-testid={`create-task-${agent.id}`} onClick={() => onCreateTask(agent)}>
+      <button data-testid={`create-task-${agent.id}`} onClick={onNewTask}>
         New Task
       </button>
-      <button data-testid={`configure-${agent.id}`} onClick={() => onConfigure(agent)}>
+      <button data-testid={`configure-${agent.id}`} onClick={onConfigure}>
         Configure
       </button>
     </div>
   ),
 }));
 
-// Mock TaskList
-jest.mock("@/modules/agents/components/TaskList", () => ({
-  TaskList: ({ tasks }: { tasks: Array<{ id: string; title: string; status: string }> }) => (
-    <div data-testid="task-list">
-      {tasks.length === 0 ? (
-        <span>No tasks found.</span>
-      ) : (
-        tasks.map((t) => (
-          <div key={t.id} data-testid={`task-${t.id}`}>
-            <span>{t.title}</span>
-            <span>{t.status}</span>
-          </div>
-        ))
-      )}
+jest.mock("@/modules/agents/components/AgentStatsBar", () => ({
+  AgentStatsBar: ({
+    stats,
+    isLoading,
+  }: {
+    stats?: { total_tasks: number; total_cost: number };
+    isLoading: boolean;
+  }) => (
+    <div data-testid="agent-stats-bar">
+      {isLoading ? "loading" : `${stats?.total_tasks ?? 0} tasks / $${stats?.total_cost ?? 0}`}
     </div>
   ),
 }));
 
-// Mock BudgetMeter
-jest.mock("@/modules/agents/components/BudgetMeter", () => ({
-  BudgetMeter: ({ budget, agentName }: { budget: { id: string }; agentName: string }) => (
-    <div data-testid={`budget-meter-${budget.id}`}>
-      <span>{agentName}</span>
-    </div>
-  ),
+jest.mock("@/modules/agents/components/NewTaskModal", () => ({
+  NewTaskModal: ({ open, agentId }: { open: boolean; agentId?: string }) =>
+    open ? <div data-testid="new-task-modal">{agentId}</div> : null,
+}));
+
+jest.mock("@/modules/agents/components/ConfigureAgentPanel", () => ({
+  ConfigureAgentPanel: ({ open, agent }: { open: boolean; agent?: { id: string } | null }) =>
+    open ? <div data-testid="configure-panel">{agent?.id}</div> : null,
 }));
 
 // Mock Skeleton
@@ -313,34 +320,28 @@ describe("AgentDashboardPage", () => {
   });
 
   // 4. Uses router.push (NOT window.location.href) for navigation
-  it("uses router.push for task creation navigation, not window.location", async () => {
+  it("opens the new-task modal for the chosen agent", async () => {
     const user = userEvent.setup();
     setDefaultMocks();
     renderWithProviders(<AgentDashboardPage />);
 
-    const createTaskBtn = screen.getByTestId("create-task-agent-1");
-    await user.click(createTaskBtn);
+    expect(screen.queryByTestId("new-task-modal")).not.toBeInTheDocument();
 
-    expect(mockPush).toHaveBeenCalledWith(
-      "/agents/tasks?create=true&agent_id=agent-1"
-    );
-    // Verify window.location.href was NOT used
-    expect(window.location.href).not.toBe(
-      "/agents/tasks?create=true&agent_id=agent-1"
-    );
+    await user.click(screen.getByTestId("create-task-agent-1"));
+
+    expect(await screen.findByTestId("new-task-modal")).toHaveTextContent("agent-1");
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it("uses router.push for agent configuration navigation", async () => {
+  it("opens the configure panel for the chosen agent", async () => {
     const user = userEvent.setup();
     setDefaultMocks();
     renderWithProviders(<AgentDashboardPage />);
 
-    const configBtn = screen.getByTestId("configure-agent-1");
-    await user.click(configBtn);
+    await user.click(screen.getByTestId("configure-agent-1"));
 
-    expect(mockPush).toHaveBeenCalledWith(
-      "/agents/settings?agent_id=agent-1"
-    );
+    expect(await screen.findByTestId("configure-panel")).toHaveTextContent("agent-1");
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   // 5. Task list renders
@@ -363,19 +364,11 @@ describe("AgentDashboardPage", () => {
   });
 
   // 6. Workflow section accessible (Budget section as a proxy for dashboard sections)
-  it("renders budget overview section when budgets are available", () => {
+  it("renders the agent usage stats bar", () => {
     setDefaultMocks();
     renderWithProviders(<AgentDashboardPage />);
 
-    expect(screen.getByText("Budget Overview")).toBeInTheDocument();
-    expect(screen.getByTestId("budget-meter-budget-1")).toBeInTheDocument();
-  });
-
-  it("does not render budget section when no budgets exist", () => {
-    setDefaultMocks({ budgets: { items: [] } });
-    renderWithProviders(<AgentDashboardPage />);
-
-    expect(screen.queryByText("Budget Overview")).not.toBeInTheDocument();
+    expect(screen.getByTestId("agent-stats-bar")).toBeInTheDocument();
   });
 
   // 7. Emergency stop button present
@@ -485,12 +478,4 @@ describe("AgentDashboardPage", () => {
     expect(screen.queryByTestId("agent-card-agent-1")).not.toBeInTheDocument();
   });
 
-  it("maps agent names correctly for budget display", () => {
-    setDefaultMocks();
-    renderWithProviders(<AgentDashboardPage />);
-
-    // Budget for agent-1 should show "Research Agent"
-    const budgetMeter = screen.getByTestId("budget-meter-budget-1");
-    expect(within(budgetMeter).getByText("Research Agent")).toBeInTheDocument();
-  });
 });

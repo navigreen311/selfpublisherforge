@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import base64
 import uuid
-from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,7 +25,6 @@ from app.modules.analytics.royalty_importer import (
     parse_kdp_csv,
 )
 from app.modules.analytics.schemas import Platform
-
 
 # ---------- Helper function tests ----------
 
@@ -215,11 +213,7 @@ class TestParseKdpCsv:
         assert len(records) == 0
 
     def test_missing_title_skipped(self):
-        csv_text = (
-            "Title,ASIN,Units Sold,Royalty\n"
-            ",B012345678,100,6.99\n"
-            "Valid Book,B098765432,50,4.99\n"
-        )
+        csv_text = "Title,ASIN,Units Sold,Royalty\n" ",B012345678,100,6.99\n" "Valid Book,B098765432,50,4.99\n"
         records = parse_kdp_csv(csv_text)
         assert len(records) == 1
         assert records[0]["title"] == "Valid Book"
@@ -235,8 +229,7 @@ class TestParseKdpCsv:
 
     def test_format_inference(self):
         csv_text = (
-            "Title,ASIN,Royalty Type,Units Sold,Royalty,Currency\n"
-            "My Book,B012345678,Kindle Edition,100,6.99,USD\n"
+            "Title,ASIN,Royalty Type,Units Sold,Royalty,Currency\n" "My Book,B012345678,Kindle Edition,100,6.99,USD\n"
         )
         records = parse_kdp_csv(csv_text)
         assert records[0]["format_type"] == "ebook"
@@ -352,10 +345,7 @@ class TestImportRoyalties:
     @pytest.mark.asyncio
     async def test_import_plain_text_csv(self, mock_db, org_id):
         """Test that non-base64 text is handled gracefully."""
-        csv_text = (
-            "Title,ASIN,Units Sold,Royalty,Currency\n"
-            "My Book,B012345678,10,6.99,USD\n"
-        )
+        csv_text = "Title,ASIN,Units Sold,Royalty,Currency\n" "My Book,B012345678,10,6.99,USD\n"
         result = await import_royalties(mock_db, org_id, Platform.KDP, csv_text)
 
         assert result.records_imported == 1
@@ -363,10 +353,7 @@ class TestImportRoyalties:
 
     @pytest.mark.asyncio
     async def test_import_sets_batch_id(self, mock_db, org_id):
-        csv_text = (
-            "Title,ASIN,Units Sold,Royalty,Currency\n"
-            "Book A,B012345678,10,6.99,USD\n"
-        )
+        csv_text = "Title,ASIN,Units Sold,Royalty,Currency\n" "Book A,B012345678,10,6.99,USD\n"
         encoded = base64.b64encode(csv_text.encode()).decode()
 
         result = await import_royalties(mock_db, org_id, Platform.KDP, encoded)

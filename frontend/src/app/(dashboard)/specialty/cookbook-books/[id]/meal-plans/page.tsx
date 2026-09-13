@@ -14,7 +14,7 @@ import {
   useCookbook,
   useMealPlans,
   useChapterRecipes,
-  useSaveMealPlan,
+  useCreateMealPlan,
 } from "@/modules/specialty/cookbook/hooks";
 
 export default function MealPlansPage() {
@@ -24,14 +24,16 @@ export default function MealPlansPage() {
   const { data: cookbook, isLoading: loadingCookbook } = useCookbook(cookbookId);
   const { data: recipes, isLoading: loadingRecipes } = useChapterRecipes(cookbookId);
   const { data: mealPlans } = useMealPlans(cookbookId);
-  const saveMutation = useSaveMealPlan(cookbookId);
+  const saveMutation = useCreateMealPlan(cookbookId);
 
   const [activeTab, setActiveTab] = useState("builder");
   const [shoppingItems, setShoppingItems] = useState<ShoppingListItem[]>([]);
 
   const handleSave = useCallback(
     (plan: { title: string; type: string; calorieTarget: number; weeks: unknown }) => {
-      saveMutation.mutate(plan);
+      // The API takes title/plan_type/description; the wizard's calorie target
+      // and week layout have no field on CookbookMealPlan yet.
+      saveMutation.mutate({ title: plan.title, plan_type: plan.type });
     },
     [saveMutation],
   );
@@ -134,7 +136,7 @@ export default function MealPlansPage() {
                     <CardHeader className="pb-2"><CardTitle className="text-base">{plan.title}</CardTitle></CardHeader>
                     <CardContent className="space-y-1 text-sm text-muted-foreground">
                       <p>{"Type: " + plan.plan_type}</p>
-                      <p>{"Target: " + plan.calorie_target + " cal/day"}</p>
+                      <p>{"Target: " + plan.total_calories_target + " cal/day"}</p>
                       <p className="text-xs">{"Created " + new Date(plan.created_at).toLocaleDateString()}</p>
                     </CardContent>
                   </Card>

@@ -1,4 +1,5 @@
 """PublishingAccount, Listing, UploadValidation, ComplianceScan, and PricingRule models."""
+
 import enum
 import uuid
 from datetime import datetime
@@ -20,8 +21,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
 
-# Import canonical PricingRule from the pricing_automation module
-from app.modules.pricing_automation.models import PricingRule  # noqa: F401
+# Import canonical PricingRule from the pricing_automation module.
+# Re-exported: app/models/__init__.py imports it from here.
+from app.modules.pricing_automation.models import PricingRule
 
 
 class PublishingPlatform(str, enum.Enum):
@@ -69,6 +71,10 @@ class RiskLevel(str, enum.Enum):
 class PublishingAccount(TenantModel):
     __tablename__ = "publishing_accounts"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     platform: Mapped[PublishingPlatform] = mapped_column(
         SAEnum(PublishingPlatform, name="publishing_platform", create_constraint=True),
         nullable=False,
@@ -83,7 +89,8 @@ class PublishingAccount(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="publishing_accounts",
+        "Organization",
+        back_populates="publishing_accounts",
         primaryjoin="PublishingAccount.org_id == Organization.id",
         foreign_keys="[PublishingAccount.org_id]",
     )
@@ -117,9 +124,7 @@ class Listing(BaseModel):
         server_default="draft",
     )
     listing_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
-    last_synced: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    last_synced: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     # Relationships
     book = relationship("Book", back_populates="listings")
@@ -197,3 +202,18 @@ class ComplianceScan(BaseModel):
         Index("ix_compliance_scans_findings_gin", "findings", postgresql_using="gin"),
         Index("ix_compliance_scans_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
+
+
+__all__ = [
+    "ComplianceScan",
+    "Listing",
+    "ListingStatus",
+    "PricingRule",
+    "PublishingAccount",
+    "PublishingAccountStatus",
+    "PublishingPlatform",
+    "RiskLevel",
+    "ScanType",
+    "UploadValidation",
+    "ValidationType",
+]

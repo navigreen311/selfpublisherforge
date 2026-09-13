@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
 from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 
@@ -45,6 +44,7 @@ TIER_RATE_LIMITS = {
 # ---------------------------------------------------------------------------
 # Helpers -- tiny test app factory
 # ---------------------------------------------------------------------------
+
 
 def _build_app(
     *,
@@ -126,8 +126,8 @@ def mock_limiter():
 # Correlation ID Middleware
 # ===================================================================
 
-class TestCorrelationIdMiddleware:
 
+class TestCorrelationIdMiddleware:
     @pytest.mark.asyncio
     async def test_generates_correlation_id_when_absent(self):
         app = _build_app(correlation=True)
@@ -170,8 +170,8 @@ class TestCorrelationIdMiddleware:
 # Timing Middleware
 # ===================================================================
 
-class TestTimingMiddleware:
 
+class TestTimingMiddleware:
     @pytest.mark.asyncio
     async def test_adds_process_time_header(self):
         app = _build_app(timing=True, correlation=False)
@@ -197,8 +197,8 @@ class TestTimingMiddleware:
 # Request Logging Middleware
 # ===================================================================
 
-class TestRequestLoggingMiddleware:
 
+class TestRequestLoggingMiddleware:
     @pytest.mark.asyncio
     async def test_logging_middleware_logs_request(self):
         app = _build_app(logging=True, correlation=False)
@@ -214,8 +214,8 @@ class TestRequestLoggingMiddleware:
 # Rate Limit Middleware
 # ===================================================================
 
-class TestRateLimitMiddleware:
 
+class TestRateLimitMiddleware:
     @pytest.mark.asyncio
     async def test_rate_limit_headers_present(self, mock_limiter):
         """Rate-limit headers should appear on every response."""
@@ -262,8 +262,8 @@ class TestRateLimitMiddleware:
 # Logging module -- correlation ID context
 # ===================================================================
 
-class TestCorrelationIdContext:
 
+class TestCorrelationIdContext:
     def test_default_value_is_none(self):
         assert correlation_id_ctx.get() is None
 

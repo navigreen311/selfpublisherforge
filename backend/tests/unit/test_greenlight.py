@@ -1,27 +1,28 @@
 """Unit tests for the Greenlight ROI forecasting engine."""
-import pytest
+
 from datetime import datetime
 
+import pytest
+
 from app.modules.portfolio_economics.greenlight import (
-    calculate_greenlight,
-    _get_genre_data,
-    _estimate_market_size,
+    GENRE_MARKET_DATA,
     _calculate_capture_rate,
     _calculate_series_multiplier,
-    _identify_risk_factors,
-    _identify_opportunity_factors,
-    _generate_suggestions,
     _determine_confidence,
-    GENRE_MARKET_DATA,
+    _estimate_market_size,
+    _get_genre_data,
+    _identify_opportunity_factors,
+    _identify_risk_factors,
+    calculate_greenlight,
 )
 from app.modules.portfolio_economics.schemas import (
+    ConfidenceLevel,
     GreenlightRequest,
     GreenlightResult,
-    ConfidenceLevel,
 )
 
-
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def basic_request() -> GreenlightRequest:
@@ -87,6 +88,7 @@ def budget_request() -> GreenlightRequest:
 
 # ─── Genre Data Tests ────────────────────────────────────────────────────────
 
+
 class TestGetGenreData:
     def test_known_genre_returns_data(self):
         data = _get_genre_data("romance")
@@ -104,7 +106,7 @@ class TestGetGenreData:
         assert data1 == data2
 
     def test_all_genres_have_required_fields(self):
-        for genre, data in GENRE_MARKET_DATA.items():
+        for _genre, data in GENRE_MARKET_DATA.items():
             assert "monthly_searches" in data
             assert "avg_price" in data
             assert "competition" in data
@@ -112,6 +114,7 @@ class TestGetGenreData:
 
 
 # ─── Market Size Estimation Tests ─────────────────────────────────────────────
+
 
 class TestEstimateMarketSize:
     def test_uses_user_provided_estimate(self, basic_request):
@@ -133,6 +136,7 @@ class TestEstimateMarketSize:
 
 
 # ─── Capture Rate Tests ──────────────────────────────────────────────────────
+
 
 class TestCalculateCaptureRate:
     def test_base_capture_rate(self, basic_request):
@@ -188,6 +192,7 @@ class TestCalculateCaptureRate:
 
 # ─── Series Multiplier Tests ─────────────────────────────────────────────────
 
+
 class TestCalculateSeriesMultiplier:
     def test_non_series_returns_1(self, basic_request):
         assert _calculate_series_multiplier(basic_request) == 1.0
@@ -231,6 +236,7 @@ class TestCalculateSeriesMultiplier:
 
 # ─── Risk Factor Tests ───────────────────────────────────────────────────────
 
+
 class TestIdentifyRiskFactors:
     def test_high_competition_risk(self, basic_request):
         genre_data = _get_genre_data("romance")  # High competition
@@ -270,6 +276,7 @@ class TestIdentifyRiskFactors:
 
 # ─── Opportunity Factor Tests ────────────────────────────────────────────────
 
+
 class TestIdentifyOpportunityFactors:
     def test_series_opportunity(self, series_request):
         genre_data = _get_genre_data(series_request.genre)
@@ -295,6 +302,7 @@ class TestIdentifyOpportunityFactors:
 
 # ─── Confidence Tests ────────────────────────────────────────────────────────
 
+
 class TestDetermineConfidence:
     def test_low_confidence_no_data(self, basic_request):
         assert _determine_confidence(basic_request) == ConfidenceLevel.LOW
@@ -312,6 +320,7 @@ class TestDetermineConfidence:
 
 # ─── Full Greenlight Calculation Tests ────────────────────────────────────────
 
+
 class TestCalculateGreenlight:
     def test_returns_greenlight_result(self, basic_request):
         result = calculate_greenlight(basic_request)
@@ -324,7 +333,10 @@ class TestCalculateGreenlight:
         assert 0 <= result.greenlight_score <= 100
         assert result.recommendation in ("go", "caution", "no-go")
         assert result.estimated_market_size > 0
-        assert result.total_investment == basic_request.estimated_production_cost + basic_request.estimated_marketing_budget
+        assert (
+            result.total_investment
+            == basic_request.estimated_production_cost + basic_request.estimated_marketing_budget
+        )
         assert isinstance(result.calculated_at, datetime)
 
     def test_roi_formula_correctness(self, basic_request):

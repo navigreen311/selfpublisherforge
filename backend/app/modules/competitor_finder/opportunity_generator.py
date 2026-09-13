@@ -3,6 +3,7 @@
 Given weakness data from review analysis, generates a comprehensive blueprint
 for how to write a better competing book.
 """
+
 from __future__ import annotations
 
 import logging
@@ -109,9 +110,7 @@ def _generate_rule_based_blueprint(
             f"there is a {'strong' if opportunity_score > 0.7 else 'moderate' if opportunity_score > 0.4 else 'limited'} "
             f"opportunity to create a superior competing book."
         ),
-        "key_actions": [
-            s.suggestion for s in weaknesses[:5] if s.suggestion
-        ],
+        "key_actions": [s.suggestion for s in weaknesses[:5] if s.suggestion],
     }
 
     return OpportunityBlueprintData(
@@ -134,15 +133,9 @@ def _generate_title_suggestions(
     """Generate title improvement suggestions based on competitor weaknesses."""
     suggestions = []
 
-    has_content_issues = any(
-        w.category == WeaknessCategory.CONTENT_QUALITY for w in weaknesses
-    )
-    has_coverage_gaps = any(
-        w.category == WeaknessCategory.COVERAGE_GAPS for w in weaknesses
-    )
-    has_missing_features = any(
-        w.category == WeaknessCategory.MISSING_FEATURES for w in weaknesses
-    )
+    has_content_issues = any(w.category == WeaknessCategory.CONTENT_QUALITY for w in weaknesses)
+    has_coverage_gaps = any(w.category == WeaknessCategory.COVERAGE_GAPS for w in weaknesses)
+    has_missing_features = any(w.category == WeaknessCategory.MISSING_FEATURES for w in weaknesses)
 
     if has_content_issues:
         suggestions.append(
@@ -151,13 +144,11 @@ def _generate_title_suggestions(
         )
     if has_coverage_gaps:
         suggestions.append(
-            "Use a title that signals comprehensive coverage, e.g., "
-            "'Everything You Need to Know About...'"
+            "Use a title that signals comprehensive coverage, e.g., " "'Everything You Need to Know About...'"
         )
     if has_missing_features:
         suggestions.append(
-            "Highlight bonus materials in subtitle, e.g., "
-            "'...with Workbook, Templates & Online Resources'"
+            "Highlight bonus materials in subtitle, e.g., " "'...with Workbook, Templates & Online Resources'"
         )
 
     if not suggestions:
@@ -175,19 +166,12 @@ def _build_content_strategy(weaknesses: list[WeaknessSignalCreate]) -> dict:
     unique_angles: list[str] = []
     depth_level = "intermediate"
 
-    content_weaknesses = [
-        w for w in weaknesses if w.category == WeaknessCategory.CONTENT_QUALITY
-    ]
-    coverage_weaknesses = [
-        w for w in weaknesses if w.category == WeaknessCategory.COVERAGE_GAPS
-    ]
+    content_weaknesses = [w for w in weaknesses if w.category == WeaknessCategory.CONTENT_QUALITY]
+    coverage_weaknesses = [w for w in weaknesses if w.category == WeaknessCategory.COVERAGE_GAPS]
 
     if content_weaknesses:
         key_topics.append("In-depth, well-researched content addressing reader complaints")
-        unique_angles.append(
-            "Provide original research, case studies, or expert interviews "
-            "that competitors lack"
-        )
+        unique_angles.append("Provide original research, case studies, or expert interviews " "that competitors lack")
         # If content is shallow, go deeper
         if any("shallow" in w.signal_text.lower() for w in content_weaknesses):
             depth_level = "advanced"
@@ -212,12 +196,8 @@ def _build_format_recommendations(weaknesses: list[WeaknessSignalCreate]) -> lis
     """Build format recommendations from format/layout weaknesses."""
     recs: list[str] = []
 
-    format_weaknesses = [
-        w for w in weaknesses if w.category == WeaknessCategory.FORMAT_LAYOUT
-    ]
-    feature_weaknesses = [
-        w for w in weaknesses if w.category == WeaknessCategory.MISSING_FEATURES
-    ]
+    format_weaknesses = [w for w in weaknesses if w.category == WeaknessCategory.FORMAT_LAYOUT]
+    feature_weaknesses = [w for w in weaknesses if w.category == WeaknessCategory.MISSING_FEATURES]
 
     if format_weaknesses:
         recs.append("Invest in professional formatting for all platforms (Kindle, print, PDF)")
@@ -235,13 +215,9 @@ def _build_format_recommendations(weaknesses: list[WeaknessSignalCreate]) -> lis
     return recs
 
 
-def _build_pricing_strategy(
-    weaknesses: list[WeaknessSignalCreate], current_price: float | None
-) -> dict:
+def _build_pricing_strategy(weaknesses: list[WeaknessSignalCreate], current_price: float | None) -> dict:
     """Build pricing strategy based on competitor weaknesses and price."""
-    pricing_weaknesses = [
-        w for w in weaknesses if w.category == WeaknessCategory.PRICING
-    ]
+    pricing_weaknesses = [w for w in weaknesses if w.category == WeaknessCategory.PRICING]
 
     recommended_price = current_price
     rationale = "Price competitively while delivering superior value."
@@ -252,13 +228,11 @@ def _build_pricing_strategy(
         if any("expensive" in w.signal_text.lower() for w in pricing_weaknesses):
             recommended_price = round(current_price * 0.85, 2)
             rationale = (
-                "Price 10-15% below the competitor to capture value-conscious readers "
-                "who complained about pricing."
+                "Price 10-15% below the competitor to capture value-conscious readers " "who complained about pricing."
             )
         elif any("value" in w.signal_text.lower() for w in pricing_weaknesses):
             rationale = (
-                "Match or slightly exceed competitor price, but ensure clear "
-                "value proposition with bonus materials."
+                "Match or slightly exceed competitor price, but ensure clear " "value proposition with bonus materials."
             )
             bundle_suggestions.append("Include bonus workbook or templates to justify price")
             bundle_suggestions.append("Offer a bundle with audiobook for added value")
@@ -280,21 +254,11 @@ def _build_differentiators(weaknesses: list[WeaknessSignalCreate]) -> list[str]:
     diffs: list[str] = []
 
     category_actions: dict[WeaknessCategory, str] = {
-        WeaknessCategory.CONTENT_QUALITY: (
-            "Deeper, well-researched content with original insights and expert backing"
-        ),
-        WeaknessCategory.FORMAT_LAYOUT: (
-            "Professional formatting and design across all reading platforms"
-        ),
-        WeaknessCategory.MISSING_FEATURES: (
-            "Comprehensive bonus materials (workbook, templates, online resources)"
-        ),
-        WeaknessCategory.PRICING: (
-            "Better value proposition with competitive pricing and included extras"
-        ),
-        WeaknessCategory.COVERAGE_GAPS: (
-            "Complete topic coverage addressing gaps readers identified"
-        ),
+        WeaknessCategory.CONTENT_QUALITY: ("Deeper, well-researched content with original insights and expert backing"),
+        WeaknessCategory.FORMAT_LAYOUT: ("Professional formatting and design across all reading platforms"),
+        WeaknessCategory.MISSING_FEATURES: ("Comprehensive bonus materials (workbook, templates, online resources)"),
+        WeaknessCategory.PRICING: ("Better value proposition with competitive pricing and included extras"),
+        WeaknessCategory.COVERAGE_GAPS: ("Complete topic coverage addressing gaps readers identified"),
     }
 
     seen_categories: set[WeaknessCategory] = set()
@@ -310,9 +274,7 @@ def _build_differentiators(weaknesses: list[WeaknessSignalCreate]) -> list[str]:
     return diffs
 
 
-def _infer_target_audience(
-    weaknesses: list[WeaknessSignalCreate], book_category: str
-) -> str:
+def _infer_target_audience(weaknesses: list[WeaknessSignalCreate], book_category: str) -> str:
     """Infer the target audience from weakness patterns."""
     has_shallow_complaints = any(
         w.category == WeaknessCategory.CONTENT_QUALITY
@@ -332,9 +294,7 @@ def _infer_target_audience(
     )
 
 
-def _calculate_opportunity_score(
-    weaknesses: list[WeaknessSignalCreate], book_rating: float | None
-) -> float:
+def _calculate_opportunity_score(weaknesses: list[WeaknessSignalCreate], book_rating: float | None) -> float:
     """Calculate an opportunity score from 0.0 to 1.0.
 
     Higher score means greater opportunity to create a superior competitor.
@@ -349,14 +309,12 @@ def _calculate_opportunity_score(
         Severity.MEDIUM: 2,
         Severity.LOW: 1,
     }
-    total_severity = sum(
-        severity_weights.get(w.severity, 1) for w in weaknesses
-    )
+    total_severity = sum(severity_weights.get(w.severity, 1) for w in weaknesses)
     max_severity = len(weaknesses) * 4
     severity_factor = min(total_severity / max(max_severity, 1), 1.0) * 0.4
 
     # Factor 2: Category diversity (0 to 0.3) - weaknesses across more categories = bigger opp
-    unique_categories = len(set(w.category for w in weaknesses))
+    unique_categories = len({w.category for w in weaknesses})
     category_factor = min(unique_categories / 5.0, 1.0) * 0.3
 
     # Factor 3: Rating-based opportunity (0 to 0.3) - lower competitor rating = higher opp

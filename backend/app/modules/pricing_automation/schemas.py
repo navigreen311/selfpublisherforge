@@ -20,18 +20,13 @@ class PricingStrategyType(str, Enum):
     PROMOTIONAL = "promotional"
 
 
-class RuleStatus(str, Enum):
-    DRAFT = "draft"
-    ACTIVE = "active"
-    PAUSED = "paused"
-    ARCHIVED = "archived"
-
-
-class PromotionStatus(str, Enum):
-    SCHEDULED = "scheduled"
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+# Re-exported from the models layer rather than redeclared. Both copies had
+# identical members, but they were distinct types, so a router typed with the
+# schema enum could not be passed to a service typed with the model one.
+from app.modules.pricing_automation.models import (  # noqa: E402
+    PromotionStatus,
+    RuleStatus,
+)
 
 
 class ABTestStatus(str, Enum):
@@ -292,29 +287,21 @@ class KUCalculatorRequest(BaseModel):
     """Input for KU (Kindle Unlimited) vs. Wide distribution revenue calculator."""
 
     book_page_count: int = Field(..., ge=1, le=10000, description="KENPC page count")
-    estimated_ku_reads_per_month: int = Field(
-        ..., ge=0, description="Estimated full KU reads per month"
-    )
+    estimated_ku_reads_per_month: int = Field(..., ge=0, description="Estimated full KU reads per month")
     ku_page_rate: float = Field(
         default=0.0045,
         ge=0.0,
         description="KU per-page-read rate (KENP rate). Defaults to ~$0.0045.",
     )
-    wide_price: float = Field(
-        ..., ge=0.0, description="Price for wide distribution sales"
-    )
-    wide_monthly_sales: int = Field(
-        ..., ge=0, description="Estimated monthly unit sales in wide distribution"
-    )
+    wide_price: float = Field(..., ge=0.0, description="Price for wide distribution sales")
+    wide_monthly_sales: int = Field(..., ge=0, description="Estimated monthly unit sales in wide distribution")
     wide_royalty_rate: float = Field(
         default=0.70,
         ge=0.0,
         le=1.0,
         description="Royalty rate for wide distribution. Defaults to 70%.",
     )
-    amazon_price: float = Field(
-        ..., ge=0.0, description="Price on Amazon (when in KU)"
-    )
+    amazon_price: float = Field(..., ge=0.0, description="Price on Amazon (when in KU)")
     amazon_monthly_sales: int = Field(
         ..., ge=0, description="Estimated monthly unit sales on Amazon (paid, outside KU)"
     )

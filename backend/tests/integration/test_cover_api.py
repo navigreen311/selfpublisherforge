@@ -1,4 +1,5 @@
 """Integration tests for the Cover Design API endpoints."""
+
 from __future__ import annotations
 
 import uuid
@@ -308,9 +309,7 @@ class TestCoverVariations:
             "variation_count": 2,
             "variation_type": "color",
         }
-        response = await client.post(
-            f"/api/v1/covers/{cover_id}/variations", json=var_payload
-        )
+        response = await client.post(f"/api/v1/covers/{cover_id}/variations", json=var_payload)
         assert response.status_code == 201
         data = response.json()["data"]
         assert len(data) == 2
@@ -322,9 +321,7 @@ class TestCoverVariations:
     async def test_variations_for_nonexistent_cover(self, client: AsyncClient):
         fake_id = str(uuid.uuid4())
         payload = {"variation_count": 1, "variation_type": "style"}
-        response = await client.post(
-            f"/api/v1/covers/{fake_id}/variations", json=payload
-        )
+        response = await client.post(f"/api/v1/covers/{fake_id}/variations", json=payload)
         assert response.status_code == 404
 
 

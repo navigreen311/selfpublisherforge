@@ -66,9 +66,7 @@ async def move_task(
     return task
 
 
-async def add_checklist_item(
-    db: AsyncSession, task_id: uuid.UUID, label: str
-) -> PipelineTask | None:
+async def add_checklist_item(db: AsyncSession, task_id: uuid.UUID, label: str) -> PipelineTask | None:
     """Add an item to a task's checklist."""
     stmt = select(PipelineTask).where(
         PipelineTask.id == task_id,
@@ -80,21 +78,21 @@ async def add_checklist_item(
         return None
 
     checklist = list(task.checklist or [])
-    checklist.append({
-        "id": str(uuid.uuid4()),
-        "label": label,
-        "done": False,
-        "created_at": datetime.now(UTC).isoformat(),
-    })
+    checklist.append(
+        {
+            "id": str(uuid.uuid4()),
+            "label": label,
+            "done": False,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+    )
     task.checklist = checklist
     await db.flush()
     await db.refresh(task)
     return task
 
 
-async def update_checklist_item(
-    db: AsyncSession, task_id: uuid.UUID, item_id: str, done: bool
-) -> PipelineTask | None:
+async def update_checklist_item(db: AsyncSession, task_id: uuid.UUID, item_id: str, done: bool) -> PipelineTask | None:
     """Toggle a checklist item."""
     stmt = select(PipelineTask).where(
         PipelineTask.id == task_id,
@@ -116,9 +114,7 @@ async def update_checklist_item(
     return task
 
 
-async def delete_checklist_item(
-    db: AsyncSession, task_id: uuid.UUID, item_id: str
-) -> PipelineTask | None:
+async def delete_checklist_item(db: AsyncSession, task_id: uuid.UUID, item_id: str) -> PipelineTask | None:
     """Remove a checklist item."""
     stmt = select(PipelineTask).where(
         PipelineTask.id == task_id,

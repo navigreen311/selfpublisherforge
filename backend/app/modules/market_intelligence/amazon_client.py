@@ -24,8 +24,6 @@ from typing import Any
 
 import httpx
 
-logger = logging.getLogger(__name__)
-
 from app.modules.market_intelligence.schemas import (
     BSRHistoryPoint,
     CompetitorSummary,
@@ -33,9 +31,13 @@ from app.modules.market_intelligence.schemas import (
     TrendDirection,
 )
 
+logger = logging.getLogger(__name__)
+
+
 # ---------------------------------------------------------------------------
 # Abstract base
 # ---------------------------------------------------------------------------
+
 
 class AmazonClientBase(ABC):
     """Interface that every Amazon API adapter must implement."""
@@ -47,41 +49,29 @@ class AmazonClientBase(ABC):
         category_id: str | None = None,
         marketplace: str = "US",
         max_results: int = 20,
-    ) -> list[CompetitorSummary]:
-        ...
+    ) -> list[CompetitorSummary]: ...
 
     @abstractmethod
-    async def get_product_detail(
-        self, asin: str, marketplace: str = "US"
-    ) -> CompetitorSummary | None:
-        ...
+    async def get_product_detail(self, asin: str, marketplace: str = "US") -> CompetitorSummary | None: ...
 
     @abstractmethod
-    async def get_keyword_data(
-        self, keywords: list[str], marketplace: str = "US"
-    ) -> list[KeywordData]:
-        ...
+    async def get_keyword_data(self, keywords: list[str], marketplace: str = "US") -> list[KeywordData]: ...
 
     @abstractmethod
-    async def get_bsr_history(
-        self, asin: str, days: int = 90, marketplace: str = "US"
-    ) -> list[BSRHistoryPoint]:
-        ...
+    async def get_bsr_history(self, asin: str, days: int = 90, marketplace: str = "US") -> list[BSRHistoryPoint]: ...
 
     @abstractmethod
-    async def get_category_tree(
-        self, root_id: str | None = None, marketplace: str = "US"
-    ) -> list[dict]:
-        ...
+    async def get_category_tree(self, root_id: str | None = None, marketplace: str = "US") -> list[dict]: ...
 
 
 # ---------------------------------------------------------------------------
 # Deterministic seed helper
 # ---------------------------------------------------------------------------
 
+
 def _seed_from(text: str) -> int:
     """Return a stable integer seed from an arbitrary string."""
-    return int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+    return int(hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()[:8], 16)
 
 
 # ---------------------------------------------------------------------------
@@ -89,26 +79,62 @@ def _seed_from(text: str) -> int:
 # ---------------------------------------------------------------------------
 
 _SAMPLE_CATEGORIES = [
-    {"id": "154606011", "name": "Self-Help", "parent_id": None, "children": [
-        {"id": "11076", "name": "Motivational", "parent_id": "154606011", "children": [], "book_count": 4500},
-        {"id": "11077", "name": "Personal Transformation", "parent_id": "154606011", "children": [], "book_count": 3200},
-    ], "book_count": 18000},
-    {"id": "18574", "name": "Romance", "parent_id": None, "children": [
-        {"id": "18575", "name": "Contemporary Romance", "parent_id": "18574", "children": [], "book_count": 25000},
-        {"id": "18576", "name": "Historical Romance", "parent_id": "18574", "children": [], "book_count": 12000},
-    ], "book_count": 60000},
-    {"id": "10399", "name": "Mystery, Thriller & Suspense", "parent_id": None, "children": [
-        {"id": "10400", "name": "Mystery", "parent_id": "10399", "children": [], "book_count": 30000},
-        {"id": "10401", "name": "Thriller", "parent_id": "10399", "children": [], "book_count": 22000},
-    ], "book_count": 75000},
-    {"id": "4736", "name": "Science Fiction & Fantasy", "parent_id": None, "children": [
-        {"id": "4737", "name": "Science Fiction", "parent_id": "4736", "children": [], "book_count": 20000},
-        {"id": "4738", "name": "Fantasy", "parent_id": "4736", "children": [], "book_count": 28000},
-    ], "book_count": 55000},
-    {"id": "2549", "name": "Business & Money", "parent_id": None, "children": [
-        {"id": "2550", "name": "Entrepreneurship", "parent_id": "2549", "children": [], "book_count": 8000},
-        {"id": "2551", "name": "Investing", "parent_id": "2549", "children": [], "book_count": 6000},
-    ], "book_count": 35000},
+    {
+        "id": "154606011",
+        "name": "Self-Help",
+        "parent_id": None,
+        "children": [
+            {"id": "11076", "name": "Motivational", "parent_id": "154606011", "children": [], "book_count": 4500},
+            {
+                "id": "11077",
+                "name": "Personal Transformation",
+                "parent_id": "154606011",
+                "children": [],
+                "book_count": 3200,
+            },
+        ],
+        "book_count": 18000,
+    },
+    {
+        "id": "18574",
+        "name": "Romance",
+        "parent_id": None,
+        "children": [
+            {"id": "18575", "name": "Contemporary Romance", "parent_id": "18574", "children": [], "book_count": 25000},
+            {"id": "18576", "name": "Historical Romance", "parent_id": "18574", "children": [], "book_count": 12000},
+        ],
+        "book_count": 60000,
+    },
+    {
+        "id": "10399",
+        "name": "Mystery, Thriller & Suspense",
+        "parent_id": None,
+        "children": [
+            {"id": "10400", "name": "Mystery", "parent_id": "10399", "children": [], "book_count": 30000},
+            {"id": "10401", "name": "Thriller", "parent_id": "10399", "children": [], "book_count": 22000},
+        ],
+        "book_count": 75000,
+    },
+    {
+        "id": "4736",
+        "name": "Science Fiction & Fantasy",
+        "parent_id": None,
+        "children": [
+            {"id": "4737", "name": "Science Fiction", "parent_id": "4736", "children": [], "book_count": 20000},
+            {"id": "4738", "name": "Fantasy", "parent_id": "4736", "children": [], "book_count": 28000},
+        ],
+        "book_count": 55000,
+    },
+    {
+        "id": "2549",
+        "name": "Business & Money",
+        "parent_id": None,
+        "children": [
+            {"id": "2550", "name": "Entrepreneurship", "parent_id": "2549", "children": [], "book_count": 8000},
+            {"id": "2551", "name": "Investing", "parent_id": "2549", "children": [], "book_count": 6000},
+        ],
+        "book_count": 35000,
+    },
 ]
 
 
@@ -140,9 +166,7 @@ class MockAmazonClient(AmazonClientBase):
             )
         return results
 
-    async def get_product_detail(
-        self, asin: str, marketplace: str = "US"
-    ) -> CompetitorSummary | None:
+    async def get_product_detail(self, asin: str, marketplace: str = "US") -> CompetitorSummary | None:
         rng = random.Random(_seed_from(asin))
         return CompetitorSummary(
             asin=asin,
@@ -155,9 +179,7 @@ class MockAmazonClient(AmazonClientBase):
             image_url=f"https://placehold.co/200x300?text={asin}",
         )
 
-    async def get_keyword_data(
-        self, keywords: list[str], marketplace: str = "US"
-    ) -> list[KeywordData]:
+    async def get_keyword_data(self, keywords: list[str], marketplace: str = "US") -> list[KeywordData]:
         results: list[KeywordData] = []
         for kw in keywords:
             rng = random.Random(_seed_from(kw))
@@ -183,9 +205,7 @@ class MockAmazonClient(AmazonClientBase):
             )
         return results
 
-    async def get_bsr_history(
-        self, asin: str, days: int = 90, marketplace: str = "US"
-    ) -> list[BSRHistoryPoint]:
+    async def get_bsr_history(self, asin: str, days: int = 90, marketplace: str = "US") -> list[BSRHistoryPoint]:
         rng = random.Random(_seed_from(asin))
         base_bsr = rng.randint(1000, 100000)
         now = datetime.now(tz=UTC)
@@ -197,9 +217,7 @@ class MockAmazonClient(AmazonClientBase):
             points.append(BSRHistoryPoint(date=date, bsr=bsr, price=price))
         return points
 
-    async def get_category_tree(
-        self, root_id: str | None = None, marketplace: str = "US"
-    ) -> list[dict]:
+    async def get_category_tree(self, root_id: str | None = None, marketplace: str = "US") -> list[dict]:
         if root_id:
             for cat in _SAMPLE_CATEGORIES:
                 if cat["id"] == root_id:
@@ -254,6 +272,7 @@ _MARKETPLACE_REGIONS: dict[str, str] = {
 # Live PA-API 5.0 client
 # ---------------------------------------------------------------------------
 
+
 class LiveAmazonClient(AmazonClientBase):
     """Calls the Amazon Product Advertising API 5.0 over HTTPS.
 
@@ -296,13 +315,10 @@ class LiveAmazonClient(AmazonClientBase):
 
     def _get_signing_key(self, date_stamp: str, region: str) -> bytes:
         """Derive the AWS V4 signing key for the given date/region."""
-        k_date = self._hmac_sha256(
-            f"AWS4{self._secret_key}".encode(), date_stamp
-        )
+        k_date = self._hmac_sha256(f"AWS4{self._secret_key}".encode(), date_stamp)
         k_region = self._hmac_sha256(k_date, region)
         k_service = self._hmac_sha256(k_region, self._SERVICE)
-        k_signing = self._hmac_sha256(k_service, "aws4_request")
-        return k_signing
+        return self._hmac_sha256(k_service, "aws4_request")
 
     def _sign_request(
         self,
@@ -334,14 +350,7 @@ class LiveAmazonClient(AmazonClientBase):
         )
         signed_headers = "content-encoding;content-type;host;x-amz-date;x-amz-target"
 
-        canonical_request = (
-            f"POST\n"
-            f"{path}\n"
-            f"\n"
-            f"{canonical_headers}\n"
-            f"{signed_headers}\n"
-            f"{payload_hash}"
-        )
+        canonical_request = f"POST\n" f"{path}\n" f"\n" f"{canonical_headers}\n" f"{signed_headers}\n" f"{payload_hash}"
 
         # String to sign
         credential_scope = f"{date_stamp}/{region}/{self._SERVICE}/aws4_request"
@@ -354,9 +363,7 @@ class LiveAmazonClient(AmazonClientBase):
 
         # Signature
         signing_key = self._get_signing_key(date_stamp, region)
-        signature = hmac.new(
-            signing_key, string_to_sign.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(signing_key, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
 
         authorization = (
             f"AWS4-HMAC-SHA256 "
@@ -561,9 +568,7 @@ class LiveAmazonClient(AmazonClientBase):
 
         return all_items[:max_results]
 
-    async def get_product_detail(
-        self, asin: str, marketplace: str = "US"
-    ) -> CompetitorSummary | None:
+    async def get_product_detail(self, asin: str, marketplace: str = "US") -> CompetitorSummary | None:
         """Retrieve details for a single ASIN via PA-API GetItems.
 
         Args:
@@ -593,9 +598,7 @@ class LiveAmazonClient(AmazonClientBase):
             return None
         return self._parse_item(raw_items[0])
 
-    async def get_keyword_data(
-        self, keywords: list[str], marketplace: str = "US"
-    ) -> list[KeywordData]:
+    async def get_keyword_data(self, keywords: list[str], marketplace: str = "US") -> list[KeywordData]:
         """Estimate keyword metrics by issuing PA-API SearchItems for each keyword.
 
         PA-API does not expose search volume or CPC directly, so this method
@@ -637,11 +640,7 @@ class LiveAmazonClient(AmazonClientBase):
             # Average BSR of returned items can hint at demand.
             bsr_values = []
             for item in raw_items:
-                sr = (
-                    item.get("BrowseNodeInfo", {})
-                    .get("WebsiteSalesRank", {})
-                    .get("SalesRank")
-                )
+                sr = item.get("BrowseNodeInfo", {}).get("WebsiteSalesRank", {}).get("SalesRank")
                 if sr is not None:
                     bsr_values.append(sr)
             avg_bsr = sum(bsr_values) / len(bsr_values) if bsr_values else 0
@@ -656,9 +655,7 @@ class LiveAmazonClient(AmazonClientBase):
                     trend=TrendDirection.STABLE,
                     trend_data=[],
                     relevance_score=round(
-                        max(0.0, min(100.0, 100.0 - (avg_bsr / 2000.0)))
-                        if avg_bsr
-                        else 50.0,
+                        max(0.0, min(100.0, 100.0 - (avg_bsr / 2000.0))) if avg_bsr else 50.0,
                         1,
                     ),
                 )
@@ -666,9 +663,7 @@ class LiveAmazonClient(AmazonClientBase):
 
         return results
 
-    async def get_bsr_history(
-        self, asin: str, days: int = 90, marketplace: str = "US"
-    ) -> list[BSRHistoryPoint]:
+    async def get_bsr_history(self, asin: str, days: int = 90, marketplace: str = "US") -> list[BSRHistoryPoint]:
         """Return BSR history for an ASIN.
 
         PA-API 5.0 does not provide historical BSR data.  This method
@@ -697,9 +692,7 @@ class LiveAmazonClient(AmazonClientBase):
             )
         ]
 
-    async def get_category_tree(
-        self, root_id: str | None = None, marketplace: str = "US"
-    ) -> list[dict]:
+    async def get_category_tree(self, root_id: str | None = None, marketplace: str = "US") -> list[dict]:
         """Retrieve the browse-node tree via PA-API GetBrowseNodes.
 
         Args:
@@ -737,6 +730,7 @@ class LiveAmazonClient(AmazonClientBase):
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def get_amazon_client() -> AmazonClientBase:
     """Return the appropriate Amazon client based on environment configuration.

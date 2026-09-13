@@ -15,18 +15,20 @@ from sqlalchemy import (
     String,
     Text,
     Uuid,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel, TenantModel
+from app.modules.advertising.models import AdCreative, Campaign
 
 # Import canonical Campaign and AdCreative from the advertising module
-from app.modules.advertising.models import AdCreative, Campaign  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class LaunchPlanStatus(str, PyEnum):
     DRAFT = "draft"
@@ -105,6 +107,7 @@ class ARCRecipientStatus(str, PyEnum):
 # Models
 # ---------------------------------------------------------------------------
 
+
 class LaunchPlan(TenantModel):
     """Top-level launch plan for a book."""
 
@@ -128,15 +131,35 @@ class LaunchPlan(TenantModel):
     budget: Mapped[float | None] = mapped_column(Float, nullable=True)
     goals: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     phases_json: Mapped[dict | None] = mapped_column("phases_data", JSON, nullable=True)
-    checklist: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    ai_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    checklist: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ai_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
 
     # Relationships
     book = relationship("Book", back_populates="launch_plans")
     phases: Mapped[list["LaunchPhase"]] = relationship(
-        "LaunchPhase", back_populates="launch_plan", cascade="all, delete-orphan",
+        "LaunchPhase",
+        back_populates="launch_plan",
+        cascade="all, delete-orphan",
         order_by="LaunchPhase.order_index",
+    )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    # Superseded. The database has both "phases" and "phases_data"; the code
+    # writes phases_data (mapped above as phases_json), and "phases" is left
+    # over from migration 001. It is declared so the schema is not a surprise,
+    # under a name that collides with neither the relationship nor phases_json.
+    legacy_phases: Mapped[dict | None] = mapped_column("phases", JSONB, nullable=True, default=None)
+    channels: Mapped[list | None] = mapped_column(ARRAY(Text()), nullable=True, default=None)
+
+    __table_args__ = (
+        Index("idx_launch_plans_book_id", "book_id"),
+        Index("ix_launch_plans_checklist_gin", "checklist", postgresql_using="gin"),
+        Index("ix_launch_plans_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_launch_plans_launch_date", "launch_date"),
+        Index("ix_launch_plans_phases_gin", "phases", postgresql_using="gin"),
+        Index("ix_launch_plans_status", "status"),
     )
 
 
@@ -146,7 +169,10 @@ class LaunchPhase(BaseModel):
     __tablename__ = "launch_phases"
 
     launch_plan_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     phase_type: Mapped[LaunchPhaseType] = mapped_column(
         Enum(LaunchPhaseType, name="launch_phase_type", create_constraint=False),
@@ -161,7 +187,9 @@ class LaunchPhase(BaseModel):
     # Relationships
     launch_plan: Mapped["LaunchPlan"] = relationship("LaunchPlan", back_populates="phases")
     tasks: Mapped[list["PhaseTask"]] = relationship(
-        "PhaseTask", back_populates="phase", cascade="all, delete-orphan",
+        "PhaseTask",
+        back_populates="phase",
+        cascade="all, delete-orphan",
         order_by="PhaseTask.order_index",
     )
 
@@ -172,7 +200,10 @@ class PhaseTask(BaseModel):
     __tablename__ = "phase_tasks"
 
     phase_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("launch_phases.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("launch_phases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -194,8 +225,15 @@ class EmailSequence(TenantModel):
 
     __tablename__ = "email_sequences"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     launch_plan_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="SET NULL"), nullable=True, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -216,13 +254,32 @@ class EmailSequence(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="email_sequences",
+        "Organization",
+        back_populates="email_sequences",
         primaryjoin="EmailSequence.org_id == Organization.id",
         foreign_keys="[EmailSequence.org_id]",
     )
     emails: Mapped[list["EmailTemplate"]] = relationship(
-        "EmailTemplate", back_populates="sequence", cascade="all, delete-orphan",
+        "EmailTemplate",
+        back_populates="sequence",
+        cascade="all, delete-orphan",
         order_by="EmailTemplate.order_index",
+    )
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    trigger: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    # Superseded, exactly as launch_plans.phases is: the code writes
+    # "emails_data" and this older "emails" column is unread.
+    legacy_emails: Mapped[dict | None] = mapped_column("emails", JSONB, nullable=True, default=None)
+    performance: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+
+    __table_args__ = (
+        Index("ix_email_sequences_deleted_at_partial", "id", postgresql_where=text("(deleted_at IS NULL)")),
+        Index("ix_email_sequences_emails_gin", "emails", postgresql_using="gin"),
+        Index("ix_email_sequences_org_id_created_at", "org_id", "created_at"),
+        Index("ix_email_sequences_performance_gin", "performance", postgresql_using="gin"),
+        Index("ix_email_sequences_trigger", "trigger"),
     )
 
 
@@ -232,7 +289,10 @@ class EmailTemplate(BaseModel):
     __tablename__ = "email_templates"
 
     sequence_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("email_sequences.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("email_sequences.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     template_type: Mapped[EmailTemplateType] = mapped_column(
         Enum(EmailTemplateType, name="email_template_type", create_constraint=False),
@@ -262,6 +322,10 @@ class ReaderPanel(TenantModel):
 
     __tablename__ = "reader_panels"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     panel_size: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     recruitment_criteria: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
@@ -270,7 +334,8 @@ class ReaderPanel(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="reader_panels",
+        "Organization",
+        back_populates="reader_panels",
         primaryjoin="ReaderPanel.org_id == Organization.id",
         foreign_keys="[ReaderPanel.org_id]",
     )
@@ -290,7 +355,10 @@ class SocialPost(TenantModel):
     __tablename__ = "social_posts"
 
     launch_plan_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="SET NULL"), nullable=True, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     platform: Mapped[SocialPlatform] = mapped_column(
         Enum(SocialPlatform, name="social_platform", create_constraint=False),
@@ -317,7 +385,10 @@ class ARCCampaign(TenantModel):
     __tablename__ = "arc_campaigns"
 
     launch_plan_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("launch_plans.id", ondelete="SET NULL"), nullable=True, index=True,
+        Uuid,
+        ForeignKey("launch_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     book_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -338,7 +409,9 @@ class ARCCampaign(TenantModel):
 
     # Relationships
     recipients: Mapped[list["ARCRecipient"]] = relationship(
-        "ARCRecipient", back_populates="campaign", cascade="all, delete-orphan",
+        "ARCRecipient",
+        back_populates="campaign",
+        cascade="all, delete-orphan",
     )
 
 
@@ -348,7 +421,10 @@ class ARCRecipient(BaseModel):
     __tablename__ = "arc_recipients"
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("arc_campaigns.id", ondelete="CASCADE"), nullable=False, index=True,
+        Uuid,
+        ForeignKey("arc_campaigns.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(300), nullable=False)
     email: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -365,3 +441,28 @@ class ARCRecipient(BaseModel):
 
     # Relationships
     campaign: Mapped["ARCCampaign"] = relationship("ARCCampaign", back_populates="recipients")
+
+
+__all__ = [
+    "ARCCampaign",
+    "ARCCampaignStatus",
+    "ARCRecipient",
+    "ARCRecipientStatus",
+    "AdCreative",
+    "Campaign",
+    "EmailSendStatus",
+    "EmailSequence",
+    "EmailSequenceStatus",
+    "EmailTemplate",
+    "EmailTemplateType",
+    "LaunchPhase",
+    "LaunchPhaseType",
+    "LaunchPlan",
+    "LaunchPlanStatus",
+    "PhaseTask",
+    "PhaseTaskStatus",
+    "ReaderPanel",
+    "SocialPlatform",
+    "SocialPost",
+    "SocialPostStatus",
+]

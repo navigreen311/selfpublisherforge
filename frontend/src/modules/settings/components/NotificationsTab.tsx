@@ -159,7 +159,7 @@ export function NotificationsTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            Don't send email notifications during these hours (times in your local timezone).
+            Don&apos;t send email notifications during these hours (times in your local timezone).
           </p>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 flex-1">

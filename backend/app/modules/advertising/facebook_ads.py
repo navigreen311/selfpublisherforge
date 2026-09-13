@@ -12,7 +12,7 @@ Credentials are read from environment variables:
 
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -58,22 +58,10 @@ class FacebookAdsClient:
         app_id: str | None = None,
         app_secret: str | None = None,
     ):
-        self.access_token = (
-            access_token
-            or os.environ.get("FACEBOOK_ACCESS_TOKEN", "")
-        )
-        self.ad_account_id = (
-            ad_account_id
-            or os.environ.get("FACEBOOK_AD_ACCOUNT_ID", "")
-        )
-        self.app_id = (
-            app_id
-            or os.environ.get("FACEBOOK_APP_ID", "")
-        )
-        self.app_secret = (
-            app_secret
-            or os.environ.get("FACEBOOK_APP_SECRET", "")
-        )
+        self.access_token = access_token or os.environ.get("FACEBOOK_ACCESS_TOKEN", "")
+        self.ad_account_id: str = ad_account_id or os.environ.get("FACEBOOK_AD_ACCOUNT_ID") or ""
+        self.app_id = app_id or os.environ.get("FACEBOOK_APP_ID", "")
+        self.app_secret = app_secret or os.environ.get("FACEBOOK_APP_SECRET", "")
 
     # ─── Internal Helpers ─────────────────────────────────────────────────
 
@@ -156,7 +144,7 @@ class FacebookAdsClient:
                 fb_error=fb_error if isinstance(fb_error, dict) else {"message": str(fb_error)},
             )
 
-        return response.json()
+        return cast("dict[Any, Any]", response.json())
 
     # ─── Campaign Management ─────────────────────────────────────────────
 
@@ -191,13 +179,15 @@ class FacebookAdsClient:
             # daily_budget comes back in cents from the API
             raw_budget = item.get("daily_budget")
             budget_dollars = float(raw_budget) / 100.0 if raw_budget else 0.0
-            campaigns.append({
-                "external_campaign_id": item.get("id", ""),
-                "name": item.get("name", ""),
-                "objective": item.get("objective", ""),
-                "status": item.get("status", "").lower(),
-                "daily_budget": budget_dollars,
-            })
+            campaigns.append(
+                {
+                    "external_campaign_id": item.get("id", ""),
+                    "name": item.get("name", ""),
+                    "objective": item.get("objective", ""),
+                    "status": item.get("status", "").lower(),
+                    "daily_budget": budget_dollars,
+                }
+            )
 
         return {
             "campaigns": campaigns,
@@ -290,7 +280,7 @@ class FacebookAdsClient:
 
         # Convert daily_budget from dollars to cents if present
         payload = dict(updates)
-        if "daily_budget" in payload and isinstance(payload["daily_budget"], (int, float)):
+        if "daily_budget" in payload and isinstance(payload["daily_budget"], int | float):
             payload["daily_budget"] = int(round(payload["daily_budget"] * 100))
 
         logger.info("Updating Facebook Ads campaign: %s", external_campaign_id)
@@ -304,15 +294,11 @@ class FacebookAdsClient:
 
     async def pause_campaign(self, external_campaign_id: str) -> dict:
         """Pause a Facebook Ads campaign."""
-        return await self.update_campaign(
-            external_campaign_id, {"status": "PAUSED"}
-        )
+        return await self.update_campaign(external_campaign_id, {"status": "PAUSED"})
 
     async def resume_campaign(self, external_campaign_id: str) -> dict:
         """Resume a paused Facebook Ads campaign."""
-        return await self.update_campaign(
-            external_campaign_id, {"status": "ACTIVE"}
-        )
+        return await self.update_campaign(external_campaign_id, {"status": "ACTIVE"})
 
     # ─── Ad Set Management ────────────────────────────────────────────────
 
@@ -553,9 +539,7 @@ class FacebookAdsClient:
         try:
             estimate_data = await self._request("GET", estimate_url, params=estimate_params)
             estimate_list = estimate_data.get("data", [])
-            estimated_reach = (
-                estimate_list[0].get("estimate_dau", 0) if estimate_list else 0
-            )
+            estimated_reach = estimate_list[0].get("estimate_dau", 0) if estimate_list else 0
         except FacebookAdsError:
             # Delivery estimate may not be available for all audience types
             estimated_reach = (lower + upper) // 2 if (lower or upper) else 0
@@ -615,16 +599,13 @@ class FacebookAdsClient:
 
         # The insights endpoint returns data inside a "data" array
         insights_list = data.get("data", [])
-        if insights_list:
-            metrics = insights_list[0]
-        else:
-            metrics = {f: "0" for f in requested_fields}
+        metrics = insights_list[0] if insights_list else {f: "0" for f in requested_fields}
 
         # Normalise metric values to floats
         normalised: dict[str, float | list | dict] = {}
         for key in requested_fields:
             value = metrics.get(key, 0)
-            if isinstance(value, (list, dict)):
+            if isinstance(value, list | dict):
                 normalised[key] = value
             else:
                 try:
@@ -678,7 +659,7 @@ class FacebookAdsClient:
             raw = insights_list[0]
             for key in fields:
                 value = raw.get(key, 0)
-                if isinstance(value, (list, dict)):
+                if isinstance(value, list | dict):
                     metrics[key] = value
                 else:
                     try:

@@ -16,6 +16,7 @@ import re
 import struct
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -110,9 +111,7 @@ class QualityAssurance:
         self._reference_ngram_sets: list[set[tuple[str, ...]]] = []
 
         # Pre-generate hash function coefficients for MinHash
-        self._hash_a, self._hash_b = self._generate_minhash_coefficients(
-            _NUM_MINHASH_PERM
-        )
+        self._hash_a, self._hash_b = self._generate_minhash_coefficients(_NUM_MINHASH_PERM)
 
     # ------------------------------------------------------------------
     # Public API
@@ -179,9 +178,7 @@ class QualityAssurance:
 
         report.word_count = len(words)
         report.sentence_count = len(sentences)
-        report.avg_sentence_length = (
-            len(words) / len(sentences) if sentences else 0.0
-        )
+        report.avg_sentence_length = len(words) / len(sentences) if sentences else 0.0
 
         # Flesch Reading Ease (0-100, higher = easier)
         if words and sentences:
@@ -236,9 +233,7 @@ class QualityAssurance:
         max_ngram_overlap: float = 0.0
         max_minhash_sim: float = 0.0
 
-        for ref_sig, ref_ngrams in zip(
-            self._reference_signatures, self._reference_ngram_sets, strict=False
-        ):
+        for ref_sig, ref_ngrams in zip(self._reference_signatures, self._reference_ngram_sets, strict=False):
             # Raw n-gram overlap (Jaccard on the actual sets)
             if ngrams and ref_ngrams:
                 intersection = len(ngrams & ref_ngrams)
@@ -257,38 +252,20 @@ class QualityAssurance:
         if max_ngram_overlap >= self._plagiarism_ngram_threshold:
             report.plagiarism_flag = True
             report.plagiarism_confidence = min(1.0, combined_score)
-            report.issues.append(
-                f"Potential plagiarism detected "
-                f"({max_ngram_overlap:.0%} n-gram overlap)"
-            )
-            report.metadata["plagiarism_ngram_overlap"] = round(
-                max_ngram_overlap, 4
-            )
-            report.metadata["plagiarism_minhash_similarity"] = round(
-                max_minhash_sim, 4
-            )
+            report.issues.append(f"Potential plagiarism detected " f"({max_ngram_overlap:.0%} n-gram overlap)")
+            report.metadata["plagiarism_ngram_overlap"] = round(max_ngram_overlap, 4)
+            report.metadata["plagiarism_minhash_similarity"] = round(max_minhash_sim, 4)
         elif max_minhash_sim >= self._minhash_similarity_threshold:
             report.plagiarism_flag = True
             report.plagiarism_confidence = min(1.0, combined_score)
-            report.issues.append(
-                f"Potential plagiarism detected "
-                f"({max_minhash_sim:.0%} MinHash similarity)"
-            )
-            report.metadata["plagiarism_ngram_overlap"] = round(
-                max_ngram_overlap, 4
-            )
-            report.metadata["plagiarism_minhash_similarity"] = round(
-                max_minhash_sim, 4
-            )
+            report.issues.append(f"Potential plagiarism detected " f"({max_minhash_sim:.0%} MinHash similarity)")
+            report.metadata["plagiarism_ngram_overlap"] = round(max_ngram_overlap, 4)
+            report.metadata["plagiarism_minhash_similarity"] = round(max_minhash_sim, 4)
         else:
             report.plagiarism_flag = False
             report.plagiarism_confidence = combined_score
-            report.metadata["plagiarism_ngram_overlap"] = round(
-                max_ngram_overlap, 4
-            )
-            report.metadata["plagiarism_minhash_similarity"] = round(
-                max_minhash_sim, 4
-            )
+            report.metadata["plagiarism_ngram_overlap"] = round(max_ngram_overlap, 4)
+            report.metadata["plagiarism_minhash_similarity"] = round(max_minhash_sim, 4)
 
         # Add current document to reference corpus for future comparisons
         self._reference_signatures.append(signature)
@@ -345,9 +322,7 @@ class QualityAssurance:
                 if not self._claim_supported_by_context(claim, context_tokens):
                     unverifiable_count += 1
 
-        unverifiable_ratio = (
-            unverifiable_count / claim_count if claim_count else 0.0
-        )
+        unverifiable_ratio = unverifiable_count / claim_count if claim_count else 0.0
 
         # Confidence scoring
         # High claim density with many unverifiable claims = high confidence
@@ -355,37 +330,26 @@ class QualityAssurance:
         # as a weaker signal.
         if context:
             # With context we can be more precise
-            confidence = self._compute_hallucination_confidence_with_context(
-                claim_density, unverifiable_ratio
-            )
+            confidence = self._compute_hallucination_confidence_with_context(claim_density, unverifiable_ratio)
         else:
             # Without context, use heuristic based on claim density and
             # the proportion of "strong" claims (specific numbers/dates)
-            strong_claim_count = sum(
-                1 for c in claims if self._is_strong_claim(c)
-            )
-            strong_ratio = (
-                strong_claim_count / total_sentences if total_sentences else 0.0
-            )
-            confidence = self._compute_hallucination_confidence_no_context(
-                claim_density, strong_ratio
-            )
+            strong_claim_count = sum(1 for c in claims if self._is_strong_claim(c))
+            strong_ratio = strong_claim_count / total_sentences if total_sentences else 0.0
+            confidence = self._compute_hallucination_confidence_no_context(claim_density, strong_ratio)
 
         report.hallucination_confidence = round(min(1.0, max(0.0, confidence)), 4)
         report.hallucination_flag = report.hallucination_confidence >= 0.5
 
         if report.hallucination_flag:
             report.issues.append(
-                f"Potential hallucination detected "
-                f"(confidence {report.hallucination_confidence:.0%})"
+                f"Potential hallucination detected " f"(confidence {report.hallucination_confidence:.0%})"
             )
 
         report.metadata["hallucination_claim_count"] = claim_count
         report.metadata["hallucination_claim_density"] = round(claim_density, 4)
         report.metadata["hallucination_unverifiable_count"] = unverifiable_count
-        report.metadata["hallucination_unverifiable_ratio"] = round(
-            unverifiable_ratio, 4
-        )
+        report.metadata["hallucination_unverifiable_ratio"] = round(unverifiable_ratio, 4)
 
     # ------------------------------------------------------------------
     # Scoring helpers
@@ -398,14 +362,10 @@ class QualityAssurance:
         readability_component = report.readability_score * 0.60
 
         # Plagiarism: 100 = clean, 0 = confirmed plagiarism
-        plagiarism_component = (
-            (1.0 - report.plagiarism_confidence) * 100.0
-        ) * 0.20
+        plagiarism_component = ((1.0 - report.plagiarism_confidence) * 100.0) * 0.20
 
         # Hallucination: 100 = clean, 0 = confirmed hallucination
-        hallucination_component = (
-            (1.0 - report.hallucination_confidence) * 100.0
-        ) * 0.20
+        hallucination_component = ((1.0 - report.hallucination_confidence) * 100.0) * 0.20
 
         total = readability_component + plagiarism_component + hallucination_component
 
@@ -438,14 +398,14 @@ class QualityAssurance:
     @staticmethod
     def _split_sentences(text: str) -> list[str]:
         """Split text into sentences."""
-        sentences = re.split(r'[.!?]+', text)
+        sentences = re.split(r"[.!?]+", text)
         return [s.strip() for s in sentences if s.strip()]
 
     @staticmethod
     def _count_syllables(word: str) -> int:
         """Approximate syllable count for English words."""
         word = word.lower().rstrip("e")
-        vowels = re.findall(r'[aeiouy]+', word)
+        vowels = re.findall(r"[aeiouy]+", word)
         count = len(vowels)
         return max(1, count)
 
@@ -459,9 +419,7 @@ class QualityAssurance:
         return [w.lower() for w in re.findall(r"[a-zA-Z']+", text) if len(w) > 1]
 
     @staticmethod
-    def _build_ngrams(
-        words: list[str], n: int
-    ) -> set[tuple[str, ...]]:
+    def _build_ngrams(words: list[str], n: int) -> set[tuple[str, ...]]:
         """Build a set of word-level n-grams (shingles)."""
         if len(words) < n:
             return set()
@@ -486,9 +444,7 @@ class QualityAssurance:
             b_coeffs.append(rng.randint(0, _MERSENNE_PRIME - 1))
         return a_coeffs, b_coeffs
 
-    def _minhash_signature(
-        self, ngrams: set[tuple[str, ...]]
-    ) -> list[int]:
+    def _minhash_signature(self, ngrams: set[tuple[str, ...]]) -> list[int]:
         """Compute a MinHash signature for a set of n-grams.
 
         Each n-gram is hashed to a 32-bit integer, then for each of
@@ -503,9 +459,7 @@ class QualityAssurance:
             h = self._hash_shingle(shingle)
             for i in range(num_perm):
                 # Universal hash: h_i(x) = (a_i * x + b_i) mod p mod 2^32
-                val = (
-                    (self._hash_a[i] * h + self._hash_b[i]) % _MERSENNE_PRIME
-                ) & _MAX_HASH
+                val = ((self._hash_a[i] * h + self._hash_b[i]) % _MERSENNE_PRIME) & _MAX_HASH
                 if val < signature[i]:
                     signature[i] = val
 
@@ -516,7 +470,7 @@ class QualityAssurance:
         """Deterministically hash a word-tuple to a 32-bit unsigned int."""
         raw = " ".join(shingle).encode("utf-8")
         digest = hashlib.sha256(raw).digest()
-        return struct.unpack("<I", digest[:4])[0]
+        return cast("int", struct.unpack("<I", digest[:4])[0])
 
     @staticmethod
     def _minhash_jaccard(sig_a: list[int], sig_b: list[int]) -> float:
@@ -541,28 +495,123 @@ class QualityAssurance:
     _RE_PROPER_NOUNS = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b")
     _RE_PERCENTAGES = re.compile(r"\b\d+(?:\.\d+)?%")
     _RE_MEASUREMENTS = re.compile(
-        r"\b\d+(?:\.\d+)?\s*(?:kg|lb|km|mi|cm|mm|m|ft|in|oz|mg|g|ml|l|"
-        r"mph|kph|hz|gb|mb|kb|tb)\b",
+        r"\b\d+(?:\.\d+)?\s*(?:kg|lb|km|mi|cm|mm|m|ft|in|oz|mg|g|ml|l|" r"mph|kph|hz|gb|mb|kb|tb)\b",
         re.IGNORECASE,
     )
 
     # Common English stop words to ignore during context matching
     _STOP_WORDS: frozenset[str] = frozenset(
         {
-            "a", "an", "the", "is", "are", "was", "were", "be", "been",
-            "being", "have", "has", "had", "do", "does", "did", "will",
-            "would", "could", "should", "may", "might", "shall", "can",
-            "to", "of", "in", "for", "on", "with", "at", "by", "from",
-            "as", "into", "through", "during", "before", "after", "above",
-            "below", "between", "out", "off", "over", "under", "again",
-            "further", "then", "once", "here", "there", "when", "where",
-            "why", "how", "all", "each", "every", "both", "few", "more",
-            "most", "other", "some", "such", "no", "nor", "not", "only",
-            "own", "same", "so", "than", "too", "very", "just", "because",
-            "but", "and", "or", "if", "while", "about", "up", "it", "its",
-            "this", "that", "these", "those", "i", "me", "my", "we", "our",
-            "you", "your", "he", "him", "his", "she", "her", "they", "them",
-            "their", "what", "which", "who", "whom",
+            "a",
+            "an",
+            "the",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "shall",
+            "can",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+            "as",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "above",
+            "below",
+            "between",
+            "out",
+            "off",
+            "over",
+            "under",
+            "again",
+            "further",
+            "then",
+            "once",
+            "here",
+            "there",
+            "when",
+            "where",
+            "why",
+            "how",
+            "all",
+            "each",
+            "every",
+            "both",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
+            "own",
+            "same",
+            "so",
+            "than",
+            "too",
+            "very",
+            "just",
+            "because",
+            "but",
+            "and",
+            "or",
+            "if",
+            "while",
+            "about",
+            "up",
+            "it",
+            "its",
+            "this",
+            "that",
+            "these",
+            "those",
+            "i",
+            "me",
+            "my",
+            "we",
+            "our",
+            "you",
+            "your",
+            "he",
+            "him",
+            "his",
+            "she",
+            "her",
+            "they",
+            "them",
+            "their",
+            "what",
+            "which",
+            "who",
+            "whom",
         }
     )
 
@@ -589,9 +638,7 @@ class QualityAssurance:
         # false positives from sentence-initial capitalization
         proper_nouns = cls._RE_PROPER_NOUNS.findall(sentence)
         multi_word_names = [pn for pn in proper_nouns if " " in pn]
-        if multi_word_names:
-            return True
-        return False
+        return bool(multi_word_names)
 
     @classmethod
     def _is_strong_claim(cls, sentence: str) -> bool:
@@ -610,9 +657,7 @@ class QualityAssurance:
             if re.search(r"\b\d{4}\b", sentence):
                 return True
         # Precise multi-digit numbers
-        if re.search(r"\b\d{3,}\b", sentence):
-            return True
-        return False
+        return bool(re.search("\\b\\d{3,}\\b", sentence))
 
     @classmethod
     def _claim_supported_by_context(
@@ -628,9 +673,7 @@ class QualityAssurance:
         are present, the claim is considered unverifiable.
         """
         claim_words = [
-            w.lower()
-            for w in re.findall(r"[a-zA-Z']+", claim)
-            if len(w) > 1 and w.lower() not in cls._STOP_WORDS
+            w.lower() for w in re.findall(r"[a-zA-Z']+", claim) if len(w) > 1 and w.lower() not in cls._STOP_WORDS
         ]
         # Also extract raw numbers as "key terms"
         claim_numbers = cls._RE_NUMBERS.findall(claim)

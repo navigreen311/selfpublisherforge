@@ -4,11 +4,13 @@ Tests pipeline CRUD, task management, status transitions, timeline generation,
 dependency validation, and template management.
 """
 
-import pytest
 import uuid
-from datetime import datetime, timedelta, UTC
-from unittest.mock import AsyncMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
+import pytest
+
+from app.modules.production_pipeline import service
 from app.modules.production_pipeline.models import (
     Pipeline,
     PipelineStatus,
@@ -17,7 +19,6 @@ from app.modules.production_pipeline.models import (
     TaskStatus,
     TaskType,
 )
-from app.modules.production_pipeline import service
 from app.modules.production_pipeline.schemas import (
     CreatePipeline,
     CreateTask,
@@ -27,7 +28,6 @@ from app.modules.production_pipeline.schemas import (
     UpdateTask,
 )
 from app.modules.production_pipeline.workflow import WorkflowError
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -82,6 +82,12 @@ async def _seed_task(
     db.add(task)
     await db.flush()
     await db.refresh(task)
+    # The task is created straight from its FK rather than through
+    # Pipeline.tasks, so an already-loaded parent collection would not see it.
+    # A real request gets a fresh session; expire the collection to match.
+    parent = await db.get(Pipeline, pipeline_id)
+    if parent is not None:
+        db.expire(parent, ["tasks"])
     return task
 
 
@@ -91,7 +97,6 @@ async def _seed_task(
 
 
 class TestCreatePipeline:
-
     @pytest.mark.asyncio
     async def test_create_pipeline_basic(self, db_session):
         """Should create a basic pipeline without template."""
@@ -145,7 +150,6 @@ class TestCreatePipeline:
 
 
 class TestGetPipeline:
-
     @pytest.mark.asyncio
     async def test_get_pipeline_success(self, db_session):
         """Should retrieve a pipeline by ID."""
@@ -169,7 +173,6 @@ class TestGetPipeline:
 
 
 class TestListPipelines:
-
     @pytest.mark.asyncio
     async def test_list_pipelines_empty(self, db_session):
         """Should return empty paginated result if no pipelines."""
@@ -202,9 +205,7 @@ class TestListPipelines:
         await _seed_pipeline(db_session, org_id, name="Draft", status=PipelineStatus.DRAFT)
         await _seed_pipeline(db_session, org_id, name="Active", status=PipelineStatus.ACTIVE)
 
-        result = await service.list_pipelines(
-            db_session, org_id, status=PipelineStatus.ACTIVE
-        )
+        result = await service.list_pipelines(db_session, org_id, status=PipelineStatus.ACTIVE)
 
         assert result.total == 1
         assert result.items[0].name == "Active"
@@ -226,7 +227,6 @@ class TestListPipelines:
 
 
 class TestUpdatePipeline:
-
     @pytest.mark.asyncio
     async def test_update_pipeline_name(self, db_session):
         """Should update pipeline name."""
@@ -263,7 +263,6 @@ class TestUpdatePipeline:
 
 
 class TestDeletePipeline:
-
     @pytest.mark.asyncio
     async def test_delete_pipeline_success(self, db_session):
         """Should soft-delete a pipeline."""
@@ -293,7 +292,6 @@ class TestDeletePipeline:
 
 
 class TestAddTask:
-
     @pytest.mark.asyncio
     async def test_add_task_success(self, db_session):
         """Should add a task to a pipeline."""
@@ -345,7 +343,6 @@ class TestAddTask:
 
 
 class TestUpdateTask:
-
     @pytest.mark.asyncio
     async def test_update_task_title(self, db_session):
         """Should update task title."""
@@ -354,9 +351,7 @@ class TestUpdateTask:
         task = await _seed_task(db_session, org_id, pipeline.id, "Old Title")
 
         payload = UpdateTask(title="New Title")
-        result = await service.update_task(
-            db_session, pipeline.id, task.id, org_id, payload
-        )
+        result = await service.update_task(db_session, pipeline.id, task.id, org_id, payload)
 
         assert result is not None
         assert result.title == "New Title"
@@ -368,9 +363,11 @@ class TestUpdateTask:
         pipeline = await _seed_pipeline(db_session, org_id)
         task = await _seed_task(db_session, org_id, pipeline.id)
 
-        payload = UpdateTask(status=TaskStatus.COMPLETED)
+        # TASK_TRANSITIONS only allows pending -> in_progress -> completed;
+        # jumping straight to completed is rejected by design.
+        await service.update_task(db_session, pipeline.id, task.id, org_id, UpdateTask(status=TaskStatus.IN_PROGRESS))
         result = await service.update_task(
-            db_session, pipeline.id, task.id, org_id, payload
+            db_session, pipeline.id, task.id, org_id, UpdateTask(status=TaskStatus.COMPLETED)
         )
 
         assert result.status == TaskStatus.COMPLETED
@@ -384,9 +381,7 @@ class TestUpdateTask:
         task_id = uuid.uuid4()
 
         payload = UpdateTask(title="Updated")
-        result = await service.update_task(
-            db_session, pipeline.id, task_id, org_id, payload
-        )
+        result = await service.update_task(db_session, pipeline.id, task_id, org_id, payload)
 
         assert result is None
 
@@ -397,7 +392,6 @@ class TestUpdateTask:
 
 
 class TestGetTimeline:
-
     @pytest.mark.asyncio
     async def test_get_timeline_success(self, db_session):
         """Should generate timeline view for a pipeline."""
@@ -428,7 +422,6 @@ class TestGetTimeline:
 
 
 class TestCreateTemplate:
-
     @pytest.mark.asyncio
     async def test_create_template_success(self, db_session):
         """Should create a pipeline template."""
@@ -462,7 +455,6 @@ class TestCreateTemplate:
 
 
 class TestListTemplates:
-
     @pytest.mark.asyncio
     async def test_list_templates_own_only(self, db_session):
         """Should list org's own templates."""
@@ -532,7 +524,6 @@ class TestListTemplates:
 
 
 class TestCreateTemplateFromPipeline:
-
     @pytest.mark.asyncio
     async def test_create_template_from_pipeline_success(self, db_session):
         """Should convert a pipeline into a reusable template."""
@@ -559,9 +550,7 @@ class TestCreateTemplateFromPipeline:
         org_id = uuid.uuid4()
         pipeline_id = uuid.uuid4()
 
-        result = await service.create_template_from_pipeline(
-            db_session, pipeline_id, org_id, name="Template"
-        )
+        result = await service.create_template_from_pipeline(db_session, pipeline_id, org_id, name="Template")
 
         assert result is None
 
@@ -572,16 +561,13 @@ class TestCreateTemplateFromPipeline:
 
 
 class TestDependencyCycleDetection:
-
     @pytest.mark.asyncio
     async def test_add_task_prevents_cycle(self, db_session):
         """Should prevent adding a task that would create a dependency cycle."""
         org_id = uuid.uuid4()
         pipeline = await _seed_pipeline(db_session, org_id)
         task1 = await _seed_task(db_session, org_id, pipeline.id, "Task 1")
-        task2 = await _seed_task(
-            db_session, org_id, pipeline.id, "Task 2", depends_on=[str(task1.id)]
-        )
+        task2 = await _seed_task(db_session, org_id, pipeline.id, "Task 2", depends_on=[str(task1.id)])
 
         # Try to make task1 depend on task2 (would create a cycle)
         payload = CreateTask(

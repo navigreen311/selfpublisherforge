@@ -13,6 +13,7 @@ Image processing functions define clear interfaces using PIL/Pillow concepts
 and data structures.  Logic is structured so it works correctly when real
 image libraries (Pillow, OpenCV) are available at runtime.
 """
+
 from __future__ import annotations
 
 import logging
@@ -158,17 +159,20 @@ async def step_2_auto_clean(image_data: bytes) -> tuple[bytes, list[QualityIssue
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         pixels = img.load()
+        if pixels is None:  # PIL returns None if the image cannot be loaded
+            raise ValueError("Could not load image pixel data")
         width, height = img.size
 
         gray_pixel_count = 0
         for y in range(height):
             for x in range(width):
-                val = pixels[x, y]
+                val = int(pixels[x, y])  # type: ignore[arg-type]  # convert("L") yields a scalar
                 if 1 <= val <= 254:
                     gray_pixel_count += 1
                 # Threshold binarization at 128
@@ -176,11 +180,13 @@ async def step_2_auto_clean(image_data: bytes) -> tuple[bytes, list[QualityIssue
 
         if gray_pixel_count > 0:
             gray_pct = (gray_pixel_count / (width * height)) * 100
-            issues.append(QualityIssue(
-                step="auto_clean",
-                severity=Severity.WARNING if gray_pct > 5 else Severity.INFO,
-                message=f"Cleaned {gray_pixel_count} gray pixels ({gray_pct:.1f}% of image)",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="auto_clean",
+                    severity=Severity.WARNING if gray_pct > 5 else Severity.INFO,
+                    message=f"Cleaned {gray_pixel_count} gray pixels ({gray_pct:.1f}% of image)",
+                )
+            )
 
         buf = io.BytesIO()
         img.save(buf, format="PNG")
@@ -188,11 +194,13 @@ async def step_2_auto_clean(image_data: bytes) -> tuple[bytes, list[QualityIssue
 
     except ImportError:
         logger.warning("PIL not available; returning image data unchanged")
-        issues.append(QualityIssue(
-            step="auto_clean",
-            severity=Severity.WARNING,
-            message="PIL/Pillow not installed; skipped binarization",
-        ))
+        issues.append(
+            QualityIssue(
+                step="auto_clean",
+                severity=Severity.WARNING,
+                message="PIL/Pillow not installed; skipped binarization",
+            )
+        )
         return image_data, issues
 
 
@@ -230,8 +238,9 @@ async def step_3_stroke_uniformity(
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image, ImageFilter, ImageMorph
         import io
+
+        from PIL import Image, ImageFilter, ImageMorph  # noqa: F401
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
 
@@ -252,16 +261,21 @@ async def step_3_stroke_uniformity(
         result = Image.eval(opened, lambda px: 255 - px)
 
         # Measure uniformity: compare original vs processed black pixel counts
-        orig_black = sum(1 for px in img.getdata() if px == 0)
-        new_black = sum(1 for px in result.getdata() if px == 0)
+        # histogram()[0] is the count of value-0 (pure black) pixels in an "L"
+        # image — the same number the old per-pixel scan produced, without
+        # materialising every pixel.
+        orig_black = img.histogram()[0]
+        new_black = result.histogram()[0]
         if orig_black > 0:
             change_pct = abs(new_black - orig_black) / orig_black * 100
             if change_pct > 20:
-                issues.append(QualityIssue(
-                    step="stroke_uniformity",
-                    severity=Severity.WARNING,
-                    message=f"Significant stroke change: {change_pct:.1f}% pixel difference after normalization",
-                ))
+                issues.append(
+                    QualityIssue(
+                        step="stroke_uniformity",
+                        severity=Severity.WARNING,
+                        message=f"Significant stroke change: {change_pct:.1f}% pixel difference after normalization",
+                    )
+                )
 
         buf = io.BytesIO()
         result.save(buf, format="PNG")
@@ -269,11 +283,13 @@ async def step_3_stroke_uniformity(
 
     except ImportError:
         logger.warning("PIL not available; skipping stroke uniformity")
-        issues.append(QualityIssue(
-            step="stroke_uniformity",
-            severity=Severity.WARNING,
-            message="PIL/Pillow not installed; skipped stroke normalization",
-        ))
+        issues.append(
+            QualityIssue(
+                step="stroke_uniformity",
+                severity=Severity.WARNING,
+                message="PIL/Pillow not installed; skipped stroke normalization",
+            )
+        )
         return image_data, issues
 
 
@@ -305,8 +321,9 @@ async def step_4_closed_shapes(image_data: bytes) -> tuple[bytes, list[QualityIs
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         width, height = img.size
@@ -367,22 +384,26 @@ async def step_4_closed_shapes(image_data: bytes) -> tuple[bytes, list[QualityIs
                         open_shapes.append({"x": center_x, "y": center_y})
 
         if open_shapes:
-            issues.append(QualityIssue(
-                step="closed_shapes",
-                severity=Severity.WARNING,
-                message=f"Found {len(open_shapes)} potentially open shape(s)",
-                location={"open_shapes": open_shapes[:20]},  # cap at 20
-            ))
+            issues.append(
+                QualityIssue(
+                    step="closed_shapes",
+                    severity=Severity.WARNING,
+                    message=f"Found {len(open_shapes)} potentially open shape(s)",
+                    location={"open_shapes": open_shapes[:20]},  # cap at 20
+                )
+            )
 
         return image_data, issues
 
     except ImportError:
         logger.warning("PIL not available; skipping closed shape detection")
-        issues.append(QualityIssue(
-            step="closed_shapes",
-            severity=Severity.WARNING,
-            message="PIL/Pillow not installed; skipped contour analysis",
-        ))
+        issues.append(
+            QualityIssue(
+                step="closed_shapes",
+                severity=Severity.WARNING,
+                message="PIL/Pillow not installed; skipped contour analysis",
+            )
+        )
         return image_data, issues
 
 
@@ -418,12 +439,15 @@ async def step_5_speck_removal(
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         width, height = img.size
         pixels = img.load()
+        if pixels is None:  # PIL returns None if the image cannot be loaded
+            raise ValueError("Could not load image pixel data")
 
         visited = [[False] * width for _ in range(height)]
         specks_removed = 0
@@ -453,11 +477,13 @@ async def step_5_speck_removal(
                         specks_removed += 1
 
         if specks_removed > 0:
-            issues.append(QualityIssue(
-                step="speck_removal",
-                severity=Severity.INFO,
-                message=f"Removed {specks_removed} speck(s) smaller than {min_size}px",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="speck_removal",
+                    severity=Severity.INFO,
+                    message=f"Removed {specks_removed} speck(s) smaller than {min_size}px",
+                )
+            )
 
         buf = io.BytesIO()
         img.save(buf, format="PNG")
@@ -465,11 +491,13 @@ async def step_5_speck_removal(
 
     except ImportError:
         logger.warning("PIL not available; skipping speck removal")
-        issues.append(QualityIssue(
-            step="speck_removal",
-            severity=Severity.WARNING,
-            message="PIL/Pillow not installed; skipped speck removal",
-        ))
+        issues.append(
+            QualityIssue(
+                step="speck_removal",
+                severity=Severity.WARNING,
+                message="PIL/Pillow not installed; skipped speck removal",
+            )
+        )
         return image_data, issues
 
 
@@ -499,11 +527,14 @@ async def step_6_background_check(image_data: bytes) -> tuple[bytes, list[Qualit
     issues: list[QualityIssue] = []
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         pixels = img.load()
+        if pixels is None:  # PIL returns None if the image cannot be loaded
+            raise ValueError("Could not load image pixel data")
         width, height = img.size
 
         off_white_count = 0
@@ -511,7 +542,7 @@ async def step_6_background_check(image_data: bytes) -> tuple[bytes, list[Qualit
 
         for y in range(height):
             for x in range(width):
-                val = pixels[x, y]
+                val = int(pixels[x, y])  # type: ignore[arg-type]  # convert("L") yields a scalar
                 if val > 0:  # not black
                     total_white_area += 1
                     if val < 255:
@@ -520,11 +551,13 @@ async def step_6_background_check(image_data: bytes) -> tuple[bytes, list[Qualit
 
         if off_white_count > 0 and total_white_area > 0:
             pct = (off_white_count / total_white_area) * 100
-            issues.append(QualityIssue(
-                step="background_check",
-                severity=Severity.WARNING if pct > 2 else Severity.INFO,
-                message=f"Fixed {off_white_count} off-white pixels ({pct:.1f}% of background)",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="background_check",
+                    severity=Severity.WARNING if pct > 2 else Severity.INFO,
+                    message=f"Fixed {off_white_count} off-white pixels ({pct:.1f}% of background)",
+                )
+            )
 
         buf = io.BytesIO()
         img.save(buf, format="PNG")
@@ -532,11 +565,13 @@ async def step_6_background_check(image_data: bytes) -> tuple[bytes, list[Qualit
 
     except ImportError:
         logger.warning("PIL not available; skipping background check")
-        issues.append(QualityIssue(
-            step="background_check",
-            severity=Severity.WARNING,
-            message="PIL/Pillow not installed; skipped background verification",
-        ))
+        issues.append(
+            QualityIssue(
+                step="background_check",
+                severity=Severity.WARNING,
+                message="PIL/Pillow not installed; skipped background verification",
+            )
+        )
         return image_data, issues
 
 
@@ -568,17 +603,20 @@ async def step_7_quality_check(image_data: bytes) -> QualityReport:
     score = 100.0
 
     try:
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.open(io.BytesIO(image_data)).convert("L")
         width, height = img.size
         total_pixels = width * height
 
         if total_pixels == 0:
-            return QualityReport(score=0, issues=[
-                QualityIssue(step="quality_check", severity=Severity.ERROR, message="Image has zero pixels")
-            ], passed=False)
+            return QualityReport(
+                score=0,
+                issues=[QualityIssue(step="quality_check", severity=Severity.ERROR, message="Image has zero pixels")],
+                passed=False,
+            )
 
         pixel_data = list(img.getdata())
 
@@ -591,54 +629,66 @@ async def step_7_quality_check(image_data: bytes) -> QualityReport:
         if gray_count > 0:
             gray_pct = (gray_count / total_pixels) * 100
             score -= min(30, gray_pct * 3)
-            issues.append(QualityIssue(
-                step="quality_check",
-                severity=Severity.ERROR,
-                message=f"Found {gray_count} gray pixels ({gray_pct:.2f}%); image is not pure B&W",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="quality_check",
+                    severity=Severity.ERROR,
+                    message=f"Found {gray_count} gray pixels ({gray_pct:.2f}%); image is not pure B&W",
+                )
+            )
 
         # Ink density check
         ink_density = (black_count / total_pixels) * 100
         if ink_density > 40:
             score -= 15
-            issues.append(QualityIssue(
-                step="quality_check",
-                severity=Severity.WARNING,
-                message=f"High ink density: {ink_density:.1f}% (recommended <40%)",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="quality_check",
+                    severity=Severity.WARNING,
+                    message=f"High ink density: {ink_density:.1f}% (recommended <40%)",
+                )
+            )
         elif ink_density < 2:
             score -= 20
-            issues.append(QualityIssue(
-                step="quality_check",
-                severity=Severity.WARNING,
-                message=f"Very low ink density: {ink_density:.1f}% -- page may appear blank",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="quality_check",
+                    severity=Severity.WARNING,
+                    message=f"Very low ink density: {ink_density:.1f}% -- page may appear blank",
+                )
+            )
 
         # Blank page check
         if black_count == 0:
             score = 0
-            issues.append(QualityIssue(
-                step="quality_check",
-                severity=Severity.ERROR,
-                message="Page is completely blank (no black pixels)",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="quality_check",
+                    severity=Severity.ERROR,
+                    message="Page is completely blank (no black pixels)",
+                )
+            )
 
         # Resolution check (informational)
         if width < 2550 or height < 3300:
             score -= 10
-            issues.append(QualityIssue(
-                step="quality_check",
-                severity=Severity.WARNING,
-                message=f"Image resolution {width}x{height} may be below 300 DPI at 8.5x11 (need 2550x3300)",
-            ))
+            issues.append(
+                QualityIssue(
+                    step="quality_check",
+                    severity=Severity.WARNING,
+                    message=f"Image resolution {width}x{height} may be below 300 DPI at 8.5x11 (need 2550x3300)",
+                )
+            )
 
     except ImportError:
         logger.warning("PIL not available; returning basic report")
-        issues.append(QualityIssue(
-            step="quality_check",
-            severity=Severity.WARNING,
-            message="PIL/Pillow not installed; quality check limited",
-        ))
+        issues.append(
+            QualityIssue(
+                step="quality_check",
+                severity=Severity.WARNING,
+                message="PIL/Pillow not installed; quality check limited",
+            )
+        )
         score = 50.0
 
     score = max(0, min(100, score))
@@ -693,11 +743,13 @@ async def run_full_pipeline(image_data: bytes) -> PipelineResult:
             image_data, issues = await step_fn(image_data)
             all_issues.extend(issues)
             steps_completed.append(step_name)
-            step_results.append(StepResult(
-                step_name=step_name,
-                success=True,
-                issues=list(issues),
-            ))
+            step_results.append(
+                StepResult(
+                    step_name=step_name,
+                    success=True,
+                    issues=list(issues),
+                )
+            )
         except Exception as exc:
             error_msg = f"Step '{step_name}' failed: {exc}"
             logger.error(error_msg, exc_info=True)
@@ -707,12 +759,14 @@ async def run_full_pipeline(image_data: bytes) -> PipelineResult:
                 message=error_msg,
             )
             all_issues.append(failure_issue)
-            step_results.append(StepResult(
-                step_name=step_name,
-                success=False,
-                issues=[failure_issue],
-                error=str(exc),
-            ))
+            step_results.append(
+                StepResult(
+                    step_name=step_name,
+                    success=False,
+                    issues=[failure_issue],
+                    error=str(exc),
+                )
+            )
             # Continue with the image data we have so far
 
     # Step 7: Quality Check (final verification)
@@ -720,11 +774,13 @@ async def run_full_pipeline(image_data: bytes) -> PipelineResult:
         report = await step_7_quality_check(image_data)
         report.issues = all_issues + report.issues
         steps_completed.append("quality_check")
-        step_results.append(StepResult(
-            step_name="quality_check",
-            success=True,
-            issues=list(report.issues),
-        ))
+        step_results.append(
+            StepResult(
+                step_name="quality_check",
+                success=True,
+                issues=list(report.issues),
+            )
+        )
     except Exception as exc:
         error_msg = f"Step 'quality_check' failed: {exc}"
         logger.error(error_msg, exc_info=True)
@@ -734,12 +790,14 @@ async def run_full_pipeline(image_data: bytes) -> PipelineResult:
             message=error_msg,
         )
         all_issues.append(failure_issue)
-        step_results.append(StepResult(
-            step_name="quality_check",
-            success=False,
-            issues=[failure_issue],
-            error=str(exc),
-        ))
+        step_results.append(
+            StepResult(
+                step_name="quality_check",
+                success=False,
+                issues=[failure_issue],
+                error=str(exc),
+            )
+        )
         # Build a fallback report since step 7 failed
         report = QualityReport(score=0, issues=all_issues, passed=False)
 

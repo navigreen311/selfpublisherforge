@@ -234,7 +234,7 @@ function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) =
         alert(`${t("manuscripts.menu.exportTxt")}: ${book.title}`);
         break;
       case "export-md":
-        alert(`${t("manuscripts.menu.exportMd")}: ${book.title}`);
+        alert(`${t("manuscripts.menu.exportMarkdown")}: ${book.title}`);
         break;
       case "analytics":
         alert(`${t("manuscripts.menu.viewAnalytics")}: ${book.title}`);
@@ -277,7 +277,7 @@ function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) =
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs text-muted-foreground">
-          {t("manuscripts.menu.exportLabel")}
+          {t("editor.export")}
         </DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => handleAction("export-docx")}>
           {t("manuscripts.menu.exportDocx")}
@@ -292,7 +292,7 @@ function ManuscriptActionMenu({ book, t }: { book: BookEntry; t: (key: string) =
           {t("manuscripts.menu.exportTxt")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleAction("export-md")}>
-          {t("manuscripts.menu.exportMd")}
+          {t("manuscripts.menu.exportMarkdown")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => handleAction("archive")}>

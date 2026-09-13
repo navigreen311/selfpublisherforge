@@ -16,6 +16,10 @@ jest.mock("next/navigation", () => ({
 
 // Mock lucide-react icons
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Loader2: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="loader-icon" {...props} />
   ),
@@ -78,6 +82,24 @@ jest.mock("@radix-ui/react-dialog", () => ({
 
 // Mock Radix UI Slot so Button renders correctly
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -131,62 +153,6 @@ jest.mock("@/modules/agents/hooks", () => ({
 }));
 
 // Mock TaskList to expose onApprove/onReject callbacks
-jest.mock("@/modules/agents/components/TaskList", () => ({
-  TaskList: ({
-    tasks,
-    onSelect,
-    onApprove,
-    onReject,
-    onCancel,
-  }: {
-    tasks: Array<{ id: string; title: string; status: string }>;
-    onSelect?: (task: unknown) => void;
-    onApprove?: (task: unknown) => void;
-    onReject?: (task: unknown) => void;
-    onCancel?: (task: unknown) => void;
-  }) => (
-    <div data-testid="task-list">
-      {tasks.length === 0 ? (
-        <span>No tasks found.</span>
-      ) : (
-        tasks.map((t) => (
-          <div key={t.id} data-testid={`task-${t.id}`}>
-            <span>{t.title}</span>
-            <span>{t.status}</span>
-            {t.status === "awaiting_approval" && onApprove && (
-              <button
-                data-testid={`approve-btn-${t.id}`}
-                aria-label={`Approve task ${t.title}`}
-                onClick={() => onApprove(t)}
-              >
-                Approve
-              </button>
-            )}
-            {t.status === "awaiting_approval" && onReject && (
-              <button
-                data-testid={`reject-btn-${t.id}`}
-                aria-label={`Reject task ${t.title}`}
-                onClick={() => onReject(t)}
-              >
-                Reject
-              </button>
-            )}
-            {(t.status === "pending" || t.status === "running") && onCancel && (
-              <button
-                data-testid={`cancel-btn-${t.id}`}
-                aria-label={`Cancel task ${t.title}`}
-                onClick={() => onCancel(t)}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  ),
-}));
-
 // Mock TaskDetail
 jest.mock("@/modules/agents/components/TaskDetail", () => ({
   TaskDetail: ({
@@ -568,7 +534,7 @@ describe("TasksPage", () => {
     });
     renderWithProviders(<TasksPage />);
 
-    expect(screen.getByText("No tasks found.")).toBeInTheDocument();
+    expect(screen.getByText("No tasks found")).toBeInTheDocument();
     expect(screen.getByText("0 total tasks")).toBeInTheDocument();
   });
 });

@@ -190,8 +190,7 @@ class TestCreateProject:
         result = await service_crud.create_project(
             db=mock_db,
             org_id=org_id,
-            book_id=book_id,
-            title="My Audiobook",
+            data={"book_id": book_id, "title": "My Audiobook"},
         )
 
         assert result is not None
@@ -215,8 +214,7 @@ class TestCreateProject:
             await service_crud.create_project(
                 db=mock_db,
                 org_id=org_id,
-                book_id=bad_book_id,
-                title="Invalid Book Audiobook",
+                data={"book_id": bad_book_id, "title": "Invalid Book Audiobook"},
             )
 
 
@@ -239,12 +237,12 @@ class TestListProjects:
         result = await service_crud.list_projects(
             db=mock_db,
             org_id=org_id,
-            limit=10,
-            offset=0,
+            page=1,
+            per_page=10,
         )
 
-        assert result.total == 3
-        assert len(result.items) == 3
+        assert result["total"] == 3
+        assert len(result["items"]) == 3
 
     @pytest.mark.asyncio
     async def test_list_projects_filter_status(self, org_id):
@@ -260,12 +258,12 @@ class TestListProjects:
             db=mock_db,
             org_id=org_id,
             status="generating",
-            limit=10,
-            offset=0,
+            page=1,
+            per_page=10,
         )
 
-        assert len(result.items) == 1
-        assert result.items[0].status == "generating"
+        assert len(result["items"]) == 1
+        assert result["items"][0].status == "generating"
 
     @pytest.mark.asyncio
     async def test_list_projects_tenant_isolation(self, org_id, other_org_id):
@@ -281,12 +279,12 @@ class TestListProjects:
         result = await service_crud.list_projects(
             db=mock_db,
             org_id=other_org_id,
-            limit=10,
-            offset=0,
+            page=1,
+            per_page=10,
         )
 
-        assert result.total == 0
-        assert len(result.items) == 0
+        assert result["total"] == 0
+        assert len(result["items"]) == 0
 
 
 # ===========================================================================
@@ -359,12 +357,16 @@ class TestUpdateProject:
             db=mock_db,
             project_id=project_id,
             org_id=org_id,
-            title="New Title",
-            status="configuring",
+            data={"title": "New Title", "status": "configuring"},
         )
 
         assert result.title == "New Title"
-        assert result.status == "configuring"
+        # `status` is deliberately absent from _UPDATABLE_FIELDS: it is driven
+        # by the generation lifecycle, not by the client. A caller asking for
+        # "configuring" is ignored rather than obeyed, and that refusal is the
+        # assertion worth making here — the test previously demanded the
+        # opposite.
+        assert result.status == "draft"
         mock_db.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -386,7 +388,7 @@ class TestUpdateProject:
             db=mock_db,
             project_id=project_id,
             org_id=org_id,
-            title="Updated Title",
+            data={"title": "Updated Title"},
         )
 
         assert result.title == "Updated Title"
@@ -455,13 +457,13 @@ class TestDeleteProject:
         result = await service_crud.list_projects(
             db=mock_db,
             org_id=org_id,
-            limit=10,
-            offset=0,
+            page=1,
+            per_page=10,
         )
 
-        assert result.total == 1
-        assert len(result.items) == 1
-        assert result.items[0].title == "Active Book"
+        assert result["total"] == 1
+        assert len(result["items"]) == 1
+        assert result["items"][0].title == "Active Book"
         # Verify none of the returned items have a deleted_at
-        for item in result.items:
+        for item in result["items"]:
             assert item.deleted_at is None

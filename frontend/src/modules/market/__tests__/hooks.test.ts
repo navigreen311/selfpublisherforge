@@ -329,7 +329,7 @@ describe("Market hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(result.current.data).toEqual(mockKeywordData);
-      expect(mockPost).toHaveBeenCalledWith("/api/v1/market/keywords/research", {
+      expect(mockPost).toHaveBeenCalledWith("/api/v1/market/keyword-research", {
         keywords: ["romance novels"],
       });
     });

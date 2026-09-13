@@ -5,23 +5,23 @@ generates EAN-13 barcodes for back-cover placement.
 
 Blueprint refs: 12.4
 """
+
 from __future__ import annotations
 
 import base64
 import uuid
 from dataclasses import dataclass
-from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty.models.enums import ISBNStatus
 from app.modules.specialty.models.shared import ISBNPool
 
-
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ISBNRecord:
@@ -50,6 +50,7 @@ class PoolStatus:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _row_to_record(row: ISBNPool) -> ISBNRecord:
     return ISBNRecord(
         id=row.id,
@@ -68,16 +69,14 @@ def _validate_isbn13(isbn: str) -> bool:
     digits = isbn.replace("-", "").replace(" ", "")
     if len(digits) != 13 or not digits.isdigit():
         return False
-    total = sum(
-        int(d) * (1 if i % 2 == 0 else 3)
-        for i, d in enumerate(digits)
-    )
+    total = sum(int(d) * (1 if i % 2 == 0 else 3) for i, d in enumerate(digits))
     return total % 10 == 0
 
 
 # ---------------------------------------------------------------------------
 # Barcode generation
 # ---------------------------------------------------------------------------
+
 
 def generate_barcode(isbn: str) -> str:
     """Generate an EAN-13 barcode SVG for *isbn*.
@@ -194,9 +193,9 @@ def _render_ean13_svg(digits: str) -> str:
     """Render a complete EAN-13 barcode as an SVG string."""
     binary = _ean13_binary(digits)
 
-    module_w = 2          # width of narrowest bar in SVG units
-    bar_h = 70            # normal bar height
-    guard_extra = 5       # extra height for guard bars
+    module_w = 2  # width of narrowest bar in SVG units
+    bar_h = 70  # normal bar height
+    guard_extra = 5  # extra height for guard bars
     font_size = 12
     text_y = bar_h + guard_extra + font_size + 2
     quiet_zone = 10 * module_w  # quiet zone width (≥ 9 modules recommended)
@@ -208,11 +207,11 @@ def _render_ean13_svg(digits: str) -> str:
     # Identify guard bar positions (start: 0-2, centre: 45-49, end: 92-94)
     guard_positions: set[int] = set()
     for p in range(3):
-        guard_positions.add(p)        # start guard
+        guard_positions.add(p)  # start guard
     for p in range(45, 50):
-        guard_positions.add(p)        # centre guard
+        guard_positions.add(p)  # centre guard
     for p in range(92, 95):
-        guard_positions.add(p)        # end guard
+        guard_positions.add(p)  # end guard
 
     # Build bar rectangles
     rects: list[str] = []
@@ -220,9 +219,7 @@ def _render_ean13_svg(digits: str) -> str:
         if ch == "1":
             x = quiet_zone + i * module_w
             h = bar_h + guard_extra if i in guard_positions else bar_h
-            rects.append(
-                f'<rect x="{x}" y="0" width="{module_w}" height="{h}" fill="#000"/>'
-            )
+            rects.append(f'<rect x="{x}" y="0" width="{module_w}" height="{h}" fill="#000"/>')
 
     # Human-readable digits -------------------------------------------------
     texts: list[str] = []
@@ -252,20 +249,17 @@ def _render_ean13_svg(digits: str) -> str:
         f'letter-spacing="2">{right_text}</text>'
     )
 
-    svg = (
+    return (
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'width="{svg_w}" height="{svg_h}" viewBox="0 0 {svg_w} {svg_h}">'
-        f'<rect width="{svg_w}" height="{svg_h}" fill="#fff"/>'
-        + "".join(rects)
-        + "".join(texts)
-        + "</svg>"
+        f'<rect width="{svg_w}" height="{svg_h}" fill="#fff"/>' + "".join(rects) + "".join(texts) + "</svg>"
     )
-    return svg
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def add_isbn_to_pool(
     db: AsyncSession,
@@ -329,11 +323,7 @@ async def get_pool_status(
     org_id: uuid.UUID,
 ) -> PoolStatus:
     """Return aggregated pool statistics for an organisation."""
-    total_stmt = (
-        select(func.count())
-        .select_from(ISBNPool)
-        .where(ISBNPool.org_id == org_id)
-    )
+    total_stmt = select(func.count()).select_from(ISBNPool).where(ISBNPool.org_id == org_id)
     assigned_stmt = (
         select(func.count())
         .select_from(ISBNPool)

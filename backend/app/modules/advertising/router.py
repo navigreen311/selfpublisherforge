@@ -7,13 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
+from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
 from app.database import get_db
 from app.modules.advertising.facebook_ads import FacebookAdsError
-from app.core.contracts import SuccessResponse
 from app.modules.advertising.schemas import (
     AdCreativeResponse,
     AdDashboard,
@@ -47,15 +45,19 @@ from app.modules.advertising.schemas import (
     PerformanceQuery,
     SearchTermResponse,
 )
+from app.modules.advertising.service import AdvertisingService
+
+logger = logging.getLogger(__name__)
+
 
 try:
     from app.modules.advertising.facebook_ads import FacebookAdsClient
+
     _facebook_client = FacebookAdsClient()
 except (ImportError, ModuleNotFoundError) as e:
     logger.warning("Facebook Ads client not available: %s", e)
-    _facebook_client = None
+    _facebook_client = None  # type: ignore[assignment]  # optional dependency
 
-from app.modules.advertising.service import AdvertisingService
 
 router = APIRouter()
 
@@ -65,6 +67,7 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> AdvertisingService:
 
 
 # ─── Campaign Endpoints ──────────────────────────────────────────────────────
+
 
 @router.get(
     "/campaigns",
@@ -174,6 +177,7 @@ async def update_campaign(
 
 # ─── Performance Endpoints ────────────────────────────────────────────────────
 
+
 @router.get(
     "/campaigns/{campaign_id}/performance",
     response_model=list[AdPerformance],
@@ -196,12 +200,12 @@ async def get_campaign_performance(
         try:
             query.date_from = datetime.fromisoformat(date_from)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date_from format")
+            raise HTTPException(status_code=400, detail="Invalid date_from format") from None
     if date_to:
         try:
             query.date_to = datetime.fromisoformat(date_to)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date_to format")
+            raise HTTPException(status_code=400, detail="Invalid date_to format") from None
 
     return await service.get_campaign_performance(
         org_id=current_user["org_id"],
@@ -211,6 +215,7 @@ async def get_campaign_performance(
 
 
 # ─── Optimization Endpoint ───────────────────────────────────────────────────
+
 
 @router.post(
     "/campaigns/{campaign_id}/optimize",
@@ -242,6 +247,7 @@ async def optimize_campaign(
 
 
 # ─── Keyword Bid Endpoints ───────────────────────────────────────────────────
+
 
 @router.get(
     "/keyword-bids",
@@ -281,6 +287,7 @@ async def update_keyword_bids(
 
 # ─── Creative Endpoints ──────────────────────────────────────────────────────
 
+
 @router.post(
     "/creatives/generate",
     response_model=CreativeGenerateResponse,
@@ -319,6 +326,7 @@ async def list_creatives(
 
 # ─── Dashboard Endpoint ──────────────────────────────────────────────────────
 
+
 @router.get(
     "/dashboard",
     response_model=AdDashboard,
@@ -338,6 +346,7 @@ async def get_dashboard(
 
 
 # ─── Facebook Ads Endpoints ─────────────────────────────────────────────────
+
 
 @router.post(
     "/facebook/campaigns",
@@ -361,7 +370,7 @@ async def create_facebook_campaign(
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.get(
@@ -387,7 +396,7 @@ async def list_facebook_campaigns(
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.get(
@@ -413,8 +422,8 @@ async def get_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.patch(
@@ -442,8 +451,8 @@ async def update_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.post(
@@ -469,8 +478,8 @@ async def pause_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.get(
@@ -489,6 +498,7 @@ async def get_facebook_campaign_metrics(
     """Get performance metrics for a Facebook Ads campaign."""
     # Validate date format
     from datetime import datetime as dt
+
     for label, value in [("start_date", start_date), ("end_date", end_date)]:
         try:
             dt.strptime(value, "%Y-%m-%d")
@@ -496,7 +506,7 @@ async def get_facebook_campaign_metrics(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid {label} format. Use YYYY-MM-DD.",
-            )
+            ) from None
 
     try:
         return await service.facebook_get_campaign_metrics(
@@ -511,8 +521,8 @@ async def get_facebook_campaign_metrics(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.put(
@@ -540,8 +550,8 @@ async def put_facebook_campaign(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.get(
@@ -567,7 +577,7 @@ async def get_facebook_campaign_insights(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid {label} format. Use YYYY-MM-DD.",
-            )
+            ) from None
 
     try:
         return await service.facebook_get_campaign_metrics(
@@ -582,8 +592,8 @@ async def get_facebook_campaign_insights(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Facebook campaign not found",
-            )
-        raise HTTPException(status_code=status_code, detail=str(exc))
+            ) from exc
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 class FacebookAudienceCreate(BaseModel):
@@ -625,20 +635,20 @@ async def create_facebook_audience(
         )
 
     try:
-        result = await _facebook_client.create_custom_audience(
+        return await _facebook_client.create_custom_audience(
             name=data.name,
             description=data.description,
             source_type=data.source_type,
         )
-        return result
     except FacebookAdsError as exc:
         raise HTTPException(
             status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
-        )
+        ) from exc
 
 
 # ─── Enhanced Dashboard Endpoint ────────────────────────────────────────────
+
 
 @router.get(
     "/dashboard/enhanced",
@@ -652,8 +662,8 @@ async def get_enhanced_dashboard(
     db: AsyncSession = Depends(get_db),
 ):
     """Get enhanced dashboard with stats, trends, and insights."""
-    from app.modules.advertising.dashboard_service import get_enhanced_dashboard as _get_dashboard
     from app.modules.advertising.ai_service import get_ai_insights
+    from app.modules.advertising.dashboard_service import get_enhanced_dashboard as _get_dashboard
 
     dashboard_data = await _get_dashboard(db, org_id=current_user["org_id"], period=period)
     insights_data = await get_ai_insights(db, org_id=current_user["org_id"])
@@ -668,6 +678,7 @@ async def get_enhanced_dashboard(
 
 
 # ─── AI Endpoints ───────────────────────────────────────────────────────────
+
 
 @router.get(
     "/ai/insights",
@@ -708,11 +719,8 @@ async def suggest_keywords_endpoint(
     keywords = await suggest_keywords(db, org_id=current_user["org_id"], book_id=book_id)
 
     from app.modules.advertising.schemas import KeywordSuggestion
-    return SuccessResponse(
-        data=KeywordSuggestionsResponse(
-            keywords=[KeywordSuggestion(**kw) for kw in keywords]
-        )
-    )
+
+    return SuccessResponse(data=KeywordSuggestionsResponse(keywords=[KeywordSuggestion(**kw) for kw in keywords]))
 
 
 @router.post(
@@ -739,6 +747,7 @@ async def optimize_bids_endpoint(
     )
 
     from app.modules.advertising.schemas import BidRecommendation
+
     return SuccessResponse(
         data=BidOptimizationResponse(
             recommendations=[BidRecommendation(**r) for r in result["recommendations"]],
@@ -748,6 +757,7 @@ async def optimize_bids_endpoint(
 
 
 # ─── Search Terms Endpoints ─────────────────────────────────────────────────
+
 
 @router.get(
     "/campaigns/{campaign_id}/search-terms",
@@ -812,6 +822,7 @@ async def negate_search_term_endpoint(
 
 # ─── Daily Metrics Endpoint ─────────────────────────────────────────────────
 
+
 @router.get(
     "/campaigns/{campaign_id}/daily-metrics",
     response_model=SuccessResponse[list[DailyMetricResponse]],
@@ -826,26 +837,31 @@ async def get_daily_metrics_endpoint(
 ):
     """Get daily metrics for a campaign."""
     from datetime import datetime, timedelta
-    from sqlalchemy import select, and_
+
+    from sqlalchemy import and_, select
+
     from app.modules.advertising.models import AdDailyMetric
 
     days = int(period.replace("d", "")) if period.endswith("d") else 30
     start_date = datetime.utcnow() - timedelta(days=days)
 
     result = await db.execute(
-        select(AdDailyMetric).where(
+        select(AdDailyMetric)
+        .where(
             and_(
                 AdDailyMetric.campaign_id == campaign_id,
                 AdDailyMetric.date >= start_date,
                 AdDailyMetric.deleted_at.is_(None),
             )
-        ).order_by(AdDailyMetric.date)
+        )
+        .order_by(AdDailyMetric.date)
     )
     metrics = result.scalars().all()
     return SuccessResponse(data=[DailyMetricResponse.model_validate(m) for m in metrics])
 
 
 # ─── Campaign Pause / Resume Endpoints ──────────────────────────────────────
+
 
 @router.post(
     "/campaigns/{campaign_id}/pause",

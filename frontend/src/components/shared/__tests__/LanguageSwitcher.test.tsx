@@ -1,5 +1,22 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { LanguageSwitcher } from "../LanguageSwitcher";
+
+/**
+ * The trigger is a Radix DropdownMenu, which opens on `pointerdown` — a bare
+ * `fireEvent.click` never opened it, so these assertions used to read a closed
+ * menu. `userEvent` fires the full pointer sequence.
+ *
+ * Queries for a locale name are scoped to the menu: the trigger button also
+ * renders the current locale's name, so an unscoped `getByText("English")`
+ * matches twice once the menu is open.
+ */
+async function openMenu() {
+  const user = userEvent.setup();
+  const trigger = screen.getByLabelText("Select language");
+  await user.click(trigger);
+  return { user, menu: await screen.findByRole("menu") };
+}
 
 describe("LanguageSwitcher", () => {
   it("should render with default locale (en)", () => {
@@ -9,75 +26,61 @@ describe("LanguageSwitcher", () => {
 
   it("should show current locale name in non-compact mode", () => {
     render(<LanguageSwitcher currentLocale="en" />);
-    // The "English" text is inside a button, but may be hidden on mobile
     const button = screen.getByLabelText("Select language");
-    expect(button).toBeInTheDocument();
+    expect(button).toHaveTextContent("English");
   });
 
   it("should show only icon in compact mode", () => {
     render(<LanguageSwitcher compact />);
     const button = screen.getByLabelText("Select language");
     expect(button).toBeInTheDocument();
-    // In compact mode, the locale name should not be visible
     expect(screen.queryByText("English")).not.toBeInTheDocument();
   });
 
-  it("should open dropdown when clicked", () => {
+  it("should open dropdown when clicked", async () => {
     render(<LanguageSwitcher />);
-    const trigger = screen.getByLabelText("Select language");
-    fireEvent.click(trigger);
+    const { menu } = await openMenu();
 
-    // Check if all locale options are displayed
-    expect(screen.getByText("English")).toBeInTheDocument();
-    expect(screen.getByText("Español")).toBeInTheDocument();
-    expect(screen.getByText("Deutsch")).toBeInTheDocument();
+    expect(within(menu).getByText("English")).toBeInTheDocument();
+    expect(within(menu).getByText("Español")).toBeInTheDocument();
+    expect(within(menu).getByText("Deutsch")).toBeInTheDocument();
   });
 
-  it("should highlight current locale with checkmark", () => {
+  it("should highlight current locale with checkmark", async () => {
     render(<LanguageSwitcher currentLocale="es" />);
-    const trigger = screen.getByLabelText("Select language");
-    fireEvent.click(trigger);
+    const { menu } = await openMenu();
 
-    // The check mark should be present for Spanish
-    const selectedItem = screen.getByText("Español").closest("[role='menuitem']");
+    const selectedItem = within(menu)
+      .getByText("Español")
+      .closest("[role='menuitem']");
     expect(selectedItem).toBeInTheDocument();
+    expect(within(selectedItem as HTMLElement).getByLabelText("Selected")).toBeInTheDocument();
   });
 
-  it("should call onLocaleChange when a locale is selected", () => {
+  it("should call onLocaleChange when a locale is selected", async () => {
     const handleLocaleChange = jest.fn();
     render(<LanguageSwitcher onLocaleChange={handleLocaleChange} />);
 
-    const trigger = screen.getByLabelText("Select language");
-    fireEvent.click(trigger);
-
-    const spanishOption = screen.getByText("Español");
-    fireEvent.click(spanishOption);
+    const { user, menu } = await openMenu();
+    await user.click(within(menu).getByText("Español"));
 
     expect(handleLocaleChange).toHaveBeenCalledWith("es");
   });
 
-  it("should log to console when onLocaleChange is not provided", () => {
-    const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+  it("should set the NEXT_LOCALE cookie when onLocaleChange is not provided", async () => {
     render(<LanguageSwitcher />);
 
-    const trigger = screen.getByLabelText("Select language");
-    fireEvent.click(trigger);
+    const { user, menu } = await openMenu();
+    await user.click(within(menu).getByText("Deutsch"));
 
-    const germanOption = screen.getByText("Deutsch");
-    fireEvent.click(germanOption);
-
-    expect(consoleSpy).toHaveBeenCalledWith("Switching to locale: de");
-    consoleSpy.mockRestore();
+    expect(document.cookie).toContain("NEXT_LOCALE=de");
   });
 
-  it("should display flag icons for each locale", () => {
+  it("should display one menu item per locale", async () => {
     render(<LanguageSwitcher />);
-    const trigger = screen.getByLabelText("Select language");
-    fireEvent.click(trigger);
+    await openMenu();
 
-    // Check for flag emojis (they should be present in the dropdown)
-    const menuItems = screen.getAllByRole("menuitem");
-    expect(menuItems).toHaveLength(3); // en, es, de
+    expect(screen.getAllByRole("menuitem")).toHaveLength(3); // en, es, de
   });
 
   it("should apply custom className to trigger button", () => {
@@ -86,18 +89,17 @@ describe("LanguageSwitcher", () => {
     expect(button).toHaveClass("custom-class");
   });
 
-  it("should be keyboard accessible", () => {
+  it("should be keyboard accessible", async () => {
+    const user = userEvent.setup();
     render(<LanguageSwitcher />);
     const trigger = screen.getByLabelText("Select language");
 
-    // Focus the trigger
     trigger.focus();
     expect(trigger).toHaveFocus();
 
-    // Open with Enter key
-    fireEvent.keyDown(trigger, { key: "Enter", code: "Enter" });
+    await user.keyboard("{Enter}");
 
-    // Verify dropdown is open by checking for locale options
-    expect(screen.getByText("English")).toBeInTheDocument();
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("English")).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for Specialty Books shared / cross-cutting systems."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -7,7 +8,6 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -92,15 +92,9 @@ class MetadataAdvisorResponse(BaseModel):
     categories: list[CategorySuggestion] = Field(
         ..., description="Recommended BISAC/KDP categories ranked by relevance"
     )
-    keywords: list[str] = Field(
-        ..., max_length=7, description="Up to 7 KDP backend keywords"
-    )
-    subtitle_suggestions: list[str] = Field(
-        default_factory=list, description="AI-generated subtitle alternatives"
-    )
-    compliance_notes: list[str] = Field(
-        default_factory=list, description="Any KDP compliance warnings"
-    )
+    keywords: list[str] = Field(..., max_length=7, description="Up to 7 KDP backend keywords")
+    subtitle_suggestions: list[str] = Field(default_factory=list, description="AI-generated subtitle alternatives")
+    compliance_notes: list[str] = Field(default_factory=list, description="Any KDP compliance warnings")
 
 
 # ---------------------------------------------------------------------------
@@ -168,9 +162,7 @@ class FingerprintResponse(BaseModel):
     phash: str | None = Field(None, description="Perceptual hash for images")
     data_hash: str | None = Field(None, description="Structural hash for grids/puzzles")
     ngram_fingerprint: str | None = Field(None, description="N-gram fingerprint for text")
-    jaccard_vector: dict[str, Any] | None = Field(
-        None, description="Jaccard similarity vector for word lists"
-    )
+    jaccard_vector: dict[str, Any] | None = Field(None, description="Jaccard similarity vector for word lists")
     created_at: datetime
 
 
@@ -215,13 +207,9 @@ class SpamCheckResponse(BaseModel):
     interior_originality_score: float = Field(..., ge=0, le=100)
     metadata_quality_score: float = Field(..., ge=0, le=100)
     content_substance_score: float = Field(..., ge=0, le=100)
-    minor_edit_detection: bool = Field(
-        ..., description="True if book appears to be a minor edit of another"
-    )
+    minor_edit_detection: bool = Field(..., description="True if book appears to be a minor edit of another")
     issues: list[str] = Field(default_factory=list, description="Specific spam risk issues found")
-    recommendations: list[str] = Field(
-        default_factory=list, description="Steps to reduce spam risk"
-    )
+    recommendations: list[str] = Field(default_factory=list, description="Steps to reduce spam risk")
 
 
 # ---------------------------------------------------------------------------
@@ -235,12 +223,8 @@ class PricingCalculateRequest(BaseModel):
     book_type: BookType
     page_count: int = Field(..., ge=1, description="Total interior page count")
     trim_size: str = Field(..., description="e.g. '8.5x11', '6x9'")
-    interior_type: str = Field(
-        "bw", description="'bw' (black & white) or 'color' (premium color)"
-    )
-    ink_coverage_percent: float | None = Field(
-        None, ge=0, le=100, description="Average ink coverage per page"
-    )
+    interior_type: str = Field("bw", description="'bw' (black & white) or 'color' (premium color)")
+    ink_coverage_percent: float | None = Field(None, ge=0, le=100, description="Average ink coverage per page")
     target_price: float | None = Field(None, ge=0, description="Desired list price in USD")
     distributor: Distributor = Distributor.KDP
 
@@ -268,14 +252,10 @@ class PricingCalculateResponse(BaseModel):
     """Print cost calculation with pricing scenarios."""
 
     cost: float = Field(..., ge=0, description="Base print cost in USD")
-    scenarios: list[PricingScenario] = Field(
-        ..., description="Multiple pricing scenarios from aggressive to premium"
-    )
+    scenarios: list[PricingScenario] = Field(..., description="Multiple pricing scenarios from aggressive to premium")
     margin_analysis: MarginAnalysis
     distributor: Distributor
-    warnings: list[str] = Field(
-        default_factory=list, description="Cost or pricing warnings"
-    )
+    warnings: list[str] = Field(default_factory=list, description="Cost or pricing warnings")
 
 
 # ---------------------------------------------------------------------------
@@ -288,9 +268,7 @@ class InkCoverageRequest(BaseModel):
 
     book_type: BookType
     book_id: UUID
-    page_ids: list[UUID] | None = Field(
-        None, description="Specific pages to analyze; None = all pages"
-    )
+    page_ids: list[UUID] | None = Field(None, description="Specific pages to analyze; None = all pages")
 
 
 class PageInkCoverage(BaseModel):
@@ -313,9 +291,7 @@ class InkCoverageResponse(BaseModel):
     average_coverage: float = Field(..., ge=0, le=100)
     max_coverage: float = Field(..., ge=0, le=100)
     pages: list[PageInkCoverage] = Field(default_factory=list)
-    estimated_cost_impact: float | None = Field(
-        None, description="Additional cost from high ink coverage"
-    )
+    estimated_cost_impact: float | None = Field(None, description="Additional cost from high ink coverage")
 
 
 class SoftProofRequest(BaseModel):
@@ -341,16 +317,10 @@ class SoftProofResponse(BaseModel):
 
     page_id: UUID
     proof_image_url: str = Field(..., description="URL of the CMYK soft-proof image")
-    side_by_side_url: str | None = Field(
-        None, description="URL of RGB vs CMYK comparison image"
-    )
+    side_by_side_url: str | None = Field(None, description="URL of RGB vs CMYK comparison image")
     gamut_warnings: list[GamutWarning] = Field(default_factory=list)
-    shadow_crush_detected: bool = Field(
-        ..., description="True if dark areas may lose detail in print"
-    )
-    ink_density_ok: bool = Field(
-        ..., description="True if total ink density is within safe limits"
-    )
+    shadow_crush_detected: bool = Field(..., description="True if dark areas may lose detail in print")
+    ink_density_ok: bool = Field(..., description="True if total ink density is within safe limits")
 
 
 class ColorAutoAdjustRequest(BaseModel):
@@ -369,12 +339,8 @@ class ColorAutoAdjustResponse(BaseModel):
 
     page_id: UUID
     adjusted_image_url: str = Field(..., description="URL of the adjusted image")
-    changes_made: list[str] = Field(
-        default_factory=list, description="List of adjustments applied"
-    )
-    before_after_url: str | None = Field(
-        None, description="Side-by-side comparison URL"
-    )
+    changes_made: list[str] = Field(default_factory=list, description="List of adjustments applied")
+    before_after_url: str | None = Field(None, description="Side-by-side comparison URL")
 
 
 # ---------------------------------------------------------------------------
@@ -386,12 +352,8 @@ class BatchCreateRequest(BaseModel):
     """Create a batch generation job."""
 
     book_type: BookType
-    batch_config: dict[str, Any] = Field(
-        ..., description="Configuration for the batch job (volumes, themes, etc.)"
-    )
-    budget_limit_cents: int | None = Field(
-        None, ge=0, description="Maximum spend in cents; None = unlimited"
-    )
+    batch_config: dict[str, Any] = Field(..., description="Configuration for the batch job (volumes, themes, etc.)")
+    budget_limit_cents: int | None = Field(None, ge=0, description="Maximum spend in cents; None = unlimited")
     volumes_total: int = Field(..., ge=1, le=100, description="Number of volumes to generate")
 
 
@@ -442,9 +404,7 @@ class SeriesCreate(BaseModel):
         default_factory=dict,
         description="Branding rules: title font/position, spine layout, volume badge, etc.",
     )
-    branding_locked: bool = Field(
-        False, description="Lock branding so volumes cannot deviate"
-    )
+    branding_locked: bool = Field(False, description="Lock branding so volumes cannot deviate")
 
 
 class SeriesResponse(BaseModel):
@@ -572,8 +532,6 @@ class TemplateResponse(BaseModel):
     description: str
     thumbnail_url: str | None = None
     template_type: str = Field(..., description="e.g. 'page-layout', 'theme-pack', 'style-pack'")
-    settings: dict[str, Any] = Field(
-        default_factory=dict, description="Pre-filled wizard settings"
-    )
+    settings: dict[str, Any] = Field(default_factory=dict, description="Pre-filled wizard settings")
     tags: list[str] = Field(default_factory=list)
     is_premium: bool = False

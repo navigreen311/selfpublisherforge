@@ -265,7 +265,7 @@ export default function NewManuscriptPage() {
               aria-disabled={
                 (submitAttempted && !isFormValid) || createProject.isPending
               }
-              aria-label={t("newManuscript.form.create")}
+              aria-busy={createProject.isPending}
             >
               {createProject.isPending ? (
                 <>

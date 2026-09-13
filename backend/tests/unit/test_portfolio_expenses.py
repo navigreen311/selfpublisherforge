@@ -9,14 +9,12 @@ safety, PortfolioMetricSnapshot population, and multi-campaign scenarios.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.modules.analytics.metrics import _compute_total_expenses, compute_portfolio_metrics
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -453,9 +451,7 @@ class TestMultipleCampaigns:
     async def test_fractional_penny_spend_preserved(self):
         """Verify sub-cent precision is handled through Decimal conversion."""
         db = AsyncMock()
-        db.execute = AsyncMock(
-            return_value=_make_expense_result(Decimal("123.456789"))
-        )
+        db.execute = AsyncMock(return_value=_make_expense_result(Decimal("123.456789")))
 
         result = await _compute_total_expenses(db, ORG_ID)
 

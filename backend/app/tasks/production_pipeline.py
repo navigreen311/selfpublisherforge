@@ -44,14 +44,13 @@ def check_deadlines(self) -> dict:
 
     loop = asyncio.new_event_loop()
     try:
-        result = loop.run_until_complete(_check_deadlines_async())
-        return result
+        return loop.run_until_complete(_check_deadlines_async())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error("check_deadlines failed: %s", exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 
@@ -98,11 +97,7 @@ async def _check_deadlines_async() -> dict:
                 reminder_count += 1
 
             # Pipeline-level deadline
-            if (
-                pipeline.deadline
-                and pipeline.deadline < now
-                and pipeline.status == PipelineStatus.ACTIVE
-            ):
+            if pipeline.deadline and pipeline.deadline < now and pipeline.status == PipelineStatus.ACTIVE:
                 _send_pipeline_overdue_alert(pipeline)
 
     logger.info(
@@ -148,7 +143,10 @@ def send_overdue_alert(self, pipeline_id: str, task_id: str) -> dict:
     except (ConnectionError, OSError) as exc:
         logger.error(
             "Failed to dispatch overdue notification for pipeline=%s task=%s: %s",
-            pipeline_id, task_id, exc, exc_info=True,
+            pipeline_id,
+            task_id,
+            exc,
+            exc_info=True,
         )
 
     return {
@@ -189,7 +187,10 @@ def send_deadline_reminder(self, pipeline_id: str, task_id: str) -> dict:
     except (ConnectionError, OSError) as exc:
         logger.error(
             "Failed to dispatch deadline reminder for pipeline=%s task=%s: %s",
-            pipeline_id, task_id, exc, exc_info=True,
+            pipeline_id,
+            task_id,
+            exc,
+            exc_info=True,
         )
 
     return {

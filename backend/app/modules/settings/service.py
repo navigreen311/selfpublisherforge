@@ -1,6 +1,7 @@
 """Settings service layer."""
+
 import secrets
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status
@@ -18,15 +19,10 @@ async def get_org_settings(db: AsyncSession, org_id: UUID) -> dict:
     org = result.scalar_one_or_none()
 
     if not org:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 
     # Get team members (users in the organization)
-    users_result = await db.execute(
-        select(User).where(User.org_id == org_id, User.deleted_at.is_(None))
-    )
+    users_result = await db.execute(select(User).where(User.org_id == org_id, User.deleted_at.is_(None)))
     users = users_result.scalars().all()
 
     team_members = [
@@ -61,10 +57,7 @@ async def update_org_settings(db: AsyncSession, org_id: UUID, data: dict) -> dic
     org = result.scalar_one_or_none()
 
     if not org:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 
     # Update name if provided
     if data.get("name") is not None:
@@ -99,17 +92,11 @@ async def change_password(db: AsyncSession, user_id: UUID, current_pw: str, new_
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Verify current password
     if not verify_password(current_pw, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
 
     # Update to new password
     user.password_hash = hash_password(new_pw)
@@ -124,10 +111,7 @@ async def enable_2fa(db: AsyncSession, user_id: UUID) -> dict:
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Generate a mock secret (in production, use pyotp)
     secret = secrets.token_urlsafe(32)
@@ -150,10 +134,7 @@ async def disable_2fa(db: AsyncSession, user_id: UUID) -> dict:
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     user.mfa_enabled = False
     user.mfa_secret = None
@@ -228,12 +209,7 @@ async def get_login_history(db: AsyncSession, user_id: UUID) -> list[dict]:
 
 async def list_api_keys(db: AsyncSession, user_id: UUID, org_id: UUID) -> list[dict]:
     """List all API keys for organization."""
-    result = await db.execute(
-        select(ApiKey).where(
-            ApiKey.org_id == org_id,
-            ApiKey.deleted_at.is_(None)
-        )
-    )
+    result = await db.execute(select(ApiKey).where(ApiKey.org_id == org_id, ApiKey.deleted_at.is_(None)))
     keys = result.scalars().all()
 
     return [
@@ -280,19 +256,11 @@ async def create_api_key(db: AsyncSession, user_id: UUID, org_id: UUID, data: di
 
 async def delete_api_key(db: AsyncSession, user_id: UUID, key_id: UUID) -> dict:
     """Delete (soft delete) an API key."""
-    result = await db.execute(
-        select(ApiKey).where(
-            ApiKey.id == key_id,
-            ApiKey.deleted_at.is_(None)
-        )
-    )
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id, ApiKey.deleted_at.is_(None)))
     api_key = result.scalar_one_or_none()
 
     if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="API key not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
 
     api_key.deleted_at = datetime.now(UTC)
     await db.commit()
@@ -302,19 +270,11 @@ async def delete_api_key(db: AsyncSession, user_id: UUID, key_id: UUID) -> dict:
 
 async def regenerate_api_key(db: AsyncSession, user_id: UUID, key_id: UUID) -> dict:
     """Regenerate an API key."""
-    result = await db.execute(
-        select(ApiKey).where(
-            ApiKey.id == key_id,
-            ApiKey.deleted_at.is_(None)
-        )
-    )
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id, ApiKey.deleted_at.is_(None)))
     api_key = result.scalar_one_or_none()
 
     if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="API key not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
 
     # Generate new key
     raw_key = f"spf_{secrets.token_urlsafe(32)}"
@@ -401,24 +361,24 @@ async def get_notification_prefs(db: AsyncSession, user_id: UUID) -> dict:
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     prefs = user.preferences or {}
-    notification_prefs = prefs.get("notifications", {
-        "email": {
-            "book_published": True,
-            "production_complete": True,
-            "marketing_updates": False,
+    notification_prefs = prefs.get(
+        "notifications",
+        {
+            "email": {
+                "book_published": True,
+                "production_complete": True,
+                "marketing_updates": False,
+            },
+            "push": {
+                "book_published": True,
+                "production_complete": False,
+                "marketing_updates": False,
+            },
         },
-        "push": {
-            "book_published": True,
-            "production_complete": False,
-            "marketing_updates": False,
-        },
-    })
+    )
 
     return {
         "preferences": notification_prefs,
@@ -433,10 +393,7 @@ async def update_notification_prefs(db: AsyncSession, user_id: UUID, data: dict)
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     current_prefs = user.preferences or {}
 

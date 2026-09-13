@@ -14,7 +14,7 @@ Tests use the async HTTPX client and in-memory SQLite fixtures from ``conftest.p
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -35,6 +35,7 @@ VALID_PASSWORD = "StrongP@ss1"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 async def _register(
     client: AsyncClient,
@@ -122,14 +123,13 @@ async def _create_project_and_book(
 # E2E: Complete Marketing Campaign Lifecycle
 # ---------------------------------------------------------------------------
 
+
 class TestMarketingCampaignLifecycle:
     """Full flow: create launch plan, ARC campaign, email sequences, social posts, and ad campaigns."""
 
     @pytest.mark.asyncio
     @patch("app.modules.advertising.service.AmazonAdsClient")
-    async def test_full_marketing_lifecycle(
-        self, mock_amazon_cls, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_full_marketing_lifecycle(self, mock_amazon_cls, client: AsyncClient, db_session: AsyncSession):
         """Complete marketing campaign lifecycle test covering all major components."""
         # Mock Amazon Ads client to avoid external dependencies
         mock_amazon = AsyncMock()
@@ -145,12 +145,10 @@ class TestMarketingCampaignLifecycle:
         token, org_id, user_id = await _register_and_get_token(client, email)
 
         # ── Step 2: Create a book project (via DB -- no project API exists) ──
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, title="The Marketing Chronicles"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, title="The Marketing Chronicles")
 
         # ── Step 3: Generate a launch plan via AI ──
-        launch_date = datetime.now(timezone.utc) + timedelta(days=60)
+        launch_date = datetime.now(UTC) + timedelta(days=60)
         launch_plan_resp = await client.post(
             f"{MARKETING_PREFIX}/launch-plan/generate",
             json={
@@ -175,7 +173,7 @@ class TestMarketingCampaignLifecycle:
         assert launch_plan["book_id"] == str(book_id)
 
         # ── Step 4: Create an ARC campaign ──
-        arc_deadline = datetime.now(timezone.utc) + timedelta(days=45)
+        arc_deadline = datetime.now(UTC) + timedelta(days=45)
         arc_campaign_resp = await client.post(
             f"{MARKETING_PREFIX}/arc",
             json={
@@ -361,17 +359,13 @@ class TestMarketingCampaignLifecycle:
         assert len(perf_data) == 0 or all(p["spend"] == 0.0 for p in perf_data)
 
     @pytest.mark.asyncio
-    async def test_social_calendar_view(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_social_calendar_view(self, client: AsyncClient, db_session: AsyncSession):
         """Test social media calendar aggregation across platforms."""
         email = "social-calendar@test.com"
         token, org_id, user_id = await _register_and_get_token(client, email)
 
         # Create a book
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, title="Social Media Book"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, title="Social Media Book")
 
         # Generate social media content
         social_resp = await client.post(
@@ -404,17 +398,13 @@ class TestMarketingCampaignLifecycle:
         assert len(calendar_data["posts"]) >= 6
 
     @pytest.mark.asyncio
-    async def test_arc_campaign_send_flow(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_arc_campaign_send_flow(self, client: AsyncClient, db_session: AsyncSession):
         """Test sending ARC copies to specific recipients."""
         email = "arc-send@test.com"
         token, org_id, user_id = await _register_and_get_token(client, email)
 
         # Create a book
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, title="ARC Test Book"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, title="ARC Test Book")
 
         # Create ARC campaign
         arc_resp = await client.post(
@@ -422,7 +412,7 @@ class TestMarketingCampaignLifecycle:
             json={
                 "name": "ARC Send Test",
                 "book_id": str(book_id),
-                "deadline": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+                "deadline": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
                 "recipients": [
                     {"name": "Tester 1", "email": "test1@example.com"},
                     {"name": "Tester 2", "email": "test2@example.com"},
@@ -449,17 +439,13 @@ class TestMarketingCampaignLifecycle:
         assert "data" in send_data
 
     @pytest.mark.asyncio
-    async def test_email_sequence_trigger(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_email_sequence_trigger(self, client: AsyncClient, db_session: AsyncSession):
         """Test triggering an email sequence send."""
         email = "email-trigger@test.com"
         token, org_id, user_id = await _register_and_get_token(client, email)
 
         # Create a book
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, title="Email Test Book"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, title="Email Test Book")
 
         # Create email sequence
         seq_resp = await client.post(
@@ -494,9 +480,7 @@ class TestMarketingCampaignLifecycle:
 
     @pytest.mark.asyncio
     @patch("app.modules.advertising.service.AmazonAdsClient")
-    async def test_ad_campaign_update(
-        self, mock_amazon_cls, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_ad_campaign_update(self, mock_amazon_cls, client: AsyncClient, db_session: AsyncSession):
         """Test updating an advertising campaign's budget and status."""
         # Mock Amazon Ads client
         mock_amazon = AsyncMock()
@@ -516,9 +500,7 @@ class TestMarketingCampaignLifecycle:
         token, org_id, user_id = await _register_and_get_token(client, email)
 
         # Create a book
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, title="Ad Update Book"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, title="Ad Update Book")
 
         # Create ad campaign
         create_resp = await client.post(

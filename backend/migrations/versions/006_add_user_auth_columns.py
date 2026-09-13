@@ -9,16 +9,15 @@ Revision ID: a3b4c5d6e7f8
 Revises: 005_add_billing_and_auth_columns
 Create Date: 2026-02-10
 """
-from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers
 revision: str = "a3b4c5d6e7f8"
-down_revision: Union[str, None] = "005_add_billing_and_auth_columns"
-branch_labels: Union[str, None] = None
-depends_on: Union[str, None] = None
+down_revision: str | None = "005_add_billing_and_auth_columns"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

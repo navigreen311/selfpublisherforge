@@ -4,11 +4,9 @@ Tests validation orchestration, individual validators, result aggregation,
 and result storage/retrieval.
 """
 
-import pytest
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from app.modules.kdp_validation.service import ValidationService
 from app.modules.kdp_validation.schemas import (
     ComplianceScanRequest,
     CoverValidationRequest,
@@ -19,8 +17,9 @@ from app.modules.kdp_validation.schemas import (
     ValidationIssue,
     ValidationResult,
     ValidationStatus,
+    ValidationType,
 )
-
+from app.modules.kdp_validation.service import ValidationService
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -28,13 +27,13 @@ from app.modules.kdp_validation.schemas import (
 
 
 def make_validation_result(
-    validator_name: str = "test_validator",
+    validation_type: ValidationType = ValidationType.PRINT,
     status: ValidationStatus = ValidationStatus.PASSED,
     issues: list[ValidationIssue] | None = None,
 ) -> ValidationResult:
     """Create a mock validation result."""
     return ValidationResult(
-        validator_name=validator_name,
+        validation_type=validation_type,
         status=status,
         issues=issues or [],
         metadata={},
@@ -42,18 +41,63 @@ def make_validation_result(
 
 
 def make_issue(
-    code: str = "TEST_ERROR",
+    rule: str = "TEST_ERROR",
     message: str = "Test error message",
     severity: Severity = Severity.ERROR,
 ) -> ValidationIssue:
     """Create a validation issue."""
     return ValidationIssue(
-        code=code,
+        rule=rule,
         message=message,
         severity=severity,
-        field=None,
-        suggested_fix=None,
+        location=None,
+        details=None,
     )
+
+
+def make_print_request(**overrides) -> PrintValidationRequest:
+    """A valid print-validation request; override only what a test cares about."""
+    payload = {
+        "trim_size": "6x9",
+        "page_count": 200,
+        "paper_type": "white",
+        "inside_margin": 0.75,
+        "outside_margin": 0.5,
+        "top_margin": 0.5,
+        "bottom_margin": 0.5,
+    }
+    payload.update(overrides)
+    return PrintValidationRequest(**payload)
+
+
+def make_cover_request(**overrides) -> CoverValidationRequest:
+    """A valid cover-validation request."""
+    payload = {
+        "cover_type": "print",
+        "width_inches": 12.5,
+        "height_inches": 9.25,
+        "dpi": 300,
+        "file_format": "TIFF",
+        "color_space": "CMYK",
+        "trim_size": "6x9",
+        "page_count": 200,
+    }
+    payload.update(overrides)
+    return CoverValidationRequest(**payload)
+
+
+def make_ebook_request(**overrides) -> EbookValidationRequest:
+    """A valid ebook-validation request."""
+    payload = {"has_ncx_toc": True, "has_html_toc": True}
+    payload.update(overrides)
+    return EbookValidationRequest(**payload)
+
+
+def make_compliance_request(**overrides) -> ComplianceScanRequest:
+    """A valid compliance-scan request."""
+    payload = {"title": "Sample Book", "description": "Sample description"}
+    payload.update(overrides)
+    return ComplianceScanRequest(**payload)
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +106,6 @@ def make_issue(
 
 
 class TestRunFullValidation:
-
     def test_full_validation_all_passed(self):
         """Should aggregate results from all validators when all pass."""
         service = ValidationService()
@@ -73,28 +116,16 @@ class TestRunFullValidation:
             patch.object(service.cover_validator, "validate") as mock_cover,
             patch.object(service.compliance_scanner, "scan") as mock_compliance,
         ):
-            mock_print.return_value = make_validation_result("print_validator")
-            mock_ebook.return_value = make_validation_result("ebook_validator")
-            mock_cover.return_value = make_validation_result("cover_validator")
-            mock_compliance.return_value = make_validation_result("compliance_scanner")
+            mock_print.return_value = make_validation_result(ValidationType.PRINT)
+            mock_ebook.return_value = make_validation_result(ValidationType.EBOOK)
+            mock_cover.return_value = make_validation_result(ValidationType.COVER)
+            mock_compliance.return_value = make_validation_result(ValidationType.COMPLIANCE)
 
             request = FullValidationRequest(
-                print_validation=PrintValidationRequest(
-                    trim_size="6x9",
-                    page_count=200,
-                    interior_type="black_and_white",
-                ),
-                ebook_validation=EbookValidationRequest(
-                    file_path="/path/to/book.epub",
-                    format="epub",
-                ),
-                cover_validation=CoverValidationRequest(
-                    file_path="/path/to/cover.jpg",
-                    trim_size="6x9",
-                ),
-                compliance_scan=ComplianceScanRequest(
-                    manuscript_text="Sample text",
-                ),
+                print_validation=make_print_request(),
+                ebook_validation=make_ebook_request(),
+                cover_validation=make_cover_request(),
+                compliance_scan=make_compliance_request(),
             )
 
             result = service.run_full_validation(request)
@@ -113,25 +144,18 @@ class TestRunFullValidation:
             patch.object(service.ebook_validator, "validate") as mock_ebook,
         ):
             mock_print.return_value = make_validation_result(
-                "print_validator",
+                ValidationType.PRINT,
                 ValidationStatus.FAILED,
                 [make_issue("INVALID_TRIM", "Invalid trim size", Severity.ERROR)],
             )
             mock_ebook.return_value = make_validation_result(
-                "ebook_validator",
+                ValidationType.EBOOK,
                 ValidationStatus.PASSED,
             )
 
             request = FullValidationRequest(
-                print_validation=PrintValidationRequest(
-                    trim_size="invalid",
-                    page_count=50,
-                    interior_type="color",
-                ),
-                ebook_validation=EbookValidationRequest(
-                    file_path="/path/to/book.epub",
-                    format="epub",
-                ),
+                print_validation=make_print_request(),
+                ebook_validation=make_ebook_request(),
             )
 
             result = service.run_full_validation(request)
@@ -146,16 +170,13 @@ class TestRunFullValidation:
 
         with patch.object(service.cover_validator, "validate") as mock_cover:
             mock_cover.return_value = make_validation_result(
-                "cover_validator",
+                ValidationType.COVER,
                 ValidationStatus.WARNINGS,
                 [make_issue("LOW_RES", "Cover resolution is low", Severity.WARNING)],
             )
 
             request = FullValidationRequest(
-                cover_validation=CoverValidationRequest(
-                    file_path="/path/to/cover.jpg",
-                    trim_size="6x9",
-                ),
+                cover_validation=make_cover_request(),
             )
 
             result = service.run_full_validation(request)
@@ -169,14 +190,10 @@ class TestRunFullValidation:
         service = ValidationService()
 
         with patch.object(service.print_validator, "validate") as mock_print:
-            mock_print.return_value = make_validation_result("print_validator")
+            mock_print.return_value = make_validation_result(ValidationType.PRINT)
 
             request = FullValidationRequest(
-                print_validation=PrintValidationRequest(
-                    trim_size="6x9",
-                    page_count=100,
-                    interior_type="black_and_white",
-                ),
+                print_validation=make_print_request(),
             )
 
             result = service.run_full_validation(request)
@@ -193,85 +210,67 @@ class TestRunFullValidation:
 
 
 class TestValidatePrint:
-
     def test_validate_print_delegates_to_validator(self):
         """Should delegate to PrintValidator."""
         service = ValidationService()
 
-        request = PrintValidationRequest(
-            trim_size="6x9",
-            page_count=150,
-            interior_type="black_and_white",
-            paper_type="cream",
-        )
+        request = make_print_request()
 
         with patch.object(service.print_validator, "validate") as mock_validate:
-            mock_validate.return_value = make_validation_result("print_validator")
+            mock_validate.return_value = make_validation_result(ValidationType.PRINT)
 
             result = service.validate_print(request)
 
         mock_validate.assert_called_once_with(request)
-        assert result.validator_name == "print_validator"
+        assert result.validation_type == ValidationType.PRINT
 
 
 class TestValidateEbook:
-
     def test_validate_ebook_delegates_to_validator(self):
         """Should delegate to EbookValidator."""
         service = ValidationService()
 
-        request = EbookValidationRequest(
-            file_path="/path/to/book.epub",
-            format="epub",
-        )
+        request = make_ebook_request()
 
         with patch.object(service.ebook_validator, "validate") as mock_validate:
-            mock_validate.return_value = make_validation_result("ebook_validator")
+            mock_validate.return_value = make_validation_result(ValidationType.EBOOK)
 
             result = service.validate_ebook(request)
 
         mock_validate.assert_called_once_with(request)
-        assert result.validator_name == "ebook_validator"
+        assert result.validation_type == ValidationType.EBOOK
 
 
 class TestValidateCover:
-
     def test_validate_cover_delegates_to_validator(self):
         """Should delegate to CoverValidator."""
         service = ValidationService()
 
-        request = CoverValidationRequest(
-            file_path="/path/to/cover.jpg",
-            trim_size="6x9",
-            bleed=0.125,
-        )
+        request = make_cover_request()
 
         with patch.object(service.cover_validator, "validate") as mock_validate:
-            mock_validate.return_value = make_validation_result("cover_validator")
+            mock_validate.return_value = make_validation_result(ValidationType.COVER)
 
             result = service.validate_cover(request)
 
         mock_validate.assert_called_once_with(request)
-        assert result.validator_name == "cover_validator"
+        assert result.validation_type == ValidationType.COVER
 
 
 class TestScanCompliance:
-
     def test_scan_compliance_delegates_to_scanner(self):
         """Should delegate to ComplianceScanner."""
         service = ValidationService()
 
-        request = ComplianceScanRequest(
-            manuscript_text="Sample text for compliance scanning",
-        )
+        request = make_compliance_request()
 
         with patch.object(service.compliance_scanner, "scan") as mock_scan:
-            mock_scan.return_value = make_validation_result("compliance_scanner")
+            mock_scan.return_value = make_validation_result(ValidationType.COMPLIANCE)
 
             result = service.scan_compliance(request)
 
         mock_scan.assert_called_once_with(request)
-        assert result.validator_name == "compliance_scanner"
+        assert result.validation_type == ValidationType.COMPLIANCE
 
 
 # ---------------------------------------------------------------------------
@@ -280,20 +279,15 @@ class TestScanCompliance:
 
 
 class TestGetResults:
-
     def test_get_results_existing(self):
         """Should retrieve stored validation results by ID."""
         service = ValidationService()
 
         with patch.object(service.print_validator, "validate") as mock_print:
-            mock_print.return_value = make_validation_result("print_validator")
+            mock_print.return_value = make_validation_result(ValidationType.PRINT)
 
             request = FullValidationRequest(
-                print_validation=PrintValidationRequest(
-                    trim_size="6x9",
-                    page_count=100,
-                    interior_type="black_and_white",
-                ),
+                print_validation=make_print_request(),
             )
 
             result = service.run_full_validation(request)
@@ -316,7 +310,6 @@ class TestGetResults:
 
 
 class TestAggregateStatus:
-
     def test_aggregate_empty_results(self):
         """Should return PASSED for empty results."""
         status = ValidationService._aggregate_status([])
@@ -325,8 +318,8 @@ class TestAggregateStatus:
     def test_aggregate_all_passed(self):
         """Should return PASSED when all validators passed."""
         results = [
-            make_validation_result("val1", ValidationStatus.PASSED),
-            make_validation_result("val2", ValidationStatus.PASSED),
+            make_validation_result(ValidationType.PRINT, ValidationStatus.PASSED),
+            make_validation_result(ValidationType.EBOOK, ValidationStatus.PASSED),
         ]
         status = ValidationService._aggregate_status(results)
         assert status == ValidationStatus.PASSED
@@ -334,9 +327,9 @@ class TestAggregateStatus:
     def test_aggregate_any_failed(self):
         """Should return FAILED if any validator failed."""
         results = [
-            make_validation_result("val1", ValidationStatus.PASSED),
-            make_validation_result("val2", ValidationStatus.FAILED),
-            make_validation_result("val3", ValidationStatus.WARNINGS),
+            make_validation_result(ValidationType.PRINT, ValidationStatus.PASSED),
+            make_validation_result(ValidationType.EBOOK, ValidationStatus.FAILED),
+            make_validation_result(ValidationType.COVER, ValidationStatus.WARNINGS),
         ]
         status = ValidationService._aggregate_status(results)
         assert status == ValidationStatus.FAILED
@@ -344,8 +337,8 @@ class TestAggregateStatus:
     def test_aggregate_warnings_only(self):
         """Should return WARNINGS if no failures but has warnings."""
         results = [
-            make_validation_result("val1", ValidationStatus.PASSED),
-            make_validation_result("val2", ValidationStatus.WARNINGS),
+            make_validation_result(ValidationType.PRINT, ValidationStatus.PASSED),
+            make_validation_result(ValidationType.EBOOK, ValidationStatus.WARNINGS),
         ]
         status = ValidationService._aggregate_status(results)
         assert status == ValidationStatus.WARNINGS
@@ -357,7 +350,6 @@ class TestAggregateStatus:
 
 
 class TestEdgeCases:
-
     def test_validation_with_no_validators_selected(self):
         """Should handle validation request with no validators enabled."""
         service = ValidationService()
@@ -379,7 +371,7 @@ class TestEdgeCases:
             patch.object(service.ebook_validator, "validate") as mock_ebook,
         ):
             mock_print.return_value = make_validation_result(
-                "print_validator",
+                ValidationType.PRINT,
                 ValidationStatus.FAILED,
                 [
                     make_issue("ERR1", "Error 1", Severity.ERROR),
@@ -388,7 +380,7 @@ class TestEdgeCases:
                 ],
             )
             mock_ebook.return_value = make_validation_result(
-                "ebook_validator",
+                ValidationType.EBOOK,
                 ValidationStatus.WARNINGS,
                 [
                     make_issue("WARN2", "Warning 2", Severity.WARNING),
@@ -396,15 +388,8 @@ class TestEdgeCases:
             )
 
             request = FullValidationRequest(
-                print_validation=PrintValidationRequest(
-                    trim_size="6x9",
-                    page_count=100,
-                    interior_type="black_and_white",
-                ),
-                ebook_validation=EbookValidationRequest(
-                    file_path="/path/to/book.epub",
-                    format="epub",
-                ),
+                print_validation=make_print_request(),
+                ebook_validation=make_ebook_request(),
             )
 
             result = service.run_full_validation(request)

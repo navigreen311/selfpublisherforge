@@ -181,13 +181,6 @@ class EmailBuilder:
         - Follow-Up: 5 days after launch
         - Review Request: 14 days after launch
         """
-        default_personalization = {
-            "book_title": book_title,
-            "author_name": author_name,
-            "buy_link": buy_link,
-            "preview_link": preview_link,
-            "review_link": review_link,
-        }
 
         emails = [
             self._build_template_email(
@@ -331,7 +324,7 @@ async def update_email_in_sequence(
     delay_days: int | None = None,
 ) -> dict | None:
     """Update a single email within a sequence."""
-    from app.models.marketing import EmailSequence, EmailTemplate
+    from app.models.marketing import EmailTemplate
 
     stmt = select(EmailTemplate).where(
         EmailTemplate.id == email_id,

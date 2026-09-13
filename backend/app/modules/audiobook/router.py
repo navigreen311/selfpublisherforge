@@ -11,7 +11,6 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.modules.audiobook import service
 from app.modules.audiobook import service_crud as crud_service
-from app.modules.audiobook.schemas_extended import AudiobookStatsResponse
 from app.modules.audiobook.schemas import (
     PronunciationCreate,
     PronunciationListResponse,
@@ -20,6 +19,7 @@ from app.modules.audiobook.schemas import (
     SSMLResponse,
     SSMLUpdateRequest,
 )
+from app.modules.audiobook.schemas_extended import AudiobookStatsResponse
 
 router = APIRouter()
 
@@ -108,8 +108,7 @@ async def add_pronunciation(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    entry = await service.add_pronunciation(db, current_user["org_id"], request)
-    return entry
+    return await service.add_pronunciation(db, current_user["org_id"], request)
 
 
 @router.get(
@@ -123,9 +122,7 @@ async def list_pronunciation(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    entries = await service.list_pronunciation(
-        db, current_user["org_id"], project_id=project_id
-    )
+    entries = await service.list_pronunciation(db, current_user["org_id"], project_id=project_id)
     return PronunciationListResponse(items=entries, total=len(entries))
 
 
@@ -148,9 +145,8 @@ async def delete_pronunciation(
         )
 
 
-
-
 # Stats endpoint
+
 
 @router.get(
     "/stats",

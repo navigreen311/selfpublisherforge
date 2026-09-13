@@ -4,10 +4,10 @@ Tests manuscript management, chapter CRUD, outline generation, readability analy
 and writing session tracking.
 """
 
-import pytest
 import uuid
-from datetime import datetime, UTC
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.core.exceptions import AppException
 from app.models.content import (
@@ -15,18 +15,16 @@ from app.models.content import (
     ContentType,
     Manuscript,
     ManuscriptStatus,
-    WritingSession,
 )
 from app.modules.ai_writing import service
 from app.modules.ai_writing.schemas import (
     ChapterCreate,
     ChapterReorderRequest,
     ChapterUpdate,
-    OutlineRequest,
     OutlineGenerateRequest,
+    OutlineRequest,
     WritingSessionCreate,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -75,7 +73,6 @@ async def _seed_chapter(
 
 
 class TestGetManuscript:
-
     @pytest.mark.asyncio
     async def test_get_manuscript_creates_if_missing(self, db_session):
         """If no manuscript exists for a book, one should be created."""
@@ -115,7 +112,6 @@ class TestGetManuscript:
 
 
 class TestListChapters:
-
     @pytest.mark.asyncio
     async def test_list_chapters_empty(self, db_session):
         """Listing chapters for a book with no manuscript creates one and returns empty list."""
@@ -139,7 +135,6 @@ class TestListChapters:
 
 
 class TestGetChapter:
-
     @pytest.mark.asyncio
     async def test_get_chapter_success(self, db_session):
         """Should retrieve a single chapter by ID."""
@@ -162,7 +157,6 @@ class TestGetChapter:
 
 
 class TestCreateChapter:
-
     @pytest.mark.asyncio
     async def test_create_chapter_success(self, db_session):
         """Should create a new chapter and calculate word count."""
@@ -188,7 +182,6 @@ class TestCreateChapter:
 
 
 class TestUpdateChapter:
-
     @pytest.mark.asyncio
     async def test_update_chapter_title(self, db_session):
         """Should update chapter title."""
@@ -196,9 +189,7 @@ class TestUpdateChapter:
         chapter = await _seed_chapter(db_session, manuscript.id)
 
         update = ChapterUpdate(title="Updated Title")
-        result = await service.update_chapter(
-            db_session, manuscript.book_id, chapter.id, update
-        )
+        result = await service.update_chapter(db_session, manuscript.book_id, chapter.id, update)
 
         assert result.title == "Updated Title"
 
@@ -209,9 +200,7 @@ class TestUpdateChapter:
         chapter = await _seed_chapter(db_session, manuscript.id, "Ch", "old content", 1)
 
         update = ChapterUpdate(content="new content with more words here")
-        result = await service.update_chapter(
-            db_session, manuscript.book_id, chapter.id, update
-        )
+        result = await service.update_chapter(db_session, manuscript.book_id, chapter.id, update)
 
         assert result.word_count == 6
 
@@ -228,7 +217,6 @@ class TestUpdateChapter:
 
 
 class TestReorderChapters:
-
     @pytest.mark.asyncio
     async def test_reorder_chapters_success(self, db_session):
         """Should reorder chapters based on provided mapping."""
@@ -238,6 +226,7 @@ class TestReorderChapters:
         ch3 = await _seed_chapter(db_session, manuscript.id, "Third", "c", 3)
 
         from app.modules.ai_writing.schemas import ChapterReorderItem
+
         reorder = ChapterReorderRequest(
             chapters=[
                 ChapterReorderItem(chapter_id=ch3.id, order=1),
@@ -259,7 +248,6 @@ class TestReorderChapters:
 
 
 class TestReadabilityScore:
-
     @pytest.mark.asyncio
     async def test_get_readability_score_empty_manuscript(self, db_session):
         """Should handle empty manuscript gracefully."""
@@ -284,7 +272,6 @@ class TestReadabilityScore:
 
 
 class TestAnalyzeManuscript:
-
     @pytest.mark.asyncio
     async def test_analyze_manuscript_empty(self, db_session):
         """Should handle analysis of empty manuscript."""
@@ -323,7 +310,6 @@ class TestAnalyzeManuscript:
 
 
 class TestGenerateOutline:
-
     @pytest.mark.asyncio
     async def test_generate_outline_success(self, db_session):
         """Should generate outline from AI."""
@@ -345,7 +331,7 @@ class TestGenerateOutline:
             "summary": "An epic tale of discovery"
         }"""
 
-        with patch("app.modules.ai_writing.service._call_llm", new_callable=AsyncMock) as mock_llm:
+        with patch("app.modules.ai_writing.generator._call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = mock_llm_response
 
             result = await service.generate_outline(db_session, book_id, request)
@@ -365,7 +351,7 @@ class TestGenerateOutline:
             num_chapters=3,
         )
 
-        with patch("app.modules.ai_writing.service._call_llm", new_callable=AsyncMock) as mock_llm:
+        with patch("app.modules.ai_writing.generator._call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = "This is not JSON"
 
             result = await service.generate_outline(db_session, book_id, request)
@@ -375,7 +361,6 @@ class TestGenerateOutline:
 
 
 class TestGenerateOutlineStandalone:
-
     @pytest.mark.asyncio
     async def test_generate_standalone_outline_success(self, db_session):
         """Should generate standalone outline without book_id."""
@@ -401,7 +386,7 @@ class TestGenerateOutlineStandalone:
             "synopsis": "A thrilling spy novel"
         }"""
 
-        with patch("app.modules.ai_writing.service._call_llm", new_callable=AsyncMock) as mock_llm:
+        with patch("app.modules.ai_writing.generator._call_llm", new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = mock_llm_response
 
             result = await service.generate_outline_standalone(request, db_session)
@@ -418,14 +403,33 @@ class TestGenerateOutlineStandalone:
 # ---------------------------------------------------------------------------
 
 
-class TestRecordWritingSession:
+async def _seed_book_with_manuscript(db_session) -> tuple[uuid.UUID, uuid.UUID]:
+    """Create a book and its manuscript; return (book_id, manuscript_id).
 
+    writing_sessions.manuscript_id is NOT NULL and the service resolves it from
+    the book, so a session needs a book that actually has one.
+    """
+    from app.models.content import ContentType, Manuscript, ManuscriptStatus
+
+    book_id = uuid.uuid4()
+    manuscript = Manuscript(
+        id=uuid.uuid4(),
+        book_id=book_id,
+        content_type=ContentType.FICTION,
+        status=ManuscriptStatus.DRAFT,
+    )
+    db_session.add(manuscript)
+    await db_session.flush()
+    return book_id, manuscript.id
+
+
+class TestRecordWritingSession:
     @pytest.mark.asyncio
     async def test_record_session_success(self, db_session):
         """Should record a writing session and convert minutes to seconds."""
         user_id = uuid.uuid4()
-        book_id = uuid.uuid4()
-        chapter_id = uuid.uuid4()
+        book_id, _ = await _seed_book_with_manuscript(db_session)
+        chapter_id = None
 
         data = WritingSessionCreate(
             book_id=book_id,
@@ -435,7 +439,7 @@ class TestRecordWritingSession:
             notes="Good writing session",
         )
 
-        result = await service.record_writing_session(db_session, user_id, data)
+        result = await service.record_writing_session(db_session, user_id, data, org_id=uuid.uuid4())
 
         assert result.user_id == user_id
         assert result.book_id == book_id
@@ -446,7 +450,7 @@ class TestRecordWritingSession:
     async def test_record_session_no_chapter(self, db_session):
         """Should allow recording session without specific chapter."""
         user_id = uuid.uuid4()
-        book_id = uuid.uuid4()
+        book_id, _ = await _seed_book_with_manuscript(db_session)
 
         data = WritingSessionCreate(
             book_id=book_id,
@@ -454,7 +458,7 @@ class TestRecordWritingSession:
             duration_minutes=20,
         )
 
-        result = await service.record_writing_session(db_session, user_id, data)
+        result = await service.record_writing_session(db_session, user_id, data, org_id=uuid.uuid4())
 
         assert result.chapter_id is None
         assert result.words_written == 300

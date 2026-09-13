@@ -42,17 +42,17 @@ function ResetPasswordForm() {
     setError("");
 
     if (!isPasswordValid) {
-      setError(t("passwordRequirements"));
+      setError(t("validation.passwordRequirements"));
       return;
     }
 
     if (!passwordsMatch) {
-      setError(t("passwordsDoNotMatch"));
+      setError(t("validation.passwordsMismatch"));
       return;
     }
 
     if (!token) {
-      setError(t("invalidToken"));
+      setError(t("validation.invalidToken"));
       return;
     }
 
@@ -70,7 +70,7 @@ function ResetPasswordForm() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError(t("resetFailed"));
+        setError(t("validation.resetFailed"));
       }
     } finally {
       setLoading(false);
@@ -81,14 +81,14 @@ function ResetPasswordForm() {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t("invalidLink")}</CardTitle>
+          <CardTitle className="text-2xl">{t("invalidLink.title")}</CardTitle>
           <CardDescription>
-            {t("invalidLinkDescription")}
+            {t("invalidLink.description")}
           </CardDescription>
         </CardHeader>
         <CardFooter className="flex flex-col gap-4">
           <Button asChild className="w-full">
-            <Link href="/forgot-password">{t("requestNewLink")}</Link>
+            <Link href="/forgot-password">{t("invalidLink.requestButton")}</Link>
           </Button>
           <p className="text-sm text-muted-foreground text-center">
             {t("rememberPassword")}{" "}
@@ -105,14 +105,14 @@ function ResetPasswordForm() {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t("successTitle")}</CardTitle>
+          <CardTitle className="text-2xl">{t("success.title")}</CardTitle>
           <CardDescription>
-            {t("successDescription")}
+            {t("success.description")}
           </CardDescription>
         </CardHeader>
         <CardFooter className="flex flex-col gap-4">
           <Button asChild className="w-full">
-            <Link href="/login">{t("signInNow")}</Link>
+            <Link href="/login">{t("success.signInButton")}</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -134,11 +134,11 @@ function ResetPasswordForm() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">{t("newPassword")}</label>
+            <label className="text-sm font-medium">{t("passwordLabel")}</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder={t("newPasswordPlaceholder")}
+                placeholder={t("passwordPlaceholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -179,11 +179,11 @@ function ResetPasswordForm() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">{t("confirmPassword")}</label>
+            <label className="text-sm font-medium">{t("confirmLabel")}</label>
             <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
-                placeholder={t("confirmPasswordPlaceholder")}
+                placeholder={t("confirmPlaceholder")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -207,7 +207,7 @@ function ResetPasswordForm() {
               </button>
             </div>
             {confirmPassword && !passwordsMatch && (
-              <p className="text-sm text-destructive">{t("passwordsDoNotMatch")}</p>
+              <p className="text-sm text-destructive">{t("validation.passwordsMismatch")}</p>
             )}
           </div>
         </CardContent>
@@ -217,7 +217,7 @@ function ResetPasswordForm() {
             className="w-full"
             disabled={loading || !isPasswordValid || !passwordsMatch}
           >
-            {loading ? t("submitting") : t("submit")}
+            {loading ? t("submitting") : t("submitButton")}
           </Button>
           <p className="text-sm text-muted-foreground text-center">
             {t("rememberPassword")}{" "}

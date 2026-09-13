@@ -7,8 +7,8 @@ import { extractApiError } from "@/hooks/use-api";
 import type {
   PhotoReference,
   PhotoUsageType,
-  PaginatedResponse,
 } from "@/modules/specialty/types/photo";
+import type { PaginatedResponse } from "@/modules/specialty/types/shared";
 
 export type { PhotoReference, PhotoUsageType };
 

@@ -89,12 +89,7 @@ GENRE_TEMPLATES: dict[str, dict[str, str]] = {
 # Default template for genres without specific templates
 DEFAULT_TEMPLATES: dict[str, str] = {
     "emotional_hook": (
-        "<b>{hook}</b>\n\n"
-        "{opening}\n\n"
-        "{middle}\n\n"
-        "{tension}\n\n"
-        "<i>{tagline}</i>\n\n"
-        "{cta}"
+        "<b>{hook}</b>\n\n" "{opening}\n\n" "{middle}\n\n" "{tension}\n\n" "<i>{tagline}</i>\n\n" "{cta}"
     ),
     "question_hook": (
         "<b>{question}</b>\n\n"
@@ -142,6 +137,7 @@ BLURB_STYLES = [
 # ---------------------------------------------------------------------------
 # AI prompt builders
 # ---------------------------------------------------------------------------
+
 
 def build_blurb_generation_prompt(
     current_blurb: str,
@@ -198,6 +194,7 @@ Return ONLY the optimized blurb text with HTML formatting. No explanations or co
 # Local blurb generation (template-based fallback)
 # ---------------------------------------------------------------------------
 
+
 def generate_blurb_variants_local(
     current_blurb: str,
     genre: Genre,
@@ -224,9 +221,7 @@ def generate_blurb_variants_local(
         hook_type = hook_types_list[i % len(hook_types_list)] if hook_types_list else "emotional_hook"
 
         # Create variant based on style
-        variant_content = _create_template_variant(
-            current_blurb, style, hook_type, keywords, i
-        )
+        variant_content = _create_template_variant(current_blurb, style, hook_type, keywords, i)
 
         # Score the variant
         variant_analysis = analyze_blurb(variant_content)
@@ -241,14 +236,16 @@ def generate_blurb_variants_local(
         if variant_analysis.has_bullet_points and not original_analysis.has_bullet_points:
             highlights.append("Added bullet points")
 
-        variants.append(BlurbVariant(
-            variant_id=str(uuid.uuid4()),
-            content=variant_content,
-            style=style,
-            hook_type=hook_type,
-            estimated_conversion_score=round(variant_analysis.score, 1),
-            highlights=highlights,
-        ))
+        variants.append(
+            BlurbVariant(
+                variant_id=str(uuid.uuid4()),
+                content=variant_content,
+                style=style,
+                hook_type=hook_type,
+                estimated_conversion_score=round(variant_analysis.score, 1),
+                highlights=highlights,
+            )
+        )
 
     return BlurbGenerateResponse(
         original_score=round(original_score, 1),
@@ -313,6 +310,7 @@ def _create_template_variant(
 # AI blurb generation (requires LLM service)
 # ---------------------------------------------------------------------------
 
+
 async def generate_blurb_variants_ai(
     current_blurb: str,
     genre: Genre,
@@ -361,9 +359,7 @@ async def generate_blurb_variants_ai(
             variant_content = response.strip()
         except (RuntimeError, ConnectionError, ValueError, TimeoutError):
             # Fallback to template
-            variant_content = _create_template_variant(
-                current_blurb, style, hook_type, keywords or [], i
-            )
+            variant_content = _create_template_variant(current_blurb, style, hook_type, keywords or [], i)
 
         variant_analysis = analyze_blurb(variant_content)
 
@@ -375,14 +371,16 @@ async def generate_blurb_variants_ai(
         if variant_analysis.has_cta:
             highlights.append("Call-to-action present")
 
-        variants.append(BlurbVariant(
-            variant_id=str(uuid.uuid4()),
-            content=variant_content,
-            style=style,
-            hook_type=hook_type,
-            estimated_conversion_score=round(variant_analysis.score, 1),
-            highlights=highlights,
-        ))
+        variants.append(
+            BlurbVariant(
+                variant_id=str(uuid.uuid4()),
+                content=variant_content,
+                style=style,
+                hook_type=hook_type,
+                estimated_conversion_score=round(variant_analysis.score, 1),
+                highlights=highlights,
+            )
+        )
 
     return BlurbGenerateResponse(
         original_score=round(original_score, 1),

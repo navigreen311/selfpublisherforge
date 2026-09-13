@@ -5,11 +5,14 @@ Recommends backend keywords for KDP based on genre, title, and current keywords.
 
 from __future__ import annotations
 
+import logging
 import random
 import uuid
-from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 # Genre-specific keyword pools for realistic recommendations
 GENRE_KEYWORDS: dict[str, list[dict]] = {
@@ -83,11 +86,13 @@ def _generate_title_keywords(title: str) -> list[dict]:
     words = [w.lower() for w in title.split() if len(w) > 3]
     suggestions = []
     for word in words[:5]:
-        suggestions.append({
-            "keyword": f"{word} books",
-            "search_volume": random.randint(5000, 30000),
-            "competition": random.choice(["low", "medium"]),
-        })
+        suggestions.append(
+            {
+                "keyword": f"{word} books",
+                "search_volume": random.randint(5000, 30000),
+                "competition": random.choice(["low", "medium"]),
+            }
+        )
     return suggestions
 
 
@@ -116,7 +121,7 @@ def _score_keyword(kw: dict, title: str, genre: str) -> float:
     volume = kw["search_volume"]
     comp_map = {"low": 1, "medium": 2, "high": 3}
     competition = comp_map.get(kw["competition"], 2)
-    return relevance * (volume / 1000) / competition
+    return cast("float", relevance * (volume / 1000) / competition)
 
 
 async def optimize_keywords(
@@ -148,13 +153,15 @@ async def optimize_keywords(
     for kw in unique_candidates:
         relevance = _calculate_relevance(kw["keyword"], title, genre)
         score = _score_keyword(kw, title, genre)
-        scored.append({
-            "keyword": kw["keyword"],
-            "search_volume": kw["search_volume"],
-            "competition": kw["competition"],
-            "relevance": relevance,
-            "score": score,
-        })
+        scored.append(
+            {
+                "keyword": kw["keyword"],
+                "search_volume": kw["search_volume"],
+                "competition": kw["competition"],
+                "relevance": relevance,
+                "score": score,
+            }
+        )
 
     scored.sort(key=lambda x: x["score"], reverse=True)
 
@@ -178,11 +185,11 @@ async def optimize_keywords(
         db.add(record)
         await db.flush()
     except Exception:
-        pass  # Model may not exist yet during migration
+        logger.warning("Could not persist keyword record; continuing", exc_info=True)
 
     return {
         "recommended": recommended,
         "optimal_seven": optimal_seven,
         "analysis_notes": f"Analyzed {len(unique_candidates)} candidate keywords for {genre} genre. "
-                         f"Selected top 7 based on relevance x search volume / competition.",
+        f"Selected top 7 based on relevance x search volume / competition.",
     }

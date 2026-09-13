@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class KeywordPerformanceData:
     """Aggregated performance data for a single keyword."""
+
     keyword_bid_id: UUID
     keyword: str
     current_bid: float
@@ -35,6 +36,7 @@ class KeywordPerformanceData:
 @dataclass
 class CampaignPerformanceData:
     """Aggregated campaign-level performance data."""
+
     campaign_id: UUID
     campaign_name: str
     current_acos: float = 0.0
@@ -58,7 +60,7 @@ class AdOptimizer:
 
     # Thresholds for keyword classification
     HIGH_ACOS_MULTIPLIER = 1.5  # keyword ACOS > target * 1.5 = reduce bid
-    LOW_ACOS_MULTIPLIER = 0.7   # keyword ACOS < target * 0.7 = increase bid
+    LOW_ACOS_MULTIPLIER = 0.7  # keyword ACOS < target * 0.7 = increase bid
     MIN_CLICKS_FOR_DECISION = 10  # minimum clicks to make a bid decision
     MIN_IMPRESSIONS_FOR_RELEVANCE = 100  # minimum impressions to consider keyword
     NEGATE_THRESHOLD_CLICKS = 20  # clicks with 0 sales -> negate
@@ -236,24 +238,19 @@ class AdOptimizer:
         num_negations: int,
     ) -> str:
         """Generate a human-readable summary of the optimization."""
-        parts = [
-            f"Campaign '{campaign_data.campaign_name}' analysis:"
-        ]
+        parts = [f"Campaign '{campaign_data.campaign_name}' analysis:"]
 
         if campaign_data.current_acos > 0:
             acos_status = "above" if campaign_data.current_acos > target_acos else "below"
             parts.append(
-                f"Current ACOS {campaign_data.current_acos:.1f}% is {acos_status} "
-                f"the target of {target_acos:.1f}%."
+                f"Current ACOS {campaign_data.current_acos:.1f}% is {acos_status} " f"the target of {target_acos:.1f}%."
             )
 
         if num_adjustments > 0:
             parts.append(f"Suggested {num_adjustments} bid adjustment(s).")
 
         if num_negations > 0:
-            parts.append(
-                f"Recommended negating {num_negations} underperforming keyword(s)."
-            )
+            parts.append(f"Recommended negating {num_negations} underperforming keyword(s).")
 
         if num_adjustments == 0 and num_negations == 0:
             parts.append("No changes recommended at this time.")

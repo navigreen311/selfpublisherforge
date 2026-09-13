@@ -10,7 +10,7 @@ import statistics
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.pricing_automation.ku_calculator import calculate_ku_vs_wide
@@ -59,13 +59,10 @@ class PricingAutomationService:
         offset: int = 0,
     ) -> tuple[list[PricingRuleResponse], int]:
         """List pricing rules for an organization with optional filters."""
-        query = (
-            select(PricingRule)
-            .where(PricingRule.org_id == org_id)
-            .where(PricingRule.deleted_at.is_(None))
-        )
+        query = select(PricingRule).where(PricingRule.org_id == org_id).where(PricingRule.deleted_at.is_(None))
         count_query = (
-            select(PricingRule)
+            select(func.count())
+            .select_from(PricingRule)
             .where(PricingRule.org_id == org_id)
             .where(PricingRule.deleted_at.is_(None))
         )
@@ -79,7 +76,7 @@ class PricingAutomationService:
 
         # Get total count
         count_result = await self.db.execute(count_query)
-        total_count = len(count_result.scalars().all())
+        total_count = count_result.scalar() or 0
 
         # Fetch paginated results
         query = query.order_by(PricingRule.created_at.desc()).offset(offset).limit(limit)
@@ -88,9 +85,7 @@ class PricingAutomationService:
 
         return [PricingRuleResponse.model_validate(r) for r in rules], total_count
 
-    async def create_rule(
-        self, org_id: UUID, data: PricingRuleCreate
-    ) -> PricingRuleResponse:
+    async def create_rule(self, org_id: UUID, data: PricingRuleCreate) -> PricingRuleResponse:
         """Create a new pricing rule."""
         rule = PricingRule(
             org_id=org_id,
@@ -122,9 +117,7 @@ class PricingAutomationService:
         rule = result.scalar_one_or_none()
         return PricingRuleResponse.model_validate(rule) if rule else None
 
-    async def update_rule(
-        self, org_id: UUID, rule_id: UUID, data: PricingRuleUpdate
-    ) -> PricingRuleResponse | None:
+    async def update_rule(self, org_id: UUID, rule_id: UUID, data: PricingRuleUpdate) -> PricingRuleResponse | None:
         """Update an existing pricing rule."""
         result = await self.db.execute(
             select(PricingRule)
@@ -163,9 +156,7 @@ class PricingAutomationService:
 
     # ──────────────────── Price Simulation ────────────────────
 
-    async def simulate_price(
-        self, request: PriceSimulationRequest
-    ) -> PriceSimulationResponse:
+    async def simulate_price(self, request: PriceSimulationRequest) -> PriceSimulationResponse:
         """Run price change simulation (stateless computation)."""
         return simulate_price_change(request)
 
@@ -233,9 +224,7 @@ class PricingAutomationService:
 
     # ──────────────────── A/B Tests ────────────────────
 
-    async def create_ab_test(
-        self, org_id: UUID, data: ABTestCreate
-    ) -> ABTestResponse:
+    async def create_ab_test(self, org_id: UUID, data: ABTestCreate) -> ABTestResponse:
         """Create a pricing A/B test."""
         ab_test = PricingABTest(
             org_id=org_id,
@@ -265,13 +254,10 @@ class PricingAutomationService:
         offset: int = 0,
     ) -> tuple[list[PromotionResponse], int]:
         """List promotional calendar entries for an organization."""
-        query = (
-            select(Promotion)
-            .where(Promotion.org_id == org_id)
-            .where(Promotion.deleted_at.is_(None))
-        )
+        query = select(Promotion).where(Promotion.org_id == org_id).where(Promotion.deleted_at.is_(None))
         count_query = (
-            select(Promotion)
+            select(func.count())
+            .select_from(Promotion)
             .where(Promotion.org_id == org_id)
             .where(Promotion.deleted_at.is_(None))
         )
@@ -284,7 +270,7 @@ class PricingAutomationService:
             count_query = count_query.where(Promotion.status == status)
 
         count_result = await self.db.execute(count_query)
-        total_count = len(count_result.scalars().all())
+        total_count = count_result.scalar() or 0
 
         query = query.order_by(Promotion.start_date.asc()).offset(offset).limit(limit)
         result = await self.db.execute(query)
@@ -292,9 +278,7 @@ class PricingAutomationService:
 
         return [PromotionResponse.model_validate(p) for p in promotions], total_count
 
-    async def create_promotion(
-        self, org_id: UUID, data: PromotionCreate
-    ) -> PromotionResponse:
+    async def create_promotion(self, org_id: UUID, data: PromotionCreate) -> PromotionResponse:
         """Schedule a new promotion."""
         promotion = Promotion(
             org_id=org_id,
@@ -318,8 +302,6 @@ class PricingAutomationService:
 
     # ──────────────────── KU Calculator ────────────────────
 
-    async def calculate_ku_revenue(
-        self, request: KUCalculatorRequest
-    ) -> KUCalculatorResponse:
+    async def calculate_ku_revenue(self, request: KUCalculatorRequest) -> KUCalculatorResponse:
         """Calculate KU vs. wide distribution revenue (stateless)."""
         return calculate_ku_vs_wide(request)

@@ -313,7 +313,7 @@ BLANK_TEMPLATE = {
     "stages": [],
 }
 
-TEMPLATES = {
+TEMPLATES: dict[str, dict] = {
     "nonfiction": NONFICTION_TEMPLATE,
     "fiction": FICTION_TEMPLATE,
     "short_story": SHORT_STORY_TEMPLATE,

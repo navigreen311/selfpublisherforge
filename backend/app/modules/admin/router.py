@@ -6,18 +6,28 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import require_role
+from app.core.dependencies import require_platform_admin, require_role
 from app.core.tier_guard import require_module
 from app.database import get_db
 from app.modules.admin import schemas, service
 from app.schemas.common import MessageResponse
 
-router = APIRouter()
+# Every endpoint in this router is platform-wide: `list_users` selects across
+# all tenants, the feature flags carry no org_id, and `get_organizations`
+# enumerates every organization. The guard therefore belongs on the router, so
+# an endpoint added later cannot quietly omit it.
+#
+# `require_admin` below is a *tier* check despite its name — require_module
+# asks whether the org's plan includes the admin module. It is not a role or a
+# permission check, and on its own it let any Enterprise org's owner read
+# every tenant's users.
+router = APIRouter(dependencies=[Depends(require_platform_admin)])
 
 
-# Admin access requires both:
-# 1. Enterprise tier (module-level)
-# 2. Admin or owner role (endpoint-level)
+# Admin access requires all three:
+# 1. Platform administrator (router-level, above)
+# 2. Enterprise tier (module-level)
+# 3. Admin or owner role (endpoint-level)
 require_admin = require_module("admin")
 
 

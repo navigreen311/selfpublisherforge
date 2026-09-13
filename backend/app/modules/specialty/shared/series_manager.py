@@ -5,6 +5,7 @@ conventions, and theme coherence across volumes.
 
 Blueprint refs: 12.1, 4.7
 """
+
 from __future__ import annotations
 
 import uuid
@@ -16,10 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty.models.shared import BookBundle, BookSeries
 
-
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SeriesInfo:
@@ -47,6 +48,7 @@ class CoherenceResult:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _row_to_series(row: BookSeries, volumes: list[dict[str, Any]] | None = None) -> SeriesInfo:
     return SeriesInfo(
@@ -85,6 +87,7 @@ DEFAULT_BRANDING_CONFIG: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def create_series(
     db: AsyncSession,
@@ -145,11 +148,7 @@ async def get_series(
         raise ValueError(f"Series {series_id} not found")
 
     # Gather volumes from bundles linked to this series.
-    bundle_stmt = (
-        select(BookBundle)
-        .where(BookBundle.series_id == series_id)
-        .order_by(BookBundle.created_at.asc())
-    )
+    bundle_stmt = select(BookBundle).where(BookBundle.series_id == series_id).order_by(BookBundle.created_at.asc())
     bundle_result = await db.execute(bundle_stmt)
     volumes: list[dict[str, Any]] = []
     for bundle in bundle_result.scalars().all():
@@ -177,12 +176,7 @@ async def lock_branding(
     * Volume badge style and position
     * Spine layout
     """
-    stmt = (
-        update(BookSeries)
-        .where(BookSeries.id == series_id)
-        .values(branding_locked=True)
-        .returning(BookSeries)
-    )
+    stmt = update(BookSeries).where(BookSeries.id == series_id).values(branding_locked=True).returning(BookSeries)
     result = await db.execute(stmt)
     row = result.scalar_one_or_none()
     if row is None:

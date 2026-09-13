@@ -37,9 +37,7 @@ RATE_LIMITS: dict[str, RateLimitRule] = {
     # Auth endpoints (strict - security critical)
     "POST /api/v1/auth/login": RateLimitRule(limit=5, window=300),  # 5 per 5 min
     "POST /api/v1/auth/register": RateLimitRule(limit=3, window=3600),  # 3 per hour
-    "POST /api/v1/auth/reset-password": RateLimitRule(
-        limit=3, window=3600
-    ),  # 3 per hour
+    "POST /api/v1/auth/reset-password": RateLimitRule(limit=3, window=3600),  # 3 per hour
     "POST /api/v1/auth/*": RateLimitRule(limit=10, window=300),  # Catch-all for auth
     # AI endpoints (costly - high resource usage)
     "POST /api/v1/ai/writing/*": RateLimitRule(limit=20, window=3600),  # 20 per hour
@@ -106,9 +104,7 @@ def match_pattern(pattern: str, path: str) -> bool:
     return len(pattern_parts) == len(path_parts)
 
 
-def find_rate_limit(
-    method: str, path: str, tier: PlanTier = PlanTier.FREE
-) -> tuple[int, int]:
+def find_rate_limit(method: str, path: str, tier: PlanTier = PlanTier.FREE) -> tuple[int, int]:
     """
     Find the applicable rate limit for a given method, path, and tier.
 

@@ -80,9 +80,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.sunset_date = sunset_date  # ISO-8601 date, e.g. "2026-06-01"
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         version = extract_version(request.url.path)
         request.state.api_version = version or CURRENT_VERSION
 

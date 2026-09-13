@@ -5,10 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.production_pipeline.models import PipelineStage, Pipeline
+from app.modules.production_pipeline.models import PipelineStage
 
 
 async def create_stage(
@@ -44,9 +44,7 @@ async def create_stage(
     return stage
 
 
-async def get_stages(
-    db: AsyncSession, pipeline_id: uuid.UUID
-) -> list[PipelineStage]:
+async def get_stages(db: AsyncSession, pipeline_id: uuid.UUID) -> list[PipelineStage]:
     """Get all stages for a pipeline, ordered."""
     stmt = (
         select(PipelineStage)
@@ -84,11 +82,10 @@ async def update_stage(
     return stage
 
 
-async def delete_stage(
-    db: AsyncSession, stage_id: uuid.UUID
-) -> bool:
+async def delete_stage(db: AsyncSession, stage_id: uuid.UUID) -> bool:
     """Soft delete a stage. Tasks in this stage get stage_id set to NULL."""
     from datetime import UTC, datetime
+
     from app.modules.production_pipeline.models import PipelineTask
 
     stmt = select(PipelineStage).where(

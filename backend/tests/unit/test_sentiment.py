@@ -1,20 +1,19 @@
 """Unit tests for sentiment analysis module."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.modules.review_intelligence.sentiment import (
     NEGATIVE_KEYWORDS,
     POSITIVE_KEYWORDS,
     SentimentAnalysisResult,
     SentimentLabel,
-    ThemeItem,
     _keyword_sentiment,
     analyze_sentiment_batch,
     analyze_sentiment_llm,
     extract_themes_from_results,
 )
-
 
 # --- Keyword-based sentiment tests ---
 
@@ -150,15 +149,17 @@ class TestLLMSentiment:
         mock_anthropic = MagicMock()
         mock_anthropic.AsyncAnthropic.return_value = mock_client_instance
 
-        with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
-            with patch(
+        with (
+            patch.dict("sys.modules", {"anthropic": mock_anthropic}),
+            patch(
                 "app.modules.review_intelligence.sentiment.anthropic",
                 mock_anthropic,
                 create=True,
-            ):
-                # We need to bypass the try/except import by directly calling
-                # Let's test the fallback path instead since mocking imports is tricky
-                pass
+            ),
+        ):
+            # We need to bypass the try/except import by directly calling
+            # Let's test the fallback path instead since mocking imports is tricky
+            pass
 
     @pytest.mark.asyncio
     async def test_handles_exception_gracefully(self):

@@ -2,34 +2,32 @@
 
 Uses FastAPI's TestClient with mocked database and auth dependencies.
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.competitor_finder.router import router
 from app.modules.competitor_finder.models import (
     CompetitorAlert,
     CompetitorAnalysis,
     CompetitorBook,
-    CompetitorReview,
     GapAnalysisResult,
     OpportunityBlueprint,
     WeaknessSignal,
 )
+from app.modules.competitor_finder.router import router
 from app.modules.competitor_finder.schemas import (
-    AnalysisStatus,
     AlertSeverity,
     AlertType,
-    WeaknessCategory,
+    AnalysisStatus,
     Severity,
+    WeaknessCategory,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -40,7 +38,7 @@ TEST_USER_ID = uuid.uuid4()
 TEST_BOOK_ID = uuid.uuid4()
 TEST_ANALYSIS_ID = uuid.uuid4()
 
-NOW = datetime.now(timezone.utc)
+NOW = datetime.now(UTC)
 
 
 def _create_test_app() -> FastAPI:
@@ -178,6 +176,7 @@ def _mock_gap_result() -> MagicMock:
 # Tests: POST /competitors/analyze
 # ---------------------------------------------------------------------------
 
+
 class TestAnalyzeEndpoint:
     @patch("app.modules.competitor_finder.router.CompetitorFinderService")
     @patch("app.modules.competitor_finder.router.get_current_user")
@@ -234,6 +233,7 @@ class TestAnalyzeEndpoint:
 # Tests: GET /competitors/{id}/weaknesses
 # ---------------------------------------------------------------------------
 
+
 class TestGetWeaknessesEndpoint:
     @patch("app.modules.competitor_finder.router.CompetitorFinderService")
     def test_get_weaknesses_returns_list(self, mock_service_cls):
@@ -276,6 +276,7 @@ class TestGetWeaknessesEndpoint:
 # Tests: GET /competitors/{id}/opportunity
 # ---------------------------------------------------------------------------
 
+
 class TestGetOpportunityEndpoint:
     @patch("app.modules.competitor_finder.router.CompetitorFinderService")
     def test_get_opportunity_returns_data(self, mock_service_cls):
@@ -316,6 +317,7 @@ class TestGetOpportunityEndpoint:
 # Tests: GET /competitors/alerts
 # ---------------------------------------------------------------------------
 
+
 class TestGetAlertsEndpoint:
     @patch("app.modules.competitor_finder.router.CompetitorFinderService")
     def test_get_alerts_returns_list(self, mock_service_cls):
@@ -350,15 +352,14 @@ class TestGetAlertsEndpoint:
         app.dependency_overrides[gdb] = lambda: AsyncMock()
 
         client = TestClient(app)
-        response = client.get(
-            "/api/v1/competitors/alerts?include_dismissed=true&limit=10"
-        )
+        response = client.get("/api/v1/competitors/alerts?include_dismissed=true&limit=10")
         assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------
 # Tests: POST /competitors/gap-analysis
 # ---------------------------------------------------------------------------
+
 
 class TestGapAnalysisEndpoint:
     @patch("app.modules.competitor_finder.router.CompetitorFinderService")
@@ -405,6 +406,7 @@ class TestGapAnalysisEndpoint:
 # ---------------------------------------------------------------------------
 # Tests: POST /competitors/batch-analyze
 # ---------------------------------------------------------------------------
+
 
 class TestBatchAnalyzeEndpoint:
     @patch("app.modules.competitor_finder.router.process_batch_analysis")

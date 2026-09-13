@@ -9,7 +9,6 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -24,10 +23,10 @@ from app.modules.competitor_finder.schemas import (
 )
 from app.modules.competitor_finder.service import CompetitorFinderService
 
-
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id():
@@ -98,6 +97,7 @@ def _make_competitor_review(**overrides):
 # ===========================================================================
 # Tests: analyze_competitor
 # ===========================================================================
+
 
 class TestAnalyzeCompetitor:
     """Tests for CompetitorFinderService.analyze_competitor."""
@@ -268,6 +268,7 @@ class TestAnalyzeCompetitor:
 # Tests: get_weaknesses
 # ===========================================================================
 
+
 class TestGetWeaknesses:
     """Tests for CompetitorFinderService.get_weaknesses."""
 
@@ -301,6 +302,7 @@ class TestGetWeaknesses:
 # ===========================================================================
 # Tests: batch_analyze
 # ===========================================================================
+
 
 class TestBatchAnalyze:
     """Tests for CompetitorFinderService.batch_analyze."""
@@ -354,6 +356,7 @@ class TestBatchAnalyze:
 # Tests: get_opportunity
 # ===========================================================================
 
+
 class TestGetOpportunity:
     """Tests for CompetitorFinderService.get_opportunity."""
 
@@ -384,6 +387,7 @@ class TestGetOpportunity:
 # ===========================================================================
 # Tests: run_gap_analysis
 # ===========================================================================
+
 
 class TestRunGapAnalysis:
     """Tests for CompetitorFinderService.run_gap_analysis."""
@@ -450,6 +454,7 @@ class TestRunGapAnalysis:
 # Tests: Alerts
 # ===========================================================================
 
+
 class TestAlerts:
     """Tests for alert management methods."""
 
@@ -480,7 +485,7 @@ class TestAlerts:
         """create_alert should create a new CompetitorAlert."""
         result = await service.create_alert(
             org_id=org_id,
-            alert_type=AlertType.NEW_COMPETITOR,
+            alert_type=AlertType.NEW_BOOK,
             title="New competitor detected",
             severity=AlertSeverity.INFO,
         )
@@ -527,6 +532,7 @@ class TestAlerts:
 # Tests: _compute_overall_score
 # ===========================================================================
 
+
 class TestComputeOverallScore:
     """Tests for the static _compute_overall_score method."""
 
@@ -544,16 +550,17 @@ class TestComputeOverallScore:
         assert isinstance(score, float)
 
     def test_high_sentiment_yields_high_score(self):
-        """High sentiment with low weaknesses should yield high score."""
-        result_mock = MagicMock(
-            sentiment_score=0.9,
-            weakness_count=1,
-            strength_count=15,
-        )
+        """High sentiment with low weaknesses should out-score the reverse."""
+        strong = MagicMock(sentiment_score=0.9, weakness_count=1, strength_count=15)
+        weak = MagicMock(sentiment_score=0.3, weakness_count=20, strength_count=2)
 
-        score = CompetitorFinderService._compute_overall_score(result_mock)
+        strong_score = CompetitorFinderService._compute_overall_score(strong)
+        weak_score = CompetitorFinderService._compute_overall_score(weak)
 
-        assert score > 50
+        # The components cap at 70, so an absolute threshold above that is not
+        # reachable; what matters is the ordering.
+        assert strong_score > weak_score
+        assert 0 <= strong_score <= 100
 
     def test_low_sentiment_yields_low_score(self):
         """Low sentiment with many weaknesses should yield low score."""

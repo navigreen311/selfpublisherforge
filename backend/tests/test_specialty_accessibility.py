@@ -7,13 +7,15 @@ import chain failures.
 from __future__ import annotations
 
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import event, select
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY as PG_ARRAY, UUID as PG_UUID
 from sqlalchemy.ext.compiler import compiles
 
 from app.database import Base
@@ -23,9 +25,11 @@ from app.database import Base
 def _compile_jsonb_sqlite(element, compiler, **kw):
     return "JSON"
 
+
 @compiles(PG_ARRAY, "sqlite")
 def _compile_array_sqlite(element, compiler, **kw):
     return "TEXT"
+
 
 @compiles(PG_UUID, "sqlite")
 def _compile_pg_uuid_sqlite(element, compiler, **kw):
@@ -42,9 +46,7 @@ def _is_pg_only_index(idx) -> bool:
     if pg_opts.get("using") or pg_opts.get("where") is not None or pg_opts.get("ops"):
         return True
     kw = getattr(idx, "kwargs", {})
-    if kw.get("postgresql_using") or kw.get("postgresql_where") is not None or kw.get("postgresql_ops"):
-        return True
-    return False
+    return bool(kw.get("postgresql_using") or kw.get("postgresql_where") is not None or kw.get("postgresql_ops"))
 
 
 @event.listens_for(Base.metadata, "before_create")
@@ -74,8 +76,6 @@ def _patch_for_sqlite(target, connection, **kw):
             table.indexes.discard(idx)
 
 
-import app.modules.specialty_books.models_accessibility  # noqa: E402, F401
-
 ORG_ID = uuid.uuid4()
 
 
@@ -89,22 +89,33 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-from app.modules.specialty_books.models_accessibility import AccessibilityVariant  # noqa: E402
-from app.modules.specialty_books import service_accessibility as acc_svc  # noqa: E402
-from app.modules.specialty_books import service_layout_protection as layout_svc  # noqa: E402
-from app.modules.specialty_books.service_accessibility import (  # noqa: E402
+from app.modules.specialty_books import service_accessibility as acc_svc
+from app.modules.specialty_books import service_layout_protection as layout_svc
+from app.modules.specialty_books.models_accessibility import AccessibilityVariant
+from app.modules.specialty_books.service_accessibility import (
+    DYSLEXIA_BACKGROUND_COLOR,
+    DYSLEXIA_FONT_FAMILY,
+    DYSLEXIA_LETTER_SPACING_PCT,
+    DYSLEXIA_LINE_SPACING,
+    DYSLEXIA_TEXT_ALIGNMENT,
+    HIGH_CONTRAST_BG,
+    HIGH_CONTRAST_FG,
+    LARGE_PRINT_MIN_FONT_SIZE,
+    VARIANT_DYSLEXIA,
+    VARIANT_HIGH_CONTRAST,
+    VARIANT_LARGE_PRINT,
+    WCAG_AAA_CONTRAST,
     calculate_contrast_ratio,
-    DYSLEXIA_FONT_FAMILY, DYSLEXIA_LINE_SPACING, DYSLEXIA_LETTER_SPACING_PCT,
-    DYSLEXIA_TEXT_ALIGNMENT, DYSLEXIA_BACKGROUND_COLOR,
-    LARGE_PRINT_MIN_FONT_SIZE, HIGH_CONTRAST_FG, HIGH_CONTRAST_BG,
-    WCAG_AA_CONTRAST, WCAG_AAA_CONTRAST,
-    VARIANT_DYSLEXIA, VARIANT_LARGE_PRINT, VARIANT_HIGH_CONTRAST,
 )
-from app.modules.specialty_books.service_layout_protection import (  # noqa: E402
-    _classify_zone, _determine_severity, _parse_trim_size,
-    GUTTER_ZONE_IN, SEVERITY_CRITICAL, SEVERITY_WARNING, SEVERITY_CAUTION, SEVERITY_OK,
+from app.modules.specialty_books.service_layout_protection import (
+    SEVERITY_CAUTION,
+    SEVERITY_CRITICAL,
+    SEVERITY_OK,
+    SEVERITY_WARNING,
+    _classify_zone,
+    _determine_severity,
+    _parse_trim_size,
 )
-
 
 # ===========================================================================
 # Unit tests (no DB)
@@ -206,8 +217,7 @@ async def test_large_print_18pt_minimum(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_large_print_rejects_small_font(db_session: AsyncSession):
     book_id = uuid.uuid4()
-    result = await acc_svc.generate_large_print(
-        db_session, "coloring", book_id, ORG_ID, settings={"min_font_size": 14})
+    result = await acc_svc.generate_large_print(db_session, "coloring", book_id, ORG_ID, settings={"min_font_size": 14})
     assert result["settings"]["min_font_size"] >= LARGE_PRINT_MIN_FONT_SIZE
 
 
@@ -250,8 +260,7 @@ async def test_high_contrast_bold_elements(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_wcag_aaa_compliance(db_session: AsyncSession):
     book_id = uuid.uuid4()
-    report = await acc_svc.check_accessibility_compliance(
-        db_session, "coloring", book_id, ORG_ID, standard="WCAG_AAA")
+    report = await acc_svc.check_accessibility_compliance(db_session, "coloring", book_id, ORG_ID, standard="WCAG_AAA")
     assert report["standard"] == "WCAG AAA"
     assert report["total_checks"] >= 3
     contrast_check = next(c for c in report["checks"] if c["name"] == "contrast_ratio")
@@ -261,8 +270,7 @@ async def test_wcag_aaa_compliance(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_wcag_aa_compliance(db_session: AsyncSession):
     book_id = uuid.uuid4()
-    report = await acc_svc.check_accessibility_compliance(
-        db_session, "coloring", book_id, ORG_ID, standard="WCAG_AA")
+    report = await acc_svc.check_accessibility_compliance(db_session, "coloring", book_id, ORG_ID, standard="WCAG_AA")
     assert report["standard"] == "WCAG AA"
     assert report["total_checks"] >= 3
 
@@ -279,7 +287,8 @@ async def test_variants_stored_in_db(db_session: AsyncSession):
     await acc_svc.generate_large_print(db_session, "coloring", book_id, ORG_ID)
     await acc_svc.generate_high_contrast(db_session, "coloring", book_id, ORG_ID)
     result = await db_session.execute(
-        select(AccessibilityVariant).where(AccessibilityVariant.source_book_id == book_id))
+        select(AccessibilityVariant).where(AccessibilityVariant.source_book_id == book_id)
+    )
     variants = result.scalars().all()
     assert len(variants) == 3
     assert {v.variant_type for v in variants} == {VARIANT_DYSLEXIA, VARIANT_LARGE_PRINT, VARIANT_HIGH_CONTRAST}

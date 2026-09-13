@@ -41,6 +41,7 @@ import logging
 import secrets
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import select
@@ -125,14 +126,15 @@ def generate_coloring_pages_batch(
     effective_job_id = job_id or f"batch-{secrets.token_urlsafe(16)}"
     logger.info(
         "Starting coloring batch generation (job=%s, book=%s, pages=%d)",
-        effective_job_id, book_id, len(descriptions),
+        effective_job_id,
+        book_id,
+        len(descriptions),
     )
-    _run_async(
-        _generate_coloring_pages_async(self, book_id, descriptions, variation_mode, effective_job_id)
-    )
+    _run_async(_generate_coloring_pages_async(self, book_id, descriptions, variation_mode, effective_job_id))
     logger.info(
         "Coloring batch generation completed (job=%s, book=%s)",
-        effective_job_id, book_id,
+        effective_job_id,
+        book_id,
     )
 
 
@@ -150,11 +152,7 @@ async def _generate_coloring_pages_async(
     async with async_session() as db:
         try:
             # Load book
-            book = (
-                await db.execute(
-                    select(ColoringBook).where(ColoringBook.id == book_id)
-                )
-            ).scalar_one()
+            book = (await db.execute(select(ColoringBook).where(ColoringBook.id == book_id))).scalar_one()
 
             book_type = "coloring"
             total_pages = len(descriptions)
@@ -162,7 +160,9 @@ async def _generate_coloring_pages_async(
             failed = 0
 
             _publish_event(
-                book_type, book_id, "batch_generation_started",
+                book_type,
+                book_id,
+                "batch_generation_started",
                 {"job_id": job_id, "total_pages": total_pages},
             )
 
@@ -180,7 +180,9 @@ async def _generate_coloring_pages_async(
                 page_index = idx + 1
                 try:
                     _publish_event(
-                        book_type, book_id, "page_generation_progress",
+                        book_type,
+                        book_id,
+                        "page_generation_progress",
                         {
                             "job_id": job_id,
                             "page_index": page_index,
@@ -200,7 +202,9 @@ async def _generate_coloring_pages_async(
                     raw_image = await step_1_generate(enriched_prompt, style_str)
 
                     _publish_event(
-                        book_type, book_id, "page_generation_progress",
+                        book_type,
+                        book_id,
+                        "page_generation_progress",
                         {
                             "job_id": job_id,
                             "page_index": page_index,
@@ -234,7 +238,9 @@ async def _generate_coloring_pages_async(
                     completed += 1
 
                     _publish_event(
-                        book_type, book_id, "page_generation_complete",
+                        book_type,
+                        book_id,
+                        "page_generation_complete",
                         {
                             "job_id": job_id,
                             "page_index": page_index,
@@ -246,10 +252,15 @@ async def _generate_coloring_pages_async(
                     failed += 1
                     logger.error(
                         "Failed to generate coloring page %d for book %s: %s",
-                        page_index, book_id, page_err, exc_info=True,
+                        page_index,
+                        book_id,
+                        page_err,
+                        exc_info=True,
                     )
                     _publish_event(
-                        book_type, book_id, "page_generation_failed",
+                        book_type,
+                        book_id,
+                        "page_generation_failed",
                         {
                             "job_id": job_id,
                             "page_index": page_index,
@@ -258,10 +269,7 @@ async def _generate_coloring_pages_async(
                     )
 
             # Compute overall QA score from completed pages
-            pages_result = await db.execute(
-                select(ColoringBookPage)
-                .where(ColoringBookPage.book_id == book_id)
-            )
+            pages_result = await db.execute(select(ColoringBookPage).where(ColoringBookPage.book_id == book_id))
             all_pages = pages_result.scalars().all()
             scores = [p.quality_score for p in all_pages if p.quality_score is not None]
             overall_qa = sum(scores) / len(scores) if scores else 0.0
@@ -270,7 +278,9 @@ async def _generate_coloring_pages_async(
             await db.commit()
 
             _publish_event(
-                book_type, book_id, "batch_generation_complete",
+                book_type,
+                book_id,
+                "batch_generation_complete",
                 {
                     "job_id": job_id,
                     "completed": completed,
@@ -283,17 +293,23 @@ async def _generate_coloring_pages_async(
             await db.rollback()
             logger.warning(
                 "generate_coloring_pages_batch hit soft time limit (job=%s, book=%s)",
-                job_id, book_id,
+                job_id,
+                book_id,
             )
             raise
         except Exception as e:
             await db.rollback()
             logger.error(
                 "Coloring batch generation failed (job=%s, book=%s): %s",
-                job_id, book_id, e, exc_info=True,
+                job_id,
+                book_id,
+                e,
+                exc_info=True,
             )
             _publish_event(
-                "coloring", book_id, "batch_generation_failed",
+                "coloring",
+                book_id,
+                "batch_generation_failed",
                 {"job_id": job_id, "error": str(e)},
             )
             raise task.retry(exc=e) from e
@@ -337,12 +353,16 @@ def export_book_task(
     """
     logger.info(
         "Starting book export (type=%s, book=%s, format=%s)",
-        book_type, book_id, format,
+        book_type,
+        book_id,
+        format,
     )
     result = _run_async(_export_book_async(self, book_type, book_id, format, org_id))
     logger.info(
         "Book export completed (type=%s, book=%s, format=%s)",
-        book_type, book_id, format,
+        book_type,
+        book_id,
+        format,
     )
     return result
 
@@ -358,11 +378,14 @@ async def _export_book_async(
     async with async_session() as db:
         try:
             _publish_event(
-                book_type, book_id, "export_started",
+                book_type,
+                book_id,
+                "export_started",
                 {"book_id": book_id, "format": format},
             )
 
             # Resolve book model based on type
+            book: Any  # reused across the per-book-type branches below
             if book_type == "coloring":
                 from app.modules.specialty.models.coloring import ColoringBook, ColoringBookPage
 
@@ -376,12 +399,16 @@ async def _export_book_async(
                 ).scalar_one()
 
                 pages = (
-                    await db.execute(
-                        select(ColoringBookPage)
-                        .where(ColoringBookPage.book_id == book_id)
-                        .order_by(ColoringBookPage.page_number.asc())
+                    (
+                        await db.execute(
+                            select(ColoringBookPage)
+                            .where(ColoringBookPage.book_id == book_id)
+                            .order_by(ColoringBookPage.page_number.asc())
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 total_pages = len(pages)
 
             elif book_type == "puzzle":
@@ -397,12 +424,14 @@ async def _export_book_async(
                 ).scalar_one()
 
                 puzzles = (
-                    await db.execute(
-                        select(Puzzle)
-                        .where(Puzzle.book_id == book_id)
-                        .order_by(Puzzle.puzzle_number.asc())
+                    (
+                        await db.execute(
+                            select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 total_pages = len(puzzles)
 
             elif book_type == "childrens":
@@ -423,17 +452,21 @@ async def _export_book_async(
 
             # Assemble export via the shared export engine
             from app.modules.specialty.shared.export_engine import (
+                calculate_export_metadata,
                 generate_pdf_manifest,
                 generate_pdfx1a_manifest,
                 generate_png_pages,
-                calculate_export_metadata,
             )
 
             book_data = {
                 "id": str(book_id),
                 "title": getattr(book, "title", "Untitled"),
                 "trim_size": getattr(book, "trim_size", "8.5x11"),
-                "interior_type": "bw" if book_type == "coloring" else "premium_color" if book_type == "childrens" else "bw",
+                "interior_type": "bw"
+                if book_type == "coloring"
+                else "premium_color"
+                if book_type == "childrens"
+                else "bw",
                 "pages": [{"page_number": i, "page_type": "content"} for i in range(1, total_pages + 1)],
             }
 
@@ -444,13 +477,14 @@ async def _export_book_async(
             else:
                 generate_pdf_manifest(book_type, book_data)
 
-            metadata = calculate_export_metadata(book_type, book_data)
+            calculate_export_metadata(book_type, book_data)
 
-            export_filename = f"{book_id}.{format}"
             download_url = f"/api/v1/storage/specialty/{book_type}/{book_id}/export.{format}"
 
             _publish_event(
-                book_type, book_id, "export_complete",
+                book_type,
+                book_id,
+                "export_complete",
                 {
                     "book_id": book_id,
                     "format": format,
@@ -471,17 +505,23 @@ async def _export_book_async(
             await db.rollback()
             logger.warning(
                 "export_book_task hit soft time limit (type=%s, book=%s)",
-                book_type, book_id,
+                book_type,
+                book_id,
             )
             raise
         except Exception as e:
             await db.rollback()
             logger.error(
                 "Book export failed (type=%s, book=%s): %s",
-                book_type, book_id, e, exc_info=True,
+                book_type,
+                book_id,
+                e,
+                exc_info=True,
             )
             _publish_event(
-                book_type, book_id, "export_failed",
+                book_type,
+                book_id,
+                "export_failed",
                 {"book_id": book_id, "error": str(e)},
             )
             raise task.retry(exc=e) from e
@@ -511,11 +551,15 @@ def run_batch_quality_check(self, book_type: str, book_id: str):
         Book UUID.
     """
     logger.info(
-        "Starting batch quality check (type=%s, book=%s)", book_type, book_id,
+        "Starting batch quality check (type=%s, book=%s)",
+        book_type,
+        book_id,
     )
     _run_async(_run_batch_quality_check_async(self, book_type, book_id))
     logger.info(
-        "Batch quality check completed (type=%s, book=%s)", book_type, book_id,
+        "Batch quality check completed (type=%s, book=%s)",
+        book_type,
+        book_id,
     )
 
 
@@ -528,29 +572,35 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
             pages_checked = 0
             scores: list[float] = []
 
+            book: Any  # reused across the per-book-type branches below
             if book_type == "coloring":
                 from app.modules.specialty.models.coloring import ColoringBook, ColoringBookPage
 
-                book = (
-                    await db.execute(
-                        select(ColoringBook).where(ColoringBook.id == book_id)
-                    )
-                ).scalar_one()
+                book = (await db.execute(select(ColoringBook).where(ColoringBook.id == book_id))).scalar_one()
 
                 pages = (
-                    await db.execute(
-                        select(ColoringBookPage)
-                        .where(ColoringBookPage.book_id == book_id)
-                        .order_by(ColoringBookPage.page_number.asc())
+                    (
+                        await db.execute(
+                            select(ColoringBookPage)
+                            .where(ColoringBookPage.book_id == book_id)
+                            .order_by(ColoringBookPage.page_number.asc())
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
 
                 for page in pages:
                     try:
                         # Fetch image data from storage
                         from app.modules.specialty.coloring.service import _fetch_specialty_asset
+
                         image_url = page.cleaned_url or page.illustration_url or ""
-                        image_data = _fetch_specialty_asset(image_url) if image_url else b""
+                        image_data = (
+                            await _fetch_specialty_asset(book.org_id, "coloring", UUID(book_id), page.id)
+                            if image_url
+                            else b""
+                        )
                         if not image_data:
                             logger.warning("No image data for page %d, skipping QA", page.page_number)
                             continue
@@ -568,7 +618,9 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
                     except Exception as page_err:
                         logger.warning(
                             "Quality check failed for page %d of book %s: %s",
-                            page.page_number, book_id, page_err,
+                            page.page_number,
+                            book_id,
+                            page_err,
                         )
 
                 overall_qa = sum(scores) / len(scores) if scores else 0.0
@@ -577,19 +629,17 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
             elif book_type == "puzzle":
                 from app.modules.specialty.models.puzzles import Puzzle, PuzzleBook
 
-                book = (
-                    await db.execute(
-                        select(PuzzleBook).where(PuzzleBook.id == book_id)
-                    )
-                ).scalar_one()
+                book = (await db.execute(select(PuzzleBook).where(PuzzleBook.id == book_id))).scalar_one()
 
                 puzzles = (
-                    await db.execute(
-                        select(Puzzle)
-                        .where(Puzzle.book_id == book_id)
-                        .order_by(Puzzle.puzzle_number.asc())
+                    (
+                        await db.execute(
+                            select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
 
                 for puzzle in puzzles:
                     try:
@@ -611,7 +661,9 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
                     except Exception as puzzle_err:
                         logger.warning(
                             "Quality check failed for puzzle %d of book %s: %s",
-                            puzzle.puzzle_number, book_id, puzzle_err,
+                            puzzle.puzzle_number,
+                            book_id,
+                            puzzle_err,
                         )
 
                 overall_qa = sum(scores) / len(scores) if scores else 0.0
@@ -619,14 +671,17 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
 
             else:
                 logger.warning(
-                    "Quality check not fully implemented for book_type=%s", book_type,
+                    "Quality check not fully implemented for book_type=%s",
+                    book_type,
                 )
                 overall_qa = 0.0
 
             await db.commit()
 
             _publish_event(
-                book_type, book_id, "quality_check_complete",
+                book_type,
+                book_id,
+                "quality_check_complete",
                 {
                     "book_id": book_id,
                     "qa_score": round(overall_qa, 1),
@@ -638,14 +693,18 @@ async def _run_batch_quality_check_async(task, book_type: str, book_id: str):
             await db.rollback()
             logger.warning(
                 "run_batch_quality_check hit soft time limit (type=%s, book=%s)",
-                book_type, book_id,
+                book_type,
+                book_id,
             )
             raise
         except Exception as e:
             await db.rollback()
             logger.error(
                 "Batch quality check failed (type=%s, book=%s): %s",
-                book_type, book_id, e, exc_info=True,
+                book_type,
+                book_id,
+                e,
+                exc_info=True,
             )
             raise task.retry(exc=e) from e
 
@@ -687,11 +746,13 @@ def generate_puzzle_batch(
     """
     logger.info(
         "Starting puzzle batch generation (book=%s, puzzles=%d)",
-        book_id, len(puzzle_configs),
+        book_id,
+        len(puzzle_configs),
     )
     _run_async(_generate_puzzle_batch_async(self, book_id, puzzle_configs))
     logger.info(
-        "Puzzle batch generation completed (book=%s)", book_id,
+        "Puzzle batch generation completed (book=%s)",
+        book_id,
     )
 
 
@@ -705,18 +766,16 @@ async def _generate_puzzle_batch_async(
 
     async with async_session() as db:
         try:
-            book = (
-                await db.execute(
-                    select(PuzzleBook).where(PuzzleBook.id == book_id)
-                )
-            ).scalar_one()
+            (await db.execute(select(PuzzleBook).where(PuzzleBook.id == book_id))).scalar_one()
 
             total = len(puzzle_configs)
             completed = 0
             verified = 0
 
             _publish_event(
-                "puzzle", book_id, "puzzle_batch_started",
+                "puzzle",
+                book_id,
+                "puzzle_batch_started",
                 {"book_id": book_id, "total": total},
             )
 
@@ -732,9 +791,14 @@ async def _generate_puzzle_batch_async(
 
                     # Generate puzzle using real algorithm
                     from app.modules.specialty.puzzles.algorithms import (
-                        generate_word_search, generate_crossword, generate_maze,
-                        generate_sudoku, generate_word_scramble, generate_cryptogram,
-                        generate_number_search, generate_word_connect,
+                        generate_crossword,
+                        generate_cryptogram,
+                        generate_maze,
+                        generate_number_search,
+                        generate_sudoku,
+                        generate_word_connect,
+                        generate_word_scramble,
+                        generate_word_search,
                     )
 
                     gs = int(grid_size.split("x")[0]) if "x" in str(grid_size) else 15
@@ -755,7 +819,11 @@ async def _generate_puzzle_batch_async(
                     elif puzzle_type == "number_search":
                         result = generate_number_search(word_list or ["123", "456"], gs)
                     elif puzzle_type == "word_connect":
-                        pairs = [(word_list[i], word_list[i+1]) for i in range(0, len(word_list)-1, 2)] if word_list and len(word_list) >= 2 else [("CAT", "FELINE")]
+                        pairs = (
+                            [(word_list[i], word_list[i + 1]) for i in range(0, len(word_list) - 1, 2)]
+                            if word_list and len(word_list) >= 2
+                            else [("CAT", "FELINE")]
+                        )
                         result = generate_word_connect(pairs, difficulty)
                     else:
                         result = generate_word_search(word_list or ["DEFAULT"], gs)
@@ -791,20 +859,27 @@ async def _generate_puzzle_batch_async(
                         verified += 1
 
                     _publish_event(
-                        "puzzle", book_id, "puzzle_batch_progress",
+                        "puzzle",
+                        book_id,
+                        "puzzle_batch_progress",
                         {"book_id": book_id, "completed": completed, "total": total},
                     )
 
                 except Exception as puzzle_err:
                     logger.error(
                         "Failed to generate puzzle %d for book %s: %s",
-                        puzzle_number, book_id, puzzle_err, exc_info=True,
+                        puzzle_number,
+                        book_id,
+                        puzzle_err,
+                        exc_info=True,
                     )
 
             await db.commit()
 
             _publish_event(
-                "puzzle", book_id, "puzzle_batch_complete",
+                "puzzle",
+                book_id,
+                "puzzle_batch_complete",
                 {
                     "book_id": book_id,
                     "total": completed,
@@ -815,14 +890,17 @@ async def _generate_puzzle_batch_async(
         except SoftTimeLimitExceeded:
             await db.rollback()
             logger.warning(
-                "generate_puzzle_batch hit soft time limit (book=%s)", book_id,
+                "generate_puzzle_batch hit soft time limit (book=%s)",
+                book_id,
             )
             raise
         except Exception as e:
             await db.rollback()
             logger.error(
                 "Puzzle batch generation failed (book=%s): %s",
-                book_id, e, exc_info=True,
+                book_id,
+                e,
+                exc_info=True,
             )
             raise task.retry(exc=e) from e
 
@@ -861,15 +939,13 @@ async def _process_batch_factory_async(task, job_id: str):
     async with async_session() as db:
         try:
             # Load job
-            job = (
-                await db.execute(
-                    select(BatchJob).where(BatchJob.id == job_id)
-                )
-            ).scalar_one()
+            job = (await db.execute(select(BatchJob).where(BatchJob.id == job_id))).scalar_one()
 
             if job.status in (BatchStatus.completed, BatchStatus.cancelled):
                 logger.info(
-                    "Batch job %s already %s, skipping.", job_id, job.status.value,
+                    "Batch job %s already %s, skipping.",
+                    job_id,
+                    job.status,
                 )
                 return
 
@@ -877,7 +953,7 @@ async def _process_batch_factory_async(task, job_id: str):
             job.status = BatchStatus.running
             await db.flush()
 
-            book_type = job.book_type if isinstance(job.book_type, str) else job.book_type.value
+            book_type = getattr(job.book_type, "value", job.book_type)
             config = job.batch_config or {}
             volumes_total = job.volumes_total
             page_count_per_volume = config.get("page_count_per_volume", 30)
@@ -885,19 +961,20 @@ async def _process_batch_factory_async(task, job_id: str):
 
             for vol_idx in range(job.volumes_completed, volumes_total):
                 # Budget guardrail
-                if (
-                    job.budget_limit_cents is not None
-                    and job.spent_cents >= job.budget_limit_cents
-                ):
+                if job.budget_limit_cents is not None and job.spent_cents >= job.budget_limit_cents:
                     job.status = BatchStatus.paused
                     await db.flush()
                     await db.commit()
                     logger.warning(
                         "Batch job %s paused: spent %d cents >= budget %d cents",
-                        job_id, job.spent_cents, job.budget_limit_cents,
+                        job_id,
+                        job.spent_cents,
+                        job.budget_limit_cents,
                     )
                     _publish_event(
-                        book_type, job_id, "batch_factory_paused",
+                        book_type,
+                        job_id,
+                        "batch_factory_paused",
                         {
                             "job_id": job_id,
                             "reason": "budget_exceeded",
@@ -908,11 +985,7 @@ async def _process_batch_factory_async(task, job_id: str):
                     return
 
                 # Check for cancellation (re-read from DB)
-                refreshed = (
-                    await db.execute(
-                        select(BatchJob).where(BatchJob.id == job_id)
-                    )
-                ).scalar_one_or_none()
+                refreshed = (await db.execute(select(BatchJob).where(BatchJob.id == job_id))).scalar_one_or_none()
                 if refreshed and refreshed.status == BatchStatus.cancelled:
                     logger.info("Batch job %s was cancelled.", job_id)
                     return
@@ -927,7 +1000,9 @@ async def _process_batch_factory_async(task, job_id: str):
                 await db.flush()
 
                 _publish_event(
-                    book_type, job_id, "batch_factory_progress",
+                    book_type,
+                    job_id,
+                    "batch_factory_progress",
                     {
                         "job_id": job_id,
                         "volumes_completed": job.volumes_completed,
@@ -938,7 +1013,10 @@ async def _process_batch_factory_async(task, job_id: str):
 
                 logger.info(
                     "Batch job %s: completed volume %d/%d (spent %d cents)",
-                    job_id, vol_idx + 1, volumes_total, job.spent_cents,
+                    job_id,
+                    vol_idx + 1,
+                    volumes_total,
+                    job.spent_cents,
                 )
 
             # All volumes completed
@@ -946,7 +1024,9 @@ async def _process_batch_factory_async(task, job_id: str):
             await db.commit()
 
             _publish_event(
-                book_type, job_id, "batch_factory_complete",
+                book_type,
+                job_id,
+                "batch_factory_complete",
                 {
                     "job_id": job_id,
                     "volumes_completed": job.volumes_completed,
@@ -957,31 +1037,31 @@ async def _process_batch_factory_async(task, job_id: str):
         except SoftTimeLimitExceeded:
             await db.rollback()
             logger.warning(
-                "process_batch_factory_job hit soft time limit (job=%s)", job_id,
+                "process_batch_factory_job hit soft time limit (job=%s)",
+                job_id,
             )
             raise
         except Exception as e:
             await db.rollback()
             logger.error(
                 "Batch factory processing failed (job=%s): %s",
-                job_id, e, exc_info=True,
+                job_id,
+                e,
+                exc_info=True,
             )
 
             # Mark job as failed in a fresh transaction
             try:
                 async with async_session() as db2:
-                    fail_job = (
-                        await db2.execute(
-                            select(BatchJob).where(BatchJob.id == job_id)
-                        )
-                    ).scalar_one_or_none()
+                    fail_job = (await db2.execute(select(BatchJob).where(BatchJob.id == job_id))).scalar_one_or_none()
                     if fail_job:
                         fail_job.status = BatchStatus.failed
                         await db2.commit()
             except SQLAlchemyError:
                 logger.error(
                     "Failed to update failure status for batch job %s",
-                    job_id, exc_info=True,
+                    job_id,
+                    exc_info=True,
                 )
 
             raise task.retry(exc=e) from e
@@ -1021,14 +1101,16 @@ def generate_accessibility_variant(
     """
     logger.info(
         "Starting accessibility variant (type=%s, book=%s, variant=%s)",
-        book_type, book_id, variant_type,
+        book_type,
+        book_id,
+        variant_type,
     )
-    _run_async(
-        _generate_accessibility_variant_async(self, book_type, book_id, variant_type)
-    )
+    _run_async(_generate_accessibility_variant_async(self, book_type, book_id, variant_type))
     logger.info(
         "Accessibility variant completed (type=%s, book=%s, variant=%s)",
-        book_type, book_id, variant_type,
+        book_type,
+        book_id,
+        variant_type,
     )
 
 
@@ -1092,7 +1174,9 @@ async def _generate_accessibility_variant_async(
             await db.commit()
 
             _publish_event(
-                book_type, book_id, "accessibility_complete",
+                book_type,
+                book_id,
+                "accessibility_complete",
                 {
                     "book_id": book_id,
                     "variant_type": variant_type,
@@ -1103,16 +1187,21 @@ async def _generate_accessibility_variant_async(
         except SoftTimeLimitExceeded:
             await db.rollback()
             logger.warning(
-                "generate_accessibility_variant hit soft time limit "
-                "(type=%s, book=%s, variant=%s)",
-                book_type, book_id, variant_type,
+                "generate_accessibility_variant hit soft time limit " "(type=%s, book=%s, variant=%s)",
+                book_type,
+                book_id,
+                variant_type,
             )
             raise
         except Exception as e:
             await db.rollback()
             logger.error(
                 "Accessibility variant failed (type=%s, book=%s, variant=%s): %s",
-                book_type, book_id, variant_type, e, exc_info=True,
+                book_type,
+                book_id,
+                variant_type,
+                e,
+                exc_info=True,
             )
             raise task.retry(exc=e) from e
 

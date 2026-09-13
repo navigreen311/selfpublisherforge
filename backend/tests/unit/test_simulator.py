@@ -17,7 +17,6 @@ from app.modules.pricing_automation.simulator import (
     simulate_price_change,
 )
 
-
 # ──────────────────── Royalty Rate ────────────────────
 
 

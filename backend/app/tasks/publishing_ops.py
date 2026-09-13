@@ -22,6 +22,7 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import Any, cast
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # S3 upload helper
 # ---------------------------------------------------------------------------
+
 
 def _upload_to_s3(
     file_bytes: bytes,
@@ -162,7 +164,9 @@ def task_generate_epub(
 
         logger.info(
             "EPUB export completed: export_id=%s, size=%d bytes, url=%s",
-            export_id, file_size, file_url,
+            export_id,
+            file_size,
+            file_url,
         )
 
         return {
@@ -174,16 +178,16 @@ def task_generate_epub(
         }
     except ClientError as exc:
         logger.error("S3 upload failed for EPUB export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except (ValueError, TypeError, KeyError) as exc:
         logger.error("Data validation error in EPUB generation for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error("EPUB generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -249,7 +253,9 @@ def task_generate_pdf(
 
         logger.info(
             "PDF export completed: export_id=%s, size=%d bytes, url=%s",
-            export_id, file_size, file_url,
+            export_id,
+            file_size,
+            file_url,
         )
 
         return {
@@ -261,16 +267,16 @@ def task_generate_pdf(
         }
     except ClientError as exc:
         logger.error("S3 upload failed for PDF export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except (ValueError, TypeError, KeyError) as exc:
         logger.error("Data validation error in PDF generation for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error("PDF generation failed for export_id=%s: %s", export_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -309,12 +315,9 @@ def task_sync_listing(
 
     async def _sync():
         async with async_session() as db:
-            stmt = (
-                select(ListingModel)
-                .where(
-                    ListingModel.id == uuid.UUID(listing_id),
-                    ListingModel.deleted_at.is_(None),
-                )
+            stmt = select(ListingModel).where(
+                ListingModel.id == uuid.UUID(listing_id),
+                ListingModel.deleted_at.is_(None),
             )
             result = await db.execute(stmt)
             listing = result.scalar_one_or_none()
@@ -338,7 +341,8 @@ def task_sync_listing(
 
             logger.info(
                 "Listing sync attempted: listing_id=%s, platform=%s",
-                listing_id, effective_platform,
+                listing_id,
+                effective_platform,
             )
 
             if effective_platform.lower() in _SUPPORTED_PLATFORM_APIS:
@@ -351,7 +355,9 @@ def task_sync_listing(
                 sync_status = "synced"
                 message = f"Successfully synced listing with {effective_platform}"
                 logger.info(
-                    "Listing %s synced with %s", listing_id, effective_platform,
+                    "Listing %s synced with %s",
+                    listing_id,
+                    effective_platform,
                 )
             else:
                 # Platform API adapter is not yet available -- mark as pending
@@ -366,7 +372,8 @@ def task_sync_listing(
                 )
                 logger.info(
                     "Listing %s marked sync_pending -- no API adapter for %s",
-                    listing_id, effective_platform,
+                    listing_id,
+                    effective_platform,
                 )
 
             # Persist the sync metadata inside listing_data
@@ -388,6 +395,7 @@ def task_sync_listing(
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 result = pool.submit(asyncio.run, _sync()).result()
         else:
@@ -399,6 +407,6 @@ def task_sync_listing(
         raise
     except Exception as exc:
         logger.error("Listing sync failed for listing_id=%s: %s", listing_id, exc, exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
-    return result
+    return cast("dict[Any, Any]", result)

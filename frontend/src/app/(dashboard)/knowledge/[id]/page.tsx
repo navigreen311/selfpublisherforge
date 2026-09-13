@@ -12,11 +12,14 @@ import {
   X,
   Calendar,
   FileText,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import {
   useKnowledgeEntry,
   useUpdateEntry,
   useDeleteEntry,
+  useSummarizeEntry,
 } from "@/modules/knowledge/hooks";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
@@ -26,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { SummarizeResult } from "@/modules/knowledge/types";
 import { useTranslations } from "@/hooks/use-translations";
 import { toast } from "sonner";
 
@@ -55,6 +59,14 @@ export default function KnowledgeEntryDetailPage() {
   const { data: entry, isLoading } = useKnowledgeEntry(entryId);
   const updateMutation = useUpdateEntry(entryId);
   const deleteMutation = useDeleteEntry();
+  // POST /knowledge/{id}/summarize had no caller after the detail view became
+  // an editor; the endpoint, the hook and the strings were all still here.
+  const summarizeMutation = useSummarizeEntry(entryId);
+  const [summary, setSummary] = useState<SummarizeResult | null>(null);
+
+  const handleSummarize = useCallback(async () => {
+    setSummary(await summarizeMutation.mutateAsync());
+  }, [summarizeMutation]);
 
   // ── Form state ───────────────────────────────────────────────────
   const [title, setTitle] = useState("");
@@ -130,18 +142,25 @@ export default function KnowledgeEntryDetailPage() {
     router.push("/knowledge");
   }, [deleteMutation, entryId, router, t]);
 
+  const addTag = useCallback(
+    (newTag: string) => {
+      const trimmed = newTag.trim();
+      if (!trimmed) return;
+      const current = tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (!current.includes(trimmed)) {
+        setTags([...current, trimmed].join(", "));
+      }
+    },
+    [tags]
+  );
+
   const handleAddTag = useCallback(() => {
-    const newTag = tagInput.trim();
-    if (!newTag) return;
-    const current = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    if (!current.includes(newTag)) {
-      setTags([...current, newTag].join(", "));
-    }
+    addTag(tagInput);
     setTagInput("");
-  }, [tagInput, tags]);
+  }, [addTag, tagInput]);
 
   const handleRemoveTag = useCallback(
     (tagToRemove: string) => {
@@ -286,6 +305,15 @@ export default function KnowledgeEntryDetailPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={summarizeMutation.isPending}
+                onClick={handleSummarize}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {t("detail.aiSummary")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
                 className="text-destructive focus:text-destructive cursor-pointer"
                 onClick={() => setShowDeleteConfirm(true)}
               >
@@ -296,6 +324,69 @@ export default function KnowledgeEntryDetailPage() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Provenance: where this entry came from and how much to trust it.
+          The editor dropped all three when it replaced the read-only view,
+          even though the entry still carries them. */}
+      {(entry.source_url || entry.credibility_score != null) && (
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          {entry.source_url && (
+            <a
+              href={entry.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-primary hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              {entry.source_url}
+            </a>
+          )}
+          {entry.credibility_score != null && (
+            <span className="text-muted-foreground">
+              {t("detail.credibility", {
+                score: Math.round(entry.credibility_score * 100),
+              })}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* AI summary */}
+      {summary && (
+        <section
+          aria-label={t("detail.aiSummary")}
+          className="rounded-lg border bg-muted/40 p-4 space-y-3"
+        >
+          <h2 className="text-sm font-semibold flex items-center gap-2">
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            {t("detail.aiSummary")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {summary.summary}
+          </p>
+          {summary.key_points?.length > 0 && (
+            <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+              {summary.key_points.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+          )}
+          {summary.suggested_tags?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {summary.suggested_tags.map((suggested) => (
+                <button
+                  key={suggested}
+                  type="button"
+                  onClick={() => addTag(suggested)}
+                  className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                >
+                  {suggested}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Created / Updated dates */}
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
@@ -495,6 +586,16 @@ export default function KnowledgeEntryDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Metadata */}
+      {entry.metadata && Object.keys(entry.metadata).length > 0 && (
+        <section aria-label={t("detail.metadata")} className="space-y-2">
+          <h2 className="text-sm font-semibold">{t("detail.metadata")}</h2>
+          <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+            {JSON.stringify(entry.metadata, null, 2)}
+          </pre>
+        </section>
+      )}
 
       {/* Delete confirmation */}
       <ConfirmDialog

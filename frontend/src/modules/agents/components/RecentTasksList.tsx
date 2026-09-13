@@ -9,6 +9,9 @@ interface RecentTasksListProps {
   tasks: any[];
   onViewOutput: (taskId: string) => void;
   onRetry?: (taskId: string) => void;
+  /** Human-in-the-loop gate: shown only on tasks awaiting approval. */
+  onApprove?: (taskId: string) => void;
+  onReject?: (taskId: string) => void;
 }
 
 function getStatusIcon(status: string): string {
@@ -70,6 +73,8 @@ export function RecentTasksList({
   tasks,
   onViewOutput,
   onRetry,
+  onApprove,
+  onReject,
 }: RecentTasksListProps) {
   if (tasks.length === 0) {
     return (
@@ -82,9 +87,13 @@ export function RecentTasksList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid="task-list">
       {tasks.map((task) => (
-        <Card key={task.id} className="transition-shadow hover:shadow-md">
+        <Card
+          key={task.id}
+          data-testid={`task-${task.id}`}
+          className="transition-shadow hover:shadow-md"
+        >
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 space-y-2">
@@ -94,9 +103,17 @@ export function RecentTasksList({
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {/* The task's own title leads; the agent is secondary.
+                          A task list headed by the agent name made every row
+                          from the same agent look identical. */}
                       <h4 className="font-semibold text-sm">
-                        {task.agent_name || "Unknown Agent"}
+                        {task.title || task.agent_name || "Unknown Agent"}
                       </h4>
+                      {task.title && task.agent_name && (
+                        <span className="text-xs text-muted-foreground">
+                          {task.agent_name}
+                        </span>
+                      )}
                       <Badge
                         variant="outline"
                         className={cn("text-xs", getStatusColor(task.status))}
@@ -137,8 +154,35 @@ export function RecentTasksList({
                 </div>
               </div>
 
-              <div className="flex gap-2 shrink-0">
-                {task.status === "running" || task.status === "pending" ? (
+              <div className="flex gap-2 shrink-0" data-testid={`task-actions-${task.id}`}>
+                {task.status === "awaiting_approval" && onApprove && onReject ? (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => onApprove(task.id)}
+                      data-testid={`approve-btn-${task.id}`}
+                      aria-label={`Approve task ${task.title || task.id}`}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => onReject(task.id)}
+                      data-testid={`reject-btn-${task.id}`}
+                      aria-label={`Reject task ${task.title || task.id}`}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onViewOutput(task.id)}
+                    >
+                      View Output
+                    </Button>
+                  </>
+                ) : task.status === "running" || task.status === "pending" ? (
                   <Button
                     size="sm"
                     variant="outline"

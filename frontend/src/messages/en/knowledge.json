@@ -29,7 +29,6 @@
   "deleteButton": "Delete",
   "cancelButton": "Cancel",
   "relevance": "Relevance: {score}",
-
   "categories": {
     "all": "All",
     "notes": "Notes",
@@ -39,7 +38,6 @@
     "references": "References",
     "outlines": "Outlines"
   },
-
   "editor": {
     "title": "Title",
     "category": "Category",
@@ -48,14 +46,12 @@
     "attachments": "Attachments",
     "addAttachment": "Add Attachment"
   },
-
   "importOptions": {
     "uploadFiles": "Upload Files",
     "fromUrl": "From URL",
     "pasteClipboard": "Paste from Clipboard",
     "fromManuscript": "From Manuscript"
   },
-
   "detail": {
     "invalidId": "Invalid entry ID",
     "notFound": "Entry not found",
@@ -98,5 +94,6 @@
       "createdAt": "Created",
       "updatedAt": "Updated"
     }
-  }
+  },
+  "titleLabel": "Title"
 }

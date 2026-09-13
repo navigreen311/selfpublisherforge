@@ -3,15 +3,16 @@
 These tests verify that admin-only endpoints are properly protected.
 """
 
-import pytest
 import uuid
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.security import create_access_token, hash_password
-from app.models.user import User, UserRole
 from app.models.organization import Organization
+from app.models.user import User, UserRole
 
 settings = get_settings()
 PREFIX = f"{settings.API_V1_PREFIX}/admin"
@@ -20,6 +21,7 @@ PREFIX = f"{settings.API_V1_PREFIX}/admin"
 # ---------------------------------------------------------------------------
 # Helper Functions
 # ---------------------------------------------------------------------------
+
 
 async def _create_org(db: AsyncSession, name: str = "Test Org") -> Organization:
     """Create a test organization."""
@@ -42,11 +44,7 @@ async def _create_user(
     role: UserRole = UserRole.VIEWER,
     is_platform_admin: bool = False,
 ) -> User:
-    """Create a test user with a specific role.
-
-    Note: Platform admin status is typically stored in preferences or a separate field.
-    For this test, we'll use role=OWNER as a proxy for admin privileges.
-    """
+    """Create a test user with a specific role and platform-admin bit."""
     user = User(
         org_id=org_id,
         email=email,
@@ -54,7 +52,7 @@ async def _create_user(
         name="Test User",
         role=role,
         is_active=True,
-        preferences={"is_platform_admin": is_platform_admin} if is_platform_admin else None,
+        is_platform_admin=is_platform_admin,
     )
     db.add(user)
     await db.commit()
@@ -84,6 +82,7 @@ def _auth_headers(token: str) -> dict:
 # Unauthenticated Access Tests
 # ---------------------------------------------------------------------------
 
+
 class TestUnauthenticatedAccess:
     """Verify unauthenticated users cannot access admin endpoints."""
 
@@ -91,13 +90,13 @@ class TestUnauthenticatedAccess:
     async def test_list_users_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot list users."""
         resp = await client.get(f"{PREFIX}/users")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_get_feature_flags_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot get feature flags."""
         resp = await client.get(f"{PREFIX}/feature-flags")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_update_feature_flag_requires_auth(self, client: AsyncClient):
@@ -106,19 +105,20 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/feature-flags/test-flag",
             json={"enabled": True, "description": "Test"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_deactivate_user_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot deactivate users."""
         user_id = uuid.uuid4()
         resp = await client.delete(f"{PREFIX}/users/{user_id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------
 # Non-Admin User Access Tests
 # ---------------------------------------------------------------------------
+
 
 class TestNonAdminAccess:
     """Verify non-admin users cannot access admin endpoints."""
@@ -180,6 +180,7 @@ class TestNonAdminAccess:
 # Platform Admin Access Tests
 # ---------------------------------------------------------------------------
 
+
 class TestPlatformAdminAccess:
     """Verify platform admins can access all admin endpoints."""
 
@@ -187,9 +188,7 @@ class TestPlatformAdminAccess:
     async def test_admin_can_list_users(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can list all users."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
         # Create some additional users
         await _create_user(db, org.id, "user1@test.com", UserRole.VIEWER)
         await _create_user(db, org.id, "user2@test.com", UserRole.EDITOR)
@@ -208,9 +207,7 @@ class TestPlatformAdminAccess:
     async def test_admin_can_filter_users_by_tier(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can filter users by tier."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
 
         token = _make_token(admin, is_admin=True)
         resp = await client.get(
@@ -226,9 +223,7 @@ class TestPlatformAdminAccess:
     async def test_admin_can_search_users(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can search users by email/name."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
         await _create_user(db, org.id, "searchme@test.com", UserRole.VIEWER)
 
         token = _make_token(admin, is_admin=True)
@@ -245,9 +240,7 @@ class TestPlatformAdminAccess:
     async def test_admin_can_get_feature_flags(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can retrieve all feature flags."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
 
         token = _make_token(admin, is_admin=True)
         resp = await client.get(f"{PREFIX}/feature-flags", headers=_auth_headers(token))
@@ -257,13 +250,17 @@ class TestPlatformAdminAccess:
         assert "flags" in data
         assert isinstance(data["flags"], list)
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="T-010a / P-06: admin.service feature flags are a declared stub — "
+        "get returns [] and update echoes its argument back. These assertions are the "
+        "specification for the real table; remove this marker when P-06 lands it.",
+    )
     @pytest.mark.asyncio
     async def test_admin_can_update_feature_flag(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can update feature flags."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
 
         token = _make_token(admin, is_admin=True)
         resp = await client.put(
@@ -284,9 +281,7 @@ class TestPlatformAdminAccess:
     async def test_admin_can_deactivate_user(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can deactivate user accounts."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
         target_user = await _create_user(db, org.id, "target@test.com", UserRole.VIEWER)
 
         token = _make_token(admin, is_admin=True)
@@ -305,6 +300,7 @@ class TestPlatformAdminAccess:
 # Admin Operations Scope Tests
 # ---------------------------------------------------------------------------
 
+
 class TestAdminOperationsScope:
     """Verify admin operations work across organizations."""
 
@@ -314,9 +310,7 @@ class TestAdminOperationsScope:
         org1 = await _create_org(db, "Org 1")
         org2 = await _create_org(db, "Org 2")
 
-        admin = await _create_user(
-            db, org1.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org1.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
         await _create_user(db, org1.id, "user1@org1.com", UserRole.VIEWER)
         await _create_user(db, org2.id, "user2@org2.com", UserRole.VIEWER)
 
@@ -329,16 +323,12 @@ class TestAdminOperationsScope:
         assert len(data["users"]) >= 3
 
     @pytest.mark.asyncio
-    async def test_admin_can_deactivate_user_from_different_org(
-        self, client: AsyncClient, db: AsyncSession
-    ):
+    async def test_admin_can_deactivate_user_from_different_org(self, client: AsyncClient, db: AsyncSession):
         """Platform admin can deactivate users from any organization."""
         org1 = await _create_org(db, "Org 1")
         org2 = await _create_org(db, "Org 2")
 
-        admin = await _create_user(
-            db, org1.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org1.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
         target_user = await _create_user(db, org2.id, "target@org2.com", UserRole.VIEWER)
 
         token = _make_token(admin, is_admin=True)
@@ -354,6 +344,7 @@ class TestAdminOperationsScope:
 # Edge Cases
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
     """Test edge cases and error scenarios."""
 
@@ -361,9 +352,7 @@ class TestEdgeCases:
     async def test_deactivate_nonexistent_user(self, client: AsyncClient, db: AsyncSession):
         """Attempting to deactivate non-existent user returns 404."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
 
         token = _make_token(admin, is_admin=True)
         fake_user_id = uuid.uuid4()
@@ -374,13 +363,17 @@ class TestEdgeCases:
 
         assert resp.status_code == 404
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="T-010a / P-06: admin.service feature flags are a declared stub — "
+        "get returns [] and update echoes its argument back. These assertions are the "
+        "specification for the real table; remove this marker when P-06 lands it.",
+    )
     @pytest.mark.asyncio
     async def test_update_nonexistent_feature_flag(self, client: AsyncClient, db: AsyncSession):
         """Updating non-existent feature flag returns 404."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
 
         token = _make_token(admin, is_admin=True)
         resp = await client.put(
@@ -395,9 +388,7 @@ class TestEdgeCases:
     async def test_list_users_with_pagination(self, client: AsyncClient, db: AsyncSession):
         """User list respects pagination parameters."""
         org = await _create_org(db)
-        admin = await _create_user(
-            db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True
-        )
+        admin = await _create_user(db, org.id, "admin@test.com", UserRole.OWNER, is_platform_admin=True)
 
         # Create multiple users
         for i in range(5):

@@ -58,6 +58,7 @@ _MIN_SAMPLE_SIZE = 100
 # Listing analysis
 # ---------------------------------------------------------------------------
 
+
 async def analyze_amazon_listing(
     request: ListingAnalyzeRequest,
     db: AsyncSession,
@@ -110,10 +111,12 @@ async def analyze_amazon_listing(
 
     # Gather listing data from the first associated Listing record.
     listing_result = await db.execute(
-        select(Listing).where(
+        select(Listing)
+        .where(
             Listing.book_id == book.id,
             Listing.deleted_at.is_(None),
-        ).order_by(Listing.updated_at.desc())
+        )
+        .order_by(Listing.updated_at.desc())
     )
     listing: Listing | None = listing_result.scalars().first()
 
@@ -153,10 +156,14 @@ async def analyze_amazon_listing(
 
     logger.info(
         "Analyzing listing for book %s (ASIN=%s): title_len=%d, blurb_len=%d, keywords=%d",
-        book.id, resolved_asin, len(title), len(blurb), len(keywords),
+        book.id,
+        resolved_asin,
+        len(title),
+        len(blurb),
+        len(keywords),
     )
 
-    analysis = analyze_listing(
+    return analyze_listing(
         title=title,
         blurb=blurb,
         keywords=keywords,
@@ -165,8 +172,6 @@ async def analyze_amazon_listing(
         genre=genre,
         asin=resolved_asin,
     )
-
-    return analysis
 
 
 async def analyze_listing_with_data(
@@ -200,6 +205,7 @@ async def analyze_listing_with_data(
 # Blurb generation
 # ---------------------------------------------------------------------------
 
+
 async def generate_blurb_variants(
     request: BlurbGenerateRequest,
 ) -> BlurbGenerateResponse:
@@ -231,6 +237,7 @@ async def generate_blurb_variants(
 # ---------------------------------------------------------------------------
 # A/B testing
 # ---------------------------------------------------------------------------
+
 
 async def create_ab_test(
     request: ABTestCreateRequest,
@@ -314,10 +321,7 @@ async def update_ab_test(
     ab_test = await _fetch_ab_test(test_id, db)
 
     # Validate content changes only allowed when not running/completed
-    content_fields_changing = (
-        request.variant_a is not None
-        or request.variant_b is not None
-    )
+    content_fields_changing = request.variant_a is not None or request.variant_b is not None
     if content_fields_changing and ab_test.status in (
         ABTestStatus.RUNNING.value,
         ABTestStatus.COMPLETED.value,
@@ -366,7 +370,7 @@ async def start_ab_test(
     if ab_test.status not in (ABTestStatus.DRAFT.value, ABTestStatus.PAUSED.value):
         raise ValidationError(
             message=f"Cannot start a test with status '{ab_test.status}'. "
-                    f"Only DRAFT or PAUSED tests can be started.",
+            f"Only DRAFT or PAUSED tests can be started.",
         )
 
     ab_test.status = ABTestStatus.RUNNING.value
@@ -389,10 +393,7 @@ async def get_test_results(
     ab_test = await _fetch_ab_test(test_id, db)
 
     # Auto-complete tests that have exceeded their duration
-    if (
-        ab_test.status == ABTestStatus.RUNNING.value
-        and ab_test.started_at is not None
-    ):
+    if ab_test.status == ABTestStatus.RUNNING.value and ab_test.started_at is not None:
         end_date = ab_test.started_at + timedelta(days=ab_test.duration_days)
         if datetime.now(UTC) >= end_date:
             ab_test.status = ABTestStatus.COMPLETED.value
@@ -401,26 +402,10 @@ async def get_test_results(
             await db.refresh(ab_test)
 
     # Compute rates
-    a_ctr = (
-        ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100
-        if ab_test.variant_a_impressions > 0
-        else 0.0
-    )
-    b_ctr = (
-        ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100
-        if ab_test.variant_b_impressions > 0
-        else 0.0
-    )
-    a_conv = (
-        ab_test.variant_a_clicks / ab_test.variant_a_impressions
-        if ab_test.variant_a_impressions > 0
-        else 0.0
-    )
-    b_conv = (
-        ab_test.variant_b_clicks / ab_test.variant_b_impressions
-        if ab_test.variant_b_impressions > 0
-        else 0.0
-    )
+    a_ctr = ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100 if ab_test.variant_a_impressions > 0 else 0.0
+    b_ctr = ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100 if ab_test.variant_b_impressions > 0 else 0.0
+    a_conv = ab_test.variant_a_clicks / ab_test.variant_a_impressions if ab_test.variant_a_impressions > 0 else 0.0
+    b_conv = ab_test.variant_b_clicks / ab_test.variant_b_impressions if ab_test.variant_b_impressions > 0 else 0.0
 
     total_impressions = ab_test.variant_a_impressions + ab_test.variant_b_impressions
     sample_sufficient = total_impressions >= _MIN_SAMPLE_SIZE
@@ -489,6 +474,7 @@ async def get_test_results(
 # Look Inside analysis
 # ---------------------------------------------------------------------------
 
+
 async def analyze_look_inside(
     request: LookInsideAnalyzeRequest,
 ) -> LookInsideAnalysis:
@@ -503,59 +489,64 @@ async def analyze_look_inside(
     # --- First page analysis ---
     first_page = preview_text[:500]
     first_page_score = _score_first_page(first_page, genre)
-    sections.append(LookInsideSection(
-        section="first_page",
-        score=first_page_score,
-        feedback=_first_page_feedback(first_page_score),
-        suggestions=_first_page_suggestions(first_page, first_page_score),
-    ))
+    sections.append(
+        LookInsideSection(
+            section="first_page",
+            score=first_page_score,
+            feedback=_first_page_feedback(first_page_score),
+            suggestions=_first_page_suggestions(first_page, first_page_score),
+        )
+    )
 
     # --- Hook strength ---
     first_paragraph = _extract_first_paragraph(preview_text)
     hook_score = _score_hook(first_paragraph, genre)
-    sections.append(LookInsideSection(
-        section="opening_hook",
-        score=hook_score,
-        feedback=_hook_feedback(hook_score),
-        suggestions=_hook_suggestions(hook_score),
-    ))
+    sections.append(
+        LookInsideSection(
+            section="opening_hook",
+            score=hook_score,
+            feedback=_hook_feedback(hook_score),
+            suggestions=_hook_suggestions(hook_score),
+        )
+    )
 
     # --- Pacing ---
     pacing_score = _score_pacing(preview_text)
-    sections.append(LookInsideSection(
-        section="pacing",
-        score=pacing_score,
-        feedback=f"Pacing score: {pacing_score}/100.",
-        suggestions=_pacing_suggestions(pacing_score),
-    ))
+    sections.append(
+        LookInsideSection(
+            section="pacing",
+            score=pacing_score,
+            feedback=f"Pacing score: {pacing_score}/100.",
+            suggestions=_pacing_suggestions(pacing_score),
+        )
+    )
 
     # --- Table of contents ---
     toc_score = _score_toc(chapter_titles)
-    sections.append(LookInsideSection(
-        section="table_of_contents",
-        score=toc_score,
-        feedback=_toc_feedback(toc_score, chapter_titles),
-        suggestions=_toc_suggestions(toc_score, chapter_titles),
-    ))
+    sections.append(
+        LookInsideSection(
+            section="table_of_contents",
+            score=toc_score,
+            feedback=_toc_feedback(toc_score, chapter_titles),
+            suggestions=_toc_suggestions(toc_score, chapter_titles),
+        )
+    )
 
     # Overall score (weighted)
-    overall = (
-        first_page_score * 0.30
-        + hook_score * 0.30
-        + pacing_score * 0.20
-        + toc_score * 0.20
-    )
+    overall = first_page_score * 0.30 + hook_score * 0.30 + pacing_score * 0.20 + toc_score * 0.20
 
     # Build recommendations from sections with low scores
     for section in sections:
         if section.score < 60:
             for suggestion in section.suggestions:
-                recommendations.append(Recommendation(
-                    area=f"look_inside_{section.section}",
-                    severity="critical" if section.score < 40 else "warning",
-                    message=section.feedback,
-                    suggestion=suggestion,
-                ))
+                recommendations.append(
+                    Recommendation(
+                        area=f"look_inside_{section.section}",
+                        severity="critical" if section.score < 40 else "warning",
+                        message=section.feedback,
+                        suggestion=suggestion,
+                    )
+                )
 
     return LookInsideAnalysis(
         overall_score=round(overall, 1),
@@ -571,6 +562,7 @@ async def analyze_look_inside(
 # ---------------------------------------------------------------------------
 # Mobile check
 # ---------------------------------------------------------------------------
+
 
 async def check_mobile_listing(
     request: MobileCheckRequest,
@@ -590,6 +582,7 @@ async def check_mobile_listing(
 # Conversion scores
 # ---------------------------------------------------------------------------
 
+
 async def get_conversion_scores(
     book_id: UUID,
     db: AsyncSession,
@@ -603,11 +596,13 @@ async def get_conversion_scores(
     # Pull the most recent completed A/B test for this book to derive
     # a blurb conversion score.
     result = await db.execute(
-        select(ABTest).where(
+        select(ABTest)
+        .where(
             ABTest.book_id == book_id,
             ABTest.status == ABTestStatus.COMPLETED.value,
             ABTest.deleted_at.is_(None),
-        ).order_by(ABTest.completed_at.desc())
+        )
+        .order_by(ABTest.completed_at.desc())
     )
     completed_tests = result.scalars().all()
 
@@ -619,16 +614,8 @@ async def get_conversion_scores(
         # Use the best CTR across all completed tests for this book.
         best_ctr = 0.0
         for test in completed_tests:
-            a_ctr = (
-                test.variant_a_clicks / test.variant_a_impressions * 100
-                if test.variant_a_impressions > 0
-                else 0.0
-            )
-            b_ctr = (
-                test.variant_b_clicks / test.variant_b_impressions * 100
-                if test.variant_b_impressions > 0
-                else 0.0
-            )
+            a_ctr = test.variant_a_clicks / test.variant_a_impressions * 100 if test.variant_a_impressions > 0 else 0.0
+            b_ctr = test.variant_b_clicks / test.variant_b_impressions * 100 if test.variant_b_impressions > 0 else 0.0
             best_ctr = max(best_ctr, a_ctr, b_ctr)
 
         # Normalise CTR to a 0-100 score (10% CTR -> 100 score).
@@ -637,22 +624,16 @@ async def get_conversion_scores(
 
         # Count tests where neither variant exceeds 5% CTR as needing attention.
         for test in completed_tests:
-            a_ctr = (
-                test.variant_a_clicks / test.variant_a_impressions * 100
-                if test.variant_a_impressions > 0
-                else 0.0
-            )
-            b_ctr = (
-                test.variant_b_clicks / test.variant_b_impressions * 100
-                if test.variant_b_impressions > 0
-                else 0.0
-            )
+            a_ctr = test.variant_a_clicks / test.variant_a_impressions * 100 if test.variant_a_impressions > 0 else 0.0
+            b_ctr = test.variant_b_clicks / test.variant_b_impressions * 100 if test.variant_b_impressions > 0 else 0.0
             if max(a_ctr, b_ctr) < 5.0:
                 recommendations_count += 1
 
     # Count active (running) tests that have not been analysed yet.
     running_result = await db.execute(
-        select(func.count()).select_from(ABTest).where(
+        select(func.count())
+        .select_from(ABTest)
+        .where(
             ABTest.book_id == book_id,
             ABTest.status == ABTestStatus.RUNNING.value,
             ABTest.deleted_at.is_(None),
@@ -663,14 +644,8 @@ async def get_conversion_scores(
         recommendations_count += 1  # Suggest waiting for results
 
     # Overall score is the average of available dimensions.
-    available_scores = [
-        s for s in [blurb_score] if s is not None
-    ]
-    overall_score = (
-        round(sum(available_scores) / len(available_scores), 1)
-        if available_scores
-        else 0.0
-    )
+    available_scores = [s for s in [blurb_score] if s is not None]
+    overall_score = round(sum(available_scores) / len(available_scores), 1) if available_scores else 0.0
 
     return ConversionScores(
         book_id=book_id,
@@ -687,6 +662,7 @@ async def get_conversion_scores(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_asin_from_url(url: str) -> str | None:
     """Extract ASIN from an Amazon product URL."""
@@ -799,27 +775,15 @@ def _normal_sf(z: float) -> float:
 def _ab_test_to_response(ab_test: ABTest) -> ABTestResponse:
     """Convert an ABTest model to response schema."""
     # Calculate CTR
-    a_ctr = (
-        ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100
-        if ab_test.variant_a_impressions > 0
-        else 0.0
-    )
-    b_ctr = (
-        ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100
-        if ab_test.variant_b_impressions > 0
-        else 0.0
-    )
+    a_ctr = ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100 if ab_test.variant_a_impressions > 0 else 0.0
+    b_ctr = ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100 if ab_test.variant_b_impressions > 0 else 0.0
 
     # Conversion rate (proportion as percentage)
     a_conv = (
-        ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100
-        if ab_test.variant_a_impressions > 0
-        else 0.0
+        ab_test.variant_a_clicks / ab_test.variant_a_impressions * 100 if ab_test.variant_a_impressions > 0 else 0.0
     )
     b_conv = (
-        ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100
-        if ab_test.variant_b_impressions > 0
-        else 0.0
+        ab_test.variant_b_clicks / ab_test.variant_b_impressions * 100 if ab_test.variant_b_impressions > 0 else 0.0
     )
 
     # Estimated score normalised to 0-100 (10% CTR -> score 100)
@@ -879,6 +843,7 @@ def _ab_test_to_response(ab_test: ABTest) -> ABTestResponse:
 # ---------------------------------------------------------------------------
 # Look Inside scoring helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_first_paragraph(text: str) -> str:
     """Extract the first paragraph from preview text."""
@@ -967,7 +932,7 @@ def _score_pacing(text: str) -> float:
     lengths = [len(p.split()) for p in paragraphs]
     if len(lengths) > 1:
         avg_length = sum(lengths) / len(lengths)
-        variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
+        variance = sum((length - avg_length) ** 2 for length in lengths) / len(lengths)
         # Some variance is good (varied pacing)
         if variance > 100:
             score += 15
@@ -981,7 +946,7 @@ def _score_pacing(text: str) -> float:
         score += 10
 
     # Short paragraphs for tension
-    short_paras = sum(1 for l in lengths if l <= 15)
+    short_paras = sum(1 for length in lengths if length <= 15)
     if short_paras > 0:
         score += 5
 
@@ -1000,19 +965,13 @@ def _score_toc(chapter_titles: list[str]) -> float:
         score += 10
 
     # Descriptive titles (not just "Chapter 1")
-    generic_count = sum(
-        1 for t in chapter_titles
-        if re.match(r"^chapter\s+\d+$", t.lower().strip())
-    )
+    generic_count = sum(1 for t in chapter_titles if re.match(r"^chapter\s+\d+$", t.lower().strip()))
     descriptive_ratio = 1 - (generic_count / max(len(chapter_titles), 1))
     score += descriptive_ratio * 20
 
     # Intriguing titles (contain interesting words)
     intriguing_words = ["secret", "dark", "last", "first", "blood", "fire", "night", "truth"]
-    intriguing_count = sum(
-        1 for t in chapter_titles
-        if any(w in t.lower() for w in intriguing_words)
-    )
+    intriguing_count = sum(1 for t in chapter_titles if any(w in t.lower() for w in intriguing_words))
     score += min(10, intriguing_count * 3)
 
     return max(0, min(100, score))

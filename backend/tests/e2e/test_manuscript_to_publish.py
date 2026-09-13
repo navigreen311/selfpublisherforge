@@ -30,6 +30,7 @@ VALID_PASSWORD = "StrongP@ss1"
 # Helper Functions
 # ---------------------------------------------------------------------------
 
+
 async def _register(
     client: AsyncClient,
     email: str = "e2e@test.com",
@@ -116,14 +117,13 @@ async def _create_project_and_book(
 # E2E Test: Complete Manuscript to Publishing Flow
 # ---------------------------------------------------------------------------
 
+
 class TestManuscriptToPublishFlow:
     """Complete flow: create project, manuscript, chapters, validate,
     create pipeline, export, and create listing."""
 
     @pytest.mark.asyncio
-    async def test_full_manuscript_to_publish_flow(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_full_manuscript_to_publish_flow(self, client: AsyncClient, db_session: AsyncSession):
         """Test the complete flow from manuscript creation to publishing.
 
         Flow steps:
@@ -357,7 +357,8 @@ class TestManuscriptToPublishFlow:
         # ===== Step 10: Create a listing (via DB - no API endpoint exists) =====
         # Insert listing directly since the publishing router doesn't expose
         # a listing creation endpoint
-        from app.models.publishing import Listing, ListingStatus as ListingStatusEnum
+        from app.models.publishing import Listing
+        from app.models.publishing import ListingStatus as ListingStatusEnum
 
         listing_id = uuid.uuid4()
         listing = Listing(
@@ -414,18 +415,14 @@ class TestManuscriptToPublishFlow:
         assert final_manuscript["total_word_count"] > 0
 
     @pytest.mark.asyncio
-    async def test_manuscript_readability_analysis(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_manuscript_readability_analysis(self, client: AsyncClient, db_session: AsyncSession):
         """Test manuscript readability analysis as part of the flow."""
         # Register and authenticate
         email = "readability@test.com"
         token, org_id = await _register_and_get_token(client, email)
 
         # Create project and book
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, book_title="Readability Test Book"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, book_title="Readability Test Book")
 
         # Create a chapter with readable content
         chapter_resp = await client.post(
@@ -462,18 +459,14 @@ class TestManuscriptToPublishFlow:
         assert "readability" in analysis
 
     @pytest.mark.asyncio
-    async def test_chapter_reordering(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_chapter_reordering(self, client: AsyncClient, db_session: AsyncSession):
         """Test reordering chapters within a manuscript."""
         # Register and authenticate
         email = "reorder@test.com"
         token, org_id = await _register_and_get_token(client, email)
 
         # Create project and book
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, book_title="Reorder Test Book"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, book_title="Reorder Test Book")
 
         # Create 3 chapters
         chapter_ids = []
@@ -515,18 +508,14 @@ class TestManuscriptToPublishFlow:
         assert reordered[2]["order"] == 2
 
     @pytest.mark.asyncio
-    async def test_chapter_update(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_chapter_update(self, client: AsyncClient, db_session: AsyncSession):
         """Test updating chapter content and title."""
         # Register and authenticate
         email = "update@test.com"
         token, org_id = await _register_and_get_token(client, email)
 
         # Create project and book
-        _project_id, book_id = await _create_project_and_book(
-            db_session, org_id, book_title="Update Test Book"
-        )
+        _project_id, book_id = await _create_project_and_book(db_session, org_id, book_title="Update Test Book")
 
         # Create a chapter
         create_resp = await client.post(
@@ -567,9 +556,7 @@ class TestManuscriptToPublishFlow:
         assert retrieved["content"] == "Updated content with more words and detail"
 
     @pytest.mark.asyncio
-    async def test_print_book_validation_flow(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_print_book_validation_flow(self, client: AsyncClient, db_session: AsyncSession):
         """Test validation flow for a print book."""
         # Register and authenticate
         email = "print-book@test.com"

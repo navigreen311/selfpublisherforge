@@ -51,6 +51,7 @@ class NicheScores:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _clamp(value: float, lo: float = 0.0, hi: float = 100.0) -> float:
     return max(lo, min(hi, value))
 
@@ -66,6 +67,7 @@ def _sigmoid_scale(x: float, midpoint: float, steepness: float = 1.0) -> float:
 # ---------------------------------------------------------------------------
 # Public scoring function
 # ---------------------------------------------------------------------------
+
 
 def calculate_niche_scores(metrics: NicheMetrics) -> NicheScores:
     """Compute demand, supply, and opportunity scores from raw niche metrics."""
@@ -86,6 +88,7 @@ def calculate_niche_scores(metrics: NicheMetrics) -> NicheScores:
 # ---------------------------------------------------------------------------
 # Demand score (0-100)  -- higher = more demand
 # ---------------------------------------------------------------------------
+
 
 def _compute_demand(m: NicheMetrics) -> float:
     # 1. Search volume component (40 %)
@@ -114,6 +117,7 @@ def _compute_demand(m: NicheMetrics) -> float:
 # Supply score (0-100) -- higher = MORE competition (harder to enter)
 # ---------------------------------------------------------------------------
 
+
 def _compute_supply(m: NicheMetrics) -> float:
     # 1. Title count component (35 %)
     title_score = _sigmoid_scale(m.total_competing_titles, midpoint=OPPORTUNITY_MIDPOINT, steepness=0.006)
@@ -134,6 +138,7 @@ def _compute_supply(m: NicheMetrics) -> float:
 # Opportunity score
 # ---------------------------------------------------------------------------
 
+
 def _compute_opportunity(demand: float, supply: float) -> float:
     """opportunity = demand * (1 - supply_difficulty / 100)"""
     supply_difficulty = supply / 100.0
@@ -145,11 +150,11 @@ def _compute_opportunity(demand: float, supply: float) -> float:
 # Recommendation text
 # ---------------------------------------------------------------------------
 
+
 def _generate_recommendation(demand: float, supply: float, opportunity: float) -> str:
     if opportunity >= 75:
         return (
-            "Excellent opportunity. High demand with manageable competition. "
-            "Strongly consider entering this niche."
+            "Excellent opportunity. High demand with manageable competition. " "Strongly consider entering this niche."
         )
     if opportunity >= 55:
         return (

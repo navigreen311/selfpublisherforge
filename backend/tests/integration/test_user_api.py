@@ -4,20 +4,18 @@ Tests the full HTTP request/response cycle through FastAPI's TestClient,
 mocking only the database session and authentication dependencies.
 """
 
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4, UUID
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.users.router import router
-from app.database import get_db
 from app.core.dependencies import get_current_user
-from app.core.exceptions import AppException
 from app.core.error_handler import app_exception_handler
-
+from app.core.exceptions import AppException
+from app.database import get_db
+from app.modules.users.router import router
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -88,23 +86,28 @@ def _create_app(user_factory=None) -> tuple[FastAPI, AsyncMock]:
 
 # ─── User Profile Endpoints ──────────────────────────────────────────────────
 
+
 class TestGetUserProfile:
     def test_get_me_success(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
-        mock_db.execute.return_value = _make_mapping_result([{
-            "id": _OWNER_ID,
-            "email": "owner@example.com",
-            "name": "Owner",
-            "role": "owner",
-            "org_id": _ORG_ID,
-            "preferences": {},
-            "avatar_url": None,
-            "is_active": True,
-            "created_at": now,
-            "updated_at": now,
-            "deleted_at": None,
-        }])
+        now = datetime.now(UTC)
+        mock_db.execute.return_value = _make_mapping_result(
+            [
+                {
+                    "id": _OWNER_ID,
+                    "email": "owner@example.com",
+                    "name": "Owner",
+                    "role": "owner",
+                    "org_id": _ORG_ID,
+                    "preferences": {},
+                    "avatar_url": None,
+                    "is_active": True,
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                }
+            ]
+        )
 
         client = TestClient(app)
         resp = client.get("/api/v1/users/me")
@@ -125,7 +128,7 @@ class TestGetUserProfile:
 class TestUpdateUserProfile:
     def test_update_name(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         row = {
             "id": _OWNER_ID,
             "email": "owner@example.com",
@@ -156,21 +159,26 @@ class TestUpdateUserProfile:
 
 # ─── Organization Endpoints ──────────────────────────────────────────────────
 
+
 class TestOrgEndpoints:
     def test_get_org_success(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
-        mock_db.execute.return_value = _make_mapping_result([{
-            "id": _ORG_ID,
-            "name": "My Org",
-            "slug": "my-org",
-            "plan_tier": "free",
-            "logo_url": None,
-            "max_members": 5,
-            "created_at": now,
-            "updated_at": now,
-            "deleted_at": None,
-        }])
+        now = datetime.now(UTC)
+        mock_db.execute.return_value = _make_mapping_result(
+            [
+                {
+                    "id": _ORG_ID,
+                    "name": "My Org",
+                    "slug": "my-org",
+                    "plan_tier": "free",
+                    "logo_url": None,
+                    "max_members": 5,
+                    "created_at": now,
+                    "updated_at": now,
+                    "deleted_at": None,
+                }
+            ]
+        )
 
         client = TestClient(app)
         resp = client.get(f"/api/v1/orgs/{_ORG_ID}")
@@ -186,14 +194,18 @@ class TestOrgEndpoints:
 
     def test_list_members(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
-        mock_db.execute.return_value = _make_mapping_result([{
-            "user_id": _OWNER_ID,
-            "email": "owner@example.com",
-            "name": "Owner",
-            "role": "owner",
-            "joined_at": now,
-        }])
+        now = datetime.now(UTC)
+        mock_db.execute.return_value = _make_mapping_result(
+            [
+                {
+                    "user_id": _OWNER_ID,
+                    "email": "owner@example.com",
+                    "name": "Owner",
+                    "role": "owner",
+                    "joined_at": now,
+                }
+            ]
+        )
 
         client = TestClient(app)
         resp = client.get(f"/api/v1/orgs/{_ORG_ID}/members")
@@ -203,17 +215,22 @@ class TestOrgEndpoints:
 
 # ─── Session Endpoints ───────────────────────────────────────────────────────
 
+
 class TestSessionEndpoints:
     def test_list_sessions(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
-        mock_db.execute.return_value = _make_mapping_result([{
-            "id": uuid4(),
-            "ip_address": "127.0.0.1",
-            "user_agent": "TestAgent",
-            "created_at": now,
-            "last_active_at": now,
-        }])
+        now = datetime.now(UTC)
+        mock_db.execute.return_value = _make_mapping_result(
+            [
+                {
+                    "id": uuid4(),
+                    "ip_address": "127.0.0.1",
+                    "user_agent": "TestAgent",
+                    "created_at": now,
+                    "last_active_at": now,
+                }
+            ]
+        )
 
         client = TestClient(app)
         resp = client.get("/api/v1/users/me/sessions")
@@ -233,20 +250,25 @@ class TestSessionEndpoints:
 
 # ─── API Key Endpoints ───────────────────────────────────────────────────────
 
+
 class TestApiKeyEndpoints:
     def test_list_api_keys(self):
         app, mock_db = _create_app()
-        now = datetime.now(timezone.utc)
-        mock_db.execute.return_value = _make_mapping_result([{
-            "id": uuid4(),
-            "name": "Test Key",
-            "prefix": "abc12345",
-            "scopes": ["read"],
-            "created_at": now,
-            "expires_at": None,
-            "last_used_at": None,
-            "is_active": True,
-        }])
+        now = datetime.now(UTC)
+        mock_db.execute.return_value = _make_mapping_result(
+            [
+                {
+                    "id": uuid4(),
+                    "name": "Test Key",
+                    "prefix": "abc12345",
+                    "scopes": ["read"],
+                    "created_at": now,
+                    "expires_at": None,
+                    "last_used_at": None,
+                    "is_active": True,
+                }
+            ]
+        )
 
         client = TestClient(app)
         resp = client.get(f"/api/v1/orgs/{_ORG_ID}/api-keys")

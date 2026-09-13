@@ -17,6 +17,7 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 # Plan schemas
 # ---------------------------------------------------------------------------
 
+
 class PlanFeature(BaseModel):
     """A single feature included in a plan."""
 
@@ -42,14 +43,13 @@ class PlanInfo(BaseModel):
 # Subscription schemas
 # ---------------------------------------------------------------------------
 
+
 class SubscriptionResponse(BaseModel):
     """Current subscription state for the requesting organization."""
 
     org_id: UUID
     plan_tier: PlanTier
-    subscription_status: str = Field(
-        description="active | trialing | past_due | canceled | incomplete | none"
-    )
+    subscription_status: str = Field(description="active | trialing | past_due | canceled | incomplete | none")
     stripe_subscription_id: str | None = None
     stripe_customer_id: str | None = None
     current_period_start: datetime | None = None
@@ -60,6 +60,7 @@ class SubscriptionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Usage schemas
 # ---------------------------------------------------------------------------
+
 
 class UsageStats(BaseModel):
     """Current usage statistics for the requesting organization."""
@@ -83,6 +84,7 @@ class UsageStats(BaseModel):
 # ---------------------------------------------------------------------------
 # Checkout / Portal request schemas
 # ---------------------------------------------------------------------------
+
 
 class CheckoutRequest(BaseModel):
     """Request body to create a Stripe Checkout session."""
@@ -123,6 +125,7 @@ class PortalResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Invoice schemas
 # ---------------------------------------------------------------------------
+
 
 class InvoiceItem(BaseModel):
     """A single Stripe invoice."""

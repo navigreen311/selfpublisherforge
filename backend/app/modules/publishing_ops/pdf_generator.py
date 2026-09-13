@@ -19,43 +19,6 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-try:
-    from reportlab.lib.colors import HexColor, black, gray, white
-    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
-    from reportlab.lib.pagesizes import A4, inch, letter
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.lib.units import inch as rl_inch
-    from reportlab.lib.units import mm
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.platypus import (
-        BaseDocTemplate,
-        Frame,
-        KeepTogether,
-        NextPageTemplate,
-        PageBreak,
-        PageTemplate,
-        Paragraph,
-        SimpleDocTemplate,
-        Spacer,
-        Table,
-        TableStyle,
-    )
-    from reportlab.platypus.flowables import HRFlowable
-
-    REPORTLAB_AVAILABLE = True
-except ImportError:
-    REPORTLAB_AVAILABLE = False
-
-try:
-    from reportlab.graphics import renderPDF
-    from reportlab.graphics.barcode.eanbc import Ean13BarcodeWidget
-    from reportlab.graphics.shapes import Drawing
-
-    BARCODE_WIDGET_AVAILABLE = True
-except ImportError:
-    BARCODE_WIDGET_AVAILABLE = False
-
 import barcode
 from barcode.writer import ImageWriter
 
@@ -66,13 +29,56 @@ from app.modules.publishing_ops.schemas import (
     TrimSize,
 )
 
+try:
+    from reportlab.lib.colors import (  # noqa: F401  # optional dependency availability probe
+        HexColor,
+        black,
+        gray,
+        white,
+    )
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+    from reportlab.lib.pagesizes import A4, inch, letter  # noqa: F401  # optional dependency availability probe
+    from reportlab.lib.styles import (  # noqa: F401  # optional dependency availability probe
+        ParagraphStyle,
+        getSampleStyleSheet,
+    )
+    from reportlab.lib.units import inch as rl_inch  # noqa: F401  # optional dependency availability probe
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics  # noqa: F401  # optional dependency availability probe
+    from reportlab.pdfbase.ttfonts import TTFont  # noqa: F401  # optional dependency availability probe
+    from reportlab.platypus import (
+        BaseDocTemplate,
+        Frame,
+        KeepTogether,  # noqa: F401  # optional dependency availability probe
+        NextPageTemplate,
+        PageBreak,
+        PageTemplate,
+        Paragraph,
+        SimpleDocTemplate,  # noqa: F401  # optional dependency availability probe
+        Spacer,
+        Table,  # noqa: F401  # optional dependency availability probe
+        TableStyle,  # noqa: F401  # optional dependency availability probe
+    )
+    from reportlab.platypus.flowables import HRFlowable
+
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
+try:
+    from reportlab.graphics import renderPDF  # noqa: F401  # optional dependency availability probe
+    from reportlab.graphics.barcode.eanbc import Ean13BarcodeWidget
+    from reportlab.graphics.shapes import Drawing
+
+    BARCODE_WIDGET_AVAILABLE = True
+except ImportError:
+    BARCODE_WIDGET_AVAILABLE = False
+
+
 logger = logging.getLogger(__name__)
 
 if not REPORTLAB_AVAILABLE:
-    logger.error(
-        "reportlab is not installed. PDF generation will not work. "
-        "Install it with: pip install reportlab"
-    )
+    logger.error("reportlab is not installed. PDF generation will not work. " "Install it with: pip install reportlab")
 
 
 # ---------- Trim size dimensions (width x height in inches) ----------
@@ -90,6 +96,7 @@ TRIM_DIMENSIONS: dict[TrimSize, tuple[float, float]] = {
 @dataclass
 class PDFPage:
     """Represents a single page in the PDF output."""
+
     page_number: int
     content_html: str
     is_chapter_start: bool = False
@@ -100,6 +107,7 @@ class PDFPage:
 @dataclass
 class PDFDocument:
     """Represents a print-ready PDF document with actual PDF binary content."""
+
     book_id: str
     title: str
     authors: list[str]
@@ -183,16 +191,12 @@ def _validate_isbn13(isbn: str) -> str:
     cleaned = isbn.replace("-", "").replace(" ", "").strip()
     if len(cleaned) != 13:
         raise ValueError(
-            f"ISBN must be exactly 13 digits after removing hyphens/spaces, "
-            f"got {len(cleaned)} characters: '{isbn}'"
+            f"ISBN must be exactly 13 digits after removing hyphens/spaces, " f"got {len(cleaned)} characters: '{isbn}'"
         )
     if not cleaned.isdigit():
         raise ValueError(f"ISBN must contain only digits (and optional hyphens), got: '{isbn}'")
 
-    total = sum(
-        int(digit) * (1 if i % 2 == 0 else 3)
-        for i, digit in enumerate(cleaned)
-    )
+    total = sum(int(digit) * (1 if i % 2 == 0 else 3) for i, digit in enumerate(cleaned))
     if total % 10 != 0:
         raise ValueError(
             f"ISBN-13 check digit is invalid for '{isbn}'. "
@@ -229,6 +233,7 @@ def render_isbn_barcode(isbn: str) -> bytes:
 
 
 # ---------- ReportLab PDF rendering helpers ----------
+
 
 def _get_font_name(requested_font: str) -> str:
     """Map a requested font family to a ReportLab built-in font name.
@@ -310,12 +315,7 @@ def _resolve_template(template: str | None, title: str, authors: list[str], page
     """Resolve header/footer template placeholders."""
     if template is None:
         return None
-    return (
-        template
-        .replace("{title}", title)
-        .replace("{author}", ", ".join(authors))
-        .replace("{page}", str(page_num))
-    )
+    return template.replace("{title}", title).replace("{author}", ", ".join(authors)).replace("{page}", str(page_num))
 
 
 def _build_isbn_barcode_flowable(isbn: str, page_width: float) -> list:
@@ -356,10 +356,7 @@ def _build_isbn_barcode_flowable(isbn: str, page_width: float) -> list:
                 fontSize=11,
                 alignment=TA_CENTER,
             )
-            formatted_isbn = (
-                f"{cleaned[0:3]}-{cleaned[3]}-{cleaned[4:6]}-"
-                f"{cleaned[6:12]}-{cleaned[12]}"
-            )
+            formatted_isbn = f"{cleaned[0:3]}-{cleaned[3]}-{cleaned[4:6]}-" f"{cleaned[6:12]}-{cleaned[12]}"
             flowables.append(Paragraph(f"ISBN {formatted_isbn}", isbn_style))
             return flowables
         except ValueError as exc:
@@ -424,10 +421,7 @@ def _render_pdf(
         The PDF content as bytes and the total page count.
     """
     if not REPORTLAB_AVAILABLE:
-        raise RuntimeError(
-            "reportlab is not installed. Cannot generate PDF. "
-            "Install it with: pip install reportlab"
-        )
+        raise RuntimeError("reportlab is not installed. Cannot generate PDF. " "Install it with: pip install reportlab")
 
     page_width = trim_size[0] * inch
     page_height = trim_size[1] * inch
@@ -439,7 +433,7 @@ def _render_pdf(
     margin_outer = max(style.margin_outer_in, 0.75) * inch
 
     base_font = _get_font_name(style.font_family)
-    bold_font = _get_bold_font_name(base_font)
+    _get_bold_font_name(base_font)
     italic_font = _get_italic_font_name(base_font)
     heading_font = _get_font_name(style.chapter_heading_font)
     heading_bold = _get_bold_font_name(heading_font)
@@ -469,13 +463,8 @@ def _render_pdf(
             canvas.setFillColor(gray)
 
             # Resolve footer template
-            footer_text_resolved = _resolve_template(
-                footer_template, title, authors, page_num
-            )
-            if footer_text_resolved:
-                display_footer = f"{footer_text_resolved} | Page {page_num}"
-            else:
-                display_footer = f"Page {page_num}"
+            footer_text_resolved = _resolve_template(footer_template, title, authors, page_num)
+            display_footer = f"{footer_text_resolved} | Page {page_num}" if footer_text_resolved else f"Page {page_num}"
 
             canvas.drawCentredString(page_width / 2, footer_y, display_footer)
 
@@ -485,9 +474,7 @@ def _render_pdf(
                 footer_y = 0.3 * inch
             canvas.setFont(base_font, 9)
             canvas.setFillColor(gray)
-            footer_text_resolved = _resolve_template(
-                footer_template, title, authors, page_num
-            )
+            footer_text_resolved = _resolve_template(footer_template, title, authors, page_num)
             if footer_text_resolved:
                 canvas.drawCentredString(page_width / 2, footer_y, footer_text_resolved)
 
@@ -496,9 +483,7 @@ def _render_pdf(
             header_y = page_height - margin_top + 0.25 * inch
             canvas.setFont(italic_font, 8)
             canvas.setFillColor(gray)
-            header_text_resolved = _resolve_template(
-                header_template, title, authors, page_num
-            )
+            header_text_resolved = _resolve_template(header_template, title, authors, page_num)
             if header_text_resolved:
                 canvas.drawCentredString(page_width / 2, header_y, header_text_resolved)
 
@@ -583,7 +568,7 @@ def _render_pdf(
         spaceBefore=0,
         spaceAfter=12,
     )
-    subtitle_style = ParagraphStyle(
+    ParagraphStyle(
         "BookSubtitle",
         fontName=italic_font,
         fontSize=16,
@@ -631,13 +616,15 @@ def _render_pdf(
     # Add subtitle if available (we check for a subtitle in the title string
     # separated by a colon, or callers can embed it)
     story.append(Spacer(1, 12))
-    story.append(HRFlowable(
-        width="40%",
-        thickness=1,
-        color=HexColor("#999999"),
-        spaceAfter=18,
-        spaceBefore=6,
-    ))
+    story.append(
+        HRFlowable(
+            width="40%",
+            thickness=1,
+            color=HexColor("#999999"),
+            spaceAfter=18,
+            spaceBefore=6,
+        )
+    )
 
     if authors:
         author_text = " &amp; ".join(authors) if len(authors) > 1 else authors[0]
@@ -655,12 +642,14 @@ def _render_pdf(
         story.append(Paragraph(toc_text, toc_entry_style))
 
     story.append(Spacer(1, 24))
-    story.append(HRFlowable(
-        width="100%",
-        thickness=0.5,
-        color=HexColor("#cccccc"),
-        spaceAfter=12,
-    ))
+    story.append(
+        HRFlowable(
+            width="100%",
+            thickness=0.5,
+            color=HexColor("#cccccc"),
+            spaceAfter=12,
+        )
+    )
     story.append(PageBreak())
 
     # -- Chapter pages --
@@ -669,13 +658,15 @@ def _render_pdf(
         story.append(Spacer(1, 48))
         story.append(Paragraph(ch.title, chapter_heading_style))
         story.append(Spacer(1, 18))
-        story.append(HRFlowable(
-            width="30%",
-            thickness=0.5,
-            color=HexColor("#999999"),
-            spaceAfter=24,
-            spaceBefore=6,
-        ))
+        story.append(
+            HRFlowable(
+                width="30%",
+                thickness=0.5,
+                color=HexColor("#999999"),
+                spaceAfter=24,
+                spaceBefore=6,
+            )
+        )
 
         # Chapter body: split on double newlines for paragraphs
         paragraphs = ch.content.strip().split("\n\n")
@@ -688,12 +679,7 @@ def _render_pdf(
             para_text = para_text.replace("\n", " ")
 
             # Escape XML-sensitive characters for ReportLab Paragraph
-            para_text = (
-                para_text
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-            )
+            para_text = para_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
             # First paragraph of chapter: no indent
             if p_idx == 0:
@@ -773,10 +759,7 @@ def generate_pdf(
         if template is None:
             return None
         return (
-            template
-            .replace("{title}", title)
-            .replace("{author}", ", ".join(authors))
-            .replace("{page}", str(page_num))
+            template.replace("{title}", title).replace("{author}", ", ".join(authors)).replace("{page}", str(page_num))
         )
 
     for ch in chapters:
@@ -812,7 +795,7 @@ def generate_pdf(
         )
         page_number += 1
 
-    doc = PDFDocument(
+    return PDFDocument(
         book_id=str(request.book_id),
         title=title,
         authors=authors,
@@ -832,8 +815,6 @@ def generate_pdf(
         total_pages=total_pages,
         _pdf_bytes=pdf_bytes,
     )
-
-    return doc
 
 
 def generate_pdf_bytes(

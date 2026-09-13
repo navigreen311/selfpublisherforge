@@ -1,4 +1,5 @@
 """Dead letter queue — stores failed tasks/events for inspection and manual retry."""
+
 from __future__ import annotations
 
 import json

@@ -4,24 +4,28 @@ These fixtures replicate the DB setup from the root conftest but avoid
 importing ``app.main`` (which triggers a chain of imports that may fail
 when model re-exports are incomplete).
 """
+
 from __future__ import annotations
 
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import event, text
+from sqlalchemy import event
+from sqlalchemy.dialects.postgresql import (
+    ARRAY as PG_ARRAY,
+)
+from sqlalchemy.dialects.postgresql import (
+    JSONB,
+)
+from sqlalchemy.dialects.postgresql import (
+    UUID as PG_UUID,
+)
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
-)
-
-from sqlalchemy.dialects.postgresql import (
-    JSONB,
-    ARRAY as PG_ARRAY,
-    UUID as PG_UUID,
 )
 from sqlalchemy.ext.compiler import compiles
 
@@ -54,9 +58,7 @@ def _compile_pg_uuid_sqlite(element, compiler, **kw):
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestingSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
+TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # ---------------------------------------------------------------------------
@@ -70,9 +72,7 @@ def _is_pg_only_index(idx) -> bool:
     if pg_opts.get("using") or pg_opts.get("where") is not None or pg_opts.get("ops"):
         return True
     kw = getattr(idx, "kwargs", {})
-    if kw.get("postgresql_using") or kw.get("postgresql_where") is not None or kw.get("postgresql_ops"):
-        return True
-    return False
+    return bool(kw.get("postgresql_using") or kw.get("postgresql_where") is not None or kw.get("postgresql_ops"))
 
 
 @event.listens_for(Base.metadata, "before_create")
@@ -85,10 +85,7 @@ def _patch_for_sqlite(target, connection, **kw):
                 sd = column.server_default
                 sd_text = ""
                 if hasattr(sd, "arg"):
-                    if hasattr(sd.arg, "text"):
-                        sd_text = str(sd.arg.text)
-                    else:
-                        sd_text = str(sd.arg)
+                    sd_text = str(sd.arg.text) if hasattr(sd.arg, "text") else str(sd.arg)
                 pg_functions = ["gen_random_uuid", "uuid_generate"]
                 if any(fn in sd_text.lower() for fn in pg_functions):
                     column.server_default = None
@@ -111,8 +108,6 @@ def _patch_for_sqlite(target, connection, **kw):
 # ---------------------------------------------------------------------------
 # Ensure relevant models are registered on Base.metadata
 # ---------------------------------------------------------------------------
-
-import app.modules.dictation.models  # noqa: F401, E402
 
 
 # ---------------------------------------------------------------------------

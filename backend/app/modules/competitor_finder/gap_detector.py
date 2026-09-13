@@ -3,6 +3,7 @@
 Analyzes a set of competitor books in a niche to find underserved areas
 that a new author can exploit.
 """
+
 from __future__ import annotations
 
 import logging
@@ -142,8 +143,7 @@ def detect_cover_gaps(books: list[BookData]) -> list[CoverGap]:
                     ),
                     prevalence=len(cheap_books) / total,
                     opportunity=(
-                        "Position with a premium cover design to signal quality and "
-                        "justify a higher price point."
+                        "Position with a premium cover design to signal quality and " "justify a higher price point."
                     ),
                 )
             )
@@ -208,10 +208,7 @@ def detect_title_gaps(books: list[BookData]) -> list[TitleGap]:
         gaps.append(
             TitleGap(
                 gap_type="missing_power_words",
-                description=(
-                    f"None of the {total} titles use these powerful keywords: "
-                    f"{', '.join(underused[:8])}"
-                ),
+                description=(f"None of the {total} titles use these powerful keywords: " f"{', '.join(underused[:8])}"),
                 missing_keywords=underused[:8],
                 opportunity=(
                     "Incorporate underused power words in your title or subtitle "
@@ -243,8 +240,7 @@ def detect_title_gaps(books: list[BookData]) -> list[TitleGap]:
                 TitleGap(
                     gap_type=f"rare_pattern_{pattern_name}",
                     description=(
-                        f"Only {matches} of {total} titles use the "
-                        f"'{pattern_name.replace('_', ' ')}' pattern."
+                        f"Only {matches} of {total} titles use the " f"'{pattern_name.replace('_', ' ')}' pattern."
                     ),
                     missing_keywords=[],
                     opportunity=(
@@ -266,8 +262,7 @@ def detect_title_gaps(books: list[BookData]) -> list[TitleGap]:
                 ),
                 missing_keywords=[],
                 opportunity=(
-                    "Add a subtitle to improve search visibility and communicate "
-                    "your book's unique value."
+                    "Add a subtitle to improve search visibility and communicate " "your book's unique value."
                 ),
             )
         )
@@ -343,10 +338,7 @@ def detect_content_gaps(
     # Check for price-content mismatch opportunities
     priced_books = [b for b in books if b.price is not None and b.rating is not None]
     if priced_books:
-        high_price_low_rating = [
-            b for b in priced_books
-            if (b.price or 0) > 14.99 and (b.rating or 5) < 4.0
-        ]
+        high_price_low_rating = [b for b in priced_books if (b.price or 0) > 14.99 and (b.rating or 5) < 4.0]
         if high_price_low_rating:
             gaps.append(
                 ContentGap(
@@ -399,9 +391,36 @@ async def run_gap_analysis(
 def _collect_title_words(books: list[BookData]) -> list[str]:
     """Collect all meaningful words from book titles."""
     stop_words = {
-        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-        "of", "with", "by", "from", "is", "it", "that", "this", "your", "my",
-        "how", "what", "why", "when", "where", "who", "which", "be", "are",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "it",
+        "that",
+        "this",
+        "your",
+        "my",
+        "how",
+        "what",
+        "why",
+        "when",
+        "where",
+        "who",
+        "which",
+        "be",
+        "are",
     }
     words = []
     for book in books:
@@ -436,8 +455,7 @@ def _build_recommendations(
 
     if not recs:
         recs.append(
-            "This niche appears well-served. Focus on execution quality "
-            "and unique perspective to differentiate."
+            "This niche appears well-served. Focus on execution quality " "and unique perspective to differentiate."
         )
 
     return recs
@@ -460,9 +478,7 @@ def _build_summary(
             "with few obvious gaps. Success will depend on superior execution."
         )
 
-    parts = [
-        f"Analysis of {total_books} books in '{niche}' identified {total_gaps} gaps:"
-    ]
+    parts = [f"Analysis of {total_books} books in '{niche}' identified {total_gaps} gaps:"]
     if cover_gaps:
         parts.append(f"{len(cover_gaps)} cover design opportunities")
     if title_gaps:

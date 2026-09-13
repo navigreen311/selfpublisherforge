@@ -102,17 +102,18 @@ export default function CookbookDetailPage() {
   const { data: book, isLoading, error } = useCookbook(bookId);
   const { data: chapters } = useCookbookChapters(bookId);
 
-  const createChapter = useCreateChapter(bookId);
-  const createRecipe = useCreateRecipe(bookId);
-  const generateRecipe = useGenerateRecipe(bookId);
-  const generateImage = useGenerateRecipeImage(bookId);
-  const improveInstructions = useImproveInstructions(bookId);
-  const calculateNutrition = useCalculateNutrition(bookId);
-  const scaleRecipe = useScaleRecipe(bookId);
-
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
   const [scaleFactor, setScaleFactor] = useState(2);
+
+  const createChapter = useCreateChapter(bookId);
+  const createRecipe = useCreateRecipe(bookId);
+  const generateRecipe = useGenerateRecipe(bookId);
+  const generateImage = useGenerateRecipeImage(selectedRecipeId ?? "");
+  const improveInstructions = useImproveInstructions(bookId);
+  const calculateNutrition = useCalculateNutrition(selectedRecipeId ?? "");
+  const scaleRecipe = useScaleRecipe(selectedRecipeId ?? "");
+
 
   const selectedRecipe = chapters
     ?.flatMap((ch) => ch.recipes ?? [])
@@ -225,7 +226,7 @@ export default function CookbookDetailPage() {
                 Chapters
               </span>
               <Button variant="ghost" size="icon" className="h-6 w-6"
-                onClick={() => createChapter.mutate({ title: "New Chapter" })}>
+                onClick={() => createChapter.mutate({ title: "New Chapter", chapter_type: "recipes" })}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -280,7 +281,7 @@ export default function CookbookDetailPage() {
 
             <Separator className="my-2" />
             <Button variant="ghost" size="sm" className="w-full justify-start gap-1.5 text-xs"
-              onClick={() => createChapter.mutate({ title: "New Chapter" })}>
+              onClick={() => createChapter.mutate({ title: "New Chapter", chapter_type: "recipes" })}>
               <Plus className="h-3.5 w-3.5" /> Add Chapter
             </Button>
           </div>
@@ -315,7 +316,7 @@ export default function CookbookDetailPage() {
                 </Button>
                 <Button size="sm" variant="outline" className="w-full justify-start gap-2 h-8 text-xs"
                   disabled={!selectedRecipe}
-                  onClick={() => selectedRecipe && generateImage.mutate({ recipeId: selectedRecipe.id })}>
+                  onClick={() => selectedRecipe && generateImage.mutate()}>
                   <ImageIcon className="h-3.5 w-3.5" /> Generate Image
                 </Button>
                 <Button size="sm" variant="outline" className="w-full justify-start gap-2 h-8 text-xs"
@@ -325,13 +326,13 @@ export default function CookbookDetailPage() {
                 </Button>
                 <Button size="sm" variant="outline" className="w-full justify-start gap-2 h-8 text-xs"
                   disabled={!selectedRecipe}
-                  onClick={() => selectedRecipe && calculateNutrition.mutate({ recipeId: selectedRecipe.id })}>
+                  onClick={() => selectedRecipe && calculateNutrition.mutate()}>
                   <Calculator className="h-3.5 w-3.5" /> Calculate Nutrition
                 </Button>
                 <div className="flex gap-1.5">
                   <Button size="sm" variant="outline" className="flex-1 gap-1.5 h-8 text-xs"
                     disabled={!selectedRecipe}
-                    onClick={() => selectedRecipe && scaleRecipe.mutate({ recipeId: selectedRecipe.id, factor: scaleFactor })}>
+                    onClick={() => selectedRecipe && scaleRecipe.mutate({ scaling_factor: scaleFactor })}>
                     <Scale className="h-3.5 w-3.5" /> Scale
                   </Button>
                   <Select value={String(scaleFactor)} onValueChange={(v) => setScaleFactor(Number(v))}>
@@ -419,7 +420,7 @@ export default function CookbookDetailPage() {
 // ---------------------------------------------------------------------------
 
 function RecipeEditor({ recipe }: { recipe: CookbookRecipe }) {
-  const totalTime = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0);
+  const totalTime = (recipe.prep_time_minutes ?? 0) + (recipe.cook_time_minutes ?? 0);
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
@@ -461,11 +462,11 @@ function RecipeEditor({ recipe }: { recipe: CookbookRecipe }) {
         </div>
         <div className="space-y-1">
           <Label className="text-xs flex items-center gap-1"><Clock className="h-3 w-3" /> Prep (min)</Label>
-          <Input type="number" className="h-8 text-sm" defaultValue={recipe.prep_time ?? ""} placeholder="15" />
+          <Input type="number" className="h-8 text-sm" defaultValue={recipe.prep_time_minutes ?? ""} placeholder="15" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs flex items-center gap-1"><Flame className="h-3 w-3" /> Cook (min)</Label>
-          <Input type="number" className="h-8 text-sm" defaultValue={recipe.cook_time ?? ""} placeholder="30" />
+          <Input type="number" className="h-8 text-sm" defaultValue={recipe.cook_time_minutes ?? ""} placeholder="30" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Total</Label>

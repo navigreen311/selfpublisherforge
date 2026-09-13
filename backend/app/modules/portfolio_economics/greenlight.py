@@ -10,7 +10,9 @@ Factors considered:
 - Seasonal adjustments
 - Risk scoring
 """
+
 from datetime import UTC, datetime
+from typing import cast
 
 from app.modules.portfolio_economics.schemas import (
     ConfidenceLevel,
@@ -27,7 +29,12 @@ GENRE_MARKET_DATA: dict[str, dict] = {
     "sci-fi": {"monthly_searches": 200000, "avg_price": 4.99, "competition": "medium", "base_capture": 0.0006},
     "fantasy": {"monthly_searches": 350000, "avg_price": 5.99, "competition": "high", "base_capture": 0.0004},
     "horror": {"monthly_searches": 150000, "avg_price": 3.99, "competition": "medium", "base_capture": 0.0007},
-    "literary_fiction": {"monthly_searches": 120000, "avg_price": 6.99, "competition": "medium", "base_capture": 0.0005},
+    "literary_fiction": {
+        "monthly_searches": 120000,
+        "avg_price": 6.99,
+        "competition": "medium",
+        "base_capture": 0.0005,
+    },
     "non-fiction": {"monthly_searches": 500000, "avg_price": 9.99, "competition": "high", "base_capture": 0.0003},
     "self-help": {"monthly_searches": 400000, "avg_price": 7.99, "competition": "very_high", "base_capture": 0.0002},
     "children": {"monthly_searches": 250000, "avg_price": 3.99, "competition": "medium", "base_capture": 0.0005},
@@ -65,7 +72,7 @@ def _estimate_market_size(request: GreenlightRequest, genre_data: dict) -> int:
     """Estimate monthly market size for the book."""
     if request.market_size_estimate is not None and request.market_size_estimate > 0:
         return request.market_size_estimate
-    return genre_data["monthly_searches"]
+    return cast("int", genre_data["monthly_searches"])
 
 
 def _calculate_capture_rate(
@@ -98,7 +105,7 @@ def _calculate_capture_rate(
         rate *= 1.05
 
     # Cap the capture rate at a reasonable maximum
-    return min(rate, 0.005)
+    return cast("float", min(rate, 0.005))
 
 
 def _calculate_series_multiplier(request: GreenlightRequest) -> float:
@@ -150,9 +157,7 @@ def _identify_risk_factors(request: GreenlightRequest, genre_data: dict) -> list
     return risks
 
 
-def _identify_opportunity_factors(
-    request: GreenlightRequest, genre_data: dict
-) -> list[str]:
+def _identify_opportunity_factors(request: GreenlightRequest, genre_data: dict) -> list[str]:
     """Identify opportunity factors for the book idea."""
     opportunities = []
 
@@ -257,10 +262,7 @@ def calculate_greenlight(request: GreenlightRequest) -> GreenlightResult:
 
     if total_investment > 0:
         first_year_roi = ((annual_royalty - total_investment) / total_investment) * 100
-        breakeven_months = (
-            total_investment / projected_monthly_royalty
-            if projected_monthly_royalty > 0 else None
-        )
+        breakeven_months = total_investment / projected_monthly_royalty if projected_monthly_royalty > 0 else None
     else:
         first_year_roi = float("inf") if annual_royalty > 0 else 0.0
         breakeven_months = 0.0

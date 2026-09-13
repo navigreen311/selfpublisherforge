@@ -113,9 +113,7 @@ TRADEMARK_BLOCKLIST: list[str] = [
     "sesame street",
 ]
 
-ARTIST_STYLE_PATTERN = re.compile(
-    r"in\s+the\s+style\s+of\s+[\w\s]+", re.IGNORECASE
-)
+ARTIST_STYLE_PATTERN = re.compile(r"in\s+the\s+style\s+of\s+[\w\s]+", re.IGNORECASE)
 
 CONTENT_SENSITIVITY_PATTERNS: dict[str, re.Pattern] = {
     "weapons_violence": re.compile(
@@ -235,9 +233,7 @@ async def _load_character(db: AsyncSession, book_id: UUID, char_id: UUID):
     result = await db.execute(stmt)
     char = result.scalar_one_or_none()
     if char is None:
-        raise NotFoundError(
-            "ChildrensBookCharacter", f"Character {char_id} not found"
-        )
+        raise NotFoundError("ChildrensBookCharacter", f"Character {char_id} not found")
     return char
 
 
@@ -294,9 +290,7 @@ def _build_illustration_prompt(
             if char.clothing_rules:
                 rules = char.clothing_rules
                 if isinstance(rules, dict):
-                    clothing_desc = ", ".join(
-                        f"{k}: {v}" for k, v in rules.items()
-                    )
+                    clothing_desc = ", ".join(f"{k}: {v}" for k, v in rules.items())
                     char_desc += f". Always wearing: {clothing_desc}"
                 elif isinstance(rules, str):
                     char_desc += f". Always wearing: {rules}"
@@ -327,10 +321,7 @@ async def _generate_image_stub(
     """Stub for AI image generation. Returns mock result."""
     seed = abs(hash(prompt)) % (2**31)
     prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()[:16]
-    image_url = (
-        f"https://cdn.selfpublisherforge.com/illustrations/"
-        f"{prompt_hash}_{seed}.png"
-    )
+    image_url = f"https://cdn.selfpublisherforge.com/illustrations/" f"{prompt_hash}_{seed}.png"
     return {
         "image_url": image_url,
         "model": "dall-e-3-stub",
@@ -388,9 +379,7 @@ async def _create_provenance_record(
         "model": provenance.model,
         "prompt_hash": provenance.prompt_hash,
         "seed": provenance.seed,
-        "generated_at": (
-            provenance.created_at.isoformat() if provenance.created_at else None
-        ),
+        "generated_at": (provenance.created_at.isoformat() if provenance.created_at else None),
         "generation_time_ms": provenance.generation_time_ms,
     }
 
@@ -445,9 +434,7 @@ async def generate_illustration(
     page.illustration_seed = result["seed"]
     await db.flush()
 
-    provenance = await _create_provenance_record(
-        db, org_id, book_id, page_id, prompt, result
-    )
+    provenance = await _create_provenance_record(db, org_id, book_id, page_id, prompt, result)
 
     return {
         "illustration_url": result["image_url"],
@@ -491,13 +478,9 @@ async def generate_variations(
 
     variations: list[dict[str, Any]] = []
     for i in range(count):
-        variation_prompt = (
-            f"{base_prompt} (variation {i + 1} of {count}, unique composition)"
-        )
+        variation_prompt = f"{base_prompt} (variation {i + 1} of {count}, unique composition)"
         result = await _generate_image_stub(variation_prompt)
-        provenance = await _create_provenance_record(
-            db, org_id, book_id, page_id, variation_prompt, result
-        )
+        provenance = await _create_provenance_record(db, org_id, book_id, page_id, variation_prompt, result)
         variations.append(
             {
                 "variation_index": i,
@@ -543,9 +526,7 @@ async def generate_character_references(
     if char.clothing_rules:
         rules = char.clothing_rules
         if isinstance(rules, dict):
-            base_desc += ". Wearing: " + ", ".join(
-                f"{k}: {v}" for k, v in rules.items()
-            )
+            base_desc += ". Wearing: " + ", ".join(f"{k}: {v}" for k, v in rules.items())
         elif isinstance(rules, str):
             base_desc += f". Wearing: {rules}"
 
@@ -571,9 +552,7 @@ async def generate_character_references(
             f"White/neutral background. Children's book character design."
         )
         result = await _generate_image_stub(prompt, width=1024, height=1024)
-        await _create_provenance_record(
-            db, org_id, book_id, None, prompt, result
-        )
+        await _create_provenance_record(db, org_id, book_id, None, prompt, result)
         reference_images.append(
             {
                 "view": view_name,
@@ -582,9 +561,7 @@ async def generate_character_references(
             }
         )
 
-    char.reference_images = [
-        {"view": ref["view"], "url": ref["image_url"]} for ref in reference_images
-    ]
+    char.reference_images = [{"view": ref["view"], "url": ref["image_url"]} for ref in reference_images]
     await db.flush()
 
     return {
@@ -611,10 +588,7 @@ def _scan_text_for_trademarks(text: str) -> list[dict[str, Any]]:
                     "type": "trademark",
                     "term": trademark,
                     "severity": SafetySeverity.ERROR.value,
-                    "message": (
-                        f"Trademarked term '{trademark}' detected. "
-                        "Remove before generation."
-                    ),
+                    "message": (f"Trademarked term '{trademark}' detected. " "Remove before generation."),
                 }
             )
 
@@ -626,8 +600,7 @@ def _scan_text_for_trademarks(text: str) -> list[dict[str, Any]]:
                 "term": match.group(),
                 "severity": SafetySeverity.ERROR.value,
                 "message": (
-                    f"Artist style reference detected: '{match.group()}'. "
-                    "Use generic style descriptors instead."
+                    f"Artist style reference detected: '{match.group()}'. " "Use generic style descriptors instead."
                 ),
             }
         )
@@ -647,10 +620,7 @@ def _scan_text_for_sensitivity(text: str) -> list[dict[str, Any]]:
                     "category": category,
                     "matches": list(set(matches)),
                     "severity": SafetySeverity.WARNING.value,
-                    "message": (
-                        f"Content sensitivity ({category}): "
-                        f"found {', '.join(set(matches))}"
-                    ),
+                    "message": (f"Content sensitivity ({category}): " f"found {', '.join(set(matches))}"),
                 }
             )
     return issues
@@ -672,12 +642,8 @@ async def safety_check(
         page_issues: list[dict[str, Any]] = []
 
         if page.illustration_prompt:
-            page_issues.extend(
-                _scan_text_for_trademarks(page.illustration_prompt)
-            )
-            page_issues.extend(
-                _scan_text_for_sensitivity(page.illustration_prompt)
-            )
+            page_issues.extend(_scan_text_for_trademarks(page.illustration_prompt))
+            page_issues.extend(_scan_text_for_sensitivity(page.illustration_prompt))
 
         if page.text_content:
             page_issues.extend(_scan_text_for_trademarks(page.text_content))
@@ -728,11 +694,7 @@ async def check_font_licensing(
     result = await db.execute(stmt)
     registered_fonts = {
         fl.font_name.lower(): {
-            "license_type": (
-                fl.license_type
-                if isinstance(fl.license_type, str)
-                else fl.license_type.value
-            ),
+            "license_type": getattr(fl.license_type, "value", fl.license_type),
             "commercial_print": fl.commercial_print,
             "source": fl.source,
         }
@@ -808,7 +770,7 @@ async def generate_preview(
 
     trim_size = book.trim_size or "8.5x8.5"
     try:
-        trim_w, trim_h = [float(x) for x in trim_size.split("x")]
+        trim_w, trim_h = (float(x) for x in trim_size.split("x"))
     except (ValueError, AttributeError):
         trim_w, trim_h = 8.5, 8.5
 
@@ -829,12 +791,8 @@ async def generate_preview(
             spreads.append(
                 {
                     "spread_index": i // 2,
-                    "left_page": (
-                        _page_preview_data(left) if left else None
-                    ),
-                    "right_page": (
-                        _page_preview_data(right) if right else None
-                    ),
+                    "left_page": (_page_preview_data(left) if left else None),
+                    "right_page": (_page_preview_data(right) if right else None),
                     "spread_width_inches": trim_w * 2,
                     "spread_height_inches": trim_h,
                 }
@@ -847,7 +805,7 @@ async def generate_preview(
             "spreads": spreads,
         }
 
-    elif preview_mode == PreviewMode.SINGLE_PAGE.value:
+    if preview_mode == PreviewMode.SINGLE_PAGE.value:
         return {
             "mode": "single_page",
             "book_id": str(book_id),
@@ -856,7 +814,7 @@ async def generate_preview(
             "pages": [_page_preview_data(p) for p in pages],
         }
 
-    elif preview_mode == PreviewMode.LOOK_INSIDE.value:
+    if preview_mode == PreviewMode.LOOK_INSIDE.value:
         preview_count = max(1, math.ceil(len(pages) * 0.10))
         preview_pages = pages[:preview_count]
 
@@ -872,30 +830,22 @@ async def generate_preview(
                     "device": "mobile",
                     "viewport_width": 375,
                     "viewport_height": 667,
-                    "pages": [
-                        _page_preview_data(p) for p in preview_pages
-                    ],
+                    "pages": [_page_preview_data(p) for p in preview_pages],
                 },
                 "desktop": {
                     "device": "desktop",
                     "viewport_width": 1200,
                     "viewport_height": 800,
-                    "pages": [
-                        _page_preview_data(p) for p in preview_pages
-                    ],
+                    "pages": [_page_preview_data(p) for p in preview_pages],
                 },
             },
         }
 
-    else:
-        raise AppException(
-            status_code=422,
-            code="INVALID_PREVIEW_MODE",
-            message=(
-                f"Invalid preview mode: {mode}. "
-                "Use spread_view, single_page, or look_inside."
-            ),
-        )
+    raise AppException(
+        status_code=422,
+        code="INVALID_PREVIEW_MODE",
+        message=(f"Invalid preview mode: {mode}. " "Use spread_view, single_page, or look_inside."),
+    )
 
 
 def _page_preview_data(page) -> dict[str, Any]:
@@ -942,10 +892,7 @@ async def run_preflight(
 
     # 1. All pages have illustrations
     pages_without_illustrations = [
-        p
-        for p in pages
-        if (p.page_type or "content") not in ("front_matter", "back_matter")
-        and not p.illustration_url
+        p for p in pages if (p.page_type or "content") not in ("front_matter", "back_matter") and not p.illustration_url
     ]
     checklist.append(
         {
@@ -971,19 +918,13 @@ async def run_preflight(
                 y = pos.get("y", 0.5)
                 if x < 0.05 or x > 0.95 or y < 0.05 or y > 0.95:
                     text_margin_ok = False
-                    margin_issues.append(
-                        f"Page {page.page_number}: text near edge"
-                    )
+                    margin_issues.append(f"Page {page.page_number}: text near edge")
     checklist.append(
         {
             "check": "text_safe_margins",
             "label": "Text within safe margins",
             "passed": text_margin_ok,
-            "details": (
-                "; ".join(margin_issues)
-                if margin_issues
-                else "All text within safe zone"
-            ),
+            "details": ("; ".join(margin_issues) if margin_issues else "All text within safe zone"),
         }
     )
 
@@ -1023,10 +964,7 @@ async def run_preflight(
             "check": "page_count",
             "label": f"Valid page count for age range {age_range}",
             "passed": page_count_ok,
-            "details": (
-                f"{actual_pages} pages "
-                f"(expected {valid_range[0]}-{valid_range[1]})"
-            ),
+            "details": (f"{actual_pages} pages " f"(expected {valid_range[0]}-{valid_range[1]})"),
         }
     )
 
@@ -1041,11 +979,7 @@ async def run_preflight(
                 "All fonts licensed"
                 if font_result["all_licensed"]
                 else "Unlicensed fonts: "
-                + ", ".join(
-                    f["font_name"]
-                    for f in font_result["fonts"]
-                    if not f["commercial_print_safe"]
-                )
+                + ", ".join(f["font_name"] for f in font_result["fonts"] if not f["commercial_print_safe"])
             ),
         }
     )
@@ -1063,11 +997,7 @@ async def run_preflight(
             "check": "trademark_safety",
             "label": "No trademark violations",
             "passed": len(trademark_issues) == 0,
-            "details": (
-                f"{len(trademark_issues)} trademark issue(s)"
-                if trademark_issues
-                else "No trademark issues"
-            ),
+            "details": (f"{len(trademark_issues)} trademark issue(s)" if trademark_issues else "No trademark issues"),
         }
     )
 
@@ -1113,11 +1043,7 @@ async def run_preflight(
             "check": "language_level",
             "label": f"Language appropriate for age range {age_range}",
             "passed": language_ok,
-            "details": (
-                "; ".join(language_issues[:5])
-                if language_issues
-                else "Language level appropriate"
-            ),
+            "details": ("; ".join(language_issues[:5]) if language_issues else "Language level appropriate"),
         }
     )
 
@@ -1128,9 +1054,7 @@ async def run_preflight(
         "passed": all_passed,
         "checks_total": len(checklist),
         "checks_passed": sum(1 for item in checklist if item["passed"]),
-        "checks_failed": sum(
-            1 for item in checklist if not item["passed"]
-        ),
+        "checks_failed": sum(1 for item in checklist if not item["passed"]),
         "checklist": checklist,
     }
 
@@ -1165,7 +1089,7 @@ async def export_book(
 
     trim_size = book.trim_size or "8.5x8.5"
     try:
-        trim_w, trim_h = [float(x) for x in trim_size.split("x")]
+        trim_w, trim_h = (float(x) for x in trim_size.split("x"))
     except (ValueError, AttributeError):
         trim_w, trim_h = 8.5, 8.5
 
@@ -1186,16 +1110,8 @@ async def export_book(
 
     provenance_report = {
         "total_assets": len(provenance_records),
-        "models_used": list(
-            set(p.model for p in provenance_records if p.model)
-        ),
-        "generation_dates": list(
-            set(
-                p.created_at.isoformat()[:10]
-                for p in provenance_records
-                if p.created_at
-            )
-        ),
+        "models_used": list({p.model for p in provenance_records if p.model}),
+        "generation_dates": list({p.created_at.isoformat()[:10] for p in provenance_records if p.created_at}),
     }
 
     font_result = await check_font_licensing(db, book_id, org_id)
@@ -1209,10 +1125,7 @@ async def export_book(
 
         return {
             "format": "print_pdf",
-            "file_url": (
-                "https://cdn.selfpublisherforge.com/exports/"
-                f"{base_name}_interior.pdf"
-            ),
+            "file_url": ("https://cdn.selfpublisherforge.com/exports/" f"{base_name}_interior.pdf"),
             "file_name": f"{base_name}_interior.pdf",
             "page_count": len(pages),
             "dimensions": {
@@ -1227,13 +1140,10 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    elif export_format == ExportFormat.KPF.value:
+    if export_format == ExportFormat.KPF.value:
         return {
             "format": "kpf",
-            "file_url": (
-                "https://cdn.selfpublisherforge.com/exports/"
-                f"{base_name}.kpf"
-            ),
+            "file_url": ("https://cdn.selfpublisherforge.com/exports/" f"{base_name}.kpf"),
             "file_name": f"{base_name}.kpf",
             "page_count": len(pages),
             "kindle_features": {
@@ -1245,13 +1155,10 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    elif export_format == ExportFormat.FIXED_EPUB.value:
+    if export_format == ExportFormat.FIXED_EPUB.value:
         return {
             "format": "fixed_epub",
-            "file_url": (
-                "https://cdn.selfpublisherforge.com/exports/"
-                f"{base_name}.epub"
-            ),
+            "file_url": ("https://cdn.selfpublisherforge.com/exports/" f"{base_name}.epub"),
             "file_name": f"{base_name}.epub",
             "page_count": len(pages),
             "epub_version": "3.0",
@@ -1260,13 +1167,12 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    elif export_format == ExportFormat.PNG.value:
+    if export_format == ExportFormat.PNG.value:
         page_files = [
             {
                 "page_number": pg.page_number,
                 "file_url": (
-                    "https://cdn.selfpublisherforge.com/exports/"
-                    f"{base_name}_page_{pg.page_number:03d}.png"
+                    "https://cdn.selfpublisherforge.com/exports/" f"{base_name}_page_{pg.page_number:03d}.png"
                 ),
                 "dpi": 300,
             }
@@ -1281,15 +1187,11 @@ async def export_book(
             "font_license_summary": font_result,
         }
 
-    else:
-        raise AppException(
-            status_code=422,
-            code="INVALID_EXPORT_FORMAT",
-            message=(
-                f"Invalid export format: {format}. "
-                "Use print_pdf, kpf, fixed_epub, or png."
-            ),
-        )
+    raise AppException(
+        status_code=422,
+        code="INVALID_EXPORT_FORMAT",
+        message=(f"Invalid export format: {format}. " "Use print_pdf, kpf, fixed_epub, or png."),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1319,39 +1221,21 @@ async def check_gutter_collisions(
             if isinstance(pos, dict):
                 x = pos.get("x", 0.5)
                 is_even = page.page_number % 2 == 0
-                if is_even and x < 0.06:
+                if is_even and x < 0.06 or not is_even and x > 0.94:
                     collisions.append(
                         {
                             "page_number": page.page_number,
                             "page_id": str(page.id),
                             "type": "text",
                             "position": pos,
-                            "message": (
-                                "Text too close to gutter on page "
-                                f"{page.page_number}"
-                            ),
-                        }
-                    )
-                elif not is_even and x > 0.94:
-                    collisions.append(
-                        {
-                            "page_number": page.page_number,
-                            "page_id": str(page.id),
-                            "type": "text",
-                            "position": pos,
-                            "message": (
-                                "Text too close to gutter on page "
-                                f"{page.page_number}"
-                            ),
+                            "message": ("Text too close to gutter on page " f"{page.page_number}"),
                         }
                     )
 
         if page.illustration_prompt and page.layout:
             layout_lower = (page.layout or "").lower()
             is_even = page.page_number % 2 == 0
-            if (is_even and "left" in layout_lower) or (
-                not is_even and "right" in layout_lower
-            ):
+            if (is_even and "left" in layout_lower) or (not is_even and "right" in layout_lower):
                 prompt_lower = page.illustration_prompt.lower()
                 if any(
                     kw in prompt_lower
@@ -1369,8 +1253,7 @@ async def check_gutter_collisions(
                             "page_id": str(page.id),
                             "type": "illustration_face",
                             "message": (
-                                f"Page {page.page_number}: face/portrait "
-                                "illustration placed near gutter side"
+                                f"Page {page.page_number}: face/portrait " "illustration placed near gutter side"
                             ),
                         }
                     )
@@ -1404,23 +1287,18 @@ async def generate_reflow(
 
     current_trim = book.trim_size or "8.5x8.5"
     try:
-        curr_w, curr_h = [float(x) for x in current_trim.split("x")]
+        curr_w, curr_h = (float(x) for x in current_trim.split("x"))
     except (ValueError, AttributeError):
         curr_w, curr_h = 8.5, 8.5
 
     try:
-        target_w, target_h = [
-            float(x) for x in target_trim_size.split("x")
-        ]
+        target_w, target_h = (float(x) for x in target_trim_size.split("x"))
     except (ValueError, AttributeError):
         raise AppException(
             status_code=422,
             code="INVALID_TRIM_SIZE",
-            message=(
-                f"Invalid trim size format: {target_trim_size}. "
-                "Use WxH (e.g., '8x10')."
-            ),
-        )
+            message=(f"Invalid trim size format: {target_trim_size}. " "Use WxH (e.g., '8x10')."),
+        ) from None
 
     scale_x = target_w / curr_w
     scale_y = target_h / curr_h
@@ -1430,9 +1308,7 @@ async def generate_reflow(
         page_plan: dict[str, Any] = {
             "page_id": str(page.id),
             "page_number": page.page_number,
-            "needs_illustration_regen": (
-                abs(scale_x - 1.0) > 0.1 or abs(scale_y - 1.0) > 0.1
-            ),
+            "needs_illustration_regen": (abs(scale_x - 1.0) > 0.1 or abs(scale_y - 1.0) > 0.1),
             "text_reposition": None,
         }
 
@@ -1440,16 +1316,12 @@ async def generate_reflow(
             page_plan["text_reposition"] = page.text_position
 
         if page.text_size:
-            new_size = max(
-                12, int(page.text_size * min(scale_x, scale_y))
-            )
+            new_size = max(12, int(page.text_size * min(scale_x, scale_y)))
             page_plan["suggested_text_size"] = new_size
 
         reflow_plan.append(page_plan)
 
-    needs_regen = any(
-        p["needs_illustration_regen"] for p in reflow_plan
-    )
+    needs_regen = any(p["needs_illustration_regen"] for p in reflow_plan)
 
     return {
         "book_id": str(book_id),

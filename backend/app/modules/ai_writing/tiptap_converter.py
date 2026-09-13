@@ -11,7 +11,7 @@ import html as _html
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # TipTap JSON -> HTML
 # ---------------------------------------------------------------------------
+
 
 def tiptap_to_html(content: dict | str | None) -> str:
     """Convert a TipTap JSON document to an HTML string.
@@ -39,11 +40,12 @@ def tiptap_to_html(content: dict | str | None) -> str:
         return ""
 
     if isinstance(content, str):
+        raw = content
         try:
-            content = json.loads(content)
+            content = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
             # If it's already plain HTML/text, return as-is
-            return content
+            return raw
 
     if not isinstance(content, dict):
         return str(content)
@@ -124,6 +126,7 @@ def _apply_marks(text: str, marks: list[dict]) -> str:
 # TipTap JSON -> Plain Text
 # ---------------------------------------------------------------------------
 
+
 def tiptap_to_text(content: dict | str | None) -> str:
     """Convert a TipTap JSON document to plain text.
 
@@ -141,11 +144,12 @@ def tiptap_to_text(content: dict | str | None) -> str:
         return ""
 
     if isinstance(content, str):
+        raw = content
         try:
-            content = json.loads(content)
+            content = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
             # Strip any HTML tags if it looks like HTML
-            return _strip_html(content)
+            return _strip_html(raw)
 
     if not isinstance(content, dict):
         return str(content)
@@ -160,7 +164,7 @@ def _extract_text(node: dict) -> str:
     text = node.get("text", "")
 
     if node_type == "text":
-        return text
+        return cast("str", text)
 
     parts = [_extract_text(child) for child in children]
     inner = "".join(parts)
@@ -187,6 +191,7 @@ def _strip_html(text: str) -> str:
 # ---------------------------------------------------------------------------
 # HTML -> TipTap JSON
 # ---------------------------------------------------------------------------
+
 
 def html_to_tiptap(html_str: str) -> dict:
     """Convert an HTML string to a TipTap-compatible JSON document.
@@ -222,7 +227,7 @@ def html_to_tiptap(html_str: str) -> dict:
     last_end = 0
     for match in block_pattern.finditer(cleaned):
         # Handle any text between blocks
-        between = cleaned[last_end:match.start()].strip()
+        between = cleaned[last_end : match.start()].strip()
         if between:
             para = _html_text_to_paragraph(between)
             if para:
@@ -233,35 +238,43 @@ def html_to_tiptap(html_str: str) -> dict:
 
         if tag and tag.lower().startswith("h"):
             level = int(tag[1])
-            content.append({
-                "type": "heading",
-                "attrs": {"level": level},
-                "content": _parse_inline_html(inner),
-            })
+            content.append(
+                {
+                    "type": "heading",
+                    "attrs": {"level": level},
+                    "content": _parse_inline_html(inner),
+                }
+            )
         elif tag and tag.lower() == "p":
             para = _html_text_to_paragraph(inner)
             if para:
                 content.append(para)
         elif tag and tag.lower() == "blockquote":
-            content.append({
-                "type": "blockquote",
-                "content": [_html_text_to_paragraph(inner) or {"type": "paragraph", "content": []}],
-            })
+            content.append(
+                {
+                    "type": "blockquote",
+                    "content": [_html_text_to_paragraph(inner) or {"type": "paragraph", "content": []}],
+                }
+            )
         elif tag and tag.lower() == "pre":
             code_text = re.sub(r"</?code[^>]*>", "", inner)
-            content.append({
-                "type": "codeBlock",
-                "content": [{"type": "text", "text": _html.unescape(code_text)}],
-            })
+            content.append(
+                {
+                    "type": "codeBlock",
+                    "content": [{"type": "text", "text": _html.unescape(code_text)}],
+                }
+            )
         elif tag and tag.lower() in ("ul", "ol"):
             list_type = "bulletList" if tag.lower() == "ul" else "orderedList"
             items = re.findall(r"<li[^>]*>(.*?)</li>", inner, re.DOTALL | re.IGNORECASE)
             list_content = []
             for item_html in items:
-                list_content.append({
-                    "type": "listItem",
-                    "content": [_html_text_to_paragraph(item_html) or {"type": "paragraph", "content": []}],
-                })
+                list_content.append(
+                    {
+                        "type": "listItem",
+                        "content": [_html_text_to_paragraph(item_html) or {"type": "paragraph", "content": []}],
+                    }
+                )
             content.append({"type": list_type, "content": list_content})
         elif match.group(0).strip().lower().startswith("<hr"):
             content.append({"type": "horizontalRule"})
@@ -340,6 +353,7 @@ def _extract_marked_segments(html_text: str) -> list[tuple[str, list[dict]]]:
 # ---------------------------------------------------------------------------
 # Plain Text -> TipTap JSON
 # ---------------------------------------------------------------------------
+
 
 def text_to_tiptap(text: str) -> dict:
     """Convert plain text to a TipTap-compatible JSON document.

@@ -9,6 +9,7 @@ from typing import TypedDict
 
 class SyntaxMetrics(TypedDict):
     """Syntax analysis results."""
+
     avg_sentence_length: float
     sentence_length_std: float
     simple_sentence_ratio: float
@@ -22,23 +23,23 @@ class SyntaxMetrics(TypedDict):
 
 # Clause markers for complexity detection
 _COORDINATING_CONJUNCTIONS = re.compile(
-    r'\b(?:and|but|or|nor|yet|so)\b',
+    r"\b(?:and|but|or|nor|yet|so)\b",
     re.IGNORECASE,
 )
 
 _SUBORDINATING_CONJUNCTIONS = re.compile(
-    r'\b(?:because|although|though|while|when|where|if|unless|until|'
-    r'after|before|since|that|which|who|whom|whose|whenever|wherever|'
-    r'whether|as|even though|in order that|provided that|assuming that)\b',
+    r"\b(?:because|although|though|while|when|where|if|unless|until|"
+    r"after|before|since|that|which|who|whom|whose|whenever|wherever|"
+    r"whether|as|even though|in order that|provided that|assuming that)\b",
     re.IGNORECASE,
 )
 
 # Passive voice detection patterns
 _PASSIVE_VOICE = re.compile(
-    r'\b(?:am|is|are|was|were|be|been|being)\s+(?:\w+ly\s+)?'
-    r'(?:[\w]+ed|[\w]+en|shown|known|written|taken|given|made|done|seen|'
-    r'told|found|felt|kept|left|lost|heard|held|met|read|said|brought|'
-    r'thought|bought|caught|taught|fought|sought)\b',
+    r"\b(?:am|is|are|was|were|be|been|being)\s+(?:\w+ly\s+)?"
+    r"(?:[\w]+ed|[\w]+en|shown|known|written|taken|given|made|done|seen|"
+    r"told|found|felt|kept|left|lost|heard|held|met|read|said|brought|"
+    r"thought|bought|caught|taught|fought|sought)\b",
     re.IGNORECASE,
 )
 
@@ -81,11 +82,7 @@ class SyntaxAnalyzer:
             SyntaxMetrics containing detailed syntax analysis
         """
         # Split into sentences (simple split for now)
-        sentences = [
-            s.strip()
-            for s in re.split(r'[.!?]+', text)
-            if s.strip() and len(s.split()) >= 2
-        ]
+        sentences = [s.strip() for s in re.split(r"[.!?]+", text) if s.strip() and len(s.split()) >= 2]
 
         if not sentences:
             return SyntaxMetrics(
@@ -122,10 +119,7 @@ class SyntaxAnalyzer:
             clause_depth_dist[count] = clause_depth_dist.get(count, 0) + 1
 
         # Normalize distribution to percentages
-        clause_depth_distribution = {
-            depth: count / total
-            for depth, count in clause_depth_dist.items()
-        }
+        clause_depth_distribution = {depth: count / total for depth, count in clause_depth_dist.items()}
 
         # Passive vs active voice
         passive_count = sum(1 for s in sentences if self._is_passive_voice(s))

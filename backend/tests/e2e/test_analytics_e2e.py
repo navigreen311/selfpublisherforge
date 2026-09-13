@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import base64
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from decimal import Decimal
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import event
@@ -36,6 +37,7 @@ VALID_PASSWORD = "StrongP@ss1"
 # aggregation layer. SQLite doesn't provide it natively, so we register a
 # pure-Python fallback on every raw DBAPI connection via a Pool-level
 # event listener.
+
 
 def _sqlite_date_trunc(interval: str, value: str | None) -> str | None:
     """Truncate a datetime string to the given interval.
@@ -82,9 +84,7 @@ def _sqlite_date_trunc(interval: str, value: str | None) -> str | None:
         truncated = dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     elif interval_lower == "week":
         days_since_monday = dt.weekday()
-        truncated = (dt - timedelta(days=days_since_monday)).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        truncated = (dt - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
     elif interval_lower == "day":
         truncated = dt.replace(hour=0, minute=0, second=0, microsecond=0)
     elif interval_lower == "hour":
@@ -134,10 +134,11 @@ def _patch_isoformat_for_sqlite(monkeypatch):
     # --- patch aggregator.aggregate_revenue ---
     _orig_agg_rev = _agg.aggregate_revenue
 
-    async def _safe_aggregate_revenue(db, org_id, period_start, period_end,
-                                       aggregation=_agg.AggregationPeriod.MONTHLY,
-                                       platform=None, book_id=None):
+    async def _safe_aggregate_revenue(
+        db, org_id, period_start, period_end, aggregation=_agg.AggregationPeriod.MONTHLY, platform=None, book_id=None
+    ):
         from sqlalchemy import and_, func, select, text
+
         from app.modules.analytics.models import RoyaltyRecord
         from app.modules.analytics.schemas import RevenueDataPoint
 
@@ -176,16 +177,16 @@ def _patch_isoformat_for_sqlite(monkeypatch):
 
     monkeypatch.setattr(_agg, "aggregate_revenue", _safe_aggregate_revenue)
     # Also patch where service.py imported it
-    monkeypatch.setattr(
-        "app.modules.analytics.service.aggregate_revenue", _safe_aggregate_revenue
-    )
+    monkeypatch.setattr("app.modules.analytics.service.aggregate_revenue", _safe_aggregate_revenue)
 
     # --- patch aggregator.aggregate_events_by_type ---
     _orig_agg_events = _agg.aggregate_events_by_type
 
-    async def _safe_aggregate_events_by_type(db, org_id, period_start, period_end,
-                                              aggregation=_agg.AggregationPeriod.DAILY):
+    async def _safe_aggregate_events_by_type(
+        db, org_id, period_start, period_end, aggregation=_agg.AggregationPeriod.DAILY
+    ):
         from sqlalchemy import and_, func, select, text
+
         from app.modules.analytics.models import AnalyticsEvent
 
         trunc_interval = _agg._agg_to_trunc(aggregation)
@@ -221,9 +222,11 @@ def _patch_isoformat_for_sqlite(monkeypatch):
     # --- patch metrics.compute_revenue_trend ---
     _orig_trend = _metrics.compute_revenue_trend
 
-    async def _safe_compute_revenue_trend(db, org_id, period_start, period_end,
-                                           aggregation=_metrics.AggregationPeriod.MONTHLY):
+    async def _safe_compute_revenue_trend(
+        db, org_id, period_start, period_end, aggregation=_metrics.AggregationPeriod.MONTHLY
+    ):
         from sqlalchemy import and_, func, select, text
+
         from app.modules.analytics.models import RoyaltyRecord
         from app.modules.analytics.schemas import TrendData, TrendDataPoint
 
@@ -279,14 +282,13 @@ def _patch_isoformat_for_sqlite(monkeypatch):
         )
 
     monkeypatch.setattr(_metrics, "compute_revenue_trend", _safe_compute_revenue_trend)
-    monkeypatch.setattr(
-        "app.modules.analytics.service.compute_revenue_trend", _safe_compute_revenue_trend
-    )
+    monkeypatch.setattr("app.modules.analytics.service.compute_revenue_trend", _safe_compute_revenue_trend)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 async def _register_user(
     client: AsyncClient,
@@ -329,19 +331,21 @@ def _build_kdp_csv(rows: list[dict]) -> str:
     )
     lines = [header]
     for row in rows:
-        line = ",".join([
-            row.get("Title", "Unknown Book"),
-            row.get("ASIN", ""),
-            row.get("Marketplace", "Amazon.com"),
-            row.get("Royalty Type", "Kindle Edition"),
-            str(row.get("Units Sold", 0)),
-            str(row.get("Units Refunded", 0)),
-            str(row.get("Net Units Sold", 0)),
-            str(row.get("Avg List Price", "0.00")),
-            row.get("Currency", "USD"),
-            str(row.get("Royalty", "0.00")),
-            row.get("Royalty Date", "2024-01-01"),
-        ])
+        line = ",".join(
+            [
+                row.get("Title", "Unknown Book"),
+                row.get("ASIN", ""),
+                row.get("Marketplace", "Amazon.com"),
+                row.get("Royalty Type", "Kindle Edition"),
+                str(row.get("Units Sold", 0)),
+                str(row.get("Units Refunded", 0)),
+                str(row.get("Net Units Sold", 0)),
+                str(row.get("Avg List Price", "0.00")),
+                row.get("Currency", "USD"),
+                str(row.get("Royalty", "0.00")),
+                row.get("Royalty Date", "2024-01-01"),
+            ]
+        )
         lines.append(line)
     csv_text = "\n".join(lines)
     return base64.b64encode(csv_text.encode()).decode()
@@ -352,16 +356,18 @@ def _build_ingram_csv(rows: list[dict]) -> str:
     header = "Title,ISBN,Format,Quantity,Publisher Compensation,Currency Code,Sale/Return,Reporting Date"
     lines = [header]
     for row in rows:
-        line = ",".join([
-            row.get("Title", "Unknown Book"),
-            row.get("ISBN", ""),
-            row.get("Format", "Paperback"),
-            str(row.get("Quantity", 0)),
-            str(row.get("Publisher Compensation", "0.00")),
-            row.get("Currency Code", "USD"),
-            row.get("Sale/Return", "Sale"),
-            row.get("Reporting Date", "2024-01-01"),
-        ])
+        line = ",".join(
+            [
+                row.get("Title", "Unknown Book"),
+                row.get("ISBN", ""),
+                row.get("Format", "Paperback"),
+                str(row.get("Quantity", 0)),
+                str(row.get("Publisher Compensation", "0.00")),
+                row.get("Currency Code", "USD"),
+                row.get("Sale/Return", "Sale"),
+                row.get("Reporting Date", "2024-01-01"),
+            ]
+        )
         lines.append(line)
     csv_text = "\n".join(lines)
     return base64.b64encode(csv_text.encode()).decode()
@@ -430,6 +436,7 @@ INGRAM_SAMPLE_ROWS = [
 # ---------------------------------------------------------------------------
 # E2E: Import royalties -> view dashboard
 # ---------------------------------------------------------------------------
+
 
 class TestImportRoyaltiesAndViewDashboard:
     """Import CSV royalties, then verify dashboard and royalty list."""
@@ -507,6 +514,7 @@ class TestImportRoyaltiesAndViewDashboard:
 # ---------------------------------------------------------------------------
 # E2E: Revenue aggregation
 # ---------------------------------------------------------------------------
+
 
 class TestRevenueAggregation:
     """Import multiple records across dates/platforms, then verify
@@ -624,6 +632,7 @@ class TestRevenueAggregation:
 # ---------------------------------------------------------------------------
 # E2E: Report generation
 # ---------------------------------------------------------------------------
+
 
 class TestReportGeneration:
     """Import data, generate a report, then verify it appears in the list."""
@@ -746,6 +755,7 @@ class TestReportGeneration:
 # E2E: Dashboard with no data
 # ---------------------------------------------------------------------------
 
+
 class TestDashboardWithNoData:
     """Verify that the dashboard returns a valid empty state for a new user
     who has not imported any data."""
@@ -860,6 +870,7 @@ class TestDashboardWithNoData:
 # E2E: Import validation and edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestImportEdgeCases:
     """Test import validation: empty content, multi-platform imports."""
 
@@ -939,6 +950,7 @@ class TestImportEdgeCases:
 # ---------------------------------------------------------------------------
 # E2E: Full analytics pipeline
 # ---------------------------------------------------------------------------
+
 
 class TestFullAnalyticsPipeline:
     """End-to-end test exercising the complete analytics pipeline:

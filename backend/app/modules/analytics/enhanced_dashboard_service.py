@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.analytics.models import SalesData, RoyaltyRecord
+from app.modules.analytics.models import RoyaltyRecord, SalesData
 
 logger = logging.getLogger(__name__)
 
@@ -81,19 +80,16 @@ async def _period_totals(
 ) -> dict:
     """Aggregate totals from sales_data for a date range, falling back to royalty_records."""
     try:
-        stmt = (
-            select(
-                func.coalesce(func.sum(SalesData.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(SalesData.units), 0).label("units"),
-                func.coalesce(func.sum(SalesData.royalties), 0).label("royalties"),
-                func.coalesce(func.sum(SalesData.kenp_read), 0).label("kenp"),
-            )
-            .where(
-                and_(
-                    SalesData.org_id == org_id,
-                    SalesData.date >= start,
-                    SalesData.date <= end,
-                )
+        stmt = select(
+            func.coalesce(func.sum(SalesData.revenue), 0).label("revenue"),
+            func.coalesce(func.sum(SalesData.units), 0).label("units"),
+            func.coalesce(func.sum(SalesData.royalties), 0).label("royalties"),
+            func.coalesce(func.sum(SalesData.kenp_read), 0).label("kenp"),
+        ).where(
+            and_(
+                SalesData.org_id == org_id,
+                SalesData.date >= start,
+                SalesData.date <= end,
             )
         )
         result = await db.execute(stmt)
@@ -109,18 +105,15 @@ async def _period_totals(
     # Fallback: try royalty_records if sales_data was empty
     if revenue == 0 and units == 0:
         try:
-            stmt2 = (
-                select(
-                    func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("revenue"),
-                    func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("units"),
-                )
-                .where(
-                    and_(
-                        RoyaltyRecord.org_id == org_id,
-                        RoyaltyRecord.period_start >= start,
-                        RoyaltyRecord.period_end <= end,
-                        RoyaltyRecord.deleted_at.is_(None),
-                    )
+            stmt2 = select(
+                func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("units"),
+            ).where(
+                and_(
+                    RoyaltyRecord.org_id == org_id,
+                    RoyaltyRecord.period_start >= start,
+                    RoyaltyRecord.period_end <= end,
+                    RoyaltyRecord.deleted_at.is_(None),
                 )
             )
             result2 = await db.execute(stmt2)
@@ -309,62 +302,74 @@ def _generate_insights(
     rev_change = _pct_change(current["revenue"], previous["revenue"])
     if rev_change is not None:
         if rev_change > 10:
-            insights.append({
-                "type": "positive_trend",
-                "message": f"Revenue is up {rev_change}% compared to the previous period. Strong momentum!",
-                "book_id": None,
-                "metric": "revenue",
-                "severity": "success",
-            })
+            insights.append(
+                {
+                    "type": "positive_trend",
+                    "message": f"Revenue is up {rev_change}% compared to the previous period. Strong momentum!",
+                    "book_id": None,
+                    "metric": "revenue",
+                    "severity": "success",
+                }
+            )
         elif rev_change < -10:
-            insights.append({
-                "type": "negative_trend",
-                "message": f"Revenue declined {abs(rev_change)}% vs. the previous period. Consider reviewing pricing or promotions.",
-                "book_id": None,
-                "metric": "revenue",
-                "severity": "warning",
-            })
+            insights.append(
+                {
+                    "type": "negative_trend",
+                    "message": f"Revenue declined {abs(rev_change)}% vs. the previous period. Consider reviewing pricing or promotions.",
+                    "book_id": None,
+                    "metric": "revenue",
+                    "severity": "warning",
+                }
+            )
         else:
-            insights.append({
-                "type": "stable",
-                "message": "Revenue is holding steady compared to the previous period.",
-                "book_id": None,
-                "metric": "revenue",
-                "severity": "info",
-            })
+            insights.append(
+                {
+                    "type": "stable",
+                    "message": "Revenue is holding steady compared to the previous period.",
+                    "book_id": None,
+                    "metric": "revenue",
+                    "severity": "info",
+                }
+            )
 
     # Top book insight
     if by_book:
         top = by_book[0]
-        insights.append({
-            "type": "top_performer",
-            "message": f"Your top-performing book generated ${top['revenue']:.2f} in revenue this period.",
-            "book_id": top["book_id"],
-            "metric": "revenue",
-            "severity": "info",
-        })
+        insights.append(
+            {
+                "type": "top_performer",
+                "message": f"Your top-performing book generated ${top['revenue']:.2f} in revenue this period.",
+                "book_id": top["book_id"],
+                "metric": "revenue",
+                "severity": "info",
+            }
+        )
 
     # Format insight
     if by_format:
         top_fmt = by_format[0]
-        insights.append({
-            "type": "format_leader",
-            "message": f"The '{top_fmt['format']}' format leads with ${top_fmt['revenue']:.2f} in revenue.",
-            "book_id": None,
-            "metric": "format_revenue",
-            "severity": "info",
-        })
+        insights.append(
+            {
+                "type": "format_leader",
+                "message": f"The '{top_fmt['format']}' format leads with ${top_fmt['revenue']:.2f} in revenue.",
+                "book_id": None,
+                "metric": "format_revenue",
+                "severity": "info",
+            }
+        )
 
     # KENP insight
     kenp_change = _pct_change(float(current["kenp"]), float(previous["kenp"]))
     if kenp_change is not None and abs(kenp_change) > 20:
         direction = "increased" if kenp_change > 0 else "decreased"
-        insights.append({
-            "type": "kenp_alert",
-            "message": f"KENP reads have {direction} by {abs(kenp_change)}%. Monitor Kindle Unlimited performance.",
-            "book_id": None,
-            "metric": "kenp_read",
-            "severity": "warning" if kenp_change < 0 else "success",
-        })
+        insights.append(
+            {
+                "type": "kenp_alert",
+                "message": f"KENP reads have {direction} by {abs(kenp_change)}%. Monitor Kindle Unlimited performance.",
+                "book_id": None,
+                "metric": "kenp_read",
+                "severity": "warning" if kenp_change < 0 else "success",
+            }
+        )
 
     return insights

@@ -84,8 +84,7 @@ async def login(body: schemas.LoginRequest, request: Request, db: AsyncSession =
 )
 async def refresh(body: schemas.RefreshRequest, db: AsyncSession = Depends(get_db)):
     """Refresh an access token using a valid refresh token."""
-    tokens = await service.refresh_access_token(db, refresh_token=body.refresh_token)
-    return tokens
+    return await service.refresh_access_token(db, refresh_token=body.refresh_token)
 
 
 # ---------------------------------------------------------------------------

@@ -134,9 +134,7 @@ async def generate_voice_preview(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await service_voices.preview_voice(
-        db, body.voice_id, current_user["org_id"], body.text
-    )
+    result = await service_voices.preview_voice(db, body.voice_id, current_user["org_id"], body.text)
     if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -318,7 +318,8 @@ describe("ProfileSettingsPage", () => {
   it("renders danger zone section", () => {
     render(<ProfileSettingsPage />);
     expect(screen.getByText("Danger Zone")).toBeInTheDocument();
-    expect(screen.getByText("Delete Account")).toBeInTheDocument();
+    // The heading and the button inside it share the text.
+    expect(screen.getAllByText("Delete Account").length).toBeGreaterThan(0);
   });
 
   // 17. Delete account dialog opens

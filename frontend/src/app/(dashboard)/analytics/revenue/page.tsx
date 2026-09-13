@@ -76,7 +76,7 @@ export default function RevenuePage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                aria-label={t("revenue.startDate")}
+                aria-label={t("revenue.filterStartDate")}
                 className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -89,7 +89,7 @@ export default function RevenuePage() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                aria-label={t("revenue.endDate")}
+                aria-label={t("revenue.filterEndDate")}
                 className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -101,7 +101,7 @@ export default function RevenuePage() {
                 id="platform-filter"
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
-                aria-label={t("revenue.platform")}
+                aria-label={t("revenue.filterPlatform")}
                 className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {PLATFORM_OPTIONS.map((opt) => (
@@ -119,7 +119,7 @@ export default function RevenuePage() {
                 id="aggregation-filter"
                 value={aggregation}
                 onChange={(e) => setAggregation(e.target.value)}
-                aria-label={t("revenue.aggregation")}
+                aria-label={t("revenue.filterAggregation")}
                 className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {AGGREGATION_OPTIONS.map((opt) => (
@@ -145,7 +145,8 @@ export default function RevenuePage() {
             <div
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
               role="region"
-              aria-label={t("revenue.totalRevenue")}
+              aria-label={t("revenue.summary")}
+              aria-describedby="revenue-summary-desc"
             >
               <p id="revenue-summary-desc" className="sr-only">
                 {t("revenue.summaryDescription", {

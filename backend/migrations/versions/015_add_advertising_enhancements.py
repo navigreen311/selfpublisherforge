@@ -15,7 +15,12 @@ def upgrade() -> None:
     op.create_table(
         "ad_search_terms",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("campaign_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "campaign_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("campaigns.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("search_term", sa.String(500), nullable=False),
         sa.Column("impressions", sa.Integer(), default=0),
         sa.Column("clicks", sa.Integer(), default=0),
@@ -34,7 +39,12 @@ def upgrade() -> None:
     op.create_table(
         "ad_daily_metrics",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("campaign_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "campaign_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("campaigns.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("date", sa.Date(), nullable=False),
         sa.Column("spend", sa.Numeric(10, 2), server_default="0"),
         sa.Column("sales", sa.Numeric(10, 2), server_default="0"),
@@ -90,9 +100,18 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Remove columns from campaigns
     for col_name in [
-        "targeting_type", "match_types", "bidding_strategy", "default_bid",
-        "schedule_start", "schedule_end", "ad_type",
-        "total_spend", "total_sales", "total_impressions", "total_clicks", "total_orders",
+        "targeting_type",
+        "match_types",
+        "bidding_strategy",
+        "default_bid",
+        "schedule_start",
+        "schedule_end",
+        "ad_type",
+        "total_spend",
+        "total_sales",
+        "total_impressions",
+        "total_clicks",
+        "total_orders",
     ]:
         try:
             op.drop_column("campaigns", col_name)

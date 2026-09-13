@@ -16,7 +16,7 @@ from app.core.exceptions import AppException
 from app.models.user import UserRole
 from app.modules.organization import service
 from shared.types.enums import PlanTier
-
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -37,7 +37,7 @@ def _make_org_row(
         "id": org_id or uuid.uuid4(),
         "name": name,
         "description": description,
-        "tier": tier,
+        "plan_tier": tier,
         "created_at": created_at or now,
         "updated_at": updated_at or now,
     }
@@ -48,7 +48,7 @@ def _make_user_row(
     email: str = "user@test.com",
     name: str = "Test User",
     org_id: uuid.UUID | None = None,
-    role: UserRole = UserRole.MEMBER,
+    role: UserRole = UserRole.EDITOR,
     created_at: datetime | None = None,
 ) -> dict:
     """Build a dict that mimics a row from the users table."""
@@ -92,7 +92,7 @@ def _mock_db_with_org(org_row: dict | None) -> AsyncMock:
 
     mock_db.execute = AsyncMock(return_value=result)
     mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
+    mock_db.refresh = AsyncMock(side_effect=populate_server_defaults)
 
     return mock_db
 
@@ -124,10 +124,7 @@ class TestGetOrganization:
         """Should return organization details when found."""
         org_id = uuid.uuid4()
         org_row = _make_org_row(
-            org_id=org_id,
-            name="Test Organization",
-            description="A test organization",
-            tier=PlanTier.PRO
+            org_id=org_id, name="Test Organization", description="A test organization", tier=PlanTier.PRO
         )
         mock_db = _mock_db_with_org(org_row)
 
@@ -178,12 +175,7 @@ class TestUpdateOrganization:
         org_row = _make_org_row(org_id=org_id, name="Old Name", description="Old Desc")
         mock_db = _mock_db_with_org(org_row)
 
-        result = await service.update_organization(
-            mock_db,
-            org_id,
-            name="New Name",
-            description="New Description"
-        )
+        result = await service.update_organization(mock_db, org_id, name="New Name", description="New Description")
 
         assert result.name == "New Name"
         assert result.description == "New Description"
@@ -197,12 +189,7 @@ class TestUpdateOrganization:
         org_row = _make_org_row(org_id=org_id, name="Old Name", description="Existing Desc")
         mock_db = _mock_db_with_org(org_row)
 
-        result = await service.update_organization(
-            mock_db,
-            org_id,
-            name="New Name",
-            description=None
-        )
+        result = await service.update_organization(mock_db, org_id, name="New Name", description=None)
 
         assert result.name == "New Name"
         # Description should remain unchanged in the mock
@@ -215,12 +202,7 @@ class TestUpdateOrganization:
         org_row = _make_org_row(org_id=org_id, name="Existing Name", description="Old Desc")
         mock_db = _mock_db_with_org(org_row)
 
-        result = await service.update_organization(
-            mock_db,
-            org_id,
-            name=None,
-            description="New Description"
-        )
+        result = await service.update_organization(mock_db, org_id, name=None, description="New Description")
 
         assert result.description == "New Description"
         mock_db.commit.assert_called_once()
@@ -232,11 +214,7 @@ class TestUpdateOrganization:
         mock_db = _mock_db_with_org(None)
 
         with pytest.raises(AppException) as exc_info:
-            await service.update_organization(
-                mock_db,
-                org_id,
-                name="New Name"
-            )
+            await service.update_organization(mock_db, org_id, name="New Name")
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.code == "ORGANIZATION_NOT_FOUND"
@@ -248,12 +226,7 @@ class TestUpdateOrganization:
         org_row = _make_org_row(org_id=org_id)
         mock_db = _mock_db_with_org(org_row)
 
-        result = await service.update_organization(
-            mock_db,
-            org_id,
-            name=None,
-            description=None
-        )
+        result = await service.update_organization(mock_db, org_id, name=None, description=None)
 
         # Should still commit even if no changes
         mock_db.commit.assert_called_once()
@@ -273,18 +246,10 @@ class TestListMembers:
         org_id = uuid.uuid4()
         user_rows = [
             _make_user_row(
-                user_id=uuid.uuid4(),
-                email="user1@test.com",
-                name="User One",
-                org_id=org_id,
-                role=UserRole.OWNER
+                user_id=uuid.uuid4(), email="user1@test.com", name="User One", org_id=org_id, role=UserRole.OWNER
             ),
             _make_user_row(
-                user_id=uuid.uuid4(),
-                email="user2@test.com",
-                name="User Two",
-                org_id=org_id,
-                role=UserRole.MEMBER
+                user_id=uuid.uuid4(), email="user2@test.com", name="User Two", org_id=org_id, role=UserRole.EDITOR
             ),
         ]
         mock_db = _mock_db_with_users(user_rows)
@@ -296,7 +261,7 @@ class TestListMembers:
         assert result.members[0].email == "user1@test.com"
         assert result.members[0].role == "owner"
         assert result.members[1].email == "user2@test.com"
-        assert result.members[1].role == "member"
+        assert result.members[1].role == "editor"
 
     @pytest.mark.asyncio
     async def test_empty_organization(self):
@@ -315,16 +280,8 @@ class TestListMembers:
         org_id = uuid.uuid4()
         now = datetime.now(UTC)
         user_rows = [
-            _make_user_row(
-                email="older@test.com",
-                org_id=org_id,
-                created_at=now
-            ),
-            _make_user_row(
-                email="newer@test.com",
-                org_id=org_id,
-                created_at=now
-            ),
+            _make_user_row(email="older@test.com", org_id=org_id, created_at=now),
+            _make_user_row(email="newer@test.com", org_id=org_id, created_at=now),
         ]
         mock_db = _mock_db_with_users(user_rows)
 
@@ -347,12 +304,7 @@ class TestCreateInvitation:
         mock_db = AsyncMock()
         org_id = uuid.uuid4()
 
-        result = await service.create_invitation(
-            mock_db,
-            org_id,
-            email="newuser@test.com",
-            role="member"
-        )
+        result = await service.create_invitation(mock_db, org_id, email="newuser@test.com", role="member")
 
         assert result.email == "newuser@test.com"
         assert result.role == "member"
@@ -367,12 +319,7 @@ class TestCreateInvitation:
         mock_db = AsyncMock()
         org_id = uuid.uuid4()
 
-        result = await service.create_invitation(
-            mock_db,
-            org_id,
-            email="test@test.com",
-            role="viewer"
-        )
+        result = await service.create_invitation(mock_db, org_id, email="test@test.com", role="viewer")
 
         # Check that expires_at is approximately 7 days from invited_at
         delta = result.expires_at - result.invited_at
@@ -384,12 +331,7 @@ class TestCreateInvitation:
         mock_db = AsyncMock()
         org_id = uuid.uuid4()
 
-        result = await service.create_invitation(
-            mock_db,
-            org_id,
-            email="admin@test.com",
-            role="admin"
-        )
+        result = await service.create_invitation(mock_db, org_id, email="admin@test.com", role="admin")
 
         assert result.role == "admin"
 

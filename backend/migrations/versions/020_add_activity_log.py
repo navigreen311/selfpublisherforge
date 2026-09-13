@@ -3,9 +3,10 @@
 Revision ID: 020_add_activity_log
 Revises: 019
 """
-from alembic import op
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 revision = "020_add_activity_log"
 down_revision = "019"

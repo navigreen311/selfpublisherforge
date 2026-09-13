@@ -55,6 +55,7 @@ router = APIRouter()
 # Unified Generation Endpoint
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/generate",
     response_model=schemas.GenerateResponse | None,
@@ -91,6 +92,7 @@ async def generate(
 # Manuscript
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/books/{book_id}/manuscript",
     response_model=schemas.ManuscriptResponse,
@@ -109,6 +111,7 @@ async def get_manuscript(
 # ---------------------------------------------------------------------------
 # Chapter CRUD
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/books/{book_id}/manuscript/chapters",
@@ -201,6 +204,7 @@ async def reorder_chapters(
 # Analysis / Readability
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/books/{book_id}/manuscript/analyze",
     response_model=schemas.ManuscriptAnalysis,
@@ -234,6 +238,7 @@ async def get_readability_score(
 # ---------------------------------------------------------------------------
 # Outline
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/books/{book_id}/outline/generate",
@@ -272,6 +277,7 @@ async def generate_outline_standalone(
 # ---------------------------------------------------------------------------
 # Writing Sessions
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/writing-sessions",
@@ -321,7 +327,7 @@ async def record_writing_session(
 ):
     """Record a writing session."""
     user_id = current_user["user_id"]
-    return await service.record_writing_session(db, user_id, data)
+    return await service.record_writing_session(db, user_id, data, org_id=current_user["org_id"])
 
 
 # ===========================================================================
@@ -368,6 +374,7 @@ def _stub_manuscript(*, include_chapters: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 # Manuscripts CRUD (stub)
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/books",
@@ -526,6 +533,7 @@ async def delete_chapter_stub(
 # Enhanced Outline (stub)
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/writing/generate-outline",
     summary="Generate enhanced outline (stub)",
@@ -558,6 +566,7 @@ async def create_from_outline_stub(
 # AI Writing (stub)
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/writing/generate",
     summary="AI writing generation (stub)",
@@ -574,6 +583,7 @@ async def generate_writing_stub(
 # ---------------------------------------------------------------------------
 # Readability (stub)
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/writing/readability/{chapter_id}",
@@ -653,9 +663,7 @@ async def compute_readability(
         flesch_label = "Very Confusing"
 
     # Passive voice detection (simple heuristic)
-    passive_patterns = re.findall(
-        r"\b(was|were|been|being|is|are|am)\b\s+\w+ed\b", text, re.IGNORECASE
-    )
+    passive_patterns = re.findall(r"\b(was|were|been|being|is|are|am)\b\s+\w+ed\b", text, re.IGNORECASE)
     passive_pct = round(len(passive_patterns) / max(sentence_count, 1) * 100, 1)
 
     # Suggestions
@@ -683,6 +691,7 @@ async def compute_readability(
 # ---------------------------------------------------------------------------
 # Writing Sessions (stub)
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/writing/sessions/start",
@@ -717,6 +726,7 @@ async def end_writing_session_stub(
 # Analytics (stub)
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/writing/analytics",
     summary="Get writing analytics (stub)",
@@ -743,6 +753,7 @@ async def get_writing_analytics_stub(
 # ---------------------------------------------------------------------------
 # Chapter Versions (stub)
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/manuscripts/{manuscript_id}/chapters/{chapter_id}/versions",

@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
-    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -16,7 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import TenantModel, BaseModel
+from app.database import BaseModel, TenantModel
 
 
 class ChildrensBook(TenantModel):
@@ -39,11 +37,17 @@ class ChildrensBook(TenantModel):
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
     # Relationships
-    pages: Mapped[list["ChildrensBookPage"]] = relationship(
-        back_populates="book", cascade="all, delete-orphan", lazy="selectin"
+    pages: Mapped[list[ChildrensBookPage]] = relationship(
+        "app.modules.specialty_books.models_childrens.ChildrensBookPage",
+        back_populates="book",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
-    characters: Mapped[list["ChildrensBookCharacter"]] = relationship(
-        back_populates="book", cascade="all, delete-orphan", lazy="selectin"
+    characters: Mapped[list[ChildrensBookCharacter]] = relationship(
+        "app.modules.specialty_books.models_childrens.ChildrensBookCharacter",
+        back_populates="book",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
 
@@ -52,9 +56,7 @@ class ChildrensBookPage(BaseModel):
 
     __tablename__ = "childrens_book_pages"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True
-    )
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True)
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
     page_type: Mapped[str | None] = mapped_column(String(20), default="spread")
     layout: Mapped[str | None] = mapped_column(String(50), default="text_bottom")
@@ -71,7 +73,9 @@ class ChildrensBookPage(BaseModel):
     text_plate: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Relationships
-    book: Mapped["ChildrensBook"] = relationship(back_populates="pages")
+    book: Mapped[ChildrensBook] = relationship(
+        "app.modules.specialty_books.models_childrens.ChildrensBook", back_populates="pages"
+    )
 
 
 class ChildrensBookCharacter(BaseModel):
@@ -79,9 +83,7 @@ class ChildrensBookCharacter(BaseModel):
 
     __tablename__ = "childrens_book_characters"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True
-    )
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("childrens_books.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     species: Mapped[str | None] = mapped_column(String(100), default="human")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -91,4 +93,6 @@ class ChildrensBookCharacter(BaseModel):
     scale_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
-    book: Mapped["ChildrensBook"] = relationship(back_populates="characters")
+    book: Mapped[ChildrensBook] = relationship(
+        "app.modules.specialty_books.models_childrens.ChildrensBook", back_populates="characters"
+    )

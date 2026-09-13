@@ -8,7 +8,6 @@ that all major API prefixes are registered and respond.
 from __future__ import annotations
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 # ---------------------------------------------------------------------------
@@ -119,8 +118,7 @@ async def test_openapi_spec_includes_expected_tags(client: AsyncClient):
 
     for tag in EXPECTED_TAGS:
         assert tag in found_tags, (
-            f"Expected tag '{tag}' not found in OpenAPI spec. "
-            f"Found tags: {sorted(found_tags)}"
+            f"Expected tag '{tag}' not found in OpenAPI spec. " f"Found tags: {sorted(found_tags)}"
         )
 
 
@@ -219,15 +217,11 @@ async def test_auth_flow_register_login_profile(client: AsyncClient):
         (f"{API}/agents", {200, 401, 403, 404, 405}),
     ],
 )
-async def test_api_prefix_responds(
-    client: AsyncClient, path: str, expected_codes: set[int]
-):
+async def test_api_prefix_responds(client: AsyncClient, path: str, expected_codes: set[int]):
     """Each major API prefix should return a recognized status code, not 404
     (which would mean the route is not registered at all)."""
     resp = await client.get(path)
-    assert resp.status_code in expected_codes, (
-        f"GET {path} returned unexpected {resp.status_code}"
-    )
+    assert resp.status_code in expected_codes, f"GET {path} returned unexpected {resp.status_code}"
 
 
 # ---------------------------------------------------------------------------
@@ -250,9 +244,7 @@ async def test_cors_headers_on_health(client: AsyncClient):
     # If CORS is configured, we expect the allow-origin header
     if resp.status_code in (200, 204):
         allow_origin = resp.headers.get("access-control-allow-origin", "")
-        assert allow_origin in ("*", "http://localhost:3000"), (
-            f"Expected CORS allow-origin header, got: {allow_origin}"
-        )
+        assert allow_origin in ("*", "http://localhost:3000"), f"Expected CORS allow-origin header, got: {allow_origin}"
 
 
 @pytest.mark.asyncio

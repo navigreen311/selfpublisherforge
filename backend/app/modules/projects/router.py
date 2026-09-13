@@ -5,12 +5,17 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
 from app.modules.projects import schemas, service
 from app.schemas.common import MessageResponse
 
 router = APIRouter()
+
+# Every endpoint here guarded with `get_current_user` alone, so a VIEWER could
+# create, update and delete projects — the role was carried in the token and
+# never consulted. Reads stay open to every role; writes do not.
+WRITE_ROLES = ("owner", "admin", "editor", "writer")
 
 
 # ---------------------------------------------------------------------------
@@ -25,7 +30,7 @@ router = APIRouter()
 )
 async def create_project(
     body: schemas.ProjectCreateRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role(*WRITE_ROLES)),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new project."""
@@ -106,8 +111,7 @@ async def get_project(
     db: AsyncSession = Depends(get_db),
 ):
     """Get project by ID."""
-    project = await service.get_project(db, project_id, current_user["org_id"])
-    return project
+    return await service.get_project(db, project_id, current_user["org_id"])
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +127,7 @@ async def get_project(
 async def update_project(
     project_id: UUID,
     body: schemas.ProjectUpdateRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role(*WRITE_ROLES)),
     db: AsyncSession = Depends(get_db),
 ):
     """Update project details."""
@@ -165,7 +169,7 @@ async def update_project(
 )
 async def delete_project(
     project_id: UUID,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role(*WRITE_ROLES)),
     db: AsyncSession = Depends(get_db),
 ):
     """Soft delete a project."""

@@ -41,6 +41,7 @@ def get_service() -> ValidationService:
 # POST /validate — Full pre-flight validation
 # ------------------------------------------------------------------
 
+
 @router.post(
     "/validate",
     response_model=FullValidationResponse,
@@ -62,6 +63,7 @@ async def run_full_validation(
 # POST /validate/print — Print file validation
 # ------------------------------------------------------------------
 
+
 @router.post(
     "/validate/print",
     response_model=ValidationResult,
@@ -79,6 +81,7 @@ async def validate_print(
 # ------------------------------------------------------------------
 # POST /validate/ebook — Ebook validation
 # ------------------------------------------------------------------
+
 
 @router.post(
     "/validate/ebook",
@@ -98,6 +101,7 @@ async def validate_ebook(
 # POST /validate/cover — Cover validation
 # ------------------------------------------------------------------
 
+
 @router.post(
     "/validate/cover",
     response_model=ValidationResult,
@@ -115,6 +119,7 @@ async def validate_cover(
 # ------------------------------------------------------------------
 # GET /validate/{id}/results — Retrieve stored results
 # ------------------------------------------------------------------
+
 
 @router.get(
     "/validate/{validation_id}/results",
@@ -139,6 +144,7 @@ async def get_validation_results(
 # ------------------------------------------------------------------
 # POST /compliance-scan — Content compliance scan
 # ------------------------------------------------------------------
+
 
 @router.post(
     "/compliance-scan",

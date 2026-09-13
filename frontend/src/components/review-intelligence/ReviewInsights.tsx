@@ -185,10 +185,10 @@ export function ReviewInsights({
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
         <p className="text-sm text-muted-foreground max-w-sm mb-4">
-          {t("insights.emptyState")}
+          {t("insights.noInsights")}
         </p>
         <Button onClick={onRefresh} disabled={isRefreshing}>
-          {isRefreshing ? t("insights.refreshing") : t("insights.refreshAnalysis")}
+          {isRefreshing ? t("insights.analyzing") : t("insights.refreshAnalysis")}
         </Button>
       </div>
     );
@@ -218,7 +218,7 @@ export function ReviewInsights({
             onClick={onRefresh}
             disabled={isRefreshing}
           >
-            {isRefreshing ? t("insights.refreshing") : t("insights.refreshAnalysis")}
+            {isRefreshing ? t("insights.analyzing") : t("insights.refreshAnalysis")}
           </Button>
           <Button variant="outline" size="sm" onClick={onExport}>
             {t("insights.exportReport")}
@@ -272,7 +272,7 @@ export function ReviewInsights({
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2 pt-2">
             <Button variant="secondary" size="sm">
-              {t("insights.applyToBookUpdates")}
+              {t("insights.applyToUpdates")}
             </Button>
             <Button variant="outline" size="sm">
               {t("insights.createRevisionTask")}

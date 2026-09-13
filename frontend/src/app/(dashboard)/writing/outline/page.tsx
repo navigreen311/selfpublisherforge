@@ -288,7 +288,7 @@ export default function OutlineGeneratorPage() {
             onClick={handleGenerate}
             disabled={generateMutation.isPending || !title.trim()}
             className="w-full sm:w-auto"
-            aria-label={t("outline.form.generate")}
+            aria-busy={generateMutation.isPending}
           >
             {generateMutation.isPending ? (
               <>

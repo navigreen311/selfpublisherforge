@@ -43,22 +43,16 @@ class WorkflowError(Exception):
 # ── Status transition validation ──────────────────────────────────────────
 
 
-def validate_pipeline_transition(
-    current: PipelineStatus, target: PipelineStatus
-) -> None:
+def validate_pipeline_transition(current: PipelineStatus, target: PipelineStatus) -> None:
     """Raise WorkflowError if the pipeline transition is invalid."""
     if target not in PIPELINE_TRANSITIONS.get(current, set()):
-        raise WorkflowError(
-            f"Cannot transition pipeline from '{current.value}' to '{target.value}'."
-        )
+        raise WorkflowError(f"Cannot transition pipeline from '{current.value}' to '{target.value}'.")
 
 
 def validate_task_transition(current: TaskStatus, target: TaskStatus) -> None:
     """Raise WorkflowError if the task transition is invalid."""
     if target not in TASK_TRANSITIONS.get(current, set()):
-        raise WorkflowError(
-            f"Cannot transition task from '{current.value}' to '{target.value}'."
-        )
+        raise WorkflowError(f"Cannot transition task from '{current.value}' to '{target.value}'.")
 
 
 # ── Dependency resolution ─────────────────────────────────────────────────
@@ -125,9 +119,7 @@ def detect_cycle(tasks: list[PipelineTask]) -> bool:
 
 def get_ready_tasks(tasks: list[PipelineTask]) -> list[PipelineTask]:
     """Return tasks that are unblocked (all dependencies completed)."""
-    completed = {
-        str(t.id) for t in tasks if t.status == TaskStatus.COMPLETED
-    }
+    completed = {str(t.id) for t in tasks if t.status == TaskStatus.COMPLETED}
     ready: list[PipelineTask] = []
     for t in tasks:
         if t.status not in (TaskStatus.PENDING, TaskStatus.BLOCKED):
@@ -140,12 +132,8 @@ def get_ready_tasks(tasks: list[PipelineTask]) -> list[PipelineTask]:
 
 def compute_blocked_tasks(tasks: list[PipelineTask]) -> list[PipelineTask]:
     """Return tasks that should be marked BLOCKED because deps are unmet."""
-    completed = {
-        str(t.id) for t in tasks if t.status == TaskStatus.COMPLETED
-    }
-    cancelled = {
-        str(t.id) for t in tasks if t.status == TaskStatus.CANCELLED
-    }
+    completed = {str(t.id) for t in tasks if t.status == TaskStatus.COMPLETED}
+    cancelled = {str(t.id) for t in tasks if t.status == TaskStatus.CANCELLED}
     blocked: list[PipelineTask] = []
     for t in tasks:
         if t.status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED):
@@ -214,9 +202,7 @@ def compute_critical_path(tasks: list[PipelineTask]) -> list[str]:
 # ── Deadline helpers ──────────────────────────────────────────────────────
 
 
-def get_overdue_tasks(
-    tasks: list[PipelineTask], now: datetime | None = None
-) -> list[PipelineTask]:
+def get_overdue_tasks(tasks: list[PipelineTask], now: datetime | None = None) -> list[PipelineTask]:
     """Return tasks that are past their due date and not completed/cancelled."""
     now = now or datetime.now(UTC)
     overdue: list[PipelineTask] = []

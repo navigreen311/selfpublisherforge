@@ -4,6 +4,7 @@ Endpoints cover full CRUD for books, pages, and characters, plus AI story
 generation, readability analysis, character-consistency checks, safety
 scanning, bilingual translation, illustration generation, and export/preflight.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -231,7 +232,11 @@ async def generate_illustration(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.generate_illustration(
-        db, current_user["org_id"], book_id, page_id, payload or {},
+        db,
+        current_user["org_id"],
+        book_id,
+        page_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -250,7 +255,11 @@ async def generate_variations(
     current_user: dict = Depends(get_current_user),
 ):
     results = await service.generate_illustration_variations(
-        db, current_user["org_id"], book_id, page_id, payload or {},
+        db,
+        current_user["org_id"],
+        book_id,
+        page_id,
+        payload or {},
     )
     return SuccessResponse(data=results)
 
@@ -268,7 +277,11 @@ async def upload_page_image(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.upload_page_image(
-        db, current_user["org_id"], book_id, page_id, file,
+        db,
+        current_user["org_id"],
+        book_id,
+        page_id,
+        file,
     )
     return SuccessResponse(data=result)
 
@@ -321,7 +334,11 @@ async def update_character(
     current_user: dict = Depends(get_current_user),
 ):
     char = await service.update_character(
-        db, current_user["org_id"], book_id, char_id, payload,
+        db,
+        current_user["org_id"],
+        book_id,
+        char_id,
+        payload,
     )
     return SuccessResponse(data=char)
 
@@ -338,7 +355,10 @@ async def delete_character(
     current_user: dict = Depends(get_current_user),
 ):
     deleted = await service.delete_character(
-        db, current_user["org_id"], book_id, char_id,
+        db,
+        current_user["org_id"],
+        book_id,
+        char_id,
     )
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
@@ -358,7 +378,10 @@ async def generate_character_references(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.generate_character_references(
-        db, current_user["org_id"], book_id, char_id,
+        db,
+        current_user["org_id"],
+        book_id,
+        char_id,
     )
     return SuccessResponse(data=result)
 
@@ -381,7 +404,10 @@ async def generate_story(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.generate_story(
-        db, current_user["org_id"], book_id, payload or {},
+        db,
+        current_user["org_id"],
+        book_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -454,7 +480,10 @@ async def translate_book(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.translate_book(
-        db, current_user["org_id"], book_id, payload,
+        db,
+        current_user["org_id"],
+        book_id,
+        payload,
     )
     return SuccessResponse(data=result)
 
@@ -476,7 +505,10 @@ async def export_book(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.export_book(
-        db, current_user["org_id"], book_id, payload or {},
+        db,
+        current_user["org_id"],
+        book_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -493,7 +525,10 @@ async def export_kindle(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.export_kindle(
-        db, current_user["org_id"], book_id, payload or {},
+        db,
+        current_user["org_id"],
+        book_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -510,7 +545,10 @@ async def device_preview(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.device_preview(
-        db, current_user["org_id"], book_id, payload or {},
+        db,
+        current_user["org_id"],
+        book_id,
+        payload or {},
     )
     return SuccessResponse(data=result)
 
@@ -555,6 +593,9 @@ async def reflow(
     current_user: dict = Depends(get_current_user),
 ):
     result = await service.reflow(
-        db, current_user["org_id"], book_id, payload,
+        db,
+        current_user["org_id"],
+        book_id,
+        payload,
     )
     return SuccessResponse(data=result)

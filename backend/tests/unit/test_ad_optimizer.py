@@ -1,7 +1,8 @@
 """Unit tests for the AdOptimizer (bid optimization engine)."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from app.modules.advertising.optimizer import (
     AdOptimizer,

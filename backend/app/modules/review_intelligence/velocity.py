@@ -65,10 +65,7 @@ def detect_trend(data_points: list[VelocityDataPoint]) -> VelocityTrend:
     slope = numerator / denominator
 
     # Normalize slope relative to mean
-    if y_mean > 0:
-        relative_slope = slope / y_mean
-    else:
-        relative_slope = slope
+    relative_slope = slope / y_mean if y_mean > 0 else slope
 
     if relative_slope > 0.1:
         return VelocityTrend.RISING
@@ -77,9 +74,7 @@ def detect_trend(data_points: list[VelocityDataPoint]) -> VelocityTrend:
     return VelocityTrend.STABLE
 
 
-def detect_anomalies(
-    data_points: list[VelocityDataPoint], z_threshold: float = 2.0
-) -> list[dict]:
+def detect_anomalies(data_points: list[VelocityDataPoint], z_threshold: float = 2.0) -> list[dict]:
     """Detect anomalies in review velocity using modified z-score method.
 
     Uses the median and MAD (Median Absolute Deviation) instead of mean/stdev
@@ -117,7 +112,7 @@ def detect_anomalies(
         spread = mad_scaled
 
     anomalies = []
-    for i, dp in enumerate(data_points):
+    for _i, dp in enumerate(data_points):
         z_score = (dp.review_count - center) / spread
         if abs(z_score) > z_threshold:
             anomalies.append(
@@ -173,15 +168,9 @@ async def compute_velocity_from_reviews(
         stmt = select(
             func.count(BookReview.id).label("review_count"),
             func.avg(BookReview.star_rating).label("avg_rating"),
-            func.count(
-                func.nullif(BookReview.sentiment == "positive", False)
-            ).label("positive_count"),
-            func.count(
-                func.nullif(BookReview.sentiment == "neutral", False)
-            ).label("neutral_count"),
-            func.count(
-                func.nullif(BookReview.sentiment == "negative", False)
-            ).label("negative_count"),
+            func.count(func.nullif(BookReview.sentiment == "positive", False)).label("positive_count"),
+            func.count(func.nullif(BookReview.sentiment == "neutral", False)).label("neutral_count"),
+            func.count(func.nullif(BookReview.sentiment == "negative", False)).label("negative_count"),
         ).where(
             and_(
                 BookReview.org_id == org_id,

@@ -19,6 +19,7 @@ from app.modules.style_cloning.schemas import (
 # Per-dimension similarity helpers
 # ---------------------------------------------------------------------------
 
+
 def _ratio_similarity(a: float, b: float, tolerance: float = 0.15) -> float:
     """Compare two values on a 0-1 scale where values within *tolerance*
     of each other score 1.0 and divergence reduces the score."""
@@ -42,6 +43,7 @@ def _bounded_similarity(a: float, b: float, max_diff: float) -> float:
 # ---------------------------------------------------------------------------
 # Sub-score calculators
 # ---------------------------------------------------------------------------
+
 
 def _vocabulary_score(profile: VocabularyMetrics, sample: VocabularyMetrics) -> tuple[float, list[str]]:
     feedback: list[str] = []
@@ -70,9 +72,13 @@ def _vocabulary_score(profile: VocabularyMetrics, sample: VocabularyMetrics) -> 
     scores.append(s)
     if s < 0.7:
         if sample.reading_level > profile.reading_level:
-            feedback.append(f"Reading level too high ({sample.reading_level:.1f} vs target {profile.reading_level:.1f}); simplify.")
+            feedback.append(
+                f"Reading level too high ({sample.reading_level:.1f} vs target {profile.reading_level:.1f}); simplify."
+            )
         else:
-            feedback.append(f"Reading level too low ({sample.reading_level:.1f} vs target {profile.reading_level:.1f}); use more complex vocabulary.")
+            feedback.append(
+                f"Reading level too low ({sample.reading_level:.1f} vs target {profile.reading_level:.1f}); use more complex vocabulary."
+            )
 
     # Average word length
     s = _bounded_similarity(profile.avg_word_length, sample.avg_word_length, 3.0)
@@ -207,6 +213,7 @@ _WEIGHTS = {
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def check_conformity(
     profile_fingerprint: VoiceFingerprint,

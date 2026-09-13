@@ -53,9 +53,7 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
     async def _process():
         async with async_session() as db:
             service = MarketingService(db)
-            sequence = await service.get_email_sequence(
-                UUID(sequence_id), UUID(org_id)
-            )
+            sequence = await service.get_email_sequence(UUID(sequence_id), UUID(org_id))
             if not sequence:
                 logger.warning(f"Sequence {sequence_id} not found")
                 return {"status": "not_found"}
@@ -87,14 +85,10 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
                         template.send_status = EmailSendStatus.SENT
                         template.sent_at = datetime.now(UTC)
                         sent_count += 1
-                        logger.info(
-                            f"Sent email '{template.subject}' for sequence {sequence_id}"
-                        )
+                        logger.info(f"Sent email '{template.subject}' for sequence {sequence_id}")
                     else:
                         template.send_status = EmailSendStatus.FAILED
-                        logger.error(
-                            f"Email '{template.subject}' failed for sequence {sequence_id}"
-                        )
+                        logger.error(f"Email '{template.subject}' failed for sequence {sequence_id}")
 
             sequence.sent_count += sent_count
             await db.commit()
@@ -103,14 +97,13 @@ def send_scheduled_emails(self, sequence_id: str, org_id: str) -> dict:
 
     try:
         loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error(f"Failed to send scheduled emails: {exc}", exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 
@@ -172,10 +165,7 @@ def send_social_post_reminders(self, org_id: str) -> dict:
                         data={"post_id": str(post.id), "platform": post.platform.value},
                     ),
                 )
-                logger.info(
-                    f"Reminder: Social post for {post.platform.value} "
-                    f"scheduled at {post.scheduled_at}"
-                )
+                logger.info(f"Reminder: Social post for {post.platform.value} " f"scheduled at {post.scheduled_at}")
                 reminders_sent += 1
 
             await db.commit()
@@ -183,14 +173,13 @@ def send_social_post_reminders(self, org_id: str) -> dict:
 
     try:
         loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error(f"Failed to send social post reminders: {exc}", exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 
@@ -230,8 +219,7 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
                     template_name="welcome",
                     context={"name": recipient_info.get("name", "Reader")},
                     subject_override=(
-                        f"Friendly reminder: We'd love your review "
-                        f"({recipient_info['days_since_send']} days ago)"
+                        f"Friendly reminder: We'd love your review " f"({recipient_info['days_since_send']} days ago)"
                     ),
                 )
                 if ok:
@@ -250,14 +238,13 @@ def send_arc_follow_ups(self, org_id: str, days_since_send: int = 7) -> dict:
 
     try:
         loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error(f"Failed to send ARC follow-ups: {exc}", exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     finally:
         loop.close()
 
@@ -301,8 +288,7 @@ def generate_launch_plan_async(
 
     loop = asyncio.new_event_loop()
     try:
-        result = loop.run_until_complete(_process())
-        return result
+        return loop.run_until_complete(_process())
     except Exception as exc:
         logger.error(f"Failed to generate launch plan: {exc}", exc_info=True)
         return {"status": "error", "error": str(exc)}

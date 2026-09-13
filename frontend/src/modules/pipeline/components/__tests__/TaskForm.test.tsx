@@ -10,11 +10,11 @@ import { TaskForm } from "../TaskForm";
 // Mock the validation module — use the real implementation so we test actual
 // Zod validation logic, but we need to make sure the module resolves.
 jest.mock("@/lib/validation", () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { z } = require("zod");
+  type ZodSchema<T> = import("zod").ZodSchema<T>;
 
   function validateForm<T>(
-    schema: z.ZodSchema<T>,
+    schema: ZodSchema<T>,
     data: unknown,
   ): { success: boolean; data?: T; errors?: Record<string, string> } {
     const result = schema.safeParse(data);

@@ -135,9 +135,7 @@ class LLMOrchestrationService:
     # Provider management
     # ------------------------------------------------------------------
 
-    def register_provider(
-        self, name: ProviderName, provider: BaseLLMProvider
-    ) -> None:
+    def register_provider(self, name: ProviderName, provider: BaseLLMProvider) -> None:
         """Register an LLM provider implementation."""
         self._orchestrator.register_provider(name, provider)
 
@@ -173,9 +171,7 @@ class LLMOrchestrationService:
 
         return _result_to_completion_response(result)
 
-    async def complete_stream(
-        self, request: CompletionRequest
-    ) -> AsyncIterator[LLMStreamChunk]:
+    async def complete_stream(self, request: CompletionRequest) -> AsyncIterator[LLMStreamChunk]:
         """Stream a single-turn completion through the orchestrator.
 
         Yields :class:`LLMStreamChunk` objects. Streaming bypasses caching
@@ -238,9 +234,7 @@ class LLMOrchestrationService:
 
         return _result_to_chat_response(result)
 
-    async def chat_stream(
-        self, request: ChatRequest
-    ) -> AsyncIterator[LLMStreamChunk]:
+    async def chat_stream(self, request: ChatRequest) -> AsyncIterator[LLMStreamChunk]:
         """Stream a multi-turn chat completion.
 
         Yields :class:`LLMStreamChunk` objects.
@@ -300,16 +294,12 @@ class LLMOrchestrationService:
     # Usage statistics
     # ------------------------------------------------------------------
 
-    def get_usage_stats(
-        self, org_id: str, model_id: str | None = None
-    ) -> UsageStats:
+    def get_usage_stats(self, org_id: str, model_id: str | None = None) -> UsageStats:
         """Return aggregated usage statistics for an organization.
 
         This is a synchronous operation backed by the in-memory cost tracker.
         """
-        summary = self._cost_tracker.get_usage_summary(
-            org_id=org_id, model_id=model_id
-        )
+        summary = self._cost_tracker.get_usage_summary(org_id=org_id, model_id=model_id)
 
         return UsageStats(
             org_id=summary["org_id"],
@@ -326,9 +316,7 @@ class LLMOrchestrationService:
     # Quality assessment (standalone)
     # ------------------------------------------------------------------
 
-    def assess_quality(
-        self, content: str, task_type: str | None = None
-    ) -> QualityReportSchema:
+    def assess_quality(self, content: str, task_type: str | None = None) -> QualityReportSchema:
         """Run a standalone quality assessment on arbitrary text.
 
         Useful for evaluating content that was not generated through the

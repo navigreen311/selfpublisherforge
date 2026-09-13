@@ -81,7 +81,7 @@ class _WorkingGrid:
         dr, dc = (0, 1) if direction == "across" else (1, 0)
 
         has_intersection = False
-        for i, (r, c, ch) in enumerate(cells):
+        for _i, (r, c, ch) in enumerate(cells):
             existing = self.get(r, c)
             if existing is not None:
                 if existing != ch:
@@ -113,10 +113,7 @@ class _WorkingGrid:
             return False
 
         # First word doesn't need intersection; all subsequent do
-        if self.placed and not has_intersection:
-            return False
-
-        return True
+        return not (self.placed and not has_intersection)
 
     def place(self, word: str, row: int, col: int, direction: str) -> _PlacedWord:
         pw = _PlacedWord(word, row, col, direction)
@@ -145,9 +142,7 @@ class _WorkingGrid:
         return (min(rows), min(cols), max(rows), max(cols))
 
 
-def _find_placements(
-    grid: _WorkingGrid, word: str
-) -> list[tuple[int, int, str, int]]:
+def _find_placements(grid: _WorkingGrid, word: str) -> list[tuple[int, int, str, int]]:
     """Find all valid placements for *word*, returning (row, col, direction, intersections)."""
     candidates: list[tuple[int, int, str, int]] = []
 
@@ -209,9 +204,7 @@ def _difficulty_score(
     black_squares = total_cells - filled_cells
     black_density = black_squares / total_cells if total_cells > 0 else 0
 
-    avg_word_len = (
-        sum(len(pw.word) for pw in placed) / len(placed) if placed else 0
-    )
+    avg_word_len = sum(len(pw.word) for pw in placed) / len(placed) if placed else 0
     # Normalise avg word length: 3=0, 15=100
     word_len_score = min(100, max(0, (avg_word_len - 3) / 12 * 100))
 
@@ -257,10 +250,7 @@ def generate_crossword(
     dict with keys: grid, size, words, solution, across_clues, down_clues,
                     difficulty_score, content_hash, unplaced_words
     """
-    if seed is not None:
-        rng = random.Random(seed)
-    else:
-        rng = random.Random()
+    rng = random.Random(seed) if seed is not None else random.Random()
 
     clean_words = _sanitize_words(words)
     if not clean_words:

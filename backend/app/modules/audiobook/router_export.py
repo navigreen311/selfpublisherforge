@@ -51,13 +51,12 @@ async def export_audiobook(
             detail="Audiobook not found for this project.",
         )
 
-    export = await service_export.create_export(
+    return await service_export.create_export(
         db,
         audiobook_id=audiobook.id,
         format_=body.format,
         platform=body.platform,
     )
-    return export
 
 
 @router.get(
@@ -168,5 +167,4 @@ async def download_export(
             detail="Export file not available.",
         )
 
-    download_info = await service_export.generate_download_url(export)
-    return download_info
+    return await service_export.generate_download_url(export)

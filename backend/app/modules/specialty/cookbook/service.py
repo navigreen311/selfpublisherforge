@@ -5,10 +5,12 @@ plus AI-powered recipe generation, nutrition calculation, recipe scaling,
 meal plan auto-fill, shopping list generation, index generation,
 front matter generation, and export/preflight.
 """
+
 from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid as _uuid
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -18,7 +20,7 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppException, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.modules.specialty.models.cookbook import (
     Cookbook,
     CookbookChapter,
@@ -46,31 +48,33 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     fully configured (e.g. during development or testing).
     """
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt,
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=max_tokens),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=max_tokens),
         )
         response = await svc.complete(request)
         return response.content
     except Exception:
         logger.warning("LLM orchestration unavailable; returning structured fallback", exc_info=True)
-        return json.dumps({
-            "status": "service_unavailable",
-            "message": (
-                "The AI text-generation service is currently unavailable. "
-                "A manual template has been provided below."
-            ),
-        })
+        return json.dumps(
+            {
+                "status": "service_unavailable",
+                "message": (
+                    "The AI text-generation service is currently unavailable. "
+                    "A manual template has been provided below."
+                ),
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -85,15 +89,15 @@ def _cookbook_to_dict(cb: Cookbook) -> dict[str, Any]:
         "title": cb.title,
         "subtitle": cb.subtitle,
         "author": cb.author,
-        "cookbook_type": cb.cookbook_type.value if cb.cookbook_type else None,
-        "status": cb.status.value if cb.status else None,
+        "cookbook_type": cb.cookbook_type,
+        "status": cb.status,
         "cuisine": cb.cuisine,
         "target_audience": cb.target_audience,
         "description": cb.description,
-        "chapter_organization": cb.chapter_organization.value if cb.chapter_organization else None,
-        "recipe_layout": cb.recipe_layout.value if cb.recipe_layout else None,
-        "illustration_method": cb.illustration_method.value if cb.illustration_method else None,
-        "interior_type": cb.interior_type.value if cb.interior_type else None,
+        "chapter_organization": cb.chapter_organization,
+        "recipe_layout": cb.recipe_layout,
+        "illustration_method": cb.illustration_method,
+        "interior_type": cb.interior_type,
         "trim_size": cb.trim_size,
         "page_count": cb.page_count,
         "include_nutrition": cb.include_nutrition,
@@ -117,7 +121,7 @@ def _chapter_to_dict(ch: CookbookChapter) -> dict[str, Any]:
         "description": ch.description,
         "introduction_text": ch.introduction_text,
         "chapter_order": ch.chapter_order,
-        "chapter_type": ch.chapter_type.value if ch.chapter_type else None,
+        "chapter_type": ch.chapter_type,
         "created_at": ch.created_at.isoformat() if ch.created_at else None,
         "updated_at": ch.updated_at.isoformat() if ch.updated_at else None,
     }
@@ -129,7 +133,7 @@ def _recipe_to_dict(r: Recipe) -> dict[str, Any]:
         "chapter_id": str(r.chapter_id),
         "title": r.title,
         "description": r.description,
-        "difficulty": r.difficulty.value if r.difficulty else None,
+        "difficulty": r.difficulty,
         "prep_time_minutes": r.prep_time_minutes,
         "cook_time_minutes": r.cook_time_minutes,
         "total_time_minutes": r.total_time_minutes,
@@ -158,7 +162,7 @@ def _meal_plan_to_dict(mp: MealPlan) -> dict[str, Any]:
         "cookbook_id": str(mp.cookbook_id),
         "title": mp.title,
         "description": mp.description,
-        "plan_type": mp.plan_type.value if mp.plan_type else None,
+        "plan_type": mp.plan_type,
         "days": mp.days or [],
         "total_calories_target": mp.total_calories_target,
         "dietary_goals": mp.dietary_goals or {},
@@ -168,9 +172,7 @@ def _meal_plan_to_dict(mp: MealPlan) -> dict[str, Any]:
     }
 
 
-async def _get_cookbook_or_404(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> Cookbook:
+async def _get_cookbook_or_404(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> Cookbook:
     stmt = select(Cookbook).where(
         Cookbook.id == cookbook_id,
         Cookbook.org_id == org_id,
@@ -183,13 +185,20 @@ async def _get_cookbook_or_404(
     return cb
 
 
-async def _get_chapter_or_404(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID
-) -> CookbookChapter:
-    stmt = select(CookbookChapter).where(
-        CookbookChapter.id == chapter_id,
-        CookbookChapter.cookbook_id == cookbook_id,
-        CookbookChapter.deleted_at.is_(None),
+async def _get_chapter_or_404(db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID) -> CookbookChapter:
+    # Only Cookbook carries org_id, so tenant scoping has to join through it.
+    # Filtering on the caller-supplied cookbook_id alone let any authenticated
+    # user reach another organisation's chapters.
+    stmt = (
+        select(CookbookChapter)
+        .join(Cookbook, CookbookChapter.cookbook_id == Cookbook.id)
+        .where(
+            CookbookChapter.id == chapter_id,
+            CookbookChapter.cookbook_id == cookbook_id,
+            CookbookChapter.deleted_at.is_(None),
+            Cookbook.org_id == org_id,
+            Cookbook.deleted_at.is_(None),
+        )
     )
     result = await db.execute(stmt)
     ch = result.scalar_one_or_none()
@@ -198,12 +207,21 @@ async def _get_chapter_or_404(
     return ch
 
 
-async def _get_recipe_or_404(
-    db: AsyncSession, org_id: UUID, recipe_id: UUID
-) -> Recipe:
-    stmt = select(Recipe).where(
-        Recipe.id == recipe_id,
-        Recipe.deleted_at.is_(None),
+async def _get_recipe_or_404(db: AsyncSession, org_id: UUID, recipe_id: UUID) -> Recipe:
+    # Recipe -> CookbookChapter -> Cookbook is the only path to org_id. Without
+    # this join the lookup matched on recipe id alone, so a recipe UUID from
+    # any tenant resolved for any caller.
+    stmt = (
+        select(Recipe)
+        .join(CookbookChapter, Recipe.chapter_id == CookbookChapter.id)
+        .join(Cookbook, CookbookChapter.cookbook_id == Cookbook.id)
+        .where(
+            Recipe.id == recipe_id,
+            Recipe.deleted_at.is_(None),
+            CookbookChapter.deleted_at.is_(None),
+            Cookbook.org_id == org_id,
+            Cookbook.deleted_at.is_(None),
+        )
     )
     result = await db.execute(stmt)
     r = result.scalar_one_or_none()
@@ -212,13 +230,17 @@ async def _get_recipe_or_404(
     return r
 
 
-async def _get_meal_plan_or_404(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, plan_id: UUID
-) -> MealPlan:
-    stmt = select(MealPlan).where(
-        MealPlan.id == plan_id,
-        MealPlan.cookbook_id == cookbook_id,
-        MealPlan.deleted_at.is_(None),
+async def _get_meal_plan_or_404(db: AsyncSession, org_id: UUID, cookbook_id: UUID, plan_id: UUID) -> MealPlan:
+    stmt = (
+        select(MealPlan)
+        .join(Cookbook, MealPlan.cookbook_id == Cookbook.id)
+        .where(
+            MealPlan.id == plan_id,
+            MealPlan.cookbook_id == cookbook_id,
+            MealPlan.deleted_at.is_(None),
+            Cookbook.org_id == org_id,
+            Cookbook.deleted_at.is_(None),
+        )
     )
     result = await db.execute(stmt)
     mp = result.scalar_one_or_none()
@@ -248,14 +270,12 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
     total_result = await db.execute(total_stmt)
     total_cookbooks = total_result.scalar() or 0
 
-    in_progress_stmt = select(func.count()).select_from(Cookbook).where(
-        *base, Cookbook.status == BookStatus.in_progress
+    in_progress_stmt = (
+        select(func.count()).select_from(Cookbook).where(*base, Cookbook.status == BookStatus.in_progress)
     )
     in_progress_result = await db.execute(in_progress_stmt)
 
-    published_stmt = select(func.count()).select_from(Cookbook).where(
-        *base, Cookbook.status == BookStatus.published
-    )
+    published_stmt = select(func.count()).select_from(Cookbook).where(*base, Cookbook.status == BookStatus.published)
     published_result = await db.execute(published_stmt)
 
     cb_ids_stmt = select(Cookbook.id).where(*base)
@@ -263,15 +283,23 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
         CookbookChapter.cookbook_id.in_(cb_ids_stmt),
         CookbookChapter.deleted_at.is_(None),
     )
-    recipe_count_stmt = select(func.count()).select_from(Recipe).where(
-        Recipe.chapter_id.in_(ch_ids_stmt),
-        Recipe.deleted_at.is_(None),
+    recipe_count_stmt = (
+        select(func.count())
+        .select_from(Recipe)
+        .where(
+            Recipe.chapter_id.in_(ch_ids_stmt),
+            Recipe.deleted_at.is_(None),
+        )
     )
     recipe_result = await db.execute(recipe_count_stmt)
 
-    chapter_count_stmt = select(func.count()).select_from(CookbookChapter).where(
-        CookbookChapter.cookbook_id.in_(cb_ids_stmt),
-        CookbookChapter.deleted_at.is_(None),
+    chapter_count_stmt = (
+        select(func.count())
+        .select_from(CookbookChapter)
+        .where(
+            CookbookChapter.cookbook_id.in_(cb_ids_stmt),
+            CookbookChapter.deleted_at.is_(None),
+        )
     )
     chapter_result = await db.execute(chapter_count_stmt)
 
@@ -304,9 +332,13 @@ async def list_cookbooks(
         Cookbook.org_id == org_id,
         Cookbook.deleted_at.is_(None),
     )
-    count_stmt = select(func.count()).select_from(Cookbook).where(
-        Cookbook.org_id == org_id,
-        Cookbook.deleted_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(Cookbook)
+        .where(
+            Cookbook.org_id == org_id,
+            Cookbook.deleted_at.is_(None),
+        )
     )
 
     if status_filter:
@@ -336,9 +368,7 @@ async def list_cookbooks(
     }
 
 
-async def create_cookbook(
-    db: AsyncSession, org_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def create_cookbook(db: AsyncSession, org_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Create a new cookbook."""
     cb = Cookbook(
         org_id=org_id,
@@ -370,27 +400,37 @@ async def create_cookbook(
     return _cookbook_to_dict(cb)
 
 
-async def get_cookbook(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> dict[str, Any]:
+async def get_cookbook(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> dict[str, Any]:
     """Return a single cookbook by ID."""
     cb = await _get_cookbook_or_404(db, org_id, cookbook_id)
     return _cookbook_to_dict(cb)
 
 
-async def update_cookbook(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def update_cookbook(db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Update a cookbook."""
     cb = await _get_cookbook_or_404(db, org_id, cookbook_id)
     allowed = {
-        "title", "subtitle", "author", "cookbook_type", "status",
-        "cuisine", "target_audience", "description",
-        "chapter_organization", "recipe_layout", "illustration_method",
-        "interior_type", "trim_size", "page_count",
-        "include_nutrition", "include_meal_plans", "include_shopping_lists",
-        "include_index", "include_conversion_charts",
-        "dietary_tags", "metadata_settings",
+        "title",
+        "subtitle",
+        "author",
+        "cookbook_type",
+        "status",
+        "cuisine",
+        "target_audience",
+        "description",
+        "chapter_organization",
+        "recipe_layout",
+        "illustration_method",
+        "interior_type",
+        "trim_size",
+        "page_count",
+        "include_nutrition",
+        "include_meal_plans",
+        "include_shopping_lists",
+        "include_index",
+        "include_conversion_charts",
+        "dietary_tags",
+        "metadata_settings",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -400,9 +440,7 @@ async def update_cookbook(
     return _cookbook_to_dict(cb)
 
 
-async def delete_cookbook(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> bool:
+async def delete_cookbook(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> bool:
     """Soft-delete a cookbook."""
     cb = await _get_cookbook_or_404(db, org_id, cookbook_id)
     cb.deleted_at = datetime.now(UTC)
@@ -415,9 +453,7 @@ async def delete_cookbook(
 # ---------------------------------------------------------------------------
 
 
-async def list_chapters(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> list[dict]:
+async def list_chapters(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> list[dict]:
     """Return all chapters for a cookbook, ordered by sort_order."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
     stmt = (
@@ -432,9 +468,7 @@ async def list_chapters(
     return [_chapter_to_dict(ch) for ch in result.scalars().all()]
 
 
-async def create_chapter(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]
-) -> dict:
+async def create_chapter(db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]) -> dict:
     """Create a new chapter in a cookbook."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
 
@@ -465,7 +499,10 @@ async def create_chapter(
 
 
 async def update_chapter(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID,
+    db: AsyncSession,
+    org_id: UUID,
+    cookbook_id: UUID,
+    chapter_id: UUID,
     payload: dict[str, Any],
 ) -> dict:
     """Update a chapter."""
@@ -479,9 +516,7 @@ async def update_chapter(
     return _chapter_to_dict(ch)
 
 
-async def delete_chapter(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID
-) -> bool:
+async def delete_chapter(db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID) -> bool:
     """Soft-delete a chapter."""
     ch = await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
     ch.deleted_at = datetime.now(UTC)
@@ -490,9 +525,7 @@ async def delete_chapter(
     return True
 
 
-async def reorder_chapters(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_ids: list[UUID]
-) -> list[dict]:
+async def reorder_chapters(db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_ids: list[UUID]) -> list[dict]:
     """Reorder chapters by assigning new sort_order based on the given ID order."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
     for idx, cid in enumerate(chapter_ids, start=1):
@@ -513,10 +546,10 @@ async def reorder_chapters(
 # ---------------------------------------------------------------------------
 
 
-async def list_recipes(
-    db: AsyncSession, org_id: UUID, chapter_id: UUID
-) -> list[dict]:
+async def list_recipes(db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID) -> list[dict]:
     """Return all recipes for a chapter, ordered by sort_order."""
+    # Establishes that the chapter belongs to a cookbook this org owns.
+    await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
     stmt = (
         select(Recipe)
         .where(
@@ -530,17 +563,12 @@ async def list_recipes(
 
 
 async def create_recipe(
-    db: AsyncSession, org_id: UUID, chapter_id: UUID, payload: dict[str, Any]
+    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID, payload: dict[str, Any]
 ) -> dict:
     """Create a new recipe in a chapter."""
-    ch_stmt = select(CookbookChapter).where(
-        CookbookChapter.id == chapter_id,
-        CookbookChapter.deleted_at.is_(None),
-    )
-    ch_result = await db.execute(ch_stmt)
-    chapter = ch_result.scalar_one_or_none()
-    if chapter is None:
-        raise NotFoundError("CookbookChapter", f"Chapter {chapter_id} not found")
+    # The unscoped lookup this replaces let a caller add a recipe to another
+    # organisation's chapter.
+    chapter = await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
 
     # Auto-assign recipe_order if not provided
     if "recipe_order" not in payload:
@@ -583,25 +611,36 @@ async def create_recipe(
     return _recipe_to_dict(r)
 
 
-async def get_recipe(
-    db: AsyncSession, org_id: UUID, recipe_id: UUID
-) -> dict:
+async def get_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID) -> dict:
     """Return a single recipe by ID."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
     return _recipe_to_dict(r)
 
 
-async def update_recipe(
-    db: AsyncSession, org_id: UUID, recipe_id: UUID, payload: dict[str, Any]
-) -> dict:
+async def update_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID, payload: dict[str, Any]) -> dict:
     """Update a recipe."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
     allowed = {
-        "title", "description", "difficulty", "prep_time_minutes",
-        "cook_time_minutes", "total_time_minutes", "servings", "recipe_order",
-        "ingredients", "instructions", "nutrition", "notes", "tips",
-        "variations", "tags", "dietary_flags", "image_url", "image_prompt",
-        "source", "scaling_factor",
+        "title",
+        "description",
+        "difficulty",
+        "prep_time_minutes",
+        "cook_time_minutes",
+        "total_time_minutes",
+        "servings",
+        "recipe_order",
+        "ingredients",
+        "instructions",
+        "nutrition",
+        "notes",
+        "tips",
+        "variations",
+        "tags",
+        "dietary_flags",
+        "image_url",
+        "image_prompt",
+        "source",
+        "scaling_factor",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -611,9 +650,7 @@ async def update_recipe(
     return _recipe_to_dict(r)
 
 
-async def delete_recipe(
-    db: AsyncSession, org_id: UUID, recipe_id: UUID
-) -> bool:
+async def delete_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID) -> bool:
     """Soft-delete a recipe."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
     ch_stmt = select(CookbookChapter.cookbook_id).where(CookbookChapter.id == r.chapter_id)
@@ -629,9 +666,12 @@ async def delete_recipe(
 
 
 async def reorder_recipes(
-    db: AsyncSession, org_id: UUID, chapter_id: UUID, recipe_ids: list[UUID]
+    db: AsyncSession, org_id: UUID, cookbook_id: UUID, chapter_id: UUID, recipe_ids: list[UUID]
 ) -> list[dict]:
     """Reorder recipes by assigning new sort_order based on the given ID order."""
+    # These are writes; without this the UPDATE matched on recipe/chapter id
+    # alone and could reorder another organisation's recipes.
+    await _get_chapter_or_404(db, org_id, cookbook_id, chapter_id)
     for idx, rid in enumerate(recipe_ids, start=1):
         await db.execute(
             update(Recipe)
@@ -642,7 +682,7 @@ async def reorder_recipes(
             .values(recipe_order=idx)
         )
     await db.flush()
-    return await list_recipes(db, org_id, chapter_id)
+    return await list_recipes(db, org_id, cookbook_id, chapter_id)
 
 
 # ---------------------------------------------------------------------------
@@ -650,9 +690,7 @@ async def reorder_recipes(
 # ---------------------------------------------------------------------------
 
 
-async def generate_recipe(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def generate_recipe(db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """AI-generate a recipe based on constraints (cuisine, dietary, difficulty, etc.).
 
     payload: {"cuisine": "italian", "difficulty": "easy",
@@ -667,10 +705,7 @@ async def generate_recipe(
     dietary = payload.get("dietary", [])
     description = payload.get("description", "a delicious dish")
 
-    system_prompt = (
-        "You are a professional chef and cookbook author. "
-        "Generate recipes in structured JSON format."
-    )
+    system_prompt = "You are a professional chef and cookbook author. " "Generate recipes in structured JSON format."
     prompt = (
         f"Create a {difficulty} {cuisine} recipe for: {description}.\n"
         f"Dietary requirements: {', '.join(dietary) if dietary else 'none'}.\n"
@@ -735,15 +770,12 @@ async def generate_recipe_image(
         "status": "pending_generation",
         "style": style,
         "message": (
-            "The image generation service has been queued. "
-            "The image will be available once processing is complete."
+            "The image generation service has been queued. " "The image will be available once processing is complete."
         ),
     }
 
 
-async def improve_recipe(
-    db: AsyncSession, org_id: UUID, recipe_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def improve_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """AI-improve/rewrite a recipe's instructions for clarity."""
     # TODO: integrate with LLM service
     r = await _get_recipe_or_404(db, org_id, recipe_id)
@@ -751,10 +783,7 @@ async def improve_recipe(
 
     focus = payload.get("focus", "clarity")  # clarity, brevity, detail, beginner-friendly
 
-    system_prompt = (
-        "You are a professional recipe editor. Rewrite the recipe instructions "
-        f"with a focus on {focus}."
-    )
+    system_prompt = "You are a professional recipe editor. Rewrite the recipe instructions " f"with a focus on {focus}."
     prompt = (
         f"Recipe: {r.title}\n"
         f"Current instructions: {json.dumps(r.instructions or [])}\n"
@@ -779,9 +808,7 @@ async def improve_recipe(
 # ---------------------------------------------------------------------------
 
 
-async def calculate_nutrition(
-    db: AsyncSession, org_id: UUID, recipe_id: UUID
-) -> dict[str, Any]:
+async def calculate_nutrition(db: AsyncSession, org_id: UUID, recipe_id: UUID) -> dict[str, Any]:
     """Calculate nutrition facts from ingredients list.
 
     In production this would integrate with a nutrition API (e.g. USDA FoodData Central).
@@ -817,9 +844,7 @@ async def calculate_nutrition(
     }
 
 
-async def batch_calculate_nutrition(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> dict[str, Any]:
+async def batch_calculate_nutrition(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> dict[str, Any]:
     """Calculate nutrition for all recipes in a cookbook."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
 
@@ -852,9 +877,19 @@ async def batch_calculate_nutrition(
 # ---------------------------------------------------------------------------
 
 
-async def scale_recipe(
-    db: AsyncSession, org_id: UUID, recipe_id: UUID, factor: float
-) -> dict[str, Any]:
+def _servings_count(raw: str | None, default: int = 4) -> int:
+    """Read a serving count out of the free-text `servings` column.
+
+    The column is String(50) and holds values like "4", "4-6" or "Serves 8",
+    so callers that treated it as a number raised TypeError.
+    """
+    if not raw:
+        return default
+    digits = re.search(r"\d+", str(raw))
+    return int(digits.group()) if digits else default
+
+
+async def scale_recipe(db: AsyncSession, org_id: UUID, recipe_id: UUID, factor: float) -> dict[str, Any]:
     """Scale a recipe's ingredients by a factor (e.g., 2.0 = double)."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
     ingredients = r.ingredients or []
@@ -862,11 +897,11 @@ async def scale_recipe(
     scaled_ingredients = []
     for ing in ingredients:
         scaled = dict(ing)
-        if "amount" in scaled and isinstance(scaled["amount"], (int, float)):
+        if "amount" in scaled and isinstance(scaled["amount"], int | float):
             scaled["amount"] = round(scaled["amount"] * factor, 2)
         scaled_ingredients.append(scaled)
 
-    original_servings = r.servings or 4
+    original_servings = _servings_count(r.servings)
     new_servings = round(original_servings * factor)
 
     return {
@@ -885,9 +920,7 @@ async def scale_recipe(
 # ---------------------------------------------------------------------------
 
 
-async def list_meal_plans(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> list[dict]:
+async def list_meal_plans(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> list[dict]:
     """Return all meal plans for a cookbook."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
     stmt = (
@@ -902,9 +935,7 @@ async def list_meal_plans(
     return [_meal_plan_to_dict(mp) for mp in result.scalars().all()]
 
 
-async def create_meal_plan(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]
-) -> dict:
+async def create_meal_plan(db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]) -> dict:
     """Create a new meal plan."""
     await _get_cookbook_or_404(db, org_id, cookbook_id)
     mp = MealPlan(
@@ -924,14 +955,22 @@ async def create_meal_plan(
 
 
 async def update_meal_plan(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, plan_id: UUID,
+    db: AsyncSession,
+    org_id: UUID,
+    cookbook_id: UUID,
+    plan_id: UUID,
     payload: dict[str, Any],
 ) -> dict:
     """Update a meal plan."""
     mp = await _get_meal_plan_or_404(db, org_id, cookbook_id, plan_id)
     allowed = {
-        "title", "description", "plan_type", "days",
-        "total_calories_target", "dietary_goals", "shopping_list",
+        "title",
+        "description",
+        "plan_type",
+        "days",
+        "total_calories_target",
+        "dietary_goals",
+        "shopping_list",
     }
     for key, value in payload.items():
         if key in allowed:
@@ -941,9 +980,7 @@ async def update_meal_plan(
     return _meal_plan_to_dict(mp)
 
 
-async def delete_meal_plan(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, plan_id: UUID
-) -> bool:
+async def delete_meal_plan(db: AsyncSession, org_id: UUID, cookbook_id: UUID, plan_id: UUID) -> bool:
     """Soft-delete a meal plan."""
     mp = await _get_meal_plan_or_404(db, org_id, cookbook_id, plan_id)
     mp.deleted_at = datetime.now(UTC)
@@ -952,7 +989,10 @@ async def delete_meal_plan(
 
 
 async def auto_fill_meal_plan(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, plan_id: UUID,
+    db: AsyncSession,
+    org_id: UUID,
+    cookbook_id: UUID,
+    plan_id: UUID,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
     """AI auto-fill a meal plan based on dietary goals and available recipes.
@@ -1010,9 +1050,7 @@ async def auto_fill_meal_plan(
 # ---------------------------------------------------------------------------
 
 
-async def generate_shopping_list(
-    db: AsyncSession, org_id: UUID, plan_id: UUID
-) -> dict[str, Any]:
+async def generate_shopping_list(db: AsyncSession, org_id: UUID, plan_id: UUID) -> dict[str, Any]:
     """Generate a consolidated shopping list from a meal plan.
 
     Aggregates ingredients across all recipes, combines duplicates,
@@ -1042,7 +1080,7 @@ async def generate_shopping_list(
             r = await _get_recipe_or_404(db, org_id, UUID(rid))
         except NotFoundError:
             continue
-        for ing in (r.ingredients or []):
+        for ing in r.ingredients or []:
             key = ing.get("name", "").lower().strip()
             if not key:
                 continue
@@ -1051,8 +1089,7 @@ async def generate_shopping_list(
                     aggregated[key]["amount"] += ing.get("amount", 0)
                 else:
                     aggregated[key]["notes"] = (
-                        aggregated[key].get("notes", "") +
-                        f"; also {ing.get('amount', '')} {ing.get('unit', '')}"
+                        aggregated[key].get("notes", "") + f"; also {ing.get('amount', '')} {ing.get('unit', '')}"
                     )
             else:
                 aggregated[key] = {
@@ -1067,10 +1104,7 @@ async def generate_shopping_list(
     for item in aggregated.values():
         by_category[item["category"]].append(item)
 
-    categories = [
-        {"category": cat, "items": items}
-        for cat, items in sorted(by_category.items())
-    ]
+    categories = [{"category": cat, "items": items} for cat, items in sorted(by_category.items())]
 
     return {
         "plan_id": str(plan_id),
@@ -1086,13 +1120,13 @@ async def generate_recipe_shopping_list(
     """Generate a shopping list for a single recipe."""
     r = await _get_recipe_or_404(db, org_id, recipe_id)
 
-    original_servings = r.servings or 4
+    original_servings = _servings_count(r.servings)
     factor = servings / original_servings if original_servings else 1
 
     items = []
-    for ing in (r.ingredients or []):
+    for ing in r.ingredients or []:
         item = dict(ing)
-        if "amount" in item and isinstance(item["amount"], (int, float)):
+        if "amount" in item and isinstance(item["amount"], int | float):
             item["amount"] = round(item["amount"] * factor, 2)
         items.append(item)
 
@@ -1100,10 +1134,7 @@ async def generate_recipe_shopping_list(
     for item in items:
         by_category[item.get("category", "other")].append(item)
 
-    categories = [
-        {"category": cat, "items": cat_items}
-        for cat, cat_items in sorted(by_category.items())
-    ]
+    categories = [{"category": cat, "items": cat_items} for cat, cat_items in sorted(by_category.items())]
 
     return {
         "recipe_id": str(recipe_id),
@@ -1119,16 +1150,14 @@ async def generate_recipe_shopping_list(
 # ---------------------------------------------------------------------------
 
 
-async def generate_index(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> dict[str, Any]:
+async def generate_index(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> dict[str, Any]:
     """Generate a recipe index (alphabetical, by ingredient, by category)."""
     cb = await _get_cookbook_or_404(db, org_id, cookbook_id)
     chapters = await list_chapters(db, org_id, cookbook_id)
 
     all_recipes: list[dict] = []
     for ch in chapters:
-        recipes = await list_recipes(db, org_id, UUID(ch["id"]))
+        recipes = await list_recipes(db, org_id, cookbook_id, UUID(ch["id"]))
         for r in recipes:
             r["chapter_title"] = ch["title"]
         all_recipes.extend(recipes)
@@ -1176,12 +1205,10 @@ async def generate_front_matter(
     author_bio = payload.get("author_bio", cb.author or "the author")
     inspiration = payload.get("cookbook_inspiration", cb.description or "")
 
-    system_prompt = (
-        "You are a professional cookbook editor. Write engaging front matter sections."
-    )
+    system_prompt = "You are a professional cookbook editor. Write engaging front matter sections."
     prompt = (
         f"Write front matter for a cookbook titled '{cb.title}'.\n"
-        f"Type: {cb.cookbook_type.value if cb.cookbook_type else 'general'}\n"
+        f"Type: {cb.cookbook_type}\n"
         f"Cuisine: {cb.cuisine or 'various'}\n"
         f"Author: {author_bio}\n"
         f"Inspiration: {inspiration}\n"
@@ -1193,11 +1220,13 @@ async def generate_front_matter(
 
     generated_sections = []
     for section in sections:
-        generated_sections.append({
-            "section": section,
-            "title": section.replace("_", " ").title(),
-            "content": raw if len(sections) == 1 else f"[{section} content from AI]",
-        })
+        generated_sections.append(
+            {
+                "section": section,
+                "title": section.replace("_", " ").title(),
+                "content": raw if len(sections) == 1 else f"[{section} content from AI]",
+            }
+        )
 
     return {
         "cookbook_id": str(cookbook_id),
@@ -1213,9 +1242,7 @@ async def generate_front_matter(
 # ---------------------------------------------------------------------------
 
 
-async def export_cookbook(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def export_cookbook(db: AsyncSession, org_id: UUID, cookbook_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Generate export file (PDF / print-ready).
 
     Delegates to the shared export engine for structured manifest
@@ -1227,7 +1254,7 @@ async def export_cookbook(
 
     all_recipes: list[dict] = []
     for ch in chapters:
-        recipes = await list_recipes(db, org_id, UUID(ch["id"]))
+        recipes = await list_recipes(db, org_id, cookbook_id, UUID(ch["id"]))
         all_recipes.extend(recipes)
 
     export_format = payload.get("format", "pdf")
@@ -1247,8 +1274,9 @@ async def export_cookbook(
             calculate_export_metadata,
             generate_pdf_manifest,
         )
+
         pdf_manifest = generate_pdf_manifest("cookbook", book_data, payload)
-        meta = calculate_export_metadata(book_data)
+        meta = calculate_export_metadata("cookbook", book_data)
     except Exception:
         logger.warning("Export engine unavailable; returning stub manifest", exc_info=True)
         pdf_manifest = {"pages": [], "format": export_format}
@@ -1271,88 +1299,97 @@ async def export_cookbook(
     }
 
 
-async def run_preflight(
-    db: AsyncSession, org_id: UUID, cookbook_id: UUID
-) -> dict[str, Any]:
+async def run_preflight(db: AsyncSession, org_id: UUID, cookbook_id: UUID) -> dict[str, Any]:
     """Run preflight check (image resolution, layout, nutrition completeness, etc.)."""
     cb = await _get_cookbook_or_404(db, org_id, cookbook_id)
     chapters = await list_chapters(db, org_id, cookbook_id)
 
     all_recipes: list[dict] = []
     for ch in chapters:
-        recipes = await list_recipes(db, org_id, UUID(ch["id"]))
+        recipes = await list_recipes(db, org_id, cookbook_id, UUID(ch["id"]))
         all_recipes.extend(recipes)
 
     checks: list[dict[str, Any]] = []
 
     # 1. Recipe count check
-    checks.append({
-        "check": "recipe_count",
-        "passed": len(all_recipes) >= 10,
-        "detail": (
-            f"Cookbook has {len(all_recipes)} recipes"
-            + (" (minimum 10 recommended)" if len(all_recipes) < 10 else "")
-        ),
-    })
+    checks.append(
+        {
+            "check": "recipe_count",
+            "passed": len(all_recipes) >= 10,
+            "detail": (
+                f"Cookbook has {len(all_recipes)} recipes"
+                + (" (minimum 10 recommended)" if len(all_recipes) < 10 else "")
+            ),
+        }
+    )
 
     # 2. All recipes have images
     recipes_without_images = [r for r in all_recipes if not r.get("image_url")]
-    checks.append({
-        "check": "recipe_images",
-        "passed": len(recipes_without_images) == 0,
-        "detail": (
-            f"{len(recipes_without_images)} recipes missing images"
-            if recipes_without_images
-            else "All recipes have images"
-        ),
-        "recipes": [r["title"] for r in recipes_without_images],
-    })
+    checks.append(
+        {
+            "check": "recipe_images",
+            "passed": len(recipes_without_images) == 0,
+            "detail": (
+                f"{len(recipes_without_images)} recipes missing images"
+                if recipes_without_images
+                else "All recipes have images"
+            ),
+            "recipes": [r["title"] for r in recipes_without_images],
+        }
+    )
 
     # 3. All recipes have ingredients
     recipes_without_ingredients = [r for r in all_recipes if not r.get("ingredients")]
-    checks.append({
-        "check": "ingredients_complete",
-        "passed": len(recipes_without_ingredients) == 0,
-        "detail": (
-            f"{len(recipes_without_ingredients)} recipes missing ingredients"
-            if recipes_without_ingredients
-            else "All recipes have ingredients"
-        ),
-    })
+    checks.append(
+        {
+            "check": "ingredients_complete",
+            "passed": len(recipes_without_ingredients) == 0,
+            "detail": (
+                f"{len(recipes_without_ingredients)} recipes missing ingredients"
+                if recipes_without_ingredients
+                else "All recipes have ingredients"
+            ),
+        }
+    )
 
     # 4. All recipes have instructions
     recipes_without_instructions = [r for r in all_recipes if not r.get("instructions")]
-    checks.append({
-        "check": "instructions_complete",
-        "passed": len(recipes_without_instructions) == 0,
-        "detail": (
-            f"{len(recipes_without_instructions)} recipes missing instructions"
-            if recipes_without_instructions
-            else "All recipes have instructions"
-        ),
-    })
+    checks.append(
+        {
+            "check": "instructions_complete",
+            "passed": len(recipes_without_instructions) == 0,
+            "detail": (
+                f"{len(recipes_without_instructions)} recipes missing instructions"
+                if recipes_without_instructions
+                else "All recipes have instructions"
+            ),
+        }
+    )
 
     # 5. Nutrition data completeness
     recipes_without_nutrition = [r for r in all_recipes if not r.get("nutrition")]
-    checks.append({
-        "check": "nutrition_complete",
-        "passed": len(recipes_without_nutrition) == 0,
-        "detail": (
-            f"{len(recipes_without_nutrition)} recipes missing nutrition data"
-            if recipes_without_nutrition
-            else "All recipes have nutrition data"
-        ),
-    })
+    checks.append(
+        {
+            "check": "nutrition_complete",
+            "passed": len(recipes_without_nutrition) == 0,
+            "detail": (
+                f"{len(recipes_without_nutrition)} recipes missing nutrition data"
+                if recipes_without_nutrition
+                else "All recipes have nutrition data"
+            ),
+        }
+    )
 
     # 6. Chapter organization
-    checks.append({
-        "check": "chapter_organization",
-        "passed": len(chapters) >= 2,
-        "detail": (
-            f"Cookbook has {len(chapters)} chapters"
-            + (" (minimum 2 recommended)" if len(chapters) < 2 else "")
-        ),
-    })
+    checks.append(
+        {
+            "check": "chapter_organization",
+            "passed": len(chapters) >= 2,
+            "detail": (
+                f"Cookbook has {len(chapters)} chapters" + (" (minimum 2 recommended)" if len(chapters) < 2 else "")
+            ),
+        }
+    )
 
     # 7. Cookbook metadata completeness
     has_title = bool(cb.title)
@@ -1366,13 +1403,13 @@ async def run_preflight(
         missing.append("author")
     if not has_description:
         missing.append("description")
-    checks.append({
-        "check": "metadata_complete",
-        "passed": metadata_complete,
-        "detail": (
-            f"Missing fields: {', '.join(missing)}" if missing else "All metadata fields present"
-        ),
-    })
+    checks.append(
+        {
+            "check": "metadata_complete",
+            "passed": metadata_complete,
+            "detail": (f"Missing fields: {', '.join(missing)}" if missing else "All metadata fields present"),
+        }
+    )
 
     all_passed = all(c["passed"] for c in checks)
     warnings = [c for c in checks if not c["passed"]]

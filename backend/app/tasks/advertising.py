@@ -49,7 +49,9 @@ def _run_async(coro):
         loop.close()
 
 
-@celery_app.task(name="app.tasks.advertising.sync_performance", bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
+@celery_app.task(
+    name="app.tasks.advertising.sync_performance", bind=True, max_retries=3, soft_time_limit=300, time_limit=600
+)
 def sync_campaign_performance(self, campaign_id: str | None = None):
     """Sync performance data from ad platforms for campaigns.
 
@@ -124,13 +126,9 @@ async def _sync_performance_async(campaign_id: str | None = None):
                     logger.info(f"Synced performance for campaign {campaign.id}")
 
                 except (ValueError, KeyError, TypeError) as e:
-                    logger.error(
-                        f"Failed to parse performance data for campaign {campaign.id}: {e}"
-                    )
+                    logger.error(f"Failed to parse performance data for campaign {campaign.id}: {e}")
                 except SQLAlchemyError as e:
-                    logger.error(
-                        f"Database error syncing campaign {campaign.id}: {e}"
-                    )
+                    logger.error(f"Database error syncing campaign {campaign.id}: {e}")
 
             await db.commit()
 
@@ -144,7 +142,9 @@ async def _sync_performance_async(campaign_id: str | None = None):
             raise
 
 
-@celery_app.task(name="app.tasks.advertising.auto_optimize", bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
+@celery_app.task(
+    name="app.tasks.advertising.auto_optimize", bind=True, max_retries=3, soft_time_limit=300, time_limit=600
+)
 def auto_optimize_bids(self):
     """Automatically optimize bids for campaigns with ACOS targets.
 
@@ -161,7 +161,7 @@ def auto_optimize_bids(self):
 
 async def _auto_optimize_async():
     """Async implementation of auto bid optimization."""
-    optimizer = AdOptimizer()
+    AdOptimizer()
 
     async with async_session() as db:
         try:
@@ -194,11 +194,7 @@ async def _auto_optimize_async():
                     if suggestion and suggestion.bid_adjustments:
                         # Apply bid adjustments automatically
                         for adj in suggestion.bid_adjustments:
-                            kw_result = await db.execute(
-                                select(KeywordBid).where(
-                                    KeywordBid.id == adj.keyword_bid_id
-                                )
-                            )
+                            kw_result = await db.execute(select(KeywordBid).where(KeywordBid.id == adj.keyword_bid_id))
                             kw = kw_result.scalar_one_or_none()
                             if kw:
                                 kw.bid_amount = adj.suggested_bid
@@ -224,13 +220,9 @@ async def _auto_optimize_async():
                         )
 
                 except (ValueError, KeyError, TypeError) as e:
-                    logger.error(
-                        f"Failed to optimize campaign {campaign.id} (data error): {e}"
-                    )
+                    logger.error(f"Failed to optimize campaign {campaign.id} (data error): {e}")
                 except SQLAlchemyError as e:
-                    logger.error(
-                        f"Failed to optimize campaign {campaign.id} (db error): {e}"
-                    )
+                    logger.error(f"Failed to optimize campaign {campaign.id} (db error): {e}")
 
             await db.commit()
 
@@ -244,7 +236,9 @@ async def _auto_optimize_async():
             raise
 
 
-@celery_app.task(name="app.tasks.advertising.budget_alerts", bind=True, max_retries=3, soft_time_limit=300, time_limit=600)
+@celery_app.task(
+    name="app.tasks.advertising.budget_alerts", bind=True, max_retries=3, soft_time_limit=300, time_limit=600
+)
 def check_budget_alerts(self):
     """Check for campaigns approaching budget limits and send alerts.
 
@@ -279,46 +273,49 @@ async def _check_budget_alerts_async():
 
                 # Check daily budget
                 if summary.total_spend > campaign.daily_budget * 0.8:
-                    pct = round(summary.total_spend / campaign.daily_budget * 100, 1) if campaign.daily_budget > 0 else 0
-                    alerts.append({
-                        "campaign_id": str(campaign.id),
-                        "campaign_name": campaign.name,
-                        "alert_type": "daily_budget",
-                        "message": (
-                            f"Campaign '{campaign.name}' has spent {pct}% "
-                            f"of its daily budget (${summary.total_spend:.2f} / "
-                            f"${campaign.daily_budget:.2f})"
-                        ),
-                    })
+                    pct = (
+                        round(summary.total_spend / campaign.daily_budget * 100, 1) if campaign.daily_budget > 0 else 0
+                    )
+                    alerts.append(
+                        {
+                            "campaign_id": str(campaign.id),
+                            "campaign_name": campaign.name,
+                            "alert_type": "daily_budget",
+                            "message": (
+                                f"Campaign '{campaign.name}' has spent {pct}% "
+                                f"of its daily budget (${summary.total_spend:.2f} / "
+                                f"${campaign.daily_budget:.2f})"
+                            ),
+                        }
+                    )
 
                 # Check total budget
                 if campaign.total_budget:
-                    total_summary = await service._get_performance_summary(
-                        campaign.id, days=365
-                    )
+                    total_summary = await service._get_performance_summary(campaign.id, days=365)
                     if total_summary.total_spend > campaign.total_budget * 0.8:
                         pct = round(total_summary.total_spend / campaign.total_budget * 100, 1)
-                        alerts.append({
-                            "campaign_id": str(campaign.id),
-                            "campaign_name": campaign.name,
-                            "alert_type": "total_budget",
-                            "message": (
-                                f"Campaign '{campaign.name}' has spent {pct}% "
-                                f"of its total budget"
-                            ),
-                        })
+                        alerts.append(
+                            {
+                                "campaign_id": str(campaign.id),
+                                "campaign_name": campaign.name,
+                                "alert_type": "total_budget",
+                                "message": (f"Campaign '{campaign.name}' has spent {pct}% " f"of its total budget"),
+                            }
+                        )
 
                 # Check ACOS target
                 if campaign.target_acos and summary.avg_acos > campaign.target_acos * 1.5:
-                    alerts.append({
-                        "campaign_id": str(campaign.id),
-                        "campaign_name": campaign.name,
-                        "alert_type": "acos_exceeded",
-                        "message": (
-                            f"Campaign '{campaign.name}' ACOS ({summary.avg_acos:.1f}%) "
-                            f"significantly exceeds target ({campaign.target_acos:.1f}%)"
-                        ),
-                    })
+                    alerts.append(
+                        {
+                            "campaign_id": str(campaign.id),
+                            "campaign_name": campaign.name,
+                            "alert_type": "acos_exceeded",
+                            "message": (
+                                f"Campaign '{campaign.name}' ACOS ({summary.avg_acos:.1f}%) "
+                                f"significantly exceeds target ({campaign.target_acos:.1f}%)"
+                            ),
+                        }
+                    )
 
             if alerts:
                 logger.warning(f"Generated {len(alerts)} budget alerts")
@@ -327,9 +324,7 @@ async def _check_budget_alerts_async():
                 for alert in alerts:
                     campaign_id_val = alert["campaign_id"]
                     # Find the campaign to get org_id
-                    campaign_result = await db.execute(
-                        select(Campaign).where(Campaign.id == campaign_id_val)
-                    )
+                    campaign_result = await db.execute(select(Campaign).where(Campaign.id == campaign_id_val))
                     alert_campaign = campaign_result.scalar_one_or_none()
                     if not alert_campaign:
                         continue

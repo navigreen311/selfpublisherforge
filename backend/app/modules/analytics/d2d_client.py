@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Custom exception
 # ---------------------------------------------------------------------------
 
+
 class D2DError(Exception):
     """Raised when a Draft2Digital API request fails in a non-recoverable way.
 
@@ -74,6 +75,7 @@ _RETRIABLE_STATUS_CODES: frozenset[int] = frozenset({429, 500, 502, 503, 504})
 # ---------------------------------------------------------------------------
 # D2D API Client
 # ---------------------------------------------------------------------------
+
 
 class D2DClient:
     """Async client for the Draft2Digital partner API.
@@ -233,11 +235,7 @@ class D2DClient:
         units_refunded = int(entry.get("unitsRefunded", 0))
         units = max(units_sold - units_refunded, 0)
 
-        revenue = float(
-            entry.get("royaltyAmount", 0)
-            or entry.get("royalties", 0)
-            or entry.get("netRevenue", 0)
-        )
+        revenue = float(entry.get("royaltyAmount", 0) or entry.get("royalties", 0) or entry.get("netRevenue", 0))
         currency = entry.get("currency", "USD")
 
         isbn = entry.get("isbn") or entry.get("isbn13") or ""
@@ -315,12 +313,7 @@ class D2DClient:
         if isinstance(data, list):
             payout_items = data
         else:
-            payout_items = (
-                data.get("payouts")
-                or data.get("reports")
-                or data.get("sales")
-                or []
-            )
+            payout_items = data.get("payouts") or data.get("reports") or data.get("sales") or []
 
         if not payout_items:
             logger.info("D2D API returned no payout items for the requested period.")
@@ -356,12 +349,7 @@ class D2DClient:
         if isinstance(data, list):
             book_items = data
         else:
-            book_items = (
-                data.get("books")
-                or data.get("titles")
-                or data.get("catalog")
-                or []
-            )
+            book_items = data.get("books") or data.get("titles") or data.get("catalog") or []
 
         if not book_items:
             logger.info("D2D API returned an empty book catalog.")
@@ -386,6 +374,7 @@ class D2DClient:
 # Factory
 # ---------------------------------------------------------------------------
 
+
 def get_d2d_client() -> D2DClient | None:
     """Return a configured ``D2DClient`` if credentials are available.
 
@@ -402,10 +391,7 @@ def get_d2d_client() -> D2DClient | None:
 
     api_key = os.environ.get("D2D_API_KEY", "")
     if not api_key:
-        logger.warning(
-            "D2D API key (D2D_API_KEY) not configured; "
-            "D2DClient will not be available."
-        )
+        logger.warning("D2D API key (D2D_API_KEY) not configured; " "D2DClient will not be available.")
         return None
 
     base_url = os.environ.get(

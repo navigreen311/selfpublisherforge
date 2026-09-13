@@ -6,6 +6,7 @@ Provides:
 - AI-recommended launch dates
 - Upcoming events relevant to user's genres
 """
+
 from datetime import UTC, date, datetime, timedelta
 
 from app.modules.portfolio_economics.schemas import (
@@ -25,8 +26,10 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "new_year",
         "name": "New Year / New You",
         "description": "Spike in self-help, fitness, and productivity books",
-        "month_start": 1, "day_start": 1,
-        "month_end": 1, "day_end": 31,
+        "month_start": 1,
+        "day_start": 1,
+        "month_end": 1,
+        "day_end": 31,
         "genres_affected": ["self-help", "non-fiction", "business", "health"],
         "impact_level": "high",
         "demand_multiplier": 1.8,
@@ -40,8 +43,10 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "valentines",
         "name": "Valentine's Day Season",
         "description": "Major romance book buying season",
-        "month_start": 2, "day_start": 1,
-        "month_end": 2, "day_end": 14,
+        "month_start": 2,
+        "day_start": 1,
+        "month_end": 2,
+        "day_end": 14,
         "genres_affected": ["romance", "erotica", "poetry"],
         "impact_level": "high",
         "demand_multiplier": 2.0,
@@ -55,8 +60,10 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "spring_break",
         "name": "Spring Break Reading",
         "description": "Increased beach read and travel book sales",
-        "month_start": 3, "day_start": 15,
-        "month_end": 4, "day_end": 15,
+        "month_start": 3,
+        "day_start": 15,
+        "month_end": 4,
+        "day_end": 15,
         "genres_affected": ["romance", "thriller", "mystery", "ya"],
         "impact_level": "medium",
         "demand_multiplier": 1.3,
@@ -69,8 +76,10 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "summer_reading",
         "name": "Summer Reading Season",
         "description": "Peak reading period -- vacations and leisure time",
-        "month_start": 6, "day_start": 1,
-        "month_end": 8, "day_end": 31,
+        "month_start": 6,
+        "day_start": 1,
+        "month_end": 8,
+        "day_end": 31,
         "genres_affected": ["romance", "thriller", "mystery", "fantasy", "ya", "children"],
         "impact_level": "high",
         "demand_multiplier": 1.5,
@@ -84,8 +93,10 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "back_to_school",
         "name": "Back to School",
         "description": "Spike in children's, YA, and educational books",
-        "month_start": 8, "day_start": 15,
-        "month_end": 9, "day_end": 15,
+        "month_start": 8,
+        "day_start": 15,
+        "month_end": 9,
+        "day_end": 15,
         "genres_affected": ["children", "ya", "non-fiction", "self-help"],
         "impact_level": "medium",
         "demand_multiplier": 1.4,
@@ -98,8 +109,10 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "halloween",
         "name": "Halloween / Spooky Season",
         "description": "Major spike in horror, thriller, and supernatural books",
-        "month_start": 10, "day_start": 1,
-        "month_end": 10, "day_end": 31,
+        "month_start": 10,
+        "day_start": 1,
+        "month_end": 10,
+        "day_end": 31,
         "genres_affected": ["horror", "thriller", "mystery", "fantasy", "ya"],
         "impact_level": "high",
         "demand_multiplier": 2.2,
@@ -113,11 +126,21 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "holiday_gift",
         "name": "Holiday Gift Season",
         "description": "Massive spike in book sales for gifting -- biggest sales period of the year",
-        "month_start": 11, "day_start": 15,
-        "month_end": 12, "day_end": 25,
+        "month_start": 11,
+        "day_start": 15,
+        "month_end": 12,
+        "day_end": 25,
         "genres_affected": [
-            "romance", "thriller", "mystery", "fantasy", "sci-fi",
-            "non-fiction", "children", "ya", "biography", "business",
+            "romance",
+            "thriller",
+            "mystery",
+            "fantasy",
+            "sci-fi",
+            "non-fiction",
+            "children",
+            "ya",
+            "biography",
+            "business",
         ],
         "impact_level": "high",
         "demand_multiplier": 2.5,
@@ -132,11 +155,18 @@ UNIVERSAL_EVENTS: list[dict] = [
         "event_id": "prime_day",
         "name": "Amazon Prime Day",
         "description": "Spike in ebook and Kindle device sales",
-        "month_start": 7, "day_start": 10,
-        "month_end": 7, "day_end": 15,
+        "month_start": 7,
+        "day_start": 10,
+        "month_end": 7,
+        "day_end": 15,
         "genres_affected": [
-            "romance", "thriller", "mystery", "fantasy", "sci-fi",
-            "non-fiction", "self-help",
+            "romance",
+            "thriller",
+            "mystery",
+            "fantasy",
+            "sci-fi",
+            "non-fiction",
+            "self-help",
         ],
         "impact_level": "medium",
         "demand_multiplier": 1.6,
@@ -154,76 +184,203 @@ UNIVERSAL_EVENTS: list[dict] = [
 
 GENRE_MONTHLY_DEMAND: dict[str, dict[str, float]] = {
     "romance": {
-        "January": 1.1, "February": 1.5, "March": 1.0, "April": 0.9,
-        "May": 1.0, "June": 1.3, "July": 1.3, "August": 1.2,
-        "September": 0.9, "October": 0.8, "November": 1.1, "December": 1.4,
+        "January": 1.1,
+        "February": 1.5,
+        "March": 1.0,
+        "April": 0.9,
+        "May": 1.0,
+        "June": 1.3,
+        "July": 1.3,
+        "August": 1.2,
+        "September": 0.9,
+        "October": 0.8,
+        "November": 1.1,
+        "December": 1.4,
     },
     "thriller": {
-        "January": 0.9, "February": 0.9, "March": 1.0, "April": 1.0,
-        "May": 1.1, "June": 1.3, "July": 1.2, "August": 1.1,
-        "September": 1.0, "October": 1.3, "November": 1.1, "December": 1.2,
+        "January": 0.9,
+        "February": 0.9,
+        "March": 1.0,
+        "April": 1.0,
+        "May": 1.1,
+        "June": 1.3,
+        "July": 1.2,
+        "August": 1.1,
+        "September": 1.0,
+        "October": 1.3,
+        "November": 1.1,
+        "December": 1.2,
     },
     "mystery": {
-        "January": 1.0, "February": 0.9, "March": 1.0, "April": 1.0,
-        "May": 1.1, "June": 1.2, "July": 1.2, "August": 1.1,
-        "September": 1.0, "October": 1.2, "November": 1.1, "December": 1.3,
+        "January": 1.0,
+        "February": 0.9,
+        "March": 1.0,
+        "April": 1.0,
+        "May": 1.1,
+        "June": 1.2,
+        "July": 1.2,
+        "August": 1.1,
+        "September": 1.0,
+        "October": 1.2,
+        "November": 1.1,
+        "December": 1.3,
     },
     "horror": {
-        "January": 0.7, "February": 0.6, "March": 0.7, "April": 0.7,
-        "May": 0.8, "June": 0.8, "July": 0.9, "August": 1.0,
-        "September": 1.3, "October": 2.2, "November": 0.9, "December": 0.8,
+        "January": 0.7,
+        "February": 0.6,
+        "March": 0.7,
+        "April": 0.7,
+        "May": 0.8,
+        "June": 0.8,
+        "July": 0.9,
+        "August": 1.0,
+        "September": 1.3,
+        "October": 2.2,
+        "November": 0.9,
+        "December": 0.8,
     },
     "fantasy": {
-        "January": 1.0, "February": 0.9, "March": 1.0, "April": 1.0,
-        "May": 1.1, "June": 1.2, "July": 1.2, "August": 1.1,
-        "September": 1.0, "October": 1.1, "November": 1.2, "December": 1.5,
+        "January": 1.0,
+        "February": 0.9,
+        "March": 1.0,
+        "April": 1.0,
+        "May": 1.1,
+        "June": 1.2,
+        "July": 1.2,
+        "August": 1.1,
+        "September": 1.0,
+        "October": 1.1,
+        "November": 1.2,
+        "December": 1.5,
     },
     "sci-fi": {
-        "January": 1.0, "February": 0.9, "March": 1.0, "April": 1.0,
-        "May": 1.1, "June": 1.2, "July": 1.2, "August": 1.0,
-        "September": 1.0, "October": 1.0, "November": 1.1, "December": 1.3,
+        "January": 1.0,
+        "February": 0.9,
+        "March": 1.0,
+        "April": 1.0,
+        "May": 1.1,
+        "June": 1.2,
+        "July": 1.2,
+        "August": 1.0,
+        "September": 1.0,
+        "October": 1.0,
+        "November": 1.1,
+        "December": 1.3,
     },
     "self-help": {
-        "January": 1.8, "February": 1.3, "March": 1.1, "April": 1.0,
-        "May": 0.9, "June": 0.9, "July": 0.8, "August": 0.9,
-        "September": 1.1, "October": 0.9, "November": 1.0, "December": 1.0,
+        "January": 1.8,
+        "February": 1.3,
+        "March": 1.1,
+        "April": 1.0,
+        "May": 0.9,
+        "June": 0.9,
+        "July": 0.8,
+        "August": 0.9,
+        "September": 1.1,
+        "October": 0.9,
+        "November": 1.0,
+        "December": 1.0,
     },
     "non-fiction": {
-        "January": 1.3, "February": 1.0, "March": 1.0, "April": 1.0,
-        "May": 1.0, "June": 0.9, "July": 0.9, "August": 1.0,
-        "September": 1.1, "October": 1.0, "November": 1.2, "December": 1.4,
+        "January": 1.3,
+        "February": 1.0,
+        "March": 1.0,
+        "April": 1.0,
+        "May": 1.0,
+        "June": 0.9,
+        "July": 0.9,
+        "August": 1.0,
+        "September": 1.1,
+        "October": 1.0,
+        "November": 1.2,
+        "December": 1.4,
     },
     "children": {
-        "January": 0.8, "February": 0.9, "March": 1.0, "April": 1.1,
-        "May": 1.0, "June": 1.3, "July": 1.3, "August": 1.4,
-        "September": 1.0, "October": 1.0, "November": 1.3, "December": 1.8,
+        "January": 0.8,
+        "February": 0.9,
+        "March": 1.0,
+        "April": 1.1,
+        "May": 1.0,
+        "June": 1.3,
+        "July": 1.3,
+        "August": 1.4,
+        "September": 1.0,
+        "October": 1.0,
+        "November": 1.3,
+        "December": 1.8,
     },
     "ya": {
-        "January": 0.9, "February": 1.0, "March": 1.0, "April": 1.0,
-        "May": 1.1, "June": 1.3, "July": 1.3, "August": 1.2,
-        "September": 1.1, "October": 1.1, "November": 1.1, "December": 1.4,
+        "January": 0.9,
+        "February": 1.0,
+        "March": 1.0,
+        "April": 1.0,
+        "May": 1.1,
+        "June": 1.3,
+        "July": 1.3,
+        "August": 1.2,
+        "September": 1.1,
+        "October": 1.1,
+        "November": 1.1,
+        "December": 1.4,
     },
     "business": {
-        "January": 1.5, "February": 1.2, "March": 1.1, "April": 1.0,
-        "May": 1.0, "June": 0.9, "July": 0.8, "August": 0.9,
-        "September": 1.1, "October": 1.0, "November": 1.1, "December": 1.2,
+        "January": 1.5,
+        "February": 1.2,
+        "March": 1.1,
+        "April": 1.0,
+        "May": 1.0,
+        "June": 0.9,
+        "July": 0.8,
+        "August": 0.9,
+        "September": 1.1,
+        "October": 1.0,
+        "November": 1.1,
+        "December": 1.2,
     },
     "biography": {
-        "January": 0.9, "February": 1.0, "March": 1.0, "April": 1.0,
-        "May": 1.0, "June": 1.0, "July": 0.9, "August": 0.9,
-        "September": 1.0, "October": 1.1, "November": 1.3, "December": 1.5,
+        "January": 0.9,
+        "February": 1.0,
+        "March": 1.0,
+        "April": 1.0,
+        "May": 1.0,
+        "June": 1.0,
+        "July": 0.9,
+        "August": 0.9,
+        "September": 1.0,
+        "October": 1.1,
+        "November": 1.3,
+        "December": 1.5,
     },
 }
 
 DEFAULT_MONTHLY_DEMAND: dict[str, float] = {
-    "January": 1.0, "February": 1.0, "March": 1.0, "April": 1.0,
-    "May": 1.0, "June": 1.1, "July": 1.1, "August": 1.0,
-    "September": 1.0, "October": 1.0, "November": 1.1, "December": 1.3,
+    "January": 1.0,
+    "February": 1.0,
+    "March": 1.0,
+    "April": 1.0,
+    "May": 1.0,
+    "June": 1.1,
+    "July": 1.1,
+    "August": 1.0,
+    "September": 1.0,
+    "October": 1.0,
+    "November": 1.1,
+    "December": 1.3,
 }
 
 MONTH_NAMES = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 
 
@@ -264,10 +421,10 @@ def get_seasonal_calendar(
     if user_genres:
         normalized_genres = [g.lower().replace(" ", "_").replace("-", "_") for g in user_genres]
         relevant_events = [
-            ev for ev in all_events
+            ev
+            for ev in all_events
             if any(
-                g in [ng.replace("_", "-") for ng in normalized_genres]
-                or g in normalized_genres
+                g in [ng.replace("_", "-") for ng in normalized_genres] or g in normalized_genres
                 for g in ev.genres_affected
             )
             or not ev.genres_affected  # Universal events always included
@@ -277,7 +434,7 @@ def get_seasonal_calendar(
 
     # Build genre seasonality data
     genre_seasonality = {}
-    for genre in (user_genres or []):
+    for genre in user_genres or []:
         genre_seasonality[genre] = get_niche_seasonality(genre, year)
 
     return SeasonalCalendarResponse(
@@ -303,8 +460,7 @@ def get_niche_seasonality(genre: str, year: int | None = None) -> NicheSeasonali
     seasonal_events = [
         _build_event_for_year(ev, target_year)
         for ev in UNIVERSAL_EVENTS
-        if normalized in ev["genres_affected"]
-        or genre.lower() in ev["genres_affected"]
+        if normalized in ev["genres_affected"] or genre.lower() in ev["genres_affected"]
     ]
 
     # Determine best launch windows
@@ -317,21 +473,25 @@ def get_niche_seasonality(genre: str, year: int | None = None) -> NicheSeasonali
         # Best to launch 2-4 weeks before peak
         launch_month_idx = month_idx - 1 if month_idx > 1 else 12
         launch_month = MONTH_NAMES[launch_month_idx - 1]
-        best_launch_windows.append({
-            "start_month": launch_month,
-            "end_month": month_name,
-            "reason": f"Demand peaks in {month_name} (index: {demand:.1f}x average)",
-        })
+        best_launch_windows.append(
+            {
+                "start_month": launch_month,
+                "end_month": month_name,
+                "reason": f"Demand peaks in {month_name} (index: {demand:.1f}x average)",
+            }
+        )
 
     # Determine windows to avoid
     avoid_windows = []
     bottom_months = sorted_months[-2:]
     for month_name, demand in bottom_months:
-        avoid_windows.append({
-            "start_month": month_name,
-            "end_month": month_name,
-            "reason": f"Low demand in {month_name} (index: {demand:.1f}x average)",
-        })
+        avoid_windows.append(
+            {
+                "start_month": month_name,
+                "end_month": month_name,
+                "reason": f"Low demand in {month_name} (index: {demand:.1f}x average)",
+            }
+        )
 
     return NicheSeasonality(
         genre=genre,
@@ -389,10 +549,7 @@ def recommend_launch_date(request: LaunchRecommendRequest) -> LaunchRecommendati
         for ev in UNIVERSAL_EVENTS:
             ev_start = date(year, ev["month_start"], ev["day_start"])
             ev_end = date(year, ev["month_end"], ev["day_end"])
-            is_relevant = (
-                normalized_genre in ev["genres_affected"]
-                or request.genre.lower() in ev["genres_affected"]
-            )
+            is_relevant = normalized_genre in ev["genres_affected"] or request.genre.lower() in ev["genres_affected"]
 
             # Check if launch is 1-4 weeks before event
             days_before = (ev_start - candidate_date).days
@@ -418,13 +575,15 @@ def recommend_launch_date(request: LaunchRecommendRequest) -> LaunchRecommendati
             # Later series books should launch quickly after previous
             score += 5
 
-        candidates.append({
-            "date": candidate_date,
-            "score": score,
-            "demand": demand,
-            "favorable_events": favorable_events,
-            "competing_events": competing_events,
-        })
+        candidates.append(
+            {
+                "date": candidate_date,
+                "score": score,
+                "demand": demand,
+                "favorable_events": favorable_events,
+                "competing_events": competing_events,
+            }
+        )
 
     # Sort by score, pick the best
     candidates.sort(key=lambda x: x["score"], reverse=True)
@@ -441,16 +600,12 @@ def recommend_launch_date(request: LaunchRecommendRequest) -> LaunchRecommendati
     # Build reasoning
     reasoning = []
     month_name = MONTH_NAMES[best["date"].month - 1]
-    reasoning.append(
-        f"{month_name} has a demand index of {best['demand']:.1f}x for {request.genre}"
-    )
+    reasoning.append(f"{month_name} has a demand index of {best['demand']:.1f}x for {request.genre}")
     if best["favorable_events"]:
         reasoning.append(f"Favorable events: {', '.join(best['favorable_events'])}")
     if best["competing_events"]:
         reasoning.append(f"Competing events to watch: {', '.join(best['competing_events'])}")
-    reasoning.append(
-        f"Launch on {best['date'].strftime('%A')} -- mid-week launches typically perform best"
-    )
+    reasoning.append(f"Launch on {best['date'].strftime('%A')} -- mid-week launches typically perform best")
 
     # Confidence
     if len(candidates) >= 3 and candidates[0]["score"] > candidates[1]["score"] * 1.15:
@@ -465,27 +620,79 @@ def recommend_launch_date(request: LaunchRecommendRequest) -> LaunchRecommendati
 
     # Pre-launch checklist
     pre_launch_checklist = [
-        {"days_before": 60, "action": "Finalize cover design", "description": "Cover should be ready for pre-order and promotional materials"},
-        {"days_before": 45, "action": "Set up pre-order", "description": "Create pre-order listing on Amazon and other platforms"},
-        {"days_before": 30, "action": "Begin ARC distribution", "description": "Send advance reader copies to reviewers and influencers"},
-        {"days_before": 21, "action": "Launch cover reveal", "description": "Share cover on social media and in newsletter"},
-        {"days_before": 14, "action": "Start pre-launch marketing", "description": "Begin countdown posts, email sequences, and ads"},
-        {"days_before": 7, "action": "Final promotional push", "description": "Increase ad spend, send launch week emails"},
-        {"days_before": 1, "action": "Pre-launch day prep", "description": "Prepare launch day posts, verify all links work"},
-        {"days_before": 0, "action": "LAUNCH DAY", "description": "Execute launch plan, engage with readers, monitor sales"},
+        {
+            "days_before": 60,
+            "action": "Finalize cover design",
+            "description": "Cover should be ready for pre-order and promotional materials",
+        },
+        {
+            "days_before": 45,
+            "action": "Set up pre-order",
+            "description": "Create pre-order listing on Amazon and other platforms",
+        },
+        {
+            "days_before": 30,
+            "action": "Begin ARC distribution",
+            "description": "Send advance reader copies to reviewers and influencers",
+        },
+        {
+            "days_before": 21,
+            "action": "Launch cover reveal",
+            "description": "Share cover on social media and in newsletter",
+        },
+        {
+            "days_before": 14,
+            "action": "Start pre-launch marketing",
+            "description": "Begin countdown posts, email sequences, and ads",
+        },
+        {
+            "days_before": 7,
+            "action": "Final promotional push",
+            "description": "Increase ad spend, send launch week emails",
+        },
+        {
+            "days_before": 1,
+            "action": "Pre-launch day prep",
+            "description": "Prepare launch day posts, verify all links work",
+        },
+        {
+            "days_before": 0,
+            "action": "LAUNCH DAY",
+            "description": "Execute launch plan, engage with readers, monitor sales",
+        },
     ]
 
     # Marketing timeline
     launch_date = best["date"]
     marketing_timeline = [
-        {"date": (launch_date - timedelta(days=30)).isoformat(), "action": "ARC distribution begins", "channel": "email"},
+        {
+            "date": (launch_date - timedelta(days=30)).isoformat(),
+            "action": "ARC distribution begins",
+            "channel": "email",
+        },
         {"date": (launch_date - timedelta(days=21)).isoformat(), "action": "Cover reveal", "channel": "social_media"},
-        {"date": (launch_date - timedelta(days=14)).isoformat(), "action": "Pre-launch email sequence starts", "channel": "email"},
-        {"date": (launch_date - timedelta(days=7)).isoformat(), "action": "Amazon ads go live", "channel": "amazon_ads"},
+        {
+            "date": (launch_date - timedelta(days=14)).isoformat(),
+            "action": "Pre-launch email sequence starts",
+            "channel": "email",
+        },
+        {
+            "date": (launch_date - timedelta(days=7)).isoformat(),
+            "action": "Amazon ads go live",
+            "channel": "amazon_ads",
+        },
         {"date": (launch_date - timedelta(days=3)).isoformat(), "action": "Countdown posts", "channel": "social_media"},
         {"date": launch_date.isoformat(), "action": "Launch day blitz", "channel": "all"},
-        {"date": (launch_date + timedelta(days=3)).isoformat(), "action": "Follow-up engagement", "channel": "social_media"},
-        {"date": (launch_date + timedelta(days=7)).isoformat(), "action": "Post-launch review request", "channel": "email"},
+        {
+            "date": (launch_date + timedelta(days=3)).isoformat(),
+            "action": "Follow-up engagement",
+            "channel": "social_media",
+        },
+        {
+            "date": (launch_date + timedelta(days=7)).isoformat(),
+            "action": "Post-launch review request",
+            "channel": "email",
+        },
     ]
 
     return LaunchRecommendation(
@@ -526,9 +733,7 @@ def get_upcoming_events(
 
             # Check if event is relevant to user's genres
             is_relevant = any(
-                g in normalized_genres
-                or g.replace("-", "_") in normalized_genres
-                for g in ev.genres_affected
+                g in normalized_genres or g.replace("-", "_") in normalized_genres for g in ev.genres_affected
             )
 
             if is_relevant or not genres:  # Show all if no genres specified

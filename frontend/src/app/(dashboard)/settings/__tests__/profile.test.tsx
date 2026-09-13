@@ -10,9 +10,26 @@ const mockUseCurrentUser = jest.fn();
 const mockUseUpdateProfile = jest.fn();
 
 // Mock the users hooks module
+// The pages call useRouter/useSearchParams; without a mock next throws
+// "invariant expected app router to be mounted" and the render dies.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 jest.mock("@/modules/users/hooks", () => ({
   useCurrentUser: (...args: unknown[]) => mockUseCurrentUser(...args),
   useUpdateProfile: (...args: unknown[]) => mockUseUpdateProfile(...args),
+  useDeleteAccount: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock sonner toast
@@ -136,10 +153,10 @@ describe("ProfileSettingsPage", () => {
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({
-        name: "New Name",
-        avatar_url: null,
-      });
+      // The form also submits the preferences block (bio, pen names, links).
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "New Name", avatar_url: null })
+      );
     });
   });
 

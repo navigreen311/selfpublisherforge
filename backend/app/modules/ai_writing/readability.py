@@ -20,9 +20,7 @@ _SENTENCE_BOUNDARY = re.compile(r"[.!?]+")
 
 # Passive voice pattern: be-verb + optional adverb + past participle (-ed or irregular)
 _PASSIVE_PATTERN = re.compile(
-    r"\b(was|were|been|being|is|are|am|get|gets|got|gotten)\b"
-    r"\s+(?:\w+ly\s+)?"
-    r"\w+(?:ed|en|t)\b",
+    r"\b(was|were|been|being|is|are|am|get|gets|got|gotten)\b" r"\s+(?:\w+ly\s+)?" r"\w+(?:ed|en|t)\b",
     re.IGNORECASE,
 )
 
@@ -80,11 +78,7 @@ def count_syllables(word: str) -> int:
 
     # Handle consonant + "le" endings (e.g., "table", "simple") -- these
     # form their own syllable, so we should NOT strip the trailing 'e'.
-    has_cle_ending = (
-        len(word) >= 3
-        and word.endswith("le")
-        and word[-3] not in "aeiouy"
-    )
+    has_cle_ending = len(word) >= 3 and word.endswith("le") and word[-3] not in "aeiouy"
 
     # Remove trailing silent e (but not consonant+le patterns)
     if word.endswith("e") and not has_cle_ending:
@@ -253,29 +247,17 @@ def _generate_suggestions(
     suggestions: list[str] = []
 
     if grade > 12:
-        suggestions.append(
-            "Consider simplifying sentences for a broader audience."
-        )
+        suggestions.append("Consider simplifying sentences for a broader audience.")
     if avg_sentence_len > 25:
-        suggestions.append(
-            "Try breaking up longer sentences for improved readability."
-        )
+        suggestions.append("Try breaking up longer sentences for improved readability.")
     if passive_pct > 15:
-        suggestions.append(
-            "Reduce passive voice for more engaging, direct writing."
-        )
+        suggestions.append("Reduce passive voice for more engaging, direct writing.")
     if flesch < 50:
-        suggestions.append(
-            "The text may be difficult to read. Consider using simpler words."
-        )
+        suggestions.append("The text may be difficult to read. Consider using simpler words.")
     if word_count < 50:
-        suggestions.append(
-            "Text is very short; readability scores may not be statistically reliable."
-        )
+        suggestions.append("Text is very short; readability scores may not be statistically reliable.")
     if avg_sentence_len < 8 and word_count > 50:
-        suggestions.append(
-            "Sentences are very short. Consider varying sentence length for better flow."
-        )
+        suggestions.append("Sentences are very short. Consider varying sentence length for better flow.")
     return suggestions
 
 
@@ -345,9 +327,7 @@ def compute_readability(text: str) -> ComputedReadability:
     passive_pct = _detect_passive_voice_pct(text, sentence_count)
     label = _flesch_label(flesch)
 
-    suggestions = _generate_suggestions(
-        grade, flesch, passive_pct, avg_sentence_len, word_count
-    )
+    suggestions = _generate_suggestions(grade, flesch, passive_pct, avg_sentence_len, word_count)
 
     return ComputedReadability(
         grade_level=round(grade, 1),

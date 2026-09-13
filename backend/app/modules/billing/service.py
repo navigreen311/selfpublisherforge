@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import stripe
@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.exceptions import AppException
+from app.core.sql import assert_known_columns
+from app.models.organization import Organization as _OrgModel
 from app.modules.billing.plans import (
     PLAN_DEFINITIONS,
     get_plan_limits,
@@ -59,6 +61,7 @@ def _ensure_stripe_configured() -> None:
 
     stripe.api_key = key
     _stripe_configured = True
+
 
 # ---------------------------------------------------------------------------
 # Mapping: PlanTier -> Stripe Price ID (read from settings)
@@ -316,15 +319,13 @@ async def handle_webhook_event(
     """
     _ensure_stripe_configured()
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
     except stripe.SignatureVerificationError:
         raise AppException(
             status_code=400,
             code="WEBHOOK_SIGNATURE_INVALID",
             message="Invalid Stripe webhook signature.",
-        )
+        ) from None
 
     event_id: str = event["id"]
     event_type: str = event["type"]
@@ -414,13 +415,9 @@ async def _handle_subscription_event(
         current_period_start = None
         current_period_end = None
         if subscription.get("current_period_start"):
-            current_period_start = datetime.fromtimestamp(
-                subscription["current_period_start"], tz=UTC
-            )
+            current_period_start = datetime.fromtimestamp(subscription["current_period_start"], tz=UTC)
         if subscription.get("current_period_end"):
-            current_period_end = datetime.fromtimestamp(
-                subscription["current_period_end"], tz=UTC
-            )
+            current_period_end = datetime.fromtimestamp(subscription["current_period_end"], tz=UTC)
 
         await _update_org(
             db,
@@ -455,13 +452,9 @@ async def _handle_subscription_event(
         current_period_start = None
         current_period_end = None
         if subscription.get("current_period_start"):
-            current_period_start = datetime.fromtimestamp(
-                subscription["current_period_start"], tz=UTC
-            )
+            current_period_start = datetime.fromtimestamp(subscription["current_period_start"], tz=UTC)
         if subscription.get("current_period_end"):
-            current_period_end = datetime.fromtimestamp(
-                subscription["current_period_end"], tz=UTC
-            )
+            current_period_end = datetime.fromtimestamp(subscription["current_period_end"], tz=UTC)
 
         await _update_org(
             db,
@@ -517,7 +510,7 @@ async def _handle_invoice_payment_failed(
         invoice_id = invoice.get("id")
 
         # Get attempt count for this invoice
-        attempt_count = await get_payment_attempt_count(db, org_id, invoice_id)
+        attempt_count = await get_payment_attempt_count(db, org_id, str(invoice_id))
 
         await handle_payment_failure(db, org_id, invoice, attempt_count)
 
@@ -537,7 +530,7 @@ async def _ensure_stripe_customer(
     row = await _get_org_row(db, org_id)
     existing_customer_id = row.get("stripe_customer_id")
     if existing_customer_id:
-        return existing_customer_id
+        return cast("str", existing_customer_id)
 
     customer = stripe.Customer.create(
         email=email,
@@ -561,9 +554,7 @@ async def _get_org_row(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
     from sqlalchemy import text
 
     row = await db.execute(
-        text(
-            "SELECT * FROM organizations WHERE id = :org_id AND deleted_at IS NULL LIMIT 1"
-        ),
+        text("SELECT * FROM organizations WHERE id = :org_id AND deleted_at IS NULL LIMIT 1"),
         {"org_id": str(org_id)},
     )
     result = row.mappings().first()
@@ -586,10 +577,11 @@ async def _update_org(
 
     if not data:
         return
+    assert_known_columns(_OrgModel, data)
     set_clauses = ", ".join(f"{key} = :{key}" for key in data)
     params = {**data, "org_id": str(org_id)}
     await db.execute(
-        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),
+        text(f"UPDATE organizations SET {set_clauses}, updated_at = NOW() WHERE id = :org_id"),  # noqa: S608  # column names validated by assert_known_columns; values are bound
         params,
     )
     await db.flush()
@@ -605,9 +597,7 @@ async def _org_id_from_customer(
     from sqlalchemy import text
 
     row = await db.execute(
-        text(
-            "SELECT id FROM organizations WHERE stripe_customer_id = :cid AND deleted_at IS NULL LIMIT 1"
-        ),
+        text("SELECT id FROM organizations WHERE stripe_customer_id = :cid AND deleted_at IS NULL LIMIT 1"),
         {"cid": customer_id},
     )
     result = row.mappings().first()

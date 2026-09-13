@@ -3,10 +3,9 @@
 Tests model instantiation, relationships, default values, soft delete behavior,
 and enum definitions without requiring a live database connection.
 """
-import uuid
-from datetime import datetime, date, timezone
 
-import pytest
+import uuid
+from datetime import UTC, date, datetime
 
 # ── Organization ───────────────────────────────────────────────────────
 from app.models.organization import Organization, PlanTier, SubscriptionStatus
@@ -42,7 +41,7 @@ class TestOrganization:
         assert org.deleted_at is None
 
     def test_soft_delete_set(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         org = Organization(name="Test", slug="test", deleted_at=now)
         assert org.deleted_at == now
 
@@ -72,7 +71,7 @@ class TestSubscriptionStatusEnum:
 
 
 # ── User ───────────────────────────────────────────────────────────────
-from app.models.user import User, ApiKey, UserSession, UserRole
+from app.models.user import ApiKey, User, UserRole, UserSession
 
 
 class TestUser:
@@ -128,7 +127,7 @@ class TestUser:
             name="Test",
         )
         assert user.deleted_at is None
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user.deleted_at = now
         assert user.deleted_at == now
 
@@ -213,8 +212,15 @@ class TestUserSession:
 
 # ── Project ────────────────────────────────────────────────────────────
 from app.models.project import (
-    Project, Book, Series, PenName, BookVersion,
-    ProjectType, ProjectStatus, BookFormat, BookStatus, SeriesStatus,
+    Book,
+    BookFormat,
+    BookStatus,
+    BookVersion,
+    PenName,
+    Project,
+    ProjectStatus,
+    ProjectType,
+    Series,
 )
 
 
@@ -367,8 +373,14 @@ class TestBookVersion:
 
 # ── Content ────────────────────────────────────────────────────────────
 from app.models.content import (
-    Manuscript, Chapter, StyleProfile, WritingSession, ContentAsset,
-    ContentType, ManuscriptStatus, ChapterStatus, AssetType,
+    AssetType,
+    Chapter,
+    ContentAsset,
+    ContentType,
+    Manuscript,
+    ManuscriptStatus,
+    StyleProfile,
+    WritingSession,
 )
 
 
@@ -501,8 +513,11 @@ class TestAssetTypeEnum:
 
 # ── Market ─────────────────────────────────────────────────────────────
 from app.models.market import (
-    MarketCategory, MarketKeyword, CompetitorBook,
-    CompetitorReview, MarketSnapshot,
+    CompetitorBook,
+    CompetitorReview,
+    MarketCategory,
+    MarketKeyword,
+    MarketSnapshot,
 )
 
 
@@ -638,10 +653,16 @@ class TestMarketSnapshot:
 
 # ── Publishing ─────────────────────────────────────────────────────────
 from app.models.publishing import (
-    PublishingAccount, Listing, UploadValidation,
-    ComplianceScan, PricingRule,
-    PublishingPlatform, PublishingAccountStatus,
-    ListingStatus, ValidationType, ScanType, RiskLevel,
+    ComplianceScan,
+    Listing,
+    PricingRule,
+    PublishingAccount,
+    PublishingAccountStatus,
+    PublishingPlatform,
+    RiskLevel,
+    ScanType,
+    UploadValidation,
+    ValidationType,
 )
 
 
@@ -774,12 +795,23 @@ class TestPricingRule:
 
 # ── Marketing ──────────────────────────────────────────────────────────
 from app.models.marketing import (
-    LaunchPlan, LaunchPhase, PhaseTask, EmailSequence, EmailTemplate,
-    SocialPost, ARCCampaign, ARCRecipient,
-    LaunchPlanStatus, LaunchPhaseType, PhaseTaskStatus,
-    EmailSequenceStatus, EmailTemplateType, EmailSendStatus,
-    SocialPlatform, SocialPostStatus,
-    ARCCampaignStatus, ARCRecipientStatus,
+    ARCCampaign,
+    ARCCampaignStatus,
+    ARCRecipient,
+    ARCRecipientStatus,
+    EmailSendStatus,
+    EmailSequence,
+    EmailSequenceStatus,
+    EmailTemplate,
+    LaunchPhase,
+    LaunchPhaseType,
+    LaunchPlan,
+    LaunchPlanStatus,
+    PhaseTask,
+    PhaseTaskStatus,
+    SocialPlatform,
+    SocialPost,
+    SocialPostStatus,
 )
 
 
@@ -973,8 +1005,16 @@ class TestARCRecipient:
 
 # ── Agent ──────────────────────────────────────────────────────────────
 from app.models.agent import (
-    Agent, AgentTask, AgentWorkflow, AgentBudget, AuditTrail,
-    AgentType, PermissionLevel, TaskStatus, BudgetType, ActorType,
+    ActorType,
+    Agent,
+    AgentBudget,
+    AgentTask,
+    AgentType,
+    AgentWorkflow,
+    AuditTrail,
+    BudgetType,
+    PermissionLevel,
+    TaskStatus,
     WorkflowStatus,
 )
 
@@ -1176,8 +1216,13 @@ class TestActorTypeEnum:
 
 # ── Analytics ──────────────────────────────────────────────────────────
 from app.models.analytics import (
-    AnalyticsEvent, RoyaltyRecord, PortfolioMetric,
-    ABTest, Report, ABTestStatus, ReportStatus,
+    ABTest,
+    ABTestStatus,
+    AnalyticsEvent,
+    PortfolioMetric,
+    Report,
+    ReportStatus,
+    RoyaltyRecord,
 )
 
 
@@ -1312,7 +1357,8 @@ class TestABTest:
         assert ab.completed_at is None
 
     def test_tablename(self):
-        assert ABTest.__tablename__ == "ab_tests"
+        # Split from cover_design's ABTest, which now owns cover_ab_tests.
+        assert ABTest.__tablename__ == "listing_ab_tests"
 
 
 class TestABTestStatusEnum:
@@ -1368,17 +1414,13 @@ class TestModelsInit:
 
     def test_all_models_importable(self):
         from app.models import (
+            ARCCampaign,
+            LaunchPlan,
             Organization,
-            User, ApiKey, UserSession,
-            Project, Book, Series, PenName, BookVersion,
-            Manuscript, Chapter, StyleProfile, WritingSession, ContentAsset,
-            MarketCategory, MarketKeyword, CompetitorBook, CompetitorReview, MarketSnapshot,
-            PublishingAccount, Listing, UploadValidation, ComplianceScan,
-            LaunchPlan, LaunchPhase, PhaseTask, EmailSequence, EmailTemplate,
-            SocialPost, ARCCampaign, ARCRecipient,
-            Agent, AgentTask, AgentWorkflow, AgentBudget, AuditTrail,
-            AnalyticsEvent, RoyaltyRecord, PortfolioMetricSnapshot, Report,
+            Report,
+            User,
         )
+
         # Just verify they're all classes
         assert Organization.__tablename__ == "organizations"
         assert User.__tablename__ == "users"
@@ -1388,20 +1430,20 @@ class TestModelsInit:
 
     def test_all_enums_importable(self):
         from app.models.marketing import (
-            LaunchPlanStatus, LaunchPhaseType, PhaseTaskStatus,
-            EmailSequenceStatus, EmailTemplateType, EmailSendStatus,
-            SocialPlatform, SocialPostStatus,
-            ARCCampaignStatus, ARCRecipientStatus,
+            ARCCampaignStatus,
+            LaunchPlanStatus,
+            SocialPlatform,
         )
+
         assert LaunchPlanStatus.DRAFT.value == "draft"
         assert SocialPlatform.TWITTER.value == "twitter"
         assert ARCCampaignStatus.ACTIVE.value == "active"
 
     def test_model_count(self):
         """Verify we have all 30+ models defined."""
-        from app.database import Base
         # Import all to register
-        import app.models  # noqa: F401
+        from app.database import Base
+
         # Count the non-abstract tables
         table_names = list(Base.metadata.tables.keys())
         assert len(table_names) >= 30, f"Expected at least 30 tables, got {len(table_names)}: {table_names}"
@@ -1414,7 +1456,7 @@ class TestSoftDeleteBehavior:
     def test_organization_soft_delete(self):
         org = Organization(name="Test", slug="test")
         assert org.deleted_at is None
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         org.deleted_at = now
         assert org.deleted_at is not None
 
@@ -1426,7 +1468,7 @@ class TestSoftDeleteBehavior:
             name="Test",
         )
         assert user.deleted_at is None
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user.deleted_at = now
         assert user.deleted_at is not None
 

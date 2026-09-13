@@ -1,18 +1,17 @@
 """Integration tests for Facebook Ads router endpoints."""
 
-import pytest
-import pytest_asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base, get_db
 from app.main import create_app
 from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +69,7 @@ async def client(test_db, mock_user):
     app.dependency_overrides[get_db] = override_db
 
     from app.core.dependencies import get_current_user
+
     app.dependency_overrides[get_current_user] = lambda: mock_user
 
     transport = ASGITransport(app=app)
@@ -595,12 +595,14 @@ class TestCreateFacebookAudience:
     @patch("app.modules.advertising.router._facebook_client")
     async def test_create_audience_success(self, mock_client, client):
         """POST /api/v1/ads/facebook/audiences with valid data should return 201."""
-        mock_client.create_custom_audience = AsyncMock(return_value={
-            "audience_id": "aud_789",
-            "name": "Book Readers",
-            "source_type": "CUSTOM",
-            "created": True,
-        })
+        mock_client.create_custom_audience = AsyncMock(
+            return_value={
+                "audience_id": "aud_789",
+                "name": "Book Readers",
+                "source_type": "CUSTOM",
+                "created": True,
+            }
+        )
 
         response = await client.post(
             "/api/v1/ads/facebook/audiences",
@@ -696,9 +698,7 @@ class TestFacebookAdsAuthRequired:
     @pytest.mark.asyncio
     async def test_pause_campaign_requires_auth(self, unauthed_client):
         """POST /api/v1/ads/facebook/campaigns/{id}/pause without token should return 401/403."""
-        response = await unauthed_client.post(
-            "/api/v1/ads/facebook/campaigns/fb_camp_123/pause"
-        )
+        response = await unauthed_client.post("/api/v1/ads/facebook/campaigns/fb_camp_123/pause")
         assert response.status_code in (401, 403)
 
     @pytest.mark.asyncio

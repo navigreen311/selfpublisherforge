@@ -55,6 +55,10 @@ jest.mock("@/hooks/use-auth", () => ({
 }));
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Eye: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="eye-icon" {...props} />
   ),
@@ -73,6 +77,24 @@ jest.mock("lucide-react", () => ({
 }));
 
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -345,25 +367,31 @@ describe("RegisterPage", () => {
     expect(uppercaseCheck).not.toHaveClass("text-green-600");
     expect(numberCheck).not.toHaveClass("text-green-600");
 
-    // Submit button should be disabled since password is invalid
+    // Submission is validated on submit rather than by gating the button —
+    // see "blocks submission and reports the errors when the password is weak".
     expect(
       screen.getByRole("button", { name: /create account/i })
-    ).toBeDisabled();
+    ).toBeEnabled();
   });
 
-  it("disables submit button when password is invalid", async () => {
+  it("blocks submission and reports the errors when the password is weak", async () => {
     const user = userEvent.setup();
     render(<RegisterPage />);
 
+    await user.type(screen.getByPlaceholderText("John Doe"), "Test User");
     await user.type(
-      screen.getByPlaceholderText("Create a password"),
-      "weak"
+      screen.getByPlaceholderText("you@example.com"),
+      "test@example.com"
     );
+    await user.type(screen.getByPlaceholderText("Create a password"), "weak");
+    await user.type(screen.getByPlaceholderText("Re-enter your password"), "weak");
 
-    // The button should be disabled since isPasswordValid is false
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
     expect(
-      screen.getByRole("button", { name: /create account/i })
-    ).toBeDisabled();
+      await screen.findByText("Please fix the errors above before submitting")
+    ).toBeInTheDocument();
+    expect(mockRegister).not.toHaveBeenCalled();
   });
 
   it("enables submit button when password is valid", async () => {
@@ -391,6 +419,10 @@ describe("RegisterPage", () => {
     );
     await user.type(
       screen.getByPlaceholderText("Create a password"),
+      "ValidPass1"
+    );
+    await user.type(
+      screen.getByPlaceholderText("Re-enter your password"),
       "ValidPass1"
     );
     await user.type(
@@ -429,6 +461,10 @@ describe("RegisterPage", () => {
       screen.getByPlaceholderText("Create a password"),
       "ValidPass1"
     );
+    await user.type(
+      screen.getByPlaceholderText("Re-enter your password"),
+      "ValidPass1"
+    );
 
     await user.click(
       screen.getByRole("button", { name: /create account/i })
@@ -453,6 +489,10 @@ describe("RegisterPage", () => {
     );
     await user.type(
       screen.getByPlaceholderText("Create a password"),
+      "ValidPass1"
+    );
+    await user.type(
+      screen.getByPlaceholderText("Re-enter your password"),
       "ValidPass1"
     );
 

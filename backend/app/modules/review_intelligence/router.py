@@ -73,9 +73,7 @@ async def list_reviews_endpoint(
         sort_by=sort_by,
         sort_dir=sort_dir,
     )
-    reviews, next_cursor, total_count = await list_reviews(
-        db, current_user["org_id"], params
-    )
+    reviews, next_cursor, total_count = await list_reviews(db, current_user["org_id"], params)
     return PaginatedResponse(
         items=[ReviewRead.model_validate(r) for r in reviews],
         next_cursor=next_cursor,
@@ -112,9 +110,7 @@ async def get_book_reviews_endpoint(
         sort_by=sort_by,
         sort_dir=sort_dir,
     )
-    reviews, next_cursor, total_count = await get_reviews_for_book(
-        db, current_user["org_id"], book_id, params
-    )
+    reviews, next_cursor, total_count = await get_reviews_for_book(db, current_user["org_id"], book_id, params)
     return PaginatedResponse(
         items=[ReviewRead.model_validate(r) for r in reviews],
         next_cursor=next_cursor,
@@ -152,9 +148,7 @@ async def get_velocity_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     """Get review velocity over time for a book."""
-    return await compute_velocity_from_snapshots(
-        db, current_user["org_id"], book_id, period, lookback
-    )
+    return await compute_velocity_from_snapshots(db, current_user["org_id"], book_id, period, lookback)
 
 
 @router.get(
@@ -182,9 +176,7 @@ async def list_alerts_endpoint(
         is_acknowledged=is_acknowledged,
         book_id=book_id,
     )
-    alerts, next_cursor, total_count = await list_alerts(
-        db, current_user["org_id"], params
-    )
+    alerts, next_cursor, total_count = await list_alerts(db, current_user["org_id"], params)
     return PaginatedResponse(
         items=[ReviewAlertRead.model_validate(a) for a in alerts],
         next_cursor=next_cursor,
@@ -246,9 +238,7 @@ async def acknowledge_alert_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     """Acknowledge an alert."""
-    alert = await acknowledge_alert(
-        db, current_user["org_id"], alert_id, current_user["user_id"]
-    )
+    alert = await acknowledge_alert(db, current_user["org_id"], alert_id, current_user["user_id"])
     if not alert:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -313,10 +303,15 @@ async def get_review_stats(
 ):
     """Get aggregate review statistics."""
     return {
-        "total": 347, "avg_rating": 4.2, "this_month": 28,
-        "this_month_change_pct": 12.5, "sentiment_score": 74,
-        "velocity": 6.8, "genre_avg_velocity": 5.2,
-        "needs_attention": 3, "book_count": 3,
+        "total": 347,
+        "avg_rating": 4.2,
+        "this_month": 28,
+        "this_month_change_pct": 12.5,
+        "sentiment_score": 74,
+        "velocity": 6.8,
+        "genre_avg_velocity": 5.2,
+        "needs_attention": 3,
+        "book_count": 3,
         "rating_distribution": {1: 8, 2: 15, 3: 42, 4: 128, 5: 154},
     }
 
@@ -340,9 +335,12 @@ async def get_review_insights(
 ):
     """Get AI review insights."""
     return {
-        "positive_themes": [], "negative_themes": [],
-        "keyword_cloud": [], "ai_summary": "",
-        "action_items": [], "velocity_data": [],
+        "positive_themes": [],
+        "negative_themes": [],
+        "keyword_cloud": [],
+        "ai_summary": "",
+        "action_items": [],
+        "velocity_data": [],
         "computed_at": None,
     }
 

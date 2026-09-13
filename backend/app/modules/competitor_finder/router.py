@@ -8,6 +8,7 @@ Endpoints:
   POST /competitors/gap-analysis     - Cover/title/content gap analysis
   GET  /competitors/alerts           - Get competitor alerts
 """
+
 from __future__ import annotations
 
 from uuid import UUID, uuid4
@@ -61,7 +62,7 @@ async def analyze_competitor(
         )
         return analysis
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.get(
@@ -77,13 +78,12 @@ async def get_weaknesses(
 ):
     service = CompetitorFinderService(db)
     try:
-        weaknesses = await service.get_weaknesses(
+        return await service.get_weaknesses(
             analysis_id=analysis_id,
             org_id=current_user["org_id"],
         )
-        return weaknesses
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.post(
@@ -122,7 +122,7 @@ async def batch_analyze(
             message=f"Batch analysis started for {len(analyses)} books",
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.get(
@@ -149,7 +149,7 @@ async def get_opportunity(
             )
         return opportunity
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.post(
@@ -172,13 +172,12 @@ async def gap_analysis(
         )
     service = CompetitorFinderService(db)
     try:
-        result = await service.run_gap_analysis(
+        return await service.run_gap_analysis(
             request=request,
             org_id=current_user["org_id"],
         )
-        return result
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.get(
@@ -194,12 +193,11 @@ async def get_alerts(
     db: AsyncSession = Depends(get_db),
 ):
     service = CompetitorFinderService(db)
-    alerts = await service.get_alerts(
+    return await service.get_alerts(
         org_id=current_user["org_id"],
         include_dismissed=include_dismissed,
         limit=limit,
     )
-    return alerts
 
 
 # ------------------------------------------------------------------

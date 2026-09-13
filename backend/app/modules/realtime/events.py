@@ -40,6 +40,7 @@ def _channel_key(channel: WSChannel, room_id: str) -> str:
 # Publish
 # ---------------------------------------------------------------------------
 
+
 async def publish_to_channel(
     channel: WSChannel,
     room_id: str,
@@ -74,6 +75,7 @@ async def publish_to_channel(
 # ---------------------------------------------------------------------------
 # Subscribe (async iterator)
 # ---------------------------------------------------------------------------
+
 
 async def subscribe_to_channel(
     channel: WSChannel,
@@ -111,6 +113,7 @@ async def subscribe_to_channel(
 # ---------------------------------------------------------------------------
 # Integration with shared EventPublisher interface
 # ---------------------------------------------------------------------------
+
 
 class RealtimeEventPublisher:
     """Concrete ``EventPublisher`` that pushes events to the WebSocket layer

@@ -39,6 +39,10 @@ jest.mock("next/link", () => {
 
 // Mock lucide-react icons
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   ArrowLeft: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="icon-arrow-left" {...props} />
   ),
@@ -79,6 +83,7 @@ jest.mock("@/modules/knowledge/hooks", () => ({
   useKnowledgeEntry: (...args: unknown[]) => mockUseKnowledgeEntry(...args),
   useDeleteEntry: (...args: unknown[]) => mockUseDeleteEntry(...args),
   useSummarizeEntry: (...args: unknown[]) => mockUseSummarizeEntry(...args),
+  useUpdateEntry: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock Radix UI Dialog primitives for ConfirmDialog
@@ -143,6 +148,24 @@ jest.mock("@radix-ui/react-dialog", () => ({
 
 // Mock Radix Slot so that Button renders correctly
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -229,6 +252,15 @@ function setupDefaultMocks(overrides?: {
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * The detail page is an editor now: Delete and AI Summary live behind the
+ * "More actions" dropdown rather than sitting on the toolbar.
+ */
+async function openMoreActions(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  await screen.findByRole("menu");
+}
+
 describe("KnowledgeEntryDetailPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -251,12 +283,10 @@ describe("KnowledgeEntryDetailPage", () => {
   it("displays the entry title and content when loaded", () => {
     render(<KnowledgeEntryDetailPage />);
 
-    expect(
-      screen.getByRole("heading", { name: /Research on Publishing Trends/i })
-    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Research on Publishing Trends")).toBeInTheDocument();
 
     expect(
-      screen.getByText(/detailed content of the knowledge entry/i)
+      screen.getByDisplayValue(/detailed content of the knowledge entry/i)
     ).toBeInTheDocument();
   });
 
@@ -326,8 +356,8 @@ describe("KnowledgeEntryDetailPage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     // Click the delete button
-    const deleteButton = screen.getByRole("button", { name: /delete/i });
-    await user.click(deleteButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     // ConfirmDialog should now be visible
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -344,8 +374,8 @@ describe("KnowledgeEntryDetailPage", () => {
     render(<KnowledgeEntryDetailPage />);
 
     // Open the confirm dialog
-    const deleteButton = screen.getByRole("button", { name: /delete/i });
-    await user.click(deleteButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
@@ -369,8 +399,8 @@ describe("KnowledgeEntryDetailPage", () => {
     render(<KnowledgeEntryDetailPage />);
 
     // Open the confirm dialog
-    const deleteButton = screen.getByRole("button", { name: /delete/i });
-    await user.click(deleteButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     // Click the confirm/Delete button in the dialog
     // The ConfirmDialog has confirmText="Delete"
@@ -421,8 +451,8 @@ describe("KnowledgeEntryDetailPage", () => {
     const user = userEvent.setup();
     render(<KnowledgeEntryDetailPage />);
 
-    const summaryButton = screen.getByRole("button", { name: /ai summary/i });
-    await user.click(summaryButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /ai summary/i }));
 
     await waitFor(() => {
       expect(mockSummarizeMutateAsync).toHaveBeenCalledTimes(1);
@@ -436,8 +466,8 @@ describe("KnowledgeEntryDetailPage", () => {
     const user = userEvent.setup();
     render(<KnowledgeEntryDetailPage />);
 
-    const summaryButton = screen.getByRole("button", { name: /ai summary/i });
-    await user.click(summaryButton);
+    await openMoreActions(user);
+    await user.click(screen.getByRole("menuitem", { name: /ai summary/i }));
 
     await waitFor(() => {
       expect(

@@ -11,12 +11,12 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agent_system.models import AuditAction, AuditTrail
+
+logger = logging.getLogger(__name__)
 
 
 async def record_audit(
@@ -77,11 +77,7 @@ async def list_audit_entries(
     total_count = total_result.scalar() or 0
 
     # Data query
-    query = (
-        select(AuditTrail)
-        .where(AuditTrail.org_id == org_id)
-        .order_by(desc(AuditTrail.created_at))
-    )
+    query = select(AuditTrail).where(AuditTrail.org_id == org_id).order_by(desc(AuditTrail.created_at))
     if action:
         query = query.where(AuditTrail.action == action)
     if actor_id:

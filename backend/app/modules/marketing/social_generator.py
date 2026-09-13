@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models.marketing import SocialPlatform
+from app.models.marketing import SocialPlatform, SocialPostStatus
 from app.modules.marketing.schemas import (
     GenerateSocialContentRequest,
     SocialPostCreate,
@@ -116,7 +116,9 @@ class SocialContentGenerator:
             "genre_hashtag": genre_hashtag,
             "target_audience": request.target_audience,
             "book_description": request.book_description,
-            "short_desc": request.book_description[:100] + "..." if len(request.book_description) > 100 else request.book_description,
+            "short_desc": request.book_description[:100] + "..."
+            if len(request.book_description) > 100
+            else request.book_description,
             "hook": f"you could {request.book_description[:50].lower().strip()}...",
             "comp_authors": "similar authors",
             "appeal": "keep you turning pages",
@@ -180,8 +182,12 @@ class SocialContentGenerator:
             SocialPlatform.TWITTER: [f"#{genre_hashtag}", "#BookLaunch", "#IndieAuthor"],
             SocialPlatform.FACEBOOK: [f"#{genre_hashtag}", "#NewBook"],
             SocialPlatform.INSTAGRAM: [
-                f"#{genre_hashtag}", "#BookStagram", "#NewRelease",
-                "#IndieAuthor", "#BookLovers", "#ReadersOfInstagram",
+                f"#{genre_hashtag}",
+                "#BookStagram",
+                "#NewRelease",
+                "#IndieAuthor",
+                "#BookLovers",
+                "#ReadersOfInstagram",
             ],
         }
 
@@ -224,7 +230,9 @@ class SocialContentGenerator:
                 messages=[{"role": "user", "content": prompt}],
             )
 
-            content = message.content[0].text
+            block = message.content[0]
+            # Only a TextBlock carries .text; a ToolUseBlock would raise.
+            content = block.text if hasattr(block, "text") else ""
             posts_data = json.loads(content)
             return self._parse_llm_social_response(request, posts_data)
 
@@ -323,7 +331,7 @@ async def update_social_post(
     if scheduled_at is not None:
         post.scheduled_at = scheduled_at
     if status is not None:
-        post.status = status
+        post.status = SocialPostStatus(status)
 
     await db.flush()
     await db.refresh(post)
@@ -336,7 +344,8 @@ async def mark_post_as_posted(
     org_id: uuid.UUID,
 ) -> dict | None:
     """Mark a social post as published."""
-    from datetime import UTC, datetime as dt
+    from datetime import UTC
+    from datetime import datetime as dt
 
     from app.models.marketing import SocialPost, SocialPostStatus
 

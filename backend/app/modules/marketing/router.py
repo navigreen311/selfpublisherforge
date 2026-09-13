@@ -49,6 +49,7 @@ router = APIRouter()
 # Launch Plan Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/launch-plan/generate",
     response_model=SuccessResponse[LaunchPlanResponse],
@@ -98,7 +99,7 @@ async def list_launch_plans(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status_filter}",
-            )
+            ) from None
 
     service = MarketingService(db)
     plans, total = await service.list_launch_plans(
@@ -162,6 +163,7 @@ async def update_launch_plan(
 # Email Sequence Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/email-sequences",
     response_model=SuccessResponse[EmailSequenceResponse],
@@ -202,7 +204,7 @@ async def list_email_sequences(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status_filter}",
-            )
+            ) from None
 
     service = MarketingService(db)
     sequences, total = await service.list_email_sequences(
@@ -273,6 +275,7 @@ async def trigger_email_send(
 # Social Media Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/social/generate",
     response_model=SuccessResponse[list[SocialPostResponse]],
@@ -322,22 +325,21 @@ async def get_social_calendar(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid platform: {platform}",
-            )
+            ) from None
 
     service = MarketingService(db)
-    calendar_data = await service.get_social_calendar(
+    return await service.get_social_calendar(
         org_id=current_user["org_id"],
         start_date=start_date,
         end_date=end_date,
         platform=social_platform,
     )
 
-    return calendar_data
-
 
 # ---------------------------------------------------------------------------
 # ARC Campaign Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/arc",
@@ -379,7 +381,7 @@ async def list_arc_campaigns(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status_filter}",
-            )
+            ) from None
 
     service = MarketingService(db)
     campaigns, total = await service.list_arc_campaigns(
@@ -462,8 +464,13 @@ async def update_email(
     from app.modules.marketing.email_builder import update_email_in_sequence
 
     result = await update_email_in_sequence(
-        db, sequence_id, current_user["org_id"], email_id,
-        subject=subject, body_html=body_html, delay_days=delay_days,
+        db,
+        sequence_id,
+        current_user["org_id"],
+        email_id,
+        subject=subject,
+        body_html=body_html,
+        delay_days=delay_days,
     )
     if not result:
         raise HTTPException(status_code=404, detail="Email not found")
@@ -523,9 +530,13 @@ async def update_social_post(
     from app.modules.marketing.social_generator import update_social_post as do_update
 
     result = await do_update(
-        db, post_id, current_user["org_id"],
-        content=content, hashtags=hashtags,
-        scheduled_at=scheduled_at, status=status_val,
+        db,
+        post_id,
+        current_user["org_id"],
+        content=content,
+        hashtags=hashtags,
+        scheduled_at=scheduled_at,
+        status=status_val,
     )
     if not result:
         raise HTTPException(status_code=404, detail="Post not found")

@@ -8,6 +8,7 @@ Endpoints:
     GET  /api/v1/covers/book/{book_id}       — List covers for a book
     DELETE /api/v1/covers/{id}               — Delete a cover
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -90,7 +91,7 @@ async def create_variations(
     try:
         variations = await service.create_variations(db, current_user["org_id"], cover_id, request)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return SuccessResponse(data=variations)
 
 

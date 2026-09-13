@@ -11,10 +11,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
+from app.core.sql import assert_known_columns
+from app.models.organization import Organization as _OrgModel
+from app.models.user import User as _UserModel
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,6 +44,7 @@ def _generate_api_key() -> tuple[str, str]:
 
 # ─── Service Class ────────────────────────────────────────────────────────────
 
+
 class UserService:
     """Stateless service; every method receives a db session."""
 
@@ -53,9 +58,7 @@ class UserService:
 
         from app.models.user import User
 
-        result = await db.execute(
-            select(User).where(User.id == user_id, User.deleted_at.is_(None))
-        )
+        result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
         user = result.scalar_one_or_none()
         if not user:
             raise AppException(
@@ -83,13 +86,15 @@ class UserService:
             )
         data["updated_at"] = datetime.now(UTC)
 
+        assert_known_columns(_UserModel, data)
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["user_id"] = user_id
         await db.execute(
-            sa_text(f"UPDATE users SET {set_clause} WHERE id = :user_id"),
+            sa_text(f"UPDATE users SET {set_clause} WHERE id = :user_id"),  # noqa: S608  # column names validated by assert_known_columns; values are bound
             data,
         )
         await db.flush()
+        db.expire_all()
         return await UserService.get_user_profile(db, user_id)
 
     @staticmethod
@@ -99,17 +104,13 @@ class UserService:
         preferences: dict[str, Any],
     ) -> dict[str, Any]:
         """Merge-update the JSONB preferences column."""
-        await db.execute(
-            sa_text(
-                "UPDATE users SET preferences = COALESCE(preferences, '{}'::jsonb) || :prefs::jsonb, "
-                "updated_at = :now WHERE id = :user_id"
-            ),
-            {
-                "prefs": json.dumps(preferences),
-                "now": datetime.now(UTC),
-                "user_id": user_id,
-            },
-        )
+        result = await db.execute(select(_UserModel).where(_UserModel.id == user_id))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise AppException(status_code=404, code="USER_NOT_FOUND", message="User not found")
+
+        user.preferences = {**(user.preferences or {}), **preferences}
+        user.updated_at = datetime.now(UTC)
         await db.flush()
         return await UserService.get_user_profile(db, user_id)
 
@@ -194,10 +195,11 @@ class UserService:
             )
 
         data["updated_at"] = datetime.now(UTC)
+        assert_known_columns(_OrgModel, data)
         set_clause = ", ".join(f"{k} = :{k}" for k in data)
         data["oid"] = org_id
         await db.execute(
-            sa_text(f"UPDATE organizations SET {set_clause} WHERE id = :oid"),
+            sa_text(f"UPDATE organizations SET {set_clause} WHERE id = :oid"),  # noqa: S608  # column names validated by assert_known_columns; values are bound
             data,
         )
         await db.flush()
@@ -242,10 +244,7 @@ class UserService:
 
         # Check duplicate pending invites
         existing = await db.execute(
-            sa_text(
-                "SELECT id FROM invitations "
-                "WHERE org_id = :oid AND email = :email AND status = 'pending'"
-            ),
+            sa_text("SELECT id FROM invitations " "WHERE org_id = :oid AND email = :email AND status = 'pending'"),
             {"oid": org_id, "email": email},
         )
         if existing.first():
@@ -349,9 +348,7 @@ class UserService:
 
         # Check target role — can't remove someone of equal/higher rank
         target_result = await db.execute(
-            sa_text(
-                "SELECT role FROM users WHERE id = :uid AND org_id = :oid AND deleted_at IS NULL"
-            ),
+            sa_text("SELECT role FROM users WHERE id = :uid AND org_id = :oid AND deleted_at IS NULL"),
             {"uid": target_user_id, "oid": org_id},
         )
         target_row = target_result.mappings().first()
@@ -369,10 +366,7 @@ class UserService:
             )
 
         await db.execute(
-            sa_text(
-                "UPDATE users SET deleted_at = :now, updated_at = :now "
-                "WHERE id = :uid AND org_id = :oid"
-            ),
+            sa_text("UPDATE users SET deleted_at = :now, updated_at = :now " "WHERE id = :uid AND org_id = :oid"),
             {
                 "now": datetime.now(UTC),
                 "uid": target_user_id,
@@ -490,4 +484,3 @@ class UserService:
                 code="API_KEY_NOT_FOUND",
                 message="API key not found or already revoked",
             )
-

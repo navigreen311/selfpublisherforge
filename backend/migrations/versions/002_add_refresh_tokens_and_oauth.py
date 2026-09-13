@@ -4,16 +4,15 @@ Revision ID: 002_refresh_tokens_oauth
 Revises: 001_initial_schema
 Create Date: 2025-01-15 12:00:00.000000
 """
-from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers
 revision: str = "002_refresh_tokens_oauth"
-down_revision: Union[str, None] = "001_initial_schema"
-branch_labels: Union[str, None] = None
-depends_on: Union[str, None] = None
+down_revision: str | None = "001_initial_schema"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

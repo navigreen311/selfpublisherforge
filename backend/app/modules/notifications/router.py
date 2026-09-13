@@ -133,7 +133,5 @@ async def update_preferences(
     db: AsyncSession = Depends(get_db),
 ):
     """Create or update notification preferences for the authenticated user."""
-    prefs = await service.upsert_preferences(
-        db, current_user["user_id"], body.preferences
-    )
+    prefs = await service.upsert_preferences(db, current_user["user_id"], body.preferences)
     return [NotificationPreferenceOut.model_validate(p) for p in prefs]

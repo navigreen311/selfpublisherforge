@@ -1,4 +1,5 @@
 """Seed demo users and organizations."""
+
 import uuid
 from datetime import UTC, datetime, timedelta
 

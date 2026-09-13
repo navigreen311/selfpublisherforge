@@ -1,0 +1,11 @@
+# Suppressions for image scanning. Each entry needs a reason the finding cannot
+# be acted on here — not merely that it is inconvenient. Anything that a
+# dependency bump can fix belongs in package.json or requirements.txt instead.
+
+# postcss 8.4.31, vendored inside next's own node_modules
+# (app/node_modules/next/node_modules/postcss). It is not a dependency this
+# repo declares or can override — it ships inside the framework, and no 15.5.x
+# release carries a patched copy. It goes away with the Next 14->16 upgrade
+# that is already an open decision; re-check on that bump and delete these.
+CVE-2026-45623
+CVE-2026-73646

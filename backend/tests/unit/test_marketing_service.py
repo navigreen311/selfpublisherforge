@@ -8,7 +8,8 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -25,20 +26,19 @@ from app.modules.marketing.schemas import (
     ARCCampaignCreate,
     ARCRecipientCreate,
     EmailSequenceCreate,
-    EmailSequenceUpdate,
     EmailTemplateCreate,
+    LaunchPhaseCreate,
     LaunchPlanCreate,
     LaunchPlanUpdate,
-    PhaseCreate,
+    PhaseTaskCreate,
     SocialPostCreate,
-    TaskCreate,
 )
 from app.modules.marketing.service import MarketingService
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id():
@@ -75,6 +75,7 @@ def service(mock_db):
 # Tests: Launch Plans
 # ===========================================================================
 
+
 class TestCreateLaunchPlan:
     """Tests for MarketingService.create_launch_plan."""
 
@@ -107,9 +108,9 @@ class TestCreateLaunchPlan:
             genre="thriller",
             target_audience="Adult readers",
             budget=5000.00,
-            goals=["Sell 1000 copies in first month"],
+            goals={"first_month_sales": 1000},
             phases=[
-                PhaseCreate(
+                LaunchPhaseCreate(
                     phase_type="pre_launch",
                     name="Pre-Launch",
                     description="Build hype",
@@ -117,7 +118,7 @@ class TestCreateLaunchPlan:
                     end_date=datetime(2025, 5, 31, tzinfo=UTC),
                     order_index=1,
                     tasks=[
-                        TaskCreate(
+                        PhaseTaskCreate(
                             title="Build ARC team",
                             description="Recruit 50 ARC readers",
                             status="pending",
@@ -229,6 +230,7 @@ class TestUpdateLaunchPlan:
 # Tests: Email Sequences
 # ===========================================================================
 
+
 class TestCreateEmailSequence:
     """Tests for MarketingService.create_email_sequence."""
 
@@ -241,7 +243,7 @@ class TestCreateEmailSequence:
     ):
         """create_email_sequence should create sequence with email templates."""
         # Mock the get_email_sequence call at the end
-        mock_sequence = MagicMock(
+        mock_sequence = SimpleNamespace(
             id=uuid.uuid4(),
             name="Welcome Series",
             status=EmailSequenceStatus.DRAFT,
@@ -266,7 +268,7 @@ class TestCreateEmailSequence:
                     delay_days=0,
                     delay_hours=0,
                     order_index=1,
-                    personalization_fields={"name": "{{name}}"},
+                    personalization_fields=["name"],
                 ),
             ],
         )
@@ -343,6 +345,7 @@ class TestTriggerEmailSend:
 # ===========================================================================
 # Tests: Social Posts
 # ===========================================================================
+
 
 class TestCreateSocialPost:
     """Tests for MarketingService.create_social_post."""
@@ -441,6 +444,7 @@ class TestGetSocialCalendar:
 # Tests: ARC Campaigns
 # ===========================================================================
 
+
 class TestCreateARCCampaign:
     """Tests for MarketingService.create_arc_campaign."""
 
@@ -454,7 +458,7 @@ class TestCreateARCCampaign:
     ):
         """create_arc_campaign should create campaign with recipients."""
         # Mock the get_arc_campaign call at the end
-        mock_campaign = MagicMock(
+        mock_campaign = SimpleNamespace(
             id=uuid.uuid4(),
             name="ARC Campaign 2025",
             status=ARCCampaignStatus.DRAFT,

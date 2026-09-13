@@ -311,7 +311,7 @@ export default function KnowledgeVaultPage() {
             <h2 id="create-dialog-title" className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t("newKnowledgeEntry")}</h2>
             <form onSubmit={handleCreate} className="space-y-3 sm:space-y-4" aria-label="Create knowledge entry form">
               <div>
-                <label htmlFor="new-entry-title" className="block text-xs sm:text-sm font-medium mb-1">{t("title")}</label>
+                <label htmlFor="new-entry-title" className="block text-xs sm:text-sm font-medium mb-1">{t("titleLabel")}</label>
                 <input
                   id="new-entry-title"
                   type="text"

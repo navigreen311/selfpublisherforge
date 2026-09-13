@@ -23,6 +23,7 @@ import asyncio
 import logging
 import statistics
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -66,9 +67,7 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
         Dict with task results including number of competitors found and
         price comparison data.
     """
-    logger.info(
-        "Checking competitor prices for book=%s org=%s", book_id, org_id
-    )
+    logger.info("Checking competitor prices for book=%s org=%s", book_id, org_id)
 
     async def _run():
         from app.database import async_session
@@ -100,7 +99,8 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
                 if not competitors:
                     logger.info(
                         "No competitor records found for book=%s org=%s",
-                        book_id, org_id,
+                        book_id,
+                        org_id,
                     )
                     return {
                         "org_id": org_id,
@@ -145,44 +145,54 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
                 for rule in active_rules:
                     # Detect if competitor average has moved outside rule bounds
                     if avg_price < rule.min_price:
-                        price_changes_detected.append({
-                            "rule_id": str(rule.id),
-                            "rule_name": rule.name,
-                            "alert": "competitor_avg_below_min",
-                            "competitor_avg": avg_price,
-                            "rule_min_price": rule.min_price,
-                        })
+                        price_changes_detected.append(
+                            {
+                                "rule_id": str(rule.id),
+                                "rule_name": rule.name,
+                                "alert": "competitor_avg_below_min",
+                                "competitor_avg": avg_price,
+                                "rule_min_price": rule.min_price,
+                            }
+                        )
                         logger.warning(
-                            "Competitor avg price $%.2f below rule min $%.2f "
-                            "for rule=%s book=%s",
-                            avg_price, rule.min_price, str(rule.id), book_id,
+                            "Competitor avg price $%.2f below rule min $%.2f " "for rule=%s book=%s",
+                            avg_price,
+                            rule.min_price,
+                            str(rule.id),
+                            book_id,
                         )
                     if avg_price > rule.max_price:
-                        price_changes_detected.append({
-                            "rule_id": str(rule.id),
-                            "rule_name": rule.name,
-                            "alert": "competitor_avg_above_max",
-                            "competitor_avg": avg_price,
-                            "rule_max_price": rule.max_price,
-                        })
+                        price_changes_detected.append(
+                            {
+                                "rule_id": str(rule.id),
+                                "rule_name": rule.name,
+                                "alert": "competitor_avg_above_max",
+                                "competitor_avg": avg_price,
+                                "rule_max_price": rule.max_price,
+                            }
+                        )
                         logger.warning(
-                            "Competitor avg price $%.2f above rule max $%.2f "
-                            "for rule=%s book=%s",
-                            avg_price, rule.max_price, str(rule.id), book_id,
+                            "Competitor avg price $%.2f above rule max $%.2f " "for rule=%s book=%s",
+                            avg_price,
+                            rule.max_price,
+                            str(rule.id),
+                            book_id,
                         )
 
                     # If the rule has a target price, flag significant deviation
                     if rule.target_price is not None and avg_price > 0:
                         deviation_pct = abs(avg_price - rule.target_price) / avg_price
                         if deviation_pct > 0.10:
-                            price_changes_detected.append({
-                                "rule_id": str(rule.id),
-                                "rule_name": rule.name,
-                                "alert": "significant_price_deviation",
-                                "competitor_avg": avg_price,
-                                "target_price": rule.target_price,
-                                "deviation_pct": round(deviation_pct * 100, 1),
-                            })
+                            price_changes_detected.append(
+                                {
+                                    "rule_id": str(rule.id),
+                                    "rule_name": rule.name,
+                                    "alert": "significant_price_deviation",
+                                    "competitor_avg": avg_price,
+                                    "target_price": rule.target_price,
+                                    "deviation_pct": round(deviation_pct * 100, 1),
+                                }
+                            )
 
                 await db.commit()
 
@@ -200,21 +210,30 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
                 await db.rollback()
                 logger.error(
                     "Invalid UUID or data for book=%s org=%s: %s",
-                    book_id, org_id, exc, exc_info=True,
+                    book_id,
+                    org_id,
+                    exc,
+                    exc_info=True,
                 )
                 raise
             except SQLAlchemyError as exc:
                 await db.rollback()
                 logger.error(
                     "Database error during competitor price check for book=%s org=%s: %s",
-                    book_id, org_id, exc, exc_info=True,
+                    book_id,
+                    org_id,
+                    exc,
+                    exc_info=True,
                 )
                 raise
             except statistics.StatisticsError as exc:
                 await db.rollback()
                 logger.error(
                     "Statistics computation failed for book=%s org=%s: %s",
-                    book_id, org_id, exc, exc_info=True,
+                    book_id,
+                    org_id,
+                    exc,
+                    exc_info=True,
                 )
                 raise
 
@@ -226,7 +245,7 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
             result["competitors_checked"],
             result["competitors_updated"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -234,9 +253,12 @@ def check_competitor_prices(self, org_id: str, book_id: str) -> dict:
     except Exception as exc:
         logger.error(
             "Competitor price check failed for book=%s org=%s: %s",
-            book_id, org_id, str(exc), exc_info=True,
+            book_id,
+            org_id,
+            str(exc),
+            exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -338,13 +360,14 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
 
                     # 4. Run the pricing strategy
                     try:
-                        strategy_result = calculate_price(
-                            rule.strategy.value, context
-                        )
+                        strategy_result = calculate_price(rule.strategy.value, context)
                     except (ValueError, KeyError, TypeError, ZeroDivisionError) as e:
                         logger.error(
                             "Strategy calculation failed for rule=%s strategy=%s org=%s: %s",
-                            str(rule.id), rule.strategy.value, org_id, e,
+                            str(rule.id),
+                            rule.strategy.value,
+                            org_id,
+                            e,
                             exc_info=True,
                         )
                         continue
@@ -368,8 +391,7 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
                         }
                         price_changes.append(change_record)
                         logger.info(
-                            "Price change triggered: rule=%s book=%s "
-                            "$%.2f -> $%.2f (confidence=%.2f)",
+                            "Price change triggered: rule=%s book=%s " "$%.2f -> $%.2f (confidence=%.2f)",
                             str(rule.id),
                             str(rule.book_id) if rule.book_id else "N/A",
                             current_price,
@@ -394,34 +416,39 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
                 await db.rollback()
                 logger.error(
                     "Invalid UUID or data during auto-pricing evaluation for org=%s: %s",
-                    org_id, exc, exc_info=True,
+                    org_id,
+                    exc,
+                    exc_info=True,
                 )
                 raise
             except SQLAlchemyError as exc:
                 await db.rollback()
                 logger.error(
                     "Database error during auto-pricing evaluation for org=%s: %s",
-                    org_id, exc, exc_info=True,
+                    org_id,
+                    exc,
+                    exc_info=True,
                 )
                 raise
             except (KeyError, AttributeError) as exc:
                 await db.rollback()
                 logger.error(
                     "Missing data during auto-pricing evaluation for org=%s: %s",
-                    org_id, exc, exc_info=True,
+                    org_id,
+                    exc,
+                    exc_info=True,
                 )
                 raise
 
     try:
         result = _run_async(_run())
         logger.info(
-            "Auto-pricing evaluation completed for org=%s: %d rules evaluated, "
-            "%d triggered",
+            "Auto-pricing evaluation completed for org=%s: %d rules evaluated, " "%d triggered",
             org_id,
             result["rules_evaluated"],
             result["rules_triggered"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -429,9 +456,11 @@ def evaluate_auto_pricing_rules(self, org_id: str) -> dict:
     except Exception as exc:
         logger.error(
             "Auto-pricing evaluation failed for org=%s: %s",
-            org_id, str(exc), exc_info=True,
+            org_id,
+            str(exc),
+            exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -481,8 +510,7 @@ def activate_scheduled_promotions(self) -> dict:
                     promo.status = PromotionStatus.ACTIVE
                     activated_ids.append(str(promo.id))
                     logger.info(
-                        "Activated promotion: id=%s name='%s' book=%s "
-                        "promo_price=$%.2f (original=$%.2f)",
+                        "Activated promotion: id=%s name='%s' book=%s " "promo_price=$%.2f (original=$%.2f)",
                         str(promo.id),
                         promo.name,
                         str(promo.book_id),
@@ -502,14 +530,16 @@ def activate_scheduled_promotions(self) -> dict:
                 await db.rollback()
                 logger.error(
                     "Database error during promotion activation: %s",
-                    exc, exc_info=True,
+                    exc,
+                    exc_info=True,
                 )
                 raise
             except (AttributeError, TypeError) as exc:
                 await db.rollback()
                 logger.error(
                     "Data error during promotion activation: %s",
-                    exc, exc_info=True,
+                    exc,
+                    exc_info=True,
                 )
                 raise
 
@@ -519,16 +549,18 @@ def activate_scheduled_promotions(self) -> dict:
             "Promotion activation check completed: %d activated",
             result["promotions_activated"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error(
-            "Promotion activation failed: %s", str(exc), exc_info=True,
+            "Promotion activation failed: %s",
+            str(exc),
+            exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -579,16 +611,17 @@ def complete_expired_promotions(self) -> dict:
                 for promo in promotions:
                     promo.status = PromotionStatus.COMPLETED
                     completed_ids.append(str(promo.id))
-                    restored_prices.append({
-                        "promotion_id": str(promo.id),
-                        "book_id": str(promo.book_id),
-                        "promo_price": promo.promo_price,
-                        "original_price": promo.original_price,
-                        "platform": promo.platform,
-                    })
+                    restored_prices.append(
+                        {
+                            "promotion_id": str(promo.id),
+                            "book_id": str(promo.book_id),
+                            "promo_price": promo.promo_price,
+                            "original_price": promo.original_price,
+                            "platform": promo.platform,
+                        }
+                    )
                     logger.info(
-                        "Completed expired promotion: id=%s name='%s' book=%s "
-                        "restoring price $%.2f -> $%.2f",
+                        "Completed expired promotion: id=%s name='%s' book=%s " "restoring price $%.2f -> $%.2f",
                         str(promo.id),
                         promo.name,
                         str(promo.book_id),
@@ -609,14 +642,16 @@ def complete_expired_promotions(self) -> dict:
                 await db.rollback()
                 logger.error(
                     "Database error during promotion expiration check: %s",
-                    exc, exc_info=True,
+                    exc,
+                    exc_info=True,
                 )
                 raise
             except (AttributeError, TypeError) as exc:
                 await db.rollback()
                 logger.error(
                     "Data error during promotion expiration check: %s",
-                    exc, exc_info=True,
+                    exc,
+                    exc_info=True,
                 )
                 raise
 
@@ -626,16 +661,18 @@ def complete_expired_promotions(self) -> dict:
             "Promotion expiration check completed: %d completed",
             result["promotions_completed"],
         )
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error(
-            "Promotion expiration check failed: %s", str(exc), exc_info=True,
+            "Promotion expiration check failed: %s",
+            str(exc),
+            exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ──────────────────── Celery Beat Schedule ────────────────────

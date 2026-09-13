@@ -4,14 +4,15 @@ Tests cover generation, variations, template listing, competitor analysis,
 and cover queries.
 """
 
-import pytest
 import uuid
-from datetime import datetime, UTC
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from app.core.exceptions import AppException
-from app.modules.cover_design.models import Cover
 from app.modules.cover_design import service
+from app.modules.cover_design.models import Cover
 from app.modules.cover_design.schemas import (
     CompetitorCoverAnalysisRequest,
     CoverGenerateRequest,
@@ -20,7 +21,6 @@ from app.modules.cover_design.schemas import (
     CoverStatus,
     CoverVariationRequest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -65,7 +65,6 @@ async def _seed_cover(
 
 
 class TestGenerateCover:
-
     @pytest.mark.asyncio
     async def test_generate_cover_success(self, db_session):
         """Should generate a new cover and persist it."""
@@ -139,7 +138,6 @@ class TestGenerateCover:
 
 
 class TestCreateVariations:
-
     @pytest.mark.asyncio
     async def test_create_variations_success(self, db_session):
         """Should create variations of an existing cover."""
@@ -181,9 +179,7 @@ class TestCreateVariations:
         ) as mock_gen:
             mock_gen.return_value = mock_variations
 
-            result = await service.create_variations(
-                db_session, org_id, original.id, request
-            )
+            result = await service.create_variations(db_session, org_id, original.id, request)
 
         assert len(result) == 2
         assert result[0].image_url == "https://example.com/var1.jpg"
@@ -211,19 +207,18 @@ class TestCreateVariations:
 
 
 class TestListTemplates:
-
     @pytest.mark.asyncio
     async def test_list_all_templates(self):
         """Should return all templates when no genre filter."""
         with patch("app.modules.cover_design.service.get_all_templates") as mock_get:
             mock_get.return_value = [
-                MagicMock(
+                SimpleNamespace(
                     id="tmpl1",
                     name="Template 1",
                     genre=CoverGenre.FANTASY,
                     description="A fantasy template",
                     thumbnail_url="https://example.com/t1.jpg",
-                    dimensions={"width": 1600, "height": 2560},
+                    dimensions={"width_px": 1600, "height_px": 2560},
                     font_recommendations=["Arial"],
                     layout_guidance="Center aligned",
                     tags=["epic"],
@@ -240,13 +235,13 @@ class TestListTemplates:
         """Should filter templates by genre."""
         with patch("app.modules.cover_design.service.get_templates_by_genre") as mock_get:
             mock_get.return_value = [
-                MagicMock(
+                SimpleNamespace(
                     id="tmpl2",
                     name="Romance Template",
                     genre=CoverGenre.ROMANCE,
                     description="A romance template",
                     thumbnail_url="https://example.com/t2.jpg",
-                    dimensions={"width": 1600, "height": 2560},
+                    dimensions={"width_px": 1600, "height_px": 2560},
                     font_recommendations=["Georgia"],
                     layout_guidance="Centered title",
                     tags=["romance"],
@@ -265,7 +260,6 @@ class TestListTemplates:
 
 
 class TestAnalyzeCompetitors:
-
     @pytest.mark.asyncio
     async def test_analyze_competitors_success(self):
         """Should analyze competitor covers."""
@@ -304,7 +298,6 @@ class TestAnalyzeCompetitors:
 
 
 class TestListCoversForBook:
-
     @pytest.mark.asyncio
     async def test_list_covers_empty(self, db_session):
         """Should return empty list if no covers exist."""
@@ -333,7 +326,6 @@ class TestListCoversForBook:
 
 
 class TestGetCoverById:
-
     @pytest.mark.asyncio
     async def test_get_cover_success(self, db_session):
         """Should retrieve a single cover by ID."""
@@ -356,7 +348,6 @@ class TestGetCoverById:
 
 
 class TestDeleteCover:
-
     @pytest.mark.asyncio
     async def test_delete_cover_success(self, db_session):
         """Should soft-delete a cover."""

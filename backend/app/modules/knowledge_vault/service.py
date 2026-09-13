@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 import httpx
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, select
 from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +28,7 @@ class KnowledgeService:
     """Encapsulates all Knowledge Vault operations."""
 
     # Class-level set of entry IDs that failed ES indexing and need retry.
-    _pending_reindex: set[str] = set()
+    _pending_reindex: ClassVar[set[str]] = set()
 
     def __init__(self, db: AsyncSession, search: KnowledgeSearchService | None = None):
         self.db = db
@@ -133,9 +133,7 @@ class KnowledgeService:
         total_result = await self.db.execute(count_stmt)
         total_count = total_result.scalar()
 
-        next_cursor = (
-            items[-1].created_at.isoformat() if has_more and items else None
-        )
+        next_cursor = items[-1].created_at.isoformat() if has_more and items else None
 
         return {
             "items": items,
@@ -144,9 +142,7 @@ class KnowledgeService:
             "total_count": total_count,
         }
 
-    async def update_entry(
-        self, org_id: UUID, entry_id: UUID, payload: UpdateEntryRequest
-    ) -> KnowledgeEntry | None:
+    async def update_entry(self, org_id: UUID, entry_id: UUID, payload: UpdateEntryRequest) -> KnowledgeEntry | None:
         entry = await self.get_entry(org_id, entry_id)
         if not entry:
             return None
@@ -317,9 +313,7 @@ class KnowledgeService:
 
     # ── AI Summarize ─────────────────────────────────────────────
 
-    async def summarize_entry(
-        self, org_id: UUID, entry_id: UUID
-    ) -> dict[str, Any] | None:
+    async def summarize_entry(self, org_id: UUID, entry_id: UUID) -> dict[str, Any] | None:
         entry = await self.get_entry(org_id, entry_id)
         if not entry:
             return None

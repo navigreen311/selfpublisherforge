@@ -66,7 +66,7 @@ def _session_to_response(session: DictationSession) -> SessionResponse:
         raw_transcript=session.raw_transcript,
         refined_text=session.refined_text,
         refinement_applied=session.refinement_applied,
-        word_count=session.word_count,
+        word_count=session.words_dictated,
         words_after_refinement=session.words_after_refinement,
         duration_seconds=session.duration_seconds,
         created_at=session.created_at,
@@ -77,7 +77,7 @@ def _session_to_response(session: DictationSession) -> SessionResponse:
 def _command_to_response(cmd: DictationCommand) -> CommandResponse:
     return CommandResponse(
         id=cmd.id,
-        trigger_phrase=cmd.trigger_phrase,
+        trigger_phrase=cmd.command_phrase,
         action=cmd.action,
         description=cmd.description,
         is_system=cmd.is_system,
@@ -151,7 +151,7 @@ async def update_session(
 
     if request.raw_transcript is not None:
         session.raw_transcript = request.raw_transcript
-        session.word_count = len(request.raw_transcript.split())
+        session.words_dictated = len(request.raw_transcript.split())
 
     if request.duration_seconds is not None:
         session.duration_seconds = request.duration_seconds
@@ -221,7 +221,7 @@ async def list_sessions(
             id=s.id,
             title=s.title,
             status=s.status.value if hasattr(s.status, "value") else s.status,
-            word_count=s.word_count,
+            word_count=s.words_dictated,
             duration_seconds=s.duration_seconds,
             refinement_applied=s.refinement_applied,
             created_at=s.created_at,
@@ -334,7 +334,11 @@ async def _ensure_system_commands(db: AsyncSession) -> None:
 
     for trigger, action, desc in SYSTEM_COMMANDS:
         cmd = DictationCommand(
-            trigger_phrase=trigger,
+            # The column is command_phrase; trigger_phrase is the API field.
+            # This constructor used the API name, so seeding the built-in
+            # commands raised TypeError every time it was called — which is
+            # why `list_commands` has only ever returned an org's own.
+            command_phrase=trigger,
             action=action,
             description=desc,
             is_system=True,
@@ -371,9 +375,13 @@ async def create_command(
 ) -> CommandResponse:
     """Create a custom voice command for an organization."""
     cmd = DictationCommand(
-        trigger_phrase=request.trigger_phrase,
+        # The ORM column is command_phrase; the request field is trigger_phrase.
+        command_phrase=request.trigger_phrase,
         action=request.action,
-        description=request.description,
+        # NOTE: request.description is accepted by the API and then dropped —
+        # DictationCommand has no description column. Passing it here raised
+        # TypeError, so this endpoint has never created a command. Persisting
+        # it needs a schema change; see the missing-columns list.
         is_system=False,
         org_id=org_id,
     )

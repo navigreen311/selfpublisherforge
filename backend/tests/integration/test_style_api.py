@@ -7,16 +7,15 @@ through the FastAPI router, using in-memory SQLite and mocked auth.
 from __future__ import annotations
 
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from unittest.mock import AsyncMock, patch
 
-from app.database import Base, get_db
 from app.core.dependencies import get_current_user
-
+from app.database import Base, get_db
 
 # ---------------------------------------------------------------------------
 # In-memory SQLite engine for tests
@@ -76,10 +75,12 @@ def _override_current_user():
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture
 async def fastapi_app():
     """Create a fresh app instance with overridden dependencies."""
     from app.main import create_app
+
     application = create_app()
     application.dependency_overrides[get_db] = _override_get_db
     application.dependency_overrides[get_current_user] = _override_current_user
@@ -112,8 +113,8 @@ SAMPLE_TEXT = (
 # Profile CRUD tests
 # ===================================================================
 
-class TestProfileCRUD:
 
+class TestProfileCRUD:
     @pytest.mark.asyncio
     async def test_create_profile_without_samples(self, client: AsyncClient):
         response = await client.post(
@@ -230,8 +231,8 @@ class TestProfileCRUD:
 # Analysis & fingerprint tests
 # ===================================================================
 
-class TestAnalysis:
 
+class TestAnalysis:
     @pytest.mark.asyncio
     async def test_analyze_adds_samples(self, client: AsyncClient):
         create_resp = await client.post(
@@ -273,9 +274,7 @@ class TestAnalysis:
         assert len(fp["voice_vector"]) >= 200
 
     @pytest.mark.asyncio
-    async def test_fingerprint_not_available_before_analysis(
-        self, client: AsyncClient
-    ):
+    async def test_fingerprint_not_available_before_analysis(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "No Analysis"},
@@ -292,8 +291,8 @@ class TestAnalysis:
 # Conformity check tests
 # ===================================================================
 
-class TestConformityCheckAPI:
 
+class TestConformityCheckAPI:
     @pytest.mark.asyncio
     async def test_conformity_check_endpoint(self, client: AsyncClient):
         create_resp = await client.post(
@@ -315,9 +314,7 @@ class TestConformityCheckAPI:
         assert "feedback" in data
 
     @pytest.mark.asyncio
-    async def test_conformity_check_on_unanalyzed_profile(
-        self, client: AsyncClient
-    ):
+    async def test_conformity_check_on_unanalyzed_profile(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "Unanalyzed"},
@@ -335,8 +332,8 @@ class TestConformityCheckAPI:
 # Generate sample tests
 # ===================================================================
 
-class TestGenerateSample:
 
+class TestGenerateSample:
     @pytest.mark.asyncio
     async def test_generate_sample_endpoint(self, client: AsyncClient):
         create_resp = await client.post(
@@ -357,9 +354,7 @@ class TestGenerateSample:
             finish_reason="end_turn",
         )
 
-        with patch(
-            "app.modules.style_cloning.router.AnthropicProvider"
-        ) as MockProvider:
+        with patch("app.modules.style_cloning.router.AnthropicProvider") as MockProvider:
             mock_instance = MockProvider.return_value
             mock_instance.generate = AsyncMock(return_value=mock_response)
 
@@ -374,9 +369,7 @@ class TestGenerateSample:
         assert data["profile_id"] == profile_id
 
     @pytest.mark.asyncio
-    async def test_generate_sample_unanalyzed_returns_400(
-        self, client: AsyncClient
-    ):
+    async def test_generate_sample_unanalyzed_returns_400(self, client: AsyncClient):
         create_resp = await client.post(
             "/api/v1/style-profiles",
             json={"name": "No Samples"},
@@ -394,8 +387,8 @@ class TestGenerateSample:
 # Org isolation tests
 # ===================================================================
 
-class TestOrgIsolation:
 
+class TestOrgIsolation:
     @pytest.mark.asyncio
     async def test_profiles_isolated_by_org(self, client: AsyncClient):
         # Create as user A
@@ -432,8 +425,8 @@ class TestOrgIsolation:
 # Validation tests
 # ===================================================================
 
-class TestValidation:
 
+class TestValidation:
     @pytest.mark.asyncio
     async def test_empty_name_returns_422(self, client: AsyncClient):
         response = await client.post(

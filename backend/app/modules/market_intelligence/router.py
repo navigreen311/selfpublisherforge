@@ -5,7 +5,7 @@ Prefix: /api/v1/market
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -170,7 +170,7 @@ async def track_competitor(
     try:
         return await svc.track_competitor(db=db, request=request, org_id=current_user["org_id"])
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get(
@@ -211,9 +211,7 @@ async def market_trends(
 ):
     """Market trend data for categories and keywords."""
     svc = _service()
-    return await svc.get_trends(
-        category_id=category_id, keyword=keyword, days=days
-    )
+    return await svc.get_trends(category_id=category_id, keyword=keyword, days=days)
 
 
 @router.get(

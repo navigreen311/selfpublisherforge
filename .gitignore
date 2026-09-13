@@ -35,3 +35,14 @@ htmlcov/
 # Build
 build/
 *.log
+
+# Local build artifacts
+*.tsbuildinfo
+frontend/coverage/
+frontend/reports/
+frontend/test-results/
+frontend/playwright-report/
+
+# Local dev databases and generated output
+*.db
+backend/generated_reports/

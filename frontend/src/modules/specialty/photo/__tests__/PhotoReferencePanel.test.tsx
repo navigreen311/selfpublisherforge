@@ -13,6 +13,10 @@ jest.mock("../components/PhotoUploadDropzone", () => ({
   PhotoUploadDropzone: () => <div data-testid="upload-dropzone">Upload</div>,
 }));
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Image: (props: React.SVGAttributes<SVGElement>) => <svg data-testid="image-icon" {...props} />,
   Search: (props: React.SVGAttributes<SVGElement>) => <svg {...props} />,
   Grid: (props: React.SVGAttributes<SVGElement>) => <svg {...props} />,
@@ -31,7 +35,7 @@ jest.mock("@/components/ui/select", () => ({
   SelectItem: ({ children }: { children: React.ReactNode; value: string }) => <div>{children}</div>,
 }));
 jest.mock("@/components/ui/scroll-area", () => ({
-  ScrollArea: ({ children, ...props }: { children: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
+  ScrollArea: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => <div {...props}>{children}</div>,
   ScrollBar: () => null,
 }));
 jest.mock("@/components/ui/dialog", () => ({
@@ -41,6 +45,24 @@ jest.mock("@/components/ui/dialog", () => ({
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }));
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>, ref: React.Ref<HTMLDivElement>) => {
     if (React.isValidElement(children)) return React.cloneElement(children, { ...props, ref } as Record<string, unknown>);
     return <div ref={ref} {...props}>{children}</div>;

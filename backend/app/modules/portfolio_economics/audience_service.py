@@ -6,6 +6,7 @@ Provides:
 - Audience growth tracking
 - Churn prediction model
 """
+
 import logging
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
@@ -19,10 +20,6 @@ from app.database import async_session
 from app.models.market import CompetitorBook
 from app.models.project import Book
 from app.modules.analytics.models import AnalyticsEvent, RoyaltyRecord
-from app.modules.review_intelligence.models import BookReview
-
-logger = logging.getLogger(__name__)
-
 from app.modules.portfolio_economics.schemas import (
     AlsoBoughtIntelligence,
     AlsoBoughtItem,
@@ -34,6 +31,10 @@ from app.modules.portfolio_economics.schemas import (
     ChurnPredictionResult,
     ChurnRisk,
 )
+from app.modules.review_intelligence.models import BookReview
+
+logger = logging.getLogger(__name__)
+
 
 # ─── Genre Persona Templates ─────────────────────────────────────────────────
 
@@ -145,11 +146,11 @@ GENRE_PERSONAS: dict[str, list[dict]] = {
 
 # ─── Churn Model Weights ─────────────────────────────────────────────────────
 
-CHURN_WEIGHT_RECENCY = 0.30      # Days since last purchase
-CHURN_WEIGHT_FREQUENCY = 0.25    # Total purchases
-CHURN_WEIGHT_RATING = 0.15       # Average rating given
-CHURN_WEIGHT_SERIES = 0.15       # Series completion rate
-CHURN_WEIGHT_EMAIL = 0.15        # Email engagement
+CHURN_WEIGHT_RECENCY = 0.30  # Days since last purchase
+CHURN_WEIGHT_FREQUENCY = 0.25  # Total purchases
+CHURN_WEIGHT_RATING = 0.15  # Average rating given
+CHURN_WEIGHT_SERIES = 0.15  # Series completion rate
+CHURN_WEIGHT_EMAIL = 0.15  # Email engagement
 
 
 def _get_persona_templates(genre: str) -> list[dict]:
@@ -183,9 +184,7 @@ async def _fetch_book_insights(
         return insights
 
     # --- Book metadata (keywords, genre info from JSONB metadata) ---
-    book_query = select(Book).where(
-        and_(Book.id == book_id, Book.deleted_at.is_(None))
-    )
+    book_query = select(Book).where(and_(Book.id == book_id, Book.deleted_at.is_(None)))
     book_result = await db.execute(book_query)
     book = book_result.scalar_one_or_none()
     if book and book.metadata_:
@@ -209,16 +208,20 @@ async def _fetch_book_insights(
         insights["avg_rating"] = round(float(row.avg_rating), 2) if row.avg_rating else None
 
     # Sentiment distribution
-    sentiment_query = select(
-        BookReview.sentiment,
-        func.count(BookReview.id).label("cnt"),
-    ).where(
-        and_(
-            BookReview.book_id == book_id,
-            BookReview.deleted_at.is_(None),
-            BookReview.sentiment.isnot(None),
+    sentiment_query = (
+        select(
+            BookReview.sentiment,
+            func.count(BookReview.id).label("cnt"),
         )
-    ).group_by(BookReview.sentiment)
+        .where(
+            and_(
+                BookReview.book_id == book_id,
+                BookReview.deleted_at.is_(None),
+                BookReview.sentiment.isnot(None),
+            )
+        )
+        .group_by(BookReview.sentiment)
+    )
     sentiment_result = await db.execute(sentiment_query)
     sentiment_rows = sentiment_result.all()
     total_sentiment = sum(r.cnt for r in sentiment_rows)
@@ -227,13 +230,17 @@ async def _fetch_book_insights(
         insights["sentiment_positive_pct"] = round(positive_count / total_sentiment, 2)
 
     # Collect unique themes from reviews
-    themes_query = select(BookReview.themes).where(
-        and_(
-            BookReview.book_id == book_id,
-            BookReview.deleted_at.is_(None),
-            BookReview.themes.isnot(None),
+    themes_query = (
+        select(BookReview.themes)
+        .where(
+            and_(
+                BookReview.book_id == book_id,
+                BookReview.deleted_at.is_(None),
+                BookReview.themes.isnot(None),
+            )
         )
-    ).limit(50)
+        .limit(50)
+    )
     themes_result = await db.execute(themes_query)
     all_themes: list[str] = []
     for (themes_data,) in themes_result.all():
@@ -329,9 +336,7 @@ async def build_audience_personas(
                     f"Quality concerns reflected in {avg_rating:.1f}-star avg across {review_count} reviews"
                 )
             elif avg_rating >= 4.5:
-                motivations.append(
-                    f"High reader satisfaction ({avg_rating:.1f} stars from {review_count} reviews)"
-                )
+                motivations.append(f"High reader satisfaction ({avg_rating:.1f} stars from {review_count} reviews)")
 
         # Adjust price sensitivity based on real sales price data
         price_sensitivity = template["price_sensitivity"]
@@ -372,8 +377,7 @@ async def build_audience_personas(
                 f"A typical {request.genre} reader persona representing "
                 f"approximately {percentage:.0f}% of the target audience."
                 + (
-                    f" Based on analysis of {review_count} reviews"
-                    f" and {total_units} units sold."
+                    f" Based on analysis of {review_count} reviews" f" and {total_units} units sold."
                     if review_count > 0 or total_units > 0
                     else ""
                 )
@@ -422,16 +426,18 @@ async def build_also_bought_intelligence(
                 comp_books = comp_result.scalars().all()
 
                 for i, comp in enumerate(comp_books):
-                    also_bought_items.append(AlsoBoughtItem(
-                        asin=comp.asin,
-                        title=comp.title,
-                        author=comp.author or "Unknown",
-                        genre=comp.category or genre,
-                        price=round(float(comp.price), 2) if comp.price is not None else 0.0,
-                        rating=round(float(comp.rating), 1) if comp.rating is not None else 0.0,
-                        review_count=comp.reviews_count or 0,
-                        overlap_score=round(max(0.0, 0.9 - (i * 0.12)), 2),
-                    ))
+                    also_bought_items.append(
+                        AlsoBoughtItem(
+                            asin=comp.asin,
+                            title=comp.title,
+                            author=comp.author or "Unknown",
+                            genre=comp.category or genre,
+                            price=round(float(comp.price), 2) if comp.price is not None else 0.0,
+                            rating=round(float(comp.rating), 1) if comp.rating is not None else 0.0,
+                            review_count=comp.reviews_count or 0,
+                            overlap_score=round(max(0.0, 0.9 - (i * 0.12)), 2),
+                        )
+                    )
 
             # If we still have ASINs without DB matches, or no ASINs given,
             # try to find competitor books in the same category
@@ -452,16 +458,18 @@ async def build_also_bought_intelligence(
                 cat_books = cat_result.scalars().all()
 
                 for i, comp in enumerate(cat_books):
-                    also_bought_items.append(AlsoBoughtItem(
-                        asin=comp.asin,
-                        title=comp.title,
-                        author=comp.author or "Unknown",
-                        genre=comp.category or genre,
-                        price=round(float(comp.price), 2) if comp.price is not None else 0.0,
-                        rating=round(float(comp.rating), 1) if comp.rating is not None else 0.0,
-                        review_count=comp.reviews_count or 0,
-                        overlap_score=round(max(0.0, 0.9 - (i * 0.12)), 2),
-                    ))
+                    also_bought_items.append(
+                        AlsoBoughtItem(
+                            asin=comp.asin,
+                            title=comp.title,
+                            author=comp.author or "Unknown",
+                            genre=comp.category or genre,
+                            price=round(float(comp.price), 2) if comp.price is not None else 0.0,
+                            rating=round(float(comp.rating), 1) if comp.rating is not None else 0.0,
+                            review_count=comp.reviews_count or 0,
+                            overlap_score=round(max(0.0, 0.9 - (i * 0.12)), 2),
+                        )
+                    )
     except (SQLAlchemyError, OperationalError):
         logger.warning(
             "build_also_bought_intelligence: database query for competitor data failed, falling back to genre-based defaults",
@@ -483,31 +491,21 @@ async def build_also_bought_intelligence(
         authors = genre_authors.get(normalized_genre, genre_authors["default"])
 
         for i, author in enumerate(authors[:6]):
-            also_bought_items.append(AlsoBoughtItem(
-                asin=(
-                    comparable_asins[i]
-                    if comparable_asins and i < len(comparable_asins)
-                    else f"B0{i:08d}"
-                ),
-                title=f"Popular {genre.title()} Title #{i + 1}",
-                author=author,
-                genre=genre,
-                price=round(3.99 + (i * 0.5), 2),
-                rating=round(4.0 + (i % 3) * 0.2, 1),
-                review_count=500 + (i * 200),
-                overlap_score=round(0.9 - (i * 0.12), 2),
-            ))
+            also_bought_items.append(
+                AlsoBoughtItem(
+                    asin=(comparable_asins[i] if comparable_asins and i < len(comparable_asins) else f"B0{i:08d}"),
+                    title=f"Popular {genre.title()} Title #{i + 1}",
+                    author=author,
+                    genre=genre,
+                    price=round(3.99 + (i * 0.5), 2),
+                    rating=round(4.0 + (i % 3) * 0.2, 1),
+                    review_count=500 + (i * 200),
+                    overlap_score=round(0.9 - (i * 0.12), 2),
+                )
+            )
 
-    avg_price = (
-        sum(item.price for item in also_bought_items) / len(also_bought_items)
-        if also_bought_items
-        else 0.0
-    )
-    avg_rating = (
-        sum(item.rating for item in also_bought_items) / len(also_bought_items)
-        if also_bought_items
-        else 0.0
-    )
+    avg_price = sum(item.price for item in also_bought_items) / len(also_bought_items) if also_bought_items else 0.0
+    avg_rating = sum(item.rating for item in also_bought_items) / len(also_bought_items) if also_bought_items else 0.0
 
     audience_insights = [
         f"Readers in {genre} typically buy {len(also_bought_items)}+ related titles",
@@ -557,18 +555,22 @@ async def get_audience_growth(
     try:
         async with async_session() as db:
             # --- Royalty records: units sold per day ---
-            royalty_query = select(
-                func.date_trunc("day", RoyaltyRecord.period_start).label("day"),
-                func.sum(RoyaltyRecord.net_units).label("units"),
-                func.sum(RoyaltyRecord.net_revenue).label("revenue"),
-            ).where(
-                and_(
-                    RoyaltyRecord.org_id == org_id,
-                    RoyaltyRecord.period_start >= start_dt,
-                    RoyaltyRecord.period_start <= end_dt,
-                    RoyaltyRecord.deleted_at.is_(None),
+            royalty_query = (
+                select(
+                    func.date_trunc("day", RoyaltyRecord.period_start).label("day"),
+                    func.sum(RoyaltyRecord.net_units).label("units"),
+                    func.sum(RoyaltyRecord.net_revenue).label("revenue"),
                 )
-            ).group_by(func.date_trunc("day", RoyaltyRecord.period_start))
+                .where(
+                    and_(
+                        RoyaltyRecord.org_id == org_id,
+                        RoyaltyRecord.period_start >= start_dt,
+                        RoyaltyRecord.period_start <= end_dt,
+                        RoyaltyRecord.deleted_at.is_(None),
+                    )
+                )
+                .group_by(func.date_trunc("day", RoyaltyRecord.period_start))
+            )
 
             royalty_result = await db.execute(royalty_query)
             for row in royalty_result.all():
@@ -578,23 +580,34 @@ async def get_audience_growth(
                     daily_revenue[d] = float(row.revenue) if row.revenue else 0.0
 
             # --- Analytics events: engagement tracking ---
-            engagement_query = select(
-                func.date_trunc("day", AnalyticsEvent.occurred_at).label("day"),
-                func.count(AnalyticsEvent.id).label("total_events"),
-                func.count(AnalyticsEvent.id).filter(
-                    AnalyticsEvent.event_type.in_([
-                        "page_read", "book_open", "read_through",
-                        "sample_download", "review_submitted",
-                    ])
-                ).label("engagement_events"),
-            ).where(
-                and_(
-                    AnalyticsEvent.org_id == org_id,
-                    AnalyticsEvent.occurred_at >= start_dt,
-                    AnalyticsEvent.occurred_at <= end_dt,
-                    AnalyticsEvent.deleted_at.is_(None),
+            engagement_query = (
+                select(
+                    func.date_trunc("day", AnalyticsEvent.occurred_at).label("day"),
+                    func.count(AnalyticsEvent.id).label("total_events"),
+                    func.count(AnalyticsEvent.id)
+                    .filter(
+                        AnalyticsEvent.event_type.in_(
+                            [
+                                "page_read",
+                                "book_open",
+                                "read_through",
+                                "sample_download",
+                                "review_submitted",
+                            ]
+                        )
+                    )
+                    .label("engagement_events"),
                 )
-            ).group_by(func.date_trunc("day", AnalyticsEvent.occurred_at))
+                .where(
+                    and_(
+                        AnalyticsEvent.org_id == org_id,
+                        AnalyticsEvent.occurred_at >= start_dt,
+                        AnalyticsEvent.occurred_at <= end_dt,
+                        AnalyticsEvent.deleted_at.is_(None),
+                    )
+                )
+                .group_by(func.date_trunc("day", AnalyticsEvent.occurred_at))
+            )
 
             engagement_result = await db.execute(engagement_query)
             for row in engagement_result.all():
@@ -642,14 +655,16 @@ async def get_audience_growth(
                 3,
             )
 
-        data_points.append(AudienceGrowthPoint(
-            date=current_date,
-            total_readers=total_readers,
-            new_readers=new_readers,
-            returning_readers=returning_readers,
-            engagement_rate=engagement_rate,
-            read_through_rate=read_through_rate,
-        ))
+        data_points.append(
+            AudienceGrowthPoint(
+                date=current_date,
+                total_readers=total_readers,
+                new_readers=new_readers,
+                returning_readers=returning_readers,
+                engagement_rate=engagement_rate,
+                read_through_rate=read_through_rate,
+            )
+        )
 
     total_audience = cumulative_readers
 
@@ -658,22 +673,14 @@ async def get_audience_growth(
         midpoint = len(data_points) // 2
         first_half_total = sum(dp.new_readers for dp in data_points[:midpoint])
         second_half_total = sum(dp.new_readers for dp in data_points[midpoint:])
-        growth_rate = (
-            ((second_half_total - first_half_total) / first_half_total)
-            if first_half_total > 0
-            else 0.0
-        )
+        growth_rate = ((second_half_total - first_half_total) / first_half_total) if first_half_total > 0 else 0.0
     else:
         growth_rate = 0.0
 
     # Retention rate: ratio of days with returning readers to days with any readers
     active_days = [dp for dp in data_points if dp.total_readers > 0]
     returning_days = [dp for dp in data_points if dp.returning_readers > 0]
-    retention_rate = (
-        round(len(returning_days) / len(active_days), 4)
-        if active_days
-        else 0.0
-    )
+    retention_rate = round(len(returning_days) / len(active_days), 4) if active_days else 0.0
 
     return AudienceGrowthResponse(
         org_id=org_id,
@@ -768,32 +775,40 @@ def predict_churn(request: ChurnPredictionRequest) -> ChurnPredictionResult:
     # Determine churn risk level
     if risk_score >= 0.7:
         churn_risk = ChurnRisk.CRITICAL
-        retention_suggestions.extend([
-            "Send a personalized win-back email with an exclusive offer",
-            "Offer a free short story or novella to re-engage",
-            "Create a limited-time bundle deal",
-        ])
+        retention_suggestions.extend(
+            [
+                "Send a personalized win-back email with an exclusive offer",
+                "Offer a free short story or novella to re-engage",
+                "Create a limited-time bundle deal",
+            ]
+        )
     elif risk_score >= 0.5:
         churn_risk = ChurnRisk.HIGH
-        retention_suggestions.extend([
-            "Send a targeted email with new release announcements",
-            "Offer early access to upcoming titles",
-            "Run a re-engagement email sequence",
-        ])
+        retention_suggestions.extend(
+            [
+                "Send a targeted email with new release announcements",
+                "Offer early access to upcoming titles",
+                "Run a re-engagement email sequence",
+            ]
+        )
     elif risk_score >= 0.3:
         churn_risk = ChurnRisk.MODERATE
-        retention_suggestions.extend([
-            "Maintain regular newsletter cadence",
-            "Share behind-the-scenes content to build connection",
-            "Consider a reader survey to understand preferences",
-        ])
+        retention_suggestions.extend(
+            [
+                "Maintain regular newsletter cadence",
+                "Share behind-the-scenes content to build connection",
+                "Consider a reader survey to understand preferences",
+            ]
+        )
     else:
         churn_risk = ChurnRisk.LOW
-        retention_suggestions.extend([
-            "Continue current engagement strategy",
-            "Consider loyalty rewards for long-term readers",
-            "Ask for reviews and referrals",
-        ])
+        retention_suggestions.extend(
+            [
+                "Continue current engagement strategy",
+                "Consider loyalty rewards for long-term readers",
+                "Ask for reviews and referrals",
+            ]
+        )
 
     # Estimate lifetime value
     avg_book_price = 4.99

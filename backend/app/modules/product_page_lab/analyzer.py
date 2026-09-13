@@ -23,25 +23,80 @@ from app.modules.product_page_lab.schemas import (
 # ---------------------------------------------------------------------------
 
 POWER_WORDS = [
-    "secret", "discover", "ultimate", "proven", "exclusive", "shocking",
-    "revealed", "breakthrough", "essential", "powerful", "untold",
-    "compelling", "gripping", "riveting", "unforgettable", "masterpiece",
-    "bestselling", "award-winning", "captivating", "thrilling", "stunning",
-    "epic", "extraordinary", "remarkable", "incredible", "magnificent",
-    "breathtaking", "spellbinding", "unputdownable", "heart-pounding",
+    "secret",
+    "discover",
+    "ultimate",
+    "proven",
+    "exclusive",
+    "shocking",
+    "revealed",
+    "breakthrough",
+    "essential",
+    "powerful",
+    "untold",
+    "compelling",
+    "gripping",
+    "riveting",
+    "unforgettable",
+    "masterpiece",
+    "bestselling",
+    "award-winning",
+    "captivating",
+    "thrilling",
+    "stunning",
+    "epic",
+    "extraordinary",
+    "remarkable",
+    "incredible",
+    "magnificent",
+    "breathtaking",
+    "spellbinding",
+    "unputdownable",
+    "heart-pounding",
 ]
 
 CTA_PHRASES = [
-    "buy now", "get your copy", "order today", "download now", "read now",
-    "grab your copy", "click", "scroll up", "add to cart", "one-click",
-    "don't miss", "start reading", "available now", "get it now",
+    "buy now",
+    "get your copy",
+    "order today",
+    "download now",
+    "read now",
+    "grab your copy",
+    "click",
+    "scroll up",
+    "add to cart",
+    "one-click",
+    "don't miss",
+    "start reading",
+    "available now",
+    "get it now",
 ]
 
 EMOTIONAL_WORDS = [
-    "love", "hate", "fear", "joy", "hope", "despair", "passion", "rage",
-    "betrayal", "trust", "loss", "desire", "revenge", "redemption",
-    "sacrifice", "courage", "haunting", "heartwarming", "devastating",
-    "inspiring", "terrifying", "exhilarating", "poignant", "bittersweet",
+    "love",
+    "hate",
+    "fear",
+    "joy",
+    "hope",
+    "despair",
+    "passion",
+    "rage",
+    "betrayal",
+    "trust",
+    "loss",
+    "desire",
+    "revenge",
+    "redemption",
+    "sacrifice",
+    "courage",
+    "haunting",
+    "heartwarming",
+    "devastating",
+    "inspiring",
+    "terrifying",
+    "exhilarating",
+    "poignant",
+    "bittersweet",
 ]
 
 # Genre average prices (ebook)
@@ -72,6 +127,7 @@ MOBILE_BLURB_FOLD_CHARS = 200
 # Title analysis
 # ---------------------------------------------------------------------------
 
+
 def analyze_title(
     title: str,
     target_keywords: list[str] | None = None,
@@ -88,11 +144,15 @@ def analyze_title(
     if length < OPTIMAL_TITLE_LENGTH[0]:
         penalty = min(20, (OPTIMAL_TITLE_LENGTH[0] - length) * 0.5)
         score -= penalty
-        issues.append(f"Title is short ({length} chars). Aim for {OPTIMAL_TITLE_LENGTH[0]}-{OPTIMAL_TITLE_LENGTH[1]} characters.")
+        issues.append(
+            f"Title is short ({length} chars). Aim for {OPTIMAL_TITLE_LENGTH[0]}-{OPTIMAL_TITLE_LENGTH[1]} characters."
+        )
     elif length > OPTIMAL_TITLE_LENGTH[1]:
         penalty = min(15, (length - OPTIMAL_TITLE_LENGTH[1]) * 0.2)
         score -= penalty
-        issues.append(f"Title is long ({length} chars). Aim for {OPTIMAL_TITLE_LENGTH[0]}-{OPTIMAL_TITLE_LENGTH[1]} characters.")
+        issues.append(
+            f"Title is long ({length} chars). Aim for {OPTIMAL_TITLE_LENGTH[0]}-{OPTIMAL_TITLE_LENGTH[1]} characters."
+        )
 
     # Keyword presence
     keyword_matches = [kw for kw in target_keywords if kw.lower() in title_lower]
@@ -141,6 +201,7 @@ def analyze_title(
 # Blurb analysis
 # ---------------------------------------------------------------------------
 
+
 def analyze_blurb(blurb: str) -> BlurbAnalysis:
     """Analyze a listing blurb/description for conversion optimization."""
     issues: list[str] = []
@@ -154,7 +215,9 @@ def analyze_blurb(blurb: str) -> BlurbAnalysis:
     if word_count < OPTIMAL_BLURB_WORD_COUNT[0]:
         penalty = min(20, (OPTIMAL_BLURB_WORD_COUNT[0] - word_count) * 0.2)
         score -= penalty
-        issues.append(f"Blurb is short ({word_count} words). Aim for {OPTIMAL_BLURB_WORD_COUNT[0]}-{OPTIMAL_BLURB_WORD_COUNT[1]} words.")
+        issues.append(
+            f"Blurb is short ({word_count} words). Aim for {OPTIMAL_BLURB_WORD_COUNT[0]}-{OPTIMAL_BLURB_WORD_COUNT[1]} words."
+        )
     elif word_count > OPTIMAL_BLURB_WORD_COUNT[1]:
         penalty = min(15, (word_count - OPTIMAL_BLURB_WORD_COUNT[1]) * 0.05)
         score -= penalty
@@ -219,6 +282,7 @@ def analyze_blurb(blurb: str) -> BlurbAnalysis:
 # Keyword analysis
 # ---------------------------------------------------------------------------
 
+
 def analyze_keywords(
     text: str,
     target_keywords: list[str] | None = None,
@@ -236,9 +300,7 @@ def analyze_keywords(
     keywords_found = [kw for kw in target_keywords if kw.lower() in text_lower]
 
     # Keyword density
-    keyword_occurrences = sum(
-        text_lower.count(kw.lower()) for kw in target_keywords
-    ) if target_keywords else 0
+    keyword_occurrences = sum(text_lower.count(kw.lower()) for kw in target_keywords) if target_keywords else 0
     keyword_density = (keyword_occurrences / max(total_words, 1)) * 100
 
     # Score based on found keywords
@@ -275,6 +337,7 @@ def analyze_keywords(
 # ---------------------------------------------------------------------------
 # Category analysis
 # ---------------------------------------------------------------------------
+
 
 def analyze_category(
     current_categories: list[str] | None = None,
@@ -344,6 +407,7 @@ def analyze_category(
 # Price analysis
 # ---------------------------------------------------------------------------
 
+
 def analyze_price(
     current_price: float | None = None,
     genre: str | None = None,
@@ -395,6 +459,7 @@ def analyze_price(
 # Full listing analysis
 # ---------------------------------------------------------------------------
 
+
 def analyze_listing(
     title: str = "",
     blurb: str = "",
@@ -430,44 +495,54 @@ def analyze_listing(
     recommendations: list[Recommendation] = []
 
     for issue in title_result.issues:
-        recommendations.append(Recommendation(
-            area="title",
-            severity=_issue_severity(title_result.score),
-            message=issue,
-            suggestion=_generate_suggestion("title", issue),
-        ))
+        recommendations.append(
+            Recommendation(
+                area="title",
+                severity=_issue_severity(title_result.score),
+                message=issue,
+                suggestion=_generate_suggestion("title", issue),
+            )
+        )
 
     for issue in blurb_result.issues:
-        recommendations.append(Recommendation(
-            area="blurb",
-            severity=_issue_severity(blurb_result.score),
-            message=issue,
-            suggestion=_generate_suggestion("blurb", issue),
-        ))
+        recommendations.append(
+            Recommendation(
+                area="blurb",
+                severity=_issue_severity(blurb_result.score),
+                message=issue,
+                suggestion=_generate_suggestion("blurb", issue),
+            )
+        )
 
     for kw in keyword_result.missing_high_value_keywords:
-        recommendations.append(Recommendation(
-            area="keywords",
-            severity="warning",
-            message=f"Missing keyword: '{kw}'",
-            suggestion=f"Incorporate '{kw}' naturally into your title or blurb.",
-        ))
+        recommendations.append(
+            Recommendation(
+                area="keywords",
+                severity="warning",
+                message=f"Missing keyword: '{kw}'",
+                suggestion=f"Incorporate '{kw}' naturally into your title or blurb.",
+            )
+        )
 
     if keyword_result.over_stuffed:
-        recommendations.append(Recommendation(
-            area="keywords",
-            severity="warning",
-            message="Keyword stuffing detected",
-            suggestion="Reduce keyword repetition to maintain natural readability.",
-        ))
+        recommendations.append(
+            Recommendation(
+                area="keywords",
+                severity="warning",
+                message="Keyword stuffing detected",
+                suggestion="Reduce keyword repetition to maintain natural readability.",
+            )
+        )
 
     for issue in price_result.issues:
-        recommendations.append(Recommendation(
-            area="price",
-            severity=_issue_severity(price_result.score),
-            message=issue,
-            suggestion=_generate_suggestion("price", issue),
-        ))
+        recommendations.append(
+            Recommendation(
+                area="price",
+                severity=_issue_severity(price_result.score),
+                message=issue,
+                suggestion=_generate_suggestion("price", issue),
+            )
+        )
 
     return ListingAnalysis(
         asin=asin,
@@ -491,6 +566,7 @@ def analyze_listing(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _extract_first_sentence(text: str) -> str:
     """Extract the first sentence from text."""
     match = re.match(r"^(.+?[.!?])\s", text)
@@ -511,17 +587,23 @@ def _has_hook(sentence: str) -> bool:
         return True
     # Starts with trigger words
     hook_starters = [
-        "what if", "imagine", "discover", "when", "in a world",
-        "everything changed", "nothing prepared", "she never expected",
-        "he thought", "they said", "one moment", "the day",
+        "what if",
+        "imagine",
+        "discover",
+        "when",
+        "in a world",
+        "everything changed",
+        "nothing prepared",
+        "she never expected",
+        "he thought",
+        "they said",
+        "one moment",
+        "the day",
     ]
     if any(s.startswith(starter) for starter in hook_starters):
         return True
     # Contains emotional / power words in first sentence
-    for word in EMOTIONAL_WORDS[:10] + POWER_WORDS[:10]:
-        if word in s:
-            return True
-    return False
+    return any(word in s for word in EMOTIONAL_WORDS[:10] + POWER_WORDS[:10])
 
 
 def _calculate_readability(text: str) -> float:
@@ -537,11 +619,7 @@ def _calculate_readability(text: str) -> float:
     num_syllables = sum(_count_syllables(w) for w in words)
 
     # Flesch-Kincaid Grade Level formula
-    grade = (
-        0.39 * (num_words / num_sentences)
-        + 11.8 * (num_syllables / num_words)
-        - 15.59
-    )
+    grade = 0.39 * (num_words / num_sentences) + 11.8 * (num_syllables / num_words) - 15.59
     return max(0, grade)
 
 

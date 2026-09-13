@@ -3,6 +3,7 @@
 Analyses competitor covers to extract dominant colours, text placement,
 imagery style, and provides recommendations for a given niche.
 """
+
 from __future__ import annotations
 
 import io
@@ -35,6 +36,7 @@ _ANALYSIS_THUMBNAIL_SIZE = (150, 150)  # resize target for fast processing
 
 class CoverData(TypedDict, total=False):
     """Structured data for a single competitor cover."""
+
     title: str
     cover_url: str
     bsr: int | None  # Best Seller Rank
@@ -46,6 +48,7 @@ class CoverData(TypedDict, total=False):
 
 class TypographyPattern(TypedDict):
     """Typography pattern analysis."""
+
     serif_percentage: float
     sans_serif_percentage: float
     bold_percentage: float
@@ -55,6 +58,7 @@ class TypographyPattern(TypedDict):
 
 class LayoutPattern(TypedDict):
     """Layout pattern analysis."""
+
     centered_title_percentage: float
     top_title_percentage: float
     bottom_title_percentage: float
@@ -63,6 +67,7 @@ class LayoutPattern(TypedDict):
 
 class ImageStyleBreakdown(TypedDict):
     """Image style breakdown."""
+
     photography_percentage: float
     illustration_percentage: float
     abstract_percentage: float
@@ -71,6 +76,7 @@ class ImageStyleBreakdown(TypedDict):
 
 class GenreAnalysisResult(TypedDict):
     """Complete analysis result for analyze_genre_covers."""
+
     top_covers: list[CoverData]
     dominant_colors: list[dict[str, Any]]  # Color name and percentage
     typography_patterns: TypographyPattern
@@ -82,13 +88,13 @@ class GenreAnalysisResult(TypedDict):
 
 class CoverGeneratorPresets(TypedDict):
     """Pre-filled form data for cover generator."""
+
     color_palette: list[str]
     style_keywords: list[str]
     mood: str
     typography_recommendation: str
     layout_recommendation: str
     additional_instructions: str
-
 
 
 # ---------------------------------------------------------------------------
@@ -398,8 +404,7 @@ def _generate_recommendations(
                 )
             elif avg > 7:
                 recommendations.append(
-                    "Competitors have strong covers — ensure your design is equally "
-                    "polished to compete effectively."
+                    "Competitors have strong covers — ensure your design is equally " "polished to compete effectively."
                 )
 
     recommendations.append(
@@ -587,7 +592,7 @@ def _analyze_typography_patterns(covers: list[CoverData], genre: CoverGenre) -> 
             light_percentage=35.0,
             script_percentage=45.0,
         )
-    elif genre == CoverGenre.THRILLER:
+    if genre == CoverGenre.THRILLER:
         return TypographyPattern(
             serif_percentage=20.0,
             sans_serif_percentage=75.0,
@@ -595,7 +600,7 @@ def _analyze_typography_patterns(covers: list[CoverData], genre: CoverGenre) -> 
             light_percentage=10.0,
             script_percentage=5.0,
         )
-    elif genre == CoverGenre.FANTASY:
+    if genre == CoverGenre.FANTASY:
         return TypographyPattern(
             serif_percentage=60.0,
             sans_serif_percentage=30.0,
@@ -603,14 +608,13 @@ def _analyze_typography_patterns(covers: list[CoverData], genre: CoverGenre) -> 
             light_percentage=25.0,
             script_percentage=15.0,
         )
-    else:
-        return TypographyPattern(
-            serif_percentage=40.0,
-            sans_serif_percentage=50.0,
-            bold_percentage=45.0,
-            light_percentage=30.0,
-            script_percentage=10.0,
-        )
+    return TypographyPattern(
+        serif_percentage=40.0,
+        sans_serif_percentage=50.0,
+        bold_percentage=45.0,
+        light_percentage=30.0,
+        script_percentage=10.0,
+    )
 
 
 def _analyze_layout_patterns(covers: list[CoverData], genre: CoverGenre) -> LayoutPattern:
@@ -627,20 +631,19 @@ def _analyze_layout_patterns(covers: list[CoverData], genre: CoverGenre) -> Layo
             bottom_title_percentage=15.0,
             image_placement={"full": 60.0, "top": 15.0, "center": 20.0, "bottom": 5.0},
         )
-    elif genre == CoverGenre.ROMANCE:
+    if genre == CoverGenre.ROMANCE:
         return LayoutPattern(
             centered_title_percentage=55.0,
             top_title_percentage=25.0,
             bottom_title_percentage=20.0,
             image_placement={"full": 50.0, "center": 35.0, "top": 10.0, "bottom": 5.0},
         )
-    else:
-        return LayoutPattern(
-            centered_title_percentage=50.0,
-            top_title_percentage=30.0,
-            bottom_title_percentage=20.0,
-            image_placement={"full": 45.0, "center": 30.0, "top": 15.0, "bottom": 10.0},
-        )
+    return LayoutPattern(
+        centered_title_percentage=50.0,
+        top_title_percentage=30.0,
+        bottom_title_percentage=20.0,
+        image_placement={"full": 45.0, "center": 30.0, "top": 15.0, "bottom": 10.0},
+    )
 
 
 def _analyze_image_styles(covers: list[CoverData], genre: CoverGenre) -> ImageStyleBreakdown:
@@ -657,27 +660,26 @@ def _analyze_image_styles(covers: list[CoverData], genre: CoverGenre) -> ImageSt
             abstract_percentage=5.0,
             typography_only_percentage=5.0,
         )
-    elif genre == CoverGenre.FANTASY:
+    if genre == CoverGenre.FANTASY:
         return ImageStyleBreakdown(
             photography_percentage=15.0,
             illustration_percentage=75.0,
             abstract_percentage=5.0,
             typography_only_percentage=5.0,
         )
-    elif genre == CoverGenre.NONFICTION:
+    if genre == CoverGenre.NONFICTION:
         return ImageStyleBreakdown(
             photography_percentage=30.0,
             illustration_percentage=20.0,
             abstract_percentage=25.0,
             typography_only_percentage=25.0,
         )
-    else:
-        return ImageStyleBreakdown(
-            photography_percentage=45.0,
-            illustration_percentage=35.0,
-            abstract_percentage=10.0,
-            typography_only_percentage=10.0,
-        )
+    return ImageStyleBreakdown(
+        photography_percentage=45.0,
+        illustration_percentage=35.0,
+        abstract_percentage=10.0,
+        typography_only_percentage=10.0,
+    )
 
 
 def _generate_ai_recommendations(

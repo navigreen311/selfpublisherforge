@@ -4,6 +4,7 @@ Orchestrates puzzle book CRUD, algorithmic puzzle generation, clue governance,
 word list management, difficulty calibration, answer key generation, large print
 variant creation, quality checks, export, and preflight.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -24,7 +25,6 @@ from app.core.exceptions import AppException, NotFoundError, ValidationError
 from app.modules.specialty.models.enums import (
     AnswerKeyPosition,
     BookStatus,
-    ClueStyle,
     Difficulty,
     DifficultyMode,
     PuzzleType,
@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _book_to_dict(book: PuzzleBook) -> dict[str, Any]:
     """Serialise a PuzzleBook ORM instance to a plain dict."""
@@ -85,9 +86,7 @@ def _puzzle_to_dict(puzzle: Puzzle) -> dict[str, Any]:
     }
 
 
-async def _get_book_or_404(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> PuzzleBook:
+async def _get_book_or_404(db: AsyncSession, org_id: UUID, book_id: UUID) -> PuzzleBook:
     """Fetch a puzzle book by ID, raising NotFoundError if absent."""
     stmt = select(PuzzleBook).where(
         PuzzleBook.id == book_id,
@@ -101,9 +100,7 @@ async def _get_book_or_404(
     return book
 
 
-async def _get_puzzle_or_404(
-    db: AsyncSession, book_id: UUID, puzzle_id: UUID
-) -> Puzzle:
+async def _get_puzzle_or_404(db: AsyncSession, book_id: UUID, puzzle_id: UUID) -> Puzzle:
     """Fetch a puzzle by ID within a book, raising NotFoundError if absent."""
     stmt = select(Puzzle).where(
         Puzzle.id == puzzle_id,
@@ -196,8 +193,14 @@ def _generate_word_search(
         directions = [(0, 1), (1, 0), (1, 1), (0, -1)]
     else:
         directions = [
-            (0, 1), (1, 0), (1, 1), (-1, 1),
-            (0, -1), (-1, 0), (-1, -1), (1, -1),
+            (0, 1),
+            (1, 0),
+            (1, 1),
+            (-1, 1),
+            (0, -1),
+            (-1, 0),
+            (-1, -1),
+            (1, -1),
         ]
 
     grid: list[list[str]] = [["" for _ in range(cols)] for _ in range(rows)]
@@ -227,11 +230,13 @@ def _generate_word_search(
             for i, ch in enumerate(word_upper):
                 nr, nc = r + dr * i, c + dc * i
                 grid[nr][nc] = ch
-            placements.append({
-                "word": word,
-                "start": [r, c],
-                "direction": [dr, dc],
-            })
+            placements.append(
+                {
+                    "word": word,
+                    "start": [r, c],
+                    "direction": [dr, dc],
+                }
+            )
             placed = True
 
     # Fill empty cells with random letters
@@ -274,17 +279,19 @@ def _generate_crossword(
     start_c = mid - len(first) // 2
     for i, ch in enumerate(first):
         grid[mid][start_c + i] = ch
-    placed.append({
-        "word": sorted_words[0],
-        "start": [mid, start_c],
-        "direction": "across",
-        "length": len(first),
-    })
+    placed.append(
+        {
+            "word": sorted_words[0],
+            "start": [mid, start_c],
+            "direction": "across",
+            "length": len(first),
+        }
+    )
 
     for word in sorted_words[1:]:
         word_upper = word.upper()
         best = None
-        for pi, pl in enumerate(placed):
+        for _pi, pl in enumerate(placed):
             pl_word = pl["word"].upper()
             for wi, wch in enumerate(word_upper):
                 for pi2, pch in enumerate(pl_word):
@@ -293,11 +300,11 @@ def _generate_crossword(
                     if pl["direction"] == "across":
                         r = pl["start"][0] - wi
                         c = pl["start"][1] + pi2
-                        dr, orient = 1, "down"
+                        _dr, orient = 1, "down"
                     else:
                         r = pl["start"][0] + pi2
                         c = pl["start"][1] - wi
-                        dr, orient = 0, "across"
+                        _dr, orient = 0, "across"
                     # Bounds check
                     if orient == "down":
                         if r < 0 or r + len(word_upper) > size:
@@ -329,12 +336,14 @@ def _generate_crossword(
                 nr = wr + (k if wo == "down" else 0)
                 nc = wc + (k if wo == "across" else 0)
                 grid[nr][nc] = kch
-            placed.append({
-                "word": w,
-                "start": [wr, wc],
-                "direction": wo,
-                "length": len(w_upper),
-            })
+            placed.append(
+                {
+                    "word": w,
+                    "start": [wr, wc],
+                    "direction": wo,
+                    "length": len(w_upper),
+                }
+            )
 
     # Trim grid to bounding box
     min_r = min_c = size
@@ -399,6 +408,7 @@ def _generate_maze(
                 carve(nr, nc)
 
     import sys
+
     old_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(max(old_limit, rows * cols + 100))
     try:
@@ -424,7 +434,7 @@ def _generate_maze(
             nr, nc = r + dr, c + dc
             if 0 <= nr < rows and 0 <= nc < cols and not cells[r][c][d] and not visited_bfs[nr][nc]:
                 visited_bfs[nr][nc] = True
-                queue.append((nr, nc, path + [(nr, nc)]))
+                queue.append((nr, nc, [*path, (nr, nc)]))
 
     # Count dead ends for difficulty metadata
     dead_end_count = 0
@@ -503,9 +513,19 @@ def _generate_sudoku(
 
     # Determine target givens
     if n == 9:
-        target = {Difficulty.easy: 40, Difficulty.medium: 31, Difficulty.hard: 25, Difficulty.expert: 22}
+        target: dict[str, int] = {
+            Difficulty.easy: 40,
+            Difficulty.medium: 31,
+            Difficulty.hard: 25,
+            Difficulty.expert: 22,
+        }
     elif n == 6:
-        target = {Difficulty.easy: 20, Difficulty.medium: 15, Difficulty.hard: 12, Difficulty.expert: 10}
+        target = {
+            Difficulty.easy: 20,
+            Difficulty.medium: 15,
+            Difficulty.hard: 12,
+            Difficulty.expert: 10,
+        }
     else:
         target = {Difficulty.easy: 10, Difficulty.medium: 8, Difficulty.hard: 6, Difficulty.expert: 5}
 
@@ -518,7 +538,7 @@ def _generate_sudoku(
     for r, c in positions:
         if removed >= cells_to_remove:
             break
-        backup = board[r][c]
+        board[r][c]
         board[r][c] = 0
         removed += 1
         # Simplified unique-solution check skipped for perf; flag accordingly
@@ -608,12 +628,14 @@ def _generate_number_search(
     rows, cols = int(parts[0]), int(parts[1])
 
     # Generate random number sequences to find
-    seq_count = {Difficulty.easy: 10, Difficulty.medium: 15, Difficulty.hard: 20}.get(
-        difficulty, 15
-    )
-    seq_len_range = {Difficulty.easy: (3, 5), Difficulty.medium: (4, 7), Difficulty.hard: (5, 9)}.get(
-        difficulty, (4, 7)
-    )
+    seq_counts: dict[str, int] = {Difficulty.easy: 10, Difficulty.medium: 15, Difficulty.hard: 20}
+    seq_count = seq_counts.get(difficulty, 15)
+    seq_len_ranges: dict[str, tuple[int, int]] = {
+        Difficulty.easy: (3, 5),
+        Difficulty.medium: (4, 7),
+        Difficulty.hard: (5, 9),
+    }
+    seq_len_range = seq_len_ranges.get(difficulty, (4, 7))
     sequences: list[str] = []
     for _ in range(seq_count):
         length = random.randint(*seq_len_range)
@@ -622,9 +644,11 @@ def _generate_number_search(
 
     # Reuse word search logic with digit characters
     grid: list[list[str]] = [["" for _ in range(cols)] for _ in range(rows)]
-    directions = [(0, 1), (1, 0), (1, 1)] if difficulty == Difficulty.easy else [
-        (0, 1), (1, 0), (1, 1), (-1, 1), (0, -1), (-1, 0), (-1, -1), (1, -1)
-    ]
+    directions = (
+        [(0, 1), (1, 0), (1, 1)]
+        if difficulty == Difficulty.easy
+        else [(0, 1), (1, 0), (1, 1), (-1, 1), (0, -1), (-1, 0), (-1, -1), (1, -1)]
+    )
     placements: list[dict[str, Any]] = []
 
     for seq in sequences:
@@ -684,15 +708,44 @@ _GENERATOR_MAP: dict[str, Any] = {
 
 # Common offensive terms (abbreviated set; production would use a full dictionary)
 _OFFENSIVE_WORDS: set[str] = {
-    "damn", "hell", "crap", "stupid", "idiot", "dumb", "hate", "kill", "die",
-    "drug", "sex", "butt", "poop", "fart",
+    "damn",
+    "hell",
+    "crap",
+    "stupid",
+    "idiot",
+    "dumb",
+    "hate",
+    "kill",
+    "die",
+    "drug",
+    "sex",
+    "butt",
+    "poop",
+    "fart",
 }
 
 # Common trademark terms to filter
 _TRADEMARK_WORDS: set[str] = {
-    "disney", "pixar", "marvel", "pokemon", "lego", "barbie", "nintendo",
-    "playstation", "xbox", "coca-cola", "pepsi", "mcdonalds", "google",
-    "apple", "microsoft", "amazon", "netflix", "tesla", "nike", "adidas",
+    "disney",
+    "pixar",
+    "marvel",
+    "pokemon",
+    "lego",
+    "barbie",
+    "nintendo",
+    "playstation",
+    "xbox",
+    "coca-cola",
+    "pepsi",
+    "mcdonalds",
+    "google",
+    "apple",
+    "microsoft",
+    "amazon",
+    "netflix",
+    "tesla",
+    "nike",
+    "adidas",
 }
 
 
@@ -797,21 +850,25 @@ async def get_stats(
     total_result = await db.execute(total_stmt)
     total_books = total_result.scalar() or 0
 
-    in_progress_stmt = select(func.count()).select_from(PuzzleBook).where(
-        *base, PuzzleBook.status == BookStatus.in_progress
+    in_progress_stmt = (
+        select(func.count()).select_from(PuzzleBook).where(*base, PuzzleBook.status == BookStatus.in_progress)
     )
     in_progress_result = await db.execute(in_progress_stmt)
     in_progress = in_progress_result.scalar() or 0
 
-    published_stmt = select(func.count()).select_from(PuzzleBook).where(
-        *base, PuzzleBook.status == BookStatus.published
+    published_stmt = (
+        select(func.count()).select_from(PuzzleBook).where(*base, PuzzleBook.status == BookStatus.published)
     )
     published_result = await db.execute(published_stmt)
     published = published_result.scalar() or 0
 
     book_ids_stmt = select(PuzzleBook.id).where(*base)
-    puzzles_stmt = select(func.count()).select_from(Puzzle).where(
-        Puzzle.book_id.in_(book_ids_stmt),
+    puzzles_stmt = (
+        select(func.count())
+        .select_from(Puzzle)
+        .where(
+            Puzzle.book_id.in_(book_ids_stmt),
+        )
     )
     puzzles_result = await db.execute(puzzles_stmt)
     pages_created = puzzles_result.scalar() or 0
@@ -871,9 +928,20 @@ async def update_puzzle_book(
     """Update puzzle book metadata."""
     book = await _get_book_or_404(db, org_id, book_id)
     allowed_fields = {
-        "title", "audience", "puzzle_config", "difficulty_mode", "themes",
-        "seasonal_theme", "word_difficulty", "clue_style", "answer_key_position",
-        "has_toc", "has_hints", "layout_mode", "status", "qa_score",
+        "title",
+        "audience",
+        "puzzle_config",
+        "difficulty_mode",
+        "themes",
+        "seasonal_theme",
+        "word_difficulty",
+        "clue_style",
+        "answer_key_position",
+        "has_toc",
+        "has_hints",
+        "layout_mode",
+        "status",
+        "qa_score",
     }
     for key, value in updates.items():
         if key in allowed_fields and hasattr(book, key):
@@ -907,11 +975,7 @@ async def list_puzzles(
 ) -> list[dict[str, Any]]:
     """List all puzzles in a book."""
     await _get_book_or_404(db, org_id, book_id)
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     return [_puzzle_to_dict(p) for p in result.scalars().all()]
 
@@ -927,8 +991,14 @@ async def update_puzzle(
     await _get_book_or_404(db, org_id, book_id)
     puzzle = await _get_puzzle_or_404(db, book_id, puzzle_id)
     allowed_fields = {
-        "theme", "difficulty", "difficulty_score", "grid_size",
-        "grid_data", "word_list", "clues", "answer_data",
+        "theme",
+        "difficulty",
+        "difficulty_score",
+        "grid_size",
+        "grid_data",
+        "word_list",
+        "clues",
+        "answer_data",
     }
     for key, value in updates.items():
         if key in allowed_fields and hasattr(puzzle, key):
@@ -972,7 +1042,7 @@ async def generate_puzzle(
     Delegates to the appropriate algorithm based on puzzle_type, verifies the
     solution, calculates a difficulty score, and generates a content hash.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
 
     puzzle_type = puzzle_type or PuzzleType.word_search
     difficulty = difficulty or Difficulty.medium
@@ -991,18 +1061,33 @@ async def generate_puzzle(
     next_number = existing_count + 1
 
     # Generate puzzle data via the appropriate algorithm
+    word_based = (
+        PuzzleType.word_search,
+        PuzzleType.word_connect,
+        PuzzleType.crossword,
+        PuzzleType.word_scramble,
+        PuzzleType.cryptogram,
+    )
+    if puzzle_type in word_based and not word_list:
+        raise AppException(
+            status_code=400,
+            code="WORD_LIST_REQUIRED",
+            message=f"{puzzle_type} puzzles require a non-empty word_list",
+        )
+
+    words: list[str] = word_list or []  # guarded above for the word-based types
     if puzzle_type in (PuzzleType.word_search, PuzzleType.word_connect):
-        gen_data = _generate_word_search(grid_size, word_list, difficulty)
+        gen_data = _generate_word_search(grid_size, words, difficulty)
     elif puzzle_type == PuzzleType.crossword:
-        gen_data = _generate_crossword(word_list, difficulty)
+        gen_data = _generate_crossword(words, difficulty)
     elif puzzle_type == PuzzleType.maze:
         gen_data = _generate_maze(grid_size, difficulty)
     elif puzzle_type == PuzzleType.sudoku:
         gen_data = _generate_sudoku(grid_size, difficulty)
     elif puzzle_type == PuzzleType.word_scramble:
-        gen_data = _generate_word_scramble(word_list)
+        gen_data = _generate_word_scramble(words)
     elif puzzle_type == PuzzleType.cryptogram:
-        gen_data = _generate_cryptogram(word_list)
+        gen_data = _generate_cryptogram(words)
     elif puzzle_type == PuzzleType.number_search:
         gen_data = _generate_number_search(grid_size, difficulty)
     else:
@@ -1105,12 +1190,11 @@ async def verify_puzzle(
                 issues.append("No solution path found")
                 is_solvable = False
 
-    elif puzzle.puzzle_type == PuzzleType.crossword:
-        if puzzle.answer_data:
-            placements = puzzle.answer_data.get("placements", [])
-            if not placements:
-                issues.append("No words placed in crossword grid")
-                is_solvable = False
+    elif puzzle.puzzle_type == PuzzleType.crossword and puzzle.answer_data:
+        placements = puzzle.answer_data.get("placements", [])
+        if not placements:
+            issues.append("No words placed in crossword grid")
+            is_solvable = False
 
     puzzle.is_verified = is_solvable
     puzzle.has_unique_solution = has_unique and is_solvable
@@ -1137,19 +1221,19 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     fully configured (e.g. during development or testing).
     """
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt,
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=max_tokens),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=max_tokens),
         )
         response = await svc.complete(request)
         return response.content
@@ -1193,7 +1277,7 @@ async def generate_word_list(
         f"Word length constraints: minimum {min_len} letters, maximum {max_len} letters.\n"
         f"All words must be common, age-appropriate, and clearly related to the theme.\n"
         f"Do NOT include proper nouns, abbreviations, or hyphenated words.\n\n"
-        f"Return a JSON array of {count} uppercase strings, e.g. [\"WORD1\", \"WORD2\", ...]"
+        f'Return a JSON array of {count} uppercase strings, e.g. ["WORD1", "WORD2", ...]'
     )
 
     raw = await _llm_generate(user_prompt, system_prompt=system_prompt, max_tokens=2000)
@@ -1205,10 +1289,7 @@ async def generate_word_list(
             parsed = json.loads(raw)
             if isinstance(parsed, list):
                 words = [
-                    w.upper().strip()
-                    for w in parsed
-                    if isinstance(w, str)
-                    and min_len <= len(w.strip()) <= max_len
+                    w.upper().strip() for w in parsed if isinstance(w, str) and min_len <= len(w.strip()) <= max_len
                 ]
         except json.JSONDecodeError:
             # Try to extract words line-by-line as fallback
@@ -1228,7 +1309,10 @@ async def generate_word_list(
 
     logger.info(
         "generate_word_list called: theme=%s, count=%d, difficulty=%s, generated=%d",
-        theme, count, difficulty, len(words),
+        theme,
+        count,
+        difficulty,
+        len(words),
     )
 
     return {
@@ -1279,8 +1363,7 @@ async def generate_clues(
 
     if puzzle.puzzle_type not in (PuzzleType.crossword, PuzzleType.word_scramble):
         raise ValidationError(
-            f"Clue generation is only supported for crossword and word_scramble "
-            f"puzzles, not {puzzle.puzzle_type}."
+            f"Clue generation is only supported for crossword and word_scramble " f"puzzles, not {puzzle.puzzle_type}."
         )
 
     word_list: list[str] = puzzle.word_list or []
@@ -1303,7 +1386,7 @@ async def generate_clues(
         "Kid-friendly": "Write simple, fun clues using vocabulary appropriate for children ages 6-12.",
         "Trivia": "Write clues in the form of trivia questions or fun facts.",
         "Themed": f"Write clues that connect each word back to the theme of the puzzle. "
-                  f"Book themes: {', '.join(book.themes or ['general'])}.",
+        f"Book themes: {', '.join(book.themes or ['general'])}.",
     }
     guidance = style_guidance.get(style, style_guidance["Standard"])
 
@@ -1348,7 +1431,9 @@ async def generate_clues(
 
     logger.info(
         "generate_clues called: puzzle=%s, style=%s, clue_count=%d",
-        puzzle_id, style, len(clues),
+        puzzle_id,
+        style,
+        len(clues),
     )
 
     return {
@@ -1391,28 +1476,34 @@ async def qa_clues(
 
         # Duplicate phrasing check
         if clue_lower in seen_clues:
-            issues.append({
-                "word": word,
-                "issue": "duplicate_clue",
-                "detail": f"Clue '{clue}' is a duplicate of another clue",
-            })
+            issues.append(
+                {
+                    "word": word,
+                    "issue": "duplicate_clue",
+                    "detail": f"Clue '{clue}' is a duplicate of another clue",
+                }
+            )
         seen_clues.add(clue_lower)
 
         # Ambiguity check: flag very short clues
         if len(clue.split()) < 3:
-            issues.append({
-                "word": word,
-                "issue": "potentially_ambiguous",
-                "detail": f"Clue is very short ({len(clue.split())} words), may be ambiguous",
-            })
+            issues.append(
+                {
+                    "word": word,
+                    "issue": "potentially_ambiguous",
+                    "detail": f"Clue is very short ({len(clue.split())} words), may be ambiguous",
+                }
+            )
 
         # Flag if clue contains the answer word
         if word.lower() in clue_lower:
-            issues.append({
-                "word": word,
-                "issue": "contains_answer",
-                "detail": "Clue contains the answer word itself",
-            })
+            issues.append(
+                {
+                    "word": word,
+                    "issue": "contains_answer",
+                    "detail": "Clue contains the answer word itself",
+                }
+            )
 
     score = max(0, 100 - len(issues) * 10)
 
@@ -1435,7 +1526,7 @@ async def auto_fix_clues(
     Identifies problematic clues (contains answer, too short) and sends
     them to the LLM for rewriting while maintaining the original style.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
 
     stmt = select(Puzzle).where(
         Puzzle.book_id == book_id,
@@ -1471,11 +1562,13 @@ async def auto_fix_clues(
 
             if issues:
                 total_issues += 1
-                flagged.append({
-                    "word": word,
-                    "original_clue": clue,
-                    "issues": issues,
-                })
+                flagged.append(
+                    {
+                        "word": word,
+                        "original_clue": clue,
+                        "issues": issues,
+                    }
+                )
 
         if not flagged:
             continue
@@ -1503,11 +1596,7 @@ async def auto_fix_clues(
                 if isinstance(parsed, dict):
                     for item in flagged:
                         word = item["word"]
-                        new_clue = (
-                            parsed.get(word)
-                            or parsed.get(word.upper())
-                            or parsed.get(word.lower())
-                        )
+                        new_clue = parsed.get(word) or parsed.get(word.upper()) or parsed.get(word.lower())
                         if new_clue and isinstance(new_clue, str):
                             clues_map[word] = new_clue
                             fixed_count += 1
@@ -1533,7 +1622,9 @@ async def auto_fix_clues(
 
     logger.info(
         "auto_fix_clues called: book=%s, fixed=%d/%d",
-        book_id, fixed_count, total_issues,
+        book_id,
+        fixed_count,
+        total_issues,
     )
 
     return {
@@ -1561,11 +1652,7 @@ async def generate_answer_key(
     """
     book = await _get_book_or_404(db, org_id, book_id)
 
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     puzzles = result.scalars().all()
 
@@ -1613,13 +1700,9 @@ async def verify_answer_key(
     - Puzzle numbering is sequential
     - Answer data is non-empty
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
 
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     puzzles = result.scalars().all()
 
@@ -1628,21 +1711,25 @@ async def verify_answer_key(
     # Check all puzzles have answer data
     for puzzle in puzzles:
         if not puzzle.answer_data:
-            issues.append({
-                "puzzle_number": puzzle.puzzle_number,
-                "issue": "missing_answer_data",
-                "detail": f"Puzzle #{puzzle.puzzle_number} has no answer data",
-            })
+            issues.append(
+                {
+                    "puzzle_number": puzzle.puzzle_number,
+                    "issue": "missing_answer_data",
+                    "detail": f"Puzzle #{puzzle.puzzle_number} has no answer data",
+                }
+            )
 
     # Check sequential numbering
     expected = 1
     for puzzle in puzzles:
         if puzzle.puzzle_number != expected:
-            issues.append({
-                "puzzle_number": puzzle.puzzle_number,
-                "issue": "numbering_gap",
-                "detail": f"Expected puzzle #{expected}, found #{puzzle.puzzle_number}",
-            })
+            issues.append(
+                {
+                    "puzzle_number": puzzle.puzzle_number,
+                    "issue": "numbering_gap",
+                    "detail": f"Expected puzzle #{expected}, found #{puzzle.puzzle_number}",
+                }
+            )
         expected = puzzle.puzzle_number + 1
 
     return {
@@ -1671,11 +1758,7 @@ async def calibrate_difficulty(
     """
     book = await _get_book_or_404(db, org_id, book_id)
 
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     puzzles = list(result.scalars().all())
 
@@ -1708,25 +1791,27 @@ async def calibrate_difficulty(
         for diff_level, target_pct in target_pacing.items():
             actual_pct = distribution.get(diff_level, 0) / max(total, 1)
             if abs(actual_pct - target_pct) > 0.15:
-                pacing_issues.append({
-                    "difficulty": diff_level,
-                    "target_pct": f"{target_pct * 100:.0f}%",
-                    "actual_pct": f"{actual_pct * 100:.0f}%",
-                    "detail": f"{diff_level} puzzles: expected ~{target_pct * 100:.0f}%, "
-                              f"got {actual_pct * 100:.0f}%",
-                })
+                pacing_issues.append(
+                    {
+                        "difficulty": diff_level,
+                        "target_pct": f"{target_pct * 100:.0f}%",
+                        "actual_pct": f"{actual_pct * 100:.0f}%",
+                        "detail": f"{diff_level} puzzles: expected ~{target_pct * 100:.0f}%, "
+                        f"got {actual_pct * 100:.0f}%",
+                    }
+                )
 
         # Check ordering for progressive: easy puzzles should come first
         if total >= 3:
             first_third = puzzles[: math.ceil(total * 0.3)]
-            non_easy_early = [
-                p for p in first_third if p.difficulty != Difficulty.easy
-            ]
+            non_easy_early = [p for p in first_third if p.difficulty != Difficulty.easy]
             if len(non_easy_early) > len(first_third) * 0.5:
-                pacing_issues.append({
-                    "difficulty": "ordering",
-                    "detail": "Progressive mode expects easy puzzles in the first 30%",
-                })
+                pacing_issues.append(
+                    {
+                        "difficulty": "ordering",
+                        "detail": "Progressive mode expects easy puzzles in the first 30%",
+                    }
+                )
 
     await db.flush()
 
@@ -1734,7 +1819,7 @@ async def calibrate_difficulty(
         "book_id": str(book_id),
         "difficulty_mode": book.difficulty_mode,
         "total_puzzles": total,
-        "distribution": {k: v for k, v in distribution.items()},
+        "distribution": dict(distribution.items()),
         "scores": [
             {
                 "puzzle_number": p.puzzle_number,
@@ -1767,17 +1852,11 @@ async def generate_large_print(
     Creates a new book copy -- original unchanged.
     """
     if scale not in (125, 150, 175):
-        raise ValidationError(
-            f"Unsupported scale: {scale}%. Use 125, 150, or 175."
-        )
+        raise ValidationError(f"Unsupported scale: {scale}%. Use 125, 150, or 175.")
 
     book = await _get_book_or_404(db, org_id, book_id)
 
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     puzzles = list(result.scalars().all())
 
@@ -1842,13 +1921,13 @@ async def generate_large_print(
             has_unique_solution=puzzle.has_unique_solution,
         )
         db.add(lp_puzzle)
-        adjusted_puzzles.append({
-            "original_grid_size": puzzle.grid_size,
-            "new_grid_size": new_grid_size,
-            "words_reduced": (
-                len(puzzle.word_list or []) != len(new_word_list or [])
-            ),
-        })
+        adjusted_puzzles.append(
+            {
+                "original_grid_size": puzzle.grid_size,
+                "new_grid_size": new_grid_size,
+                "words_reduced": (len(puzzle.word_list or []) != len(new_word_list or [])),
+            }
+        )
 
     await db.flush()
     await db.refresh(lp_book)
@@ -1885,11 +1964,7 @@ async def run_quality_check(
     """
     book = await _get_book_or_404(db, org_id, book_id)
 
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     puzzles = list(result.scalars().all())
 
@@ -1900,26 +1975,24 @@ async def run_quality_check(
     hash_counts: dict[str, list[int]] = {}
     for puzzle in puzzles:
         if puzzle.content_hash:
-            hash_counts.setdefault(puzzle.content_hash, []).append(
-                puzzle.puzzle_number
-            )
+            hash_counts.setdefault(puzzle.content_hash, []).append(puzzle.puzzle_number)
     duplicates = {h: nums for h, nums in hash_counts.items() if len(nums) > 1}
     if duplicates:
         for h, nums in duplicates.items():
-            issues.append({
-                "check": "duplicate_grids",
-                "detail": f"Puzzles {nums} have identical content (hash: {h[:12]}...)",
-                "puzzle_numbers": nums,
-            })
+            issues.append(
+                {
+                    "check": "duplicate_grids",
+                    "detail": f"Puzzles {nums} have identical content (hash: {h[:12]}...)",
+                    "puzzle_numbers": nums,
+                }
+            )
     checks["duplicate_grids"] = not duplicates
 
     # 2. Word list overlap check
     all_word_sets: list[tuple[int, set[str]]] = []
     for puzzle in puzzles:
         if puzzle.word_list:
-            all_word_sets.append(
-                (puzzle.puzzle_number, set(w.lower() for w in puzzle.word_list))
-            )
+            all_word_sets.append((puzzle.puzzle_number, {w.lower() for w in puzzle.word_list}))
     for i in range(len(all_word_sets)):
         for j in range(i + 1, len(all_word_sets)):
             num_i, set_i = all_word_sets[i]
@@ -1927,18 +2000,17 @@ async def run_quality_check(
             overlap = set_i & set_j
             overlap_pct = len(overlap) / max(len(set_i | set_j), 1)
             if overlap_pct > 0.30:
-                issues.append({
-                    "check": "word_list_overlap",
-                    "detail": (
-                        f"Puzzles #{num_i} and #{num_j} share "
-                        f"{overlap_pct * 100:.0f}% of words (max 30%)"
-                    ),
-                    "puzzle_numbers": [num_i, num_j],
-                    "overlap_pct": round(overlap_pct * 100, 1),
-                })
-    checks["word_list_unique"] = not any(
-        i["check"] == "word_list_overlap" for i in issues
-    )
+                issues.append(
+                    {
+                        "check": "word_list_overlap",
+                        "detail": (
+                            f"Puzzles #{num_i} and #{num_j} share " f"{overlap_pct * 100:.0f}% of words (max 30%)"
+                        ),
+                        "puzzle_numbers": [num_i, num_j],
+                        "overlap_pct": round(overlap_pct * 100, 1),
+                    }
+                )
+    checks["word_list_unique"] = not any(i["check"] == "word_list_overlap" for i in issues)
 
     # 3. Difficulty distribution check
     distribution = Counter(p.difficulty for p in puzzles)
@@ -1947,25 +2019,24 @@ async def run_quality_check(
         for diff_level in [Difficulty.easy, Difficulty.medium, Difficulty.hard]:
             pct = distribution.get(diff_level, 0) / total
             if pct < 0.10:
-                issues.append({
-                    "check": "difficulty_distribution",
-                    "detail": (
-                        f"{diff_level} puzzles are underrepresented "
-                        f"({pct * 100:.0f}% of total)"
-                    ),
-                })
-    checks["difficulty_balanced"] = not any(
-        i["check"] == "difficulty_distribution" for i in issues
-    )
+                issues.append(
+                    {
+                        "check": "difficulty_distribution",
+                        "detail": (f"{diff_level} puzzles are underrepresented " f"({pct * 100:.0f}% of total)"),
+                    }
+                )
+    checks["difficulty_balanced"] = not any(i["check"] == "difficulty_distribution" for i in issues)
 
     # 4. All puzzles verified
     unverified = [p.puzzle_number for p in puzzles if not p.is_verified]
     if unverified:
-        issues.append({
-            "check": "verification",
-            "detail": f"Puzzles {unverified} have not been verified as solvable",
-            "puzzle_numbers": unverified,
-        })
+        issues.append(
+            {
+                "check": "verification",
+                "detail": f"Puzzles {unverified} have not been verified as solvable",
+                "puzzle_numbers": unverified,
+            }
+        )
     checks["all_verified"] = not unverified
 
     # Calculate overall QA score
@@ -2013,32 +2084,27 @@ async def export_book(
 
     book = await _get_book_or_404(db, org_id, book_id)
 
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     puzzles = list(result.scalars().all())
 
     # Build page dicts for puzzle content pages
     puzzle_page_dicts = []
     for p in puzzles:
-        puzzle_page_dicts.append({
-            "page_number": p.puzzle_number,
-            "page_type": "content",
-            "label": f"Puzzle {p.puzzle_number}",
-            "puzzle_type": str(p.puzzle_type) if p.puzzle_type else None,
-            "difficulty": str(p.difficulty) if p.difficulty else None,
-            "theme": p.theme,
-        })
+        puzzle_page_dicts.append(
+            {
+                "page_number": p.puzzle_number,
+                "page_type": "content",
+                "label": f"Puzzle {p.puzzle_number}",
+                "puzzle_type": str(p.puzzle_type) if p.puzzle_type else None,
+                "difficulty": str(p.difficulty) if p.difficulty else None,
+                "theme": p.theme,
+            }
+        )
 
     # Build answer key page dicts (compact: 4 answers per page)
     answer_page_count = max(1, math.ceil(len(puzzles) / 4)) if puzzles else 0
-    answer_page_dicts = [
-        {"type": "answer_key", "label": f"Answer Key {i + 1}"}
-        for i in range(answer_page_count)
-    ]
+    answer_page_dicts = [{"type": "answer_key", "label": f"Answer Key {i + 1}"} for i in range(answer_page_count)]
 
     # Build front matter (TOC + instructions)
     front_matter: list[dict[str, Any]] = []
@@ -2121,11 +2187,7 @@ async def run_preflight(
     """
     book = await _get_book_or_404(db, org_id, book_id)
 
-    stmt = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id)
-        .order_by(Puzzle.puzzle_number.asc())
-    )
+    stmt = select(Puzzle).where(Puzzle.book_id == book_id).order_by(Puzzle.puzzle_number.asc())
     result = await db.execute(stmt)
     puzzles = list(result.scalars().all())
 
@@ -2155,15 +2217,16 @@ async def run_preflight(
             san_result = _run_sanitisation_pipeline(puzzle.word_list)
             if san_result["removed_count"] > 0:
                 unsanitised.append(puzzle.puzzle_number)
-                issues.append({
-                    "check": "sanitisation",
-                    "puzzle_number": puzzle.puzzle_number,
-                    "detail": (
-                        f"Puzzle #{puzzle.puzzle_number} has "
-                        f"{san_result['removed_count']} unsanitised words"
-                    ),
-                    "removed_words": san_result["removed"],
-                })
+                issues.append(
+                    {
+                        "check": "sanitisation",
+                        "puzzle_number": puzzle.puzzle_number,
+                        "detail": (
+                            f"Puzzle #{puzzle.puzzle_number} has " f"{san_result['removed_count']} unsanitised words"
+                        ),
+                        "removed_words": san_result["removed"],
+                    }
+                )
     checks["sanitisation"] = {
         "status": "passed" if not unsanitised else "failed",
         "unsanitised_puzzles": unsanitised,
@@ -2184,9 +2247,7 @@ async def run_preflight(
     }
 
     # Overall status
-    all_passed = all(
-        c.get("status") == "passed" for c in checks.values()
-    )
+    all_passed = all(c.get("status") == "passed" for c in checks.values())
 
     return {
         "book_id": str(book_id),

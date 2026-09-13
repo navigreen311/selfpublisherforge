@@ -6,9 +6,7 @@ import pytest
 
 from app.modules.kdp_validation.print_validator import PrintValidator
 from app.modules.kdp_validation.rules import (
-    BLEED_SIZE,
     MIN_PAGE_COUNT,
-    MIN_PRINT_DPI,
     PaperType,
     calculate_spine_width,
     get_inside_margin,
@@ -28,19 +26,19 @@ def validator() -> PrintValidator:
 
 def _make_request(**overrides) -> PrintValidationRequest:
     """Create a valid-by-default print validation request."""
-    defaults = dict(
-        trim_size="6x9",
-        page_count=200,
-        paper_type="white",
-        has_bleed=False,
-        inside_margin=0.625,
-        outside_margin=0.5,
-        top_margin=0.5,
-        bottom_margin=0.5,
-        image_dpi=300,
-        fonts_embedded=True,
-        color_space="RGB",
-    )
+    defaults = {
+        "trim_size": "6x9",
+        "page_count": 200,
+        "paper_type": "white",
+        "has_bleed": False,
+        "inside_margin": 0.625,
+        "outside_margin": 0.5,
+        "top_margin": 0.5,
+        "bottom_margin": 0.5,
+        "image_dpi": 300,
+        "fonts_embedded": True,
+        "color_space": "RGB",
+    }
     defaults.update(overrides)
     return PrintValidationRequest(**defaults)
 
@@ -48,6 +46,7 @@ def _make_request(**overrides) -> PrintValidationRequest:
 # ===================================================================
 # Trim size validation
 # ===================================================================
+
 
 class TestTrimSize:
     def test_valid_trim_size(self, validator: PrintValidator):
@@ -74,6 +73,7 @@ class TestTrimSize:
 # ===================================================================
 # Page count validation
 # ===================================================================
+
 
 class TestPageCount:
     def test_valid_page_count(self, validator: PrintValidator):
@@ -127,6 +127,7 @@ class TestPageCount:
 # Margin validation
 # ===================================================================
 
+
 class TestMargins:
     def test_margins_pass_6x9(self, validator: PrintValidator):
         # 6x9, 200 pages: inside requires 0.5 + 0.125 = 0.625
@@ -139,10 +140,7 @@ class TestMargins:
             bottom_margin=0.25,
         )
         result = validator.validate(req)
-        margin_errors = [
-            i for i in result.issues
-            if i.rule.startswith("margin_") and i.severity == Severity.ERROR
-        ]
+        margin_errors = [i for i in result.issues if i.rule.startswith("margin_") and i.severity == Severity.ERROR]
         assert len(margin_errors) == 0
 
     def test_inside_margin_too_small(self, validator: PrintValidator):
@@ -198,6 +196,7 @@ class TestMargins:
 # Bleed
 # ===================================================================
 
+
 class TestBleed:
     def test_bleed_info_when_enabled(self, validator: PrintValidator):
         req = _make_request(has_bleed=True)
@@ -217,6 +216,7 @@ class TestBleed:
 # Fonts
 # ===================================================================
 
+
 class TestFonts:
     def test_fonts_embedded_pass(self, validator: PrintValidator):
         req = _make_request(fonts_embedded=True)
@@ -235,6 +235,7 @@ class TestFonts:
 # ===================================================================
 # Image DPI
 # ===================================================================
+
 
 class TestImageDPI:
     def test_dpi_at_minimum(self, validator: PrintValidator):
@@ -260,6 +261,7 @@ class TestImageDPI:
 # Color space
 # ===================================================================
 
+
 class TestColorSpace:
     def test_rgb_passes(self, validator: PrintValidator):
         req = _make_request(color_space="RGB")
@@ -284,6 +286,7 @@ class TestColorSpace:
 # ===================================================================
 # Spine calculation
 # ===================================================================
+
 
 class TestSpineCalculation:
     def test_spine_in_metadata(self, validator: PrintValidator):
@@ -313,6 +316,7 @@ class TestSpineCalculation:
 # Overall status
 # ===================================================================
 
+
 class TestOverallStatus:
     def test_passes_when_all_valid(self, validator: PrintValidator):
         req = _make_request()
@@ -338,6 +342,7 @@ class TestOverallStatus:
 # ===================================================================
 # Rules helpers
 # ===================================================================
+
 
 class TestRulesHelpers:
     def test_get_inside_margin_low_pages(self):

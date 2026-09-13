@@ -9,8 +9,9 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -23,14 +24,16 @@ from app.modules.pricing_automation.schemas import (
     PriceSimulationRequest,
     PricingRuleCreate,
     PricingRuleUpdate,
+    PricingStrategyType,
     PromotionCreate,
 )
 from app.modules.pricing_automation.service import PricingAutomationService
-
+from tests.conftest import populate_server_defaults
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id():
@@ -48,7 +51,7 @@ def mock_db():
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=populate_server_defaults)
     db.execute = AsyncMock()
     return db
 
@@ -59,15 +62,18 @@ def service(mock_db):
     return PricingAutomationService(mock_db)
 
 
-def _make_pricing_rule(**overrides):
-    """Factory helper to create a PricingRule mock."""
+def _make_pricing_rule(**overrides) -> SimpleNamespace:
+    """A pricing-rule row carrying every field PricingRuleResponse reads."""
+    now = datetime.now(UTC)
     defaults = {
         "id": uuid.uuid4(),
         "org_id": uuid.uuid4(),
         "name": "Test Rule",
         "description": "Test pricing rule",
         "book_id": uuid.uuid4(),
-        "strategy": "fixed",
+        # "fixed" is not a PricingStrategyType — the enum is competitive_match /
+        # value_based / penetration / dynamic / promotional.
+        "strategy": PricingStrategyType.DYNAMIC,
         "book_format": BookFormat.EBOOK,
         "min_price": Decimal("2.99"),
         "max_price": Decimal("9.99"),
@@ -75,19 +81,68 @@ def _make_pricing_rule(**overrides):
         "parameters": {},
         "is_auto_apply": False,
         "status": RuleStatus.DRAFT,
-        "created_at": datetime.now(UTC),
+        "last_applied_at": None,
+        "created_at": now,
+        "updated_at": now,
         "deleted_at": None,
     }
     defaults.update(overrides)
-    rule = MagicMock()
-    for k, v in defaults.items():
-        setattr(rule, k, v)
-    return rule
+    return SimpleNamespace(**defaults)
+
+
+def _make_competitor_price(**overrides) -> SimpleNamespace:
+    """A competitor-price row carrying every field CompetitorPriceEntry reads."""
+    defaults = {
+        "id": uuid.uuid4(),
+        "book_id": uuid.uuid4(),
+        "competitor_asin": "B00TEST123",
+        "competitor_title": "A Rival Book",
+        "competitor_author": "R. Ival",
+        "book_format": BookFormat.EBOOK,
+        "price": Decimal("4.99"),
+        "currency": "USD",
+        "bsr_rank": 5000,
+        "review_count": 120,
+        "review_rating": Decimal("4.3"),
+        "category": "Thrillers",
+        "snapshot_date": datetime.now(UTC),
+        "source": "amazon",
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
+
+
+def _make_promotion(**overrides) -> SimpleNamespace:
+    """A promotion row carrying every field PromotionResponse reads."""
+    now = datetime.now(UTC)
+    defaults = {
+        "id": uuid.uuid4(),
+        "org_id": uuid.uuid4(),
+        "pricing_rule_id": None,
+        "book_id": uuid.uuid4(),
+        "name": "Launch Sale",
+        "description": "Two weeks at 0.99",
+        "original_price": Decimal("4.99"),
+        "promo_price": Decimal("0.99"),
+        "book_format": BookFormat.EBOOK,
+        "start_date": now,
+        "end_date": now,
+        "status": "scheduled",
+        "platform": "amazon",
+        "notes": None,
+        "performance_data": {},
+        "created_at": now,
+        "updated_at": now,
+        "deleted_at": None,
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
 
 
 # ===========================================================================
 # Tests: list_rules
 # ===========================================================================
+
 
 class TestListRules:
     """Tests for PricingAutomationService.list_rules."""
@@ -103,9 +158,12 @@ class TestListRules:
         rule2 = _make_pricing_rule()
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [rule1, rule2, rule1, rule2]
+        mock_result.scalars.return_value.all.return_value = [rule1, rule2]
 
-        service.db.execute.side_effect = [mock_result, mock_result]
+        count_result = MagicMock()
+        count_result.scalar.return_value = 4
+
+        service.db.execute.side_effect = [count_result, mock_result]
 
         rules, total = await service.list_rules(org_id, limit=10, offset=0)
 
@@ -135,6 +193,7 @@ class TestListRules:
 # ===========================================================================
 # Tests: create_rule
 # ===========================================================================
+
 
 class TestCreateRule:
     """Tests for PricingAutomationService.create_rule."""
@@ -171,6 +230,7 @@ class TestCreateRule:
 # Tests: update_rule
 # ===========================================================================
 
+
 class TestUpdateRule:
     """Tests for PricingAutomationService.update_rule."""
 
@@ -204,6 +264,7 @@ class TestUpdateRule:
 # Tests: simulate_price
 # ===========================================================================
 
+
 class TestSimulatePrice:
     """Tests for PricingAutomationService.simulate_price."""
 
@@ -225,8 +286,8 @@ class TestSimulatePrice:
 
         request = PriceSimulationRequest(
             current_price=Decimal("4.99"),
-            new_price=Decimal("3.99"),
-            current_units=100,
+            proposed_price=Decimal("3.99"),
+            current_daily_sales=100,
             elasticity=1.2,
         )
 
@@ -241,6 +302,7 @@ class TestSimulatePrice:
 # Tests: get_competitor_prices
 # ===========================================================================
 
+
 class TestGetCompetitorPrices:
     """Tests for PricingAutomationService.get_competitor_prices."""
 
@@ -252,16 +314,8 @@ class TestGetCompetitorPrices:
         book_id,
     ):
         """get_competitor_prices should return aggregated competitor pricing data."""
-        comp1 = MagicMock(
-            price=Decimal("4.99"),
-            bsr_rank=5000,
-            review_rating=4.3,
-        )
-        comp2 = MagicMock(
-            price=Decimal("5.99"),
-            bsr_rank=3000,
-            review_rating=4.5,
-        )
+        comp1 = _make_competitor_price(price=Decimal("4.99"), bsr_rank=5000, review_rating=Decimal("4.3"))
+        comp2 = _make_competitor_price(price=Decimal("5.99"), bsr_rank=3000, review_rating=Decimal("4.5"))
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [comp1, comp2]
@@ -270,14 +324,15 @@ class TestGetCompetitorPrices:
         result = await service.get_competitor_prices(org_id, book_id)
 
         assert result.total_competitors == 2
-        assert result.avg_price == Decimal("5.49")
-        assert result.min_price == Decimal("4.99")
-        assert result.max_price == Decimal("5.99")
+        assert result.avg_price == pytest.approx(5.49)
+        assert result.min_price == pytest.approx(4.99)
+        assert result.max_price == pytest.approx(5.99)
 
 
 # ===========================================================================
 # Tests: create_ab_test
 # ===========================================================================
+
 
 class TestCreateABTest:
     """Tests for PricingAutomationService.create_ab_test."""
@@ -312,6 +367,7 @@ class TestCreateABTest:
 # Tests: list_promotions
 # ===========================================================================
 
+
 class TestListPromotions:
     """Tests for PricingAutomationService.list_promotions."""
 
@@ -322,13 +378,16 @@ class TestListPromotions:
         org_id,
     ):
         """list_promotions should return paginated list of promotions."""
-        promo1 = MagicMock(id=uuid.uuid4())
-        promo2 = MagicMock(id=uuid.uuid4())
+        promo1 = _make_promotion()
+        promo2 = _make_promotion()
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [promo1, promo2, promo1, promo2]
+        mock_result.scalars.return_value.all.return_value = [promo1, promo2]
 
-        service.db.execute.side_effect = [mock_result, mock_result]
+        count_result = MagicMock()
+        count_result.scalar.return_value = 4
+
+        service.db.execute.side_effect = [count_result, mock_result]
 
         promotions, total = await service.list_promotions(org_id, limit=10, offset=0)
 
@@ -339,6 +398,7 @@ class TestListPromotions:
 # ===========================================================================
 # Tests: create_promotion
 # ===========================================================================
+
 
 class TestCreatePromotion:
     """Tests for PricingAutomationService.create_promotion."""
@@ -374,6 +434,7 @@ class TestCreatePromotion:
 # Tests: calculate_ku_revenue
 # ===========================================================================
 
+
 class TestCalculateKURevenue:
     """Tests for PricingAutomationService.calculate_ku_revenue."""
 
@@ -392,11 +453,15 @@ class TestCalculateKURevenue:
         )
 
         request = KUCalculatorRequest(
-            ku_pages_read=50000,
-            ku_rate_per_page=Decimal("0.0045"),
-            wide_units_sold=100,
-            wide_price=Decimal("4.99"),
-            wide_royalty_rate=Decimal("0.70"),
+            book_page_count=250,
+            estimated_ku_reads_per_month=200,
+            ku_page_rate=0.0045,
+            wide_price=4.99,
+            wide_monthly_sales=100,
+            wide_royalty_rate=0.7,
+            amazon_price=4.99,
+            amazon_monthly_sales=150,
+            amazon_royalty_rate=0.7,
         )
 
         result = await service.calculate_ku_revenue(request)

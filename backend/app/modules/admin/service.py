@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppException
 from app.models.organization import Organization
 from app.models.project import Book
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.modules.admin.schemas import (
     ActivityLogEntry,
     ActivityLogFilters,
@@ -51,13 +51,11 @@ async def list_users(
 
     if request.search:
         search_term = f"%{request.search}%"
-        query = query.where(
-            (User.email.ilike(search_term)) | (User.name.ilike(search_term))
-        )
+        query = query.where((User.email.ilike(search_term)) | (User.name.ilike(search_term)))
 
     if request.tier:
         # Join with organization to filter by tier
-        query = query.join(Organization).where(Organization.tier == request.tier)
+        query = query.join(Organization).where(Organization.plan_tier == request.tier)
 
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
@@ -73,7 +71,7 @@ async def list_users(
     user_items = []
     for user in users:
         # Get user's organization to determine tier
-        org_query = select(Organization).where(Organization.id == user.organization_id)
+        org_query = select(Organization).where(Organization.id == user.org_id)
         org_result = await db.execute(org_query)
         org = org_result.scalar_one_or_none()
 
@@ -83,7 +81,7 @@ async def list_users(
                 email=user.email,
                 name=user.name,
                 created_at=user.created_at,
-                tier=org.tier if org else PlanTier.FREE,
+                tier=org.plan_tier if org else PlanTier.FREE,
                 is_active=user.is_active,
             )
         )
@@ -164,6 +162,7 @@ async def deactivate_user(db: AsyncSession, user_id: UUID) -> dict:
 # Platform Statistics
 # ---------------------------------------------------------------------------
 
+
 async def get_platform_stats(db: AsyncSession) -> PlatformStatsResponse:
     """Get platform-wide statistics.
 
@@ -178,7 +177,7 @@ async def get_platform_stats(db: AsyncSession) -> PlatformStatsResponse:
     users_total = await db.scalar(users_total_query) or 0
 
     # Count active users (simplified - would need last_active tracking)
-    users_active_query = select(func.count()).select_from(User).where(User.is_active == True)
+    users_active_query = select(func.count()).select_from(User).where(User.is_active.is_(True))
     users_active_week = await db.scalar(users_active_query) or 0
 
     # Count organizations
@@ -211,6 +210,7 @@ async def get_platform_stats(db: AsyncSession) -> PlatformStatsResponse:
 # Activity Log
 # ---------------------------------------------------------------------------
 
+
 async def get_activity_log(
     db: AsyncSession,
     filters: ActivityLogFilters,
@@ -229,7 +229,7 @@ async def get_activity_log(
         a dedicated activity_log table or audit system.
     """
     # Return mock data for now
-    activities = []
+    activities: list[ActivityLogEntry] = []
     total = 0
 
     return ActivityLogResponse(activities=activities, total=total)
@@ -238,6 +238,7 @@ async def get_activity_log(
 # ---------------------------------------------------------------------------
 # User Management
 # ---------------------------------------------------------------------------
+
 
 async def get_user_detail(db: AsyncSession, user_id: UUID) -> AdminUserDetail:
     """Get detailed user information.
@@ -260,7 +261,7 @@ async def get_user_detail(db: AsyncSession, user_id: UUID) -> AdminUserDetail:
         raise AppException(status_code=404, code="USER_NOT_FOUND", message="User not found")
 
     # Get organization
-    org_query = select(Organization).where(Organization.id == user.organization_id)
+    org_query = select(Organization).where(Organization.id == user.org_id)
     org_result = await db.execute(org_query)
     org = org_result.scalar_one_or_none()
 
@@ -274,7 +275,7 @@ async def get_user_detail(db: AsyncSession, user_id: UUID) -> AdminUserDetail:
         name=user.name,
         role=user.role,
         status="active" if user.is_active else "inactive",
-        org_id=user.organization_id,
+        org_id=user.org_id,
         org_name=org.name if org else "Unknown",
         last_active=None,  # Would need tracking
         books_count=books_count,
@@ -343,7 +344,7 @@ async def update_user(
 
     # Update fields
     if data.role is not None:
-        user.role = data.role
+        user.role = UserRole(data.role)
     if data.status is not None:
         user.is_active = data.status == "active"
 
@@ -388,6 +389,7 @@ async def reset_user_password(db: AsyncSession, user_id: UUID) -> dict:
 # Organization Management
 # ---------------------------------------------------------------------------
 
+
 async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
     """Get all organizations with details.
 
@@ -404,17 +406,14 @@ async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
     org_details = []
     for org in orgs:
         # Count members
-        members_query = select(func.count()).select_from(User).where(User.organization_id == org.id)
+        members_query = select(func.count()).select_from(User).where(User.org_id == org.id)
         member_count = await db.scalar(members_query) or 0
 
         # Count books
         books_count = 0
 
         # Get owner
-        owner_query = select(User).where(
-            User.organization_id == org.id,
-            User.role.in_(["owner", "admin"])
-        ).limit(1)
+        owner_query = select(User).where(User.org_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
         owner_result = await db.execute(owner_query)
         owner = owner_result.scalar_one_or_none()
 
@@ -423,7 +422,7 @@ async def get_organizations(db: AsyncSession) -> list[AdminOrgDetail]:
                 id=org.id,
                 name=org.name,
                 slug=org.slug,
-                plan_tier=org.tier.value if hasattr(org, 'tier') else "free",
+                plan_tier=org.plan_tier.value if hasattr(org, "tier") else "free",
                 owner_name=owner.name if owner else "Unknown",
                 member_count=member_count,
                 books_count=books_count,
@@ -458,17 +457,14 @@ async def get_org_detail(db: AsyncSession, org_id: UUID) -> AdminOrgDetail:
         raise AppException(status_code=404, code="ORG_NOT_FOUND", message="Organization not found")
 
     # Count members
-    members_query = select(func.count()).select_from(User).where(User.organization_id == org.id)
+    members_query = select(func.count()).select_from(User).where(User.org_id == org.id)
     member_count = await db.scalar(members_query) or 0
 
     # Count books
     books_count = 0
 
     # Get owner
-    owner_query = select(User).where(
-        User.organization_id == org.id,
-        User.role.in_(["owner", "admin"])
-    ).limit(1)
+    owner_query = select(User).where(User.org_id == org.id, User.role.in_(["owner", "admin"])).limit(1)
     owner_result = await db.execute(owner_query)
     owner = owner_result.scalar_one_or_none()
 
@@ -476,7 +472,7 @@ async def get_org_detail(db: AsyncSession, org_id: UUID) -> AdminOrgDetail:
         id=org.id,
         name=org.name,
         slug=org.slug,
-        plan_tier=org.tier.value if hasattr(org, 'tier') else "free",
+        plan_tier=org.plan_tier.value if hasattr(org, "tier") else "free",
         owner_name=owner.name if owner else "Unknown",
         member_count=member_count,
         books_count=books_count,
@@ -528,6 +524,7 @@ async def update_org(
 # Billing
 # ---------------------------------------------------------------------------
 
+
 async def get_billing_overview(db: AsyncSession, org_id: UUID) -> BillingOverview:
     """Get billing overview for an organization.
 
@@ -552,7 +549,7 @@ async def get_billing_overview(db: AsyncSession, org_id: UUID) -> BillingOvervie
     if not org:
         raise AppException(status_code=404, code="ORG_NOT_FOUND", message="Organization not found")
 
-    plan_tier = org.tier.value if hasattr(org, 'tier') else "free"
+    plan_tier = org.plan_tier.value if hasattr(org, "tier") else "free"
     plan_prices = {
         "free": 0.0,
         "starter": 29.0,

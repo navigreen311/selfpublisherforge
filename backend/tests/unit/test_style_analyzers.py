@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.modules.style_cloning.analyzers import (
     RhythmAnalyzer,
     SyntaxAnalyzer,
     ToneAnalyzer,
     VocabularyAnalyzer,
 )
-
 
 # ---------------------------------------------------------------------------
 # Sample texts for testing
@@ -113,6 +110,7 @@ HEDGING_TEXT = (
 # SyntaxAnalyzer Tests
 # ---------------------------------------------------------------------------
 
+
 class TestSyntaxAnalyzer:
     """Tests for SyntaxAnalyzer."""
 
@@ -125,12 +123,15 @@ class TestSyntaxAnalyzer:
         assert metrics["simple_sentence_ratio"] > 0.5
         assert metrics["compound_sentence_ratio"] >= 0
         assert metrics["complex_sentence_ratio"] >= 0
-        assert abs(
-            metrics["simple_sentence_ratio"]
-            + metrics["compound_sentence_ratio"]
-            + metrics["complex_sentence_ratio"]
-            - 1.0
-        ) < 0.01
+        assert (
+            abs(
+                metrics["simple_sentence_ratio"]
+                + metrics["compound_sentence_ratio"]
+                + metrics["complex_sentence_ratio"]
+                - 1.0
+            )
+            < 0.01
+        )
 
     def test_complex_sentences(self):
         """Test analysis of complex sentences."""
@@ -173,6 +174,7 @@ class TestSyntaxAnalyzer:
 # ---------------------------------------------------------------------------
 # RhythmAnalyzer Tests
 # ---------------------------------------------------------------------------
+
 
 class TestRhythmAnalyzer:
     """Tests for RhythmAnalyzer."""
@@ -245,6 +247,7 @@ class TestRhythmAnalyzer:
 # ---------------------------------------------------------------------------
 # VocabularyAnalyzer Tests
 # ---------------------------------------------------------------------------
+
 
 class TestVocabularyAnalyzer:
     """Tests for VocabularyAnalyzer."""
@@ -321,6 +324,7 @@ class TestVocabularyAnalyzer:
 # ---------------------------------------------------------------------------
 # ToneAnalyzer Tests
 # ---------------------------------------------------------------------------
+
 
 class TestToneAnalyzer:
     """Tests for ToneAnalyzer."""
@@ -403,6 +407,7 @@ class TestToneAnalyzer:
 # ---------------------------------------------------------------------------
 # Integration Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAnalyzersIntegration:
     """Integration tests for all analyzers working together."""

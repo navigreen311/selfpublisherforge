@@ -26,7 +26,7 @@ import os
 import time
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -234,16 +234,11 @@ class IngramSparkClient:
             # Exponential backoff: 1s, 2s, 4s ...
             if attempt < _MAX_RETRIES - 1:
                 backoff = 2**attempt
-                logger.debug(
-                    "Retrying IngramSpark API request in %ds ...", backoff
-                )
+                logger.debug("Retrying IngramSpark API request in %ds ...", backoff)
                 await asyncio.sleep(backoff)
 
         # All retries exhausted.
-        msg = (
-            f"IngramSpark API {method} {path} failed after {_MAX_RETRIES} "
-            f"attempts. Last error: {last_exc}"
-        )
+        msg = f"IngramSpark API {method} {path} failed after {_MAX_RETRIES} " f"attempts. Last error: {last_exc}"
         logger.error(msg)
         raise IngramSparkError(msg)
 
@@ -280,18 +275,9 @@ class IngramSparkClient:
         units = int(entry.get("units", 0) or entry.get("quantitySold", 0))
         units_refunded = int(entry.get("unitsRefunded", 0))
 
-        royalties = Decimal(
-            str(entry.get("royalties", 0) or entry.get("netRevenue", 0))
-        )
-        gross = Decimal(
-            str(
-                entry.get("grossRevenue", 0)
-                or entry.get("grossAmount", royalties)
-            )
-        )
-        list_price = Decimal(
-            str(entry.get("listPrice", 0) or entry.get("retailPrice", 0))
-        )
+        royalties = Decimal(str(entry.get("royalties", 0) or entry.get("netRevenue", 0)))
+        gross = Decimal(str(entry.get("grossRevenue", 0) or entry.get("grossAmount", royalties)))
+        list_price = Decimal(str(entry.get("listPrice", 0) or entry.get("retailPrice", 0)))
         royalty_rate = Decimal(str(entry.get("royaltyRate", "0.00")))
 
         fmt = (entry.get("format", "paperback") or "paperback").lower()
@@ -334,7 +320,7 @@ class IngramSparkClient:
         """
         if isinstance(data, list):
             return data
-        return data.get("reports", data.get("compensations", []))
+        return cast("list[dict[str, Any]]", data.get("reports", data.get("compensations", [])))
 
     # -- Public interface --------------------------------------------------
 
@@ -382,9 +368,7 @@ class IngramSparkClient:
         records: list[dict[str, Any]] = []
         for entry in report_items:
             try:
-                record = self._normalise_royalty_record(
-                    entry, start_date, end_date
-                )
+                record = self._normalise_royalty_record(entry, start_date, end_date)
                 records.append(record)
             except (KeyError, ValueError, TypeError, InvalidOperation) as exc:
                 logger.warning(
@@ -393,8 +377,7 @@ class IngramSparkClient:
                 )
 
         logger.info(
-            "Parsed %d compensation records from IngramSpark API "
-            "(%d raw items).",
+            "Parsed %d compensation records from IngramSpark API " "(%d raw items).",
             len(records),
             len(report_items),
         )
@@ -439,28 +422,19 @@ class IngramSparkClient:
         )
 
         try:
-            data = await self._request(
-                "GET", "/sales/summary", params=params
-            )
+            data = await self._request("GET", "/sales/summary", params=params)
         except IngramSparkError:
             # If the dedicated summary endpoint is unavailable, fall back
             # to aggregating the compensation report data.
-            logger.info(
-                "Sales summary endpoint unavailable; falling back to "
-                "compensation report aggregation."
-            )
-            data = await self._request(
-                "GET", "/compensation/reports", params=params
-            )
+            logger.info("Sales summary endpoint unavailable; falling back to " "compensation report aggregation.")
+            data = await self._request("GET", "/compensation/reports", params=params)
 
         # If the response already contains aggregated fields, return them
         # directly after normalisation.
         if isinstance(data, dict) and "totalUnits" in data:
             return {
                 "total_units": int(data.get("totalUnits", 0)),
-                "total_revenue": str(
-                    Decimal(str(data.get("totalRevenue", 0)))
-                ),
+                "total_revenue": str(Decimal(str(data.get("totalRevenue", 0)))),
                 "currency": data.get("currency", "USD"),
                 "period_start": start_date.isoformat(),
                 "period_end": end_date.isoformat(),
@@ -475,15 +449,8 @@ class IngramSparkClient:
 
         for entry in report_items:
             try:
-                units = int(
-                    entry.get("units", 0) or entry.get("quantitySold", 0)
-                )
-                revenue = Decimal(
-                    str(
-                        entry.get("royalties", 0)
-                        or entry.get("netRevenue", 0)
-                    )
-                )
+                units = int(entry.get("units", 0) or entry.get("quantitySold", 0))
+                revenue = Decimal(str(entry.get("royalties", 0) or entry.get("netRevenue", 0)))
                 marketplace = entry.get("marketplace", "US")
 
                 total_units += units
@@ -497,9 +464,7 @@ class IngramSparkClient:
                 by_marketplace[marketplace]["units"] += units
                 by_marketplace[marketplace]["revenue"] += revenue
             except (KeyError, ValueError, TypeError, InvalidOperation) as exc:
-                logger.warning(
-                    "Skipping entry during sales summary aggregation: %s", exc
-                )
+                logger.warning("Skipping entry during sales summary aggregation: %s", exc)
 
         # Convert Decimal values to strings for JSON serialisability.
         serialisable_marketplaces: dict[str, dict[str, Any]] = {}

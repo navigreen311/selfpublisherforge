@@ -1,15 +1,47 @@
 """Shared test fixtures for the backend test suite."""
+
 from __future__ import annotations
 
-import asyncio
-import uuid
-from typing import AsyncGenerator, Generator
+import os
 
+# The suite runs against in-memory SQLite. app/database.py carries a complete
+# portability shim for that (generic Uuid, JSON-backed ARRAY/JSONB, stripped
+# gen_random_uuid() server defaults), but it is gated on the configured
+# DATABASE_URL. get_settings() is lru_cached, so this has to be set before the
+# first `app.*` import or the shim never engages and Postgres-only types reach
+# the SQLite driver — which is why binding a uuid.UUID used to fail outright.
+#
+# It is assigned, not setdefault'ed. The engine below is unconditionally
+# SQLite, so the environment must say so unconditionally too. CI exports a
+# Postgres DATABASE_URL for the migration-validation step, and with setdefault
+# that value survived into the pytest process: the shim stayed off, the SQLite
+# engine was handed real JSONB/ARRAY/UUID types, and ~200 tests failed on
+# "type 'UUID' is not supported" — none of which reproduced locally, because
+# locally nothing exported DATABASE_URL.
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["ENVIRONMENT"] = "test"
+
+import asyncio
+import contextlib
 import logging
+import uuid
+from collections.abc import AsyncGenerator, Generator
+from datetime import UTC, datetime
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event, text, Enum as SAEnum
+from sqlalchemy import event
+from sqlalchemy.dialects.postgresql import (
+    ARRAY as PG_ARRAY,
+)
+from sqlalchemy.dialects.postgresql import (
+    JSONB,
+)
+from sqlalchemy.dialects.postgresql import (
+    UUID as PG_UUID,
+)
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -17,25 +49,15 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from sqlalchemy.dialects.postgresql import (
-    JSONB,
-    ARRAY as PG_ARRAY,
-    UUID as PG_UUID,
-    ENUM as PG_ENUM,
-)
-from sqlalchemy import JSON, String
-
-from app.database import Base, get_db
-from app.main import create_app
-
-# Ensure all models are imported so Base.metadata knows about them
-import app.models  # noqa: F401
-
 # ---------------------------------------------------------------------------
 # Register SQLite-compatible type compilation for PostgreSQL-specific types
 # ---------------------------------------------------------------------------
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.types import VARCHAR
+from sqlalchemy.types import ARRAY as SA_ARRAY
+
+# Ensure all models are imported so Base.metadata knows about them
+from app.database import Base, get_db
+from app.main import create_app
 
 
 @compiles(JSONB, "sqlite")
@@ -50,6 +72,17 @@ def _compile_array_sqlite(element, compiler, **kw):
     return "TEXT"
 
 
+@compiles(SA_ARRAY, "sqlite")
+def _compile_generic_array_sqlite(element, compiler, **kw):
+    """Generic sqlalchemy.ARRAY -> TEXT on SQLite.
+
+    Ten model modules import ARRAY from sqlalchemy rather than from
+    sqlalchemy.dialects.postgresql, so the PG_ARRAY rule above never applied
+    to them and every fixture touching those tables failed to create a schema.
+    """
+    return "TEXT"
+
+
 @compiles(PG_UUID, "sqlite")
 def _compile_pg_uuid_sqlite(element, compiler, **kw):
     """PostgreSQL UUID -> CHAR(32) on SQLite."""
@@ -60,17 +93,14 @@ def _compile_pg_uuid_sqlite(element, compiler, **kw):
 # In-memory SQLite for tests (async via aiosqlite)
 # ---------------------------------------------------------------------------
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestingSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
+TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # ---------------------------------------------------------------------------
 # Neutralize PostgreSQL-specific indexes before table creation on SQLite
 # ---------------------------------------------------------------------------
+
 
 def _is_pg_only_index(idx) -> bool:
     """Return True if the index uses PostgreSQL-specific features that
@@ -96,10 +126,7 @@ def _is_pg_only_index(idx) -> bool:
         return True
     if kw.get("postgresql_where") is not None:
         return True
-    if kw.get("postgresql_ops"):
-        return True
-
-    return False
+    return bool(kw.get("postgresql_ops"))
 
 
 @event.listens_for(Base.metadata, "before_create")
@@ -122,14 +149,15 @@ def _patch_for_sqlite(target, connection, **kw):
                 sd = column.server_default
                 sd_text = ""
                 if hasattr(sd, "arg"):
-                    if hasattr(sd.arg, "text"):
-                        sd_text = str(sd.arg.text)
-                    else:
-                        sd_text = str(sd.arg)
+                    sd_text = str(sd.arg.text) if hasattr(sd.arg, "text") else str(sd.arg)
 
                 # Strip PG-only function calls in server_default
                 pg_functions = ["gen_random_uuid", "uuid_generate"]
-                if any(fn in sd_text.lower() for fn in pg_functions):
+                if (
+                    any(fn in sd_text.lower() for fn in pg_functions)
+                    or isinstance(column.type, PG_ARRAY | SA_ARRAY)
+                    and sd_text.strip().strip("'\"") in ("{}", "[]")
+                ):
                     column.server_default = None
 
         # ---- Remove PG-only indexes ----
@@ -239,7 +267,7 @@ def make_review(
     **kwargs,
 ):
     """Factory helper to create a BookReview ORM instance for tests."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.modules.review_intelligence.models import BookReview
 
@@ -252,6 +280,39 @@ def make_review(
         sentiment=sentiment,
         sentiment_score=sentiment_score,
         is_competitor=is_competitor,
-        review_date=review_date or datetime.now(timezone.utc),
+        review_date=review_date or datetime.now(UTC),
         **kwargs,
     )
+
+
+async def populate_server_defaults(obj, *_args, **_kwargs):
+    """Stand in for what a real flush + refresh fills in.
+
+    Suites that mock the session with ``AsyncMock`` get a no-op ``refresh``, so
+    a freshly added model still has ``id``/``created_at``/``updated_at`` set to
+    None — and the service then hands that to a response schema that requires
+    all three. Wire this in as ``db.refresh``'s side effect:
+
+        db.refresh = AsyncMock(side_effect=populate_server_defaults)
+    """
+    now = datetime.now(UTC)
+    for attr, value in (("id", uuid.uuid4()), ("created_at", now), ("updated_at", now)):
+        if getattr(obj, attr, None) is None:
+            with contextlib.suppress(AttributeError):
+                setattr(obj, attr, value)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Dispose the test engine so the process can actually exit.
+
+    aiosqlite runs each connection on its own **non-daemon** thread. Pooled
+    connections are never closed on their own, so those threads sit blocked on
+    their queue forever and CPython refuses to exit while they live: pytest
+    prints its summary, returns its exit code, and the process then hangs.
+
+    On a developer's machine that looks like a slow test run. In CI it burned
+    the job's entire six-hour budget after a session that took sixteen seconds.
+    """
+    import asyncio
+
+    asyncio.run(engine.dispose())

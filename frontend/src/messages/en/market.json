@@ -1,14 +1,12 @@
 {
   "title": "Market Research",
   "subtitle": "Analyze market trends, competitors, and find profitable niches.",
-
   "tabs": {
     "nicheAnalyzer": "Niche Analyzer",
     "keywordResearch": "Keyword Research",
     "categoryExplorer": "Category Explorer",
     "trends": "Trends"
   },
-
   "nicheSearchLabel": "Enter a niche to analyze",
   "nicheSearchPlaceholder": "Enter a niche topic or keyword (e.g., 'keto diet for beginners')",
   "nicheSearchHint": "Type a niche keyword and press Enter or click Analyze Niche to get market analysis",
@@ -22,7 +20,6 @@
   "searchHistory": "Recent Searches",
   "analyzed": "Analyzed {count} competing titles",
   "lastUpdated": "Last updated: {time}",
-
   "filters": {
     "marketplace": "Marketplace",
     "format": "Format",
@@ -39,14 +36,12 @@
     "last365d": "Last 365 days",
     "allTime": "All Time"
   },
-
   "marketplaces": {
     "amazon_com": "Amazon.com",
     "amazon_co_uk": "Amazon.co.uk",
     "amazon_de": "Amazon.de",
     "amazon_ca": "Amazon.ca"
   },
-
   "scores": {
     "opportunity": "Opportunity",
     "demand": "Demand",
@@ -60,9 +55,9 @@
     "low": "Low",
     "high": "High",
     "veryHigh": "Very High",
-    "verdict": "Verdict"
+    "verdict": "Verdict",
+    "nicheAnalysis": "Niche Analysis"
   },
-
   "results": {
     "topBooks": "Top Competing Books",
     "found": "{count} found",
@@ -89,7 +84,6 @@
     "price": "Price",
     "estRev": "Est Rev"
   },
-
   "charts": {
     "bsrDistribution": "BSR Distribution",
     "priceDistribution": "Price Distribution",
@@ -98,7 +92,6 @@
     "priceDesc": "Sweet spot: {range}",
     "reviewDesc": "Avg reviews needed to rank: ~{count}"
   },
-
   "keywords": {
     "title": "Keyword Research",
     "seedPlaceholder": "Enter seed keyword...",
@@ -120,7 +113,6 @@
     "competitionMedium": "Medium",
     "competitionLow": "Low"
   },
-
   "categories": {
     "title": "Category Explorer",
     "searchPlaceholder": "Search categories...",
@@ -138,7 +130,6 @@
     "viewTopBooks": "View Top 50 Books",
     "noSelection": "Select a category from the tree to view its metrics."
   },
-
   "trends": {
     "title": "Market Trends",
     "trendingUp": "Trending Up",
@@ -153,7 +144,6 @@
     "range2y": "2 years",
     "noTrends": "No trend data available yet."
   },
-
   "ai": {
     "title": "AI Market Analysis",
     "regenerate": "Regenerate",
@@ -164,7 +154,6 @@
     "saveAnalysis": "Save Analysis",
     "loading": "Generating AI analysis..."
   },
-
   "categoryBrowser": "Category browser",
   "loadingCategories": "Loading categories",
   "categoryAnalysisDetails": "Category analysis details",
@@ -230,14 +219,12 @@
   "getSuggestions": "Get Suggestions",
   "aiKeywordSuggestions": "AI keyword suggestions results",
   "keywordResearchResults": "Keyword research results",
-
   "suggestedSearch1": "intermittent fasting",
   "suggestedSearch2": "romance werewolf",
   "suggestedSearch3": "python programming",
   "suggestedSearch4": "toddler activities",
   "suggestedSearch5": "cozy mystery",
   "suggestedSearch6": "personal finance",
-
   "error": {
     "title": "Error",
     "generic": "Something went wrong. Please try again."

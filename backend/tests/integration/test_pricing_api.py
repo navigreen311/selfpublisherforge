@@ -6,7 +6,7 @@ Tests the full request/response cycle through FastAPI with mocked database layer
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -15,18 +15,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.dependencies import get_current_user
 from app.database import Base, get_db
 from app.main import create_app
-from app.core.dependencies import get_current_user
 from app.modules.pricing_automation.schemas import (
     ABTestResponse,
-    ABTestStatus,
-    BookFormat,
     CompetitorPriceSummary,
     PricingRuleResponse,
     PromotionResponse,
-    PromotionStatus,
-    RuleStatus,
 )
 
 # ──────────────────── Test DB Setup ────────────────────
@@ -72,9 +68,7 @@ async def mock_db():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    session_factory = async_sessionmaker(
-        test_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    session_factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
     async with session_factory() as session:
         yield session
 
@@ -247,7 +241,7 @@ class TestPricingRulesEndpoints:
         """POST /api/v1/pricing/rules creates a rule."""
         from app.modules.pricing_automation.service import PricingAutomationService
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         rule_id = uuid.uuid4()
 
         mock_rule_response = PricingRuleResponse(
@@ -309,7 +303,7 @@ class TestPricingRulesEndpoints:
         """GET /api/v1/pricing/rules returns paginated results."""
         from app.modules.pricing_automation.service import PricingAutomationService
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_rules = [
             PricingRuleResponse(
                 id=uuid.uuid4(),
@@ -370,7 +364,7 @@ class TestPromotionEndpoints:
         """POST /api/v1/pricing/promotions schedules a promotion."""
         from app.modules.pricing_automation.service import PricingAutomationService
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         start = now + timedelta(days=7)
         end = now + timedelta(days=14)
 
@@ -419,7 +413,7 @@ class TestPromotionEndpoints:
 
     async def test_create_promotion_end_before_start(self, client: AsyncClient):
         """Creating promotion with end_date before start_date fails."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         response = await client.post(
             "/api/v1/pricing/promotions",
             json={
@@ -435,7 +429,7 @@ class TestPromotionEndpoints:
 
     async def test_create_promotion_promo_gte_original(self, client: AsyncClient):
         """Creating promotion with promo_price >= original_price fails."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         response = await client.post(
             "/api/v1/pricing/promotions",
             json={
@@ -459,7 +453,7 @@ class TestABTestEndpoints:
         """POST /api/v1/pricing/ab-test creates a test."""
         from app.modules.pricing_automation.service import PricingAutomationService
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         mock_test = ABTestResponse(
             id=uuid.uuid4(),

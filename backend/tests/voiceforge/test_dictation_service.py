@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,7 +13,6 @@ from app.core.exceptions import AppException
 from app.modules.dictation.models import (
     DictationCommand,
     DictationSession,
-    DictationSettings,
     SessionStatus,
 )
 from app.modules.dictation.schemas import (
@@ -53,9 +52,7 @@ OTHER_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
 @pytest.fixture
 def mock_refiner():
     """Patch DictationRefiner and return the mock instance."""
-    with patch(
-        "app.services.voiceforge.dictation_refiner.DictationRefiner"
-    ) as mock_cls:
+    with patch("app.services.voiceforge.dictation_refiner.DictationRefiner") as mock_cls:
         refiner = mock_cls.return_value
         refiner.refine_transcript = AsyncMock(
             return_value=MagicMock(
@@ -80,8 +77,15 @@ async def _create_db_session(
     raw_transcript: str | None = None,
     title: str | None = "Test Session",
     status: SessionStatus = SessionStatus.ACTIVE,
+    created_at: datetime | None = None,
 ) -> DictationSession:
-    """Insert a DictationSession row and return the refreshed ORM object."""
+    """Insert a DictationSession row and return the refreshed ORM object.
+
+    `created_at` is settable because `list_sessions` orders by it descending.
+    Rows inserted in a loop all take the same server-side timestamp, which
+    leaves the order undefined — a test asserting "newest first" against them
+    passes or fails on luck, not behaviour.
+    """
     session = DictationSession(
         user_id=user_id,
         org_id=org_id,
@@ -89,7 +93,11 @@ async def _create_db_session(
         language="en",
         status=status,
         raw_transcript=raw_transcript,
-        word_count=len(raw_transcript.split()) if raw_transcript else 0,
+        # The ORM column is words_dictated; word_count is the API field name.
+        # DictationSessionResponse maps one to the other — this helper builds a
+        # row, so it has to use the column.
+        words_dictated=len(raw_transcript.split()) if raw_transcript else 0,
+        **({"created_at": created_at} if created_at is not None else {}),
     )
     db.add(session)
     await db.commit()
@@ -158,8 +166,9 @@ async def test_get_session_access_denied(db: AsyncSession, user_id: uuid.UUID, o
 @pytest.mark.asyncio
 async def test_list_sessions(db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID):
     """list_sessions returns paginated results for the given user."""
+    base = datetime(2026, 1, 1, tzinfo=UTC)
     for i in range(3):
-        await _create_db_session(db, user_id, org_id, title=f"Session {i}")
+        await _create_db_session(db, user_id, org_id, title=f"Session {i}", created_at=base + timedelta(minutes=i))
 
     result = await list_sessions(db, user_id, page=1, page_size=10)
 
@@ -253,27 +262,21 @@ async def test_update_session_access_denied(db: AsyncSession, user_id: uuid.UUID
 
 
 @pytest.mark.asyncio
-async def test_refine_session(
-    db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner
-):
+async def test_refine_session(db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner):
     """refine_session calls DictationRefiner and persists the result."""
-    row = await _create_db_session(
-        db, user_id, org_id, raw_transcript="this is some raw dictation text"
-    )
+    row = await _create_db_session(db, user_id, org_id, raw_transcript="this is some raw dictation text")
 
     request = RefineSessionRequest(style_profile_id=None)
     result = await refine_session(db, row.id, user_id, request)
 
     assert result.refined_text == "Refined text here."
     assert result.original_length == 6  # "this is some raw dictation text"
-    assert result.refined_length == 3   # "Refined text here."
+    assert result.refined_length == 3  # "Refined text here."
     mock_refiner.refine_transcript.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_refine_session_empty_transcript(
-    db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner
-):
+async def test_refine_session_empty_transcript(db: AsyncSession, user_id: uuid.UUID, org_id: uuid.UUID, mock_refiner):
     """refine_session raises 422 when transcript is empty."""
     row = await _create_db_session(db, user_id, org_id, raw_transcript="")
 
@@ -287,9 +290,7 @@ async def test_refine_session_empty_transcript(
 
 
 @pytest.mark.asyncio
-async def test_refine_session_not_found(
-    db: AsyncSession, user_id: uuid.UUID, mock_refiner
-):
+async def test_refine_session_not_found(db: AsyncSession, user_id: uuid.UUID, mock_refiner):
     """refine_session raises 404 for missing session."""
     request = RefineSessionRequest()
 
@@ -370,12 +371,8 @@ async def test_list_commands_org_isolation(db: AsyncSession, org_id: uuid.UUID):
     """list_commands does not return custom commands from other orgs."""
     other_org = uuid.uuid4()
 
-    await create_command(
-        db, org_id, CommandCreateRequest(trigger_phrase="mine", action="my_action")
-    )
-    await create_command(
-        db, other_org, CommandCreateRequest(trigger_phrase="theirs", action="their_action")
-    )
+    await create_command(db, org_id, CommandCreateRequest(trigger_phrase="mine", action="my_action"))
+    await create_command(db, other_org, CommandCreateRequest(trigger_phrase="theirs", action="their_action"))
 
     result = await list_commands(db, org_id)
 
@@ -420,9 +417,7 @@ async def test_delete_system_command_forbidden(db: AsyncSession, org_id: uuid.UU
     # Find a system command
     from sqlalchemy import select
 
-    result = await db.execute(
-        select(DictationCommand).where(DictationCommand.is_system.is_(True)).limit(1)
-    )
+    result = await db.execute(select(DictationCommand).where(DictationCommand.is_system.is_(True)).limit(1))
     sys_cmd = result.scalar_one()
 
     with pytest.raises(AppException) as exc_info:
@@ -435,9 +430,7 @@ async def test_delete_system_command_forbidden(db: AsyncSession, org_id: uuid.UU
 @pytest.mark.asyncio
 async def test_delete_command_wrong_org(db: AsyncSession, org_id: uuid.UUID):
     """delete_command raises 403 when org_id doesn't match."""
-    created = await create_command(
-        db, org_id, CommandCreateRequest(trigger_phrase="test", action="test_action")
-    )
+    created = await create_command(db, org_id, CommandCreateRequest(trigger_phrase="test", action="test_action"))
 
     other_org = uuid.uuid4()
     with pytest.raises(AppException) as exc_info:

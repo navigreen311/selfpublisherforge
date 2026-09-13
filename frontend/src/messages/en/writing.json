@@ -74,7 +74,7 @@
       "date": "Date"
     },
     "minutes": "min",
-    "viewAll": "View All Sessions \u2192"
+    "viewAll": "View All Sessions →"
   },
   "status": {
     "draft": "Draft",
@@ -337,7 +337,9 @@
       "title": "Chapter Stats",
       "wordCount": "Word Count",
       "words": "words"
-    }
+    },
+    "dictationComingSoon": "Dictation is coming soon.",
+    "recording": "Recording..."
   },
   "outline": {
     "backToStudio": "Back",

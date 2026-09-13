@@ -7,7 +7,7 @@ correctly, and EventPublisher raises NotImplementedError as an abstract interfac
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -15,10 +15,10 @@ from pydantic import ValidationError
 
 from app.core.event_types import BaseEvent, EventPublisher, EventType
 
-
 # ---------------------------------------------------------------------------
 # EventType enum
 # ---------------------------------------------------------------------------
+
 
 class TestEventType:
     """EventType is a str enum whose values use dot-notation domain prefixes."""
@@ -164,7 +164,7 @@ class TestEventType:
 
 _ORG_ID = UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
 _ACTOR_ID = UUID("11111111-2222-3333-4444-555555555555")
-_TIMESTAMP = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+_TIMESTAMP = datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC)
 
 
 class TestBaseEvent:
@@ -357,6 +357,7 @@ class TestBaseEvent:
 # ---------------------------------------------------------------------------
 # EventPublisher
 # ---------------------------------------------------------------------------
+
 
 class TestEventPublisher:
     """EventPublisher is an abstract interface (raises NotImplementedError)."""

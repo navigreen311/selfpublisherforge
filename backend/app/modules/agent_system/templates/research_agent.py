@@ -27,8 +27,7 @@ TEMPLATE: dict[str, Any] = {
         {
             "title": "Analyze bestseller lists",
             "description": (
-                "Scrape and analyze current bestseller rankings across major platforms "
-                "(Amazon, Apple Books, etc.)"
+                "Scrape and analyze current bestseller rankings across major platforms " "(Amazon, Apple Books, etc.)"
             ),
             "agent_type": "research",
             "input_schema": {

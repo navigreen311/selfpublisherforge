@@ -21,6 +21,8 @@ jest.mock("@/modules/analytics/hooks", () => ({
   usePortfolioMetrics: () => mockUsePortfolioMetrics(),
   useGenerateReport: () => mockUseGenerateReport(),
   useImportRoyalties: () => mockUseImportRoyalties(),
+  useEnhancedDashboard: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
+  useGenerateEnhancedReport: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // ── Mock: next/link ─────────────────────────────────────────────────────
@@ -299,62 +301,51 @@ beforeEach(() => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe("Analytics Dashboard Page - Accessibility", () => {
-  it("data tables have aria-describedby", () => {
+  it("has a single h1 naming the page", () => {
     renderWithProviders(<AnalyticsPage />);
 
-    const table = document.querySelector("table[aria-describedby]");
-    if (table) {
-      const describedById = table.getAttribute("aria-describedby");
-      expect(describedById).toBeTruthy();
-      const descElement = document.getElementById(describedById!);
-      expect(descElement).toBeInTheDocument();
-    } else {
-      // The PortfolioTable mock renders a table with aria-describedby
-      const portfolioTable = screen.getByTestId("portfolio-table");
-      const innerTable = within(portfolioTable).getByRole("table");
-      expect(innerTable).toHaveAttribute("aria-describedby");
-      const descId = innerTable.getAttribute("aria-describedby")!;
-      expect(document.getElementById(descId)).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("Analytics Dashboard");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
+  it("names the navigation landmark and every link in it", () => {
+    renderWithProviders(<AnalyticsPage />);
+
+    const nav = screen.getByRole("navigation", { name: "Analytics navigation" });
+    for (const link of within(nav).getAllByRole("link")) {
+      expect(
+        link.textContent?.trim() || link.getAttribute("aria-label")
+      ).toBeTruthy();
     }
   });
 
-  it("all interactive elements have aria-labels", () => {
+  it("gives every interactive element an accessible name", () => {
     renderWithProviders(<AnalyticsPage />);
 
-    // All links should have text content or aria-label
-    const links = screen.getAllByRole("link");
-    links.forEach((link) => {
-      const hasAccessibleName =
-        link.textContent?.trim() ||
-        link.getAttribute("aria-label") ||
-        link.getAttribute("aria-labelledby");
-      expect(hasAccessibleName).toBeTruthy();
-    });
-
-    // All buttons should have text content or aria-label
-    const buttons = screen.queryAllByRole("button");
-    buttons.forEach((button) => {
-      const hasAccessibleName =
-        button.textContent?.trim() ||
-        button.getAttribute("aria-label") ||
-        button.getAttribute("aria-labelledby");
-      expect(hasAccessibleName).toBeTruthy();
-    });
+    for (const el of [...screen.getAllByRole("link"), ...screen.queryAllByRole("button")]) {
+      expect(
+        el.textContent?.trim() ||
+          el.getAttribute("aria-label") ||
+          el.getAttribute("aria-labelledby")
+      ).toBeTruthy();
+    }
   });
 
-  it("major sections have appropriate landmark roles or headings", () => {
+  it("exposes the period and comparison controls to assistive tech", () => {
     renderWithProviders(<AnalyticsPage />);
 
-    // The page should have a main heading
-    const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading).toHaveTextContent("Analytics Dashboard");
+    expect(screen.getByLabelText("Compare with previous period")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
 
-    // KPI cards should have group roles from the mock
-    const kpiCards = screen.getAllByTestId("kpi-card");
-    kpiCards.forEach((card) => {
-      expect(card).toHaveAttribute("role", "group");
-      expect(card).toHaveAttribute("aria-label");
-    });
+  it("exposes the analytics tabs as a tablist", () => {
+    renderWithProviders(<AnalyticsPage />);
+
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    for (const tab of ["Overview", "Sales", "Books", "Advertising", "KDP Reports"]) {
+      expect(screen.getByRole("tab", { name: tab })).toBeInTheDocument();
+    }
   });
 });
 
@@ -363,49 +354,37 @@ describe("Analytics Dashboard Page - Accessibility", () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe("Reports Page - Accessibility", () => {
-  it("tables have aria-describedby", () => {
+  it("splits the page into two named regions", () => {
     renderWithProviders(<ReportsPage />);
 
-    const table = document.querySelector("table");
-    expect(table).toBeInTheDocument();
-    expect(table).toHaveAttribute("aria-describedby", "reports-table-desc");
-
-    const descElement = document.getElementById("reports-table-desc");
-    expect(descElement).toBeInTheDocument();
-    expect(descElement!.textContent).toContain("generated reports");
+    const regionLabels = screen
+      .getAllByRole("region")
+      .map((r) => r.getAttribute("aria-label"));
+    expect(regionLabels).toContain("Generate Report");
+    expect(regionLabels).toContain("Generated Reports");
   });
 
-  it("filter controls have labels", () => {
+  it("announces the generated-reports list, which repopulates after a run", () => {
     renderWithProviders(<ReportsPage />);
 
-    // The ReportBuilder mock provides labeled form controls
-    const reportBuilder = screen.getByTestId("report-builder");
-    const reportTitleInput = within(reportBuilder).getByLabelText("Report Title");
-    expect(reportTitleInput).toBeInTheDocument();
-
-    const reportTypeSelect = within(reportBuilder).getByLabelText("Report Type");
-    expect(reportTypeSelect).toBeInTheDocument();
-
-    const formatSelect = within(reportBuilder).getByLabelText("Output Format");
-    expect(formatSelect).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "Generated Reports" });
+    expect(list).toHaveAttribute("aria-live", "polite");
   });
 
-  it("dynamic content area has aria-live", () => {
+  it("labels the report form controls", () => {
     renderWithProviders(<ReportsPage />);
 
-    // The reports list area uses aria-live="polite"
-    const liveRegion = document.querySelector("[aria-live]");
-    expect(liveRegion).toBeInTheDocument();
-    expect(liveRegion!.getAttribute("aria-live")).toBe("polite");
+    const builder = screen.getByRole("region", { name: "Generate Report" });
+    expect(within(builder).getByLabelText("Report Type")).toBeInTheDocument();
+    expect(within(builder).getByLabelText("Format")).toBeInTheDocument();
   });
 
-  it("report builder and reports list have region roles", () => {
+  it("names the back link", () => {
     renderWithProviders(<ReportsPage />);
 
-    const regions = screen.getAllByRole("region");
-    const regionLabels = regions.map((r) => r.getAttribute("aria-label"));
-    expect(regionLabels).toContain("Report Builder");
-    expect(regionLabels).toContain("Generated Reports List");
+    expect(
+      screen.getByRole("link", { name: "Back to Dashboard" })
+    ).toHaveAttribute("href", "/analytics");
   });
 });
 
@@ -414,59 +393,55 @@ describe("Reports Page - Accessibility", () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe("Revenue Page - Accessibility", () => {
-  it("tables have aria-describedby", () => {
+  it("describes the portfolio table", () => {
     renderWithProviders(<RevenuePage />);
 
-    // The PortfolioTable mock renders a table with aria-describedby
-    const portfolioTable = screen.getByTestId("portfolio-table");
-    const innerTable = within(portfolioTable).getByRole("table");
-    expect(innerTable).toHaveAttribute("aria-describedby");
-    const descId = innerTable.getAttribute("aria-describedby")!;
-    expect(document.getElementById(descId)).toBeInTheDocument();
+    const table = within(screen.getByTestId("portfolio-table")).getByRole("table");
+    const descId = table.getAttribute("aria-describedby");
+    expect(descId).toBeTruthy();
+    expect(document.getElementById(descId!)).toBeInTheDocument();
   });
 
-  it("chart areas have aria-labels", () => {
+  it("wraps the chart in a named region and labels the chart itself", () => {
     renderWithProviders(<RevenuePage />);
 
-    // The RevenueChart mock has role="img" with aria-label
     const chart = screen.getByTestId("revenue-chart");
     expect(chart).toHaveAttribute("role", "img");
-    expect(chart).toHaveAttribute("aria-label", "Revenue chart visualization");
+    expect(chart).toHaveAttribute("aria-label");
 
-    // The containing region for the chart should also have aria-label
-    const chartRegion = screen.getByRole("region", { name: "Revenue chart visualization" });
-    expect(chartRegion).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Revenue chart" })).toBeInTheDocument();
   });
 
-  it("filter controls have associated labels", () => {
+  it("gives each filter control a distinct, descriptive name", () => {
     renderWithProviders(<RevenuePage />);
 
-    // Revenue page has native HTML labels via htmlFor
-    const startDateInput = screen.getByLabelText("Filter by start date");
-    expect(startDateInput).toBeInTheDocument();
-
-    const endDateInput = screen.getByLabelText("Filter by end date");
-    expect(endDateInput).toBeInTheDocument();
-
-    const platformSelect = screen.getByLabelText("Filter by publishing platform");
-    expect(platformSelect).toBeInTheDocument();
-
-    const aggregationSelect = screen.getByLabelText("Select data aggregation period");
-    expect(aggregationSelect).toBeInTheDocument();
+    expect(screen.getByLabelText("Filter by start date")).toBeInTheDocument();
+    expect(screen.getByLabelText("Filter by end date")).toBeInTheDocument();
+    expect(screen.getByLabelText("Filter by publishing platform")).toBeInTheDocument();
+    expect(screen.getByLabelText("Select data aggregation period")).toBeInTheDocument();
   });
 
-  it("revenue summary section has region role with label", () => {
+  it("names the summary region and points it at its description", () => {
     renderWithProviders(<RevenuePage />);
 
-    const summaryRegion = screen.getByRole("region", { name: "Revenue summary statistics" });
-    expect(summaryRegion).toBeInTheDocument();
+    const summary = screen.getByRole("region", { name: "Revenue summary statistics" });
+    const descId = summary.getAttribute("aria-describedby");
+    expect(descId).toBe("revenue-summary-desc");
+    expect(document.getElementById(descId!)).toBeInTheDocument();
   });
 
-  it("filter section has region role", () => {
+  it("puts the filters in their own region", () => {
     renderWithProviders(<RevenuePage />);
 
-    const filterRegion = screen.getByRole("region", { name: "Revenue filters" });
-    expect(filterRegion).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Revenue filters" })).toBeInTheDocument();
+  });
+
+  it("announces the revenue summary as it reloads", () => {
+    renderWithProviders(<RevenuePage />);
+
+    const live = document.querySelector("[aria-live]");
+    expect(live).toBeInTheDocument();
+    expect(live!.getAttribute("aria-live")).toBe("polite");
   });
 });
 

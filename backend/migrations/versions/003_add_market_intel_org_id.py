@@ -4,16 +4,15 @@ Revision ID: 003_add_market_intel_org_id
 Revises: 002_refresh_tokens_oauth
 Create Date: 2026-02-10
 """
-from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers
 revision: str = "003_add_market_intel_org_id"
-down_revision: Union[str, None] = "002_refresh_tokens_oauth"
-branch_labels: Union[str, None] = None
-depends_on: Union[str, None] = None
+down_revision: str | None = "002_refresh_tokens_oauth"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 # Tables that need the org_id column
 _TABLES = ["market_categories", "market_keywords", "market_snapshots"]

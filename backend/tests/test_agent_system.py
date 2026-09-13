@@ -7,15 +7,15 @@ emergency stop, and audit trail.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import Base, get_db
 from app.core.dependencies import get_current_user
+from app.database import Base, get_db
 from app.main import create_app
 from app.modules.agent_system.models import (
     Agent,
@@ -25,13 +25,10 @@ from app.modules.agent_system.models import (
     AgentWorkflow,
     AuditTrail,
     PermissionLevel,
-    TaskPriority,
     TaskStatus,
-    WorkflowStatus,
 )
-
-from tests.conftest import TestingSessionLocal, engine as test_engine
-
+from tests.conftest import TestingSessionLocal
+from tests.conftest import engine as test_engine
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -122,7 +119,7 @@ async def seeded_task(db: AsyncSession, seeded_agent: Agent) -> AgentTask:
         cost_usd=0.0015,
         quality_score=0.85,
         created_by=USER_ID,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     db.add(task)
     await db.flush()
@@ -139,8 +136,8 @@ async def seeded_budget(db: AsyncSession, seeded_agent: Agent) -> AgentBudget:
         daily_token_limit=100000,
         daily_usd_limit=10.0,
         monthly_usd_limit=200.0,
-        last_reset_daily=datetime.now(timezone.utc),
-        last_reset_monthly=datetime.now(timezone.utc),
+        last_reset_daily=datetime.now(UTC),
+        last_reset_monthly=datetime.now(UTC),
     )
     db.add(budget)
     await db.flush()
@@ -151,6 +148,7 @@ async def seeded_budget(db: AsyncSession, seeded_agent: Agent) -> AgentBudget:
 # ---------------------------------------------------------------------------
 # Test: List Agents
 # ---------------------------------------------------------------------------
+
 
 class TestListAgents:
     @pytest.mark.asyncio
@@ -165,9 +163,7 @@ class TestListAgents:
         assert data["total_count"] >= 4  # 4 default agents seeded
 
     @pytest.mark.asyncio
-    async def test_list_agents_includes_seeded(
-        self, client: AsyncClient, seeded_agent: Agent
-    ):
+    async def test_list_agents_includes_seeded(self, client: AsyncClient, seeded_agent: Agent):
         """GET /agents should include a pre-seeded agent."""
         resp = await client.get("/api/v1/agents")
         assert resp.status_code == 200
@@ -181,11 +177,10 @@ class TestListAgents:
 # Test: Get Agent Config
 # ---------------------------------------------------------------------------
 
+
 class TestGetAgentConfig:
     @pytest.mark.asyncio
-    async def test_get_config_success(
-        self, client: AsyncClient, seeded_agent: Agent
-    ):
+    async def test_get_config_success(self, client: AsyncClient, seeded_agent: Agent):
         """GET /agents/{id}/config should return agent details."""
         resp = await client.get(f"/api/v1/agents/{seeded_agent.id}/config")
         assert resp.status_code == 200
@@ -206,11 +201,10 @@ class TestGetAgentConfig:
 # Test: Create Task
 # ---------------------------------------------------------------------------
 
+
 class TestCreateTask:
     @pytest.mark.asyncio
-    async def test_create_task_success(
-        self, client: AsyncClient, seeded_agent: Agent
-    ):
+    async def test_create_task_success(self, client: AsyncClient, seeded_agent: Agent):
         """POST /agents/tasks should create a new task."""
         resp = await client.post(
             "/api/v1/agents/tasks",
@@ -247,11 +241,10 @@ class TestCreateTask:
 # Test: List Tasks
 # ---------------------------------------------------------------------------
 
+
 class TestListTasks:
     @pytest.mark.asyncio
-    async def test_list_tasks(
-        self, client: AsyncClient, seeded_task: AgentTask
-    ):
+    async def test_list_tasks(self, client: AsyncClient, seeded_task: AgentTask):
         """GET /agents/tasks should return tasks."""
         resp = await client.get("/api/v1/agents/tasks")
         assert resp.status_code == 200
@@ -261,13 +254,9 @@ class TestListTasks:
         assert len(data["items"]) >= 1
 
     @pytest.mark.asyncio
-    async def test_list_tasks_filter_by_status(
-        self, client: AsyncClient, seeded_task: AgentTask
-    ):
+    async def test_list_tasks_filter_by_status(self, client: AsyncClient, seeded_task: AgentTask):
         """GET /agents/tasks?status=... should filter correctly."""
-        resp = await client.get(
-            "/api/v1/agents/tasks?status=awaiting_approval"
-        )
+        resp = await client.get("/api/v1/agents/tasks?status=awaiting_approval")
         assert resp.status_code == 200
 
         data = resp.json()
@@ -279,11 +268,10 @@ class TestListTasks:
 # Test: Get Task
 # ---------------------------------------------------------------------------
 
+
 class TestGetTask:
     @pytest.mark.asyncio
-    async def test_get_task_success(
-        self, client: AsyncClient, seeded_task: AgentTask
-    ):
+    async def test_get_task_success(self, client: AsyncClient, seeded_task: AgentTask):
         """GET /agents/tasks/{id} should return a task."""
         resp = await client.get(f"/api/v1/agents/tasks/{seeded_task.id}")
         assert resp.status_code == 200
@@ -303,11 +291,10 @@ class TestGetTask:
 # Test: Approve Task
 # ---------------------------------------------------------------------------
 
+
 class TestApproveTask:
     @pytest.mark.asyncio
-    async def test_approve_task(
-        self, client: AsyncClient, seeded_task: AgentTask
-    ):
+    async def test_approve_task(self, client: AsyncClient, seeded_task: AgentTask):
         """POST /agents/tasks/{id}/approve should approve awaiting task."""
         resp = await client.post(
             f"/api/v1/agents/tasks/{seeded_task.id}/approve",
@@ -321,11 +308,10 @@ class TestApproveTask:
 # Test: Reject Task
 # ---------------------------------------------------------------------------
 
+
 class TestRejectTask:
     @pytest.mark.asyncio
-    async def test_reject_task(
-        self, client: AsyncClient, seeded_task: AgentTask
-    ):
+    async def test_reject_task(self, client: AsyncClient, seeded_task: AgentTask):
         """POST /agents/tasks/{id}/reject should reject awaiting task."""
         resp = await client.post(
             f"/api/v1/agents/tasks/{seeded_task.id}/reject",
@@ -339,11 +325,10 @@ class TestRejectTask:
 # Test: Cancel Task
 # ---------------------------------------------------------------------------
 
+
 class TestCancelTask:
     @pytest.mark.asyncio
-    async def test_cancel_task(
-        self, client: AsyncClient, seeded_task: AgentTask
-    ):
+    async def test_cancel_task(self, client: AsyncClient, seeded_task: AgentTask):
         """POST /agents/tasks/{id}/cancel should cancel a cancellable task."""
         resp = await client.post(
             f"/api/v1/agents/tasks/{seeded_task.id}/cancel",
@@ -357,11 +342,10 @@ class TestCancelTask:
 # Test: Create Workflow
 # ---------------------------------------------------------------------------
 
+
 class TestCreateWorkflow:
     @pytest.mark.asyncio
-    async def test_create_workflow(
-        self, client: AsyncClient, seeded_agent: Agent
-    ):
+    async def test_create_workflow(self, client: AsyncClient, seeded_agent: Agent):
         """POST /agents/workflows should create a multi-step workflow."""
         resp = await client.post(
             "/api/v1/agents/workflows",
@@ -395,6 +379,7 @@ class TestCreateWorkflow:
 # ---------------------------------------------------------------------------
 # Test: List Workflows
 # ---------------------------------------------------------------------------
+
 
 class TestListWorkflows:
     @pytest.mark.asyncio
@@ -431,11 +416,10 @@ class TestListWorkflows:
 # Test: Budgets
 # ---------------------------------------------------------------------------
 
+
 class TestBudgets:
     @pytest.mark.asyncio
-    async def test_get_budgets(
-        self, client: AsyncClient, seeded_budget: AgentBudget
-    ):
+    async def test_get_budgets(self, client: AsyncClient, seeded_budget: AgentBudget):
         """GET /agents/budgets should return budget status."""
         resp = await client.get("/api/v1/agents/budgets")
         assert resp.status_code == 200
@@ -470,6 +454,7 @@ class TestBudgets:
 # Test: Emergency Stop
 # ---------------------------------------------------------------------------
 
+
 class TestEmergencyStop:
     @pytest.mark.asyncio
     async def test_emergency_stop(
@@ -500,6 +485,7 @@ class TestEmergencyStop:
 # ---------------------------------------------------------------------------
 # Test: Audit Trail
 # ---------------------------------------------------------------------------
+
 
 class TestAuditTrail:
     @pytest.mark.asyncio

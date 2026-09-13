@@ -6,6 +6,10 @@ import "@testing-library/jest-dom";
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   AlertTriangle: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="alert-triangle-icon" {...props} />
   ),
@@ -13,6 +17,24 @@ jest.mock("lucide-react", () => ({
 
 // Mock Radix UI Slot so that Button renders correctly
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -43,7 +65,7 @@ import { ErrorBoundary } from "../error-boundary";
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // A component that throws an error on render
-function ThrowingComponent({ message }: { message: string }) {
+function ThrowingComponent({ message }: { message: string }): React.JSX.Element {
   throw new Error(message);
 }
 
@@ -94,7 +116,7 @@ describe("ErrorBoundary", () => {
 
   it("displays a default message when error has no message", () => {
     // Component that throws an error without a message
-    function ThrowEmpty() {
+    function ThrowEmpty(): React.JSX.Element {
       throw new Error();
     }
 

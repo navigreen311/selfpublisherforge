@@ -92,10 +92,7 @@ async def list_reviews(
 
     # Sorting
     sort_column = getattr(BookReview, params.sort_by, BookReview.review_date)
-    if params.sort_dir == "asc":
-        stmt = stmt.order_by(sort_column.asc())
-    else:
-        stmt = stmt.order_by(sort_column.desc())
+    stmt = stmt.order_by(sort_column.asc()) if params.sort_dir == "asc" else stmt.order_by(sort_column.desc())
 
     stmt = stmt.limit(params.limit + 1)
 
@@ -150,10 +147,7 @@ async def get_reviews_for_book(
         stmt = stmt.where(BookReview.id > params.cursor)
 
     sort_column = getattr(BookReview, params.sort_by, BookReview.review_date)
-    if params.sort_dir == "asc":
-        stmt = stmt.order_by(sort_column.asc())
-    else:
-        stmt = stmt.order_by(sort_column.desc())
+    stmt = stmt.order_by(sort_column.asc()) if params.sort_dir == "asc" else stmt.order_by(sort_column.desc())
 
     stmt = stmt.limit(params.limit + 1)
 
@@ -174,24 +168,14 @@ async def get_reviews_for_book(
 # --- Sentiment ---
 
 
-async def get_sentiment_breakdown(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> SentimentBreakdown:
+async def get_sentiment_breakdown(db: AsyncSession, org_id: UUID, book_id: UUID) -> SentimentBreakdown:
     """Get sentiment breakdown for a book's reviews."""
     stmt = select(
         func.count(BookReview.id).label("total"),
-        func.count(
-            case((BookReview.sentiment == "positive", 1))
-        ).label("positive"),
-        func.count(
-            case((BookReview.sentiment == "neutral", 1))
-        ).label("neutral"),
-        func.count(
-            case((BookReview.sentiment == "negative", 1))
-        ).label("negative"),
-        func.count(
-            case((BookReview.sentiment == "mixed", 1))
-        ).label("mixed"),
+        func.count(case((BookReview.sentiment == "positive", 1))).label("positive"),
+        func.count(case((BookReview.sentiment == "neutral", 1))).label("neutral"),
+        func.count(case((BookReview.sentiment == "negative", 1))).label("negative"),
+        func.count(case((BookReview.sentiment == "mixed", 1))).label("mixed"),
         func.avg(BookReview.sentiment_score).label("avg_score"),
     ).where(
         and_(
@@ -239,9 +223,7 @@ async def get_sentiment_breakdown(
             sentiment=SentimentLabel.NEUTRAL,
             example_quotes=[],
         )
-        for name, count in sorted(theme_counts.items(), key=lambda x: x[1], reverse=True)[
-            :10
-        ]
+        for name, count in sorted(theme_counts.items(), key=lambda x: x[1], reverse=True)[:10]
     ]
 
     return SentimentBreakdown(
@@ -259,9 +241,7 @@ async def get_sentiment_breakdown(
     )
 
 
-async def analyze_reviews_batch(
-    db: AsyncSession, org_id: UUID, request: BatchAnalysisRequest
-) -> BatchAnalysisResponse:
+async def analyze_reviews_batch(db: AsyncSession, org_id: UUID, request: BatchAnalysisRequest) -> BatchAnalysisResponse:
     """Analyze a batch of reviews with AI sentiment analysis."""
     # Fetch reviews
     stmt = select(BookReview).where(
@@ -299,9 +279,7 @@ async def analyze_reviews_batch(
         )
 
     # Run sentiment analysis
-    review_dicts = [
-        {"text": r.body or "", "star_rating": r.star_rating} for r in reviews
-    ]
+    review_dicts = [{"text": r.body or "", "star_rating": r.star_rating} for r in reviews]
     analysis_results = await analyze_sentiment_batch(review_dicts)
 
     # Update reviews with analysis results
@@ -339,9 +317,7 @@ async def analyze_reviews_batch(
     top_complaints = list(dict.fromkeys(all_complaints))[:10]
     top_praise = list(dict.fromkeys(all_praise))[:10]
 
-    avg_score = (
-        sum(r.score for r in analysis_results) / total if total > 0 else 0.0
-    )
+    avg_score = sum(r.score for r in analysis_results) / total if total > 0 else 0.0
 
     # Generate actionable insights
     insights = _generate_insights(positive, negative, neutral, total, themes)
@@ -368,9 +344,7 @@ async def analyze_reviews_batch(
     )
 
 
-def _generate_insights(
-    positive: int, negative: int, neutral: int, total: int, themes: list
-) -> list[str]:
+def _generate_insights(positive: int, negative: int, neutral: int, total: int, themes: list) -> list[str]:
     """Generate basic actionable insights from analysis."""
     insights = []
 
@@ -381,17 +355,11 @@ def _generate_insights(
     pos_pct = (positive / total) * 100 if total > 0 else 0
 
     if neg_pct > 30:
-        insights.append(
-            f"High negative sentiment ({neg_pct:.0f}%). Consider addressing common complaints."
-        )
+        insights.append(f"High negative sentiment ({neg_pct:.0f}%). Consider addressing common complaints.")
     if pos_pct > 70:
-        insights.append(
-            f"Strong positive sentiment ({pos_pct:.0f}%). Leverage this in marketing materials."
-        )
+        insights.append(f"Strong positive sentiment ({pos_pct:.0f}%). Leverage this in marketing materials.")
     if neutral > positive and neutral > negative:
-        insights.append(
-            "Most reviews are neutral. Consider what could make the book more memorable."
-        )
+        insights.append("Most reviews are neutral. Consider what could make the book more memorable.")
 
     # Theme-based insights
     for theme in themes[:3]:
@@ -401,9 +369,7 @@ def _generate_insights(
                 "This is an area to investigate."
             )
         elif theme.sentiment == SentimentLabel.POSITIVE:
-            insights.append(
-                f'Readers frequently praise "{theme.theme}". Highlight this in your marketing.'
-            )
+            insights.append(f'Readers frequently praise "{theme.theme}". Highlight this in your marketing.')
 
     if not insights:
         insights.append("Review sentiment is balanced. Monitor for changes over time.")
@@ -440,9 +406,7 @@ async def list_alerts(
         count_stmt = count_stmt.where(ReviewAlert.severity == params.severity.value)
     if params.is_acknowledged is not None:
         stmt = stmt.where(ReviewAlert.is_acknowledged == params.is_acknowledged)
-        count_stmt = count_stmt.where(
-            ReviewAlert.is_acknowledged == params.is_acknowledged
-        )
+        count_stmt = count_stmt.where(ReviewAlert.is_acknowledged == params.is_acknowledged)
     if params.book_id:
         stmt = stmt.where(ReviewAlert.book_id == params.book_id)
         count_stmt = count_stmt.where(ReviewAlert.book_id == params.book_id)
@@ -498,25 +462,19 @@ async def acknowledge_alert(
 # --- Reputation ---
 
 
-async def compute_reputation_score(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> ReputationHealthMetrics:
+async def compute_reputation_score(db: AsyncSession, org_id: UUID, book_id: UUID) -> ReputationHealthMetrics:
     """Compute comprehensive reputation score and health metrics for a book."""
     # Aggregate review stats
     stats_stmt = select(
         func.count(BookReview.id).label("total"),
         func.avg(BookReview.star_rating).label("avg_rating"),
-        func.count(
-            case((BookReview.sentiment == "positive", 1))
-        ).label("positive"),
-        func.count(
-            case((BookReview.sentiment == "negative", 1))
-        ).label("negative"),
+        func.count(case((BookReview.sentiment == "positive", 1))).label("positive"),
+        func.count(case((BookReview.sentiment == "negative", 1))).label("negative"),
     ).where(
         and_(
             BookReview.org_id == org_id,
             BookReview.book_id == book_id,
-            BookReview.is_competitor == False,
+            BookReview.is_competitor.is_(False),
             BookReview.deleted_at.is_(None),
         )
     )
@@ -531,40 +489,39 @@ async def compute_reputation_score(
     sentiment_ratio = positive / total if total > 0 else 0.0
 
     # Rating distribution
-    dist_stmt = select(
-        BookReview.star_rating,
-        func.count(BookReview.id),
-    ).where(
-        and_(
-            BookReview.org_id == org_id,
-            BookReview.book_id == book_id,
-            BookReview.is_competitor == False,
-            BookReview.deleted_at.is_(None),
+    dist_stmt = (
+        select(
+            BookReview.star_rating,
+            func.count(BookReview.id),
         )
-    ).group_by(BookReview.star_rating)
+        .where(
+            and_(
+                BookReview.org_id == org_id,
+                BookReview.book_id == book_id,
+                BookReview.is_competitor.is_(False),
+                BookReview.deleted_at.is_(None),
+            )
+        )
+        .group_by(BookReview.star_rating)
+    )
 
     dist_result = await db.execute(dist_stmt)
-    rating_distribution = {
-        str(int(row[0])): row[1] for row in dist_result.all() if row[0] is not None
-    }
+    rating_distribution = {str(int(row[0])): row[1] for row in dist_result.all() if row[0] is not None}
 
     # Compute velocity trend (using recent data)
     try:
-        velocity = await compute_velocity_from_snapshots(
-            db, org_id, book_id, VelocityPeriod.WEEKLY, lookback=4
-        )
+        velocity = await compute_velocity_from_snapshots(db, org_id, book_id, VelocityPeriod.WEEKLY, lookback=4)
         velocity_trend = velocity.trend
     except (SQLAlchemyError, ValueError) as e:
         logger.warning(
             "Velocity computation failed for book %s, defaulting to STABLE: %s",
-            book_id, e,
+            book_id,
+            e,
         )
         velocity_trend = VelocityTrend.STABLE
 
     # Calculate overall score (0-100)
-    overall_score = _calculate_overall_score(
-        avg_rating, total, sentiment_ratio, velocity_trend
-    )
+    overall_score = _calculate_overall_score(avg_rating, total, sentiment_ratio, velocity_trend)
 
     # Health grade
     health_grade = _score_to_grade(overall_score)
@@ -656,10 +613,7 @@ def _calculate_overall_score(
     rating_score = (avg_rating / 5.0) * 40 if avg_rating > 0 else 0
 
     # Volume component (0-20), log-scaled
-    if total_reviews > 0:
-        volume_score = min(20, (math.log10(total_reviews + 1) / math.log10(1001)) * 20)
-    else:
-        volume_score = 0
+    volume_score = min(20, math.log10(total_reviews + 1) / math.log10(1001) * 20) if total_reviews > 0 else 0
 
     # Sentiment component (0-25)
     sentiment_score = sentiment_ratio * 25
@@ -720,9 +674,7 @@ def _generate_reputation_recommendations(
             "Average rating is below 3.5. Review negative feedback for patterns and consider content revisions."
         )
     elif avg_rating < 4.0 and total_reviews > 10:
-        recommendations.append(
-            "Consider addressing common complaints to push your average rating above 4.0."
-        )
+        recommendations.append("Consider addressing common complaints to push your average rating above 4.0.")
 
     if sentiment_ratio < 0.5 and total_count > 5:
         recommendations.append(
@@ -741,9 +693,7 @@ def _generate_reputation_recommendations(
         )
 
     if not recommendations:
-        recommendations.append(
-            "Your book's reputation is healthy! Continue monitoring and engaging with readers."
-        )
+        recommendations.append("Your book's reputation is healthy! Continue monitoring and engaging with readers.")
 
     return recommendations
 
@@ -785,25 +735,27 @@ Return ONLY valid JSON."""
         response_text = message.content[0].text.strip()  # type: ignore[union-attr]
         result_data = json.loads(response_text)
 
-        tips = [
-            AcquisitionTip(**tip_data)
-            for tip_data in result_data.get("tips", [])
-        ]
+        tips = [AcquisitionTip(**tip_data) for tip_data in result_data.get("tips", [])]
 
         return AcquisitionTipsResponse(
             book_id=request.book_id,
             tips=tips,
-            estimated_review_potential=result_data.get(
-                "estimated_review_potential", 0
-            ),
+            estimated_review_potential=result_data.get("estimated_review_potential", 0),
             summary=result_data.get("summary", ""),
         )
     except ImportError:
         logger.info("Anthropic SDK not available, using default tips")
+    except TypeError as e:
+        # anthropic raises TypeError when no api_key/auth_token is configured.
+        logger.info("Anthropic client could not be built, using default tips: %s", e)
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         logger.warning("LLM acquisition tips response parsing failed, using defaults: %s", e)
     except OSError as e:
         logger.warning("LLM acquisition tips network request failed, using defaults: %s", e)
+    except Exception as e:  # anthropic.AnthropicError and friends
+        if type(e).__module__.split(".")[0] != "anthropic":
+            raise
+        logger.warning("LLM acquisition tips call failed, using defaults: %s", e)
 
     # Fallback tips
     return _default_acquisition_tips(request)
@@ -859,10 +811,7 @@ def _default_acquisition_tips(
             tip="Partner with other authors for newsletter swaps",
             effort_level="medium",
             expected_impact="medium",
-            details=(
-                "Cross-promote with authors in your genre. "
-                "Their readers may review your book and vice versa."
-            ),
+            details=("Cross-promote with authors in your genre. " "Their readers may review your book and vice versa."),
         ),
     ]
 

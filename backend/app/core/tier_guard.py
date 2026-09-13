@@ -14,7 +14,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -26,7 +26,6 @@ from app.database import get_db
 from app.models.organization import Organization
 from app.schemas.common import PlanTier
 
-
 # ---- Simple module tier registry ----
 # Maps module slugs to the minimum tier required.
 _TIER_ORDER = [PlanTier.FREE, PlanTier.STARTER, PlanTier.PRO, PlanTier.BUSINESS, PlanTier.ENTERPRISE]
@@ -35,6 +34,7 @@ MODULE_TIERS: dict[str, PlanTier] = {
     "admin": PlanTier.FREE,  # all tiers can reach admin (role check happens inside)
     "settings": PlanTier.FREE,
     "agents": PlanTier.FREE,
+    "notifications": PlanTier.FREE,
     "market-intelligence": PlanTier.FREE,
     "knowledge-vault": PlanTier.FREE,
     "ai-writing": PlanTier.FREE,
@@ -69,8 +69,7 @@ async def _get_org_tier(
 ) -> PlanTier:
     """Fetch the organization's current plan tier."""
     result = await db.execute(
-        select(Organization.tier)
-        .where(Organization.id == org_id, Organization.deleted_at.is_(None))
+        select(Organization.plan_tier).where(Organization.id == org_id, Organization.deleted_at.is_(None))
     )
     tier = result.scalar_one_or_none()
 
@@ -97,8 +96,15 @@ def require_module(module_slug: str) -> Callable:
 
     Returns:
         A FastAPI dependency function
+
+    Raises:
+        ValueError: If the slug is not in MODULE_TIERS. Defaulting an unknown
+            slug to FREE would let a typo in a router quietly open a paid
+            module to every tier, so this fails loudly at import time.
     """
-    required_tier = MODULE_TIERS.get(module_slug, PlanTier.FREE)
+    if module_slug not in MODULE_TIERS:
+        raise ValueError(f"Unknown module slug: {module_slug}")
+    required_tier = MODULE_TIERS[module_slug]
 
     async def _tier_checker(
         current_user: dict = Depends(get_current_user),

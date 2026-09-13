@@ -2,10 +2,11 @@
 
 Orchestrates cover generation, template management, and competitor analysis.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -222,10 +223,7 @@ async def list_templates(
     genre: CoverGenre | None = None,
 ) -> list[CoverTemplateResponse]:
     """Return available cover templates, optionally filtered by genre."""
-    if genre:
-        templates = get_templates_by_genre(genre)
-    else:
-        templates = get_all_templates()
+    templates = get_templates_by_genre(genre) if genre else get_all_templates()
 
     return [
         CoverTemplateResponse(
@@ -335,8 +333,12 @@ async def delete_cover(
 
 
 # Additional service methods for router endpoints
-async def list_covers(db, org_id, project_id=None, format_filter=None, sort_by="created_at", sort_dir="desc", limit=50, offset=0):
-    from sqlalchemy import desc as sql_desc, asc as sql_asc
+async def list_covers(
+    db, org_id, project_id=None, format_filter=None, sort_by="created_at", sort_dir="desc", limit=50, offset=0
+):
+    from sqlalchemy import asc as sql_asc
+    from sqlalchemy import desc as sql_desc
+
     stmt = select(Cover).where(Cover.org_id == org_id, Cover.deleted_at.is_(None))
     if project_id:
         stmt = stmt.where(Cover.book_id == project_id)
@@ -346,8 +348,9 @@ async def list_covers(db, org_id, project_id=None, format_filter=None, sort_by="
     result = await db.execute(stmt)
     return [_cover_to_response(c) for c in result.scalars().all()]
 
+
 async def update_cover(db, org_id, cover_id, **updates):
-    cover = await get_cover_by_id(db, org_id, cover_id)
+    await get_cover_by_id(db, org_id, cover_id)
     stmt = select(Cover).where(Cover.id == cover_id, Cover.org_id == org_id, Cover.deleted_at.is_(None))
     result = await db.execute(stmt)
     cover_orm = result.scalar_one_or_none()
@@ -385,36 +388,101 @@ async def export_cover(db, org_id, cover_id, export_format, dpi, include_bleed, 
         "export_url": export_url,
         "format": export_format,
         "file_size_bytes": 1024000,
-        "dimensions": CoverDimensions(width_px=cover.width_px or 2560, height_px=cover.height_px or 1600, dpi=dpi, bleed_px=cover.bleed_px if include_bleed else 0),
+        "dimensions": CoverDimensions(
+            width_px=cover.width_px or 2560,
+            height_px=cover.height_px or 1600,
+            dpi=dpi,
+            bleed_px=cover.bleed_px if include_bleed else 0,
+        ),
         "created_at": datetime.now(UTC),
     }
 
 
-async def create_ab_test(db, org_id, name, description, cover_a_id, cover_b_id, target_audience, duration_days, public_url_enabled):
+async def create_ab_test(
+    db, org_id, name, description, cover_a_id, cover_b_id, target_audience, duration_days, public_url_enabled
+):
     import secrets
+
     from app.modules.cover_design.models import CoverABTest
-    stmt = select(Cover).where(Cover.id.in_([cover_a_id, cover_b_id]), Cover.org_id == org_id, Cover.deleted_at.is_(None))
+
+    stmt = select(Cover).where(
+        Cover.id.in_([cover_a_id, cover_b_id]), Cover.org_id == org_id, Cover.deleted_at.is_(None)
+    )
     result = await db.execute(stmt)
     if len(result.scalars().all()) != 2:
         raise AppException(status_code=404, code="COVER_NOT_FOUND", message="One or both covers not found")
     public_url = f"ab-test-{secrets.token_urlsafe(16)}" if public_url_enabled else None
-    ab_test = CoverABTest(org_id=org_id, name=name, description=description, cover_a_id=cover_a_id, cover_b_id=cover_b_id, status="active", public_url=public_url, target_audience=target_audience, duration_days=duration_days, started_at=datetime.now(UTC))
+    ab_test = CoverABTest(
+        org_id=org_id,
+        name=name,
+        description=description,
+        cover_a_id=cover_a_id,
+        cover_b_id=cover_b_id,
+        status="active",
+        public_url=public_url,
+        target_audience=target_audience,
+        duration_days=duration_days,
+        started_at=datetime.now(UTC),
+    )
     db.add(ab_test)
     await db.flush()
     await db.refresh(ab_test)
-    return {"id": ab_test.id, "org_id": ab_test.org_id, "name": ab_test.name, "description": ab_test.description, "cover_a_id": ab_test.cover_a_id, "cover_b_id": ab_test.cover_b_id, "status": ab_test.status, "votes_a": ab_test.votes_a, "votes_b": ab_test.votes_b, "public_url": ab_test.public_url, "target_audience": ab_test.target_audience, "duration_days": ab_test.duration_days, "started_at": ab_test.started_at, "ended_at": ab_test.ended_at, "created_at": ab_test.created_at, "updated_at": ab_test.updated_at}
+    return {
+        "id": ab_test.id,
+        "org_id": ab_test.org_id,
+        "name": ab_test.name,
+        "description": ab_test.description,
+        "cover_a_id": ab_test.cover_a_id,
+        "cover_b_id": ab_test.cover_b_id,
+        "status": ab_test.status,
+        "votes_a": ab_test.votes_a,
+        "votes_b": ab_test.votes_b,
+        "public_url": ab_test.public_url,
+        "target_audience": ab_test.target_audience,
+        "duration_days": ab_test.duration_days,
+        "started_at": ab_test.started_at,
+        "ended_at": ab_test.ended_at,
+        "created_at": ab_test.created_at,
+        "updated_at": ab_test.updated_at,
+    }
 
 
 async def list_ab_tests(db, org_id):
     from app.modules.cover_design.models import CoverABTest
-    stmt = select(CoverABTest).where(CoverABTest.org_id == org_id, CoverABTest.deleted_at.is_(None)).order_by(CoverABTest.created_at.desc())
+
+    stmt = (
+        select(CoverABTest)
+        .where(CoverABTest.org_id == org_id, CoverABTest.deleted_at.is_(None))
+        .order_by(CoverABTest.created_at.desc())
+    )
     result = await db.execute(stmt)
     tests = result.scalars().all()
-    return [{"id": t.id, "org_id": t.org_id, "name": t.name, "description": t.description, "cover_a_id": t.cover_a_id, "cover_b_id": t.cover_b_id, "status": t.status, "votes_a": t.votes_a, "votes_b": t.votes_b, "public_url": t.public_url, "target_audience": t.target_audience, "duration_days": t.duration_days, "started_at": t.started_at, "ended_at": t.ended_at, "created_at": t.created_at, "updated_at": t.updated_at} for t in tests]
+    return [
+        {
+            "id": t.id,
+            "org_id": t.org_id,
+            "name": t.name,
+            "description": t.description,
+            "cover_a_id": t.cover_a_id,
+            "cover_b_id": t.cover_b_id,
+            "status": t.status,
+            "votes_a": t.votes_a,
+            "votes_b": t.votes_b,
+            "public_url": t.public_url,
+            "target_audience": t.target_audience,
+            "duration_days": t.duration_days,
+            "started_at": t.started_at,
+            "ended_at": t.ended_at,
+            "created_at": t.created_at,
+            "updated_at": t.updated_at,
+        }
+        for t in tests
+    ]
 
 
 async def get_ab_test(db, test_id, org_id=None):
     from app.modules.cover_design.models import CoverABTest
+
     stmt = select(CoverABTest).where(CoverABTest.id == test_id, CoverABTest.deleted_at.is_(None))
     if org_id:
         stmt = stmt.where(CoverABTest.org_id == org_id)
@@ -422,11 +490,29 @@ async def get_ab_test(db, test_id, org_id=None):
     test = result.scalar_one_or_none()
     if not test:
         raise AppException(status_code=404, code="AB_TEST_NOT_FOUND", message=f"A/B test {test_id} not found")
-    return {"id": test.id, "org_id": test.org_id, "name": test.name, "description": test.description, "cover_a_id": test.cover_a_id, "cover_b_id": test.cover_b_id, "status": test.status, "votes_a": test.votes_a, "votes_b": test.votes_b, "public_url": test.public_url, "target_audience": test.target_audience, "duration_days": test.duration_days, "started_at": test.started_at, "ended_at": test.ended_at, "created_at": test.created_at, "updated_at": test.updated_at}
+    return {
+        "id": test.id,
+        "org_id": test.org_id,
+        "name": test.name,
+        "description": test.description,
+        "cover_a_id": test.cover_a_id,
+        "cover_b_id": test.cover_b_id,
+        "status": test.status,
+        "votes_a": test.votes_a,
+        "votes_b": test.votes_b,
+        "public_url": test.public_url,
+        "target_audience": test.target_audience,
+        "duration_days": test.duration_days,
+        "started_at": test.started_at,
+        "ended_at": test.ended_at,
+        "created_at": test.created_at,
+        "updated_at": test.updated_at,
+    }
 
 
 async def vote_on_ab_test(db, test_id, choice, voter_fingerprint=None):
     from app.modules.cover_design.models import CoverABTest
+
     stmt = select(CoverABTest).where(CoverABTest.id == test_id, CoverABTest.deleted_at.is_(None))
     result = await db.execute(stmt)
     test = result.scalar_one_or_none()
@@ -442,12 +528,20 @@ async def vote_on_ab_test(db, test_id, choice, voter_fingerprint=None):
         raise AppException(status_code=400, code="INVALID_CHOICE", message="Choice must be a or b")
     await db.flush()
     await db.refresh(test)
-    return {"success": True, "message": "Vote recorded successfully", "current_votes_a": test.votes_a, "current_votes_b": test.votes_b}
+    return {
+        "success": True,
+        "message": "Vote recorded successfully",
+        "current_votes_a": test.votes_a,
+        "current_votes_b": test.votes_b,
+    }
 
 
 async def end_ab_test(db, org_id, test_id, winner, notes):
     from app.modules.cover_design.models import CoverABTest
-    stmt = select(CoverABTest).where(CoverABTest.id == test_id, CoverABTest.org_id == org_id, CoverABTest.deleted_at.is_(None))
+
+    stmt = select(CoverABTest).where(
+        CoverABTest.id == test_id, CoverABTest.org_id == org_id, CoverABTest.deleted_at.is_(None)
+    )
     result = await db.execute(stmt)
     test = result.scalar_one_or_none()
     if not test:
@@ -460,7 +554,24 @@ async def end_ab_test(db, org_id, test_id, winner, notes):
     test.metadata_json["notes"] = notes
     await db.flush()
     await db.refresh(test)
-    return {"id": test.id, "org_id": test.org_id, "name": test.name, "description": test.description, "cover_a_id": test.cover_a_id, "cover_b_id": test.cover_b_id, "status": test.status, "votes_a": test.votes_a, "votes_b": test.votes_b, "public_url": test.public_url, "target_audience": test.target_audience, "duration_days": test.duration_days, "started_at": test.started_at, "ended_at": test.ended_at, "created_at": test.created_at, "updated_at": test.updated_at}
+    return {
+        "id": test.id,
+        "org_id": test.org_id,
+        "name": test.name,
+        "description": test.description,
+        "cover_a_id": test.cover_a_id,
+        "cover_b_id": test.cover_b_id,
+        "status": test.status,
+        "votes_a": test.votes_a,
+        "votes_b": test.votes_b,
+        "public_url": test.public_url,
+        "target_audience": test.target_audience,
+        "duration_days": test.duration_days,
+        "started_at": test.started_at,
+        "ended_at": test.ended_at,
+        "created_at": test.created_at,
+        "updated_at": test.updated_at,
+    }
 
 
 _generation_jobs = {}
@@ -468,8 +579,17 @@ _generation_jobs = {}
 
 async def start_generation_job(db, org_id, request):
     import secrets
+
     job_id = f"job-{secrets.token_urlsafe(16)}"
-    _generation_jobs[job_id] = {"job_id": job_id, "status": "pending", "progress": 0, "cover_id": None, "error_message": None, "created_at": datetime.now(UTC), "completed_at": None}
+    _generation_jobs[job_id] = {
+        "job_id": job_id,
+        "status": "pending",
+        "progress": 0,
+        "cover_id": None,
+        "error_message": None,
+        "created_at": datetime.now(UTC),
+        "completed_at": None,
+    }
     return job_id
 
 

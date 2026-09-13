@@ -2,22 +2,27 @@
 
 Covers schemas, models, service helpers, analyzer, generator, and templates.
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from PIL import Image
 from pydantic import ValidationError
 
+from app.modules.cover_design.analyzer import (
+    analyze_competitor_covers,
+    analyze_single_cover,
+)
+from app.modules.cover_design.generator import build_cover_prompt
 from app.modules.cover_design.schemas import (
     ColorAnalysis,
     CompetitorAnalysisResponse,
     CompetitorCoverAnalysis,
     CompetitorCoverAnalysisRequest,
-    CoverDimensions,
     CoverGenerateRequest,
     CoverGenre,
     CoverPlatform,
@@ -26,18 +31,13 @@ from app.modules.cover_design.schemas import (
     CoverTemplateResponse,
     CoverVariationRequest,
 )
-from app.modules.cover_design.analyzer import (
-    analyze_competitor_covers,
-    analyze_single_cover,
-)
-from app.modules.cover_design.generator import build_cover_prompt
+from app.modules.cover_design.service import _cover_to_response
 from app.modules.cover_design.templates import (
     get_all_templates,
     get_dimensions_for_platform,
     get_template_by_id,
     get_templates_by_genre,
 )
-from app.modules.cover_design.service import _cover_to_response
 
 
 def _make_fake_image() -> Image.Image:
@@ -128,8 +128,8 @@ class TestCoverSchemas:
             genre=CoverGenre.FANTASY,
             status=CoverStatus.COMPLETED,
             platform=CoverPlatform.AMAZON_KDP,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         assert resp.genre == CoverGenre.FANTASY
         assert resp.status == CoverStatus.COMPLETED
@@ -319,8 +319,8 @@ class TestCoverToResponse:
         mock_cover.bleed_px = 38
         mock_cover.platform = "amazon-kdp"
         mock_cover.metadata_json = {"mood": "warm"}
-        mock_cover.created_at = datetime.now(timezone.utc)
-        mock_cover.updated_at = datetime.now(timezone.utc)
+        mock_cover.created_at = datetime.now(UTC)
+        mock_cover.updated_at = datetime.now(UTC)
 
         result = _cover_to_response(mock_cover)
 
@@ -350,8 +350,8 @@ class TestCoverToResponse:
         mock_cover.bleed_px = 0
         mock_cover.platform = "amazon-kdp"
         mock_cover.metadata_json = None
-        mock_cover.created_at = datetime.now(timezone.utc)
-        mock_cover.updated_at = datetime.now(timezone.utc)
+        mock_cover.created_at = datetime.now(UTC)
+        mock_cover.updated_at = datetime.now(UTC)
 
         result = _cover_to_response(mock_cover)
 
@@ -368,8 +368,9 @@ class TestRouterConfig:
     """Verify the cover design router is properly configured."""
 
     def test_router_exists_and_is_api_router(self):
-        from app.modules.cover_design.router import router
         from fastapi import APIRouter
+
+        from app.modules.cover_design.router import router
 
         assert isinstance(router, APIRouter)
 

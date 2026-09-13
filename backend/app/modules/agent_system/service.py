@@ -11,8 +11,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +38,9 @@ from app.modules.agent_system.schemas import (
     WorkflowCreate,
 )
 from app.modules.agent_system.workflow_engine import WorkflowEngine
+
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Default agent definitions (seeded per-org on first access)
@@ -94,11 +95,10 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
 # Agent CRUD
 # ---------------------------------------------------------------------------
 
+
 async def ensure_default_agents(db: AsyncSession, org_id: uuid.UUID) -> list[Agent]:
     """Ensure default agents exist for the org. Seed if needed."""
-    result = await db.execute(
-        select(Agent).where(Agent.org_id == org_id, Agent.deleted_at.is_(None))
-    )
+    result = await db.execute(select(Agent).where(Agent.org_id == org_id, Agent.deleted_at.is_(None)))
     agents = list(result.scalars().all())
 
     if agents:
@@ -119,8 +119,7 @@ async def ensure_default_agents(db: AsyncSession, org_id: uuid.UUID) -> list[Age
 
 async def list_agents(db: AsyncSession, org_id: uuid.UUID) -> list[Agent]:
     """List all non-deleted agents for the org, seeding defaults if needed."""
-    agents = await ensure_default_agents(db, org_id)
-    return agents
+    return await ensure_default_agents(db, org_id)
 
 
 async def get_agent(db: AsyncSession, agent_id: uuid.UUID, org_id: uuid.UUID) -> Agent:
@@ -178,6 +177,7 @@ async def update_agent_config(
 # Task management
 # ---------------------------------------------------------------------------
 
+
 async def create_task(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -226,9 +226,7 @@ async def list_tasks(
     """List tasks with optional filters. Returns (items, next_cursor, has_more, total)."""
     # Count
     count_q = (
-        select(func.count())
-        .select_from(AgentTask)
-        .where(AgentTask.org_id == org_id, AgentTask.deleted_at.is_(None))
+        select(func.count()).select_from(AgentTask).where(AgentTask.org_id == org_id, AgentTask.deleted_at.is_(None))
     )
     if status:
         count_q = count_q.where(AgentTask.status == status)
@@ -415,6 +413,7 @@ async def cancel_task(
 # Workflow management
 # ---------------------------------------------------------------------------
 
+
 async def create_workflow(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -525,11 +524,10 @@ async def get_workflow(
 # Budget management
 # ---------------------------------------------------------------------------
 
+
 async def get_budgets(db: AsyncSession, org_id: uuid.UUID) -> list[AgentBudget]:
     """Get all budget records for the org."""
-    result = await db.execute(
-        select(AgentBudget).where(AgentBudget.org_id == org_id)
-    )
+    result = await db.execute(select(AgentBudget).where(AgentBudget.org_id == org_id))
     return list(result.scalars().all())
 
 
@@ -583,6 +581,7 @@ async def update_budget(
 # ---------------------------------------------------------------------------
 # Execute task (sync entry point)
 # ---------------------------------------------------------------------------
+
 
 async def execute_task(
     db: AsyncSession,

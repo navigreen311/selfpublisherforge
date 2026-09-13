@@ -1,14 +1,14 @@
 """Integration tests for Review Intelligence API endpoints."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.database import Base, get_db
+from app.database import get_db
 from app.main import create_app
 
 
@@ -56,7 +56,7 @@ async def seeded_db(db):
     from tests.conftest import make_review
 
     reviews = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Positive reviews
     for i in range(5):
@@ -150,9 +150,7 @@ class TestListReviewsEndpoint:
         response = await client.get("/api/v1/reviews?sentiment=positive")
         assert response.status_code == 200
         data = response.json()
-        assert all(
-            item["sentiment"] == "positive" for item in data["items"]
-        )
+        assert all(item["sentiment"] == "positive" for item in data["items"])
 
     @pytest.mark.asyncio
     async def test_list_reviews_filter_min_rating(self, client, seeded_db):
@@ -201,12 +199,7 @@ class TestSentimentEndpoint:
     async def test_sentiment_percentages_sum(self, client, seeded_db):
         response = await client.get(f"/api/v1/reviews/sentiment/{BOOK_ID}")
         data = response.json()
-        total_pct = (
-            data["positive_pct"]
-            + data["neutral_pct"]
-            + data["negative_pct"]
-            + data["mixed_pct"]
-        )
+        total_pct = data["positive_pct"] + data["neutral_pct"] + data["negative_pct"] + data["mixed_pct"]
         # Should sum to approximately 100% (allowing floating point variance)
         assert 99.0 <= total_pct <= 101.0
 
@@ -225,9 +218,7 @@ class TestSentimentEndpoint:
 class TestVelocityEndpoint:
     @pytest.mark.asyncio
     async def test_get_velocity(self, client, seeded_db):
-        response = await client.get(
-            f"/api/v1/reviews/velocity/{BOOK_ID}?period=daily&lookback=7"
-        )
+        response = await client.get(f"/api/v1/reviews/velocity/{BOOK_ID}?period=daily&lookback=7")
         assert response.status_code == 200
         data = response.json()
         assert data["book_id"] == str(BOOK_ID)
@@ -238,9 +229,7 @@ class TestVelocityEndpoint:
 
     @pytest.mark.asyncio
     async def test_velocity_weekly(self, client, seeded_db):
-        response = await client.get(
-            f"/api/v1/reviews/velocity/{BOOK_ID}?period=weekly"
-        )
+        response = await client.get(f"/api/v1/reviews/velocity/{BOOK_ID}?period=weekly")
         assert response.status_code == 200
         data = response.json()
         assert data["period"] == "weekly"
@@ -312,10 +301,16 @@ class TestAnalyzeEndpoint:
             "app.modules.review_intelligence.sentiment.analyze_sentiment_llm",
             new_callable=AsyncMock,
         ) as mock_llm:
-            from app.modules.review_intelligence.schemas import SentimentAnalysisResult, SentimentLabel as SL
+            from app.modules.review_intelligence.schemas import SentimentAnalysisResult
+            from app.modules.review_intelligence.schemas import SentimentLabel as SL
+
             mock_llm.return_value = SentimentAnalysisResult(
-                sentiment=SL.POSITIVE, score=0.8, themes=["writing_style"],
-                key_phrases=[], complaints=[], praise=["amazing"],
+                sentiment=SL.POSITIVE,
+                score=0.8,
+                themes=["writing_style"],
+                key_phrases=[],
+                complaints=[],
+                praise=["amazing"],
             )
             response = await client.post(
                 "/api/v1/reviews/analyze",
@@ -365,10 +360,13 @@ class TestAcquisitionTipsEndpoint:
             "app.modules.review_intelligence.router.generate_acquisition_tips",
             new_callable=AsyncMock,
         ) as mock_tips:
-            from app.modules.review_intelligence.service import _default_acquisition_tips
             from app.modules.review_intelligence.schemas import AcquisitionTipsRequest
+            from app.modules.review_intelligence.service import _default_acquisition_tips
+
             req = AcquisitionTipsRequest(
-                book_id=BOOK_ID, current_review_count=5, genre="fantasy",
+                book_id=BOOK_ID,
+                current_review_count=5,
+                genre="fantasy",
             )
             mock_tips.return_value = _default_acquisition_tips(req)
             response = await client.post(
@@ -391,8 +389,9 @@ class TestAcquisitionTipsEndpoint:
             "app.modules.review_intelligence.router.generate_acquisition_tips",
             new_callable=AsyncMock,
         ) as mock_tips:
-            from app.modules.review_intelligence.service import _default_acquisition_tips
             from app.modules.review_intelligence.schemas import AcquisitionTipsRequest
+            from app.modules.review_intelligence.service import _default_acquisition_tips
+
             req = AcquisitionTipsRequest(book_id=BOOK_ID)
             mock_tips.return_value = _default_acquisition_tips(req)
             response = await client.post(

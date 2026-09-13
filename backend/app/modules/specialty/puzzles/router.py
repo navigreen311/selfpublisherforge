@@ -21,12 +21,13 @@ Endpoints:
     POST       .../{id}/export                                             -- Export book
     POST       .../{id}/preflight                                          -- Run preflight
 """
+
 from __future__ import annotations
 
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.contracts import SuccessResponse
@@ -116,9 +117,7 @@ async def update_puzzle_book(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    book = await service.update_puzzle_book(
-        db, current_user["org_id"], book_id, updates
-    )
+    book = await service.update_puzzle_book(db, current_user["org_id"], book_id, updates)
     return SuccessResponse(data=book)
 
 
@@ -192,9 +191,7 @@ async def regenerate_puzzle(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    puzzle = await service.regenerate_puzzle(
-        db, current_user["org_id"], book_id, puzzle_id
-    )
+    puzzle = await service.regenerate_puzzle(db, current_user["org_id"], book_id, puzzle_id)
     return SuccessResponse(data=puzzle)
 
 
@@ -210,9 +207,7 @@ async def update_puzzle(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    puzzle = await service.update_puzzle(
-        db, current_user["org_id"], book_id, puzzle_id, updates
-    )
+    puzzle = await service.update_puzzle(db, current_user["org_id"], book_id, puzzle_id, updates)
     return SuccessResponse(data=puzzle)
 
 
@@ -242,9 +237,7 @@ async def verify_puzzle(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.verify_puzzle(
-        db, current_user["org_id"], book_id, puzzle_id
-    )
+    result = await service.verify_puzzle(db, current_user["org_id"], book_id, puzzle_id)
     return SuccessResponse(data=result)
 
 
@@ -323,9 +316,7 @@ async def qa_clues(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.qa_clues(
-        db, current_user["org_id"], book_id, puzzle_id
-    )
+    result = await service.qa_clues(db, current_user["org_id"], book_id, puzzle_id)
     return SuccessResponse(data=result)
 
 
@@ -339,9 +330,7 @@ async def auto_fix_clues(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.auto_fix_clues(
-        db, current_user["org_id"], book_id
-    )
+    result = await service.auto_fix_clues(db, current_user["org_id"], book_id)
     return SuccessResponse(data=result)
 
 
@@ -360,9 +349,7 @@ async def generate_answer_key(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.generate_answer_key(
-        db, current_user["org_id"], book_id
-    )
+    result = await service.generate_answer_key(db, current_user["org_id"], book_id)
     return SuccessResponse(data=result)
 
 
@@ -376,9 +363,7 @@ async def verify_answer_key(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.verify_answer_key(
-        db, current_user["org_id"], book_id
-    )
+    result = await service.verify_answer_key(db, current_user["org_id"], book_id)
     return SuccessResponse(data=result)
 
 
@@ -397,9 +382,7 @@ async def quality_check(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.run_quality_check(
-        db, current_user["org_id"], book_id
-    )
+    result = await service.run_quality_check(db, current_user["org_id"], book_id)
     return SuccessResponse(data=result)
 
 
@@ -413,9 +396,7 @@ async def calibrate_difficulty(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.calibrate_difficulty(
-        db, current_user["org_id"], book_id
-    )
+    result = await service.calibrate_difficulty(db, current_user["org_id"], book_id)
     return SuccessResponse(data=result)
 
 
@@ -479,7 +460,5 @@ async def preflight(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.run_preflight(
-        db, current_user["org_id"], book_id
-    )
+    result = await service.run_preflight(db, current_user["org_id"], book_id)
     return SuccessResponse(data=result)

@@ -31,9 +31,7 @@ DEFAULT_THRESHOLDS = {
 }
 
 
-def _determine_severity(
-    alert_type: AlertType, magnitude: float
-) -> AlertSeverity:
+def _determine_severity(alert_type: AlertType, magnitude: float) -> AlertSeverity:
     """Determine alert severity based on type and magnitude of the change."""
     if alert_type == AlertType.NEGATIVE_SPIKE:
         if magnitude > 200:
@@ -95,9 +93,7 @@ async def _create_alert(
     )
     db.add(alert)
     await db.flush()
-    logger.info(
-        f"Created {severity.value} alert [{alert_type.value}] for book {book_id}: {title}"
-    )
+    logger.info(f"Created {severity.value} alert [{alert_type.value}] for book {book_id}: {title}")
     return alert
 
 
@@ -323,7 +319,7 @@ async def check_competitor_surge(
         and_(
             BookReview.org_id == org_id,
             BookReview.book_id == book_id,
-            BookReview.is_competitor == False,
+            BookReview.is_competitor.is_(False),
             BookReview.review_date >= current_start,
             BookReview.review_date < now,
             BookReview.deleted_at.is_(None),
@@ -336,7 +332,7 @@ async def check_competitor_surge(
     comp_stmt = select(func.count(BookReview.id)).where(
         and_(
             BookReview.org_id == org_id,
-            BookReview.is_competitor == True,
+            BookReview.is_competitor.is_(True),
             BookReview.review_date >= current_start,
             BookReview.review_date < now,
             BookReview.deleted_at.is_(None),
@@ -400,7 +396,9 @@ async def run_all_checks(
         except (SQLAlchemyError, ValueError, TypeError) as e:
             logger.error(
                 "Alert check %s failed for book %s: %s",
-                check_fn.__name__, book_id, e,
+                check_fn.__name__,
+                book_id,
+                e,
                 exc_info=True,
             )
 

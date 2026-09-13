@@ -12,9 +12,7 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
 from datetime import timedelta
-from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -26,10 +24,10 @@ from app.modules.realtime.manager import ConnectionManager
 from app.modules.realtime.router import router
 from app.modules.realtime.schemas import WSChannel
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def test_manager() -> ConnectionManager:
@@ -83,14 +81,13 @@ def expired_token() -> str:
 # Tests — Full Flow (Connect → Subscribe → Receive → Disconnect)
 # ---------------------------------------------------------------------------
 
+
 class TestFullFlow:
     """Test complete WebSocket lifecycle."""
 
     def test_writing_channel_full_flow(self, client: TestClient, valid_token: str) -> None:
         """Test full flow on WRITING channel."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             # 1. Connect - receive welcome message
             msg = ws.receive_json()
             assert msg["type"] == "connected"
@@ -109,9 +106,7 @@ class TestFullFlow:
 
     def test_agents_channel_full_flow(self, client: TestClient, valid_token: str) -> None:
         """Test full flow on AGENTS channel."""
-        with client.websocket_connect(
-            f"/api/v1/ws/agents/org-456?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/agents/org-456?token={valid_token}") as ws:
             # Connect
             msg = ws.receive_json()
             assert msg["type"] == "connected"
@@ -126,9 +121,7 @@ class TestFullFlow:
 
     def test_analytics_channel_full_flow(self, client: TestClient, valid_token: str) -> None:
         """Test full flow on ANALYTICS channel."""
-        with client.websocket_connect(
-            f"/api/v1/ws/analytics/org-456?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/analytics/org-456?token={valid_token}") as ws:
             # Connect
             msg = ws.receive_json()
             assert msg["type"] == "connected"
@@ -143,9 +136,7 @@ class TestFullFlow:
 
     def test_publishing_channel_full_flow(self, client: TestClient, valid_token: str) -> None:
         """Test full flow on PUBLISHING channel."""
-        with client.websocket_connect(
-            f"/api/v1/ws/publishing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/publishing/book-1?token={valid_token}") as ws:
             # Connect
             msg = ws.receive_json()
             assert msg["type"] == "connected"
@@ -163,6 +154,7 @@ class TestFullFlow:
 # Tests — Multiple Clients on Same Channel
 # ---------------------------------------------------------------------------
 
+
 class TestMultipleClients:
     """Test multiple clients sharing a channel."""
 
@@ -170,14 +162,10 @@ class TestMultipleClients:
         self, client: TestClient, valid_token: str, valid_token_user2: str
     ) -> None:
         """Test broadcast reaches all clients in room."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws1:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws1:
             ws1.receive_json()  # welcome
 
-            with client.websocket_connect(
-                f"/api/v1/ws/writing/book-1?token={valid_token_user2}"
-            ) as ws2:
+            with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token_user2}") as ws2:
                 ws2.receive_json()  # welcome
 
                 # Client 1 sends a message
@@ -194,14 +182,10 @@ class TestMultipleClients:
         self, client: TestClient, valid_token: str, test_manager: ConnectionManager
     ) -> None:
         """Test clients in different rooms don't receive each other's messages."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-a?token={valid_token}"
-        ) as ws_a:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-a?token={valid_token}") as ws_a:
             ws_a.receive_json()  # welcome
 
-            with client.websocket_connect(
-                f"/api/v1/ws/writing/book-b?token={valid_token}"
-            ) as ws_b:
+            with client.websocket_connect(f"/api/v1/ws/writing/book-b?token={valid_token}") as ws_b:
                 ws_b.receive_json()  # welcome
 
                 # Send in room-a
@@ -218,23 +202,15 @@ class TestMultipleClients:
                 assert count_a == 1
                 assert count_b == 1
 
-    def test_three_clients_same_room(
-        self, client: TestClient, valid_token: str
-    ) -> None:
+    def test_three_clients_same_room(self, client: TestClient, valid_token: str) -> None:
         """Test broadcast reaches all three clients."""
-        with client.websocket_connect(
-            f"/api/v1/ws/agents/org-1?token={valid_token}"
-        ) as ws1:
+        with client.websocket_connect(f"/api/v1/ws/agents/org-1?token={valid_token}") as ws1:
             ws1.receive_json()  # welcome
 
-            with client.websocket_connect(
-                f"/api/v1/ws/agents/org-1?token={valid_token}"
-            ) as ws2:
+            with client.websocket_connect(f"/api/v1/ws/agents/org-1?token={valid_token}") as ws2:
                 ws2.receive_json()  # welcome
 
-                with client.websocket_connect(
-                    f"/api/v1/ws/agents/org-1?token={valid_token}"
-                ) as ws3:
+                with client.websocket_connect(f"/api/v1/ws/agents/org-1?token={valid_token}") as ws3:
                     ws3.receive_json()  # welcome
 
                     # Send from client 1
@@ -254,6 +230,7 @@ class TestMultipleClients:
 # Tests — Reconnection After Disconnect
 # ---------------------------------------------------------------------------
 
+
 class TestReconnection:
     """Test reconnection scenarios."""
 
@@ -262,9 +239,7 @@ class TestReconnection:
     ) -> None:
         """Test client can reconnect after disconnecting."""
         # First connection
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             ws.receive_json()  # welcome
             assert test_manager.get_connection_count(WSChannel.WRITING, "book-1") == 1
 
@@ -272,9 +247,7 @@ class TestReconnection:
         assert test_manager.get_connection_count(WSChannel.WRITING, "book-1") == 0
 
         # Reconnect
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             msg = ws.receive_json()  # welcome
             assert msg["type"] == "connected"
             assert test_manager.get_connection_count(WSChannel.WRITING, "book-1") == 1
@@ -283,15 +256,11 @@ class TestReconnection:
         self, client: TestClient, valid_token: str, test_manager: ConnectionManager
     ) -> None:
         """Test client leaving and rejoining doesn't break room."""
-        with client.websocket_connect(
-            f"/api/v1/ws/agents/org-1?token={valid_token}"
-        ) as ws1:
+        with client.websocket_connect(f"/api/v1/ws/agents/org-1?token={valid_token}") as ws1:
             ws1.receive_json()  # welcome
 
             # Another client joins
-            with client.websocket_connect(
-                f"/api/v1/ws/agents/org-1?token={valid_token}"
-            ) as ws2:
+            with client.websocket_connect(f"/api/v1/ws/agents/org-1?token={valid_token}") as ws2:
                 ws2.receive_json()  # welcome
                 assert test_manager.get_connection_count(WSChannel.AGENTS, "org-1") == 2
 
@@ -308,14 +277,13 @@ class TestReconnection:
 # Tests — Message Ordering
 # ---------------------------------------------------------------------------
 
+
 class TestMessageOrdering:
     """Test message order preservation."""
 
     def test_messages_received_in_order(self, client: TestClient, valid_token: str) -> None:
         """Test messages are received in the order sent."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             ws.receive_json()  # welcome
 
             # Send multiple messages in sequence
@@ -332,9 +300,7 @@ class TestMessageOrdering:
 
     def test_concurrent_messages_all_delivered(self, client: TestClient, valid_token: str) -> None:
         """Test all messages are delivered even when sent rapidly."""
-        with client.websocket_connect(
-            f"/api/v1/ws/agents/org-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/agents/org-1?token={valid_token}") as ws:
             ws.receive_json()  # welcome
 
             # Send 10 messages rapidly
@@ -359,6 +325,7 @@ class TestMessageOrdering:
 # Tests — Authentication Edge Cases
 # ---------------------------------------------------------------------------
 
+
 class TestAuthenticationE2E:
     """Test authentication in full flow."""
 
@@ -371,24 +338,18 @@ class TestAuthenticationE2E:
     def test_reject_connection_with_invalid_token(self, client: TestClient) -> None:
         """Test connection rejected with invalid token."""
         with pytest.raises(Exception):
-            with client.websocket_connect(
-                "/api/v1/ws/writing/book-1?token=invalid-token-12345"
-            ) as ws:
+            with client.websocket_connect("/api/v1/ws/writing/book-1?token=invalid-token-12345") as ws:
                 ws.receive_json()
 
     def test_reject_connection_with_expired_token(self, client: TestClient, expired_token: str) -> None:
         """Test connection rejected with expired token."""
         with pytest.raises(Exception):
-            with client.websocket_connect(
-                f"/api/v1/ws/writing/book-1?token={expired_token}"
-            ) as ws:
+            with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={expired_token}") as ws:
                 ws.receive_json()
 
     def test_user_id_added_to_broadcast_messages(self, client: TestClient, valid_token: str) -> None:
         """Test user_id from token is added to broadcast messages."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             welcome = ws.receive_json()
             assert welcome["user_id"] == "user-123"
 
@@ -404,6 +365,7 @@ class TestAuthenticationE2E:
 # Tests — Concurrent Connections
 # ---------------------------------------------------------------------------
 
+
 class TestConcurrentConnections:
     """Test concurrent connection scenarios."""
 
@@ -411,14 +373,10 @@ class TestConcurrentConnections:
         self, client: TestClient, valid_token: str, test_manager: ConnectionManager
     ) -> None:
         """Test client connected to multiple channels simultaneously."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws_writing:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws_writing:
             ws_writing.receive_json()  # welcome
 
-            with client.websocket_connect(
-                f"/api/v1/ws/agents/org-456?token={valid_token}"
-            ) as ws_agents:
+            with client.websocket_connect(f"/api/v1/ws/agents/org-456?token={valid_token}") as ws_agents:
                 ws_agents.receive_json()  # welcome
 
                 # Verify both connections active
@@ -439,14 +397,10 @@ class TestConcurrentConnections:
         self, client: TestClient, valid_token: str, test_manager: ConnectionManager
     ) -> None:
         """Test same user connected to multiple rooms in same channel."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws1:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws1:
             ws1.receive_json()  # welcome
 
-            with client.websocket_connect(
-                f"/api/v1/ws/writing/book-2?token={valid_token}"
-            ) as ws2:
+            with client.websocket_connect(f"/api/v1/ws/writing/book-2?token={valid_token}") as ws2:
                 ws2.receive_json()  # welcome
 
                 # Both connections active
@@ -467,6 +421,7 @@ class TestConcurrentConnections:
 # Tests — Error Handling
 # ---------------------------------------------------------------------------
 
+
 class TestErrorHandling:
     """Test error scenarios."""
 
@@ -476,9 +431,7 @@ class TestErrorHandling:
         Note: TestClient's send_json validates, so this test documents
         expected behavior but may not fully exercise the error path.
         """
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             ws.receive_json()  # welcome
 
             # Send valid message
@@ -490,9 +443,7 @@ class TestErrorHandling:
         self, client: TestClient, valid_token: str, test_manager: ConnectionManager
     ) -> None:
         """Test manager state is correct after client disconnects with error."""
-        with client.websocket_connect(
-            f"/api/v1/ws/agents/org-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/agents/org-1?token={valid_token}") as ws:
             ws.receive_json()  # welcome
             assert test_manager.get_connection_count(WSChannel.AGENTS, "org-1") == 1
 
@@ -503,6 +454,7 @@ class TestErrorHandling:
 # ---------------------------------------------------------------------------
 # Tests — Status Endpoint
 # ---------------------------------------------------------------------------
+
 
 class TestStatusEndpoint:
     """Test WebSocket status HTTP endpoint."""
@@ -524,9 +476,7 @@ class TestStatusEndpoint:
         self, client: TestClient, valid_token: str, test_manager: ConnectionManager
     ) -> None:
         """Test status endpoint shows active rooms."""
-        with client.websocket_connect(
-            f"/api/v1/ws/writing/book-1?token={valid_token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/v1/ws/writing/book-1?token={valid_token}") as ws:
             ws.receive_json()  # welcome
 
             # Check status via HTTP endpoint

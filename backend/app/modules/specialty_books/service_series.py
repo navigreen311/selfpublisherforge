@@ -110,9 +110,7 @@ async def update_series_branding(
         attempted_keys = set(branding_updates.keys())
         conflicts = locked_keys & attempted_keys
         if conflicts:
-            raise ValueError(
-                f"Branding is locked. Cannot modify: {', '.join(sorted(conflicts))}"
-            )
+            raise ValueError(f"Branding is locked. Cannot modify: {', '.join(sorted(conflicts))}")
 
     existing = dict(series.branding_config or {})
     existing.update(branding_updates)
@@ -179,11 +177,13 @@ async def check_series_coherence(
     for vol in volumes:
         title = vol.get("title", "")
         if series.name and series.name not in title:
-            issues.append({
-                "volume": vol.get("volume_number"),
-                "issue_type": "naming",
-                "description": f"Title '{title}' does not contain series name '{series.name}'",
-            })
+            issues.append(
+                {
+                    "volume": vol.get("volume_number"),
+                    "issue_type": "naming",
+                    "description": f"Title '{title}' does not contain series name '{series.name}'",
+                }
+            )
             score -= 10
 
     # Check branding consistency (if locked)
@@ -194,24 +194,28 @@ async def check_series_coherence(
             vol_meta = vol.get("metadata") or {}
             vol_branding = vol_meta.get("branding", {})
             if expected_font and vol_branding.get("title_font") != expected_font:
-                issues.append({
-                    "volume": vol.get("volume_number"),
-                    "issue_type": "cover_template",
-                    "description": (
-                        f"Title font mismatch: expected '{expected_font}', "
-                        f"found '{vol_branding.get('title_font', 'none')}'"
-                    ),
-                })
+                issues.append(
+                    {
+                        "volume": vol.get("volume_number"),
+                        "issue_type": "cover_template",
+                        "description": (
+                            f"Title font mismatch: expected '{expected_font}', "
+                            f"found '{vol_branding.get('title_font', 'none')}'"
+                        ),
+                    }
+                )
                 score -= 15
             if expected_spine and vol_branding.get("spine_layout") != expected_spine:
-                issues.append({
-                    "volume": vol.get("volume_number"),
-                    "issue_type": "spine",
-                    "description": (
-                        f"Spine layout mismatch: expected '{expected_spine}', "
-                        f"found '{vol_branding.get('spine_layout', 'none')}'"
-                    ),
-                })
+                issues.append(
+                    {
+                        "volume": vol.get("volume_number"),
+                        "issue_type": "spine",
+                        "description": (
+                            f"Spine layout mismatch: expected '{expected_spine}', "
+                            f"found '{vol_branding.get('spine_layout', 'none')}'"
+                        ),
+                    }
+                )
                 score -= 10
 
     score = max(0, min(100, score))
@@ -230,9 +234,11 @@ _BACK_MATTER_GENERATORS: dict[str, Any] = {}
 
 def _register_generator(template_type: str):
     """Decorator to register a back-matter content generator."""
+
     def decorator(func):
         _BACK_MATTER_GENERATORS[template_type] = func
         return func
+
     return decorator
 
 
@@ -341,16 +347,20 @@ async def generate_back_matter(
         db.add(record)
         await db.flush()
 
-        generated_pages.append({
-            "id": record.id,
-            "template_type": template_type,
-            "content": content,
-            "qr_code_url": qr_code_url,
-        })
+        generated_pages.append(
+            {
+                "id": record.id,
+                "template_type": template_type,
+                "content": content,
+                "qr_code_url": qr_code_url,
+            }
+        )
 
     logger.info(
         "Generated %d back-matter pages for %s/%s",
-        len(generated_pages), book_type, book_id,
+        len(generated_pages),
+        book_type,
+        book_id,
     )
     return generated_pages
 
@@ -410,24 +420,28 @@ async def create_bundle(
     combined_toc: list[dict[str, Any]] = []
     section_dividers: list[dict[str, Any]] = []
 
-    for idx, vid in enumerate(volume_ids):
+    for idx, _vid in enumerate(volume_ids):
         vol_info = (
             volume_page_counts[idx]
             if idx < len(volume_page_counts)
             else {"title": f"Volume {idx + 1}", "page_count": 0}
         )
         vol_pages = vol_info.get("page_count", 0)
-        combined_toc.append({
-            "volume_index": idx + 1,
-            "volume_title": vol_info.get("title", f"Volume {idx + 1}"),
-            "start_page": total_pages + 1,
-            "page_count": vol_pages,
-        })
+        combined_toc.append(
+            {
+                "volume_index": idx + 1,
+                "volume_title": vol_info.get("title", f"Volume {idx + 1}"),
+                "start_page": total_pages + 1,
+                "page_count": vol_pages,
+            }
+        )
         if idx > 0:
-            section_dividers.append({
-                "after_page": total_pages,
-                "title": vol_info.get("title", f"Volume {idx + 1}"),
-            })
+            section_dividers.append(
+                {
+                    "after_page": total_pages,
+                    "title": vol_info.get("title", f"Volume {idx + 1}"),
+                }
+            )
         total_pages += vol_pages
 
     # Add divider pages to total
@@ -459,7 +473,9 @@ async def create_bundle(
 
     logger.info(
         "Created bundle %s with %d volumes, %d pages",
-        bundle.id, len(volume_ids), total_pages,
+        bundle.id,
+        len(volume_ids),
+        total_pages,
     )
     return _bundle_to_dict(bundle)
 
@@ -516,14 +532,13 @@ async def manage_isbn(
     """
     if action == "add_to_pool":
         return await _isbn_add_to_pool(db, org_id, data)
-    elif action == "assign":
+    if action == "assign":
         return await _isbn_assign(db, org_id, data)
-    elif action == "generate_barcode":
+    if action == "generate_barcode":
         return _isbn_generate_barcode(data.get("isbn", ""))
-    elif action == "get_status":
+    if action == "get_status":
         return await _isbn_get_status(db, org_id, data.get("isbn", ""))
-    else:
-        raise ValueError(f"Unknown ISBN action: {action}")
+    raise ValueError(f"Unknown ISBN action: {action}")
 
 
 async def _isbn_add_to_pool(
@@ -676,11 +691,11 @@ def _isbn_generate_barcode(isbn: str) -> dict[str, Any]:
 
 # Distributor-specific check definitions
 _KDP_CHECKS: list[tuple[str, str]] = [
-    ("margins", "Interior margins meet KDP minimums (0.375\" inside, 0.25\" outside)"),
+    ("margins", 'Interior margins meet KDP minimums (0.375" inside, 0.25" outside)'),
     ("dpi", "Image resolution >= 300 DPI"),
     ("page_count", "Page count within KDP limits (24-828 pages)"),
     ("file_size", "PDF file size under 650 MB"),
-    ("bleed", "Bleed extends 0.125\" on trim edges"),
+    ("bleed", 'Bleed extends 0.125" on trim edges'),
     ("cover_dimensions", "Cover matches calculated dimensions for trim + page count"),
     ("font_embedding", "All fonts embedded in PDF"),
 ]
@@ -734,14 +749,16 @@ async def run_distributor_preflight(
         "trim_size": "8.5x11",
     }
 
-    for check_name, description in check_defs:
+    for check_name, _description in check_defs:
         passed, details = _run_single_check(check_name, book_info, distributor)
-        checks_result.append({
-            "name": check_name,
-            "passed": passed,
-            "details": details,
-            "severity": "error" if not passed else "info",
-        })
+        checks_result.append(
+            {
+                "name": check_name,
+                "passed": passed,
+                "details": details,
+                "severity": "error" if not passed else "info",
+            }
+        )
 
     all_passed = all(c["passed"] for c in checks_result)
     status = "PASSED" if all_passed else "FAILED"
@@ -777,9 +794,9 @@ async def run_distributor_preflight(
 def _get_checks_for_distributor(distributor: str) -> list[tuple[str, str]]:
     if distributor == DistributorTarget.KDP.value:
         return _KDP_CHECKS
-    elif distributor == DistributorTarget.INGRAM_SPARK.value:
+    if distributor == DistributorTarget.INGRAM_SPARK.value:
         return _INGRAM_CHECKS
-    elif distributor == DistributorTarget.BN_PRESS.value:
+    if distributor == DistributorTarget.BN_PRESS.value:
         return _BN_CHECKS
     return _KDP_CHECKS
 
@@ -796,9 +813,8 @@ def _run_single_check(
         if distributor == DistributorTarget.BN_PRESS.value:
             ok = 24 <= page_count <= 800
             return ok, f"Page count: {page_count} (B&N range: 24-800)"
-        else:
-            ok = 24 <= page_count <= 828
-            return ok, f"Page count: {page_count} (range: 24-828)"
+        ok = 24 <= page_count <= 828
+        return ok, f"Page count: {page_count} (range: 24-828)"
 
     if check_name == "dpi":
         return True, "All images >= 300 DPI (simulated check)"
@@ -807,7 +823,7 @@ def _run_single_check(
     if check_name == "file_size":
         return True, "File size within limits (simulated check)"
     if check_name == "bleed":
-        return True, "Bleed extends 0.125\" on trim edges (simulated check)"
+        return True, 'Bleed extends 0.125" on trim edges (simulated check)'
     if check_name == "cover_dimensions":
         return True, "Cover dimensions match specification (simulated check)"
     if check_name == "font_embedding":
@@ -906,19 +922,23 @@ async def process_review_feedback(
         complaint_lower = complaint.strip().lower()
         match = _find_best_complaint_match(complaint_lower)
         if match:
-            mappings.append({
-                "complaint": complaint,
-                "suggested_fix": match["suggested_fix"],
-                "automated_action": match.get("automated_action"),
-                "automated_action_available": match["automated_action_available"],
-            })
+            mappings.append(
+                {
+                    "complaint": complaint,
+                    "suggested_fix": match["suggested_fix"],
+                    "automated_action": match.get("automated_action"),
+                    "automated_action_available": match["automated_action_available"],
+                }
+            )
         else:
-            mappings.append({
-                "complaint": complaint,
-                "suggested_fix": "Manual review recommended - no automated fix available",
-                "automated_action": None,
-                "automated_action_available": False,
-            })
+            mappings.append(
+                {
+                    "complaint": complaint,
+                    "suggested_fix": "Manual review recommended - no automated fix available",
+                    "automated_action": None,
+                    "automated_action_available": False,
+                }
+            )
 
     logger.info(
         "Processed %d review complaints for %s/%s, %d matched",

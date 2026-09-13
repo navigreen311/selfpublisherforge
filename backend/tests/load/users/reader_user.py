@@ -8,14 +8,15 @@ ReaderUser represents 60% of traffic:
 
 Wait time: 1-3 seconds between requests
 """
+
 from __future__ import annotations
 
 import random
 
-from locust import task, between
+from locust import between, task
 
-from . import AuthenticatedUser
 from ..config import WAIT_TIMES
+from . import AuthenticatedUser
 
 wait_config = WAIT_TIMES["reader"]
 

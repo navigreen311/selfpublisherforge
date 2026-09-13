@@ -1,4 +1,5 @@
 """MarketCategory, MarketKeyword, CompetitorBook, CompetitorReview, and MarketSnapshot models."""
+
 import uuid
 from datetime import date, datetime
 
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -29,9 +31,7 @@ class MarketCategory(BaseModel):
         default=None,
         index=True,
     )
-    amazon_node_id: Mapped[str | None] = mapped_column(
-        String(50), nullable=True, default=None, unique=True, index=True
-    )
+    amazon_node_id: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None, index=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     path: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -49,6 +49,7 @@ class MarketCategory(BaseModel):
     snapshots = relationship("MarketSnapshot", back_populates="category", lazy="selectin")
 
     __table_args__ = (
+        UniqueConstraint("amazon_node_id", name="market_categories_amazon_node_id_key"),
         Index("ix_market_categories_path_gin", "path", postgresql_using="gin"),
         Index("ix_market_categories_competition_score", "competition_score"),
         Index("ix_market_categories_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
@@ -67,15 +68,9 @@ class MarketKeyword(BaseModel):
     keyword: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
     search_volume: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     competition_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
-    cpc_estimate: Mapped[float | None] = mapped_column(
-        Numeric(10, 4), nullable=True, default=None
-    )
-    trend_direction: Mapped[str | None] = mapped_column(
-        String(20), nullable=True, default=None
-    )
-    last_updated: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    cpc_estimate: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True, default=None)
+    trend_direction: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    last_updated: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     __table_args__ = (
         Index("ix_market_keywords_search_volume", "search_volume"),
@@ -88,7 +83,7 @@ class CompetitorBook(BaseModel):
     __tablename__ = "competitor_books"
 
     org_id: Mapped[uuid.UUID | None] = mapped_column(index=True, nullable=True, default=None)
-    asin: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
+    asin: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     bsr_current: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
@@ -102,11 +97,16 @@ class CompetitorBook(BaseModel):
     metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Relationships
-    reviews = relationship("CompetitorReview", back_populates="competitor_book", lazy="selectin",
-                           foreign_keys="CompetitorReview.competitor_book_id")
+    reviews = relationship(
+        "CompetitorReview",
+        back_populates="competitor_book",
+        lazy="selectin",
+        foreign_keys="CompetitorReview.competitor_book_id",
+    )
     analyses = relationship("CompetitorAnalysis", back_populates="book", lazy="selectin")
 
     __table_args__ = (
+        UniqueConstraint("asin", name="competitor_books_asin_key"),
         Index("ix_competitor_books_bsr_current", "bsr_current"),
         Index("ix_competitor_books_bsr_history_gin", "bsr_history", postgresql_using="gin"),
         Index("ix_competitor_books_category_ids_gin", "category_ids", postgresql_using="gin"),
@@ -144,9 +144,7 @@ class CompetitorReview(BaseModel):
     rating: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
     review_text: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
-    review_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
-    )
+    review_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     verified_purchase: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     helpful_votes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
@@ -154,6 +152,11 @@ class CompetitorReview(BaseModel):
 
     # Relationships
     competitor_book = relationship("CompetitorBook", back_populates="reviews")
+
+    # Columns the database has carried since the migrations that created
+    # them; they were never declared here, so every read of one was invisible
+    # to the type checker and to `alembic check`.
+    date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     __table_args__ = (
         Index("ix_competitor_reviews_rating", "rating"),

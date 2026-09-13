@@ -3,6 +3,7 @@
 Handles saving extracted Amazon data, serving quick research data,
 and saving clips to the Knowledge Vault.
 """
+
 from __future__ import annotations
 
 import json
@@ -142,12 +143,9 @@ async def get_quick_research(
 
         # --- Competitor tracking data (CompetitorBook) -----------------
         try:
-            comp_stmt = (
-                select(CompetitorBook)
-                .where(
-                    CompetitorBook.asin == query.asin,
-                    CompetitorBook.deleted_at.is_(None),
-                )
+            comp_stmt = select(CompetitorBook).where(
+                CompetitorBook.asin == query.asin,
+                CompetitorBook.deleted_at.is_(None),
             )
             comp_result = await db.execute(comp_stmt)
             competitor = comp_result.scalar_one_or_none()
@@ -158,9 +156,7 @@ async def get_quick_research(
                     response.title = competitor.title
                 if response.current_bsr is None and competitor.bsr_current is not None:
                     response.current_bsr = competitor.bsr_current
-                    response.estimated_daily_sales = _estimate_daily_sales(
-                        competitor.bsr_current
-                    )
+                    response.estimated_daily_sales = _estimate_daily_sales(competitor.bsr_current)
 
                 # Merge richer BSR history from competitor tracking
                 if isinstance(competitor.bsr_history, list) and competitor.bsr_history:
@@ -170,16 +166,12 @@ async def get_quick_research(
                         if pt.get("bsr") is not None
                     ]
                     # Combine with extraction history, de-duplicate by date
-                    existing_dates = {
-                        entry.get("date") for entry in response.bsr_history
-                    }
+                    existing_dates = {entry.get("date") for entry in response.bsr_history}
                     for entry in tracked_history:
                         if entry.get("date") not in existing_dates:
                             response.bsr_history.append(entry)
                     # Sort chronologically
-                    response.bsr_history.sort(
-                        key=lambda e: e.get("date") or ""
-                    )
+                    response.bsr_history.sort(key=lambda e: e.get("date") or "")
         except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError):
             logger.warning(
                 "Failed to fetch CompetitorBook data for ASIN %s",
@@ -215,13 +207,13 @@ def _estimate_daily_sales(bsr: int) -> int:
     if bsr <= 0:
         return 0
     if bsr <= 100:
-        return max(1, int(500 / (bsr ** 0.5)))
+        return max(1, int(500 / (bsr**0.5)))
     if bsr <= 1_000:
-        return max(1, int(200 / (bsr ** 0.4)))
+        return max(1, int(200 / (bsr**0.4)))
     if bsr <= 10_000:
-        return max(1, int(100 / (bsr ** 0.35)))
+        return max(1, int(100 / (bsr**0.35)))
     if bsr <= 100_000:
-        return max(1, int(50 / (bsr ** 0.3)))
+        return max(1, int(50 / (bsr**0.3)))
     return 1
 
 
@@ -361,9 +353,7 @@ async def _compute_niche_stats(
             total_competing_titles=competitor_count,
             avg_review_count=float(avg_reviews) if avg_reviews else 0.0,
             avg_rating=avg_rating,
-            top_10_avg_reviews=(
-                _stats.mean(top_10_reviews) if top_10_reviews else 0.0
-            ),
+            top_10_avg_reviews=(_stats.mean(top_10_reviews) if top_10_reviews else 0.0),
             avg_price=float(avg_price) if avg_price else 0.0,
         )
 
@@ -375,13 +365,9 @@ async def _compute_niche_stats(
     # --- Related keywords ---------------------------------------------
     related_keywords: list[RelatedKeyword] = []
     try:
-        related_keywords = await _generate_related_keywords(
-            db, org_id, keywords
-        )
+        related_keywords = await _generate_related_keywords(db, org_id, keywords)
         # Augment with MarketKeyword data for volume accuracy
-        related_keywords = await _enrich_keywords_from_market_data(
-            db, related_keywords
-        )
+        related_keywords = await _enrich_keywords_from_market_data(db, related_keywords)
     except (SQLAlchemyError, OperationalError, ValueError, TypeError, KeyError):
         logger.warning("Failed to generate related keywords", exc_info=True)
 
@@ -561,8 +547,7 @@ async def _generate_related_keywords_via_llm(
 
     except (ImportError, json.JSONDecodeError, KeyError, ValueError, OSError, RuntimeError) as exc:
         logger.debug(
-            "LLM-based keyword generation unavailable (%s: %s), falling back to "
-            "local analysis",
+            "LLM-based keyword generation unavailable (%s: %s), falling back to " "local analysis",
             type(exc).__name__,
             exc,
             exc_info=True,
@@ -662,9 +647,7 @@ async def _generate_related_keywords(
     llm_keywords = await _generate_related_keywords_via_llm(keywords)
 
     # Always run local analysis for data-backed suggestions
-    corpus_keywords = await _generate_related_keywords_from_corpus(
-        db, org_id, keywords
-    )
+    corpus_keywords = await _generate_related_keywords_from_corpus(db, org_id, keywords)
 
     # Merge: LLM results first, then corpus results (de-duplicated)
     seen: set[str] = set()

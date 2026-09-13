@@ -1,4 +1,5 @@
 """Celery Beat schedule — periodic task definitions."""
+
 from celery.schedules import crontab, schedule
 
 # ---------------------------------------------------------------------------

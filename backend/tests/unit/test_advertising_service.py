@@ -9,9 +9,10 @@ All tests use mocked AsyncSession -- no real DB.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,19 +27,18 @@ from app.modules.advertising.schemas import (
     CampaignUpdate,
     CreativeGenerateRequest,
     FacebookCampaignCreate,
-    FacebookCampaignObjective,
     FacebookCampaignStatus,
-    FacebookCampaignUpdate,
+    FacebookObjective,
     KeywordBidBulkUpdate,
     OptimizationRequest,
     PerformanceQuery,
 )
 from app.modules.advertising.service import AdvertisingService
 
-
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id():
@@ -57,11 +57,23 @@ def campaign_id():
 
 @pytest.fixture
 def mock_db():
-    """Return an AsyncMock simulating an AsyncSession."""
+    """Return an AsyncMock simulating an AsyncSession.
+
+    `refresh` fills in the server-side defaults a real flush would populate —
+    without it the service hands Pydantic a model whose id and timestamps are
+    still None.
+    """
+
+    async def _refresh(obj, *_args, **_kwargs):
+        now = datetime.now(UTC)
+        for attr, value in (("id", uuid.uuid4()), ("created_at", now), ("updated_at", now)):
+            if getattr(obj, attr, None) is None:
+                setattr(obj, attr, value)
+
     db = AsyncMock()
     db.add = MagicMock()
     db.flush = AsyncMock()
-    db.refresh = AsyncMock()
+    db.refresh = AsyncMock(side_effect=_refresh)
     db.execute = AsyncMock()
     return db
 
@@ -72,8 +84,9 @@ def service(mock_db):
     return AdvertisingService(mock_db)
 
 
-def _make_campaign(**overrides):
-    """Factory helper to create a Campaign mock."""
+def _make_campaign(**overrides) -> SimpleNamespace:
+    """A campaign row carrying every field CampaignResponse reads."""
+    now = datetime.now(UTC)
     defaults = {
         "id": uuid.uuid4(),
         "org_id": uuid.uuid4(),
@@ -86,19 +99,91 @@ def _make_campaign(**overrides):
         "total_budget": Decimal("500.00"),
         "bid_strategy": BidStrategy.MANUAL.value,
         "target_acos": Decimal("25.00"),
-        "created_at": datetime.now(UTC),
+        "start_date": None,
+        "end_date": None,
+        "targeting_keywords": [],
+        "negative_keywords": [],
+        "external_campaign_id": None,
+        "created_at": now,
+        "updated_at": now,
         "deleted_at": None,
     }
     defaults.update(overrides)
-    campaign = MagicMock()
-    for k, v in defaults.items():
-        setattr(campaign, k, v)
-    return campaign
+    return SimpleNamespace(**defaults)
+
+
+def _make_performance(**overrides) -> SimpleNamespace:
+    """A performance row carrying every field AdPerformance reads."""
+    defaults = {
+        "id": uuid.uuid4(),
+        "campaign_id": uuid.uuid4(),
+        "date": datetime(2025, 1, 1).date(),
+        "impressions": 1000,
+        "clicks": 50,
+        "spend": Decimal("25.00"),
+        "sales": Decimal("100.00"),
+        "orders": 5,
+        "acos": Decimal("25.00"),
+        "roas": Decimal("4.00"),
+        "ctr": Decimal("5.00"),
+        "cpc": Decimal("0.50"),
+        "conversion_rate": Decimal("10.00"),
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
+
+
+def _make_keyword_bid(**overrides) -> SimpleNamespace:
+    """A keyword-bid row carrying every field KeywordBidResponse reads."""
+    now = datetime.now(UTC)
+    defaults = {
+        "id": uuid.uuid4(),
+        "campaign_id": uuid.uuid4(),
+        "keyword": "thriller",
+        "match_type": "exact",
+        "bid_amount": Decimal("0.75"),
+        "is_negative": False,
+        "is_active": True,
+        "impressions": 0,
+        "clicks": 0,
+        "spend": Decimal("0.00"),
+        "sales": Decimal("0.00"),
+        "acos": Decimal("0.00"),
+        "created_at": now,
+        "updated_at": now,
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
+
+
+def _make_creative(**overrides) -> SimpleNamespace:
+    """A creative row carrying every field AdCreativeResponse reads."""
+    now = datetime.now(UTC)
+    defaults = {
+        "id": uuid.uuid4(),
+        "org_id": uuid.uuid4(),
+        "campaign_id": None,
+        "book_id": None,
+        "headline": "A Gripping Thriller",
+        "body_text": "You will not put it down.",
+        "call_to_action": "Read now",
+        "image_url": None,
+        "status": "draft",
+        "impressions": 0,
+        "clicks": 0,
+        "ctr": Decimal("0.00"),
+        "conversions": 0,
+        "created_at": now,
+        "updated_at": now,
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
 
 
 # ===========================================================================
 # Tests: list_campaigns
 # ===========================================================================
+
 
 class TestListCampaigns:
     """Tests for AdvertisingService.list_campaigns."""
@@ -160,6 +245,7 @@ class TestListCampaigns:
 # Tests: get_campaign
 # ===========================================================================
 
+
 class TestGetCampaign:
     """Tests for AdvertisingService.get_campaign."""
 
@@ -207,6 +293,7 @@ class TestGetCampaign:
 # Tests: create_campaign
 # ===========================================================================
 
+
 class TestCreateCampaign:
     """Tests for AdvertisingService.create_campaign."""
 
@@ -238,6 +325,7 @@ class TestCreateCampaign:
 # ===========================================================================
 # Tests: update_campaign
 # ===========================================================================
+
 
 class TestUpdateCampaign:
     """Tests for AdvertisingService.update_campaign."""
@@ -271,6 +359,7 @@ class TestUpdateCampaign:
 # Tests: get_campaign_performance
 # ===========================================================================
 
+
 class TestGetCampaignPerformance:
     """Tests for AdvertisingService.get_campaign_performance."""
 
@@ -287,8 +376,8 @@ class TestGetCampaignPerformance:
         campaign_result.scalar_one_or_none.return_value = campaign_id
 
         # Mock performance records
-        perf1 = MagicMock(date=datetime(2025, 1, 1).date(), impressions=1000, clicks=50)
-        perf2 = MagicMock(date=datetime(2025, 1, 2).date(), impressions=1200, clicks=60)
+        perf1 = _make_performance(date=datetime(2025, 1, 1).date(), impressions=1000, clicks=50)
+        perf2 = _make_performance(date=datetime(2025, 1, 2).date(), impressions=1200, clicks=60)
 
         perf_result = MagicMock()
         perf_result.scalars.return_value.all.return_value = [perf1, perf2]
@@ -309,6 +398,7 @@ class TestGetCampaignPerformance:
 # Tests: Keyword Bids
 # ===========================================================================
 
+
 class TestKeywordBids:
     """Tests for keyword bid management."""
 
@@ -325,8 +415,8 @@ class TestKeywordBids:
         campaign_result.scalar_one_or_none.return_value = campaign_id
 
         # Mock keyword bids
-        bid1 = MagicMock(keyword="thriller", bid_amount=Decimal("0.75"))
-        bid2 = MagicMock(keyword="suspense", bid_amount=Decimal("0.85"))
+        bid1 = _make_keyword_bid(keyword="thriller", bid_amount=Decimal("0.75"))
+        bid2 = _make_keyword_bid(keyword="suspense", bid_amount=Decimal("0.85"))
 
         bids_result = MagicMock()
         bids_result.scalars.return_value.all.return_value = [bid1, bid2]
@@ -345,7 +435,7 @@ class TestKeywordBids:
     ):
         """update_keyword_bids should bulk update keyword bid amounts."""
         bid_id = uuid.uuid4()
-        bid = MagicMock(id=bid_id, bid_amount=Decimal("0.75"))
+        bid = _make_keyword_bid(id=bid_id, bid_amount=Decimal("0.75"))
 
         bid_result = MagicMock()
         bid_result.scalar_one_or_none.return_value = bid
@@ -367,6 +457,7 @@ class TestKeywordBids:
 # Tests: Ad Creatives
 # ===========================================================================
 
+
 class TestAdCreatives:
     """Tests for ad creative generation and listing."""
 
@@ -377,8 +468,8 @@ class TestAdCreatives:
         org_id,
     ):
         """list_creatives should return ad creatives for an org."""
-        creative1 = MagicMock(id=uuid.uuid4(), headline="Creative 1")
-        creative2 = MagicMock(id=uuid.uuid4(), headline="Creative 2")
+        creative1 = _make_creative(headline="Creative 1")
+        creative2 = _make_creative(headline="Creative 2")
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [creative1, creative2]
@@ -389,15 +480,15 @@ class TestAdCreatives:
         assert len(result) == 2
 
     @pytest.mark.asyncio
-    @patch.object(AdvertisingService, "creative_generator")
     async def test_generate_creatives(
         self,
-        mock_creative_generator,
         service,
         org_id,
         book_id,
     ):
         """generate_creatives should generate and save ad creatives."""
+        mock_creative_generator = MagicMock()
+        service.creative_generator = mock_creative_generator
         mock_creative_generator.generate_creatives = AsyncMock(
             return_value=MagicMock(
                 variations=[
@@ -412,6 +503,8 @@ class TestAdCreatives:
 
         request = CreativeGenerateRequest(
             book_id=book_id,
+            book_title="Night Terminal",
+            book_description="A thriller about a stranded traveller.",
             platform=AdPlatform.AMAZON,
             num_variations=1,
         )
@@ -426,19 +519,20 @@ class TestAdCreatives:
 # Tests: Optimization
 # ===========================================================================
 
+
 class TestOptimization:
     """Tests for campaign optimization."""
 
     @pytest.mark.asyncio
-    @patch.object(AdvertisingService, "optimizer")
     async def test_optimize_campaign(
         self,
-        mock_optimizer,
         service,
         org_id,
         campaign_id,
     ):
         """optimize_campaign should generate optimization suggestions."""
+        mock_optimizer = MagicMock()
+        service.optimizer = mock_optimizer
         campaign = _make_campaign(id=campaign_id)
 
         campaign_result = MagicMock()
@@ -454,9 +548,16 @@ class TestOptimization:
 
         service.db.execute.side_effect = [campaign_result, kw_result, perf_result]
 
-        mock_optimizer.optimize_campaign.return_value = MagicMock(
-            recommendations=["Increase bids on high-performing keywords"],
-            estimated_improvement=Decimal("15.00"),
+        mock_optimizer.optimize_campaign.return_value = SimpleNamespace(
+            campaign_id=campaign_id,
+            campaign_name="Test Campaign",
+            current_acos=Decimal("30.00"),
+            target_acos=Decimal("20.00"),
+            bid_adjustments=[],
+            keywords_to_add=["thriller"],
+            keywords_to_negate=[],
+            budget_recommendation="Hold budget steady",
+            summary="Increase bids on high-performing keywords",
         )
 
         request = OptimizationRequest(
@@ -466,12 +567,13 @@ class TestOptimization:
 
         result = await service.optimize_campaign(org_id, campaign_id, request)
 
-        assert len(result.recommendations) > 0
+        assert result.summary
 
 
 # ===========================================================================
 # Tests: Dashboard
 # ===========================================================================
+
 
 class TestGetDashboard:
     """Tests for AdvertisingService.get_dashboard."""
@@ -525,18 +627,19 @@ class TestGetDashboard:
 # Tests: Facebook Ads
 # ===========================================================================
 
+
 class TestFacebookAds:
     """Tests for Facebook Ads integration."""
 
     @pytest.mark.asyncio
-    @patch.object(AdvertisingService, "facebook_client")
     async def test_facebook_create_campaign(
         self,
-        mock_facebook_client,
         service,
         org_id,
     ):
         """facebook_create_campaign should create Facebook campaign via API."""
+        mock_facebook_client = MagicMock()
+        service.facebook_client = mock_facebook_client
         mock_facebook_client.create_campaign = AsyncMock(
             return_value={
                 "external_campaign_id": "fb123",
@@ -547,7 +650,7 @@ class TestFacebookAds:
 
         data = FacebookCampaignCreate(
             name="FB Campaign",
-            objective=FacebookCampaignObjective.CONVERSIONS,
+            objective=FacebookObjective.OUTCOME_SALES,
             daily_budget=Decimal("50.00"),
             status=FacebookCampaignStatus.ACTIVE,
         )

@@ -28,7 +28,6 @@ from app.modules.specialty_books.service_childrens_ai import (
     ContinuityCheckResponse,
     StoryGenerateRequest,
     StoryGenerateResponse,
-    StoryMode,
     TextAnalysisResponse,
     TranslateRequest,
     TranslateResponse,
@@ -54,14 +53,14 @@ router = APIRouter(
 
 class AnalyzeTextRequest(BaseModel):
     """Request body for text analysis endpoint."""
-    pages_text: list[str] = Field(
-        default_factory=list, description="List of page texts"
-    )
+
+    pages_text: list[str] = Field(default_factory=list, description="List of page texts")
     age_band: AgeBand = AgeBand.PICTURE
 
 
 class ContinuityCheckRequest(BaseModel):
     """Request body for continuity check endpoint."""
+
     character_sheets: list[CharacterSheet] = Field(default_factory=list)
     illustration_prompts: list[dict[str, str]] = Field(
         default_factory=list,
@@ -71,6 +70,7 @@ class ContinuityCheckRequest(BaseModel):
 
 class AutoFixRequest(BaseModel):
     """Request body for auto-fix prompts endpoint."""
+
     character_sheets: list[CharacterSheet] = Field(default_factory=list)
     illustration_prompts: list[dict[str, str]] = Field(
         default_factory=list,
@@ -80,6 +80,7 @@ class AutoFixRequest(BaseModel):
 
 class TranslateBookRequest(BaseModel):
     """Request body for translation endpoint."""
+
     target_language: str = Field(..., min_length=2, max_length=50)
     layout_mode: BilingualLayout = BilingualLayout.SIDE_BY_SIDE
     pages_text: list[str] = Field(default_factory=list)
@@ -110,7 +111,7 @@ async def generate_story_endpoint(
     illustration prompts plus character description sheets.
     """
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await generate_story(db, book_id, org_id, request)
     except AppException:
         raise
@@ -119,7 +120,7 @@ async def generate_story_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Story generation failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -136,7 +137,7 @@ async def analyze_text_endpoint(
 ) -> TextAnalysisResponse:
     """Analyze text for reading level, pacing, rhythm, and hook strength."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await analyze_text(
             db,
             book_id,
@@ -151,7 +152,7 @@ async def analyze_text_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Text analysis failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -168,7 +169,7 @@ async def continuity_check_endpoint(
 ) -> ContinuityCheckResponse:
     """Analyze illustration prompts for character consistency issues."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await check_continuity(
             db,
             book_id,
@@ -183,7 +184,7 @@ async def continuity_check_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Continuity check failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -200,7 +201,7 @@ async def auto_fix_prompts_endpoint(
 ) -> AutoFixResponse:
     """Batch-update all illustration prompts to match character rules."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         return await auto_fix_prompts(
             db,
             book_id,
@@ -215,7 +216,7 @@ async def auto_fix_prompts_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Auto-fix prompts failed: {e}",
-        )
+        ) from e
 
 
 @router.post(
@@ -232,7 +233,7 @@ async def translate_book_endpoint(
 ) -> TranslateResponse:
     """AI translation with cultural adaptation and reading-level validation."""
     try:
-        org_id = current_user.get("org_id")
+        org_id = current_user["org_id"]
         translate_req = TranslateRequest(
             target_language=request.target_language,
             layout_mode=request.layout_mode,
@@ -253,4 +254,4 @@ async def translate_book_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Translation failed: {e}",
-        )
+        ) from e

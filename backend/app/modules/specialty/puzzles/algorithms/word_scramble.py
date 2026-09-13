@@ -23,10 +23,10 @@ from .utils import (
     svg_text,
 )
 
-
 # ---------------------------------------------------------------------------
 # Core algorithm
 # ---------------------------------------------------------------------------
+
 
 def _sanitize_word(word: str) -> str:
     """Strip and upper-case a word, keeping only alpha characters."""
@@ -84,10 +84,7 @@ def _calculate_letter_pattern_complexity(word: str) -> float:
     uniqueness = unique / length
 
     # Balance ratio: perfectly balanced vowels/consonants → harder to decode
-    if length > 0:
-        balance = 1.0 - abs(vowels - consonants) / length
-    else:
-        balance = 0.0
+    balance = 1.0 - abs(vowels - consonants) / length if length > 0 else 0.0
 
     # Repetition penalty: many repeats → easier
     repeat_penalty = 1.0 - (length - unique) / max(length, 1)
@@ -95,8 +92,7 @@ def _calculate_letter_pattern_complexity(word: str) -> float:
     return round((uniqueness * 0.4 + balance * 0.3 + repeat_penalty * 0.3), 4)
 
 
-def calculate_difficulty(avg_word_length: float,
-                         letter_pattern_complexity: float) -> float:
+def calculate_difficulty(avg_word_length: float, letter_pattern_complexity: float) -> float:
     """
     Calculate a difficulty score from 0 to 100.
 
@@ -117,8 +113,8 @@ def calculate_difficulty(avg_word_length: float,
 # Public API
 # ---------------------------------------------------------------------------
 
-def generate_word_scramble(words: list[str],
-                           hint_mode: str = "first_letter") -> dict[str, Any]:
+
+def generate_word_scramble(words: list[str], hint_mode: str = "first_letter") -> dict[str, Any]:
     """
     Generate a word scramble puzzle.
 
@@ -162,11 +158,13 @@ def generate_word_scramble(words: list[str],
         if hint_mode == "none":
             hint = ""
 
-        scrambles.append({
-            "original": clean,
-            "scrambled": scrambled,
-            "hint": hint,
-        })
+        scrambles.append(
+            {
+                "original": clean,
+                "scrambled": scrambled,
+                "hint": hint,
+            }
+        )
 
     if not scrambles:
         raise ValueError("No valid words to scramble (all too short).")
@@ -190,21 +188,18 @@ def generate_word_scramble(words: list[str],
 # SVG rendering
 # ---------------------------------------------------------------------------
 
-def render_word_scramble_svg(scrambles: list[dict[str, str]],
-                             line_height: int = 60,
-                             padding: int = 30) -> str:
+
+def render_word_scramble_svg(scrambles: list[dict[str, str]], line_height: int = 60, padding: int = 30) -> str:
     """Render scrambled words with blank answer lines to SVG."""
     width = 500
     height = padding * 2 + len(scrambles) * line_height + 20
     parts: list[str] = [svg_header(width, height)]
-    parts.append(
-        svg_rect(0, 0, width, height, fill="white", stroke="none")
-    )
+    parts.append(svg_rect(0, 0, width, height, fill="white", stroke="none"))
 
     # Title
-    parts.append(svg_text(width // 2, padding, "Word Scramble",
-                          font_size=22, font_weight="bold",
-                          font_family="sans-serif"))
+    parts.append(
+        svg_text(width // 2, padding, "Word Scramble", font_size=22, font_weight="bold", font_family="sans-serif")
+    )
 
     y = padding + 40
     for idx, entry in enumerate(scrambles, 1):
@@ -213,9 +208,9 @@ def render_word_scramble_svg(scrambles: list[dict[str, str]],
 
         # Number + scrambled word
         label = f"{idx}. {scrambled}"
-        parts.append(svg_text(padding, y, label, font_size=18,
-                              anchor="start", font_family="monospace",
-                              font_weight="bold"))
+        parts.append(
+            svg_text(padding, y, label, font_size=18, anchor="start", font_family="monospace", font_weight="bold")
+        )
 
         # Answer blank line
         blank_x = padding + 30
@@ -229,10 +224,17 @@ def render_word_scramble_svg(scrambles: list[dict[str, str]],
 
         # Hint (small text)
         if hint:
-            parts.append(svg_text(blank_x + line_len + 10, blank_y - 4,
-                                  f"({hint})", font_size=11,
-                                  anchor="start", font_family="sans-serif",
-                                  fill="gray"))
+            parts.append(
+                svg_text(
+                    blank_x + line_len + 10,
+                    blank_y - 4,
+                    f"({hint})",
+                    font_size=11,
+                    anchor="start",
+                    font_family="sans-serif",
+                    fill="gray",
+                )
+            )
 
         y += line_height
 

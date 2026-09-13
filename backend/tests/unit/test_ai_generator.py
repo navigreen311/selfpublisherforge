@@ -2,28 +2,27 @@
 
 import json
 import uuid
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app.modules.ai_writing.generator import (
+    _run_quality_checks,
     build_messages,
-    resolve_model,
     generate_stream,
     generate_sync,
-    _run_quality_checks,
+    resolve_model,
 )
+from app.modules.ai_writing.prompts import PROMPT_REGISTRY, get_prompt
 from app.modules.ai_writing.schemas import (
     GenerateRequest,
     GenerationType,
-    ModelPreference,
 )
-from app.modules.ai_writing.prompts import get_prompt, PROMPT_REGISTRY
-
 
 # ---------------------------------------------------------------------------
 # Prompt construction
 # ---------------------------------------------------------------------------
+
 
 class TestBuildMessages:
     def _make_request(self, gen_type: str = "chapter", **overrides) -> GenerateRequest:
@@ -59,9 +58,7 @@ class TestBuildMessages:
     def test_all_generation_types_have_prompts(self):
         """Every GenerationType should have a registered prompt builder."""
         for gen_type in GenerationType:
-            assert gen_type.value in PROMPT_REGISTRY, (
-                f"Missing prompt for generation type: {gen_type.value}"
-            )
+            assert gen_type.value in PROMPT_REGISTRY, f"Missing prompt for generation type: {gen_type.value}"
 
 
 class TestGetPrompt:
@@ -100,6 +97,7 @@ class TestGetPrompt:
 # Model resolution
 # ---------------------------------------------------------------------------
 
+
 class TestResolveModel:
     def test_auto_returns_default(self):
         model = resolve_model("auto")
@@ -126,11 +124,9 @@ class TestResolveModel:
 # Quality checks
 # ---------------------------------------------------------------------------
 
+
 class TestQualityChecks:
-    SAMPLE_TEXT = (
-        "The quick brown fox jumps over the lazy dog. "
-        "Simple sentences are easy to read."
-    )
+    SAMPLE_TEXT = "The quick brown fox jumps over the lazy dog. " "Simple sentences are easy to read."
 
     def test_readability_check(self):
         results = _run_quality_checks(self.SAMPLE_TEXT, ["readability"])
@@ -153,15 +149,14 @@ class TestQualityChecks:
         assert results == {}
 
     def test_multiple_checks(self):
-        results = _run_quality_checks(
-            self.SAMPLE_TEXT, ["readability", "word_count", "grammar"]
-        )
+        results = _run_quality_checks(self.SAMPLE_TEXT, ["readability", "word_count", "grammar"])
         assert len(results) == 3
 
 
 # ---------------------------------------------------------------------------
 # Streaming (mocked LLM)
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateStream:
     def _make_request(self, **overrides) -> GenerateRequest:
@@ -242,6 +237,7 @@ class TestGenerateStream:
 # ---------------------------------------------------------------------------
 # Sync generation (mocked LLM)
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateSync:
     @pytest.mark.asyncio

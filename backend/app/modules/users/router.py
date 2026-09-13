@@ -33,6 +33,7 @@ router = APIRouter(tags=["users"])
 
 # ─── User Profile ────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/users/me",
     response_model=UserProfile,
@@ -59,9 +60,7 @@ async def update_current_user_profile(
     db: AsyncSession = Depends(get_db),
 ):
     """Update the authenticated user's profile."""
-    return await UserService.update_user_profile(
-        db, current_user["user_id"], body.model_dump(exclude_unset=True)
-    )
+    return await UserService.update_user_profile(db, current_user["user_id"], body.model_dump(exclude_unset=True))
 
 
 @router.patch(
@@ -76,12 +75,11 @@ async def update_user_preferences(
     db: AsyncSession = Depends(get_db),
 ):
     """Merge-update user preferences (JSONB)."""
-    return await UserService.update_preferences(
-        db, current_user["user_id"], body.preferences
-    )
+    return await UserService.update_preferences(db, current_user["user_id"], body.preferences)
 
 
 # ─── Sessions ────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/users/me/sessions",
@@ -115,6 +113,7 @@ async def revoke_session(
 
 # ─── Organization ────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/orgs/{org_id}",
     response_model=OrgDetails,
@@ -145,9 +144,7 @@ async def update_org(
 ):
     """Update organization settings (owner/admin only)."""
     _assert_org_access(current_user, org_id)
-    return await UserService.update_org(
-        db, org_id, body.model_dump(exclude_unset=True), current_user
-    )
+    return await UserService.update_org(db, org_id, body.model_dump(exclude_unset=True), current_user)
 
 
 @router.get(
@@ -181,9 +178,7 @@ async def invite_member(
 ):
     """Invite a new user to the organization."""
     _assert_org_access(current_user, org_id)
-    return await UserService.invite_member(
-        db, org_id, body.email, body.role.value, current_user
-    )
+    return await UserService.invite_member(db, org_id, body.email, body.role.value, current_user)
 
 
 @router.patch(
@@ -201,9 +196,7 @@ async def change_member_role(
 ):
     """Change a member's role (owner only)."""
     _assert_org_access(current_user, org_id)
-    await UserService.change_member_role(
-        db, org_id, user_id, body.role.value, current_user
-    )
+    await UserService.change_member_role(db, org_id, user_id, body.role.value, current_user)
     return MessageResponse(message="Role updated successfully")
 
 
@@ -227,6 +220,7 @@ async def remove_member(
 
 # ─── API Keys ────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/orgs/{org_id}/api-keys",
     response_model=ApiKeyCreatedResponse,
@@ -242,9 +236,7 @@ async def create_api_key(
 ):
     """Create a new API key for the organization."""
     _assert_org_access(current_user, org_id)
-    return await UserService.create_api_key(
-        db, org_id, body.model_dump(), current_user
-    )
+    return await UserService.create_api_key(db, org_id, body.model_dump(), current_user)
 
 
 @router.get(
@@ -282,6 +274,7 @@ async def revoke_api_key(
 
 
 # ─── Internal helpers ─────────────────────────────────────────────────────────
+
 
 def _assert_org_access(current_user: dict, org_id: UUID) -> None:
     """Ensure the current user belongs to the requested organization."""

@@ -1,13 +1,17 @@
 """Service layer for Puzzle Books CRUD, word lists, QA, and export."""
+
 from __future__ import annotations
+
 import random
 import re
 import uuid
+from datetime import UTC
 from typing import Any
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.modules.specialty_books.models_puzzle import Puzzle, PuzzleBook
 
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.specialty_books.models_puzzle import Puzzle, PuzzleBook
 
 # ---------------------------------------------------------------------------
 # 8 puzzle book templates
@@ -74,13 +78,40 @@ PUZZLE_BOOK_TEMPLATES: dict[str, dict[str, Any]] = {
 # Word-list sanitization data
 # ---------------------------------------------------------------------------
 _OFFENSIVE_WORDS: set[str] = {
-    "damn", "hell", "crap", "ass", "bastard", "idiot", "stupid",
-    "moron", "dumb", "hate", "kill", "die", "dead", "ugly",
+    "damn",
+    "hell",
+    "crap",
+    "ass",
+    "bastard",
+    "idiot",
+    "stupid",
+    "moron",
+    "dumb",
+    "hate",
+    "kill",
+    "die",
+    "dead",
+    "ugly",
 }
 _TRADEMARK_WORDS: set[str] = {
-    "google", "apple", "microsoft", "amazon", "facebook", "disney",
-    "nike", "coca-cola", "pepsi", "starbucks", "mcdonalds", "netflix",
-    "twitter", "instagram", "tiktok", "youtube", "xbox", "playstation",
+    "google",
+    "apple",
+    "microsoft",
+    "amazon",
+    "facebook",
+    "disney",
+    "nike",
+    "coca-cola",
+    "pepsi",
+    "starbucks",
+    "mcdonalds",
+    "netflix",
+    "twitter",
+    "instagram",
+    "tiktok",
+    "youtube",
+    "xbox",
+    "playstation",
 }
 _MIN_WORD_LENGTH = 3
 _MAX_WORD_LENGTH = 15
@@ -91,10 +122,19 @@ _VALID_CHARS = re.compile(r"^[a-zA-Z]+$")
 # Book CRUD
 # ---------------------------------------------------------------------------
 async def list_puzzle_books(
-    db: AsyncSession, org_id: uuid.UUID, *, skip: int = 0, limit: int = 50,
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    *,
+    skip: int = 0,
+    limit: int = 50,
 ) -> tuple[list[PuzzleBook], int]:
-    count_q = select(func.count()).select_from(PuzzleBook).where(
-        PuzzleBook.org_id == org_id, PuzzleBook.deleted_at.is_(None),
+    count_q = (
+        select(func.count())
+        .select_from(PuzzleBook)
+        .where(
+            PuzzleBook.org_id == org_id,
+            PuzzleBook.deleted_at.is_(None),
+        )
     )
     total = (await db.execute(count_q)).scalar() or 0
     q = (
@@ -109,7 +149,9 @@ async def list_puzzle_books(
 
 
 async def create_puzzle_book(
-    db: AsyncSession, org_id: uuid.UUID, data: dict[str, Any],
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    data: dict[str, Any],
 ) -> PuzzleBook:
     template_name = data.pop("template", None)
     if template_name and template_name in PUZZLE_BOOK_TEMPLATES:
@@ -124,7 +166,9 @@ async def create_puzzle_book(
 
 
 async def get_puzzle_book(
-    db: AsyncSession, org_id: uuid.UUID, book_id: uuid.UUID,
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    book_id: uuid.UUID,
 ) -> PuzzleBook | None:
     q = select(PuzzleBook).where(
         PuzzleBook.id == book_id,
@@ -135,7 +179,9 @@ async def get_puzzle_book(
 
 
 async def update_puzzle_book(
-    db: AsyncSession, book: PuzzleBook, data: dict[str, Any],
+    db: AsyncSession,
+    book: PuzzleBook,
+    data: dict[str, Any],
 ) -> PuzzleBook:
     for k, v in data.items():
         if v is not None:
@@ -146,8 +192,9 @@ async def update_puzzle_book(
 
 
 async def delete_puzzle_book(db: AsyncSession, book: PuzzleBook) -> None:
-    from datetime import datetime, timezone
-    book.deleted_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    book.deleted_at = datetime.now(UTC)
     await db.flush()
 
 
@@ -155,18 +202,18 @@ async def delete_puzzle_book(db: AsyncSession, book: PuzzleBook) -> None:
 # Puzzle CRUD
 # ---------------------------------------------------------------------------
 async def list_puzzles(
-    db: AsyncSession, book_id: uuid.UUID,
+    db: AsyncSession,
+    book_id: uuid.UUID,
 ) -> list[Puzzle]:
-    q = (
-        select(Puzzle)
-        .where(Puzzle.book_id == book_id, Puzzle.deleted_at.is_(None))
-        .order_by(Puzzle.puzzle_number)
-    )
+    q = select(Puzzle).where(Puzzle.book_id == book_id, Puzzle.deleted_at.is_(None)).order_by(Puzzle.puzzle_number)
     return list((await db.execute(q)).scalars().all())
 
 
 async def create_puzzle(
-    db: AsyncSession, org_id: uuid.UUID, book_id: uuid.UUID, data: dict[str, Any],
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    book_id: uuid.UUID,
+    data: dict[str, Any],
 ) -> Puzzle:
     puzzle_type = data.get("puzzle_type", "word_search")
     generated = _generate_puzzle_data(puzzle_type, data)
@@ -178,7 +225,8 @@ async def create_puzzle(
 
 
 async def regenerate_puzzle(
-    db: AsyncSession, puzzle: Puzzle,
+    db: AsyncSession,
+    puzzle: Puzzle,
 ) -> Puzzle:
     generated = _generate_puzzle_data(puzzle.puzzle_type, {})
     for k, v in generated.items():
@@ -189,7 +237,9 @@ async def regenerate_puzzle(
 
 
 async def update_puzzle(
-    db: AsyncSession, puzzle: Puzzle, data: dict[str, Any],
+    db: AsyncSession,
+    puzzle: Puzzle,
+    data: dict[str, Any],
 ) -> Puzzle:
     for k, v in data.items():
         if v is not None:
@@ -200,13 +250,15 @@ async def update_puzzle(
 
 
 async def delete_puzzle(db: AsyncSession, puzzle: Puzzle) -> None:
-    from datetime import datetime, timezone
-    puzzle.deleted_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    puzzle.deleted_at = datetime.now(UTC)
     await db.flush()
 
 
 async def get_puzzle(
-    db: AsyncSession, puzzle_id: uuid.UUID,
+    db: AsyncSession,
+    puzzle_id: uuid.UUID,
 ) -> Puzzle | None:
     q = select(Puzzle).where(Puzzle.id == puzzle_id, Puzzle.deleted_at.is_(None))
     return (await db.execute(q)).scalar_one_or_none()
@@ -216,22 +268,23 @@ async def get_puzzle(
 # Verification / QA
 # ---------------------------------------------------------------------------
 async def verify_puzzle(db: AsyncSession, puzzle: Puzzle) -> dict[str, Any]:
-    scores = {
+    scores: dict[str, float | None] = {
         "solvability": 1.0,
         "uniqueness": 0.95,
         "difficulty_match": 0.9,
         "clue_quality": 0.85 if puzzle.clues else None,
     }
-    scores = {k: v for k, v in scores.items() if v is not None}
-    passed = all(v >= 0.7 for v in scores.values())
-    puzzle.qa_scores = scores
+    graded: dict[str, float] = {k: v for k, v in scores.items() if v is not None}
+    passed = all(v >= 0.7 for v in graded.values())
+    puzzle.qa_scores = graded
     puzzle.qa_passed = passed
     await db.flush()
     return {"puzzle_id": str(puzzle.id), "scores": scores, "passed": passed}
 
 
 async def book_quality_check(
-    db: AsyncSession, book: PuzzleBook,
+    db: AsyncSession,
+    book: PuzzleBook,
 ) -> dict[str, Any]:
     puzzles = await list_puzzles(db, book.id)
     total = len(puzzles)
@@ -250,19 +303,78 @@ async def book_quality_check(
 # Word lists
 # ---------------------------------------------------------------------------
 async def generate_word_list(
-    theme: str, count: int = 20, difficulty: str = "medium",
+    theme: str,
+    count: int = 20,
+    difficulty: str = "medium",
 ) -> list[str]:
     """Generate a themed word list (stub -- would call LLM in production)."""
     base_words = {
-        "easy": ["cat", "dog", "sun", "hat", "run", "big", "red", "cup", "pen", "box",
-                 "map", "fun", "ant", "bat", "car", "day", "eat", "fly", "got", "hop"],
-        "medium": ["garden", "bridge", "castle", "forest", "planet", "river", "storm",
-                   "valley", "island", "desert", "harbor", "museum", "rocket", "branch",
-                   "candle", "fabric", "golden", "hammer", "jungle", "kettle"],
-        "hard": ["algorithm", "butterfly", "cathedral", "dangerous", "elaborate",
-                 "fantastic", "grotesque", "harmonica", "imaginary", "jubilant",
-                 "knowledge", "labyrinth", "momentous", "nocturnal", "obsidian",
-                 "parchment", "quizzical", "reservoir", "spaghetti", "telescope"],
+        "easy": [
+            "cat",
+            "dog",
+            "sun",
+            "hat",
+            "run",
+            "big",
+            "red",
+            "cup",
+            "pen",
+            "box",
+            "map",
+            "fun",
+            "ant",
+            "bat",
+            "car",
+            "day",
+            "eat",
+            "fly",
+            "got",
+            "hop",
+        ],
+        "medium": [
+            "garden",
+            "bridge",
+            "castle",
+            "forest",
+            "planet",
+            "river",
+            "storm",
+            "valley",
+            "island",
+            "desert",
+            "harbor",
+            "museum",
+            "rocket",
+            "branch",
+            "candle",
+            "fabric",
+            "golden",
+            "hammer",
+            "jungle",
+            "kettle",
+        ],
+        "hard": [
+            "algorithm",
+            "butterfly",
+            "cathedral",
+            "dangerous",
+            "elaborate",
+            "fantastic",
+            "grotesque",
+            "harmonica",
+            "imaginary",
+            "jubilant",
+            "knowledge",
+            "labyrinth",
+            "momentous",
+            "nocturnal",
+            "obsidian",
+            "parchment",
+            "quizzical",
+            "reservoir",
+            "spaghetti",
+            "telescope",
+        ],
     }
     words = base_words.get(difficulty, base_words["medium"])
     return words[:count]
@@ -337,31 +449,37 @@ def sanitize_word_list(words: list[str]) -> dict[str, Any]:
 # Answer keys
 # ---------------------------------------------------------------------------
 async def generate_answer_key(
-    db: AsyncSession, book: PuzzleBook,
+    db: AsyncSession,
+    book: PuzzleBook,
 ) -> dict[str, Any]:
     puzzles = await list_puzzles(db, book.id)
     keys: list[dict[str, Any]] = []
     for p in puzzles:
-        keys.append({
-            "puzzle_number": p.puzzle_number,
-            "puzzle_type": p.puzzle_type,
-            "solution": p.solution_data or {},
-        })
+        keys.append(
+            {
+                "puzzle_number": p.puzzle_number,
+                "puzzle_type": p.puzzle_type,
+                "solution": p.solution_data or {},
+            }
+        )
     return {"book_id": str(book.id), "answer_keys": keys, "total": len(keys)}
 
 
 async def verify_answer_key(
-    db: AsyncSession, book: PuzzleBook,
+    db: AsyncSession,
+    book: PuzzleBook,
 ) -> dict[str, Any]:
     puzzles = await list_puzzles(db, book.id)
     results: list[dict[str, Any]] = []
     for p in puzzles:
         has_solution = bool(p.solution_data)
-        results.append({
-            "puzzle_number": p.puzzle_number,
-            "has_solution": has_solution,
-            "verified": has_solution,
-        })
+        results.append(
+            {
+                "puzzle_number": p.puzzle_number,
+                "has_solution": has_solution,
+                "verified": has_solution,
+            }
+        )
     all_verified = all(r["verified"] for r in results) if results else False
     return {"book_id": str(book.id), "results": results, "all_verified": all_verified}
 
@@ -370,7 +488,9 @@ async def verify_answer_key(
 # Export / preflight
 # ---------------------------------------------------------------------------
 async def export_book(
-    db: AsyncSession, book: PuzzleBook, fmt: str = "print_pdf",
+    db: AsyncSession,
+    book: PuzzleBook,
+    fmt: str = "print_pdf",
 ) -> dict[str, Any]:
     return {
         "book_id": str(book.id),
@@ -381,34 +501,41 @@ async def export_book(
 
 
 async def run_preflight(
-    db: AsyncSession, book: PuzzleBook,
+    db: AsyncSession,
+    book: PuzzleBook,
 ) -> dict[str, Any]:
     puzzles = await list_puzzles(db, book.id)
     checks: list[dict[str, Any]] = []
 
-    checks.append({
-        "name": "has_puzzles",
-        "passed": len(puzzles) > 0,
-        "details": f"{len(puzzles)} puzzles found",
-        "severity": "error" if len(puzzles) == 0 else "info",
-    })
+    checks.append(
+        {
+            "name": "has_puzzles",
+            "passed": len(puzzles) > 0,
+            "details": f"{len(puzzles)} puzzles found",
+            "severity": "error" if len(puzzles) == 0 else "info",
+        }
+    )
 
     qa_done = [p for p in puzzles if p.qa_passed is not None]
     all_passed = all(p.qa_passed for p in qa_done) if qa_done else False
-    checks.append({
-        "name": "qa_all_passed",
-        "passed": all_passed,
-        "details": f"{len(qa_done)}/{len(puzzles)} verified",
-        "severity": "warning" if not all_passed else "info",
-    })
+    checks.append(
+        {
+            "name": "qa_all_passed",
+            "passed": all_passed,
+            "details": f"{len(qa_done)}/{len(puzzles)} verified",
+            "severity": "warning" if not all_passed else "info",
+        }
+    )
 
     has_solutions = all(p.solution_data for p in puzzles) if puzzles else False
-    checks.append({
-        "name": "solutions_complete",
-        "passed": has_solutions,
-        "details": "All puzzles have solution data" if has_solutions else "Missing solutions",
-        "severity": "error" if not has_solutions else "info",
-    })
+    checks.append(
+        {
+            "name": "solutions_complete",
+            "passed": has_solutions,
+            "details": "All puzzles have solution data" if has_solutions else "Missing solutions",
+            "severity": "error" if not has_solutions else "info",
+        }
+    )
 
     overall = all(c["passed"] for c in checks)
     return {"book_id": str(book.id), "checks": checks, "ready": overall}
@@ -439,8 +566,12 @@ def _gen_word_search(data: dict) -> dict[str, Any]:
     rows = int(size.split("x")[0]) if "x" in size else 15
     grid = [["." for _ in range(rows)] for _ in range(rows)]
     return {
-        "grid_size": size, "grid_data": {"grid": grid}, "word_list": words,
-        "solution_data": {"placed_words": {w: {"row": i, "col": 0, "direction": "across"} for i, w in enumerate(words)}},
+        "grid_size": size,
+        "grid_data": {"grid": grid},
+        "word_list": words,
+        "solution_data": {
+            "placed_words": {w: {"row": i, "col": 0, "direction": "across"} for i, w in enumerate(words)}
+        },
         "difficulty_score": 0.5,
     }
 
@@ -467,8 +598,8 @@ def _gen_maze(data: dict) -> dict[str, Any]:
 def _gen_sudoku(data: dict) -> dict[str, Any]:
     return {
         "grid_size": "9x9",
-        "grid_data": {"grid": [[0]*9 for _ in range(9)]},
-        "solution_data": {"grid": [[((i*3+i//3+j) % 9)+1 for j in range(9)] for i in range(9)]},
+        "grid_data": {"grid": [[0] * 9 for _ in range(9)]},
+        "solution_data": {"grid": [[((i * 3 + i // 3 + j) % 9) + 1 for j in range(9)] for i in range(9)]},
         "difficulty_score": 0.5,
     }
 
@@ -483,7 +614,7 @@ def _gen_word_scramble(data: dict) -> dict[str, Any]:
     return {
         "grid_data": {"scrambled": scrambled, "originals": words},
         "word_list": words,
-        "solution_data": {"answers": dict(zip(scrambled, words))},
+        "solution_data": {"answers": dict(zip(scrambled, words, strict=False))},
         "difficulty_score": 0.4,
     }
 

@@ -2,6 +2,7 @@
 
 Provides publish (Pub/Sub + Streams), subscribe, replay, and dead-letter handling.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -10,8 +11,10 @@ import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
+
+from pydantic import ValidationError
 
 from app.core.event_types import BaseEvent, EventPublisher, EventType
 
@@ -25,7 +28,6 @@ except ImportError:
     RedisError = Exception  # type: ignore[misc,assignment]
     ResponseError = Exception  # type: ignore[misc,assignment]
 
-from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +94,7 @@ class RedisStreamPublisher:
         if isinstance(msg_id, bytes):
             msg_id = msg_id.decode()
         logger.info("Event published | type=%s stream_id=%s", event.event_type.value, msg_id)
-        return msg_id
+        return cast("str", msg_id)
 
 
 class RedisEventPublisher(EventPublisher):
@@ -114,10 +116,9 @@ class RedisEventPublisher(EventPublisher):
         """Return (and lazily create) the async Redis client."""
         if self._redis is None:
             if aioredis is None:
-                raise RuntimeError(
-                    "redis package is not installed -- cannot create RedisEventPublisher"
-                )
+                raise RuntimeError("redis package is not installed -- cannot create RedisEventPublisher")
             from app.config import get_settings
+
             url = self._redis_url or get_settings().REDIS_URL
             self._redis = aioredis.Redis.from_url(url)
         return self._redis
@@ -133,9 +134,7 @@ class RedisEventPublisher(EventPublisher):
             channel = f"events:{event.event_type.value}"
             payload = event.model_dump_json()
             await redis_client.publish(channel, payload)
-            logger.debug(
-                "Published event %s to channel %s", event.event_type, channel
-            )
+            logger.debug("Published event %s to channel %s", event.event_type, channel)
         except Exception as e:
             logger.error(
                 "Failed to publish event %s: %s",

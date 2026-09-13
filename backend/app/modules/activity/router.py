@@ -44,13 +44,7 @@ async def list_activity(
     if until:
         clauses.append(ActivityLog.created_at <= until)
 
-    stmt = (
-        select(ActivityLog)
-        .where(and_(*clauses))
-        .order_by(ActivityLog.created_at.desc())
-        .limit(limit)
-        .offset(offset)
-    )
+    stmt = select(ActivityLog).where(and_(*clauses)).order_by(ActivityLog.created_at.desc()).limit(limit).offset(offset)
     result = await db.execute(stmt)
     rows = result.scalars().all()
 

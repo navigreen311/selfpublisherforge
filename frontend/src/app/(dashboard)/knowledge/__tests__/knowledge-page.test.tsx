@@ -22,6 +22,10 @@ jest.mock("next/link", () => {
 
 // Mock lucide-react icons
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Plus: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="icon-plus" {...props} />
   ),
@@ -71,6 +75,7 @@ jest.mock("@/modules/knowledge/hooks", () => ({
   useKnowledgeTags: (...args: unknown[]) => mockUseKnowledgeTags(...args),
   useKnowledgeSearch: (...args: unknown[]) => mockUseKnowledgeSearch(...args),
   useCreateEntry: (...args: unknown[]) => mockUseCreateEntry(...args),
+  useDeleteEntry: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // Mock SearchBar component
@@ -104,27 +109,25 @@ jest.mock("@/modules/knowledge/components/SearchBar", () => ({
 }));
 
 // Mock TagFilter component
-jest.mock("@/modules/knowledge/components/TagFilter", () => ({
-  TagFilter: ({
-    tags,
-    counts,
-    selectedTags,
-    onToggleTag,
+jest.mock("@/modules/knowledge/components/CategoryFilter", () => ({
+  CategoryFilter: ({
+    categories,
+    selectedCategory,
+    onSelect,
   }: {
-    tags: string[];
-    counts: Record<string, number>;
-    selectedTags: string[];
-    onToggleTag: (tag: string) => void;
+    categories: { name: string; count: number }[];
+    selectedCategory: string | null;
+    onSelect: (category: string | null) => void;
   }) => (
-    <div data-testid="tag-filter">
-      {tags.map((tag) => (
+    <div data-testid="category-filter">
+      {categories.map((category) => (
         <button
-          key={tag}
-          data-testid={`tag-${tag}`}
-          onClick={() => onToggleTag(tag)}
-          className={selectedTags.includes(tag) ? "selected" : ""}
+          key={category.name}
+          data-testid={`category-${category.name}`}
+          onClick={() => onSelect(category.name)}
+          className={selectedCategory === category.name ? "selected" : ""}
         >
-          {tag} ({counts[tag] ?? 0})
+          {category.name} ({category.count})
         </button>
       ))}
     </div>
@@ -233,6 +236,7 @@ function setDefaultMocks(overrides?: {
       total_count: 2,
     },
     isLoading: overrides?.entriesLoading ?? false,
+    isPending: overrides?.entriesLoading ?? false,
   });
 
   mockUseKnowledgeTags.mockReturnValue({
@@ -326,40 +330,37 @@ describe("KnowledgeVaultPage", () => {
     await user.click(newEntryBtn);
 
     expect(screen.getByText("New Knowledge Entry")).toBeInTheDocument();
-    expect(screen.getByText("Title")).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toBeInTheDocument();
     expect(screen.getByText("Content")).toBeInTheDocument();
   });
 
-  // 4. Tag filter works
-  it("renders tag filter with available tags", () => {
+  // 4. Category filter works
+  it("derives the category filter from the entries' source types", () => {
     setDefaultMocks();
     renderWithProviders(<KnowledgeVaultPage />);
 
-    expect(screen.getByTestId("tag-filter")).toBeInTheDocument();
-    expect(screen.getByTestId("tag-research")).toBeInTheDocument();
-    expect(screen.getByTestId("tag-market")).toBeInTheDocument();
-    expect(screen.getByTestId("tag-publishing")).toBeInTheDocument();
-    expect(screen.getByTestId("tag-kdp")).toBeInTheDocument();
+    expect(screen.getByTestId("category-filter")).toBeInTheDocument();
+    expect(screen.getByTestId("category-manual")).toBeInTheDocument();
+    expect(screen.getByTestId("category-url")).toBeInTheDocument();
   });
 
-  it("toggles tag selection when a tag is clicked", async () => {
+  it("re-queries when a category is selected", async () => {
     const user = userEvent.setup();
     setDefaultMocks();
     renderWithProviders(<KnowledgeVaultPage />);
 
-    const researchTag = screen.getByTestId("tag-research");
-    await user.click(researchTag);
+    await user.click(screen.getByTestId("category-manual"));
 
-    // After clicking, useKnowledgeEntries should be called with tag filter
-    // The component re-renders and the hook is called with updated params
     expect(mockUseKnowledgeEntries).toHaveBeenCalled();
   });
 
-  it("does not render tag filter when no tags data exists", () => {
-    setDefaultMocks({ tags: undefined });
+  it("does not render the category filter when there are no entries", () => {
+    setDefaultMocks({
+      entries: { items: [], next_cursor: null, has_more: false, total_count: 0 },
+    });
     renderWithProviders(<KnowledgeVaultPage />);
 
-    expect(screen.queryByTestId("tag-filter")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("category-filter")).not.toBeInTheDocument();
   });
 
   // 5. Search functionality
@@ -412,11 +413,9 @@ describe("KnowledgeVaultPage", () => {
     });
     renderWithProviders(<KnowledgeVaultPage />);
 
-    expect(screen.getByText("No entries yet")).toBeInTheDocument();
+    expect(screen.getByText("Your Knowledge Vault is empty")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Create your first research entry or import from a URL or file."
-      )
+      screen.getByText("Start building your research library.")
     ).toBeInTheDocument();
   });
 
@@ -455,7 +454,7 @@ describe("KnowledgeVaultPage", () => {
     await user.type(contentInput, "Some important findings...");
 
     // Submit
-    const createBtn = screen.getByRole("button", { name: /^create$/i });
+    const createBtn = screen.getByRole("button", { name: /create entry/i });
     await user.click(createBtn);
 
     expect(mockCreateMutateAsync).toHaveBeenCalledWith(

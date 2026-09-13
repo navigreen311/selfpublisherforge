@@ -25,7 +25,6 @@ from app.core.rate_limit import (
     get_rate_limiter,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers -- in-memory fake Redis
 # ---------------------------------------------------------------------------
@@ -37,7 +36,7 @@ class FakeRedis:
     def __init__(self) -> None:
         self._store: dict[str, list[tuple[float, str]]] = {}
 
-    def pipeline(self) -> "FakePipeline":
+    def pipeline(self) -> FakePipeline:
         return FakePipeline(self)
 
     async def zrem(self, key: str, member: str) -> int:
@@ -70,19 +69,19 @@ class FakePipeline:
         self._redis = redis
         self._ops: list[tuple[str, Any]] = []
 
-    def zremrangebyscore(self, key: str, min_score: str, max_score: float) -> "FakePipeline":
+    def zremrangebyscore(self, key: str, min_score: str, max_score: float) -> FakePipeline:
         self._ops.append(("zremrangebyscore", (key, min_score, max_score)))
         return self
 
-    def zadd(self, key: str, mapping: dict[str, float]) -> "FakePipeline":
+    def zadd(self, key: str, mapping: dict[str, float]) -> FakePipeline:
         self._ops.append(("zadd", (key, mapping)))
         return self
 
-    def zcard(self, key: str) -> "FakePipeline":
+    def zcard(self, key: str) -> FakePipeline:
         self._ops.append(("zcard", (key,)))
         return self
 
-    def expire(self, key: str, ttl: int) -> "FakePipeline":
+    def expire(self, key: str, ttl: int) -> FakePipeline:
         self._ops.append(("expire", (key, ttl)))
         return self
 
@@ -92,17 +91,21 @@ class FakePipeline:
             if op == "zremrangebyscore":
                 key, _min, max_score = args
                 if key in self._redis._store:
-                    self._redis._store[key] = [
-                        (s, m) for s, m in self._redis._store[key] if s > max_score
-                    ]
+                    self._redis._store[key] = [(s, m) for s, m in self._redis._store[key] if s > max_score]
                 results.append(0)
             elif op == "zadd":
                 key, mapping = args
-                if key not in self._redis._store:
-                    self._redis._store[key] = []
+                entries = self._redis._store.setdefault(key, [])
+                added = 0
                 for member, score in mapping.items():
-                    self._redis._store[key].append((score, member))
-                results.append(len(mapping))
+                    for i, (_s, m) in enumerate(entries):
+                        if m == member:
+                            entries[i] = (score, member)
+                            break
+                    else:
+                        entries.append((score, member))
+                        added += 1
+                results.append(added)
             elif op == "zcard":
                 (key,) = args
                 results.append(len(self._redis._store.get(key, [])))
@@ -114,23 +117,23 @@ class FakePipeline:
 class FakeRedisConnectionError(FakeRedis):
     """A FakeRedis that raises ConnectionError on pipeline execution."""
 
-    def pipeline(self) -> "FakeErrorPipeline":
+    def pipeline(self) -> FakeErrorPipeline:
         return FakeErrorPipeline()
 
 
 class FakeErrorPipeline:
     """Pipeline that raises on execute to simulate Redis failure."""
 
-    def zremrangebyscore(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def zremrangebyscore(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
-    def zadd(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def zadd(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
-    def zcard(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def zcard(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
-    def expire(self, *a: Any, **kw: Any) -> "FakeErrorPipeline":
+    def expire(self, *a: Any, **kw: Any) -> FakeErrorPipeline:
         return self
 
     async def execute(self) -> list[Any]:
@@ -151,8 +154,7 @@ def fake_redis() -> FakeRedis:
 
 @pytest.fixture
 def limiter(fake_redis: FakeRedis) -> SlidingWindowRateLimiter:
-    rl = SlidingWindowRateLimiter(redis_client=fake_redis)  # type: ignore[arg-type]
-    return rl
+    return SlidingWindowRateLimiter(redis_client=fake_redis)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -170,7 +172,7 @@ class TestSlidingWindow:
 
     @pytest.mark.asyncio
     async def test_requests_up_to_limit_allowed(self, limiter: SlidingWindowRateLimiter) -> None:
-        for i in range(60):
+        for _i in range(60):
             allowed, _ = await limiter.check("user:2", RateLimitTier.FREE)
             assert allowed is True
 
@@ -255,32 +257,24 @@ class TestTierLimits:
 
     @pytest.mark.asyncio
     async def test_endpoint_override_ai(self, limiter: SlidingWindowRateLimiter) -> None:
-        _, headers = await limiter.check(
-            "u:free", RateLimitTier.FREE, path="/api/v1/ai/generate"
-        )
+        _, headers = await limiter.check("u:free", RateLimitTier.FREE, path="/api/v1/ai/generate")
         assert int(headers["X-RateLimit-Limit"]) == ENDPOINT_OVERRIDES["/api/v1/ai/"][RateLimitTier.FREE]
 
     @pytest.mark.asyncio
     async def test_endpoint_override_generation(self, limiter: SlidingWindowRateLimiter) -> None:
-        _, headers = await limiter.check(
-            "u:pro", RateLimitTier.PRO, path="/api/v1/generation/text"
-        )
+        _, headers = await limiter.check("u:pro", RateLimitTier.PRO, path="/api/v1/generation/text")
         assert int(headers["X-RateLimit-Limit"]) == ENDPOINT_OVERRIDES["/api/v1/generation/"][RateLimitTier.PRO]
 
     @pytest.mark.asyncio
     async def test_non_override_path_uses_default(self, limiter: SlidingWindowRateLimiter) -> None:
         """A path that does not match any override prefix uses the default tier limit."""
-        _, headers = await limiter.check(
-            "u:free", RateLimitTier.FREE, path="/api/v1/books/list"
-        )
+        _, headers = await limiter.check("u:free", RateLimitTier.FREE, path="/api/v1/books/list")
         assert int(headers["X-RateLimit-Limit"]) == DEFAULT_TIER_LIMITS[RateLimitTier.FREE]
 
     @pytest.mark.asyncio
     async def test_enterprise_ai_endpoint_override(self, limiter: SlidingWindowRateLimiter) -> None:
         """Enterprise tier on AI endpoint gets the AI-specific enterprise limit."""
-        _, headers = await limiter.check(
-            "u:ent", RateLimitTier.ENTERPRISE, path="/api/v1/ai/summarize"
-        )
+        _, headers = await limiter.check("u:ent", RateLimitTier.ENTERPRISE, path="/api/v1/ai/summarize")
         expected = ENDPOINT_OVERRIDES["/api/v1/ai/"][RateLimitTier.ENTERPRISE]
         assert int(headers["X-RateLimit-Limit"]) == expected
 
@@ -318,9 +312,7 @@ class TestRateLimitHeaders:
         assert int(headers["X-RateLimit-Remaining"]) == 0
 
     @pytest.mark.asyncio
-    async def test_reset_is_approximately_window_size_in_future(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_reset_is_approximately_window_size_in_future(self, limiter: SlidingWindowRateLimiter) -> None:
         """The reset timestamp should be roughly now + WINDOW_SIZE."""
         now = int(time.time())
         _, headers = await limiter.check("u:reset-check", RateLimitTier.FREE)
@@ -400,8 +392,10 @@ class TestRedisIntegration:
         limiter = SlidingWindowRateLimiter(redis_client=None)
         mock_redis = MagicMock()
 
-        with patch("app.core.rate_limiter.get_settings") as mock_settings, \
-             patch("app.core.rate_limiter.redis.from_url", return_value=mock_redis) as mock_from_url:
+        with (
+            patch("app.core.rate_limiter.get_settings") as mock_settings,
+            patch("app.core.rate_limiter.redis.from_url", return_value=mock_redis) as mock_from_url,
+        ):
             mock_settings.return_value.REDIS_URL = "redis://localhost:6379/0"
             result = await limiter._get_redis()
             mock_from_url.assert_called_once_with(
@@ -480,13 +474,34 @@ class TestRateLimitTierEnum:
 # ---------------------------------------------------------------------------
 
 
+class LegacyLimiterStub:
+    """Minimal object exposing the legacy `check(identifier, tier, path)` API.
+
+    `AsyncMock(spec=SlidingWindowRateLimiter)` satisfies `isinstance`, so the
+    middleware took the wrapper branch and reached for `._limiter`, which is
+    set in `__init__` and therefore absent from the spec. A plain AsyncMock has
+    the opposite problem: it answers `hasattr(..., "check_request")` too, so it
+    lands on the new-API branch. A real object with just the legacy method
+    lands where these tests mean it to.
+    """
+
+    def __init__(self, result: tuple[bool, dict[str, str]]) -> None:
+        self._result = result
+        self.calls: list[tuple] = []
+
+    async def check(self, identifier: str, tier=None, path: str = "/"):
+        self.calls.append((identifier, tier, path))
+        if isinstance(self._result, Exception):
+            raise self._result
+        return self._result
+
+
 class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_passes_allowed_request(self) -> None:
         """When the limiter allows, the middleware should call_next and attach headers."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(
-            return_value=(
+        mock_limiter = LegacyLimiterStub(
+            (
                 True,
                 {
                     "X-RateLimit-Limit": "60",
@@ -515,9 +530,8 @@ class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_returns_429_when_denied(self) -> None:
         """When the limiter denies, the middleware returns a 429 JSON response."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(
-            return_value=(
+        mock_limiter = LegacyLimiterStub(
+            (
                 False,
                 {
                     "X-RateLimit-Limit": "60",
@@ -543,7 +557,7 @@ class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_skips_health_endpoint(self) -> None:
         """Requests to /health should bypass rate limiting entirely."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
+        mock_limiter = LegacyLimiterStub((True, {}))
 
         response = MagicMock()
         call_next = AsyncMock(return_value=response)
@@ -552,9 +566,9 @@ class TestRateLimitMiddlewareDispatch:
         request.url.path = "/health"
 
         middleware = RateLimitMiddleware(app=MagicMock(), limiter=mock_limiter)
-        result = await middleware.dispatch(request, call_next)
+        await middleware.dispatch(request, call_next)
 
-        mock_limiter.check.assert_not_awaited()
+        assert mock_limiter.calls == []
         call_next.assert_awaited_once_with(request)
 
     @pytest.mark.asyncio
@@ -562,8 +576,7 @@ class TestRateLimitMiddlewareDispatch:
         """If Redis is unreachable, the middleware should allow the request through."""
         from redis.exceptions import ConnectionError as RedisConnectionError
 
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(side_effect=RedisConnectionError("down"))
+        mock_limiter = LegacyLimiterStub(RedisConnectionError("down"))
 
         response = MagicMock()
         response.headers = {}
@@ -584,8 +597,7 @@ class TestRateLimitMiddlewareDispatch:
     @pytest.mark.asyncio
     async def test_middleware_allows_on_timeout_error(self) -> None:
         """If Redis times out, the middleware should allow the request through."""
-        mock_limiter = AsyncMock(spec=SlidingWindowRateLimiter)
-        mock_limiter.check = AsyncMock(side_effect=TimeoutError("timeout"))
+        mock_limiter = LegacyLimiterStub(TimeoutError("timeout"))
 
         response = MagicMock()
         response.headers = {}
@@ -610,20 +622,15 @@ class TestRateLimitMiddlewareDispatch:
 
 class TestConcurrentRequests:
     @pytest.mark.asyncio
-    async def test_concurrent_requests_counted_correctly(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_concurrent_requests_counted_correctly(self, limiter: SlidingWindowRateLimiter) -> None:
         """Multiple concurrent requests to the same identifier are all tracked."""
         import asyncio
 
-        tasks = [
-            limiter.check("user:concurrent", RateLimitTier.FREE)
-            for _ in range(10)
-        ]
+        tasks = [limiter.check("user:concurrent", RateLimitTier.FREE) for _ in range(10)]
         results = await asyncio.gather(*tasks)
 
         # All 10 should be allowed (well within the 60 limit)
-        for allowed, headers in results:
+        for allowed, _headers in results:
             assert allowed is True
 
         # After 10 concurrent requests, remaining should reflect them
@@ -631,9 +638,7 @@ class TestConcurrentRequests:
         assert int(final_headers["X-RateLimit-Remaining"]) == 49  # 60 - 11
 
     @pytest.mark.asyncio
-    async def test_concurrent_requests_at_boundary(
-        self, limiter: SlidingWindowRateLimiter
-    ) -> None:
+    async def test_concurrent_requests_at_boundary(self, limiter: SlidingWindowRateLimiter) -> None:
         """Fill to near-limit, then fire concurrent requests that cross the boundary."""
         # Fill 58 of 60 slots
         for _ in range(58):
@@ -642,10 +647,7 @@ class TestConcurrentRequests:
         import asyncio
 
         # Fire 5 concurrent -- 2 should be allowed, 3 denied
-        tasks = [
-            limiter.check("user:boundary", RateLimitTier.FREE)
-            for _ in range(5)
-        ]
+        tasks = [limiter.check("user:boundary", RateLimitTier.FREE) for _ in range(5)]
         results = await asyncio.gather(*tasks)
 
         allowed_count = sum(1 for allowed, _ in results if allowed)

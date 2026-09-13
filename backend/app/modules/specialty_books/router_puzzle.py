@@ -1,5 +1,7 @@
 """FastAPI router for Puzzle Book CRUD endpoints."""
+
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -281,8 +283,7 @@ async def sanitize_word_list(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = service_puzzle.sanitize_word_list(body.words)
-    return result
+    return service_puzzle.sanitize_word_list(body.words)
 
 
 # ---------------------------------------------------------------------------

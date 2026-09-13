@@ -3,6 +3,7 @@
 Orchestrates analysis, manages alerts, and coordinates between the
 review analyzer, opportunity generator, and gap detector.
 """
+
 from __future__ import annotations
 
 import logging
@@ -239,9 +240,7 @@ class CompetitorFinderService:
         if not analysis:
             raise ValueError(f"Analysis {analysis_id} not found")
 
-        stmt = select(OpportunityBlueprint).where(
-            OpportunityBlueprint.analysis_id == analysis_id
-        )
+        stmt = select(OpportunityBlueprint).where(OpportunityBlueprint.analysis_id == analysis_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -335,7 +334,7 @@ class CompetitorFinderService:
             .limit(limit)
         )
         if not include_dismissed:
-            stmt = stmt.where(CompetitorAlert.dismissed == False)  # noqa: E712
+            stmt = stmt.where(CompetitorAlert.dismissed.is_(False))
 
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
@@ -400,9 +399,7 @@ class CompetitorFinderService:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def _get_reviews(
-        self, book_id: UUID, limit: int = 100
-    ) -> list[CompetitorReview]:
+    async def _get_reviews(self, book_id: UUID, limit: int = 100) -> list[CompetitorReview]:
         """Fetch reviews for a book."""
         stmt = (
             select(CompetitorReview)
@@ -413,9 +410,7 @@ class CompetitorFinderService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def _get_analysis(
-        self, analysis_id: UUID, org_id: UUID
-    ) -> CompetitorAnalysis | None:
+    async def _get_analysis(self, analysis_id: UUID, org_id: UUID) -> CompetitorAnalysis | None:
         """Fetch an analysis by ID, scoped to org."""
         stmt = select(CompetitorAnalysis).where(
             CompetitorAnalysis.id == analysis_id,
@@ -426,9 +421,12 @@ class CompetitorFinderService:
 
     @staticmethod
     def _compute_overall_score(result: AnalysisResult) -> float:
-        """Compute an overall competitor quality score (0-100).
+        """Compute an overall competitor quality score.
 
-        Higher score = stronger competitor = harder to beat.
+        Higher score = stronger competitor = harder to beat. The result is
+        clamped to 0-100, but note the components cap out at 70 in practice
+        (50 sentiment + 20 strength bonus, before the weakness penalty), so a
+        score above 70 is not reachable with the current weights.
         """
         # Sentiment contribution (0-50)
         sentiment_component = result.sentiment_score * 50

@@ -52,10 +52,10 @@ export function EmailSequenceBuilder({ bookId }: EmailSequenceBuilderProps) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">
-              {t("acquisition.emailSequenceTitle")}
+              {t("acquisition.emailSequences")}
             </CardTitle>
             <CardDescription>
-              {t("acquisition.emailSequenceSubtitle")}
+              {t("acquisition.emailSubtitle")}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export function EmailSequenceBuilder({ bookId }: EmailSequenceBuilderProps) {
             >
               {generateSequence.isPending
                 ? t("acquisition.generating")
-                : t("acquisition.generateNewSequence")}
+                : t("acquisition.generateSequence")}
             </Button>
             <Button variant="outline" size="sm" disabled>
               {t("acquisition.customizeTiming")}

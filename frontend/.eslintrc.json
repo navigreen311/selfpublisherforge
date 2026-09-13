@@ -1,0 +1,20 @@
+{
+  "extends": "next/core-web-vitals",
+  "ignorePatterns": [
+    "src/modules/specialty-books/puzzles/**",
+    "src/modules/specialty-books/coloring/**"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "**/__tests__/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "jest.setup.js"
+      ],
+      "rules": {
+        "react/display-name": "off"
+      }
+    }
+  ]
+}

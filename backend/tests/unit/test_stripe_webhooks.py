@@ -8,24 +8,23 @@ cancellations, trial events, idempotency, and edge cases.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.schemas.common import PlanTier
 from app.modules.billing.webhook_handlers import (
-    handle_subscription_upgrade,
-    handle_subscription_downgrade,
+    get_payment_attempt_count,
+    handle_invoice_paid,
     handle_payment_failure,
     handle_subscription_canceled,
+    handle_subscription_downgrade,
+    handle_subscription_upgrade,
     handle_trial_will_end,
-    handle_invoice_paid,
     is_event_processed,
     mark_event_processed,
-    get_payment_attempt_count,
 )
-
+from app.schemas.common import PlanTier
 
 # ===========================================================================
 # Helpers
@@ -44,8 +43,8 @@ def _make_subscription_dict(
         "status": status,
         "metadata": {"plan_tier": plan_tier},
         "cancel_at_period_end": cancel_at_period_end,
-        "current_period_start": int(datetime(2024, 1, 1, tzinfo=timezone.utc).timestamp()),
-        "current_period_end": int(datetime(2024, 2, 1, tzinfo=timezone.utc).timestamp()),
+        "current_period_start": int(datetime(2024, 1, 1, tzinfo=UTC).timestamp()),
+        "current_period_end": int(datetime(2024, 2, 1, tzinfo=UTC).timestamp()),
     }
 
 
@@ -70,11 +69,7 @@ def _mock_db_execute_result(rows: list[dict] | None = None) -> AsyncMock:
     mock_db = AsyncMock()
     mock_result = MagicMock()
 
-    if rows is None:
-        mock_result.scalar_one_or_none.return_value = None
-        mock_result.scalar_one.return_value = 0
-        mock_result.mappings.return_value.first.return_value = None
-    elif len(rows) == 0:
+    if rows is None or len(rows) == 0:
         mock_result.scalar_one_or_none.return_value = None
         mock_result.scalar_one.return_value = 0
         mock_result.mappings.return_value.first.return_value = None
@@ -101,9 +96,7 @@ class TestSubscriptionUpgrade:
         """Upgrading should update org plan_tier immediately."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(plan_tier="business")
 
@@ -125,9 +118,7 @@ class TestSubscriptionUpgrade:
         """Upgrading should send a success notification."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(plan_tier="business")
 
@@ -149,9 +140,7 @@ class TestSubscriptionUpgrade:
         """Upgrading should log a billing event for audit trail."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(plan_tier="enterprise")
 
@@ -181,9 +170,7 @@ class TestSubscriptionDowngrade:
         """Downgrade should be immediate when cancel_at_period_end is False."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(
             plan_tier="starter",
@@ -207,9 +194,7 @@ class TestSubscriptionDowngrade:
         """Downgrade should be scheduled when cancel_at_period_end is True."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(
             plan_tier="starter",
@@ -233,9 +218,7 @@ class TestSubscriptionDowngrade:
         """Downgrading should send a warning notification."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(plan_tier="free")
 
@@ -264,9 +247,7 @@ class TestPaymentFailure:
         """First payment failure should set status to past_due."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         invoice = _make_invoice_dict()
 
@@ -286,9 +267,7 @@ class TestPaymentFailure:
         """Third payment failure should move org to free tier."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         invoice = _make_invoice_dict()
 
@@ -308,9 +287,7 @@ class TestPaymentFailure:
         """Payment failures should send notifications with correct severity."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         invoice = _make_invoice_dict()
 
@@ -334,9 +311,7 @@ class TestPaymentFailure:
         """Payment failures should log billing events."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         invoice = _make_invoice_dict()
 
@@ -365,9 +340,7 @@ class TestSubscriptionCanceled:
         """Cancellation should move org to free tier."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(status="canceled")
 
@@ -382,9 +355,7 @@ class TestSubscriptionCanceled:
         """Cancellation should send a confirmation notification."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(status="canceled")
 
@@ -400,9 +371,7 @@ class TestSubscriptionCanceled:
         """Cancellation should log billing event for win-back sequence."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict(status="canceled")
 
@@ -426,9 +395,7 @@ class TestTrialWillEnd:
         """Trial ending should send a warning notification."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict()
 
@@ -444,9 +411,7 @@ class TestTrialWillEnd:
         """Trial ending today should have different message."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = _make_subscription_dict()
 
@@ -598,9 +563,7 @@ class TestEdgeCases:
         """Subscription events should handle missing timestamps gracefully."""
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        mock_db = _mock_db_execute_result([
-            {"id": user_id, "email": "owner@example.com"}
-        ])
+        mock_db = _mock_db_execute_result([{"id": user_id, "email": "owner@example.com"}])
 
         subscription = {
             "id": "sub_test",

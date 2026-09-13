@@ -71,7 +71,7 @@ export function ARCManager({ bookId }: ARCManagerProps) {
             onClick={handleCreateCampaign}
             disabled={!bookId || creatingCampaign || createCampaign.isPending}
           >
-            {t("acquisition.createArcCampaign")}
+            {t("acquisition.createCampaign")}
           </Button>
         </div>
       </CardHeader>

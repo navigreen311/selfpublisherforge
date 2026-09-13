@@ -6,10 +6,11 @@ layout templates, and export/preflight.
 
 ~25 test cases.
 """
+
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -29,9 +30,13 @@ class TestComicCRUD:
         """Create a comic with minimal payload; verify defaults are applied."""
         mock_service = AsyncMock()
         mock_service.create_comic.return_value = {
-            "id": str(COMIC_ID), "title": "My Comic", "status": "draft",
-            "art_style": "manga", "format": "single_issue",
-            "page_count": 0, "org_id": str(ORG_ID),
+            "id": str(COMIC_ID),
+            "title": "My Comic",
+            "status": "draft",
+            "art_style": "manga",
+            "format": "single_issue",
+            "page_count": 0,
+            "org_id": str(ORG_ID),
         }
         result = await mock_service.create_comic(org_id=ORG_ID, title="My Comic")
         assert result["status"] == "draft"
@@ -44,14 +49,19 @@ class TestComicCRUD:
         """Create a comic with all fields populated."""
         mock_service = AsyncMock()
         payload = {
-            "title": "Epic Saga", "description": "An epic tale",
-            "art_style": "american", "format": "graphic_novel",
-            "genre": "superhero", "target_audience": "teens",
+            "title": "Epic Saga",
+            "description": "An epic tale",
+            "art_style": "american",
+            "format": "graphic_novel",
+            "genre": "superhero",
+            "target_audience": "teens",
             "page_size": "standard_us",
         }
         mock_service.create_comic.return_value = {
-            "id": str(COMIC_ID), **payload,
-            "status": "draft", "org_id": str(ORG_ID),
+            "id": str(COMIC_ID),
+            **payload,
+            "status": "draft",
+            "org_id": str(ORG_ID),
         }
         result = await mock_service.create_comic(org_id=ORG_ID, **payload)
         assert result["title"] == "Epic Saga"
@@ -64,7 +74,10 @@ class TestComicCRUD:
         mock_service = AsyncMock()
         comics = [{"id": str(uuid.uuid4()), "title": f"Comic {i}"} for i in range(5)]
         mock_service.list_comics.return_value = {
-            "items": comics[:2], "total": 5, "page": 1, "page_size": 2,
+            "items": comics[:2],
+            "total": 5,
+            "page": 1,
+            "page_size": 2,
         }
         result = await mock_service.list_comics(org_id=ORG_ID, page=1, page_size=2)
         assert len(result["items"]) == 2
@@ -75,7 +88,8 @@ class TestComicCRUD:
         """Filter comics by draft/published status."""
         mock_service = AsyncMock()
         mock_service.list_comics.return_value = {
-            "items": [{"id": str(COMIC_ID), "status": "draft"}], "total": 1,
+            "items": [{"id": str(COMIC_ID), "status": "draft"}],
+            "total": 1,
         }
         result = await mock_service.list_comics(org_id=ORG_ID, status="draft")
         assert all(c["status"] == "draft" for c in result["items"])
@@ -85,7 +99,8 @@ class TestComicCRUD:
         """Filter comics by format (graphic_novel, manga, etc)."""
         mock_service = AsyncMock()
         mock_service.list_comics.return_value = {
-            "items": [{"id": str(COMIC_ID), "format": "manga"}], "total": 1,
+            "items": [{"id": str(COMIC_ID), "format": "manga"}],
+            "total": 1,
         }
         result = await mock_service.list_comics(org_id=ORG_ID, format="manga")
         assert all(c["format"] == "manga" for c in result["items"])
@@ -103,10 +118,15 @@ class TestComicCRUD:
         """Update title and art_style of an existing comic."""
         mock_service = AsyncMock()
         mock_service.update_comic.return_value = {
-            "id": str(COMIC_ID), "title": "Updated Title", "art_style": "european",
+            "id": str(COMIC_ID),
+            "title": "Updated Title",
+            "art_style": "european",
         }
         result = await mock_service.update_comic(
-            org_id=ORG_ID, comic_id=COMIC_ID, title="Updated Title", art_style="european",
+            org_id=ORG_ID,
+            comic_id=COMIC_ID,
+            title="Updated Title",
+            art_style="european",
         )
         assert result["title"] == "Updated Title"
         assert result["art_style"] == "european"
@@ -128,7 +148,9 @@ class TestComicPageManagement:
         """Create a page with a page_number."""
         mock_service = AsyncMock()
         mock_service.create_page.return_value = {
-            "id": str(PAGE_ID), "comic_id": str(COMIC_ID), "page_number": 1,
+            "id": str(PAGE_ID),
+            "comic_id": str(COMIC_ID),
+            "page_number": 1,
         }
         result = await mock_service.create_page(comic_id=COMIC_ID, page_number=1)
         assert result["page_number"] == 1
@@ -148,8 +170,7 @@ class TestComicPageManagement:
         """Reorder pages and verify new ordering."""
         mock_service = AsyncMock()
         mock_service.reorder_pages.return_value = [
-            {"id": str(uuid.uuid4()), "page_number": i + 1, "sort_order": i}
-            for i in range(5)
+            {"id": str(uuid.uuid4()), "page_number": i + 1, "sort_order": i} for i in range(5)
         ]
         result = await mock_service.reorder_pages(comic_id=COMIC_ID, page_order=[3, 1, 2, 4, 5])
         assert len(result) == 5
@@ -171,8 +192,13 @@ class TestComicPanelCRUD:
         """Create a panel with x, y, width, height coordinates."""
         mock_service = AsyncMock()
         mock_service.create_panel.return_value = {
-            "id": str(PANEL_ID), "page_id": str(PAGE_ID),
-            "x": 10, "y": 20, "width": 300, "height": 400, "panel_type": "standard",
+            "id": str(PANEL_ID),
+            "page_id": str(PAGE_ID),
+            "x": 10,
+            "y": 20,
+            "width": 300,
+            "height": 400,
+            "panel_type": "standard",
         }
         result = await mock_service.create_panel(page_id=PAGE_ID, x=10, y=20, width=300, height=400)
         assert result["x"] == 10
@@ -191,7 +217,9 @@ class TestComicPanelCRUD:
         """Verify border style is applied to a panel."""
         mock_service = AsyncMock()
         mock_service.update_panel.return_value = {
-            "id": str(PANEL_ID), "border_style": "thick_black", "border_width": 3,
+            "id": str(PANEL_ID),
+            "border_style": "thick_black",
+            "border_width": 3,
         }
         result = await mock_service.update_panel(panel_id=PANEL_ID, border_style="thick_black", border_width=3)
         assert result["border_style"] == "thick_black"
@@ -206,8 +234,11 @@ class TestComicBubbleCRUD:
         """Create a speech bubble with text content."""
         mock_service = AsyncMock()
         mock_service.create_bubble.return_value = {
-            "id": str(uuid.uuid4()), "panel_id": str(PANEL_ID),
-            "text": "Hello, world!", "bubble_type": "speech", "order": 1,
+            "id": str(uuid.uuid4()),
+            "panel_id": str(PANEL_ID),
+            "text": "Hello, world!",
+            "bubble_type": "speech",
+            "order": 1,
         }
         result = await mock_service.create_bubble(panel_id=PANEL_ID, text="Hello, world!", bubble_type="speech")
         assert result["text"] == "Hello, world!"
@@ -219,7 +250,9 @@ class TestComicBubbleCRUD:
         """Test each bubble type enum value is accepted."""
         mock_service = AsyncMock()
         mock_service.create_bubble.return_value = {
-            "id": str(uuid.uuid4()), "bubble_type": bubble_type, "text": "Test",
+            "id": str(uuid.uuid4()),
+            "bubble_type": bubble_type,
+            "text": "Test",
         }
         result = await mock_service.create_bubble(panel_id=PANEL_ID, text="Test", bubble_type=bubble_type)
         assert result["bubble_type"] == bubble_type
@@ -243,11 +276,16 @@ class TestComicCharacters:
         """Create a character with name, role, and description."""
         mock_service = AsyncMock()
         mock_service.create_character.return_value = {
-            "id": str(CHARACTER_ID), "name": "Captain Brave",
-            "role": "protagonist", "description": "A fearless hero",
+            "id": str(CHARACTER_ID),
+            "name": "Captain Brave",
+            "role": "protagonist",
+            "description": "A fearless hero",
         }
         result = await mock_service.create_character(
-            comic_id=COMIC_ID, name="Captain Brave", role="protagonist", description="A fearless hero",
+            comic_id=COMIC_ID,
+            name="Captain Brave",
+            role="protagonist",
+            description="A fearless hero",
         )
         assert result["name"] == "Captain Brave"
         assert result["role"] == "protagonist"
@@ -257,10 +295,13 @@ class TestComicCharacters:
         """Add an expression variant to a character."""
         mock_service = AsyncMock()
         mock_service.add_expression.return_value = {
-            "character_id": str(CHARACTER_ID), "expression": "angry",
+            "character_id": str(CHARACTER_ID),
+            "expression": "angry",
             "description": "Furrowed brows, clenched teeth",
         }
-        result = await mock_service.add_expression(character_id=CHARACTER_ID, expression="angry", description="Furrowed brows, clenched teeth")
+        result = await mock_service.add_expression(
+            character_id=CHARACTER_ID, expression="angry", description="Furrowed brows, clenched teeth"
+        )
         assert result["expression"] == "angry"
 
     @pytest.mark.asyncio
@@ -268,10 +309,13 @@ class TestComicCharacters:
         """Add a pose variant to a character."""
         mock_service = AsyncMock()
         mock_service.add_pose.return_value = {
-            "character_id": str(CHARACTER_ID), "pose": "flying",
+            "character_id": str(CHARACTER_ID),
+            "pose": "flying",
             "description": "Arms extended forward, cape flowing",
         }
-        result = await mock_service.add_pose(character_id=CHARACTER_ID, pose="flying", description="Arms extended forward, cape flowing")
+        result = await mock_service.add_pose(
+            character_id=CHARACTER_ID, pose="flying", description="Arms extended forward, cape flowing"
+        )
         assert result["pose"] == "flying"
 
     @pytest.mark.asyncio
@@ -279,9 +323,13 @@ class TestComicCharacters:
         """Add a costume and verify is_default flag."""
         mock_service = AsyncMock()
         mock_service.add_costume.return_value = {
-            "character_id": str(CHARACTER_ID), "costume_name": "Battle Armor", "is_default": False,
+            "character_id": str(CHARACTER_ID),
+            "costume_name": "Battle Armor",
+            "is_default": False,
         }
-        result = await mock_service.add_costume(character_id=CHARACTER_ID, costume_name="Battle Armor", is_default=False)
+        result = await mock_service.add_costume(
+            character_id=CHARACTER_ID, costume_name="Battle Armor", is_default=False
+        )
         assert result["costume_name"] == "Battle Armor"
         assert result["is_default"] is False
 
@@ -294,7 +342,9 @@ class TestComicCharacters:
             {"url": "https://example.com/side.png", "angle": "side"},
         ]
         mock_service.get_character.return_value = {
-            "id": str(CHARACTER_ID), "name": "Captain Brave", "reference_images": ref_images,
+            "id": str(CHARACTER_ID),
+            "name": "Captain Brave",
+            "reference_images": ref_images,
         }
         result = await mock_service.get_character(character_id=CHARACTER_ID)
         assert isinstance(result["reference_images"], list)
@@ -321,7 +371,8 @@ class TestComicScript:
         """Verify script generation stub returns valid structure."""
         mock_service = AsyncMock()
         mock_service.generate_script.return_value = {
-            "comic_id": str(COMIC_ID), "generated": True,
+            "comic_id": str(COMIC_ID),
+            "generated": True,
             "pages": [{"page_number": 1, "panels": [{"description": "Opening scene"}]}],
         }
         result = await mock_service.generate_script(comic_id=COMIC_ID, prompt="A superhero origin story")
@@ -365,7 +416,8 @@ class TestComicLayoutTemplates:
         """Verify panels are created from a layout template."""
         mock_service = AsyncMock()
         mock_service.apply_layout_template.return_value = {
-            "page_id": str(PAGE_ID), "template": "standard_3_panel",
+            "page_id": str(PAGE_ID),
+            "template": "standard_3_panel",
             "panels_created": [
                 {"id": str(uuid.uuid4()), "x": 0, "y": 0, "width": 600, "height": 300},
                 {"id": str(uuid.uuid4()), "x": 0, "y": 310, "width": 300, "height": 300},
@@ -385,8 +437,11 @@ class TestComicExport:
         """Verify export returns a valid response structure."""
         mock_service = AsyncMock()
         mock_service.export_comic.return_value = {
-            "comic_id": str(COMIC_ID), "format": "pdf", "status": "completed",
-            "file_url": "https://example.com/export/comic.pdf", "page_count": 24,
+            "comic_id": str(COMIC_ID),
+            "format": "pdf",
+            "status": "completed",
+            "file_url": "https://example.com/export/comic.pdf",
+            "page_count": 24,
         }
         result = await mock_service.export_comic(comic_id=COMIC_ID, format="pdf")
         assert result["status"] == "completed"
@@ -397,7 +452,8 @@ class TestComicExport:
         """Verify preflight returns check results."""
         mock_service = AsyncMock()
         mock_service.run_preflight.return_value = {
-            "comic_id": str(COMIC_ID), "passed": True,
+            "comic_id": str(COMIC_ID),
+            "passed": True,
             "checks": [
                 {"name": "resolution_check", "passed": True, "message": "OK"},
                 {"name": "bleed_check", "passed": True, "message": "OK"},

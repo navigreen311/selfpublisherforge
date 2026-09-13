@@ -25,6 +25,7 @@ from app.models.marketing import (
 # Phase Task Schemas
 # ---------------------------------------------------------------------------
 
+
 class PhaseTaskBase(BaseModel):
     title: str = Field(..., max_length=500)
     description: str | None = None
@@ -57,6 +58,7 @@ class PhaseTaskResponse(PhaseTaskBase):
 # ---------------------------------------------------------------------------
 # Launch Phase Schemas
 # ---------------------------------------------------------------------------
+
 
 class LaunchPhaseBase(BaseModel):
     phase_type: LaunchPhaseType
@@ -92,6 +94,7 @@ class LaunchPhaseResponse(LaunchPhaseBase):
 # ---------------------------------------------------------------------------
 # Launch Plan Schemas
 # ---------------------------------------------------------------------------
+
 
 class LaunchPlanBase(BaseModel):
     title: str = Field(..., max_length=500)
@@ -135,6 +138,7 @@ class LaunchPlanResponse(LaunchPlanBase):
 
 class LaunchPlanSummary(BaseModel):
     """Lightweight launch plan for list views."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -150,6 +154,7 @@ class LaunchPlanSummary(BaseModel):
 
 class GenerateLaunchPlanRequest(BaseModel):
     """Request body for AI launch plan generation."""
+
     book_id: UUID
     book_title: str = Field(..., max_length=500)
     genre: str = Field(..., max_length=200)
@@ -163,6 +168,7 @@ class GenerateLaunchPlanRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Email Template Schemas
 # ---------------------------------------------------------------------------
+
 
 class EmailTemplateBase(BaseModel):
     template_type: EmailTemplateType = EmailTemplateType.CUSTOM
@@ -205,6 +211,7 @@ class EmailTemplateResponse(EmailTemplateBase):
 # ---------------------------------------------------------------------------
 # Email Sequence Schemas
 # ---------------------------------------------------------------------------
+
 
 class EmailSequenceBase(BaseModel):
     name: str = Field(..., max_length=500)
@@ -258,6 +265,7 @@ class EmailSequenceSummary(BaseModel):
 
 class TriggerEmailSendRequest(BaseModel):
     """Request to trigger sending an email sequence."""
+
     recipient_emails: list[str] = Field(..., min_length=1)
     personalization: dict[str, str] | None = None
     schedule_at: datetime | None = None
@@ -266,6 +274,7 @@ class TriggerEmailSendRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Social Post Schemas
 # ---------------------------------------------------------------------------
+
 
 class SocialPostBase(BaseModel):
     platform: SocialPlatform
@@ -304,6 +313,7 @@ class SocialPostResponse(SocialPostBase):
 
 class GenerateSocialContentRequest(BaseModel):
     """Request body for AI social media content generation."""
+
     book_title: str = Field(..., max_length=500)
     genre: str = Field(..., max_length=200)
     target_audience: str
@@ -320,6 +330,7 @@ class GenerateSocialContentRequest(BaseModel):
 
 class SocialCalendarResponse(BaseModel):
     """Aggregated view of scheduled social posts for a calendar."""
+
     posts: list[SocialPostResponse]
     total_scheduled: int
     total_published: int
@@ -330,6 +341,7 @@ class SocialCalendarResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # ARC Recipient Schemas
 # ---------------------------------------------------------------------------
+
 
 class ARCRecipientBase(BaseModel):
     name: str = Field(..., max_length=300)
@@ -358,6 +370,7 @@ class ARCRecipientResponse(ARCRecipientBase):
 # ---------------------------------------------------------------------------
 # ARC Campaign Schemas
 # ---------------------------------------------------------------------------
+
 
 class ARCCampaignBase(BaseModel):
     name: str = Field(..., max_length=500)
@@ -418,6 +431,7 @@ class ARCCampaignSummary(BaseModel):
 
 class SendARCRequest(BaseModel):
     """Request to send ARC copies to recipients."""
+
     recipient_ids: list[UUID] | None = None  # None means send to all pending
     custom_message: str | None = None
 
@@ -426,15 +440,20 @@ class SendARCRequest(BaseModel):
 # Additional request/response schemas for enhanced features
 # ---------------------------------------------------------------------------
 
+
 class LaunchPlanTaskToggle(BaseModel):
     """Toggle a task's completion status within a launch plan."""
+
     done: bool
 
 
 class EmailSequenceGenerateRequest(BaseModel):
     """Request to AI-generate an email sequence."""
+
     book_id: UUID | None = None
-    sequence_type: str = Field(default="pre_launch", pattern=r"^(pre_launch|launch_week|post_purchase|nurture|re_engagement)$")
+    sequence_type: str = Field(
+        default="pre_launch", pattern=r"^(pre_launch|launch_week|post_purchase|nurture|re_engagement)$"
+    )
     email_count: int = Field(default=5, ge=3, le=7)
     book_title: str | None = None
     author_name: str | None = None
@@ -443,6 +462,7 @@ class EmailSequenceGenerateRequest(BaseModel):
 
 class EmailUpdateRequest(BaseModel):
     """Update a single email within a sequence."""
+
     subject: str | None = Field(None, max_length=1000)
     body_html: str | None = None
     body_text: str | None = None
@@ -451,6 +471,7 @@ class EmailUpdateRequest(BaseModel):
 
 class SocialGenerateRequest(BaseModel):
     """Request to generate a batch of social media posts."""
+
     book_id: UUID | None = None
     platforms: list[str] = Field(default_factory=lambda: ["twitter", "facebook", "instagram"])
     posts_per_week: int = Field(default=3, ge=1, le=7)
@@ -462,6 +483,7 @@ class SocialGenerateRequest(BaseModel):
 
 class SocialPostUpdateRequest(BaseModel):
     """Update a social media post."""
+
     content: str | None = Field(None, max_length=5000)
     hashtags: list[str] | None = None
     scheduled_at: datetime | None = None
@@ -470,5 +492,6 @@ class SocialPostUpdateRequest(BaseModel):
 
 class ARCRecipientAdd(BaseModel):
     """Add a recipient to an ARC campaign."""
+
     name: str = Field(..., min_length=1, max_length=300)
     email: str = Field(..., min_length=3, max_length=500)

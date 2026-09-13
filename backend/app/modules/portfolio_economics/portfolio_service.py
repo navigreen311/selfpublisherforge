@@ -5,6 +5,7 @@ Aggregates data across all books in a portfolio to provide:
 - Kill/scale decisions for individual books
 - AI-powered recommendations for portfolio optimization
 """
+
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -20,17 +21,17 @@ from app.modules.portfolio_economics.schemas import (
 
 # ─── Kill/Scale Thresholds ────────────────────────────────────────────────────
 
-KILL_ROI_THRESHOLD = -50.0        # ROI below this suggests killing
-SCALE_ROI_THRESHOLD = 50.0        # ROI above this suggests scaling
-MAINTAIN_MIN_REVENUE = 50.0       # Minimum monthly revenue to maintain
+KILL_ROI_THRESHOLD = -50.0  # ROI below this suggests killing
+SCALE_ROI_THRESHOLD = 50.0  # ROI above this suggests scaling
+MAINTAIN_MIN_REVENUE = 50.0  # Minimum monthly revenue to maintain
 
 # Revenue trend thresholds
 TREND_DECLINING_THRESHOLD = -0.10  # >10% monthly decline is concerning
-TREND_GROWING_THRESHOLD = 0.05    # >5% monthly growth is positive
+TREND_GROWING_THRESHOLD = 0.05  # >5% monthly growth is positive
 
 # Review thresholds
-REVIEW_CONCERN_THRESHOLD = 3.5    # Below this rating is concerning
-REVIEW_STRONG_THRESHOLD = 4.2     # Above this is strong social proof
+REVIEW_CONCERN_THRESHOLD = 3.5  # Below this rating is concerning
+REVIEW_STRONG_THRESHOLD = 4.2  # Above this is strong social proof
 
 
 def calculate_kill_scale(request: KillScaleRequest) -> KillScaleDecision:
@@ -44,10 +45,7 @@ def calculate_kill_scale(request: KillScaleRequest) -> KillScaleDecision:
     """
     # Calculate current ROI
     if request.total_investment > 0:
-        current_roi = (
-            (request.total_revenue_to_date - request.total_investment)
-            / request.total_investment * 100
-        )
+        current_roi = (request.total_revenue_to_date - request.total_investment) / request.total_investment * 100
     else:
         current_roi = 100.0 if request.total_revenue_to_date > 0 else 0.0
 
@@ -61,12 +59,10 @@ def calculate_kill_scale(request: KillScaleRequest) -> KillScaleDecision:
 
     # Project future revenue (simple trend projection)
     projected_6m_revenue = sum(
-        max(0, request.current_monthly_revenue * ((1 + monthly_trend) ** m))
-        for m in range(1, 7)
+        max(0, request.current_monthly_revenue * ((1 + monthly_trend) ** m)) for m in range(1, 7)
     )
     projected_12m_revenue = sum(
-        max(0, request.current_monthly_revenue * ((1 + monthly_trend) ** m))
-        for m in range(1, 13)
+        max(0, request.current_monthly_revenue * ((1 + monthly_trend) ** m)) for m in range(1, 13)
     )
 
     # Scoring factors
@@ -165,44 +161,54 @@ def calculate_kill_scale(request: KillScaleRequest) -> KillScaleDecision:
     # Determine decision
     if score >= 70:
         decision = DecisionType.SCALE
-        actions.extend([
-            "Increase marketing budget by 50-100%",
-            "Run targeted advertising campaigns",
-            "Consider audiobook format if not available",
-            "Request BookBub featured deal",
-        ])
+        actions.extend(
+            [
+                "Increase marketing budget by 50-100%",
+                "Run targeted advertising campaigns",
+                "Consider audiobook format if not available",
+                "Request BookBub featured deal",
+            ]
+        )
     elif score >= 45:
         decision = DecisionType.MAINTAIN
-        actions.extend([
-            "Continue current marketing strategy",
-            "Monitor trends monthly",
-            "Consider minor price optimization",
-        ])
+        actions.extend(
+            [
+                "Continue current marketing strategy",
+                "Monitor trends monthly",
+                "Consider minor price optimization",
+            ]
+        )
     elif score >= 30 and request.months_since_launch > 6:
         # Could be a revive candidate if it had decent performance before
         if current_roi > -20 or request.review_rating and request.review_rating >= 4.0:
             decision = DecisionType.REVIVE
-            actions.extend([
-                "Refresh book cover and description",
-                "Run a limited-time price promotion",
-                "Consider new keyword targeting",
-                "Seek newsletter swaps or cross-promotions",
-            ])
+            actions.extend(
+                [
+                    "Refresh book cover and description",
+                    "Run a limited-time price promotion",
+                    "Consider new keyword targeting",
+                    "Seek newsletter swaps or cross-promotions",
+                ]
+            )
         else:
             decision = DecisionType.KILL
-            actions.extend([
-                "Stop active marketing spend",
-                "Consider unpublishing or enrolling in KU if not already",
-                "Redirect resources to better-performing titles",
-            ])
+            actions.extend(
+                [
+                    "Stop active marketing spend",
+                    "Consider unpublishing or enrolling in KU if not already",
+                    "Redirect resources to better-performing titles",
+                ]
+            )
     else:
         decision = DecisionType.KILL
-        actions.extend([
-            "Stop active marketing spend immediately",
-            "Consider unpublishing or making exclusive to KU",
-            "Use lessons learned for future titles",
-            "Redirect investment to higher-ROI books",
-        ])
+        actions.extend(
+            [
+                "Stop active marketing spend immediately",
+                "Consider unpublishing or making exclusive to KU",
+                "Use lessons learned for future titles",
+                "Redirect investment to higher-ROI books",
+            ]
+        )
 
     # Series protection -- never kill book 1 if later books perform
     if decision == DecisionType.KILL and request.is_series and request.series_position == 1:
@@ -260,10 +266,7 @@ def build_portfolio_overview(
     total_investment = sum(b.get("total_investment", 0.0) for b in books)
     monthly_revenue = sum(b.get("monthly_revenue", 0.0) for b in active_books)
 
-    portfolio_roi = (
-        ((total_revenue - total_investment) / total_investment * 100)
-        if total_investment > 0 else 0.0
-    )
+    portfolio_roi = ((total_revenue - total_investment) / total_investment * 100) if total_investment > 0 else 0.0
 
     book_summaries = [
         BookSummary(
@@ -275,9 +278,9 @@ def build_portfolio_overview(
             monthly_units=b.get("monthly_units", 0),
             total_revenue=b.get("total_revenue", 0.0),
             roi=(
-                ((b.get("total_revenue", 0) - b.get("total_investment", 0))
-                 / b.get("total_investment", 1) * 100)
-                if b.get("total_investment", 0) > 0 else 0.0
+                ((b.get("total_revenue", 0) - b.get("total_investment", 0)) / b.get("total_investment", 1) * 100)
+                if b.get("total_investment", 0) > 0
+                else 0.0
             ),
             status=b.get("status", "active"),
         )
@@ -325,22 +328,24 @@ def generate_portfolio_recommendations(
 
     # Diversification analysis
     if overview.total_books > 0 and len(overview.genre_distribution) == 1:
-        genre = list(overview.genre_distribution.keys())[0]
-        recommendations.append(PortfolioRecommendation(
-            category="diversification",
-            priority="high",
-            title="Diversify your genre portfolio",
-            description=(
-                f"All {overview.total_books} books are in {genre}. "
-                "Consider expanding to adjacent genres to reduce risk."
-            ),
-            estimated_impact="Reduce single-genre dependency by 30-50%",
-            actions=[
-                f"Research genres adjacent to {genre}",
-                "Start with a single book in a new genre to test",
-                "Consider cross-genre appeal in future book ideas",
-            ],
-        ))
+        genre = next(iter(overview.genre_distribution.keys()))
+        recommendations.append(
+            PortfolioRecommendation(
+                category="diversification",
+                priority="high",
+                title="Diversify your genre portfolio",
+                description=(
+                    f"All {overview.total_books} books are in {genre}. "
+                    "Consider expanding to adjacent genres to reduce risk."
+                ),
+                estimated_impact="Reduce single-genre dependency by 30-50%",
+                actions=[
+                    f"Research genres adjacent to {genre}",
+                    "Start with a single book in a new genre to test",
+                    "Consider cross-genre appeal in future book ideas",
+                ],
+            )
+        )
     elif overview.total_books >= 5:
         # Check for genre concentration
         max_genre_count = max(overview.genre_distribution.values()) if overview.genre_distribution else 0
@@ -348,91 +353,101 @@ def generate_portfolio_recommendations(
         if concentration > 0.7:
             dominant_genre = max(
                 overview.genre_distribution,
-                key=lambda k: overview.genre_distribution.get(k, 0)  # type: ignore[arg-type]
+                key=lambda k: overview.genre_distribution.get(k, 0),  # type: ignore[arg-type]
             )
-            recommendations.append(PortfolioRecommendation(
-                category="diversification",
-                priority="medium",
-                title="Genre concentration risk",
-                description=(
-                    f"{concentration:.0%} of your books are in {dominant_genre}. "
-                    "Consider diversifying to protect against genre market shifts."
-                ),
-                estimated_impact="Reduce genre risk exposure",
-                actions=[
-                    "Write 1-2 books in a complementary genre",
-                    "Use pen names if needed for genre separation",
-                ],
-            ))
+            recommendations.append(
+                PortfolioRecommendation(
+                    category="diversification",
+                    priority="medium",
+                    title="Genre concentration risk",
+                    description=(
+                        f"{concentration:.0%} of your books are in {dominant_genre}. "
+                        "Consider diversifying to protect against genre market shifts."
+                    ),
+                    estimated_impact="Reduce genre risk exposure",
+                    actions=[
+                        "Write 1-2 books in a complementary genre",
+                        "Use pen names if needed for genre separation",
+                    ],
+                )
+            )
 
     # ROI optimization
     if overview.portfolio_roi < 0:
-        recommendations.append(PortfolioRecommendation(
-            category="optimization",
-            priority="high",
-            title="Negative portfolio ROI",
-            description=(
-                f"Portfolio ROI is {overview.portfolio_roi:.0f}%. "
-                "Review underperforming books and consider killing or reviving them."
-            ),
-            estimated_impact="Potential to recover 20-40% of losses",
-            actions=[
-                "Run kill/scale analysis on each underperforming book",
-                "Stop marketing spend on books with no traction",
-                "Invest in cover refreshes for books with good content but poor sales",
-            ],
-        ))
+        recommendations.append(
+            PortfolioRecommendation(
+                category="optimization",
+                priority="high",
+                title="Negative portfolio ROI",
+                description=(
+                    f"Portfolio ROI is {overview.portfolio_roi:.0f}%. "
+                    "Review underperforming books and consider killing or reviving them."
+                ),
+                estimated_impact="Potential to recover 20-40% of losses",
+                actions=[
+                    "Run kill/scale analysis on each underperforming book",
+                    "Stop marketing spend on books with no traction",
+                    "Invest in cover refreshes for books with good content but poor sales",
+                ],
+            )
+        )
     elif overview.portfolio_roi < 50:
-        recommendations.append(PortfolioRecommendation(
-            category="optimization",
-            priority="medium",
-            title="Portfolio ROI below target",
-            description=(
-                f"Portfolio ROI is {overview.portfolio_roi:.0f}%. "
-                "Focus on scaling top performers and optimizing pricing."
-            ),
-            actions=[
-                "Double down on marketing for top 3 books",
-                "Test price increases on books with high review ratings",
-                "Consider bundling underperformers with top sellers",
-            ],
-        ))
+        recommendations.append(
+            PortfolioRecommendation(
+                category="optimization",
+                priority="medium",
+                title="Portfolio ROI below target",
+                description=(
+                    f"Portfolio ROI is {overview.portfolio_roi:.0f}%. "
+                    "Focus on scaling top performers and optimizing pricing."
+                ),
+                actions=[
+                    "Double down on marketing for top 3 books",
+                    "Test price increases on books with high review ratings",
+                    "Consider bundling underperformers with top sellers",
+                ],
+            )
+        )
 
     # Growth opportunities
     if overview.total_books < 5:
-        recommendations.append(PortfolioRecommendation(
-            category="growth",
-            priority="high",
-            title="Build your backlist",
-            description=(
-                f"You have {overview.total_books} book(s). "
-                "Growing to 5+ books creates significant compounding revenue effects."
-            ),
-            estimated_impact="Backlist of 5+ books typically 2-3x total revenue",
-            actions=[
-                "Aim to publish at least 3-4 books per year",
-                "Consider series to leverage read-through",
-                "Use rapid-release strategy for new series",
-            ],
-        ))
+        recommendations.append(
+            PortfolioRecommendation(
+                category="growth",
+                priority="high",
+                title="Build your backlist",
+                description=(
+                    f"You have {overview.total_books} book(s). "
+                    "Growing to 5+ books creates significant compounding revenue effects."
+                ),
+                estimated_impact="Backlist of 5+ books typically 2-3x total revenue",
+                actions=[
+                    "Aim to publish at least 3-4 books per year",
+                    "Consider series to leverage read-through",
+                    "Use rapid-release strategy for new series",
+                ],
+            )
+        )
 
     # Underperformer analysis
     if overview.underperformers:
         low_revenue = [b for b in overview.underperformers if b.monthly_revenue < 20]
         if low_revenue:
-            recommendations.append(PortfolioRecommendation(
-                category="risk",
-                priority="medium",
-                title=f"{len(low_revenue)} books earning under $20/month",
-                description=(
-                    "These books may be dragging down portfolio efficiency. "
-                    "Evaluate whether to invest in reviving them or reallocate resources."
-                ),
-                actions=[
-                    "Run kill/scale analysis on each low-performer",
-                    "Consider cover and blurb refreshes",
-                    "Evaluate keyword and category targeting",
-                ],
-            ))
+            recommendations.append(
+                PortfolioRecommendation(
+                    category="risk",
+                    priority="medium",
+                    title=f"{len(low_revenue)} books earning under $20/month",
+                    description=(
+                        "These books may be dragging down portfolio efficiency. "
+                        "Evaluate whether to invest in reviving them or reallocate resources."
+                    ),
+                    actions=[
+                        "Run kill/scale analysis on each low-performer",
+                        "Consider cover and blurb refreshes",
+                        "Evaluate keyword and category targeting",
+                    ],
+                )
+            )
 
     return recommendations

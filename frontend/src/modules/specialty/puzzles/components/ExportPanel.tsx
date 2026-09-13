@@ -95,7 +95,7 @@ export function ExportPanel({
       <div>
         <h2 className="text-xl font-semibold">Export</h2>
         <p className="text-sm text-muted-foreground">
-          Export "{bookTitle}" as a print-ready PDF
+          Export &quot;{bookTitle}&quot; as a print-ready PDF
         </p>
       </div>
 

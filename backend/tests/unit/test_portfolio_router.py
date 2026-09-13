@@ -29,7 +29,6 @@ from app.modules.portfolio_economics.schemas import (
     PortfolioRecommendation,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -269,6 +268,7 @@ class TestGetPortfolioOverviewRequiresAuth:
     async def test_unauthenticated_request_returns_403(self):
         """Without a token, the middleware returns 403."""
         from httpx import ASGITransport, AsyncClient
+
         from app.main import create_app
 
         app = create_app()
@@ -279,14 +279,13 @@ class TestGetPortfolioOverviewRequiresAuth:
                 params={"org_id": str(uuid.uuid4())},
             )
         # The app enforces auth middleware: unauthenticated = 403
-        assert response.status_code in (401, 403), (
-            f"Expected 401 or 403, got {response.status_code}"
-        )
+        assert response.status_code in (401, 403), f"Expected 401 or 403, got {response.status_code}"
 
     @pytest.mark.asyncio
     async def test_recommendations_unauthenticated_returns_403(self):
         """Recommendations GET endpoint should enforce auth like overview."""
         from httpx import ASGITransport, AsyncClient
+
         from app.main import create_app
 
         app = create_app()
@@ -303,6 +302,7 @@ class TestGetPortfolioOverviewRequiresAuth:
         """Missing org_id on the overview endpoint should not return 200.
         The middleware enforces auth before the route parameter validation."""
         from httpx import ASGITransport, AsyncClient
+
         from app.main import create_app
 
         app = create_app()

@@ -4,6 +4,7 @@ Provides CRUD for books, pages, and characters, plus AI-powered story
 generation, readability analysis, character-consistency checking, safety
 scanning, bilingual translation, illustration generation, and export/preflight.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,15 +17,19 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import UploadFile
-from sqlalchemy import func, select, update
+from sqlalchemy import Select, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppException, NotFoundError
-from app.database import TenantModel
+from app.core.exceptions import NotFoundError
+from app.core.sql import assert_known_columns
+from app.modules.specialty.models.childrens import (
+    ChildrensBook,
+    ChildrensBookCharacter,
+    ChildrensBookPage,
+)
 from app.modules.specialty.models.enums import (
     AgeRange,
     BookStatus,
-    IllustrationStyle,
     PageLayout,
 )
 
@@ -34,12 +39,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # ORM models — imported from the canonical models module
 # ---------------------------------------------------------------------------
-from app.modules.specialty.models.childrens import (  # noqa: E402
-    ChildrensBook,
-    ChildrensBookCharacter,
-    ChildrensBookPage,
-)
-
 
 # ---------------------------------------------------------------------------
 # Age-band readability constraints (from blueprint section 3.5)
@@ -98,10 +97,24 @@ AGE_BAND_RULES: dict[str, dict[str, Any]] = {
 
 # Trademarked terms to block (blueprint section 3.7)
 TRADEMARK_TERMS: list[str] = [
-    "disney", "pixar", "peppa pig", "bluey", "paw patrol", "marvel",
-    "frozen", "cocomelon", "sesame street", "pokemon", "hello kitty",
-    "thomas the tank engine", "dora the explorer", "spongebob",
-    "mickey mouse", "winnie the pooh", "barbie", "lego",
+    "disney",
+    "pixar",
+    "peppa pig",
+    "bluey",
+    "paw patrol",
+    "marvel",
+    "frozen",
+    "cocomelon",
+    "sesame street",
+    "pokemon",
+    "hello kitty",
+    "thomas the tank engine",
+    "dora the explorer",
+    "spongebob",
+    "mickey mouse",
+    "winnie the pooh",
+    "barbie",
+    "lego",
 ]
 
 CONTENT_SENSITIVITY_PATTERNS: list[str] = [
@@ -116,6 +129,7 @@ CONTENT_SENSITIVITY_PATTERNS: list[str] = [
 # LLM helper
 # ---------------------------------------------------------------------------
 
+
 async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 4000) -> str:
     """Call the LLM orchestration service and return generated text.
 
@@ -123,64 +137,66 @@ async def _llm_generate(prompt: str, system_prompt: str = "", max_tokens: int = 
     fully configured (e.g. during development or testing).
     """
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
             prompt=prompt,
             system_prompt=system_prompt,
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=max_tokens),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=max_tokens),
         )
         response = await svc.complete(request)
         return response.content
     except Exception:
         logger.warning("LLM orchestration unavailable; returning structured fallback", exc_info=True)
-        return json.dumps({
-            "status": "service_unavailable",
-            "message": (
-                "The AI text-generation service is currently unavailable. "
-                "A manual template has been provided below."
-            ),
-            "template": {
-                "title": "[Enter book title]",
-                "pages": [
-                    {
-                        "page_number": i,
-                        "text_content": f"[Enter text for page {i}]",
-                    }
-                    for i in range(1, 6)
-                ],
-                "instructions": (
-                    "Fill in each page's text_content field. "
-                    "Re-submit once the AI service is restored for "
-                    "AI-assisted refinement."
+        return json.dumps(
+            {
+                "status": "service_unavailable",
+                "message": (
+                    "The AI text-generation service is currently unavailable. "
+                    "A manual template has been provided below."
                 ),
-            },
-        })
+                "template": {
+                    "title": "[Enter book title]",
+                    "pages": [
+                        {
+                            "page_number": i,
+                            "text_content": f"[Enter text for page {i}]",
+                        }
+                        for i in range(1, 6)
+                    ],
+                    "instructions": (
+                        "Fill in each page's text_content field. "
+                        "Re-submit once the AI service is restored for "
+                        "AI-assisted refinement."
+                    ),
+                },
+            }
+        )
 
 
 async def _llm_generate_image(prompt: str) -> dict[str, str]:
     """Request an AI-generated image.  Returns dict with ``image_url``."""
     try:
-        from app.modules.llm_orchestration.service import LLMOrchestrationService
         from app.modules.llm_orchestration.schemas import (
             CompletionRequest,
-            GenerationConfig,
-            TaskType,
+            ModelConfig,
+            TaskTypeEnum,
         )
+        from app.modules.llm_orchestration.service import LLMOrchestrationService
 
         svc = LLMOrchestrationService()
         request = CompletionRequest(
             prompt=f"Generate an illustration: {prompt}",
             system_prompt="You are an image generation dispatcher. Return a JSON object with 'image_url' key.",
-            task_type=TaskType.CREATIVE,
-            config=GenerationConfig(max_tokens=500),
+            task_type=TaskTypeEnum.LONG_FORM_WRITING,
+            config=ModelConfig(max_tokens=500),
         )
         response = await svc.complete(request)
         try:
@@ -214,23 +230,22 @@ def _book_to_dict(book: ChildrensBook) -> dict[str, Any]:
         "org_id": str(book.org_id),
         "title": book.title,
         "subtitle": book.subtitle,
-        "author_name": book.author_name,
-        "age_range": book.age_range.value if book.age_range else None,
-        "status": book.status.value if book.status else None,
+        "author": book.author,
+        "age_range": book.age_range,
+        "status": book.status,
         "page_count": book.page_count,
         "trim_size": book.trim_size,
-        "illustration_style": book.illustration_style.value if book.illustration_style else None,
+        "illustration_style": book.illustration_style,
         "color_palette": book.color_palette,
         "story_prompt": book.story_prompt,
-        "theme": book.theme,
+        "theme_moral": book.theme_moral,
         "tone": book.tone,
         "story_mode": book.story_mode,
-        "bilingual": book.bilingual,
+        "is_bilingual": book.is_bilingual,
         "bilingual_language": book.bilingual_language,
         "bilingual_layout": book.bilingual_layout,
         "fear_intensity": book.fear_intensity,
         "qa_score": book.qa_score,
-        "metadata": book.metadata_json or {},
         "created_at": book.created_at.isoformat() if book.created_at else None,
         "updated_at": book.updated_at.isoformat() if book.updated_at else None,
     }
@@ -243,12 +258,18 @@ def _page_to_dict(page: ChildrensBookPage) -> dict[str, Any]:
         "page_number": page.page_number,
         "text_content": page.text_content,
         "illustration_prompt": page.illustration_prompt,
-        "layout": page.layout.value if page.layout else None,
-        "image_url": page.image_url,
-        "thumbnail_url": page.thumbnail_url,
-        "font_size": page.font_size,
+        "page_type": page.page_type,
+        "layout": page.layout,
+        "illustration_url": page.illustration_url,
+        "illustration_model": page.illustration_model,
+        "illustration_seed": page.illustration_seed,
+        "text_font": page.text_font,
+        "text_size": page.text_size,
+        "text_color": page.text_color,
         "text_position": page.text_position,
-        "dpi": page.dpi,
+        "text_plate_enabled": page.text_plate_enabled,
+        "contrast_score": page.contrast_score,
+        "gutter_safe": page.gutter_safe,
         "translated_text": page.translated_text,
         "metadata": page.metadata_json or {},
         "created_at": page.created_at.isoformat() if page.created_at else None,
@@ -261,22 +282,20 @@ def _char_to_dict(char: ChildrensBookCharacter) -> dict[str, Any]:
         "id": str(char.id),
         "book_id": str(char.book_id),
         "name": char.name,
-        "species_type": char.species_type,
+        "species": char.species,
         "description": char.description,
-        "clothing_rules": char.clothing_rules,
-        "scale_rules": char.scale_rules,
-        "setting_continuity": char.setting_continuity,
-        "time_of_day_rules": char.time_of_day_rules,
+        "auto_append": char.auto_append,
+        "clothing_rules": char.clothing_rules or {},
+        "scale_rules": char.scale_rules or {},
+        "setting_continuity_rules": char.setting_rules or {},
+        "time_of_day_rules": char.time_rules or {},
         "reference_images": char.reference_images or [],
-        "metadata": char.metadata_json or {},
         "created_at": char.created_at.isoformat() if char.created_at else None,
         "updated_at": char.updated_at.isoformat() if char.updated_at else None,
     }
 
 
-async def _get_book_or_404(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> ChildrensBook:
+async def _get_book_or_404(db: AsyncSession, org_id: UUID, book_id: UUID) -> ChildrensBook:
     stmt = select(ChildrensBook).where(
         ChildrensBook.id == book_id,
         ChildrensBook.org_id == org_id,
@@ -289,13 +308,23 @@ async def _get_book_or_404(
     return book
 
 
-async def _get_page_or_404(
-    db: AsyncSession, org_id: UUID, book_id: UUID, page_id: UUID
-) -> ChildrensBookPage:
+def _org_book_ids(org_id: UUID) -> Select[tuple[UUID]]:
+    """Sub-select of the org's live book ids.
+
+    Pages and characters carry no org_id of their own, so every query against
+    them is scoped by their parent book.
+    """
+    return select(ChildrensBook.id).where(
+        ChildrensBook.org_id == org_id,
+        ChildrensBook.deleted_at.is_(None),
+    )
+
+
+async def _get_page_or_404(db: AsyncSession, org_id: UUID, book_id: UUID, page_id: UUID) -> ChildrensBookPage:
     stmt = select(ChildrensBookPage).where(
         ChildrensBookPage.id == page_id,
         ChildrensBookPage.book_id == book_id,
-        ChildrensBookPage.org_id == org_id,
+        ChildrensBookPage.book_id.in_(_org_book_ids(org_id)),
         ChildrensBookPage.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -305,13 +334,11 @@ async def _get_page_or_404(
     return page
 
 
-async def _get_character_or_404(
-    db: AsyncSession, org_id: UUID, book_id: UUID, char_id: UUID
-) -> ChildrensBookCharacter:
+async def _get_character_or_404(db: AsyncSession, org_id: UUID, book_id: UUID, char_id: UUID) -> ChildrensBookCharacter:
     stmt = select(ChildrensBookCharacter).where(
         ChildrensBookCharacter.id == char_id,
         ChildrensBookCharacter.book_id == book_id,
-        ChildrensBookCharacter.org_id == org_id,
+        ChildrensBookCharacter.book_id.in_(_org_book_ids(org_id)),
         ChildrensBookCharacter.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -336,13 +363,13 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
         ChildrensBook.deleted_at.is_(None),
     ]
 
-    total_result = await db.execute(
-        select(func.count()).select_from(ChildrensBook).where(*base_filter)
-    )
+    total_result = await db.execute(select(func.count()).select_from(ChildrensBook).where(*base_filter))
     total_books = total_result.scalar() or 0
 
     in_progress_result = await db.execute(
-        select(func.count()).select_from(ChildrensBook).where(
+        select(func.count())
+        .select_from(ChildrensBook)
+        .where(
             *base_filter,
             ChildrensBook.status == BookStatus.in_progress,
         )
@@ -350,7 +377,9 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
     in_progress = in_progress_result.scalar() or 0
 
     published_result = await db.execute(
-        select(func.count()).select_from(ChildrensBook).where(
+        select(func.count())
+        .select_from(ChildrensBook)
+        .where(
             *base_filter,
             ChildrensBook.status == BookStatus.published,
         )
@@ -359,7 +388,9 @@ async def get_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
 
     book_ids_subq = select(ChildrensBook.id).where(*base_filter)
     pages_result = await db.execute(
-        select(func.count()).select_from(ChildrensBookPage).where(
+        select(func.count())
+        .select_from(ChildrensBookPage)
+        .where(
             ChildrensBookPage.book_id.in_(book_ids_subq),
             ChildrensBookPage.deleted_at.is_(None),
         )
@@ -393,9 +424,13 @@ async def list_books(
         ChildrensBook.org_id == org_id,
         ChildrensBook.deleted_at.is_(None),
     )
-    count_stmt = select(func.count()).select_from(ChildrensBook).where(
-        ChildrensBook.org_id == org_id,
-        ChildrensBook.deleted_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(ChildrensBook)
+        .where(
+            ChildrensBook.org_id == org_id,
+            ChildrensBook.deleted_at.is_(None),
+        )
     )
 
     if status_filter:
@@ -421,15 +456,13 @@ async def list_books(
     }
 
 
-async def create_book(
-    db: AsyncSession, org_id: UUID, data: dict[str, Any]
-) -> dict[str, Any]:
+async def create_book(db: AsyncSession, org_id: UUID, data: dict[str, Any]) -> dict[str, Any]:
     """Create a new children's book."""
     book = ChildrensBook(
         org_id=org_id,
         title=data["title"],
         subtitle=data.get("subtitle"),
-        author_name=data.get("author_name"),
+        author=data.get("author") or data.get("author_name"),
         age_range=data.get("age_range", AgeRange.preschool.value),
         status=BookStatus.draft.value,
         page_count=data.get("page_count", 0),
@@ -437,14 +470,13 @@ async def create_book(
         illustration_style=data.get("illustration_style"),
         color_palette=data.get("color_palette"),
         story_prompt=data.get("story_prompt"),
-        theme=data.get("theme"),
+        theme_moral=data.get("theme_moral") or data.get("theme"),
         tone=data.get("tone"),
         story_mode=data.get("story_mode"),
-        bilingual=data.get("bilingual", False),
+        is_bilingual=data.get("is_bilingual", data.get("bilingual", False)),
         bilingual_language=data.get("bilingual_language"),
         bilingual_layout=data.get("bilingual_layout"),
         fear_intensity=data.get("fear_intensity", "none"),
-        metadata_json=data.get("metadata", {}),
     )
     db.add(book)
     await db.flush()
@@ -452,35 +484,42 @@ async def create_book(
     return _book_to_dict(book)
 
 
-async def get_book(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> dict[str, Any]:
+async def get_book(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[str, Any]:
     book = await _get_book_or_404(db, org_id, book_id)
     return _book_to_dict(book)
 
 
-async def update_book(
-    db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[str, Any]
-) -> dict[str, Any]:
+async def update_book(db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[str, Any]) -> dict[str, Any]:
     book = await _get_book_or_404(db, org_id, book_id)
     allowed = {
-        "title", "subtitle", "author_name", "age_range", "status",
-        "page_count", "trim_size", "illustration_style", "color_palette",
-        "story_prompt", "theme", "tone", "story_mode", "bilingual",
-        "bilingual_language", "bilingual_layout", "fear_intensity", "metadata",
+        "title",
+        "subtitle",
+        "author",
+        "age_range",
+        "status",
+        "page_count",
+        "trim_size",
+        "illustration_style",
+        "color_palette",
+        "story_prompt",
+        "theme_moral",
+        "tone",
+        "story_mode",
+        "is_bilingual",
+        "bilingual_language",
+        "bilingual_layout",
+        "fear_intensity",
     }
+    assert_known_columns(ChildrensBook, allowed)
     for key, value in data.items():
         if key in allowed:
-            col = "metadata_json" if key == "metadata" else key
-            setattr(book, col, value)
+            setattr(book, key, value)
     await db.flush()
     await db.refresh(book)
     return _book_to_dict(book)
 
 
-async def delete_book(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> bool:
+async def delete_book(db: AsyncSession, org_id: UUID, book_id: UUID) -> bool:
     book = await _get_book_or_404(db, org_id, book_id)
     book.deleted_at = datetime.now(UTC)
     await db.flush()
@@ -492,15 +531,12 @@ async def delete_book(
 # ---------------------------------------------------------------------------
 
 
-async def list_pages(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> list[dict[str, Any]]:
+async def list_pages(db: AsyncSession, org_id: UUID, book_id: UUID) -> list[dict[str, Any]]:
     await _get_book_or_404(db, org_id, book_id)
     stmt = (
         select(ChildrensBookPage)
         .where(
             ChildrensBookPage.book_id == book_id,
-            ChildrensBookPage.org_id == org_id,
             ChildrensBookPage.deleted_at.is_(None),
         )
         .order_by(ChildrensBookPage.page_number)
@@ -509,9 +545,7 @@ async def list_pages(
     return [_page_to_dict(p) for p in result.scalars().all()]
 
 
-async def create_page(
-    db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[str, Any]
-) -> dict[str, Any]:
+async def create_page(db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[str, Any]) -> dict[str, Any]:
     await _get_book_or_404(db, org_id, book_id)
 
     # Auto-assign page number if not provided
@@ -541,15 +575,17 @@ async def create_page(
     await db.refresh(page)
 
     # Update book page count
-    count_stmt = select(func.count()).select_from(ChildrensBookPage).where(
-        ChildrensBookPage.book_id == book_id,
-        ChildrensBookPage.deleted_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(ChildrensBookPage)
+        .where(
+            ChildrensBookPage.book_id == book_id,
+            ChildrensBookPage.deleted_at.is_(None),
+        )
     )
     count_result = await db.execute(count_stmt)
     await db.execute(
-        update(ChildrensBook)
-        .where(ChildrensBook.id == book_id)
-        .values(page_count=count_result.scalar() or 0)
+        update(ChildrensBook).where(ChildrensBook.id == book_id).values(page_count=count_result.scalar() or 0)
     )
 
     return _page_to_dict(page)
@@ -560,8 +596,14 @@ async def update_page(
 ) -> dict[str, Any]:
     page = await _get_page_or_404(db, org_id, book_id, page_id)
     allowed = {
-        "text_content", "illustration_prompt", "layout", "font_size",
-        "text_position", "dpi", "page_number", "metadata",
+        "text_content",
+        "illustration_prompt",
+        "layout",
+        "font_size",
+        "text_position",
+        "dpi",
+        "page_number",
+        "metadata",
     }
     for key, value in data.items():
         if key in allowed:
@@ -572,18 +614,14 @@ async def update_page(
     return _page_to_dict(page)
 
 
-async def delete_page(
-    db: AsyncSession, org_id: UUID, book_id: UUID, page_id: UUID
-) -> bool:
+async def delete_page(db: AsyncSession, org_id: UUID, book_id: UUID, page_id: UUID) -> bool:
     page = await _get_page_or_404(db, org_id, book_id, page_id)
     page.deleted_at = datetime.now(UTC)
     await db.flush()
     return True
 
 
-async def reorder_pages(
-    db: AsyncSession, org_id: UUID, book_id: UUID, page_ids: list[str]
-) -> list[dict[str, Any]]:
+async def reorder_pages(db: AsyncSession, org_id: UUID, book_id: UUID, page_ids: list[str]) -> list[dict[str, Any]]:
     """Reorder pages by assigning new page numbers based on the given ID order."""
     await _get_book_or_404(db, org_id, book_id)
     for idx, pid in enumerate(page_ids, start=1):
@@ -592,7 +630,6 @@ async def reorder_pages(
             .where(
                 ChildrensBookPage.id == UUID(str(pid)),
                 ChildrensBookPage.book_id == book_id,
-                ChildrensBookPage.org_id == org_id,
             )
             .values(page_number=idx)
         )
@@ -605,15 +642,12 @@ async def reorder_pages(
 # ---------------------------------------------------------------------------
 
 
-async def list_characters(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> list[dict[str, Any]]:
+async def list_characters(db: AsyncSession, org_id: UUID, book_id: UUID) -> list[dict[str, Any]]:
     await _get_book_or_404(db, org_id, book_id)
     stmt = (
         select(ChildrensBookCharacter)
         .where(
             ChildrensBookCharacter.book_id == book_id,
-            ChildrensBookCharacter.org_id == org_id,
             ChildrensBookCharacter.deleted_at.is_(None),
         )
         .order_by(ChildrensBookCharacter.created_at)
@@ -622,9 +656,7 @@ async def list_characters(
     return [_char_to_dict(c) for c in result.scalars().all()]
 
 
-async def create_character(
-    db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[str, Any]
-) -> dict[str, Any]:
+async def create_character(db: AsyncSession, org_id: UUID, book_id: UUID, data: dict[str, Any]) -> dict[str, Any]:
     await _get_book_or_404(db, org_id, book_id)
     char = ChildrensBookCharacter(
         org_id=org_id,
@@ -635,7 +667,7 @@ async def create_character(
         clothing_rules=data.get("clothing_rules"),
         scale_rules=data.get("scale_rules"),
         setting_continuity=data.get("setting_continuity"),
-        time_of_day_rules=data.get("time_of_day_rules"),
+        time_rules=data.get("time_of_day_rules"),
         reference_images=data.get("reference_images", []),
         metadata_json=data.get("metadata", {}),
     )
@@ -650,9 +682,15 @@ async def update_character(
 ) -> dict[str, Any]:
     char = await _get_character_or_404(db, org_id, book_id, char_id)
     allowed = {
-        "name", "species_type", "description", "clothing_rules",
-        "scale_rules", "setting_continuity", "time_of_day_rules",
-        "reference_images", "metadata",
+        "name",
+        "species_type",
+        "description",
+        "clothing_rules",
+        "scale_rules",
+        "setting_continuity",
+        "time_of_day_rules",
+        "reference_images",
+        "metadata",
     }
     for key, value in data.items():
         if key in allowed:
@@ -663,23 +701,19 @@ async def update_character(
     return _char_to_dict(char)
 
 
-async def delete_character(
-    db: AsyncSession, org_id: UUID, book_id: UUID, char_id: UUID
-) -> bool:
+async def delete_character(db: AsyncSession, org_id: UUID, book_id: UUID, char_id: UUID) -> bool:
     char = await _get_character_or_404(db, org_id, book_id, char_id)
     char.deleted_at = datetime.now(UTC)
     await db.flush()
     return True
 
 
-async def generate_character_references(
-    db: AsyncSession, org_id: UUID, book_id: UUID, char_id: UUID
-) -> dict[str, Any]:
+async def generate_character_references(db: AsyncSession, org_id: UUID, book_id: UUID, char_id: UUID) -> dict[str, Any]:
     """Generate 4 reference images for a character (front, side, happy, scared)."""
     book = await _get_book_or_404(db, org_id, book_id)
     char = await _get_character_or_404(db, org_id, book_id, char_id)
 
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
     base_desc = f"{char.description or char.name}"
     if char.clothing_rules:
         base_desc += f", wearing {char.clothing_rules}"
@@ -709,9 +743,7 @@ async def generate_character_references(
 # ---------------------------------------------------------------------------
 
 
-async def generate_story(
-    db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]
-) -> dict[str, Any]:
+async def generate_story(db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]) -> dict[str, Any]:
     """Generate a full story with per-page text and illustration prompts.
 
     Builds a prompt using the book's age-band constraints, theme, tone,
@@ -720,18 +752,18 @@ async def generate_story(
     """
     book = await _get_book_or_404(db, org_id, book_id)
     characters = await list_characters(db, org_id, book_id)
-    rules = AGE_BAND_RULES.get(book.age_range.value if book.age_range else "preschool", AGE_BAND_RULES["preschool"])
+    rules = AGE_BAND_RULES.get(book.age_range, AGE_BAND_RULES["preschool"])
 
     target_pages = options.get("target_pages", book.page_count or 24)
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
 
-    char_descriptions = "\n".join(
-        f"- {c['name']}: {c.get('description', '')} {c.get('clothing_rules', '')}"
-        for c in characters
-    ) or "No characters defined yet."
+    char_descriptions = (
+        "\n".join(f"- {c['name']}: {c.get('description', '')} {c.get('clothing_rules', '')}" for c in characters)
+        or "No characters defined yet."
+    )
 
     system_prompt = (
-        f"You are a children's book author. Write for age range: {book.age_range.value if book.age_range else 'preschool'}.\n"
+        f"You are a children's book author. Write for age range: {book.age_range}.\n"
         f"Rules: max {rules['max_sentence_words']} words per sentence, "
         f"max {rules['max_word_length']} letters per word (0=no limit), "
         f"total words between {rules['total_words_min']}-{rules['total_words_max']}.\n"
@@ -743,7 +775,7 @@ async def generate_story(
     prompt = (
         f"Write a {target_pages}-page children's book.\n"
         f"Title: {book.title}\n"
-        f"Theme/Moral: {book.theme or 'Not specified'}\n"
+        f"Theme/Moral: {book.theme_moral or 'Not specified'}\n"
         f"Story Prompt: {book.story_prompt or 'Not specified'}\n"
         f"Characters:\n{char_descriptions}\n\n"
         f"For each page, output in this exact format:\n"
@@ -784,7 +816,7 @@ async def generate_story(
     # Run readability check on generated content
     readability = _analyze_readability(
         [p.get("text_content", "") for p in created_pages],
-        book.age_range.value if book.age_range else "preschool",
+        book.age_range,
     )
 
     return {
@@ -811,11 +843,13 @@ def _parse_story_pages(raw_text: str, target_pages: int) -> list[dict[str, Any]]
             text_match = re.search(r"TEXT:\s*(.+?)(?=ILLUSTRATION:|$)", content, re.DOTALL | re.IGNORECASE)
             illust_match = re.search(r"ILLUSTRATION:\s*(.+?)(?=PAGE\s+\d+:|$)", content, re.DOTALL | re.IGNORECASE)
 
-            pages.append({
-                "page_number": page_num,
-                "text": text_match.group(1).strip() if text_match else content.strip(),
-                "illustration_prompt": illust_match.group(1).strip() if illust_match else "",
-            })
+            pages.append(
+                {
+                    "page_number": page_num,
+                    "text": text_match.group(1).strip() if text_match else content.strip(),
+                    "illustration_prompt": illust_match.group(1).strip() if illust_match else "",
+                }
+            )
     else:
         # Fallback: split raw text into equal chunks
         sentences = [s.strip() for s in re.split(r"[.!?]+", raw_text) if s.strip()]
@@ -825,11 +859,13 @@ def _parse_story_pages(raw_text: str, target_pages: int) -> list[dict[str, Any]]
             chunk = ". ".join(sentences[start : start + per_page])
             if chunk:
                 chunk += "."
-            pages.append({
-                "page_number": pg + 1,
-                "text": chunk,
-                "illustration_prompt": f"Illustration for: {chunk[:120]}",
-            })
+            pages.append(
+                {
+                    "page_number": pg + 1,
+                    "text": chunk,
+                    "illustration_prompt": f"Illustration for: {chunk[:120]}",
+                }
+            )
 
     return pages
 
@@ -839,9 +875,7 @@ def _parse_story_pages(raw_text: str, target_pages: int) -> list[dict[str, Any]]
 # ---------------------------------------------------------------------------
 
 
-def _analyze_readability(
-    page_texts: list[str], age_range_value: str
-) -> dict[str, Any]:
+def _analyze_readability(page_texts: list[str], age_range_value: str) -> dict[str, Any]:
     """Run readability analysis per blueprint 3.5 rules.
 
     Returns per-page issues, rhythm score, and aggregate stats.
@@ -895,14 +929,15 @@ def _analyze_readability(
     # Total word count check
     word_count_ok = rules["total_words_min"] <= total_words <= rules["total_words_max"]
     if not word_count_ok:
-        issues.append({
-            "page": 0,
-            "type": "total_word_count",
-            "detail": (
-                f"Total words: {total_words} "
-                f"(expected {rules['total_words_min']}-{rules['total_words_max']})"
-            ),
-        })
+        issues.append(
+            {
+                "page": 0,
+                "type": "total_word_count",
+                "detail": (
+                    f"Total words: {total_words} " f"(expected {rules['total_words_min']}-{rules['total_words_max']})"
+                ),
+            }
+        )
 
     # Rhythm score (0-100): based on sentence cadence variance, repetition, page-turn balance
     rhythm_score = _compute_rhythm_score(page_texts, page_word_counts, rules)
@@ -963,7 +998,7 @@ def _compute_rhythm_score(
     if word_list:
         # Check for bigram repetition
         bigrams = [f"{word_list[i]} {word_list[i+1]}" for i in range(len(word_list) - 1)]
-        bigram_counts = {}
+        bigram_counts: dict[str, int] = {}
         for bg in bigrams:
             bigram_counts[bg] = bigram_counts.get(bg, 0) + 1
         repeated = sum(1 for c in bigram_counts.values() if c >= 3)
@@ -990,14 +1025,12 @@ def _compute_rhythm_score(
     return max(0, min(100, int(score)))
 
 
-async def analyze_text(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> dict[str, Any]:
+async def analyze_text(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[str, Any]:
     """Full readability and pacing analysis for a book."""
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
     texts = [p.get("text_content", "") or "" for p in pages]
-    age = book.age_range.value if book.age_range else "preschool"
+    age = book.age_range
     return _analyze_readability(texts, age)
 
 
@@ -1006,15 +1039,13 @@ async def analyze_text(
 # ---------------------------------------------------------------------------
 
 
-async def check_continuity(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> dict[str, Any]:
+async def check_continuity(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[str, Any]:
     """Compare all illustration prompts against character sheets for consistency.
 
     Checks: clothing/accessories mentioned, character scale references,
     time-of-day/location consistency, style drift.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
     characters = await list_characters(db, org_id, book_id)
 
@@ -1023,12 +1054,14 @@ async def check_continuity(
     for page in pages:
         prompt = (page.get("illustration_prompt") or "").lower()
         if not prompt:
-            issues.append({
-                "page": page["page_number"],
-                "type": "missing_prompt",
-                "detail": "Page has no illustration prompt",
-                "severity": "warning",
-            })
+            issues.append(
+                {
+                    "page": page["page_number"],
+                    "type": "missing_prompt",
+                    "detail": "Page has no illustration prompt",
+                    "severity": "warning",
+                }
+            )
             continue
 
         for char in characters:
@@ -1040,23 +1073,27 @@ async def check_continuity(
                     clothing_terms = [t.strip().lower() for t in char["clothing_rules"].split(",")]
                     missing = [t for t in clothing_terms if t and t not in prompt]
                     if missing:
-                        issues.append({
-                            "page": page["page_number"],
-                            "type": "missing_clothing",
-                            "character": char["name"],
-                            "detail": f"Missing clothing/accessory details: {', '.join(missing)}",
-                            "severity": "error",
-                        })
+                        issues.append(
+                            {
+                                "page": page["page_number"],
+                                "type": "missing_clothing",
+                                "character": char["name"],
+                                "detail": f"Missing clothing/accessory details: {', '.join(missing)}",
+                                "severity": "error",
+                            }
+                        )
 
                 # Check scale rules
                 if char.get("scale_rules") and char["scale_rules"].lower() not in prompt:
-                    issues.append({
-                        "page": page["page_number"],
-                        "type": "missing_scale",
-                        "character": char["name"],
-                        "detail": f"Scale rule not referenced: {char['scale_rules']}",
-                        "severity": "warning",
-                    })
+                    issues.append(
+                        {
+                            "page": page["page_number"],
+                            "type": "missing_scale",
+                            "character": char["name"],
+                            "detail": f"Scale rule not referenced: {char['scale_rules']}",
+                            "severity": "warning",
+                        }
+                    )
 
         # Check setting continuity across pages
         if characters:
@@ -1065,13 +1102,15 @@ async def check_continuity(
                     setting_terms = [t.strip().lower() for t in char["setting_continuity"].split(",")]
                     for term in setting_terms:
                         if term and term not in prompt and char["name"].lower() in prompt:
-                            issues.append({
-                                "page": page["page_number"],
-                                "type": "setting_inconsistency",
-                                "character": char["name"],
-                                "detail": f"Setting continuity detail missing: {term}",
-                                "severity": "warning",
-                            })
+                            issues.append(
+                                {
+                                    "page": page["page_number"],
+                                    "type": "setting_inconsistency",
+                                    "character": char["name"],
+                                    "detail": f"Setting continuity detail missing: {term}",
+                                    "severity": "warning",
+                                }
+                            )
 
     return {
         "book_id": str(book_id),
@@ -1088,20 +1127,17 @@ async def check_continuity(
 # ---------------------------------------------------------------------------
 
 
-async def auto_fix_prompts(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> dict[str, Any]:
+async def auto_fix_prompts(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[str, Any]:
     """Batch-update all illustration prompts to include character descriptions.
 
     For every page that mentions a character by name, appends the character's
     full description, clothing rules, and scale rules to the prompt.
     """
-    book = await _get_book_or_404(db, org_id, book_id)
+    await _get_book_or_404(db, org_id, book_id)
     characters = await list_characters(db, org_id, book_id)
 
     stmt = select(ChildrensBookPage).where(
         ChildrensBookPage.book_id == book_id,
-        ChildrensBookPage.org_id == org_id,
         ChildrensBookPage.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
@@ -1138,10 +1174,12 @@ async def auto_fix_prompts(
         if additions:
             page.illustration_prompt = prompt + " " + " ".join(additions)
             fixed_count += 1
-            fixes.append({
-                "page_number": page.page_number,
-                "added_descriptors": additions,
-            })
+            fixes.append(
+                {
+                    "page_number": page.page_number,
+                    "added_descriptors": additions,
+                }
+            )
 
     if fixed_count > 0:
         await db.flush()
@@ -1159,9 +1197,7 @@ async def auto_fix_prompts(
 # ---------------------------------------------------------------------------
 
 
-async def check_safety(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> dict[str, Any]:
+async def check_safety(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[str, Any]:
     """Scan book text and illustration prompts for trademark terms and
     content sensitivity issues (blueprint section 3.7).
     """
@@ -1192,36 +1228,42 @@ async def check_safety(
         # Trademark scan
         for term in TRADEMARK_TERMS:
             if term in text_lower:
-                trademark_issues.append({
-                    "page": page_num,
-                    "field": field,
-                    "term": term,
-                    "detail": f"Trademarked term '{term}' found in {field}",
-                    "severity": "error",
-                })
+                trademark_issues.append(
+                    {
+                        "page": page_num,
+                        "field": field,
+                        "term": term,
+                        "detail": f"Trademarked term '{term}' found in {field}",
+                        "severity": "error",
+                    }
+                )
 
         # "In the style of [specific artist]" check
         style_match = re.search(r"in the style of\s+[a-z][a-z\s]+", text_lower)
         if style_match:
-            trademark_issues.append({
-                "page": page_num,
-                "field": field,
-                "term": style_match.group(),
-                "detail": f"Artist style reference found: '{style_match.group()}'",
-                "severity": "warning",
-            })
+            trademark_issues.append(
+                {
+                    "page": page_num,
+                    "field": field,
+                    "term": style_match.group(),
+                    "detail": f"Artist style reference found: '{style_match.group()}'",
+                    "severity": "warning",
+                }
+            )
 
         # Content sensitivity scan
         for pattern in CONTENT_SENSITIVITY_PATTERNS:
             matches = re.findall(pattern, text_lower)
             for match in matches:
-                content_issues.append({
-                    "page": page_num,
-                    "field": field,
-                    "term": match,
-                    "detail": f"Sensitive content '{match}' found in {field}",
-                    "severity": "error",
-                })
+                content_issues.append(
+                    {
+                        "page": page_num,
+                        "field": field,
+                        "term": match,
+                        "detail": f"Sensitive content '{match}' found in {field}",
+                        "severity": "error",
+                    }
+                )
 
     total_issues = len(trademark_issues) + len(content_issues)
     return {
@@ -1238,9 +1280,7 @@ async def check_safety(
 # ---------------------------------------------------------------------------
 
 
-async def translate_book(
-    db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]
-) -> dict[str, Any]:
+async def translate_book(db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]) -> dict[str, Any]:
     """Generate bilingual translation for all pages via LLM.
 
     Supports target language and layout mode (side-by-side, alternating, back section).
@@ -1249,15 +1289,18 @@ async def translate_book(
     target_language = options.get("target_language", book.bilingual_language or "Spanish")
     layout_mode = options.get("layout", book.bilingual_layout or "side_by_side")
 
-    stmt = select(ChildrensBookPage).where(
-        ChildrensBookPage.book_id == book_id,
-        ChildrensBookPage.org_id == org_id,
-        ChildrensBookPage.deleted_at.is_(None),
-    ).order_by(ChildrensBookPage.page_number)
+    stmt = (
+        select(ChildrensBookPage)
+        .where(
+            ChildrensBookPage.book_id == book_id,
+            ChildrensBookPage.deleted_at.is_(None),
+        )
+        .order_by(ChildrensBookPage.page_number)
+    )
     result = await db.execute(stmt)
     page_records = result.scalars().all()
 
-    age = book.age_range.value if book.age_range else "preschool"
+    age = book.age_range
     rules = AGE_BAND_RULES.get(age, AGE_BAND_RULES["preschool"])
 
     system_prompt = (
@@ -1271,11 +1314,13 @@ async def translate_book(
 
     for page in page_records:
         if not page.text_content:
-            translations.append({
-                "page_number": page.page_number,
-                "original": "",
-                "translated": "",
-            })
+            translations.append(
+                {
+                    "page_number": page.page_number,
+                    "original": "",
+                    "translated": "",
+                }
+            )
             continue
 
         prompt = (
@@ -1286,14 +1331,16 @@ async def translate_book(
         translated = await _llm_generate(prompt, system_prompt=system_prompt, max_tokens=1000)
 
         page.translated_text = translated.strip()
-        translations.append({
-            "page_number": page.page_number,
-            "original": page.text_content,
-            "translated": page.translated_text,
-        })
+        translations.append(
+            {
+                "page_number": page.page_number,
+                "original": page.text_content,
+                "translated": page.translated_text,
+            }
+        )
 
     # Update book bilingual settings
-    book.bilingual = True
+    book.is_bilingual = True
     book.bilingual_language = target_language
     book.bilingual_layout = layout_mode
     await db.flush()
@@ -1329,7 +1376,7 @@ async def generate_illustration(
     characters = await list_characters(db, org_id, book_id)
 
     prompt = page.illustration_prompt or f"Illustration for: {page.text_content or ''}"
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
 
     # Append character consistency descriptors
     prompt_lower = prompt.lower()
@@ -1353,7 +1400,7 @@ async def generate_illustration(
 
     result = await _llm_generate_image(full_prompt)
 
-    page.image_url = result.get("image_url", "")
+    page.illustration_url = result.get("image_url", "")
     page.metadata_json = page.metadata_json or {}
     page.metadata_json["illustration_prompt_used"] = full_prompt
     page.metadata_json["generation_timestamp"] = datetime.now(UTC).isoformat()
@@ -1367,7 +1414,7 @@ async def generate_illustration(
 
     return {
         "page_id": str(page_id),
-        "image_url": page.image_url,
+        "image_url": page.illustration_url,
         "prompt_used": full_prompt,
         "provenance": page.metadata_json.get("provenance", {}),
     }
@@ -1385,7 +1432,7 @@ async def generate_illustration_variations(
     page = await _get_page_or_404(db, org_id, book_id, page_id)
 
     base_prompt = page.illustration_prompt or f"Illustration for: {page.text_content or ''}"
-    style = book.illustration_style.value if book.illustration_style else "storybook"
+    style = book.illustration_style
 
     variation_modifiers = [
         "slightly zoomed in, warm lighting",
@@ -1398,12 +1445,14 @@ async def generate_illustration_variations(
     for i, modifier in enumerate(variation_modifiers, start=1):
         prompt = f"{base_prompt}, {modifier}, {style} style, children's book illustration"
         result = await _llm_generate_image(prompt)
-        variations.append({
-            "variation_index": i,
-            "image_url": result.get("image_url", ""),
-            "prompt_used": prompt,
-            "modifier": modifier,
-        })
+        variations.append(
+            {
+                "variation_index": i,
+                "image_url": result.get("image_url", ""),
+                "prompt_used": prompt,
+                "modifier": modifier,
+            }
+        )
 
     return variations
 
@@ -1430,7 +1479,7 @@ async def upload_page_image(
     # Placeholder URL (production would use storage service)
     image_url = f"uploads/childrens/{book_id}/{page_id}/{filename}"
 
-    page.image_url = image_url
+    page.illustration_url = image_url
     page.metadata_json = page.metadata_json or {}
     page.metadata_json["upload"] = {
         "filename": filename,
@@ -1454,9 +1503,7 @@ async def upload_page_image(
 # ---------------------------------------------------------------------------
 
 
-async def run_preflight(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> dict[str, Any]:
+async def run_preflight(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[str, Any]:
     """Run a full preflight check per blueprint section 3.9.
 
     Checks: all pages have illustrations, text within safe margins, 300+ DPI,
@@ -1465,82 +1512,103 @@ async def run_preflight(
     """
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
-    age = book.age_range.value if book.age_range else "preschool"
+    age = book.age_range
     rules = AGE_BAND_RULES.get(age, AGE_BAND_RULES["preschool"])
 
     checks: list[dict[str, Any]] = []
 
     # 1. All pages have illustrations
     pages_without_images = [p for p in pages if not p.get("image_url")]
-    checks.append({
-        "check": "illustrations_complete",
-        "passed": len(pages_without_images) == 0,
-        "detail": f"{len(pages_without_images)} pages missing illustrations" if pages_without_images else "All pages have illustrations",
-        "pages": [p["page_number"] for p in pages_without_images],
-    })
+    checks.append(
+        {
+            "check": "illustrations_complete",
+            "passed": len(pages_without_images) == 0,
+            "detail": f"{len(pages_without_images)} pages missing illustrations"
+            if pages_without_images
+            else "All pages have illustrations",
+            "pages": [p["page_number"] for p in pages_without_images],
+        }
+    )
 
     # 2. DPI check (300+ required)
     low_dpi_pages = [p for p in pages if (p.get("dpi") or 300) < 300]
-    checks.append({
-        "check": "dpi_minimum",
-        "passed": len(low_dpi_pages) == 0,
-        "detail": f"{len(low_dpi_pages)} pages below 300 DPI" if low_dpi_pages else "All pages meet 300 DPI minimum",
-    })
+    checks.append(
+        {
+            "check": "dpi_minimum",
+            "passed": len(low_dpi_pages) == 0,
+            "detail": f"{len(low_dpi_pages)} pages below 300 DPI"
+            if low_dpi_pages
+            else "All pages meet 300 DPI minimum",
+        }
+    )
 
     # 3. Font size minimum per age band
     min_font = rules["min_font_size"]
-    small_font_pages = [
-        p for p in pages
-        if p.get("font_size") is not None and p["font_size"] < min_font
-    ]
-    checks.append({
-        "check": "font_size_minimum",
-        "passed": len(small_font_pages) == 0,
-        "detail": f"Minimum {min_font}pt required; {len(small_font_pages)} pages below" if small_font_pages else f"All pages meet {min_font}pt minimum",
-    })
+    small_font_pages = [p for p in pages if p.get("font_size") is not None and p["font_size"] < min_font]
+    checks.append(
+        {
+            "check": "font_size_minimum",
+            "passed": len(small_font_pages) == 0,
+            "detail": f"Minimum {min_font}pt required; {len(small_font_pages)} pages below"
+            if small_font_pages
+            else f"All pages meet {min_font}pt minimum",
+        }
+    )
 
     # 4. Valid page count (must be multiple of 2 for spreads, and within age-range norms)
     page_count = len(pages)
     valid_count = page_count > 0 and page_count % 2 == 0
-    checks.append({
-        "check": "page_count",
-        "passed": valid_count,
-        "detail": f"{page_count} pages" + ("" if valid_count else " (must be even for print spreads)"),
-    })
+    checks.append(
+        {
+            "check": "page_count",
+            "passed": valid_count,
+            "detail": f"{page_count} pages" + ("" if valid_count else " (must be even for print spreads)"),
+        }
+    )
 
     # 5. Gutter safety (no text within 0.5in of spine - heuristic check)
     gutter_issues = _check_gutter_safety(pages)
-    checks.append({
-        "check": "gutter_safety",
-        "passed": len(gutter_issues) == 0,
-        "detail": f"{len(gutter_issues)} gutter collision(s)" if gutter_issues else "No gutter collisions detected",
-        "issues": gutter_issues,
-    })
+    checks.append(
+        {
+            "check": "gutter_safety",
+            "passed": len(gutter_issues) == 0,
+            "detail": f"{len(gutter_issues)} gutter collision(s)" if gutter_issues else "No gutter collisions detected",
+            "issues": gutter_issues,
+        }
+    )
 
     # 6. Readability / language level
     texts = [p.get("text_content", "") or "" for p in pages]
     readability = _analyze_readability(texts, age)
-    checks.append({
-        "check": "language_level",
-        "passed": readability["issues_count"] == 0,
-        "detail": f"{readability['issues_count']} readability issue(s)",
-        "rhythm_score": readability["rhythm_score"],
-    })
+    checks.append(
+        {
+            "check": "language_level",
+            "passed": readability["issues_count"] == 0,
+            "detail": f"{readability['issues_count']} readability issue(s)",
+            "rhythm_score": readability["rhythm_score"],
+        }
+    )
 
     # 7. Trademark safety
     safety = await check_safety(db, org_id, book_id)
-    checks.append({
-        "check": "trademark_safety",
-        "passed": safety["passed"],
-        "detail": f"{safety['total_issues']} safety issue(s)" if not safety["passed"] else "No trademark or content issues",
-    })
+    checks.append(
+        {
+            "check": "trademark_safety",
+            "passed": safety["passed"],
+            "detail": f"{safety['total_issues']} safety issue(s)"
+            if not safety["passed"]
+            else "No trademark or content issues",
+        }
+    )
 
     # 8. Content sensitivity
-    checks.append({
-        "check": "content_sensitivity",
-        "passed": len(safety.get("content_issues", [])) == 0,
-        "detail": f"{len(safety.get('content_issues', []))} content sensitivity issue(s)",
-    })
+    checks.append(
+        {
+            "check": "content_sensitivity",
+            "passed": len(safety.get("content_issues", [])) == 0,
+            "detail": f"{len(safety.get('content_issues', []))} content sensitivity issue(s)",
+        }
+    )
 
     all_passed = all(c["passed"] for c in checks)
 
@@ -1571,21 +1639,23 @@ def _check_gutter_safety(pages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         # Odd pages: text near left edge is near gutter
         is_recto = pn % 2 == 1  # odd = recto (right page)
         if is_recto and pos == "left":
-            issues.append({
-                "page": pn,
-                "detail": "Text positioned at left edge (gutter side) on recto page",
-            })
+            issues.append(
+                {
+                    "page": pn,
+                    "detail": "Text positioned at left edge (gutter side) on recto page",
+                }
+            )
         elif not is_recto and pos == "right":
-            issues.append({
-                "page": pn,
-                "detail": "Text positioned at right edge (gutter side) on verso page",
-            })
+            issues.append(
+                {
+                    "page": pn,
+                    "detail": "Text positioned at right edge (gutter side) on verso page",
+                }
+            )
     return issues
 
 
-async def gutter_check(
-    db: AsyncSession, org_id: UUID, book_id: UUID
-) -> dict[str, Any]:
+async def gutter_check(db: AsyncSession, org_id: UUID, book_id: UUID) -> dict[str, Any]:
     """Dedicated gutter collision check endpoint."""
     await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
@@ -1598,9 +1668,7 @@ async def gutter_check(
     }
 
 
-async def export_book(
-    db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]
-) -> dict[str, Any]:
+async def export_book(db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]) -> dict[str, Any]:
     """Generate export file (PDF / PNG / PDF/X-1a).
 
     Delegates to the shared export engine for structured manifest
@@ -1623,7 +1691,7 @@ async def export_book(
     book_data: dict[str, Any] = {
         "id": str(book_id),
         "title": book.title,
-        "author": book.author_name or "",
+        "author": book.author or "",
         "trim_size": book.trim_size or "8.5x8.5",
         "interior_type": "color",
         "pages": pages,
@@ -1646,7 +1714,7 @@ async def export_book(
             "status": "processing",
             "created_at": datetime.now(UTC).isoformat(),
         }
-    elif export_format == "pdfx1a":
+    if export_format == "pdfx1a":
         manifest = generate_pdfx1a_manifest("childrens", book_data)
         metadata = calculate_export_metadata("childrens", book_data)
         return {
@@ -1659,25 +1727,22 @@ async def export_book(
             "status": "processing",
             "created_at": datetime.now(UTC).isoformat(),
         }
-    else:
-        # Default: PDF
-        manifest = generate_pdf_manifest("childrens", book_data, options)
-        metadata = calculate_export_metadata("childrens", book_data)
-        return {
-            "book_id": str(book_id),
-            "export_id": export_id,
-            "export_url": export_url,
-            "format": export_format,
-            "manifest": manifest,
-            "metadata": metadata,
-            "status": "processing",
-            "created_at": datetime.now(UTC).isoformat(),
-        }
+    # Default: PDF
+    manifest = generate_pdf_manifest("childrens", book_data, options)
+    metadata = calculate_export_metadata("childrens", book_data)
+    return {
+        "book_id": str(book_id),
+        "export_id": export_id,
+        "export_url": export_url,
+        "format": export_format,
+        "manifest": manifest,
+        "metadata": metadata,
+        "status": "processing",
+        "created_at": datetime.now(UTC).isoformat(),
+    }
 
 
-async def export_kindle(
-    db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]
-) -> dict[str, Any]:
+async def export_kindle(db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]) -> dict[str, Any]:
     """Generate fixed-layout KPF/EPUB export.
 
     Uses the shared export engine for page ordering and metadata, then
@@ -1698,7 +1763,7 @@ async def export_kindle(
     book_data: dict[str, Any] = {
         "id": str(book_id),
         "title": book.title,
-        "author": book.author_name or "",
+        "author": book.author or "",
         "trim_size": book.trim_size or "8.5x8.5",
         "interior_type": "color",
         "pages": pages,
@@ -1732,17 +1797,19 @@ async def export_kindle(
     # Build per-page spine entries from the manifest
     page_entries = []
     for p in pdf_manifest["pages"]:
-        page_entries.append({
-            "sequence": p["sequence"],
-            "section": p["section"],
-            "type": p["type"],
-            "idref": f"page{p['sequence']:04d}",
-            "image_url": p.get("image_url"),
-            "text_content": p.get("text_content"),
-            "layout": p.get("layout") or "image_top_text_bottom",
-            "is_blank": p["is_blank"],
-            "properties": "rendition:layout-pre-paginated",
-        })
+        page_entries.append(
+            {
+                "sequence": p["sequence"],
+                "section": p["section"],
+                "type": p["type"],
+                "idref": f"page{p['sequence']:04d}",
+                "image_url": p.get("image_url"),
+                "text_content": p.get("text_content"),
+                "layout": p.get("layout") or "image_top_text_bottom",
+                "is_blank": p["is_blank"],
+                "properties": "rendition:layout-pre-paginated",
+            }
+        )
 
     return {
         "book_id": str(book_id),
@@ -1760,8 +1827,8 @@ async def export_kindle(
         },
         "opf_metadata": {
             "dc:title": book.title,
-            "dc:creator": book.author_name or "",
-            "dc:language": book.bilingual_language if book.bilingual else "en",
+            "dc:creator": book.author or "",
+            "dc:language": book.bilingual_language if book.is_bilingual else "en",
             "meta_fixed_layout": "true",
             "meta_original_resolution": f"{viewport_w}x{viewport_h}",
         },
@@ -1769,21 +1836,21 @@ async def export_kindle(
         "total_pages": pdf_manifest["total_pages"],
         "page_counts": pdf_manifest["page_counts"],
         "metadata": metadata,
-        "read_aloud_ready": book.bilingual or False,
+        "read_aloud_ready": book.is_bilingual or False,
         "status": "processing",
         "created_at": datetime.now(UTC).isoformat(),
     }
 
 
-async def device_preview(
-    db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]
-) -> dict[str, Any]:
+async def device_preview(db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]) -> dict[str, Any]:
     """Generate device-accurate preview images for 6 device types."""
     book = await _get_book_or_404(db, org_id, book_id)
     pages = await list_pages(db, org_id, book_id)
 
     # Physical dimensions per device (diagonal inches and PPI)
-    devices = [
+    # Entries mix str and numeric values, so without this the reads below
+    # come back as `object` and every arithmetic use is an error.
+    devices: list[dict[str, Any]] = [
         {"name": "Kindle Fire HD 10", "width": 1920, "height": 1200, "type": "tablet", "ppi": 224, "diag_in": 10.1},
         {"name": "Kindle Fire HD 8", "width": 1280, "height": 800, "type": "tablet", "ppi": 189, "diag_in": 8.0},
         {"name": "iPad Pro 12.9", "width": 2048, "height": 2732, "type": "tablet", "ppi": 264, "diag_in": 12.9},
@@ -1828,22 +1895,24 @@ async def device_preview(
         offset_x = (dev_w - render_w) // 2
         offset_y = (dev_h - render_h) // 2
 
-        previews.append({
-            "device": device["name"],
-            "device_type": device["type"],
-            "screen_width": dev_w,
-            "screen_height": dev_h,
-            "ppi": ppi,
-            "physical_width_in": round(dev_w_in, 2),
-            "physical_height_in": round(dev_h_in, 2),
-            "render_width": render_w,
-            "render_height": render_h,
-            "offset_x": offset_x,
-            "offset_y": offset_y,
-            "scale_factor": scale_factor,
-            "preview_url": f"previews/childrens/{book_id}/page_{preview_page}_{device['name'].lower().replace(' ', '_')}.png",
-            "source_image": target_page["image_url"] if target_page else None,
-        })
+        previews.append(
+            {
+                "device": device["name"],
+                "device_type": device["type"],
+                "screen_width": dev_w,
+                "screen_height": dev_h,
+                "ppi": ppi,
+                "physical_width_in": round(dev_w_in, 2),
+                "physical_height_in": round(dev_h_in, 2),
+                "render_width": render_w,
+                "render_height": render_h,
+                "offset_x": offset_x,
+                "offset_y": offset_y,
+                "scale_factor": scale_factor,
+                "preview_url": f"previews/childrens/{book_id}/page_{preview_page}_{device['name'].lower().replace(' ', '_')}.png",
+                "source_image": target_page["image_url"] if target_page else None,
+            }
+        )
 
     return {
         "book_id": str(book_id),
@@ -1853,9 +1922,7 @@ async def device_preview(
     }
 
 
-async def reflow(
-    db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]
-) -> dict[str, Any]:
+async def reflow(db: AsyncSession, org_id: UUID, book_id: UUID, options: dict[str, Any]) -> dict[str, Any]:
     """Generate an alternate trim-size version of the book.
 
     Re-calculates layout, margins, and font sizes for the new trim.
@@ -1902,7 +1969,7 @@ async def reflow(
 
         # Estimate whether text will overflow the new content area
         text = p.get("text_content") or ""
-        word_count = len(text.split())
+        len(text.split())
         # Rough chars-per-line estimate at the new font size (assuming ~0.6 em width)
         chars_per_line = max(1, int(new_content_w * 72 / (new_font_size * 0.6)))
         lines_needed = max(1, math.ceil(len(text) / chars_per_line))
@@ -1915,15 +1982,17 @@ async def reflow(
         available_text_height = new_content_h * text_zone_fraction
         text_overflow = text_height_in > available_text_height
 
-        reflowed_pages.append({
-            "page_number": p["page_number"],
-            "original_font_size": font_size,
-            "new_font_size": new_font_size,
-            "text_content": text,
-            "layout": layout,
-            "text_overflow": text_overflow,
-            "needs_review": aspect_ratio_changed or text_overflow,
-        })
+        reflowed_pages.append(
+            {
+                "page_number": p["page_number"],
+                "original_font_size": font_size,
+                "new_font_size": new_font_size,
+                "text_content": text,
+                "layout": layout,
+                "text_overflow": text_overflow,
+                "needs_review": aspect_ratio_changed or text_overflow,
+            }
+        )
 
     return {
         "book_id": str(book_id),

@@ -28,7 +28,6 @@ const ALERT_TYPE_KEYS: Record<string, string> = {
 /** Return a human-readable relative time string for a given ISO date. */
 function relativeTime(
   iso: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (key: string, values?: any) => string,
 ): string {
   const now = Date.now();

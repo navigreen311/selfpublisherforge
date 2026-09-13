@@ -1,23 +1,24 @@
 """SQLAlchemy models for Cookbooks."""
+
 from __future__ import annotations
 
 import uuid
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Enum,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import TenantModel, BaseModel
+from app.database import BaseModel, TenantModel
 from app.modules.specialty.models.enums import (
     BookStatus,
     ChapterOrganization,
@@ -71,22 +72,12 @@ class Cookbook(TenantModel):
     )
 
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
-    trim_size: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="8x10"
-    )
+    trim_size: Mapped[str] = mapped_column(String(20), nullable=False, default="8x10")
 
-    include_nutrition: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
-    include_meal_plans: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    include_shopping_lists: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    include_index: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
+    include_nutrition: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    include_meal_plans: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    include_shopping_lists: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    include_index: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     include_conversion_charts: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
@@ -95,7 +86,7 @@ class Cookbook(TenantModel):
     metadata_settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     status: Mapped[str] = mapped_column(
-        Enum(BookStatus, name="book_status", native_enum=True, create_constraint=False),
+        Enum(BookStatus, name="specialty_book_status", native_enum=True, create_constraint=False),
         nullable=False,
         default=BookStatus.draft,
         server_default="draft",
@@ -104,13 +95,13 @@ class Cookbook(TenantModel):
 
     # Relationships
     chapters: Mapped[list[CookbookChapter]] = relationship(
-        "CookbookChapter",
+        "app.modules.specialty.models.cookbook.CookbookChapter",
         back_populates="cookbook",
         cascade="all, delete-orphan",
         order_by="CookbookChapter.chapter_order",
     )
     meal_plans: Mapped[list[MealPlan]] = relationship(
-        "MealPlan",
+        "app.modules.specialty.models.cookbook.MealPlan",
         back_populates="cookbook",
         cascade="all, delete-orphan",
     )
@@ -138,9 +129,12 @@ class CookbookChapter(BaseModel):
     )
 
     # Relationships
-    cookbook: Mapped[Cookbook] = relationship("Cookbook", back_populates="chapters")
+    cookbook: Mapped[Cookbook] = relationship(
+        "app.modules.specialty.models.cookbook.Cookbook",
+        back_populates="chapters",
+    )
     recipes: Mapped[list[Recipe]] = relationship(
-        "Recipe",
+        "app.modules.specialty.models.cookbook.Recipe",
         back_populates="chapter",
         cascade="all, delete-orphan",
         order_by="Recipe.recipe_order",
@@ -196,7 +190,8 @@ class Recipe(BaseModel):
 
     # Relationships
     chapter: Mapped[CookbookChapter] = relationship(
-        "CookbookChapter", back_populates="recipes"
+        "app.modules.specialty.models.cookbook.CookbookChapter",
+        back_populates="recipes",
     )
 
 
@@ -226,4 +221,7 @@ class MealPlan(BaseModel):
     shopping_list: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    cookbook: Mapped[Cookbook] = relationship("Cookbook", back_populates="meal_plans")
+    cookbook: Mapped[Cookbook] = relationship(
+        "app.modules.specialty.models.cookbook.Cookbook",
+        back_populates="meal_plans",
+    )

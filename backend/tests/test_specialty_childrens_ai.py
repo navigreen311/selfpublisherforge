@@ -143,65 +143,40 @@ class TestTextAnalysis:
 
     @pytest.mark.asyncio
     async def test_analyze_detects_sentence_too_long(self):
-        pages = [
-            "The very big enormous gigantic cat sat on the extremely comfortable mat."
-        ]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD
-        )
+        pages = ["The very big enormous gigantic cat sat on the extremely comfortable mat."]
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD)
         assert isinstance(result, TextAnalysisResponse)
-        sentence_issues = [
-            i for i in result.issues if i.issue_type == "sentence_too_long"
-        ]
+        sentence_issues = [i for i in result.issues if i.issue_type == "sentence_too_long"]
         assert len(sentence_issues) > 0
 
     @pytest.mark.asyncio
     async def test_analyze_detects_word_too_long(self):
         pages = ["The elephant walked slowly."]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD
-        )
-        word_issues = [
-            i for i in result.issues if i.issue_type == "word_too_long"
-        ]
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD)
+        word_issues = [i for i in result.issues if i.issue_type == "word_too_long"]
         assert len(word_issues) > 0
 
     @pytest.mark.asyncio
     async def test_analyze_detects_vocabulary_violations(self):
         pages = ["The metamorphosis was extraordinary."]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD
-        )
-        vocab_issues = [
-            i for i in result.issues if i.issue_type == "vocabulary_violation"
-        ]
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD)
+        vocab_issues = [i for i in result.issues if i.issue_type == "vocabulary_violation"]
         assert len(vocab_issues) > 0
 
     @pytest.mark.asyncio
     async def test_analyze_word_count_out_of_range(self):
         pages = [" ".join(["word"] * 200)]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD
-        )
-        wc_issues = [
-            i for i in result.issues
-            if i.issue_type == "word_count_out_of_range"
-        ]
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD)
+        wc_issues = [i for i in result.issues if i.issue_type == "word_count_out_of_range"]
         assert len(wc_issues) > 0
         assert result.word_count_valid is False
 
     @pytest.mark.asyncio
     async def test_analyze_valid_board_book(self):
         pages = ["The cat sat.", "The dog ran.", "The bird flew.", "The fish swam."]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD
-        )
-        sentence_issues = [
-            i for i in result.issues if i.issue_type == "sentence_too_long"
-        ]
-        word_issues = [
-            i for i in result.issues if i.issue_type == "word_too_long"
-        ]
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.BOARD)
+        sentence_issues = [i for i in result.issues if i.issue_type == "sentence_too_long"]
+        word_issues = [i for i in result.issues if i.issue_type == "word_too_long"]
         assert len(sentence_issues) == 0
         assert len(word_issues) == 0
 
@@ -212,18 +187,14 @@ class TestTextAnalysis:
             "Then the cat went to play.",
             "And the cat came back home.",
         ]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.PICTURE
-        )
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.PICTURE)
         assert result.rhythm_score is not None
         assert 0 <= result.rhythm_score.overall <= 100
 
     @pytest.mark.asyncio
     async def test_analyze_hook_strength_computed(self):
         pages = ["Who is hiding behind the door?", "It was a big red bear!"]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.PICTURE
-        )
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.PICTURE)
         assert result.hook_strength_score >= 0
 
     @pytest.mark.asyncio
@@ -233,24 +204,15 @@ class TestTextAnalysis:
             "Suddenly, a surprise appeared!",
             "Oh wow, look at that!",
         ]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.PICTURE
-        )
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.PICTURE)
         assert len(result.page_turn_surprises) == 3
-        assert (
-            result.page_turn_surprises[1].surprise_score
-            > result.page_turn_surprises[0].surprise_score
-        )
+        assert result.page_turn_surprises[1].surprise_score > result.page_turn_surprises[0].surprise_score
 
     @pytest.mark.asyncio
     async def test_analyze_chapter_book_no_word_length_limit(self):
         pages = ["The extraordinary metamorphosis was unprecedented."]
-        result = await analyze_text(
-            None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.CHAPTER
-        )
-        word_issues = [
-            i for i in result.issues if i.issue_type == "word_too_long"
-        ]
+        result = await analyze_text(None, BOOK_ID, ORG_ID, pages_text=pages, age_band=AgeBand.CHAPTER)
+        word_issues = [i for i in result.issues if i.issue_type == "word_too_long"]
         assert len(word_issues) == 0
 
 
@@ -264,10 +226,7 @@ class TestRhymePatterns:
 
     def test_detect_aabb_pattern(self):
         text = (
-            "The cat sat on the mat\n"
-            "And then he saw a bat\n"
-            "He ran across the floor\n"
-            "And out the open door\n"
+            "The cat sat on the mat\n" "And then he saw a bat\n" "He ran across the floor\n" "And out the open door\n"
         )
         result = check_rhyme_patterns(text, StoryMode.RHYMING)
         assert isinstance(result, RhymeCheckResult)
@@ -284,12 +243,7 @@ class TestRhymePatterns:
         assert result.pattern_detected == "ABAB"
 
     def test_no_rhyme_pattern(self):
-        text = (
-            "The dog walked around\n"
-            "Trees were very tall\n"
-            "Water flowed gently\n"
-            "Mountains stood above\n"
-        )
+        text = "The dog walked around\n" "Trees were very tall\n" "Water flowed gently\n" "Mountains stood above\n"
         result = check_rhyme_patterns(text, StoryMode.RHYMING)
         assert result.pattern_detected in ("NONE", "MIXED")
 
@@ -304,12 +258,7 @@ class TestRhymePatterns:
         assert isinstance(result.near_rhymes, list)
 
     def test_meter_consistency_checked(self):
-        text = (
-            "Cat\n"
-            "The very long sentence about the extraordinary adventure of the little cat\n"
-            "Dog\n"
-            "Run\n"
-        )
+        text = "Cat\n" "The very long sentence about the extraordinary adventure of the little cat\n" "Dog\n" "Run\n"
         result = check_rhyme_patterns(text, StoryMode.RHYMING)
         assert result.meter_consistent is False
         assert len(result.meter_issues) > 0
@@ -351,20 +300,13 @@ class TestContinuityCheck:
             },
             {
                 "page_number": "2",
-                "prompt": (
-                    "Luna the orange tabby kitten with "
-                    "red collar with gold bell"
-                ),
+                "prompt": ("Luna the orange tabby kitten with " "red collar with gold bell"),
             },
         ]
-        result = await check_continuity(
-            None, BOOK_ID, ORG_ID, sheets, prompts
-        )
+        result = await check_continuity(None, BOOK_ID, ORG_ID, sheets, prompts)
         assert isinstance(result, ContinuityCheckResponse)
         assert result.total_issues > 0
-        clothing_issues = [
-            i for i in result.issues if i.issue_type == "clothing"
-        ]
+        clothing_issues = [i for i in result.issues if i.issue_type == "clothing"]
         assert len(clothing_issues) >= 2
 
     @pytest.mark.asyncio
@@ -376,17 +318,11 @@ class TestContinuityCheck:
             },
             {
                 "page_number": "2",
-                "prompt": (
-                    "Luna eating breakfast at sunrise in the morning"
-                ),
+                "prompt": ("Luna eating breakfast at sunrise in the morning"),
             },
         ]
-        result = await check_continuity(
-            None, BOOK_ID, ORG_ID, [], prompts
-        )
-        time_issues = [
-            i for i in result.issues if i.issue_type == "time_of_day"
-        ]
+        result = await check_continuity(None, BOOK_ID, ORG_ID, [], prompts)
+        time_issues = [i for i in result.issues if i.issue_type == "time_of_day"]
         assert len(time_issues) > 0
 
     @pytest.mark.asyncio
@@ -402,25 +338,15 @@ class TestContinuityCheck:
         prompts = [
             {
                 "page_number": "1",
-                "prompt": (
-                    "Bear the brown bear wearing red scarf "
-                    "in morning garden"
-                ),
+                "prompt": ("Bear the brown bear wearing red scarf " "in morning garden"),
             },
             {
                 "page_number": "2",
-                "prompt": (
-                    "Bear the brown bear wearing red scarf "
-                    "at afternoon picnic"
-                ),
+                "prompt": ("Bear the brown bear wearing red scarf " "at afternoon picnic"),
             },
         ]
-        result = await check_continuity(
-            None, BOOK_ID, ORG_ID, sheets, prompts
-        )
-        clothing_issues = [
-            i for i in result.issues if i.issue_type == "clothing"
-        ]
+        result = await check_continuity(None, BOOK_ID, ORG_ID, sheets, prompts)
+        clothing_issues = [i for i in result.issues if i.issue_type == "clothing"]
         assert len(clothing_issues) == 0
 
     @pytest.mark.asyncio
@@ -453,9 +379,7 @@ class TestAutoFixPrompts:
                 "prompt": "Luna the orange tabby kitten in the garden",
             },
         ]
-        result = await auto_fix_prompts(
-            None, BOOK_ID, ORG_ID, sheets, prompts
-        )
+        result = await auto_fix_prompts(None, BOOK_ID, ORG_ID, sheets, prompts)
         assert isinstance(result, AutoFixResponse)
         assert result.total_fixes >= 1
         fix = result.fixes[0]
@@ -478,14 +402,8 @@ class TestAutoFixPrompts:
                 "prompt": "Bear the brown bear wearing red scarf",
             },
         ]
-        result = await auto_fix_prompts(
-            None, BOOK_ID, ORG_ID, sheets, prompts
-        )
-        clothing_fixes = [
-            f
-            for f in result.fixes
-            if any("accessory" in c.lower() for c in f.changes)
-        ]
+        result = await auto_fix_prompts(None, BOOK_ID, ORG_ID, sheets, prompts)
+        clothing_fixes = [f for f in result.fixes if any("accessory" in c.lower() for c in f.changes)]
         assert len(clothing_fixes) == 0
 
     @pytest.mark.asyncio
@@ -501,9 +419,7 @@ class TestAutoFixPrompts:
         prompts = [
             {"page_number": "1", "prompt": "Luna the kitten playing"},
         ]
-        result = await auto_fix_prompts(
-            None, BOOK_ID, ORG_ID, sheets, prompts
-        )
+        result = await auto_fix_prompts(None, BOOK_ID, ORG_ID, sheets, prompts)
         if result.fixes:
             assert len(result.fixes[0].changes) > 0
 
@@ -527,8 +443,12 @@ class TestTranslation:
             layout_mode=BilingualLayout.SIDE_BY_SIDE,
         )
         result = await translate_book(
-            None, BOOK_ID, ORG_ID, req,
-            pages_text=pages, age_band=AgeBand.PICTURE,
+            None,
+            BOOK_ID,
+            ORG_ID,
+            req,
+            pages_text=pages,
+            age_band=AgeBand.PICTURE,
         )
         assert isinstance(result, TranslateResponse)
         assert result.target_language == "Spanish"
@@ -545,9 +465,7 @@ class TestTranslation:
             target_language="French",
             layout_mode=BilingualLayout.ALTERNATING,
         )
-        result = await translate_book(
-            None, BOOK_ID, ORG_ID, req, pages_text=pages
-        )
+        result = await translate_book(None, BOOK_ID, ORG_ID, req, pages_text=pages)
         assert result.layout_mode == BilingualLayout.ALTERNATING
 
     @pytest.mark.asyncio
@@ -557,9 +475,7 @@ class TestTranslation:
             target_language="German",
             layout_mode=BilingualLayout.BACK_SECTION,
         )
-        result = await translate_book(
-            None, BOOK_ID, ORG_ID, req, pages_text=pages
-        )
+        result = await translate_book(None, BOOK_ID, ORG_ID, req, pages_text=pages)
         assert result.layout_mode == BilingualLayout.BACK_SECTION
         assert result.source_language == "English"
 
@@ -568,8 +484,12 @@ class TestTranslation:
         pages = ["Simple text."]
         req = TranslateRequest(target_language="Japanese")
         result = await translate_book(
-            None, BOOK_ID, ORG_ID, req,
-            pages_text=pages, age_band=AgeBand.BOARD,
+            None,
+            BOOK_ID,
+            ORG_ID,
+            req,
+            pages_text=pages,
+            age_band=AgeBand.BOARD,
         )
         assert isinstance(result.target_language_readable, bool)
 
@@ -600,9 +520,7 @@ class TestHelpers:
         assert _check_word_in_vocabulary("metamorphosis", 500) is False
 
     def test_vocabulary_check_no_limit(self):
-        assert _check_word_in_vocabulary(
-            "antidisestablishmentarianism", None
-        ) is True
+        assert _check_word_in_vocabulary("antidisestablishmentarianism", None) is True
 
     def test_age_band_compliance_check(self):
         issues = _check_age_band_compliance("The cat sat.", AgeBand.BOARD)
@@ -622,12 +540,8 @@ class TestHelpers:
         assert score.overall == 0
 
     def test_hook_strength_with_question(self):
-        score_with = _compute_hook_strength(
-            ["Who is hiding behind the door?"]
-        )
-        score_without = _compute_hook_strength(
-            ["The cat sat on the mat."]
-        )
+        score_with = _compute_hook_strength(["Who is hiding behind the door?"])
+        score_without = _compute_hook_strength(["The cat sat on the mat."])
         assert score_with > score_without
 
     def test_age_band_constraints_defined(self):

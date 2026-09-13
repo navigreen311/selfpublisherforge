@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import cast
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ async def get_sales_data(
     start_date = datetime.utcnow() - timedelta(days=days)
 
     # Try to get from sales_data table, fallback to royalty_records
-    from app.modules.analytics.models import SalesData, RoyaltyRecord
+    from app.modules.analytics.models import SalesData
 
     try:
         stmt = select(SalesData).where(
@@ -87,8 +88,8 @@ async def get_sales_data(
         "daily_data": daily_data,
         "totals": {
             "units": total_units,
-            "revenue": float(round(total_revenue, 2)),
-            "royalties": float(round(total_royalties, 2)),
+            "revenue": round(float(cast("float", total_revenue)), 2),
+            "royalties": round(float(cast("float", total_royalties)), 2),
         },
         "by_marketplace": sorted(
             [

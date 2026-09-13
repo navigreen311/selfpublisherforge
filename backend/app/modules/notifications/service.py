@@ -120,15 +120,13 @@ async def _push_websocket_event(notification: Notification) -> None:
                 "data": {
                     "id": str(notification.id),
                     "user_id": str(notification.user_id),
-                    "type": notification.type.value
-                    if hasattr(notification.type, "value")
-                    else str(notification.type),
+                    "type": notification.type.value if hasattr(notification.type, "value") else str(notification.type),
                     "title": notification.title,
                     "message": notification.message,
                 },
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("notification WS push failed: %s", exc)
 
 
@@ -158,9 +156,7 @@ async def _maybe_send_email(
 
     # Respect user preferences (opt-out model: default is enabled)
     category = notification.type.value
-    email_enabled = await is_preference_enabled(
-        db, notification.user_id, NotificationChannel.EMAIL, category
-    )
+    email_enabled = await is_preference_enabled(db, notification.user_id, NotificationChannel.EMAIL, category)
     if not email_enabled:
         logger.info(
             "Email channel disabled by user %s for category %s; skipping.",
@@ -191,8 +187,7 @@ async def _maybe_send_email(
             )
         else:
             logger.warning(
-                "Email not sent for notification %s (template=%s, to=%s). "
-                "SMTP may not be configured.",
+                "Email not sent for notification %s (template=%s, to=%s). " "SMTP may not be configured.",
                 notification.id,
                 template_name,
                 recipient_email,
@@ -225,11 +220,7 @@ async def list_notifications(
     Returns:
         Tuple of (items, next_cursor, has_more).
     """
-    query = (
-        select(Notification)
-        .where(Notification.user_id == user_id)
-        .order_by(Notification.created_at.desc())
-    )
+    query = select(Notification).where(Notification.user_id == user_id).order_by(Notification.created_at.desc())
 
     if cursor:
         cursor_dt = datetime.fromisoformat(cursor)
@@ -307,11 +298,7 @@ async def get_preferences(
     user_id: UUID,
 ) -> list[NotificationPreference]:
     """Return all notification preferences for a user."""
-    result = await db.execute(
-        select(NotificationPreference).where(
-            NotificationPreference.user_id == user_id
-        )
-    )
+    result = await db.execute(select(NotificationPreference).where(NotificationPreference.user_id == user_id))
     return list(result.scalars().all())
 
 

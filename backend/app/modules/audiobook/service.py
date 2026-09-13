@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from xml.etree import ElementTree
 
+from defusedxml import ElementTree  # hardened parser: SSML can be user-submitted
+from defusedxml.common import DefusedXmlException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -234,7 +235,7 @@ def _basic_ssml_conversion(text: str, pronunciation_dict: dict[str, str]) -> str
         ssml_parts.append(f"<p>{para}</p>")
 
     ssml_body = '\n<break time="500ms"/>\n'.join(ssml_parts)
-    ssml_text = f'<speak>\n{ssml_body}\n</speak>'
+    ssml_text = f"<speak>\n{ssml_body}\n</speak>"
 
     # Apply pronunciation dictionary
     for word, phoneme in pronunciation_dict.items():
@@ -271,7 +272,9 @@ def _detect_dialogue_basic(text: str) -> list[dict]:
 def _validate_ssml(ssml_text: str) -> dict:
     """Validate SSML syntax by parsing as XML."""
     try:
-        ElementTree.fromstring(ssml_text)  # noqa: S314
+        ElementTree.fromstring(ssml_text)
         return {"valid": True, "error": None}
-    except ElementTree.ParseError as e:
+    except (ElementTree.ParseError, DefusedXmlException) as e:
+        # DefusedXmlException covers entity declarations and other XXE
+        # constructs the hardened parser refuses outright.
         return {"valid": False, "error": str(e)}

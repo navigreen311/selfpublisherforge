@@ -22,12 +22,13 @@ Endpoints (18 total):
     POST       .../{id}/export                                 -- Generate export file
     POST       .../{id}/preflight                              -- Run full preflight
 """
+
 from __future__ import annotations
 
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.contracts import SuccessResponse
@@ -323,8 +324,9 @@ async def detect_page_regions(
 
     # Verify ownership and page existence
     await service.get_coloring_book(db, current_user["org_id"], book_id)
-    from app.modules.specialty.models.coloring import ColoringBookPage
     from sqlalchemy import select as sa_select
+
+    from app.modules.specialty.models.coloring import ColoringBookPage
 
     stmt = sa_select(ColoringBookPage).where(
         ColoringBookPage.id == page_id,

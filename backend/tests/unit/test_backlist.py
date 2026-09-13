@@ -1,25 +1,24 @@
 """Unit tests for the Backlist compounding revenue model."""
+
 import pytest
 
 from app.modules.portfolio_economics.backlist import (
-    calculate_backlist_projection,
-    _apply_decay,
-    _apply_promotion_boost,
-    _calculate_series_read_through,
-    DEFAULT_MONTHLY_DECAY_RATE,
     PROMOTION_BOOST_MULTIPLIER,
     PROMOTION_FREQUENCY_MONTHS,
     REVENUE_FLOOR_MULTIPLIER,
     SERIES_READ_THROUGH_BASE,
-    SERIES_READ_THROUGH_DECAY,
+    _apply_decay,
+    _apply_promotion_boost,
+    _calculate_series_read_through,
+    calculate_backlist_projection,
 )
 from app.modules.portfolio_economics.schemas import (
     BacklistProjection,
     ProjectionPeriod,
 )
 
-
 # ─── Decay Function Tests ────────────────────────────────────────────────────
+
 
 class TestApplyDecay:
     def test_no_decay_at_month_0(self):
@@ -60,6 +59,7 @@ class TestApplyDecay:
 
 # ─── Promotion Boost Tests ───────────────────────────────────────────────────
 
+
 class TestApplyPromotionBoost:
     def test_no_boost_at_month_0(self):
         result = _apply_promotion_boost(0, 100.0)
@@ -87,6 +87,7 @@ class TestApplyPromotionBoost:
 
 
 # ─── Series Read-Through Tests ───────────────────────────────────────────────
+
 
 class TestCalculateSeriesReadThrough:
     def test_single_book_no_readthrough(self):
@@ -129,6 +130,7 @@ class TestCalculateSeriesReadThrough:
 
 
 # ─── Full Backlist Projection Tests ──────────────────────────────────────────
+
 
 class TestCalculateBacklistProjection:
     def test_returns_backlist_projection(self):
@@ -217,10 +219,9 @@ class TestCalculateBacklistProjection:
             if month > 0 and month % PROMOTION_FREQUENCY_MONTHS == 0:
                 # Previous month (non-promo) should be lower
                 prev = result.monthly_projections[month - 2] if month > 1 else None
-                if prev:
-                    if proj["revenue"] > prev["revenue"]:
-                        has_spike = True
-                        break
+                if prev and proj["revenue"] > prev["revenue"]:
+                    has_spike = True
+                    break
 
         assert has_spike, "Expected at least one promotion spike"
 

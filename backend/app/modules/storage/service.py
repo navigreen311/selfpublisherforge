@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -31,6 +31,7 @@ settings = get_settings()
 # ---------------------------------------------------------------------------
 # S3 client helper
 # ---------------------------------------------------------------------------
+
 
 def _get_s3_client():
     """Return a boto3 S3 client configured for the current settings."""
@@ -75,6 +76,7 @@ async def check_s3_connectivity() -> bool:
 # ---------------------------------------------------------------------------
 # Service class
 # ---------------------------------------------------------------------------
+
 
 class StorageService:
     """High-level storage operations."""
@@ -145,9 +147,7 @@ class StorageService:
 
     # -- Complete upload ----------------------------------------------------
 
-    async def complete_upload(
-        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> AssetResponse:
+    async def complete_upload(self, *, asset_id: uuid.UUID, org_id: uuid.UUID) -> AssetResponse:
         """Called after S3 upload finishes.
 
         1. Verify the object exists in S3.
@@ -166,12 +166,12 @@ class StorageService:
         # Verify the object actually exists in S3
         try:
             head = self.s3.head_object(Bucket=self.bucket, Key=asset.s3_key)
-        except ClientError:
+        except ClientError as exc:
             raise AppException(
                 status_code=400,
                 code="UPLOAD_NOT_FOUND",
                 message="The file has not been uploaded to storage yet.",
-            )
+            ) from exc
 
         # Back-fill the actual file size from S3 if available
         actual_size = head.get("ContentLength")
@@ -225,7 +225,7 @@ class StorageService:
                     status_code=400,
                     code="INVALID_CURSOR",
                     message="Cursor value is not a valid ISO-8601 datetime.",
-                )
+                ) from None
             query = query.where(ContentAsset.created_at < cursor_dt)
 
         query = query.limit(limit + 1)  # fetch one extra for has_more
@@ -253,18 +253,14 @@ class StorageService:
 
     # -- Get single asset ---------------------------------------------------
 
-    async def get_asset(
-        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> AssetResponse:
+    async def get_asset(self, *, asset_id: uuid.UUID, org_id: uuid.UUID) -> AssetResponse:
         asset = await self._get_asset_or_404(asset_id, org_id)
         download_url = self._generate_download_url(asset.s3_key)  # type: ignore[arg-type]
         return self._to_response(asset, download_url=download_url)
 
     # -- Soft-delete --------------------------------------------------------
 
-    async def delete_asset(
-        self, *, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> None:
+    async def delete_asset(self, *, asset_id: uuid.UUID, org_id: uuid.UUID) -> None:
         asset = await self._get_asset_or_404(asset_id, org_id)
         asset.status = AssetStatus.DELETED.value
         asset.deleted_at = datetime.now(UTC)
@@ -328,7 +324,7 @@ class StorageService:
                 status_code=500,
                 code="PROCESSING_FAILED",
                 message="Asset processing failed due to a storage service error.",
-            )
+            ) from exc
         except OSError as exc:
             logger.error("I/O error during asset processing for %s: %s", asset_id, exc)
             asset.status = AssetStatus.FAILED.value
@@ -338,7 +334,7 @@ class StorageService:
                 status_code=500,
                 code="PROCESSING_FAILED",
                 message="Asset processing failed due to an I/O error.",
-            )
+            ) from exc
 
         return self._to_response(asset)
 
@@ -397,9 +393,7 @@ class StorageService:
 
     # -- Private helpers ----------------------------------------------------
 
-    async def _get_asset_or_404(
-        self, asset_id: uuid.UUID, org_id: uuid.UUID
-    ) -> ContentAsset:
+    async def _get_asset_or_404(self, asset_id: uuid.UUID, org_id: uuid.UUID) -> ContentAsset:
         result = await self.db.execute(
             select(ContentAsset)
             .where(ContentAsset.id == asset_id)
@@ -430,16 +424,15 @@ class StorageService:
         return f"orgs/{org_id}/{asset_type.value}/{asset_id}/{safe_name}"
 
     def _generate_download_url(self, s3_key: str, expires_in: int = 3600) -> str:
-        return self.s3.generate_presigned_url(
+        url = self.s3.generate_presigned_url(  # boto3 is untyped
             ClientMethod="get_object",
             Params={"Bucket": self.bucket, "Key": s3_key},
             ExpiresIn=expires_in,
         )
+        return cast("str", url)
 
     @staticmethod
-    def _to_response(
-        asset: ContentAsset, *, download_url: str | None = None
-    ) -> AssetResponse:
+    def _to_response(asset: ContentAsset, *, download_url: str | None = None) -> AssetResponse:
         return AssetResponse(
             id=asset.id,
             org_id=asset.org_id,

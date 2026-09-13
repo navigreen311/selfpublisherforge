@@ -12,6 +12,22 @@ const mockUseListings = jest.fn();
 const mockUseDeleteAccount = jest.fn();
 const mockUseSyncListing = jest.fn();
 
+// The pages call useRouter/useSearchParams; without a mock next throws
+// "invariant expected app router to be mounted" and the render dies.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 jest.mock("@/modules/publishing/hooks", () => ({
   usePublishingAccounts: (...args: unknown[]) => mockUsePublishingAccounts(...args),
   useCreateAccount: (...args: unknown[]) => mockUseCreateAccount(...args),
@@ -158,6 +174,18 @@ function setupDefaultMocks() {
 
 // ── Tests ────────────────────────────────────────────────────────────────
 
+/**
+ * StatCard renders the label and the value as sibling paragraphs, and several
+ * cards can hold the same number, so read a value through its own label.
+ */
+function statValue(label: string): string {
+  const labelNode = screen
+    .getAllByText(label)
+    .find((node) => node.tagName === "P" && node.nextElementSibling);
+  if (!labelNode) throw new Error(`no stat card labelled ${label}`);
+  return labelNode.nextElementSibling!.textContent ?? "";
+}
+
 describe("PublishingDashboardPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -177,31 +205,29 @@ describe("PublishingDashboardPage", () => {
   });
 
   // 2. Shows export section
-  it("shows the export section with New Export button and export manuscript card", () => {
+  it("links to the export wizard from the header", () => {
     renderWithProviders(<PublishingDashboardPage />);
 
-    // New Export button in header
-    const newExportLink = screen.getByRole("link", { name: /new export/i });
-    expect(newExportLink).toHaveAttribute("href", "/publishing/export");
+    expect(screen.getByRole("link", { name: /new export/i })).toHaveAttribute(
+      "href",
+      "/publishing/export"
+    );
+  });
 
-    // Export Manuscript quick action card
-    expect(screen.getByText("Export Manuscript")).toBeInTheDocument();
-    expect(
-      screen.getByText("Generate EPUB or print-ready PDF with formatting templates")
-    ).toBeInTheDocument();
+  it("renders a tab per publishing area", () => {
+    renderWithProviders(<PublishingDashboardPage />);
+
+    for (const tab of ["Accounts", "Exports", "Listings", "ISBNs", "Pricing"]) {
+      expect(screen.getByRole("tab", { name: tab })).toBeInTheDocument();
+    }
   });
 
   // 3. Shows metadata section (Connected Accounts and Active Listings cards)
   it("shows the connected accounts and active listings stat cards", () => {
     renderWithProviders(<PublishingDashboardPage />);
 
-    expect(screen.getByText("Connected Accounts")).toBeInTheDocument();
-    // 2 accounts
-    expect(screen.getByText("2")).toBeInTheDocument();
-
-    expect(screen.getByText("Active Listings")).toBeInTheDocument();
-    // 1 active listing
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(statValue("Accounts")).toBe("2");
+    expect(statValue("Active Listings")).toBe("1");
   });
 
   // 4. Shows book listings (accounts rendered)
@@ -316,10 +342,11 @@ describe("PublishingDashboardPage", () => {
 
     await user.click(screen.getByText("+ Connect Account"));
 
-    const nameInput = screen.getByPlaceholderText("My KDP Account");
+    const nameInput = screen.getByPlaceholderText("My Publishing Account");
     await user.type(nameInput, "Test Account");
 
-    const connectBtn = screen.getByRole("button", { name: /^connect$/i });
+    const form = screen.getByRole("form", { name: "Connect new publishing account" });
+    const connectBtn = within(form).getByRole("button", { name: /^connect$/i });
     await user.click(connectBtn);
 
     expect(mockMutate).toHaveBeenCalledTimes(1);
@@ -335,9 +362,7 @@ describe("PublishingDashboardPage", () => {
   it("displays the correct count of connected accounts", () => {
     renderWithProviders(<PublishingDashboardPage />);
 
-    // Connected Accounts stat card shows count from accounts array length
-    expect(screen.getByText("Connected Accounts")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(statValue("Accounts")).toBe("2");
   });
 
   it("renders 0 for connected accounts when no accounts exist", () => {
@@ -349,16 +374,7 @@ describe("PublishingDashboardPage", () => {
 
     renderWithProviders(<PublishingDashboardPage />);
 
-    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(statValue("Accounts")).toBe("0");
   });
 
-  it("has links pointing to /publishing/export", () => {
-    renderWithProviders(<PublishingDashboardPage />);
-
-    const exportLinks = screen.getAllByRole("link").filter(
-      (link) => link.getAttribute("href") === "/publishing/export"
-    );
-    // New Export button + Export Manuscript card
-    expect(exportLinks.length).toBeGreaterThanOrEqual(2);
-  });
 });

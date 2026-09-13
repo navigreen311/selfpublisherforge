@@ -99,7 +99,7 @@ export default function CoverDetailPage() {
           <button onClick={() => router.back()} className="p-2 hover:bg-accent rounded-lg">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-semibold">Cover Editor: "{coverName}"</h1>
+          <h1 className="text-lg font-semibold">Cover Editor: &quot;{coverName}&quot;</h1>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg">

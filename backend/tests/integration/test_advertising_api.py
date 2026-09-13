@@ -1,32 +1,31 @@
 """Integration tests for the Advertising Intelligence API endpoints."""
 
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
+from uuid import uuid4
+
 import pytest
 import pytest_asyncio
-from datetime import datetime, timezone, timedelta
-from unittest.mock import AsyncMock, patch, MagicMock
-from uuid import uuid4, UUID
-
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base, get_db
 from app.main import create_app
+from app.models.organization import Organization
 from app.modules.advertising.models import (
+    AdCreative,
     Campaign,
     CampaignPerformance,
     KeywordBid,
-    AdCreative,
 )
 from app.modules.advertising.schemas import (
     AdPlatform,
+    BidStrategy,
     CampaignStatus,
     CampaignType,
-    BidStrategy,
     MatchType,
 )
-from app.modules.advertising.amazon_ads import AmazonAdsNotConfiguredError
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -63,6 +62,26 @@ def org_id():
     return uuid4()
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _organization_row(test_db, org_id):
+    """Persist the organization every row in this module points at.
+
+    The fixtures here invented an org_id and never created the organization.
+    That worked only while `Campaign.org_id` carried no ForeignKey in the
+    model; the database has had one since migration 004, and declaring it made
+    SQLite enforce what Postgres always would have — every insert now fails
+    with FOREIGN KEY constraint failed.
+    """
+    org = Organization(
+        id=org_id,
+        name="Advertising Test Org",
+        slug=f"advertising-test-{org_id.hex[:8]}",
+    )
+    test_db.add(org)
+    await test_db.flush()
+    return org
+
+
 @pytest.fixture
 def user_id():
     return uuid4()
@@ -84,6 +103,7 @@ async def client(test_db, mock_user):
     app.dependency_overrides[get_db] = override_db
 
     from app.core.dependencies import get_current_user
+
     app.dependency_overrides[get_current_user] = lambda: mock_user
 
     transport = ASGITransport(app=app)
@@ -119,7 +139,7 @@ async def sample_campaign(test_db, org_id):
 async def sample_performance(test_db, sample_campaign):
     """Create sample performance records for a campaign."""
     records = []
-    base_date = datetime.now(timezone.utc) - timedelta(days=7)
+    base_date = datetime.now(UTC) - timedelta(days=7)
     for i in range(7):
         perf = CampaignPerformance(
             campaign_id=sample_campaign.id,
@@ -194,6 +214,7 @@ async def sample_creative(test_db, org_id, sample_campaign):
 
 
 # ─── Campaign API Tests ──────────────────────────────────────────────────────
+
 
 class TestCampaignEndpoints:
     """Test campaign CRUD endpoints."""
@@ -327,15 +348,14 @@ class TestCampaignEndpoints:
 
 # ─── Performance API Tests ───────────────────────────────────────────────────
 
+
 class TestPerformanceEndpoints:
     """Test performance data endpoints."""
 
     @pytest.mark.asyncio
     async def test_get_performance(self, client, sample_campaign, sample_performance):
         """GET /api/v1/ads/campaigns/{id}/performance should return data."""
-        response = await client.get(
-            f"/api/v1/ads/campaigns/{sample_campaign.id}/performance"
-        )
+        response = await client.get(f"/api/v1/ads/campaigns/{sample_campaign.id}/performance")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -348,11 +368,9 @@ class TestPerformanceEndpoints:
             assert "acos" in record
 
     @pytest.mark.asyncio
-    async def test_get_performance_date_filter(
-        self, client, sample_campaign, sample_performance
-    ):
+    async def test_get_performance_date_filter(self, client, sample_campaign, sample_performance):
         """GET /api/v1/ads/campaigns/{id}/performance with date range."""
-        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        yesterday = (datetime.now(UTC) - timedelta(days=1)).isoformat()
         response = await client.get(
             f"/api/v1/ads/campaigns/{sample_campaign.id}/performance",
             params={"date_from": yesterday},
@@ -362,13 +380,12 @@ class TestPerformanceEndpoints:
 
 # ─── Optimization API Tests ─────────────────────────────────────────────────
 
+
 class TestOptimizationEndpoints:
     """Test campaign optimization endpoints."""
 
     @pytest.mark.asyncio
-    async def test_optimize_campaign(
-        self, client, sample_campaign, sample_keywords
-    ):
+    async def test_optimize_campaign(self, client, sample_campaign, sample_keywords):
         """POST /api/v1/ads/campaigns/{id}/optimize should return suggestions."""
         response = await client.post(
             f"/api/v1/ads/campaigns/{sample_campaign.id}/optimize",
@@ -388,9 +405,7 @@ class TestOptimizationEndpoints:
         assert "summary" in data
 
     @pytest.mark.asyncio
-    async def test_optimize_campaign_default_params(
-        self, client, sample_campaign, sample_keywords
-    ):
+    async def test_optimize_campaign_default_params(self, client, sample_campaign, sample_keywords):
         """POST /api/v1/ads/campaigns/{id}/optimize with no body."""
         response = await client.post(
             f"/api/v1/ads/campaigns/{sample_campaign.id}/optimize",
@@ -409,15 +424,14 @@ class TestOptimizationEndpoints:
 
 # ─── Keyword Bid API Tests ──────────────────────────────────────────────────
 
+
 class TestKeywordBidEndpoints:
     """Test keyword bid management endpoints."""
 
     @pytest.mark.asyncio
     async def test_list_keyword_bids(self, client, sample_campaign, sample_keywords):
         """GET /api/v1/ads/keyword-bids should return keyword bids."""
-        response = await client.get(
-            f"/api/v1/ads/keyword-bids?campaign_id={sample_campaign.id}"
-        )
+        response = await client.get(f"/api/v1/ads/keyword-bids?campaign_id={sample_campaign.id}")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -443,6 +457,7 @@ class TestKeywordBidEndpoints:
 
 
 # ─── Creative API Tests ─────────────────────────────────────────────────────
+
 
 class TestCreativeEndpoints:
     """Test ad creative management endpoints."""
@@ -503,13 +518,12 @@ class TestCreativeEndpoints:
 
 # ─── Dashboard API Tests ─────────────────────────────────────────────────────
 
+
 class TestDashboardEndpoint:
     """Test the aggregate dashboard endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_dashboard(
-        self, client, sample_campaign, sample_performance
-    ):
+    async def test_get_dashboard(self, client, sample_campaign, sample_performance):
         """GET /api/v1/ads/dashboard should return aggregate data."""
         response = await client.get("/api/v1/ads/dashboard")
         assert response.status_code == 200

@@ -10,6 +10,14 @@ statements continue to work without duplicating SQLAlchemy mapper registrations.
 
 import enum
 
+from app.modules.analytics.models import (
+    AnalyticsEvent,
+    PortfolioMetricSnapshot,
+    Report,
+    RoyaltyRecord,
+)
+from app.modules.product_page_lab.models import ABTest
+
 
 # ── Enums (defined here — not duplicated in module models) ────────────
 class ABTestStatus(str, enum.Enum):
@@ -27,13 +35,6 @@ class ReportStatus(str, enum.Enum):
 
 
 # ── Re-exports from canonical module models ───────────────────────────
-from app.modules.analytics.models import (  # noqa: E402
-    AnalyticsEvent,
-    PortfolioMetricSnapshot,
-    Report,
-    RoyaltyRecord,
-)
-from app.modules.product_page_lab.models import ABTest  # noqa: E402
 
 # Backward-compatible alias — legacy code references "PortfolioMetric"
 PortfolioMetric = PortfolioMetricSnapshot

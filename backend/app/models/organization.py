@@ -1,8 +1,10 @@
 """Organization model."""
+
 import enum
+import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, Uuid
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -30,7 +32,10 @@ class Organization(BaseModel):
     __tablename__ = "organizations"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    # OrganizationResponse has always declared it, and the settings screen
+    # reads and writes it.
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     plan_tier: Mapped[PlanTier] = mapped_column(
         SAEnum(PlanTier, name="plan_tier", create_constraint=True),
         default=PlanTier.FREE,
@@ -47,15 +52,9 @@ class Organization(BaseModel):
     # Stripe billing columns
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    current_period_start: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    current_period_end: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    cancel_at_period_end: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    current_period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # Relationships - User/ApiKey have explicit FK to organizations.id
     users = relationship("User", back_populates="organization", lazy="selectin")
@@ -64,86 +63,160 @@ class Organization(BaseModel):
     # Relationships - TenantModel subclasses use org_id without FK constraint.
     # We must supply explicit primaryjoin + foreign_keys.
     projects = relationship(
-        "Project", back_populates="organization", lazy="selectin",
+        "Project",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(Project.org_id)",
     )
     series = relationship(
-        "Series", back_populates="organization", lazy="selectin",
+        "Series",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(Series.org_id)",
     )
     pen_names = relationship(
-        "PenName", back_populates="organization", lazy="selectin",
+        "PenName",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(PenName.org_id)",
     )
     style_profiles = relationship(
-        "StyleProfile", back_populates="organization", lazy="selectin",
+        "StyleProfile",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(StyleProfile.org_id)",
     )
     content_assets = relationship(
-        "ContentAsset", back_populates="organization", lazy="selectin",
+        "ContentAsset",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(ContentAsset.org_id)",
     )
     publishing_accounts = relationship(
-        "PublishingAccount", back_populates="organization", lazy="selectin",
+        "PublishingAccount",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(PublishingAccount.org_id)",
     )
     campaigns = relationship(
-        "Campaign", back_populates="organization", lazy="selectin",
+        "Campaign",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(Campaign.org_id)",
     )
     email_sequences = relationship(
-        "EmailSequence", lazy="selectin", viewonly=True,
+        "EmailSequence",
+        lazy="selectin",
+        viewonly=True,
         primaryjoin="Organization.id == foreign(EmailSequence.org_id)",
     )
     launch_plans = relationship(
-        "LaunchPlan", lazy="selectin", viewonly=True,
+        "LaunchPlan",
+        lazy="selectin",
+        viewonly=True,
         primaryjoin="Organization.id == foreign(LaunchPlan.org_id)",
     )
     social_posts = relationship(
-        "SocialPost", lazy="selectin", viewonly=True,
+        "SocialPost",
+        lazy="selectin",
+        viewonly=True,
         primaryjoin="Organization.id == foreign(SocialPost.org_id)",
     )
     arc_campaigns = relationship(
-        "ARCCampaign", lazy="selectin", viewonly=True,
+        "ARCCampaign",
+        lazy="selectin",
+        viewonly=True,
         primaryjoin="Organization.id == foreign(ARCCampaign.org_id)",
     )
     agents = relationship(
-        "Agent", back_populates="organization", lazy="selectin",
+        "Agent",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(Agent.org_id)",
     )
     agent_workflows = relationship(
-        "AgentWorkflow", back_populates="organization", lazy="selectin",
+        "AgentWorkflow",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(AgentWorkflow.org_id)",
     )
     agent_budgets = relationship(
-        "AgentBudget", back_populates="organization", lazy="selectin",
+        "AgentBudget",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(AgentBudget.org_id)",
     )
     audit_trails = relationship(
-        "AuditTrail", back_populates="organization", lazy="selectin",
+        "AuditTrail",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(AuditTrail.org_id)",
     )
     analytics_events = relationship(
-        "AnalyticsEvent", back_populates="organization", lazy="selectin",
+        "AnalyticsEvent",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(AnalyticsEvent.org_id)",
     )
     portfolio_metrics = relationship(
-        "PortfolioMetricSnapshot", back_populates="organization", lazy="selectin",
+        "PortfolioMetricSnapshot",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(PortfolioMetricSnapshot.org_id)",
     )
     reports = relationship(
-        "Report", back_populates="organization", lazy="selectin",
+        "Report",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(Report.org_id)",
     )
     reader_panels = relationship(
-        "ReaderPanel", back_populates="organization", lazy="selectin",
+        "ReaderPanel",
+        back_populates="organization",
+        lazy="selectin",
         primaryjoin="Organization.id == foreign(ReaderPanel.org_id)",
     )
 
     __table_args__ = (
+        UniqueConstraint("slug", name="organizations_slug_key"),
         Index("ix_organizations_plan_tier", "plan_tier"),
         Index("ix_organizations_subscription_status", "subscription_status"),
         Index("ix_organizations_settings_gin", "settings", postgresql_using="gin"),
         Index("ix_organizations_limits_gin", "limits", postgresql_using="gin"),
         Index("ix_organizations_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
     )
+
+
+class Invitation(BaseModel):
+    """Pending invitation for someone to join an organization.
+
+    UserService.invite_member has always INSERTed into `invitations`, but no
+    model or migration ever created the table, so inviting a member failed with
+    "relation invitations does not exist".
+    """
+
+    __tablename__ = "invitations"
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="pending",
+        server_default="pending",
+        index=True,
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("ix_invitations_org_email", "org_id", "email"),)

@@ -15,10 +15,12 @@ Each task declares explicit ``soft_time_limit`` and ``time_limit`` values
   - V. Long (full analytics aggregation):       soft=3300, hard=3600
 Global defaults in config.py are 3300/3600 but per-task limits take precedence.
 """
+
 import asyncio
 import logging
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from typing import Any, cast
 from uuid import UUID
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -73,9 +75,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
 
                 # If "all", find every org with books via projects
                 if target_org_id is None:
-                    org_query = select(func.distinct(Project.org_id)).where(
-                        Project.deleted_at.is_(None)
-                    )
+                    org_query = select(func.distinct(Project.org_id)).where(Project.deleted_at.is_(None))
                     result = await db.execute(org_query)
                     org_ids = [row[0] for row in result.all()]
                 else:
@@ -91,11 +91,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                     book_query = (
                         select(
                             func.count(Book.id).label("total_books"),
-                            func.count(
-                                func.nullif(
-                                    Book.status != BookStatus.PUBLISHED, True
-                                )
-                            ).label("active_books"),
+                            func.count(func.nullif(Book.status != BookStatus.PUBLISHED, True)).label("active_books"),
                         )
                         .join(Project, Book.project_id == Project.id)
                         .where(
@@ -155,34 +151,38 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                     monthly_revenue = monthly_rev_result.scalar() or Decimal("0.00")
 
                     # Platform breakdown
-                    platform_query = select(
-                        RoyaltyRecord.platform,
-                        func.sum(RoyaltyRecord.net_revenue),
-                    ).where(
-                        and_(
-                            RoyaltyRecord.org_id == oid,
-                            RoyaltyRecord.deleted_at.is_(None),
+                    platform_query = (
+                        select(
+                            RoyaltyRecord.platform,
+                            func.sum(RoyaltyRecord.net_revenue),
                         )
-                    ).group_by(RoyaltyRecord.platform)
+                        .where(
+                            and_(
+                                RoyaltyRecord.org_id == oid,
+                                RoyaltyRecord.deleted_at.is_(None),
+                            )
+                        )
+                        .group_by(RoyaltyRecord.platform)
+                    )
                     platform_result = await db.execute(platform_query)
-                    platform_breakdown = {
-                        row[0]: str(row[1]) for row in platform_result.all()
-                    }
+                    platform_breakdown = {row[0]: str(row[1]) for row in platform_result.all()}
 
                     # Format breakdown
-                    format_query = select(
-                        RoyaltyRecord.format_type,
-                        func.sum(RoyaltyRecord.net_revenue),
-                    ).where(
-                        and_(
-                            RoyaltyRecord.org_id == oid,
-                            RoyaltyRecord.deleted_at.is_(None),
+                    format_query = (
+                        select(
+                            RoyaltyRecord.format_type,
+                            func.sum(RoyaltyRecord.net_revenue),
                         )
-                    ).group_by(RoyaltyRecord.format_type)
+                        .where(
+                            and_(
+                                RoyaltyRecord.org_id == oid,
+                                RoyaltyRecord.deleted_at.is_(None),
+                            )
+                        )
+                        .group_by(RoyaltyRecord.format_type)
+                    )
                     format_result = await db.execute(format_query)
-                    format_breakdown = {
-                        row[0]: str(row[1]) for row in format_result.all()
-                    }
+                    format_breakdown = {row[0]: str(row[1]) for row in format_result.all()}
 
                     # Top 5 books by revenue
                     top_books_query = (
@@ -201,10 +201,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
                         .limit(5)
                     )
                     top_books_result = await db.execute(top_books_query)
-                    top_books = [
-                        {"title": row[0], "revenue": str(row[1])}
-                        for row in top_books_result.all()
-                    ]
+                    top_books = [{"title": row[0], "revenue": str(row[1])} for row in top_books_result.all()]
 
                     # Calculate real expenses from campaign ad spend
                     total_expenses = await _compute_total_expenses(db, oid)
@@ -280,7 +277,7 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
             snapshot.get("monthly_revenue", 0.0),
         )
 
-        return snapshot
+        return cast("dict[Any, Any]", snapshot)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -288,10 +285,11 @@ def snapshot_portfolio_metrics(self, org_id: str) -> dict:
     except Exception as exc:
         logger.error(
             "Failed to snapshot portfolio metrics for org %s: %s",
-            org_id, str(exc),
+            org_id,
+            str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -336,9 +334,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
 
                 # Resolve org IDs
                 if target_org_id is None:
-                    org_query = select(func.distinct(Project.org_id)).where(
-                        Project.deleted_at.is_(None)
-                    )
+                    org_query = select(func.distinct(Project.org_id)).where(Project.deleted_at.is_(None))
                     result = await db.execute(org_query)
                     org_ids = [row[0] for row in result.all()]
                 else:
@@ -357,11 +353,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
                     if book_id:
                         conditions.append(Book.id == UUID(book_id))
 
-                    books_query = (
-                        select(Book)
-                        .join(Project, Book.project_id == Project.id)
-                        .where(and_(*conditions))
-                    )
+                    books_query = select(Book).join(Project, Book.project_id == Project.id).where(and_(*conditions))
                     books_result = await db.execute(books_query)
                     books = books_result.scalars().all()
 
@@ -408,9 +400,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
                         # Store persona data in the book metadata
                         updated_metadata = dict(metadata)
                         updated_metadata["audience_personas_count"] = len(personas)
-                        updated_metadata["audience_last_refreshed"] = datetime.now(
-                            UTC
-                        ).isoformat()
+                        updated_metadata["audience_last_refreshed"] = datetime.now(UTC).isoformat()
                         updated_metadata["total_units_sold"] = sales_row[0]
                         updated_metadata["total_revenue"] = str(sales_row[1])
                         book.metadata_ = updated_metadata
@@ -441,7 +431,7 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
             result["personas_updated"],
         )
 
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -449,10 +439,11 @@ def refresh_audience_data(self, org_id: str, book_id: str | None = None) -> dict
     except Exception as exc:
         logger.error(
             "Failed to refresh audience data for org %s: %s",
-            org_id, str(exc),
+            org_id,
+            str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -488,9 +479,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
                 target_org_id = UUID(org_id) if org_id != "all" else None
 
                 if target_org_id is None:
-                    org_query = select(func.distinct(Project.org_id)).where(
-                        Project.deleted_at.is_(None)
-                    )
+                    org_query = select(func.distinct(Project.org_id)).where(Project.deleted_at.is_(None))
                     result = await db.execute(org_query)
                     org_ids = [row[0] for row in result.all()]
                 else:
@@ -566,10 +555,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
                         monthly_units = monthly_rev_row[1]
 
                         # Compute months since launch
-                        months_since_launch = max(
-                            1,
-                            (now - book.created_at).days // 30
-                        )
+                        months_since_launch = max(1, (now - book.created_at).days // 30)
 
                         # Extract metadata signals
                         metadata = book.metadata_ or {}
@@ -682,7 +668,7 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
             result["books_analyzed"],
         )
 
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
@@ -690,10 +676,11 @@ def generate_kill_scale_alerts(self, org_id: str) -> dict:
     except Exception as exc:
         logger.error(
             "Failed to generate kill/scale alerts for org %s: %s",
-            org_id, str(exc),
+            org_id,
+            str(exc),
             exc_info=True,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @celery_app.task(
@@ -796,14 +783,14 @@ def update_seasonal_calendar(self) -> dict:
             result["years_updated"],
         )
 
-        return result
+        return cast("dict[Any, Any]", result)
 
     except SoftTimeLimitExceeded:
         logger.warning("Task %s hit soft time limit, cleaning up", self.request.id)
         raise
     except Exception as exc:
         logger.error("Failed to update seasonal calendar: %s", str(exc), exc_info=True)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ─── Celery Beat Schedule ────────────────────────────────────────────────────

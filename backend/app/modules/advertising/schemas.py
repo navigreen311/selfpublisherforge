@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
 
+
 class AdPlatform(str, Enum):
     AMAZON = "amazon"
     FACEBOOK = "facebook"
@@ -51,6 +52,7 @@ class CreativeStatus(str, Enum):
 
 
 # ─── Campaign Schemas ─────────────────────────────────────────────────────────
+
 
 class CampaignCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -104,6 +106,7 @@ class CampaignResponse(BaseModel):
 
 # ─── Performance Schemas ──────────────────────────────────────────────────────
 
+
 class AdPerformance(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -143,6 +146,7 @@ class CampaignWithPerformance(CampaignResponse):
 
 # ─── Keyword Bid Schemas ─────────────────────────────────────────────────────
 
+
 class KeywordBidCreate(BaseModel):
     campaign_id: UUID
     keyword: str = Field(..., min_length=1, max_length=255)
@@ -158,10 +162,7 @@ class KeywordBidUpdate(BaseModel):
 
 
 class KeywordBidBulkUpdate(BaseModel):
-    updates: list[dict] = Field(
-        ...,
-        description="List of {id: UUID, bid_amount: float} objects"
-    )
+    updates: list[dict] = Field(..., description="List of {id: UUID, bid_amount: float} objects")
 
 
 class KeywordBidResponse(BaseModel):
@@ -184,6 +185,7 @@ class KeywordBidResponse(BaseModel):
 
 
 # ─── Ad Creative Schemas ──────────────────────────────────────────────────────
+
 
 class AdCreativeCreate(BaseModel):
     campaign_id: UUID | None = None
@@ -240,6 +242,7 @@ class CreativeGenerateResponse(BaseModel):
 
 # ─── Optimization Schemas ────────────────────────────────────────────────────
 
+
 class OptimizationRequest(BaseModel):
     target_acos: float | None = Field(None, ge=0, le=100)
     max_bid_increase_pct: float = Field(20.0, ge=0, le=100)
@@ -269,6 +272,7 @@ class OptimizationSuggestion(BaseModel):
 
 
 # ─── Dashboard Schemas ───────────────────────────────────────────────────────
+
 
 class AdDashboard(BaseModel):
     total_active_campaigns: int = 0
@@ -340,6 +344,7 @@ class FacebookCampaignMetrics(BaseModel):
 
 # ─── Filter / Query Schemas ──────────────────────────────────────────────────
 
+
 class CampaignFilter(BaseModel):
     platform: AdPlatform | None = None
     status: CampaignStatus | None = None
@@ -356,6 +361,7 @@ class PerformanceQuery(BaseModel):
 
 
 # ─── Enhanced Advertising Schemas ────────────────────────────────────────────
+
 
 class SearchTermResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

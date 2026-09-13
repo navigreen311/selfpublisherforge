@@ -1,20 +1,21 @@
 """Tests for database seeding scripts."""
-import pytest
-from sqlalchemy import select
 
-from app.models.organization import Organization
-from app.models.user import User
-from app.models.project import Project, Book
-from app.models.content import Manuscript, Chapter
-from app.modules.analytics.models import RoyaltyRecord, PortfolioMetricSnapshot
-from app.models.market import CompetitorBook, MarketKeyword
-from app.models.marketing import LaunchPlan, EmailSequence
-from scripts.seeds.users import seed_users
-from scripts.seeds.projects import seed_projects
-from scripts.seeds.content import seed_content
+import pytest
 from scripts.seeds.analytics import seed_analytics
+from scripts.seeds.content import seed_content
 from scripts.seeds.market import seed_market
 from scripts.seeds.marketing import seed_marketing
+from scripts.seeds.projects import seed_projects
+from scripts.seeds.users import seed_users
+from sqlalchemy import select
+
+from app.models.content import Chapter, Manuscript
+from app.models.market import CompetitorBook, MarketKeyword
+from app.models.marketing import EmailSequence, LaunchPlan
+from app.models.organization import Organization
+from app.models.project import Book, Project
+from app.models.user import User
+from app.modules.analytics.models import PortfolioMetricSnapshot, RoyaltyRecord
 
 
 @pytest.mark.asyncio
@@ -28,18 +29,14 @@ async def test_seed_users(db_session):
     assert len(result["orgs"]) == 4
 
     # Verify user exists
-    user_result = await db_session.execute(
-        select(User).where(User.email == "jane@example.com")
-    )
+    user_result = await db_session.execute(select(User).where(User.email == "jane@example.com"))
     user = user_result.scalar_one_or_none()
     assert user is not None
     assert user.name == "Jane Doe"
     assert user.email_verified is True
 
     # Verify org exists
-    org_result = await db_session.execute(
-        select(Organization).where(Organization.slug == "janes-publishing")
-    )
+    org_result = await db_session.execute(select(Organization).where(Organization.slug == "janes-publishing"))
     org = org_result.scalar_one_or_none()
     assert org is not None
     assert org.name == "Jane's Publishing House"
@@ -60,9 +57,7 @@ async def test_seed_users_idempotent(db_session):
     assert jane_id_1 == jane_id_2
 
     # Verify only one Jane exists
-    user_result = await db_session.execute(
-        select(User).where(User.email == "jane@example.com")
-    )
+    user_result = await db_session.execute(select(User).where(User.email == "jane@example.com"))
     users = user_result.scalars().all()
     assert len(users) == 1
 
@@ -82,17 +77,13 @@ async def test_seed_projects(db_session):
     assert len(result["books"]) == 3
 
     # Verify book exists
-    book_result = await db_session.execute(
-        select(Book).where(Book.title == "The Dragon's Prophecy")
-    )
+    book_result = await db_session.execute(select(Book).where(Book.title == "The Dragon's Prophecy"))
     book = book_result.scalar_one_or_none()
     assert book is not None
     assert book.subtitle == "Book 1 of the Fire Chronicles"
 
     # Verify project exists
-    project_result = await db_session.execute(
-        select(Project).where(Project.id == book.project_id)
-    )
+    project_result = await db_session.execute(select(Project).where(Project.id == book.project_id))
     project = project_result.scalar_one_or_none()
     assert project is not None
     assert project.org_id == jane_org_id
@@ -117,9 +108,7 @@ async def test_seed_content(db_session):
     manuscript = manuscript_result.scalar_one_or_none()
     assert manuscript is not None
 
-    chapter_result = await db_session.execute(
-        select(Chapter).where(Chapter.manuscript_id == manuscript.id)
-    )
+    chapter_result = await db_session.execute(select(Chapter).where(Chapter.manuscript_id == manuscript.id))
     chapters = chapter_result.scalars().all()
     assert len(chapters) == 5
     assert chapters[0].title == "The Awakening"
@@ -138,17 +127,13 @@ async def test_seed_analytics(db_session):
     await seed_analytics(db_session, jane_org_id, book_ids)
 
     # Verify royalty records exist
-    royalty_result = await db_session.execute(
-        select(RoyaltyRecord).where(RoyaltyRecord.org_id == jane_org_id)
-    )
+    royalty_result = await db_session.execute(select(RoyaltyRecord).where(RoyaltyRecord.org_id == jane_org_id))
     royalties = royalty_result.scalars().all()
     assert len(royalties) > 0
 
     # Verify portfolio snapshots exist
     snapshot_result = await db_session.execute(
-        select(PortfolioMetricSnapshot).where(
-            PortfolioMetricSnapshot.org_id == jane_org_id
-        )
+        select(PortfolioMetricSnapshot).where(PortfolioMetricSnapshot.org_id == jane_org_id)
     )
     snapshots = snapshot_result.scalars().all()
     assert len(snapshots) > 0
@@ -165,17 +150,13 @@ async def test_seed_market(db_session):
     await seed_market(db_session, jane_org_id)
 
     # Verify competitor books exist
-    book_result = await db_session.execute(
-        select(CompetitorBook).where(CompetitorBook.org_id == jane_org_id)
-    )
+    book_result = await db_session.execute(select(CompetitorBook).where(CompetitorBook.org_id == jane_org_id))
     books = book_result.scalars().all()
     assert len(books) > 0
     assert books[0].category == "Fantasy"
 
     # Verify keywords exist
-    keyword_result = await db_session.execute(
-        select(MarketKeyword).where(MarketKeyword.org_id == jane_org_id)
-    )
+    keyword_result = await db_session.execute(select(MarketKeyword).where(MarketKeyword.org_id == jane_org_id))
     keywords = keyword_result.scalars().all()
     assert len(keywords) > 0
 
@@ -194,17 +175,13 @@ async def test_seed_marketing(db_session):
     await seed_marketing(db_session, jane_org_id, jane_user_id, book_ids)
 
     # Verify launch plan exists
-    plan_result = await db_session.execute(
-        select(LaunchPlan).where(LaunchPlan.org_id == jane_org_id)
-    )
+    plan_result = await db_session.execute(select(LaunchPlan).where(LaunchPlan.org_id == jane_org_id))
     plan = plan_result.scalar_one_or_none()
     assert plan is not None
     assert plan.title == "Dragon's Prophecy Launch Campaign"
 
     # Verify email sequence exists
-    sequence_result = await db_session.execute(
-        select(EmailSequence).where(EmailSequence.org_id == jane_org_id)
-    )
+    sequence_result = await db_session.execute(select(EmailSequence).where(EmailSequence.org_id == jane_org_id))
     sequence = sequence_result.scalar_one_or_none()
     assert sequence is not None
     assert sequence.name == "Dragon's Prophecy - Launch Sequence"

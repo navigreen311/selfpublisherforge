@@ -30,8 +30,8 @@ describe("CreateChildrensBookWizard", () => {
       <CreateChildrensBookWizard open={true} onOpenChange={jest.fn()} />,
       { wrapper },
     );
-    expect(screen.getByText("Create Children\u2019s Book")).toBeInTheDocument();
-    expect(screen.getByText(/title/i)).toBeInTheDocument();
+    expect(screen.getByText(/Create Children.s Book/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^title/i)).toBeInTheDocument();
   });
 
   it("does not render content when closed", () => {
@@ -39,7 +39,7 @@ describe("CreateChildrensBookWizard", () => {
       <CreateChildrensBookWizard open={false} onOpenChange={jest.fn()} />,
       { wrapper },
     );
-    expect(screen.queryByText("Create Children\u2019s Book")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Create Children.s Book/)).not.toBeInTheDocument();
   });
 
   it("disables Next when title and author are empty", () => {

@@ -10,6 +10,13 @@ const mockGet = jest.fn();
 const mockInvalidateQueries = jest.fn();
 
 // Mock next/link
+// The security page now also renders SecurityTab (password, active sessions,
+// login history). Those read react-query directly, which this suite stubs
+// wholesale; they have their own coverage, so stand the tab in.
+jest.mock("@/modules/settings/components/SecurityTab", () => ({
+  SecurityTab: () => <div data-testid="security-tab" />,
+}));
+
 jest.mock("next/link", () => {
   return function MockLink({
     children,
@@ -30,6 +37,10 @@ jest.mock("next/link", () => {
 
 // Mock lucide-react icons
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   X: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="x-icon" {...props} />
   ),
@@ -87,7 +98,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLButtonElement>
     ) => (
       <button ref={ref} {...props}>
@@ -106,7 +117,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLDivElement>
     ) => (
       <div ref={ref} role="dialog" {...props}>
@@ -119,7 +130,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLHeadingElement>
     ) => (
       <h2 ref={ref} {...props}>
@@ -132,7 +143,7 @@ jest.mock("@radix-ui/react-dialog", () => ({
       {
         children,
         ...props
-      }: { children: React.ReactNode } & Record<string, unknown>,
+      }: { children?: React.ReactNode } & Record<string, unknown>,
       ref: React.Ref<HTMLParagraphElement>
     ) => (
       <p ref={ref} {...props}>
@@ -150,6 +161,24 @@ jest.mock("@radix-ui/react-dialog", () => ({
 
 // Mock Radix Slot
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -362,7 +391,7 @@ describe("SecuritySettingsPage", () => {
     );
 
     await waitFor(() => {
-      const qrImg = screen.getByAltText("MFA QR Code");
+      const qrImg = screen.getByAltText(/scan this qr code with your authenticator app/i);
       expect(qrImg).toBeInTheDocument();
       expect(qrImg).toHaveAttribute("src", mockSetupResponse.qr_code_url);
     });

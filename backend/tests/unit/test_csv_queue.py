@@ -7,9 +7,8 @@ the async process_csv_import pipeline, and various edge cases.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -22,9 +21,7 @@ try:
         process_csv_import,
     )
 except ImportError:
-    pytestmark = pytest.mark.skip(
-        reason="app.modules.analytics.csv_queue not available yet (W01)"
-    )
+    pytestmark = pytest.mark.skip(reason="app.modules.analytics.csv_queue not available yet (W01)")
     # Define stubs so the rest of the file parses without NameError
     CSVImportQueue = None  # type: ignore[assignment, misc]
     process_csv_import = None  # type: ignore[assignment]
@@ -33,6 +30,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Shared helpers / fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id() -> uuid.UUID:
@@ -80,8 +78,7 @@ HEADERS_ONLY_KDP_CSV = (
 )
 
 HEADERS_ONLY_INGRAM_CSV = (
-    "Title,ISBN,Format,Quantity,Publisher Compensation,"
-    "Currency Code,Sale/Return,Reporting Date\n"
+    "Title,ISBN,Format,Quantity,Publisher Compensation," "Currency Code,Sale/Return,Reporting Date\n"
 )
 
 MIXED_VALID_INVALID_KDP_CSV = (

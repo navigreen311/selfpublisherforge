@@ -46,6 +46,7 @@ def _run_async(coro):
 # Task: Refresh category data
 # ---------------------------------------------------------------------------
 
+
 @celery_app.task(
     name="app.tasks.market_intelligence.refresh_category_data",
     bind=True,
@@ -72,25 +73,22 @@ def refresh_category_data(self):
 
         # Flatten the tree and upsert each node into market_categories
         flat = _flatten_category_tree(categories)
-        async with async_session() as session:
-            async with session.begin():
-                for node in flat:
-                    result = await session.execute(
-                        select(MarketCategory).where(
-                            MarketCategory.amazon_node_id == node["id"]
-                        )
+        async with async_session() as session, session.begin():
+            for node in flat:
+                result = await session.execute(
+                    select(MarketCategory).where(MarketCategory.amazon_node_id == node["id"])
+                )
+                existing = result.scalar_one_or_none()
+                if existing:
+                    existing.name = node["name"]
+                    existing.book_count = node.get("book_count") or 0
+                else:
+                    cat = MarketCategory(
+                        amazon_node_id=node["id"],
+                        name=node["name"],
+                        book_count=node.get("book_count") or 0,
                     )
-                    existing = result.scalar_one_or_none()
-                    if existing:
-                        existing.name = node["name"]
-                        existing.book_count = node.get("book_count") or 0
-                    else:
-                        cat = MarketCategory(
-                            amazon_node_id=node["id"],
-                            name=node["name"],
-                            book_count=node.get("book_count") or 0,
-                        )
-                        session.add(cat)
+                    session.add(cat)
         return count
 
     try:
@@ -102,10 +100,10 @@ def refresh_category_data(self):
         raise
     except SQLAlchemyError as exc:
         logger.error("Category refresh DB error: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except ConnectionError as exc:
         logger.error("Category refresh connection failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 def _count_nodes(nodes: list[dict]) -> int:
@@ -128,6 +126,7 @@ def _flatten_category_tree(nodes: list[dict]) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Task: Update BSR history
 # ---------------------------------------------------------------------------
+
 
 @celery_app.task(
     name="app.tasks.market_intelligence.update_bsr_history",
@@ -153,20 +152,14 @@ def update_bsr_history(self):
 
         async with async_session() as session:
             async with session.begin():
-                result = await session.execute(
-                    select(CompetitorBook).where(
-                        CompetitorBook.deleted_at.is_(None)
-                    )
-                )
+                result = await session.execute(select(CompetitorBook).where(CompetitorBook.deleted_at.is_(None)))
                 tracked = result.scalars().all()
 
             updated = 0
             for comp in tracked:
                 marketplace = (comp.metadata_json or {}).get("marketplace", "US")
                 try:
-                    product = await client.get_product_detail(
-                        comp.asin, marketplace=marketplace
-                    )
+                    product = await client.get_product_detail(comp.asin, marketplace=marketplace)
                     if product and product.bsr is not None:
                         now_iso = datetime.now(tz=UTC).isoformat()
                         bsr_point = {
@@ -181,9 +174,7 @@ def update_bsr_history(self):
                             comp.bsr_current = product.bsr
                             session.add(comp)
                         updated += 1
-                        logger.debug(
-                            "Updated BSR for %s: %d", comp.asin, product.bsr
-                        )
+                        logger.debug("Updated BSR for %s: %d", comp.asin, product.bsr)
                 except (SQLAlchemyError, ConnectionError) as exc:
                     logger.warning("Failed to update BSR for %s: %s", comp.asin, exc)
 
@@ -198,15 +189,16 @@ def update_bsr_history(self):
         raise
     except SQLAlchemyError as exc:
         logger.error("BSR history update DB error: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except ConnectionError as exc:
         logger.error("BSR history update connection failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------
 # Task: Generate market snapshots
 # ---------------------------------------------------------------------------
+
 
 @celery_app.task(
     name="app.tasks.market_intelligence.generate_market_snapshot",
@@ -242,31 +234,30 @@ def generate_market_snapshot(self, category_id: str | None = None):
                     "competition_score": analysis.competition_score,
                 }
 
-                async with async_session() as session:
-                    async with session.begin():
-                        # Look up or create the MarketCategory row for this node
-                        cat_result = await session.execute(
-                            select(MarketCategory).where(
-                                MarketCategory.amazon_node_id == cat_id,
-                                MarketCategory.deleted_at.is_(None),
-                            )
+                async with async_session() as session, session.begin():
+                    # Look up or create the MarketCategory row for this node
+                    cat_result = await session.execute(
+                        select(MarketCategory).where(
+                            MarketCategory.amazon_node_id == cat_id,
+                            MarketCategory.deleted_at.is_(None),
                         )
-                        cat_obj = cat_result.scalar_one_or_none()
-                        if cat_obj is None:
-                            cat_obj = MarketCategory(
-                                amazon_node_id=cat_id,
-                                name=analysis.category_name,
-                                book_count=analysis.book_count,
-                            )
-                            session.add(cat_obj)
-                            await session.flush()
+                    )
+                    cat_obj = cat_result.scalar_one_or_none()
+                    if cat_obj is None:
+                        cat_obj = MarketCategory(
+                            amazon_node_id=cat_id,
+                            name=analysis.category_name,
+                            book_count=analysis.book_count,
+                        )
+                        session.add(cat_obj)
+                        await session.flush()
 
-                        snapshot = MarketSnapshot(
-                            category_id=cat_obj.id,
-                            snapshot_date=date.today(),
-                            metrics=snapshot_data,
-                        )
-                        session.add(snapshot)
+                    snapshot = MarketSnapshot(
+                        category_id=cat_obj.id,
+                        snapshot_date=date.today(),
+                        metrics=snapshot_data,
+                    )
+                    session.add(snapshot)
 
                 snapshots_created += 1
                 logger.debug("Snapshot created for %s: %s", cat_id, snapshot_data)
@@ -284,10 +275,10 @@ def generate_market_snapshot(self, category_id: str | None = None):
         raise
     except SQLAlchemyError as exc:
         logger.error("Market snapshot generation DB error: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
     except ConnectionError as exc:
         logger.error("Market snapshot generation connection failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------

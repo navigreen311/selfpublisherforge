@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.models.project import Project
+from app.models.project import Project, ProjectStatus
 from app.modules.projects.schemas import (
     ProjectListItem,
     ProjectListRequest,
@@ -193,9 +193,7 @@ async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
         from app.models.project import Book
 
         result = await db.execute(
-            select(func.count(Book.id)).where(
-                Book.project_id == project_id, Book.deleted_at.is_(None)
-            )
+            select(func.count(Book.id)).where(Book.project_id == project_id, Book.deleted_at.is_(None))
         )
         count = result.scalar() or 0
         out.append(
@@ -205,16 +203,14 @@ async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
                 count=int(count),
             )
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("linked books failed: %s", exc)
 
     # Pipelines
     try:
         from app.modules.production_pipeline.models import Pipeline
 
-        result = await db.execute(
-            select(Pipeline).where(Pipeline.deleted_at.is_(None))
-        )
+        result = await db.execute(select(Pipeline).where(Pipeline.deleted_at.is_(None)))
         pipelines = [p for p in result.scalars().all() if getattr(p, "book_id", None)]
         # Simple heuristic: any pipeline whose book belongs to this project
         # (we don't require it -- just surface pipeline count for the project)
@@ -225,7 +221,7 @@ async def _compute_linked_modules(db: AsyncSession, project_id: UUID) -> list:
                 count=len(pipelines),
             )
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("linked pipelines failed: %s", exc)
 
     return out
@@ -316,7 +312,7 @@ async def update_project(
     if target_launch_date is not None:
         project.target_launch_date = target_launch_date
     if status is not None:
-        project.status = status
+        project.status = ProjectStatus(status)
     if genre is not None:
         project.genre = genre
     if subgenre is not None:

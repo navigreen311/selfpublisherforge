@@ -4,19 +4,47 @@ Blueprint Section 17.4 -- 21 test cases covering preflight, pricing,
 color management, fingerprinting, spam detection, safety, font licensing,
 metadata, review feedback, accessibility, device preview, and distributor.
 """
+
 from __future__ import annotations
 
-import json
-
 import pytest
+
+from app.modules.specialty.shared.accessibility import (
+    DYSLEXIA_SETTINGS,
+    LARGE_PRINT_SETTINGS,
+    generate_dyslexia_variant,
+)
+from app.modules.specialty.shared.color_management import (
+    _is_out_of_gamut,
+    calculate_ink_density,
+    check_gamut,
+    rgb_to_cmyk,
+)
+from app.modules.specialty.shared.device_preview import (
+    DEVICE_SPECS,
+    generate_all_previews,
+    generate_preview,
+)
+from app.modules.specialty.shared.distributor import (
+    _run_bn_checks,
+    _run_ingram_checks,
+    _run_kdp_checks,
+)
+from app.modules.specialty.shared.fingerprinting import (
+    compare_fingerprints,
+    generate_fingerprint,
+)
+from app.modules.specialty.shared.font_licensing import (
+    check_font_license,
+)
+from app.modules.specialty.shared.metadata_advisor import (
+    check_metadata_compliance,
+)
 
 # ---------------------------------------------------------------------------
 # Imports under test
 # ---------------------------------------------------------------------------
 from app.modules.specialty.shared.preflight import (
-    MIN_BLEED_MARGIN,
-    MIN_DPI,
-    GUTTER_SAFETY_INCHES,
     SPINE_WIDTH_PER_PAGE_BW,
     SPINE_WIDTH_PER_PAGE_COLOR,
     calculate_spine_width,
@@ -27,49 +55,17 @@ from app.modules.specialty.shared.print_pricing import (
     calculate_print_cost,
     generate_price_scenarios,
 )
-from app.modules.specialty.shared.color_management import (
-    rgb_to_cmyk,
-    calculate_ink_density,
-    check_gamut,
-    _is_out_of_gamut,
-)
-from app.modules.specialty.shared.fingerprinting import (
-    generate_fingerprint,
-    compare_fingerprints,
-)
-from app.modules.specialty.shared.spam_detector import (
-    _check_metadata_quality,
-    _INTERIOR_SIMILARITY_THRESHOLD,
-)
-from app.modules.specialty.shared.safety import (
-    scan_text_for_trademarks,
-    scan_content_sensitivity,
-)
-from app.modules.specialty.shared.font_licensing import (
-    check_font_license,
-)
-from app.modules.specialty.shared.metadata_advisor import (
-    check_metadata_compliance,
-)
 from app.modules.specialty.shared.review_feedback import (
     analyze_feedback,
 )
-from app.modules.specialty.shared.accessibility import (
-    DYSLEXIA_SETTINGS,
-    LARGE_PRINT_SETTINGS,
-    generate_dyslexia_variant,
+from app.modules.specialty.shared.safety import (
+    scan_content_sensitivity,
+    scan_text_for_trademarks,
 )
-from app.modules.specialty.shared.device_preview import (
-    DEVICE_SPECS,
-    generate_preview,
-    generate_all_previews,
+from app.modules.specialty.shared.spam_detector import (
+    _INTERIOR_SIMILARITY_THRESHOLD,
+    _check_metadata_quality,
 )
-from app.modules.specialty.shared.distributor import (
-    _run_kdp_checks,
-    _run_ingram_checks,
-    _run_bn_checks,
-)
-
 
 # ===================================================================
 # 1. Preflight: DPI check catches <300 DPI

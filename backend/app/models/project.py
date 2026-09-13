@@ -1,4 +1,5 @@
 """Project, Book, Series, PenName, and BookVersion models."""
+
 import datetime
 import enum
 import uuid
@@ -59,6 +60,10 @@ class SeriesStatus(str, enum.Enum):
 class Project(TenantModel):
     __tablename__ = "projects"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     type: Mapped[ProjectType] = mapped_column(
@@ -97,7 +102,8 @@ class Project(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="projects",
+        "Organization",
+        back_populates="projects",
         primaryjoin="Project.org_id == Organization.id",
         foreign_keys="[Project.org_id]",
     )
@@ -105,6 +111,7 @@ class Project(TenantModel):
     books = relationship("Book", back_populates="project", lazy="selectin")
 
     __table_args__ = (
+        Index("ix_projects_org_id_status", "org_id", "status"),
         Index("ix_projects_type", "type"),
         Index("ix_projects_status", "status"),
         Index("ix_projects_settings_gin", "settings", postgresql_using="gin"),
@@ -135,9 +142,7 @@ class Book(BaseModel):
         default=BookStatus.DRAFT,
         server_default="draft",
     )
-    metadata_: Mapped[dict | None] = mapped_column(
-        "metadata", JSONB, nullable=True, default=None
-    )
+    metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True, default=None)
 
     # Relationships
     project = relationship("Project", back_populates="books")
@@ -147,17 +152,23 @@ class Book(BaseModel):
     upload_validations = relationship("UploadValidation", back_populates="book", lazy="selectin")
     compliance_scans = relationship("ComplianceScan", back_populates="book", lazy="selectin")
     pricing_rules = relationship(
-        "PricingRule", back_populates="book", lazy="selectin",
+        "PricingRule",
+        back_populates="book",
+        lazy="selectin",
         primaryjoin="Book.id == foreign(PricingRule.book_id)",
     )
     campaigns = relationship(
-        "Campaign", back_populates="book", lazy="selectin",
+        "Campaign",
+        back_populates="book",
+        lazy="selectin",
         primaryjoin="Book.id == foreign(Campaign.book_id)",
     )
     launch_plans = relationship("LaunchPlan", back_populates="book", lazy="selectin")
     writing_sessions = relationship("WritingSession", back_populates="book", lazy="selectin")
     royalty_records = relationship(
-        "RoyaltyRecord", back_populates="book", lazy="selectin",
+        "RoyaltyRecord",
+        back_populates="book",
+        lazy="selectin",
         primaryjoin="Book.id == foreign(RoyaltyRecord.book_id)",
     )
 
@@ -172,6 +183,10 @@ class Book(BaseModel):
 class Series(TenantModel):
     __tablename__ = "series"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     genre_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, default=None)
     book_order: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True, default=None)
@@ -184,12 +199,14 @@ class Series(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="series",
+        "Organization",
+        back_populates="series",
         primaryjoin="Series.org_id == Organization.id",
         foreign_keys="[Series.org_id]",
     )
 
     __table_args__ = (
+        Index("ix_series_genre_id", "genre_id"),
         Index("ix_series_status", "status"),
         Index("ix_series_book_order_gin", "book_order", postgresql_using="gin"),
         Index("ix_series_reading_order_gin", "reading_order", postgresql_using="gin"),
@@ -201,6 +218,10 @@ class Series(TenantModel):
 class PenName(TenantModel):
     __tablename__ = "pen_names"
 
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     brand_guidelines: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
@@ -208,7 +229,8 @@ class PenName(TenantModel):
 
     # Relationships
     organization = relationship(
-        "Organization", back_populates="pen_names",
+        "Organization",
+        back_populates="pen_names",
         primaryjoin="PenName.org_id == Organization.id",
         foreign_keys="[PenName.org_id]",
     )
@@ -244,6 +266,4 @@ class BookVersion(BaseModel):
     book = relationship("Book", back_populates="book_versions")
     created_by_user = relationship("User", back_populates="book_versions")
 
-    __table_args__ = (
-        Index("ix_book_versions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),
-    )
+    __table_args__ = (Index("ix_book_versions_deleted_at_partial", "id", postgresql_where="deleted_at IS NULL"),)

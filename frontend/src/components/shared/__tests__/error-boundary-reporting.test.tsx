@@ -14,6 +14,10 @@ Object.defineProperty(navigator, "sendBeacon", {
 });
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   AlertTriangle: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="alert-triangle-icon" {...props} />
   ),
@@ -21,6 +25,24 @@ jest.mock("lucide-react", () => ({
 
 // Mock Radix UI Slot so that Button renders correctly
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -47,7 +69,7 @@ jest.mock("@radix-ui/react-slot", () => ({
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // A component that throws an error on render
-function ThrowingComponent({ message }: { message: string }) {
+function ThrowingComponent({ message }: { message: string }): React.JSX.Element {
   throw new Error(message);
 }
 
@@ -72,7 +94,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it("catches component errors and prevents crash propagation", () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     const { container } = render(
@@ -88,7 +109,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it("displays error UI when a child component throws", () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(
@@ -102,7 +122,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it('has data-testid="error-boundary" on the error container', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(
@@ -115,7 +134,6 @@ describe("ErrorBoundary - error catching and display", () => {
   });
 
   it("reset button clears error state and re-renders children", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
     const user = userEvent.setup();
 
@@ -156,7 +174,6 @@ describe("ErrorBoundary - error catching and display", () => {
 
     // Directly test that changing resetKey clears the error.
     // We need to access the inner class component via re-requiring the module.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     let shouldThrow = true;
@@ -209,15 +226,14 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
   });
 
   it("calls sendBeacon (via reportError) on error in production mode", () => {
     // Override NODE_ENV before requiring the module
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(
@@ -234,10 +250,9 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   it("reportError respects rate limit (max 10 per minute)", () => {
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     // Render 12 error boundaries in succession to exceed the rate limit.
@@ -255,11 +270,10 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   it("reportError handles missing NEXT_PUBLIC_ERROR_REPORTING_URL gracefully", () => {
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
     // Explicitly delete the URL so the module sees it as undefined
     delete process.env.NEXT_PUBLIC_ERROR_REPORTING_URL;
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     // This should not throw
@@ -276,10 +290,9 @@ describe("ErrorBoundary - reportError in production mode", () => {
   });
 
   it("does not call sendBeacon in development mode (logs to console instead)", () => {
-    process.env.NODE_ENV = "development";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
     process.env.NEXT_PUBLIC_ERROR_REPORTING_URL = "https://errors.example.com/report";
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ErrorBoundary } = require("../error-boundary");
 
     render(

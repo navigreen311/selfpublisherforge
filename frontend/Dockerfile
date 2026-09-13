@@ -31,6 +31,18 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS runtime
 
+# `node server.js` is the whole runtime; npm is only here because the base
+# image ships it, and every Node finding the image scanner reports (tar,
+# pacote, sigstore, cross-spawn, glob, minimatch, brace-expansion, ip-address)
+# lives in npm's own bundled node_modules, not in anything this app imports.
+# The apk upgrade picks up the openssl patches Alpine has released since the
+# base image was cut.
+RUN apk --no-cache upgrade && \
+    rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm /usr/local/bin/npx \
+           /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+           /opt/yarn-*
+
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -54,6 +66,9 @@ ENV HOSTNAME="0.0.0.0"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+    # 127.0.0.1, not localhost: busybox wget resolves localhost to ::1 first and
+    # the Next server listens on 0.0.0.0, so the probe never connected and the
+    # container reported unhealthy forever.
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
 CMD ["node", "server.js"]

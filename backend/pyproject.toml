@@ -8,6 +8,12 @@ authors = [
     { name = "SelfPublisherForge Team" },
 ]
 
+[tool.mypy]
+# Without this plugin mypy does not understand Field(None, ...) as a default,
+# so every partial-update schema looks like it has required fields and every
+# construction of one is reported as a missing argument.
+plugins = ["pydantic.mypy"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120
@@ -37,13 +43,115 @@ ignore = [
     "B008",   # allow function calls in default arguments (FastAPI Depends)
     "RET504", # allow assignment before return
     "ARG001", # allow unused function arguments (common in FastAPI deps)
+
+    # --- Disabled deliberately, with reasons. Reviewed 2026-09-09. ---
+
+    # `ruff format` owns line length and breaks what can be broken. What E501
+    # still reports is content it cannot split: long URLs, long single-token
+    # string literals, and prompt text. Enforcing it would mean hand-wrapping
+    # strings, which hurts readability rather than helping it.
+    "E501",
+
+    # ARG001 is already disabled above; ARG002 is the same concern for methods
+    # and fires on interface conformance — overrides that must accept an
+    # argument they do not use.
+    "ARG002",
+
+    # Every S311 site was reviewed: puzzle generation (maze, sudoku, crossword,
+    # word search, cryptogram), simulated marketplace metrics, and sampling in
+    # LLM quality scoring. No auth, token, session or password path uses the
+    # random module — those use `secrets`. Puzzle generators need a seedable
+    # PRNG, which is what `random` is for.
+    "S311",
+
+    # High false-positive rate against this codebase's conventions: route
+    # banner comments ("# PUT /feature-flags/{flag_key}") and ordinary prose
+    # ("# Chat (multi-turn)") are read as commented-out code.
+    "ERA001",
+
+    # The codebase writes prose with em dashes and typographic quotes in
+    # docstrings and comments. That is a deliberate style, not an attempt to
+    # smuggle look-alike characters into identifiers.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+
+    # Readability preferences, not defects. Restructuring working conditionals
+    # and context managers to satisfy them risks behaviour changes for no
+    # functional gain, and the expanded forms often carry explanatory comments
+    # between the branches.
+    "SIM102",  # collapsible if
+    "SIM108",  # if/else that could be a ternary
+    "SIM117",  # nested with statements
+
+    # Naming conventions this codebase has already settled on:
+    #   N806  - PascalCase locals holding a model or class reference in factories
+    #   N817  - acronym import aliases (import x as ABC)
+    #   N818  - AppException is the base exception name used in every module;
+    #           renaming it to AppError is a repo-wide refactor with no
+    #           functional benefit and a large conflict surface.
+    "N806",
+    "N817",
+    "N818",
+
+    # Callback signatures are fixed by their caller, so some parameters and
+    # loop variables are necessarily unused.
+    "ARG005",
+    "B007",
+
+    # os.path is used in a handful of scripts, migrations and generators where
+    # it reads fine; the async-critical path was converted to pathlib.
+    "PTH118",
+    "PTH120",
+    "PTH123",
 ]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "shared"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "ARG001", "ARG002"]
+# Test code is held to the same correctness bar as app code, but a handful of
+# rules describe production concerns that do not apply to it.
+"tests/**/*.py" = [
+    "S101",    # assert is the point of a test
+    "S108",    # /tmp paths in fixtures are test scaffolding
+    "S107",    # fixture password defaults
+    "S307",    # eval in a test asserting on an expression evaluator
+    "S314",    # tests parse XML they authored in the same file
+    "B017",    # pytest.raises(Exception) is sometimes exactly the assertion
+    "RUF012",  # Locust user classes and expected-value constants
+    "S105",    # "hardcoded password" — these are fixture tokens, not secrets
+    "S106",    #   ditto, passed as a function argument
+    "S311",    # random for fixture data, never for security
+    "ARG001",  # pytest fixtures are requested by name and often unused in-body
+    "ARG002",
+    "ERA001",  # commented-out code in tests is usually a documented variant
+    "F841",    # bound-but-unused locals are common when asserting on a call
+    "E402",    # several suites set env vars before importing app modules
+    "E741",    # `l`/`I` appear in table-shaped fixture data
+    "N806",    # fixture builders use PascalCase for model classes
+    "RUF001",  # em dashes and quotes in test docstrings
+    "RUF002",
+]
+
+# CLI and seeding scripts: printing to stdout is their purpose.
+"scripts/**/*.py" = [
+    "T201",    # print is the interface
+    "S311",    # random sample data
+    "ERA001",
+]
+
+# Alembic revisions are generated and then hand-edited; they are not a place
+# to apply general style rules, and rewriting them rewrites history.
+"migrations/**/*.py" = [
+    "E501",
+    "ERA001",
+    "F401",
+    "S110",
+    "SIM105",
+    "UP035",
+    "S608",    # data migrations build SQL from developer-authored literals
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

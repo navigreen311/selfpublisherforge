@@ -9,25 +9,24 @@ import zipfile
 import pytest
 
 from app.modules.publishing_ops.epub_generator import (
-    generate_epub,
-    _default_style,
     _build_chapter_xhtml,
     _build_container_xml,
     _build_nav_xhtml,
+    _default_style,
     _wrap_paragraphs,
+    generate_epub,
 )
 from app.modules.publishing_ops.schemas import (
     ChapterInput,
     ExportFormat,
     ExportRequest,
     TemplateStyleSettings,
-    TrimSize,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def book_id() -> uuid.UUID:
@@ -37,8 +36,12 @@ def book_id() -> uuid.UUID:
 @pytest.fixture
 def sample_chapters() -> list[ChapterInput]:
     return [
-        ChapterInput(title="Chapter 1: The Beginning", content="It was a dark and stormy night.\n\nThe wind howled.", order=1),
-        ChapterInput(title="Chapter 2: The Middle", content="Things got interesting.\n\nVery interesting indeed.", order=2),
+        ChapterInput(
+            title="Chapter 1: The Beginning", content="It was a dark and stormy night.\n\nThe wind howled.", order=1
+        ),
+        ChapterInput(
+            title="Chapter 2: The Middle", content="Things got interesting.\n\nVery interesting indeed.", order=2
+        ),
         ChapterInput(title="Chapter 3: The End", content="And they all lived happily ever after.", order=3),
     ]
 
@@ -57,6 +60,7 @@ def export_request(book_id: uuid.UUID, sample_chapters: list[ChapterInput]) -> E
 # ---------------------------------------------------------------------------
 # Tests: helper functions
 # ---------------------------------------------------------------------------
+
 
 class TestDefaultStyle:
     def test_returns_css_string(self):
@@ -147,6 +151,7 @@ class TestBuildNavXhtml:
 # ---------------------------------------------------------------------------
 # Tests: EPUB generation
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateEpub:
     def test_returns_bytes(self, export_request: ExportRequest):
@@ -278,9 +283,7 @@ class TestGenerateEpub:
             assert "Third" in ch3
 
     def test_authors_in_opf(self, export_request: ExportRequest):
-        result = generate_epub(
-            export_request, title="Multi Author", authors=["Alice", "Bob"]
-        )
+        result = generate_epub(export_request, title="Multi Author", authors=["Alice", "Bob"])
         buf = io.BytesIO(result)
         with zipfile.ZipFile(buf, "r") as zf:
             opf = zf.read("OEBPS/content.opf").decode("utf-8")

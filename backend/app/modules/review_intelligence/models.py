@@ -34,22 +34,16 @@ class BookReview(TenantModel):
     star_rating: Mapped[float] = mapped_column(Float)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
-    review_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    review_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verified_purchase: Mapped[bool] = mapped_column(Boolean, default=False)
     helpful_count: Mapped[int] = mapped_column(Integer, default=0)
     is_competitor: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
     # Sentiment analysis results
-    sentiment: Mapped[str | None] = mapped_column(
-        String(20), nullable=True
-    )  # positive, negative, neutral, mixed
+    sentiment: Mapped[str | None] = mapped_column(String(20), nullable=True)  # positive, negative, neutral, mixed
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     themes: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    analyzed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("ix_book_reviews_book_source", "book_id", "source"),
@@ -79,12 +73,8 @@ class ReviewAlert(TenantModel):
     description: Mapped[str] = mapped_column(Text)
     data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
-    acknowledged_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    acknowledged_by: Mapped[uuid.UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=True
-    )
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    acknowledged_by: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
 
     __table_args__ = (
         Index("ix_review_alerts_org_active", "org_id", "is_acknowledged"),
@@ -123,22 +113,12 @@ class ReputationScore(TenantModel):
 
     __tablename__ = "reputation_scores"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), unique=True, index=True
-    )
+    book_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), unique=True, index=True)
     overall_score: Mapped[float] = mapped_column(Float, default=0.0)
     avg_rating: Mapped[float] = mapped_column(Float, default=0.0)
     total_reviews: Mapped[int] = mapped_column(Integer, default=0)
-    sentiment_ratio: Mapped[float] = mapped_column(
-        Float, default=0.0
-    )  # positive / total
-    velocity_trend: Mapped[str] = mapped_column(
-        String(20), default="stable"
-    )  # rising, stable, declining
-    health_grade: Mapped[str] = mapped_column(
-        String(2), default="C"
-    )  # A+, A, B+, B, C+, C, D, F
+    sentiment_ratio: Mapped[float] = mapped_column(Float, default=0.0)  # positive / total
+    velocity_trend: Mapped[str] = mapped_column(String(20), default="stable")  # rising, stable, declining
+    health_grade: Mapped[str] = mapped_column(String(2), default="C")  # A+, A, B+, B, C+, C, D, F
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    last_calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    last_calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

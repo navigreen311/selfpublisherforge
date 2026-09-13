@@ -9,7 +9,6 @@ import hashlib
 import json
 import random
 import string
-from typing import Optional
 
 # Direction vectors: (row_delta, col_delta)
 DIRECTION_VECTORS = {
@@ -94,7 +93,7 @@ def _remove_word(
     original_cells: list[str],
 ) -> None:
     """Remove a placed word, restoring original cell values."""
-    for (r, c), orig in zip(positions, original_cells):
+    for (r, c), orig in zip(positions, original_cells, strict=False):
         grid[r][c] = orig
 
 
@@ -121,7 +120,7 @@ def generate_word_search(
     grid_size: int = 15,
     directions: int = 4,
     max_retries_per_word: int = 200,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> dict:
     """
     Generate a word search puzzle using backtracking placement.
@@ -178,13 +177,15 @@ def generate_word_search(
             # Find direction name
             dir_name = direction_names[direction_vecs.index((dr, dc))]
 
-            placed_words.append({
-                "word": word,
-                "row": row,
-                "col": col,
-                "direction": dir_name,
-                "positions": positions,
-            })
+            placed_words.append(
+                {
+                    "word": word,
+                    "row": row,
+                    "col": col,
+                    "direction": dir_name,
+                    "positions": positions,
+                }
+            )
             solution_positions[word] = positions
             placed = True
 
@@ -200,9 +201,7 @@ def generate_word_search(
 
     # Calculate overlap rate
     total_placed_cells = sum(len(pw["positions"]) for pw in placed_words)
-    unique_cells = len(set(
-        pos for pw in placed_words for pos in pw["positions"]
-    ))
+    unique_cells = len({pos for pw in placed_words for pos in pw["positions"]})
     overlap_rate = 1.0 - (unique_cells / total_placed_cells) if total_placed_cells > 0 else 0.0
 
     difficulty = calculate_difficulty(
@@ -223,9 +222,7 @@ def generate_word_search(
         "grid": grid,
         "placed_words": [pw["word"] for pw in placed_words],
     }
-    content_hash = hashlib.sha256(
-        json.dumps(content_data, sort_keys=True).encode()
-    ).hexdigest()
+    content_hash = hashlib.sha256(json.dumps(content_data, sort_keys=True).encode()).hexdigest()
 
     return {
         "grid": grid,
@@ -243,14 +240,9 @@ def generate_word_search(
         "unplaced_words": [w for w in sanitized if w not in solution_positions],
         "solution": {
             "highlighted_positions": [
-                [r, c]
-                for word_positions in solution_positions.values()
-                for r, c in word_positions
+                [r, c] for word_positions in solution_positions.values() for r, c in word_positions
             ],
-            "word_positions": {
-                word: [[r, c] for r, c in positions]
-                for word, positions in solution_positions.items()
-            },
+            "word_positions": {word: [[r, c] for r, c in positions] for word, positions in solution_positions.items()},
         },
         "difficulty_score": difficulty,
         "overlap_rate": round(overlap_rate, 4),
@@ -334,9 +326,7 @@ def render_to_svg(
     )
 
     # White background
-    parts.append(
-        f'<rect width="{svg_width}" height="{svg_height}" fill="white"/>'
-    )
+    parts.append(f'<rect width="{svg_width}" height="{svg_height}" fill="white"/>')
 
     # Grid
     for r in range(grid_size):

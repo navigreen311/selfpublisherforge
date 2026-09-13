@@ -3,20 +3,23 @@
 Uses an in-memory SQLite database and does NOT import app.main,
 avoiding the chain of router imports that may fail on feature branches.
 """
+
 from __future__ import annotations
 
 import uuid
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import event, Text as SA_Text
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY, JSONB, UUID as PG_UUID
 
 # ---------------------------------------------------------------------------
 # SQLite type compilation overrides (must be registered before create_all)
 # ---------------------------------------------------------------------------
+
 
 @compiles(JSONB, "sqlite")
 def _jsonb_sqlite(type_, compiler, **kw):
@@ -36,17 +39,18 @@ def _uuid_sqlite(type_, compiler, **kw):
 # ---------------------------------------------------------------------------
 # Import models so they register with Base.metadata
 # ---------------------------------------------------------------------------
-from app.database import Base  # noqa: E402
-import app.modules.specialty_books.models_coloring  # noqa: E402, F401
-try:
-    import app.modules.specialty_books.models_puzzle  # noqa: E402, F401
-except (ImportError, ModuleNotFoundError):
+import contextlib
+
+from app.database import Base
+
+with contextlib.suppress(ImportError, ModuleNotFoundError):
     pass
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def org_id() -> uuid.UUID:
@@ -58,27 +62,28 @@ def other_org_id() -> uuid.UUID:
     return uuid.uuid4()
 
 
-def _strip_pg_only(metadata):
-    """Remove PostgreSQL-only index kwargs and server_defaults that SQLite cannot handle."""
-    for table in metadata.tables.values():
-        for col in table.columns:
-            if col.server_default is not None:
-                col.server_default = None
-        idxs_to_drop = []
-        for idx in table.indexes:
-            if getattr(idx, "dialect_options", {}).get("postgresql", {}):
-                pass  # keep but strip options
-            idx.dialect_options = {}
-        for idx in idxs_to_drop:
-            table.indexes.discard(idx)
+# `_strip_pg_only` used to live here. It did three destructive things to the
+# shared `Base.metadata`, permanently and for the whole process:
+#
+#   * `idx.dialect_options = {}` on *every* index of *every* table, replacing
+#     SQLAlchemy's lazily-populating PopulateDict with a plain dict. After
+#     that, `index.dialect_options["sqlite"]` — which the SQLite DDL compiler
+#     reads for every CREATE INDEX — raises KeyError: 'sqlite' forever. That
+#     single line accounted for 372 errors across suites that never import
+#     anything from this directory.
+#   * `col.server_default = None` on every column of every table, so later
+#     tests lost defaults they relied on.
+#   * built an `idxs_to_drop` list, never appended to it, and looped over it.
+#
+# The root tests/conftest.py already registers a `before_create` listener that
+# does this correctly and only for the duration of the DDL. Nothing needs to be
+# stripped here.
 
 
 @pytest_asyncio.fixture
 async def db():
     """Yield an async SQLite session with tables created."""
     engine = create_async_engine("sqlite+aiosqlite://", echo=False)
-
-    _strip_pg_only(Base.metadata)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

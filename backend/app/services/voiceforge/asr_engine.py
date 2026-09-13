@@ -129,7 +129,7 @@ class ASREngine:
         self,
         session_id: str,
         language: str = "en",
-        config: dict | None = None,  # noqa: ARG002 - reserved for future use
+        config: dict | None = None,  # - reserved for future use
     ) -> ASRSession:
         """Initialize a new ASR session."""
         session = ASRSession(session_id=session_id, language=language)
@@ -163,9 +163,7 @@ class ASREngine:
     # Audio processing
     # ------------------------------------------------------------------
 
-    async def process_audio_chunk(
-        self, session_id: str, audio_chunk: bytes
-    ) -> TranscriptEvent | None:
+    async def process_audio_chunk(self, session_id: str, audio_chunk: bytes) -> TranscriptEvent | None:
         """Process an incoming audio chunk.
 
         Returns a ``TranscriptEvent`` when enough audio has been accumulated,
@@ -197,9 +195,7 @@ class ASREngine:
     # Primary transcription via Faster-Whisper
     # ------------------------------------------------------------------
 
-    async def _process_segment(
-        self, session: ASRSession, *, is_final: bool = True
-    ) -> TranscriptEvent:
+    async def _process_segment(self, session: ASRSession, *, is_final: bool = True) -> TranscriptEvent:
         """Transcribe a buffered segment via Faster-Whisper, falling back to Deepgram."""
         audio_data = bytes(session.buffer)
         session.buffer.clear()
@@ -215,9 +211,7 @@ class ASREngine:
             )
         except Exception as exc:
             logger.warning("Whisper failed, trying Deepgram fallback: %s", exc)
-            return await self._transcribe_deepgram(
-                audio_data, session.language, is_final=is_final
-            )
+            return await self._transcribe_deepgram(audio_data, session.language, is_final=is_final)
 
     async def _get_partial(self, session: ASRSession) -> TranscriptEvent:
         """Return a partial (non-final) transcript for real-time display.
@@ -237,13 +231,9 @@ class ASREngine:
         except Exception:
             return TranscriptEvent(is_final=False, text="", confidence=0.0)
 
-    async def _transcribe_whisper(
-        self, audio_data: bytes, language: str
-    ) -> dict:
+    async def _transcribe_whisper(self, audio_data: bytes, language: str) -> dict:
         """Call the Faster-Whisper OpenAI-compatible transcription endpoint."""
-        endpoint = (
-            f"{self.settings.FASTER_WHISPER_ENDPOINT}/v1/audio/transcriptions"
-        )
+        endpoint = f"{self.settings.FASTER_WHISPER_ENDPOINT}/v1/audio/transcriptions"
         wav_data = self._pcm_to_wav(audio_data)
 
         files = {"file": ("audio.wav", wav_data, "audio/wav")}
@@ -270,11 +260,7 @@ class ASREngine:
                 )
 
         # Aggregate confidence across words (fallback to 0.9).
-        avg_confidence = (
-            sum(wt.confidence for wt in words) / len(words)
-            if words
-            else 0.9
-        )
+        avg_confidence = sum(wt.confidence for wt in words) / len(words) if words else 0.9
 
         return {
             "text": result.get("text", "").strip(),
@@ -313,17 +299,11 @@ class ASREngine:
         }
 
         try:
-            response = await self._http_client.post(
-                url, params=params, headers=headers, content=wav_data
-            )
+            response = await self._http_client.post(url, params=params, headers=headers, content=wav_data)
             response.raise_for_status()
             body = response.json()
 
-            channel = (
-                body.get("results", {})
-                .get("channels", [{}])[0]
-                .get("alternatives", [{}])[0]
-            )
+            channel = body.get("results", {}).get("channels", [{}])[0].get("alternatives", [{}])[0]
             text = channel.get("transcript", "").strip()
             confidence = channel.get("confidence", 0.0)
 
@@ -396,11 +376,7 @@ class ASREngine:
             return None
 
         for phrase, action in _VOICE_COMMANDS.items():
-            if (
-                text_lower == phrase
-                or text_lower.startswith(phrase + " ")
-                or text_lower.endswith(" " + phrase)
-            ):
+            if text_lower == phrase or text_lower.startswith(phrase + " ") or text_lower.endswith(" " + phrase):
                 return (phrase, action)
         return None
 
@@ -422,11 +398,7 @@ class ASREngine:
         while self._sessions:
             await asyncio.sleep(60)  # check every minute
             now = time.time()
-            expired = [
-                sid
-                for sid, sess in self._sessions.items()
-                if now - sess.last_activity > SESSION_IDLE_TIMEOUT_S
-            ]
+            expired = [sid for sid, sess in self._sessions.items() if now - sess.last_activity > SESSION_IDLE_TIMEOUT_S]
             for sid in expired:
                 logger.info("Reaping idle ASR session: %s", sid)
                 await self.end_session(sid)

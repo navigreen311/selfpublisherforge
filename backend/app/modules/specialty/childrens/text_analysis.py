@@ -4,11 +4,12 @@ Provides age-band compliance checking, readability scoring, rhythm analysis,
 page-turn surprise mapping, Look Inside optimization, and rhyme detection
 with AI-powered fix suggestions.
 """
+
 from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -60,10 +61,7 @@ def _resolve_age_range(age_range: str) -> str:
     """Resolve an age-range key to the canonical AGE_BAND_RULES key."""
     key = _AGE_RANGE_ALIAS.get(age_range)
     if key is None:
-        raise ValueError(
-            f"Unknown age_range '{age_range}'. "
-            f"Valid values: {list(_AGE_RANGE_ALIAS.keys())}"
-        )
+        raise ValueError(f"Unknown age_range '{age_range}'. " f"Valid values: {list(_AGE_RANGE_ALIAS.keys())}")
     return key
 
 
@@ -159,10 +157,7 @@ def analyze_text(text: str, age_range: str) -> dict[str, Any]:
                     violations.append(
                         Violation(
                             rule="max_sentence_words",
-                            message=(
-                                f"Sentence has {len(words)} words "
-                                f"(max {max_sw} for {key})"
-                            ),
+                            message=(f"Sentence has {len(words)} words " f"(max {max_sw} for {key})"),
                             page=page_idx,
                             line=line_idx,
                             offending_text=sentence,
@@ -178,10 +173,7 @@ def analyze_text(text: str, age_range: str) -> dict[str, Any]:
                             violations.append(
                                 Violation(
                                     rule="max_word_length",
-                                    message=(
-                                        f"Word '{word}' has {len(word)} letters "
-                                        f"(max {max_wl} for {key})"
-                                    ),
+                                    message=(f"Word '{word}' has {len(word)} letters " f"(max {max_wl} for {key})"),
                                     page=page_idx,
                                     line=line_idx,
                                     offending_text=word,
@@ -195,10 +187,7 @@ def analyze_text(text: str, age_range: str) -> dict[str, Any]:
         violations.append(
             Violation(
                 rule="total_words",
-                message=(
-                    f"Book has {total_words} words "
-                    f"(minimum {min_words} for {key})"
-                ),
+                message=(f"Book has {total_words} words " f"(minimum {min_words} for {key})"),
                 suggestion=f"Add more content to reach at least {min_words} words.",
             )
         )
@@ -206,10 +195,7 @@ def analyze_text(text: str, age_range: str) -> dict[str, Any]:
         violations.append(
             Violation(
                 rule="total_words",
-                message=(
-                    f"Book has {total_words} words "
-                    f"(maximum {max_words} for {key})"
-                ),
+                message=(f"Book has {total_words} words " f"(maximum {max_words} for {key})"),
                 suggestion=f"Trim content to stay under {max_words} words.",
             )
         )
@@ -320,9 +306,7 @@ def calculate_rhythm_score(text: str) -> float:
 
     # --- Page-turn momentum ---
     # Check for sentences that end with ellipsis or em-dash (momentum builders)
-    momentum_markers = sum(
-        1 for s in sentences if s.rstrip().endswith(("...", "\u2014", "--"))
-    )
+    momentum_markers = sum(1 for s in sentences if s.rstrip().endswith(("...", "\u2014", "--")))
     if momentum_markers > 0:
         score += min(momentum_markers * 2, 10.0)
 
@@ -549,16 +533,12 @@ def detect_rhyme_pattern(text: str) -> dict[str, Any]:
             for g in range(groups):
                 chunk = scheme_letters[g * 4 : g * 4 + 4]
                 if len(chunk) == 4 and not (chunk[0] == chunk[1] and chunk[2] == chunk[3]):
-                    issues.append(
-                        f"Lines {g * 4 + 1}-{g * 4 + 4}: expected AABB pattern but got {''.join(chunk)}"
-                    )
+                    issues.append(f"Lines {g * 4 + 1}-{g * 4 + 4}: expected AABB pattern but got {''.join(chunk)}")
         elif pattern == "ABAB":
             for g in range(groups):
                 chunk = scheme_letters[g * 4 : g * 4 + 4]
                 if len(chunk) == 4 and not (chunk[0] == chunk[2] and chunk[1] == chunk[3]):
-                    issues.append(
-                        f"Lines {g * 4 + 1}-{g * 4 + 4}: expected ABAB pattern but got {''.join(chunk)}"
-                    )
+                    issues.append(f"Lines {g * 4 + 1}-{g * 4 + 4}: expected ABAB pattern but got {''.join(chunk)}")
 
     # --- Near-rhyme detection ---
     # Check consecutive pairs for near-misses
@@ -566,22 +546,19 @@ def detect_rhyme_pattern(text: str) -> dict[str, Any]:
         e1, e2 = endings[i], endings[i + 1]
         if e1 and e2 and e1 != e2:
             # Check if they share some but not all ending sounds
-            if len(e1) >= 2 and len(e2) >= 2:
-                if e1[-1] == e2[-1] and e1[-2:] != e2[-2:]:
-                    issues.append(
-                        f"Lines {i + 1}-{i + 2}: near-rhyme detected "
-                        f"('{lines[i].split()[-1] if lines[i].split() else ''}' / "
-                        f"'{lines[i + 1].split()[-1] if lines[i + 1].split() else ''}')"
-                    )
+            if len(e1) >= 2 and len(e2) >= 2 and e1[-1] == e2[-1] and e1[-2:] != e2[-2:]:
+                issues.append(
+                    f"Lines {i + 1}-{i + 2}: near-rhyme detected "
+                    f"('{lines[i].split()[-1] if lines[i].split() else ''}' / "
+                    f"'{lines[i + 1].split()[-1] if lines[i + 1].split() else ''}')"
+                )
 
     # --- Meter consistency (syllable-count heuristic) ---
     word_counts_per_line = [len(_extract_words(ln)) for ln in lines]
     if len(word_counts_per_line) >= 4:
         mean_wc = sum(word_counts_per_line) / len(word_counts_per_line)
         outliers = [
-            i + 1
-            for i, wc in enumerate(word_counts_per_line)
-            if abs(wc - mean_wc) > mean_wc * 0.5 and mean_wc > 0
+            i + 1 for i, wc in enumerate(word_counts_per_line) if abs(wc - mean_wc) > mean_wc * 0.5 and mean_wc > 0
         ]
         if outliers:
             issues.append(

@@ -219,7 +219,7 @@ export function OnboardingChecklist({ hasProjects, onDismiss }: OnboardingCheckl
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {t("onboarding.progress", { completed: completedCount, total: STEPS.length })}
+            {t("onboarding.stepsComplete", { completed: completedCount, total: STEPS.length })}
           </p>
         </div>
       </CardContent>

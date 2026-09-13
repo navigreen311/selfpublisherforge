@@ -1,4 +1,5 @@
 """FastAPI router for Art Style Cloning."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -81,9 +82,7 @@ async def update_profile(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    profile = await service.update_profile(
-        db, current_user["org_id"], profile_id, payload
-    )
+    profile = await service.update_profile(db, current_user["org_id"], profile_id, payload)
     return SuccessResponse(data=profile)
 
 
@@ -99,9 +98,7 @@ async def delete_profile(
 ):
     deleted = await service.delete_profile(db, current_user["org_id"], profile_id)
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
     return
 
 
@@ -131,9 +128,7 @@ async def test_generate(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.test_generate(
-        db, current_user["org_id"], profile_id, payload
-    )
+    result = await service.test_generate(db, current_user["org_id"], profile_id, payload)
     return SuccessResponse(data=result)
 
 

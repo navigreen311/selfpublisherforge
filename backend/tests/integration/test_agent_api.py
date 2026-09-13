@@ -6,16 +6,15 @@ Tests use an in-memory SQLite database and override FastAPI dependencies.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import patch
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import Base, get_db
 from app.core.dependencies import get_current_user
+from app.database import Base, get_db
 from app.main import create_app
 from app.modules.agent_system.models import (
     Agent,
@@ -25,12 +24,10 @@ from app.modules.agent_system.models import (
     AgentWorkflow,
     AuditTrail,
     PermissionLevel,
-    TaskPriority,
     TaskStatus,
-    WorkflowStatus,
 )
-
-from tests.conftest import TestingSessionLocal, engine as test_engine
+from tests.conftest import TestingSessionLocal
+from tests.conftest import engine as test_engine
 
 TestSessionLocal = TestingSessionLocal
 
@@ -38,6 +35,7 @@ TestSessionLocal = TestingSessionLocal
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id() -> uuid.UUID:
@@ -145,7 +143,7 @@ async def seeded_task(
         cost_usd=0.0015,
         quality_score=0.85,
         created_by=user_id,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     db.add(task)
     await db.flush()
@@ -165,8 +163,8 @@ async def seeded_budget(
         daily_token_limit=100000,
         daily_usd_limit=10.0,
         monthly_usd_limit=200.0,
-        last_reset_daily=datetime.now(timezone.utc),
-        last_reset_monthly=datetime.now(timezone.utc),
+        last_reset_daily=datetime.now(UTC),
+        last_reset_monthly=datetime.now(UTC),
     )
     db.add(budget)
     await db.flush()
@@ -177,6 +175,7 @@ async def seeded_budget(
 # ---------------------------------------------------------------------------
 # Agent endpoints
 # ---------------------------------------------------------------------------
+
 
 class TestListAgents:
     @pytest.mark.asyncio
@@ -237,9 +236,7 @@ class TestUpdateAgentConfig:
         assert data["max_tokens"] == 8192
 
     @pytest.mark.asyncio
-    async def test_update_permission_level(
-        self, client: AsyncClient, seeded_agent: Agent
-    ):
+    async def test_update_permission_level(self, client: AsyncClient, seeded_agent: Agent):
         resp = await client.patch(
             f"/api/v1/agents/{seeded_agent.id}/config",
             json={"permission_level": "auto_execute_low"},
@@ -251,6 +248,7 @@ class TestUpdateAgentConfig:
 # ---------------------------------------------------------------------------
 # Task endpoints
 # ---------------------------------------------------------------------------
+
 
 class TestCreateTask:
     @pytest.mark.asyncio
@@ -392,6 +390,7 @@ class TestCancelTask:
 # Workflow endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestCreateWorkflow:
     @pytest.mark.asyncio
     async def test_create_workflow(
@@ -459,6 +458,7 @@ class TestListWorkflows:
 # Budget endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestGetBudgets:
     @pytest.mark.asyncio
     async def test_get_budgets(
@@ -500,6 +500,7 @@ class TestUpdateBudgets:
 # Emergency stop
 # ---------------------------------------------------------------------------
 
+
 class TestEmergencyStop:
     @pytest.mark.asyncio
     async def test_emergency_stop(
@@ -532,6 +533,7 @@ class TestEmergencyStop:
 # ---------------------------------------------------------------------------
 # Audit trail
 # ---------------------------------------------------------------------------
+
 
 class TestAuditTrail:
     @pytest.mark.asyncio
@@ -571,7 +573,7 @@ class TestAuditTrail:
         user_id: uuid.UUID,
     ):
         # Create multiple audit entries
-        for i in range(5):
+        for _i in range(5):
             entry = AuditTrail(
                 org_id=org_id,
                 action="config_updated",

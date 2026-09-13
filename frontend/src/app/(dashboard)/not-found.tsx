@@ -17,14 +17,14 @@ export default function DashboardNotFound() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center pb-4">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <FileQuestion className="h-8 w-8 text-muted-foreground" />
+            <FileQuestion className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
           </div>
         </CardHeader>
         <CardContent className="text-center space-y-2">
           <h1 className="text-3xl font-bold">404</h1>
           <h2 className="text-xl font-semibold">Page Not Found</h2>
           <p className="text-sm text-muted-foreground pt-2">
-            The page you're looking for doesn't exist or has been moved.
+            The page you&apos;re looking for doesn&apos;t exist or has been moved.
           </p>
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">

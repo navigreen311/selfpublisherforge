@@ -21,14 +21,13 @@ from app.modules.review_intelligence.schemas import (
     BatchAnalysisRequest,
     ReviewListParams,
     SentimentLabel,
-    VelocityPeriod,
     VelocityTrend,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id():
@@ -79,6 +78,7 @@ def _make_review(**overrides):
 # ===========================================================================
 # Tests: list_reviews
 # ===========================================================================
+
 
 class TestListReviews:
     """Tests for service.list_reviews."""
@@ -140,6 +140,7 @@ class TestListReviews:
 # Tests: get_sentiment_breakdown
 # ===========================================================================
 
+
 class TestGetSentimentBreakdown:
     """Tests for service.get_sentiment_breakdown."""
 
@@ -178,6 +179,7 @@ class TestGetSentimentBreakdown:
 # ===========================================================================
 # Tests: analyze_reviews_batch
 # ===========================================================================
+
 
 class TestAnalyzeReviewsBatch:
     """Tests for service.analyze_reviews_batch."""
@@ -237,6 +239,7 @@ class TestAnalyzeReviewsBatch:
 # Tests: list_alerts
 # ===========================================================================
 
+
 class TestListAlerts:
     """Tests for service.list_alerts."""
 
@@ -270,6 +273,7 @@ class TestListAlerts:
 # Tests: acknowledge_alert
 # ===========================================================================
 
+
 class TestAcknowledgeAlert:
     """Tests for service.acknowledge_alert."""
 
@@ -298,6 +302,7 @@ class TestAcknowledgeAlert:
 # ===========================================================================
 # Tests: compute_reputation_score
 # ===========================================================================
+
 
 class TestComputeReputationScore:
     """Tests for service.compute_reputation_score."""
@@ -353,6 +358,7 @@ class TestComputeReputationScore:
 # Tests: generate_acquisition_tips
 # ===========================================================================
 
+
 class TestGenerateAcquisitionTips:
     """Tests for service.generate_acquisition_tips."""
 
@@ -367,7 +373,10 @@ class TestGenerateAcquisitionTips:
             budget="medium",
         )
 
-        result = await service.generate_acquisition_tips(request)
+        # No network: without a key the service falls back to its defaults,
+        # and this suite must not depend on one being present either way.
+        with patch.object(service.settings, "ANTHROPIC_API_KEY", ""):
+            result = await service.generate_acquisition_tips(request)
 
         assert result.book_id == request.book_id
         assert len(result.tips) > 0
@@ -377,6 +386,7 @@ class TestGenerateAcquisitionTips:
 # ===========================================================================
 # Tests: Helper functions
 # ===========================================================================
+
 
 class TestHelperFunctions:
     """Tests for internal helper functions."""

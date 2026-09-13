@@ -10,10 +10,10 @@ Usage::
     scenarios = generate_price_scenarios(cost, target_margins=[30, 50, 70])
     guardrails = margin_guardrails(list_price=9.99, cost=cost)
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 # ---------------------------------------------------------------------------
 # KDP Print Cost Formulas (USD, as of 2026)
@@ -41,7 +41,7 @@ _TRIM_SURCHARGES: dict[str, float] = {
     "6x9": 1.0,
     "5x8": 1.0,
     "5.5x8.5": 1.0,
-    "10x8": 1.05,   # landscape slightly higher
+    "10x8": 1.05,  # landscape slightly higher
     "8x10": 1.05,
     "7x10": 1.0,
 }
@@ -67,6 +67,7 @@ _CATEGORY_AVG_PRICES: dict[str, float] = {
 # ---------------------------------------------------------------------------
 # Core cost calculation
 # ---------------------------------------------------------------------------
+
 
 def calculate_print_cost(
     page_count: int,
@@ -94,10 +95,7 @@ def calculate_print_cost(
     """
     formula = KDP_COST_FORMULAS.get(interior_type.lower())
     if formula is None:
-        raise ValueError(
-            f"Unknown interior_type '{interior_type}'. "
-            f"Valid: {list(KDP_COST_FORMULAS.keys())}"
-        )
+        raise ValueError(f"Unknown interior_type '{interior_type}'. " f"Valid: {list(KDP_COST_FORMULAS.keys())}")
 
     per_page = formula["per_page"]
     fixed = formula["fixed"]
@@ -114,6 +112,7 @@ def calculate_print_cost(
 # ---------------------------------------------------------------------------
 # Pricing scenarios
 # ---------------------------------------------------------------------------
+
 
 def generate_price_scenarios(
     cost: float,
@@ -149,30 +148,32 @@ def generate_price_scenarios(
         divisor = KDP_ROYALTY_RATE - (margin_pct / 100.0)
         if divisor <= 0:
             # Margin target exceeds royalty rate; not achievable
-            scenarios.append({
-                "list_price": None,
-                "royalty_rate": KDP_ROYALTY_RATE,
-                "royalty_amount": None,
-                "margin_pct": margin_pct,
-                "note": (
-                    f"A {margin_pct}% margin is not achievable with a "
-                    f"{KDP_ROYALTY_RATE * 100:.0f}% royalty rate."
-                ),
-            })
+            scenarios.append(
+                {
+                    "list_price": None,
+                    "royalty_rate": KDP_ROYALTY_RATE,
+                    "royalty_amount": None,
+                    "margin_pct": margin_pct,
+                    "note": (
+                        f"A {margin_pct}% margin is not achievable with a "
+                        f"{KDP_ROYALTY_RATE * 100:.0f}% royalty rate."
+                    ),
+                }
+            )
             continue
 
         list_price = round(cost / divisor, 2)
         royalty_amount = round(list_price * KDP_ROYALTY_RATE - cost, 2)
-        actual_margin = (
-            round(royalty_amount / list_price * 100, 1) if list_price > 0 else 0.0
-        )
+        actual_margin = round(royalty_amount / list_price * 100, 1) if list_price > 0 else 0.0
 
-        scenarios.append({
-            "list_price": list_price,
-            "royalty_rate": KDP_ROYALTY_RATE,
-            "royalty_amount": royalty_amount,
-            "margin_pct": actual_margin,
-        })
+        scenarios.append(
+            {
+                "list_price": list_price,
+                "royalty_rate": KDP_ROYALTY_RATE,
+                "royalty_amount": royalty_amount,
+                "margin_pct": actual_margin,
+            }
+        )
 
     return scenarios
 
@@ -180,6 +181,7 @@ def generate_price_scenarios(
 # ---------------------------------------------------------------------------
 # Ink coverage cost factor
 # ---------------------------------------------------------------------------
+
 
 def ink_coverage_factor(pages_data: list[dict[str, Any]]) -> float:
     """Calculate a cost-adjustment factor based on average ink coverage.
@@ -200,9 +202,7 @@ def ink_coverage_factor(pages_data: list[dict[str, Any]]) -> float:
     if not pages_data:
         return 1.0
 
-    coverages = [
-        p.get("ink_coverage_percent", 20.0) for p in pages_data
-    ]
+    coverages = [p.get("ink_coverage_percent", 20.0) for p in pages_data]
     avg_coverage = sum(coverages) / len(coverages)
 
     # Baseline assumed at 20% coverage; above that, cost rises linearly
@@ -210,12 +210,13 @@ def ink_coverage_factor(pages_data: list[dict[str, Any]]) -> float:
         return 1.0
     # Scale: every +20% coverage adds ~5% to cost, capped at 1.25
     factor = 1.0 + ((avg_coverage - 20.0) / 20.0) * 0.05
-    return round(min(factor, 1.25), 4)
+    return cast("float", round(min(factor, 1.25), 4))
 
 
 # ---------------------------------------------------------------------------
 # Margin guardrails
 # ---------------------------------------------------------------------------
+
 
 def margin_guardrails(
     list_price: float,
@@ -252,9 +253,7 @@ def margin_guardrails(
         )
 
     if list_price > 50.0:
-        warnings.append(
-            "List price above $50 may reduce conversion on KDP."
-        )
+        warnings.append("List price above $50 may reduce conversion on KDP.")
 
     return {
         "viable": viable,
@@ -269,6 +268,7 @@ def margin_guardrails(
 # ---------------------------------------------------------------------------
 # Strategy advisor
 # ---------------------------------------------------------------------------
+
 
 def strategy_advisor(
     book_type: str,
@@ -297,21 +297,14 @@ def strategy_advisor(
     """
     # Infer interior type
     if interior_type is None:
-        if book_type == "childrens":
-            interior_type = "premium_color"
-        else:
-            interior_type = "bw"
+        interior_type = "premium_color" if book_type == "childrens" else "bw"
 
     cost = calculate_print_cost(page_count, interior_type)
     category_avg = _CATEGORY_AVG_PRICES.get(book_type, 9.99)
 
     # Generate 30% margin scenario
     scenarios = generate_price_scenarios(cost, target_margins=[30])
-    rec_price = (
-        scenarios[0]["list_price"]
-        if scenarios and scenarios[0]["list_price"]
-        else category_avg
-    )
+    rec_price = scenarios[0]["list_price"] if scenarios and scenarios[0]["list_price"] else category_avg
 
     # Clamp to category range
     price_floor = max(rec_price, cost / KDP_ROYALTY_RATE + 0.01)
@@ -319,24 +312,15 @@ def strategy_advisor(
 
     notes: list[str] = []
     if book_type == "childrens" and interior_type == "premium_color":
-        notes.append(
-            "Premium color interiors have high per-page costs. "
-            "Keep page count ≤ 32 for best margins."
-        )
+        notes.append("Premium color interiors have high per-page costs. " "Keep page count ≤ 32 for best margins.")
     if book_type == "coloring":
         notes.append(
-            "Coloring books use B&W interior. Single-sided printing means "
-            "total page count = 2× coloring pages."
+            "Coloring books use B&W interior. Single-sided printing means " "total page count = 2× coloring pages."
         )
     if audience in ("kids", "teens"):
-        notes.append(
-            "Lower price points ($5.99-$8.99) perform better for "
-            "children/teen audiences on KDP."
-        )
+        notes.append("Lower price points ($5.99-$8.99) perform better for " "children/teen audiences on KDP.")
     if audience == "seniors":
-        notes.append(
-            "Large-print editions command a price premium ($9.99-$14.99)."
-        )
+        notes.append("Large-print editions command a price premium ($9.99-$14.99).")
 
     return {
         "recommended_price": recommended,

@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import pytest
 
-from app.modules.specialty_books.generators.word_search import generate_word_search
 from app.modules.specialty_books.generators.crossword import generate_crossword
 from app.modules.specialty_books.generators.svg_renderer import (
-    render_word_search_svg,
     render_crossword_svg,
+    render_word_search_svg,
 )
-
+from app.modules.specialty_books.generators.word_search import generate_word_search
 
 # ---- Helpers ----
 
@@ -35,8 +34,7 @@ def _verify_word_in_grid(grid: list[list[str]], word: str, positions: list) -> N
     """Assert that *word* actually appears at *positions* in *grid*."""
     for i, (r, c) in enumerate(positions):
         assert grid[r][c] == word[i], (
-            f"Mismatch at position {i} of '{word}': "
-            f"expected '{word[i]}', got '{grid[r][c]}' at ({r},{c})"
+            f"Mismatch at position {i} of '{word}': " f"expected '{word[i]}', got '{grid[r][c]}' at ({r},{c})"
         )
 
 
@@ -76,9 +74,7 @@ class TestWordSearchGeneration:
 
     def test_respects_direction_constraint_8(self):
         """With directions=8, all 8 directions should be available."""
-        result = generate_word_search(
-            SAMPLE_WORDS * 3, grid_size=20, directions=8, seed=99
-        )
+        result = generate_word_search(SAMPLE_WORDS * 3, grid_size=20, directions=8, seed=99)
         all_deltas: set[tuple[int, int]] = set()
         for positions in result["solution"].values():
             if len(positions) < 2:
@@ -119,9 +115,7 @@ class TestWordSearchGeneration:
         _verify_word_in_grid(result["grid"], "HELLO", result["solution"]["HELLO"])
 
     def test_word_longer_than_grid_is_skipped(self):
-        result = generate_word_search(
-            ["ABCDEFGHIJK", "CAT"], grid_size=5, directions=2, seed=0
-        )
+        result = generate_word_search(["ABCDEFGHIJK", "CAT"], grid_size=5, directions=2, seed=0)
         assert "ABCDEFGHIJK" not in result["words"]
         assert "CAT" in result["words"]
 
@@ -130,9 +124,7 @@ class TestWordSearchGeneration:
             generate_word_search([], grid_size=10)
 
     def test_non_alpha_words_filtered(self):
-        result = generate_word_search(
-            ["HELLO", "WO RLD", "12345", "GOOD!"], grid_size=10, directions=2, seed=3
-        )
+        result = generate_word_search(["HELLO", "WO RLD", "12345", "GOOD!"], grid_size=10, directions=2, seed=3)
         assert "HELLO" in result["words"]
         # Non-alpha words should be filtered out
         for w in result["words"]:

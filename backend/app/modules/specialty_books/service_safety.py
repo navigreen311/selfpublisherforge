@@ -222,32 +222,37 @@ async def _get_book_record(db: AsyncSession, book_type: str, book_id: uuid.UUID,
     else:
         return None
 
-    result = await db.execute(
-        select(Model).where(Model.id == book_id, Model.org_id == org_id)
-    )
+    result = await db.execute(select(Model).where(Model.id == book_id, Model.org_id == org_id))
     return result.scalar_one_or_none()
 
 
 async def _get_book_pages(db: AsyncSession, book_type: str, book_id: uuid.UUID, org_id: uuid.UUID) -> list[Any]:
     """Retrieve pages/puzzles for a book."""
+    # One name bound to three different model classes; declare it once so the
+    # branches are reassignments rather than conflicting imports.
+    PageModel: Any
     if book_type == "childrens":
-        from app.modules.specialty_books.models_childrens import ChildrensBookPage as PageModel
+        from app.modules.specialty_books.models_childrens import ChildrensBookPage
+
+        PageModel = ChildrensBookPage
     elif book_type == "coloring":
         try:
-            from app.modules.specialty_books.models_coloring import ColoringBookPage as PageModel  # type: ignore[assignment]
+            from app.modules.specialty_books.models_coloring import ColoringBookPage
+
+            PageModel = ColoringBookPage
         except ImportError:
             return []
     elif book_type == "puzzle":
         try:
-            from app.modules.specialty_books.models_puzzle import Puzzle as PageModel  # type: ignore[assignment]
+            from app.modules.specialty_books.models_puzzle import Puzzle
+
+            PageModel = Puzzle
         except ImportError:
             return []
     else:
         return []
 
-    result = await db.execute(
-        select(PageModel).where(PageModel.book_id == book_id, PageModel.org_id == org_id)
-    )
+    result = await db.execute(select(PageModel).where(PageModel.book_id == book_id, PageModel.org_id == org_id))
     return list(result.scalars().all())
 
 
@@ -293,8 +298,8 @@ async def generate_originality_fingerprint(
 
         # Word list Jaccard vector (puzzle word_list)
         word_list = getattr(page, "word_list", None)
-        if word_list and isinstance(word_list, (list, set)):
-            words_set = set(w.lower() for w in word_list if isinstance(w, str))
+        if word_list and isinstance(word_list, list | set):
+            words_set = {w.lower() for w in word_list if isinstance(w, str)}
             fp["jaccard_vector"] = sorted(words_set)
             combined_parts.append("|".join(sorted(words_set)))
 
@@ -395,10 +400,7 @@ async def compare_originality(
         "text_ngram": 0.15,
     }
     total_weight = sum(weights.get(k, 0.25) for k in scores)
-    if total_weight > 0:
-        overall = sum(scores[k] * weights.get(k, 0.25) for k in scores) / total_weight
-    else:
-        overall = 0.0
+    overall = sum(scores[k] * weights.get(k, 0.25) for k in scores) / total_weight if total_weight > 0 else 0.0
 
     flagged = overall > SIMILARITY_THRESHOLD
 
@@ -488,12 +490,14 @@ def _check_interior_originality(pages: list[Any]) -> tuple[float, list[dict[str,
     """Score interior originality. Returns (score 0-100, flags)."""
     flags: list[dict[str, Any]] = []
     if not pages:
-        flags.append({
-            "type": "no_content",
-            "severity": "error",
-            "description": "Book has no pages/content.",
-            "fix": "Add interior content before publishing.",
-        })
+        flags.append(
+            {
+                "type": "no_content",
+                "severity": "error",
+                "description": "Book has no pages/content.",
+                "fix": "Add interior content before publishing.",
+            }
+        )
         return 0.0, flags
 
     # Check for unique content across pages
@@ -516,19 +520,23 @@ def _check_interior_originality(pages: list[Any]) -> tuple[float, list[dict[str,
     score = unique_ratio * 100
 
     if unique_ratio < 0.5:
-        flags.append({
-            "type": "low_uniqueness",
-            "severity": "error",
-            "description": f"Only {unique_ratio:.0%} of pages have unique content.",
-            "fix": "Diversify page content — each page should be substantially different.",
-        })
+        flags.append(
+            {
+                "type": "low_uniqueness",
+                "severity": "error",
+                "description": f"Only {unique_ratio:.0%} of pages have unique content.",
+                "fix": "Diversify page content — each page should be substantially different.",
+            }
+        )
     elif unique_ratio < 0.8:
-        flags.append({
-            "type": "moderate_uniqueness",
-            "severity": "warning",
-            "description": f"{unique_ratio:.0%} of pages are unique. Aim for 85%+.",
-            "fix": "Review similar pages and add variation.",
-        })
+        flags.append(
+            {
+                "type": "moderate_uniqueness",
+                "severity": "warning",
+                "description": f"{unique_ratio:.0%} of pages are unique. Aim for 85%+.",
+                "fix": "Review similar pages and add variation.",
+            }
+        )
 
     return score, flags
 
@@ -544,32 +552,38 @@ def _check_metadata_quality(book: Any) -> tuple[float, list[dict[str, Any]]]:
     # Keyword stuffing: too many commas, pipes, or extremely long title
     if len(title) > 200:
         score -= 30
-        flags.append({
-            "type": "title_too_long",
-            "severity": "warning",
-            "description": f"Title is {len(title)} characters. KDP recommends <200.",
-            "fix": "Shorten the title. Move keywords to the subtitle or keyword fields.",
-        })
+        flags.append(
+            {
+                "type": "title_too_long",
+                "severity": "warning",
+                "description": f"Title is {len(title)} characters. KDP recommends <200.",
+                "fix": "Shorten the title. Move keywords to the subtitle or keyword fields.",
+            }
+        )
 
     comma_count = title.count(",") + title.count("|") + title.count(" - ")
     if comma_count > 3:
         score -= 25
-        flags.append({
-            "type": "keyword_stuffed_title",
-            "severity": "error",
-            "description": f"Title contains {comma_count} separator characters — likely keyword-stuffed.",
-            "fix": "Use a natural title. Place keywords in subtitle and KDP keyword fields.",
-        })
+        flags.append(
+            {
+                "type": "keyword_stuffed_title",
+                "severity": "error",
+                "description": f"Title contains {comma_count} separator characters — likely keyword-stuffed.",
+                "fix": "Use a natural title. Place keywords in subtitle and KDP keyword fields.",
+            }
+        )
 
     # Description substance
     if len(description) < 50:
         score -= 20
-        flags.append({
-            "type": "thin_description",
-            "severity": "warning",
-            "description": "Description is too short (<50 chars). KDP recommends substantive descriptions.",
-            "fix": "Write a detailed description of at least 150 characters.",
-        })
+        flags.append(
+            {
+                "type": "thin_description",
+                "severity": "warning",
+                "description": "Description is too short (<50 chars). KDP recommends substantive descriptions.",
+                "fix": "Write a detailed description of at least 150 characters.",
+            }
+        )
 
     return max(score, 0.0), flags
 
@@ -594,12 +608,14 @@ def _check_minor_edit_risk(pages: list[Any]) -> tuple[float, list[dict[str, Any]
     score = (1 - empty_ratio) * 100
 
     if empty_ratio > 0.3:
-        flags.append({
-            "type": "high_empty_pages",
-            "severity": "warning",
-            "description": f"{empty_ratio:.0%} of pages are empty or have no substantive content.",
-            "fix": "Ensure all pages have meaningful content (text, illustrations, or puzzles).",
-        })
+        flags.append(
+            {
+                "type": "high_empty_pages",
+                "severity": "warning",
+                "description": f"{empty_ratio:.0%} of pages are empty or have no substantive content.",
+                "fix": "Ensure all pages have meaningful content (text, illustrations, or puzzles).",
+            }
+        )
 
     return max(score, 0.0), flags
 
@@ -609,12 +625,14 @@ def _check_content_substance(pages: list[Any]) -> tuple[float, list[dict[str, An
     flags: list[dict[str, Any]] = []
 
     if not pages:
-        return 0.0, [{
-            "type": "no_pages",
-            "severity": "error",
-            "description": "No pages found.",
-            "fix": "Add content pages to the book.",
-        }]
+        return 0.0, [
+            {
+                "type": "no_pages",
+                "severity": "error",
+                "description": "No pages found.",
+                "fix": "Add content pages to the book.",
+            }
+        ]
 
     total_text_length = 0
     pages_with_content = 0
@@ -633,20 +651,24 @@ def _check_content_substance(pages: list[Any]) -> tuple[float, list[dict[str, An
 
     if len(pages) < 10:
         score = min(score, 40.0)
-        flags.append({
-            "type": "too_few_pages",
-            "severity": "warning",
-            "description": f"Only {len(pages)} pages. Low-content books risk KDP rejection.",
-            "fix": "Add more pages to meet minimum content standards (at least 24 for most categories).",
-        })
+        flags.append(
+            {
+                "type": "too_few_pages",
+                "severity": "warning",
+                "description": f"Only {len(pages)} pages. Low-content books risk KDP rejection.",
+                "fix": "Add more pages to meet minimum content standards (at least 24 for most categories).",
+            }
+        )
 
     if content_ratio < 0.7:
-        flags.append({
-            "type": "low_content_density",
-            "severity": "error",
-            "description": f"Only {content_ratio:.0%} of pages have substantive content.",
-            "fix": "Fill empty pages with content or remove unnecessary blank pages.",
-        })
+        flags.append(
+            {
+                "type": "low_content_density",
+                "severity": "error",
+                "description": f"Only {content_ratio:.0%} of pages have substantive content.",
+                "fix": "Fill empty pages with content or remove unnecessary blank pages.",
+            }
+        )
 
     return max(score, 0.0), flags
 
@@ -683,12 +705,14 @@ async def run_spam_check(
         all_flags.extend(meta_flags)
     else:
         meta_score = 0.0
-        all_flags.append({
-            "type": "book_not_found",
-            "severity": "error",
-            "description": "Book record not found.",
-            "fix": "Ensure the book exists and belongs to your organization.",
-        })
+        all_flags.append(
+            {
+                "type": "book_not_found",
+                "severity": "error",
+                "description": "Book record not found.",
+                "fix": "Ensure the book exists and belongs to your organization.",
+            }
+        )
 
     # 3. Minor-edit detection
     minor_edit_score, minor_edit_flags = _check_minor_edit_risk(pages)
@@ -699,12 +723,7 @@ async def run_spam_check(
     all_flags.extend(substance_flags)
 
     # Compute overall risk score (inverse of quality — higher = more risky)
-    quality_score = (
-        interior_score * 0.30
-        + meta_score * 0.25
-        + minor_edit_score * 0.20
-        + substance_score * 0.25
-    )
+    quality_score = interior_score * 0.30 + meta_score * 0.25 + minor_edit_score * 0.20 + substance_score * 0.25
     risk_score = round(100 - quality_score, 2)
 
     passed = risk_score < 50  # Below 50 is acceptable
@@ -755,40 +774,44 @@ def check_trademark_safety(text: str, context: str = "general") -> list[dict[str
             pattern = re.compile(rf"\b{re.escape(trademark)}\b", re.IGNORECASE)
 
         for match in pattern.finditer(text):
-            violations.append({
-                "type": "trademark_violation",
-                "term": match.group(),
-                "trademark": trademark,
-                "position": match.start(),
-                "context": context,
-                "severity": "error",
-                "description": (
-                    f"Trademarked term '{match.group()}' detected in {context}. "
-                    "This will likely trigger KDP rejection or legal action."
-                ),
-                "fix": f"Remove or replace '{match.group()}' with a generic alternative.",
-            })
+            violations.append(
+                {
+                    "type": "trademark_violation",
+                    "term": match.group(),
+                    "trademark": trademark,
+                    "position": match.start(),
+                    "context": context,
+                    "severity": "error",
+                    "description": (
+                        f"Trademarked term '{match.group()}' detected in {context}. "
+                        "This will likely trigger KDP rejection or legal action."
+                    ),
+                    "fix": f"Remove or replace '{match.group()}' with a generic alternative.",
+                }
+            )
 
     # Check "in the style of [artist]" pattern
     for match in STYLE_OF_PATTERN.finditer(text):
         artist_name = match.group(1)
-        violations.append({
-            "type": "style_imitation",
-            "term": match.group(),
-            "artist": artist_name,
-            "position": match.start(),
-            "context": context,
-            "severity": "warning",
-            "description": (
-                f"'In the style of {artist_name}' detected in {context}. "
-                "Referencing specific artists may violate their rights or "
-                "trigger AI-art content policies."
-            ),
-            "fix": (
-                f"Describe the desired style using generic terms instead of "
-                f"referencing '{artist_name}' by name."
-            ),
-        })
+        violations.append(
+            {
+                "type": "style_imitation",
+                "term": match.group(),
+                "artist": artist_name,
+                "position": match.start(),
+                "context": context,
+                "severity": "warning",
+                "description": (
+                    f"'In the style of {artist_name}' detected in {context}. "
+                    "Referencing specific artists may violate their rights or "
+                    "trigger AI-art content policies."
+                ),
+                "fix": (
+                    f"Describe the desired style using generic terms instead of "
+                    f"referencing '{artist_name}' by name."
+                ),
+            }
+        )
 
     return violations
 
@@ -829,44 +852,46 @@ def check_content_sensitivity(
             pattern = re.compile(pattern_str, re.IGNORECASE)
             for match in pattern.finditer(text):
                 # Determine severity based on age range and category
-                if category == "mature_themes":
-                    severity = "block"
-                elif category == "weapons_violence" and min_age < 8:
-                    severity = "block"
-                elif category == "stereotypes":
-                    severity = "block"
-                elif min_age < 6:
+                if (
+                    category == "mature_themes"
+                    or category == "weapons_violence"
+                    and min_age < 8
+                    or category == "stereotypes"
+                    or min_age < 6
+                ):
                     severity = "block"
                 else:
                     severity = "warning"
 
-                issues.append({
-                    "type": category,
-                    "term": match.group(),
-                    "position": match.start(),
-                    "severity": severity,
-                    "age_range": age_range or "unspecified",
-                    "description": (
-                        f"'{match.group()}' detected — potentially inappropriate "
-                        f"for age range {age_range or 'unspecified'} "
-                        f"(category: {category.replace('_', ' ')})."
-                    ),
-                })
+                issues.append(
+                    {
+                        "type": category,
+                        "term": match.group(),
+                        "position": match.start(),
+                        "severity": severity,
+                        "age_range": age_range or "unspecified",
+                        "description": (
+                            f"'{match.group()}' detected — potentially inappropriate "
+                            f"for age range {age_range or 'unspecified'} "
+                            f"(category: {category.replace('_', ' ')})."
+                        ),
+                    }
+                )
 
     # Age-appropriate vocabulary check (only for young children)
     if min_age < 6:
         words = set(re.findall(r"\w+", text.lower()))
         advanced_found = words & ADVANCED_VOCABULARY
         for word in sorted(advanced_found):
-            issues.append({
-                "type": "advanced_vocabulary",
-                "term": word,
-                "severity": "warning",
-                "age_range": age_range or "unspecified",
-                "description": (
-                    f"'{word}' may be too advanced for children aged {age_range or '0-5'}."
-                ),
-            })
+            issues.append(
+                {
+                    "type": "advanced_vocabulary",
+                    "term": word,
+                    "severity": "warning",
+                    "age_range": age_range or "unspecified",
+                    "description": (f"'{word}' may be too advanced for children aged {age_range or '0-5'}."),
+                }
+            )
 
     return issues
 
@@ -908,21 +933,25 @@ async def anti_duplicate_guardrails(
             passed = unique_ratio >= 0.85
             if not passed:
                 overall_pass = False
-            checks.append({
-                "rule": "unique_pages_85_pct",
-                "passed": passed,
-                "value": round(unique_ratio * 100, 2),
-                "threshold": 85.0,
-                "description": f"{unique_ratio:.0%} unique pages (require 85%+).",
-            })
+            checks.append(
+                {
+                    "rule": "unique_pages_85_pct",
+                    "passed": passed,
+                    "value": round(unique_ratio * 100, 2),
+                    "threshold": 85.0,
+                    "description": f"{unique_ratio:.0%} unique pages (require 85%+).",
+                }
+            )
         else:
-            checks.append({
-                "rule": "unique_pages_85_pct",
-                "passed": False,
-                "value": 0,
-                "threshold": 85.0,
-                "description": "No pages found to evaluate.",
-            })
+            checks.append(
+                {
+                    "rule": "unique_pages_85_pct",
+                    "passed": False,
+                    "value": 0,
+                    "threshold": 85.0,
+                    "description": "No pages found to evaluate.",
+                }
+            )
             overall_pass = False
 
     elif book_type == "puzzle":
@@ -939,23 +968,25 @@ async def anti_duplicate_guardrails(
                 grid_unique = unique_grids == total_grids
                 if not grid_unique:
                     overall_pass = False
-                checks.append({
-                    "rule": "unique_grids_100_pct",
-                    "passed": grid_unique,
-                    "value": round(unique_grids / max(total_grids, 1) * 100, 2),
-                    "threshold": 100.0,
-                    "description": (
-                        f"{unique_grids}/{total_grids} unique grids "
-                        f"({'PASS' if grid_unique else 'FAIL: duplicates found'})."
-                    ),
-                })
+                checks.append(
+                    {
+                        "rule": "unique_grids_100_pct",
+                        "passed": grid_unique,
+                        "value": round(unique_grids / max(total_grids, 1) * 100, 2),
+                        "threshold": 100.0,
+                        "description": (
+                            f"{unique_grids}/{total_grids} unique grids "
+                            f"({'PASS' if grid_unique else 'FAIL: duplicates found'})."
+                        ),
+                    }
+                )
 
             # Max 30% word overlap between puzzles in same volume
             all_word_sets: list[set[str]] = []
             for page in pages:
                 word_list = getattr(page, "word_list", None)
-                if word_list and isinstance(word_list, (list, set)):
-                    all_word_sets.append(set(w.lower() for w in word_list if isinstance(w, str)))
+                if word_list and isinstance(word_list, list | set):
+                    all_word_sets.append({w.lower() for w in word_list if isinstance(w, str)})
 
             if len(all_word_sets) >= 2:
                 max_overlap = 0.0
@@ -967,24 +998,28 @@ async def anti_duplicate_guardrails(
                 word_pass = max_overlap <= 0.30
                 if not word_pass:
                     overall_pass = False
-                checks.append({
-                    "rule": "word_overlap_30_pct_max",
-                    "passed": word_pass,
-                    "value": round(max_overlap * 100, 2),
-                    "threshold": 30.0,
-                    "description": (
-                        f"Max word overlap: {max_overlap:.0%} "
-                        f"({'PASS' if word_pass else 'FAIL: too much overlap'})."
-                    ),
-                })
+                checks.append(
+                    {
+                        "rule": "word_overlap_30_pct_max",
+                        "passed": word_pass,
+                        "value": round(max_overlap * 100, 2),
+                        "threshold": 30.0,
+                        "description": (
+                            f"Max word overlap: {max_overlap:.0%} "
+                            f"({'PASS' if word_pass else 'FAIL: too much overlap'})."
+                        ),
+                    }
+                )
         else:
-            checks.append({
-                "rule": "unique_grids_100_pct",
-                "passed": False,
-                "value": 0,
-                "threshold": 100.0,
-                "description": "No puzzles found to evaluate.",
-            })
+            checks.append(
+                {
+                    "rule": "unique_grids_100_pct",
+                    "passed": False,
+                    "value": 0,
+                    "threshold": 100.0,
+                    "description": "No puzzles found to evaluate.",
+                }
+            )
             overall_pass = False
 
     elif book_type == "childrens":
@@ -999,13 +1034,15 @@ async def anti_duplicate_guardrails(
             passed = unique_ratio >= 0.85
             if not passed:
                 overall_pass = False
-            checks.append({
-                "rule": "unique_pages_85_pct",
-                "passed": passed,
-                "value": round(unique_ratio * 100, 2),
-                "threshold": 85.0,
-                "description": f"{unique_ratio:.0%} unique pages (require 85%+).",
-            })
+            checks.append(
+                {
+                    "rule": "unique_pages_85_pct",
+                    "passed": passed,
+                    "value": round(unique_ratio * 100, 2),
+                    "threshold": 85.0,
+                    "description": f"{unique_ratio:.0%} unique pages (require 85%+).",
+                }
+            )
 
     return {
         "book_type": book_type,

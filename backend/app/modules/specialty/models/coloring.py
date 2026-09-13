@@ -1,10 +1,12 @@
 """SQLAlchemy models for Coloring Books."""
+
 from __future__ import annotations
 
 import uuid
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Enum,
     Float,
@@ -16,7 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import TenantModel, BaseModel
+from app.database import BaseModel, TenantModel
 from app.modules.specialty.models.enums import (
     Audience,
     BookStatus,
@@ -37,26 +39,16 @@ class ColoringBook(TenantModel):
         default=Audience.adults,
     )
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
-    trim_size: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="8.5x11"
-    )
+    trim_size: Mapped[str] = mapped_column(String(20), nullable=False, default="8.5x11")
     line_style: Mapped[str] = mapped_column(
         Enum(LineStyle, name="line_style", native_enum=True),
         nullable=False,
         default=LineStyle.medium,
     )
-    line_weight: Mapped[float] = mapped_column(
-        Float, nullable=False, default=2.0
-    )
-    complexity: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.5
-    )
-    stroke_uniformity: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
-    single_sided: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
+    line_weight: Mapped[float] = mapped_column(Float, nullable=False, default=2.0)
+    complexity: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    stroke_uniformity: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    single_sided: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     series_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid,
         ForeignKey("book_series.id", ondelete="SET NULL"),
@@ -64,7 +56,7 @@ class ColoringBook(TenantModel):
         index=True,
     )
     status: Mapped[str] = mapped_column(
-        Enum(BookStatus, name="book_status", native_enum=True, create_type=False),
+        Enum(BookStatus, name="specialty_book_status", native_enum=True, create_type=False),
         nullable=False,
         default=BookStatus.draft,
         server_default="draft",
@@ -73,7 +65,7 @@ class ColoringBook(TenantModel):
 
     # Relationships
     pages: Mapped[list[ColoringBookPage]] = relationship(
-        "ColoringBookPage",
+        "app.modules.specialty.models.coloring.ColoringBookPage",
         back_populates="book",
         cascade="all, delete-orphan",
     )
@@ -100,13 +92,11 @@ class ColoringBookPage(BaseModel):
     illustration_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     cleaned_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     vectorized_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    illustration_model: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
-    illustration_seed: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )
+    illustration_model: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    illustration_seed: Mapped[str | None] = mapped_column(String(50), nullable=True)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Per-issue detail behind quality_score, written by the QA pipeline.
+    qa_issues: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     closed_shapes_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     speck_free: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     stroke_uniform: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
@@ -115,5 +105,6 @@ class ColoringBookPage(BaseModel):
 
     # Relationships
     book: Mapped[ColoringBook] = relationship(
-        "ColoringBook", back_populates="pages"
+        "app.modules.specialty.models.coloring.ColoringBook",
+        back_populates="pages",
     )

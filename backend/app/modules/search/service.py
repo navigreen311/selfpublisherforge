@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 ALL_TYPES = {"projects", "books", "recipes", "chapters", "reviews"}
 
 
-async def _search_projects(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_projects(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.models.project import Project
 
@@ -47,14 +45,12 @@ async def _search_projects(
             )
             for p in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search projects failed: %s", exc)
         return []
 
 
-async def _search_books(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_books(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.models.project import Book, Project
 
@@ -81,26 +77,31 @@ async def _search_books(
             )
             for b in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search books failed: %s", exc)
         return []
 
 
-async def _search_chapters(
-    db: AsyncSession, org_id: UUID, like: str  # noqa: ARG001
-) -> list[SearchResultItem]:
+async def _search_chapters(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
-        from app.models.content import Chapter
+        from app.models.content import Chapter, Manuscript
+        from app.models.project import Book, Project
 
+        # Chapter has no org_id, and neither does Book. The owning org is on
+        # Project: Chapter -> Manuscript -> Book -> Project. Without this the
+        # search returned every tenant's chapters. _search_books already walks
+        # the Book -> Project half of the same chain.
         stmt = (
             select(Chapter)
+            .join(Manuscript, Chapter.manuscript_id == Manuscript.id)
+            .join(Book, Manuscript.book_id == Book.id)
+            .join(Project, Book.project_id == Project.id)
             .where(
-                Chapter.deleted_at.is_(None) if hasattr(Chapter, "deleted_at") else True,
+                Project.org_id == org_id,
+                Chapter.deleted_at.is_(None),
                 or_(
                     Chapter.title.ilike(like),
-                    Chapter.content.ilike(like)
-                    if hasattr(Chapter, "content")
-                    else Chapter.title.ilike(like),
+                    Chapter.content.ilike(like),
                 ),
             )
             .limit(10)
@@ -115,23 +116,27 @@ async def _search_chapters(
             )
             for c in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search chapters failed: %s", exc)
         return []
 
 
-async def _search_recipes(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_recipes(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
-        from app.modules.specialty.cookbook.models import Recipe  # type: ignore
+        # The module is specialty.models.cookbook, not specialty.cookbook.models.
+        # The old path raised ImportError on every call, was swallowed by the
+        # except below and logged at debug, so recipe search always returned [].
+        from app.modules.specialty.models.cookbook import Cookbook, CookbookChapter, Recipe
 
+        # Recipe has no org_id either; scope through chapter -> cookbook. The
+        # previous hasattr guard collapsed to a literal True.
         stmt = (
             select(Recipe)
+            .join(CookbookChapter, Recipe.chapter_id == CookbookChapter.id)
+            .join(Cookbook, CookbookChapter.cookbook_id == Cookbook.id)
             .where(
-                getattr(Recipe, "org_id", None) == org_id
-                if hasattr(Recipe, "org_id")
-                else True,
+                Cookbook.org_id == org_id,
+                Recipe.deleted_at.is_(None),
                 Recipe.title.ilike(like),
             )
             .limit(10)
@@ -146,14 +151,12 @@ async def _search_recipes(
             )
             for r in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search recipes failed: %s", exc)
         return []
 
 
-async def _search_reviews(
-    db: AsyncSession, org_id: UUID, like: str
-) -> list[SearchResultItem]:
+async def _search_reviews(db: AsyncSession, org_id: UUID, like: str) -> list[SearchResultItem]:
     try:
         from app.modules.review_intelligence.models import BookReview
 
@@ -175,7 +178,7 @@ async def _search_reviews(
             )
             for r in result.scalars().all()
         ]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("search reviews failed: %s", exc)
         return []
 
@@ -213,6 +216,4 @@ async def search(
         results_by_type[t] = items
 
     total = sum(len(v) for v in results_by_type.values())
-    return SearchResponse(
-        query=q, results_by_type=results_by_type, total_count=total
-    )
+    return SearchResponse(query=q, results_by_type=results_by_type, total_count=total)

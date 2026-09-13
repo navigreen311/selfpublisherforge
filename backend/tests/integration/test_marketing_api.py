@@ -6,8 +6,9 @@ Uses an in-memory SQLite database and the FastAPI test client.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -30,6 +31,7 @@ _TEST_USER = {"user_id": uuid.uuid4(), "org_id": uuid.uuid4(), "role": "admin"}
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture(scope="module")
 async def engine() -> AsyncGenerator[AsyncEngine, None]:
     eng = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
@@ -43,9 +45,7 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
 
 @pytest_asyncio.fixture
 async def db(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
-    session_factory = async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with session_factory() as session:
         yield session
         await session.rollback()
@@ -53,9 +53,7 @@ async def db(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
 
 @pytest_asyncio.fixture
 async def client(engine: AsyncEngine) -> AsyncGenerator[AsyncClient, None]:
-    session_factory = async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async def override_get_db():
         async with session_factory() as session:
@@ -82,20 +80,19 @@ def book_id() -> str:
 
 @pytest.fixture
 def launch_date() -> str:
-    return (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    return (datetime.now(UTC) + timedelta(days=30)).isoformat()
 
 
 # ---------------------------------------------------------------------------
 # Launch Plan API Tests
 # ---------------------------------------------------------------------------
 
+
 class TestLaunchPlanAPI:
     """Integration tests for launch plan endpoints."""
 
     @pytest.mark.asyncio
-    async def test_generate_launch_plan(
-        self, client: AsyncClient, book_id: str, launch_date: str
-    ):
+    async def test_generate_launch_plan(self, client: AsyncClient, book_id: str, launch_date: str):
         response = await client.post(
             "/api/v1/marketing/launch-plan/generate",
             json={
@@ -116,9 +113,7 @@ class TestLaunchPlanAPI:
         assert len(data["phases"]) == 3
 
     @pytest.mark.asyncio
-    async def test_list_launch_plans(
-        self, client: AsyncClient, book_id: str, launch_date: str
-    ):
+    async def test_list_launch_plans(self, client: AsyncClient, book_id: str, launch_date: str):
         # Create a plan first
         await client.post(
             "/api/v1/marketing/launch-plan/generate",
@@ -138,9 +133,7 @@ class TestLaunchPlanAPI:
         assert data["total_count"] >= 1
 
     @pytest.mark.asyncio
-    async def test_get_launch_plan_detail(
-        self, client: AsyncClient, book_id: str, launch_date: str
-    ):
+    async def test_get_launch_plan_detail(self, client: AsyncClient, book_id: str, launch_date: str):
         # Create
         create_resp = await client.post(
             "/api/v1/marketing/launch-plan/generate",
@@ -162,9 +155,7 @@ class TestLaunchPlanAPI:
         assert len(data["phases"]) == 3
 
     @pytest.mark.asyncio
-    async def test_update_launch_plan(
-        self, client: AsyncClient, book_id: str, launch_date: str
-    ):
+    async def test_update_launch_plan(self, client: AsyncClient, book_id: str, launch_date: str):
         # Create
         create_resp = await client.post(
             "/api/v1/marketing/launch-plan/generate",
@@ -198,6 +189,7 @@ class TestLaunchPlanAPI:
 # ---------------------------------------------------------------------------
 # Email Sequence API Tests
 # ---------------------------------------------------------------------------
+
 
 class TestEmailSequenceAPI:
     """Integration tests for email sequence endpoints."""
@@ -315,6 +307,7 @@ class TestEmailSequenceAPI:
 # Social Media API Tests
 # ---------------------------------------------------------------------------
 
+
 class TestSocialMediaAPI:
     """Integration tests for social media endpoints."""
 
@@ -359,6 +352,7 @@ class TestSocialMediaAPI:
 # ARC Campaign API Tests
 # ---------------------------------------------------------------------------
 
+
 class TestARCCampaignAPI:
     """Integration tests for ARC campaign endpoints."""
 
@@ -369,7 +363,7 @@ class TestARCCampaignAPI:
             "name": "ARC Campaign 1",
             "description": "Test ARC campaign",
             "cover_letter": "Dear reviewer, please enjoy this ARC.",
-            "deadline": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+            "deadline": (datetime.now(UTC) + timedelta(days=14)).isoformat(),
             "recipients": [
                 {"name": "Reviewer A", "email": "a@example.com"},
                 {"name": "Reviewer B", "email": "b@example.com"},
@@ -378,9 +372,7 @@ class TestARCCampaignAPI:
         }
 
     @pytest.mark.asyncio
-    async def test_create_arc_campaign(
-        self, client: AsyncClient, arc_payload: dict
-    ):
+    async def test_create_arc_campaign(self, client: AsyncClient, arc_payload: dict):
         response = await client.post(
             "/api/v1/marketing/arc",
             json=arc_payload,
@@ -393,9 +385,7 @@ class TestARCCampaignAPI:
         assert len(data["recipients"]) == 3
 
     @pytest.mark.asyncio
-    async def test_list_arc_campaigns(
-        self, client: AsyncClient, arc_payload: dict
-    ):
+    async def test_list_arc_campaigns(self, client: AsyncClient, arc_payload: dict):
         await client.post("/api/v1/marketing/arc", json=arc_payload)
 
         response = await client.get("/api/v1/marketing/arc")
@@ -404,9 +394,7 @@ class TestARCCampaignAPI:
         assert data["total_count"] >= 1
 
     @pytest.mark.asyncio
-    async def test_send_arc_copies(
-        self, client: AsyncClient, arc_payload: dict
-    ):
+    async def test_send_arc_copies(self, client: AsyncClient, arc_payload: dict):
         # Create
         create_resp = await client.post(
             "/api/v1/marketing/arc",
@@ -426,9 +414,7 @@ class TestARCCampaignAPI:
         assert data["status"] in ("active", "completed")
 
     @pytest.mark.asyncio
-    async def test_send_arc_to_specific_recipients(
-        self, client: AsyncClient, arc_payload: dict
-    ):
+    async def test_send_arc_to_specific_recipients(self, client: AsyncClient, arc_payload: dict):
         # Create
         create_resp = await client.post(
             "/api/v1/marketing/arc",

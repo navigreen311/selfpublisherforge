@@ -3,15 +3,16 @@
 These tests verify that permission checks are properly enforced on organization endpoints.
 """
 
-import pytest
 import uuid
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.security import create_access_token, hash_password
-from app.models.user import User, UserRole
 from app.models.organization import Organization
+from app.models.user import User, UserRole
 
 settings = get_settings()
 PREFIX = f"{settings.API_V1_PREFIX}/orgs"
@@ -20,6 +21,7 @@ PREFIX = f"{settings.API_V1_PREFIX}/orgs"
 # ---------------------------------------------------------------------------
 # Helper Functions
 # ---------------------------------------------------------------------------
+
 
 async def _create_org(db: AsyncSession, name: str = "Test Org") -> Organization:
     """Create a test organization."""
@@ -77,6 +79,7 @@ def _auth_headers(token: str) -> dict:
 # Unauthenticated Access Tests
 # ---------------------------------------------------------------------------
 
+
 class TestUnauthenticatedAccess:
     """Verify unauthenticated users cannot access organization endpoints."""
 
@@ -85,7 +88,7 @@ class TestUnauthenticatedAccess:
         """Unauthenticated user cannot get organization details."""
         org = await _create_org(db)
         resp = await client.get(f"{PREFIX}/{org.id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_update_org_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -95,14 +98,14 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/{org.id}",
             json={"name": "Updated Name", "description": "Test"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_members_requires_auth(self, client: AsyncClient, db: AsyncSession):
         """Unauthenticated user cannot list organization members."""
         org = await _create_org(db)
         resp = await client.get(f"{PREFIX}/{org.id}/members")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_create_invitation_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -112,14 +115,14 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/{org.id}/invitations",
             json={"email": "invite@test.com", "role": "viewer"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_invitations_requires_auth(self, client: AsyncClient, db: AsyncSession):
         """Unauthenticated user cannot list invitations."""
         org = await _create_org(db)
         resp = await client.get(f"{PREFIX}/{org.id}/invitations")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_remove_member_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -127,12 +130,13 @@ class TestUnauthenticatedAccess:
         org = await _create_org(db)
         user_id = uuid.uuid4()
         resp = await client.delete(f"{PREFIX}/{org.id}/members/{user_id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------
 # Cross-Organization Access Tests
 # ---------------------------------------------------------------------------
+
 
 class TestCrossOrganizationAccess:
     """Verify users cannot access data from other organizations."""
@@ -181,6 +185,7 @@ class TestCrossOrganizationAccess:
 # ---------------------------------------------------------------------------
 # Role-Based Access Control Tests
 # ---------------------------------------------------------------------------
+
 
 class TestRoleBasedAccess:
     """Verify role-based access control on organization endpoints."""
@@ -277,6 +282,7 @@ class TestRoleBasedAccess:
 # ---------------------------------------------------------------------------
 # Authorized Access Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAuthorizedAccess:
     """Verify authorized users can access their organization's data."""

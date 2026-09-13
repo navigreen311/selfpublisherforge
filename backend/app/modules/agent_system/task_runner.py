@@ -9,8 +9,10 @@ import asyncio
 import json
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from typing import Any, AsyncGenerator
+from decimal import Decimal
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,7 +97,7 @@ async def execute_task(
         steps[i]["status"] = "running"
 
         # Simulate processing
-        await asyncio.sleep(step_config["duration"])
+        await asyncio.sleep(float(cast("float", step_config["duration"])))
 
         # Mark step as complete with output
         steps[i]["status"] = "complete"
@@ -117,7 +119,7 @@ async def execute_task(
         "steps": steps,
     }
     task.tokens_used = total_tokens
-    task.cost_usd = total_cost
+    task.cost_usd = Decimal(str(total_cost))
     await db.commit()
     await db.refresh(task)
 
@@ -147,9 +149,7 @@ async def stream_task_execution(
         SSE-formatted event strings
     """
     # Get task
-    result = await db.execute(
-        select(AgentTask).where(AgentTask.id == task_id)
-    )
+    result = await db.execute(select(AgentTask).where(AgentTask.id == task_id))
     task = result.scalar_one_or_none()
 
     if not task:
@@ -157,10 +157,8 @@ async def stream_task_execution(
         return
 
     # Get agent
-    result = await db.execute(
-        select(Agent).where(Agent.id == task.agent_id)
-    )
-    agent = result.scalar_one_or_none()
+    agent_result = await db.execute(select(Agent).where(Agent.id == task.agent_id))
+    agent = agent_result.scalar_one_or_none()
 
     if not agent:
         yield f"data: {json.dumps({'error': 'Agent not found'})}\n\n"
@@ -182,7 +180,7 @@ async def stream_task_execution(
         yield f"data: {json.dumps({'event': 'step_start', 'step': step_config['name'], 'progress': progress})}\n\n"
 
         # Simulate processing
-        await asyncio.sleep(step_config["duration"])
+        await asyncio.sleep(float(cast("float", step_config["duration"])))
 
         # Send step complete event
         yield f"data: {json.dumps({'event': 'step_complete', 'step': step_config['name']})}\n\n"

@@ -9,11 +9,10 @@ Tests cover:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 from app.modules.chrome_extension.schemas import (
     AmazonMarketplace,
@@ -22,15 +21,14 @@ from app.modules.chrome_extension.schemas import (
     RelatedKeyword,
 )
 from app.modules.chrome_extension.service import (
-    get_quick_research,
     _estimate_daily_sales,
     _extract_candidate_words,
-    _volume_indicator,
     _generate_related_keywords,
     _generate_related_keywords_from_corpus,
     _generate_related_keywords_via_llm,
+    _volume_indicator,
+    get_quick_research,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -79,7 +77,7 @@ def _make_mock_product(
     product.bsr = bsr
     product.price = price
     product.keywords = keywords or []
-    product.created_at = created_at or datetime.now(timezone.utc)
+    product.created_at = created_at or datetime.now(UTC)
     product.deleted_at = deleted_at
     return product
 
@@ -93,9 +91,7 @@ class TestGetQuickResearchAggregatesData:
     """Verify get_quick_research combines ASIN product data and niche stats."""
 
     @pytest.mark.asyncio
-    async def test_returns_quick_research_response(
-        self, org_id: uuid.UUID, asin_query: QuickResearchQuery
-    ):
+    async def test_returns_quick_research_response(self, org_id: uuid.UUID, asin_query: QuickResearchQuery):
         """Result should be a QuickResearchResponse with expected fields."""
         mock_db = AsyncMock()
 
@@ -129,15 +125,13 @@ class TestGetQuickResearchAggregatesData:
         assert response.avg_price == 4.99
 
     @pytest.mark.asyncio
-    async def test_asin_lookup_populates_bsr_history(
-        self, org_id: uuid.UUID, asin_query: QuickResearchQuery
-    ):
+    async def test_asin_lookup_populates_bsr_history(self, org_id: uuid.UUID, asin_query: QuickResearchQuery):
         """When multiple snapshots exist for an ASIN, bsr_history should be populated."""
         mock_db = AsyncMock()
 
         products = [
-            _make_mock_product(bsr=3500, created_at=datetime(2024, 6, 1, tzinfo=timezone.utc)),
-            _make_mock_product(bsr=4200, created_at=datetime(2024, 5, 1, tzinfo=timezone.utc)),
+            _make_mock_product(bsr=3500, created_at=datetime(2024, 6, 1, tzinfo=UTC)),
+            _make_mock_product(bsr=4200, created_at=datetime(2024, 5, 1, tzinfo=UTC)),
         ]
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = products
@@ -161,9 +155,7 @@ class TestGetQuickResearchAggregatesData:
         assert response.bsr_history[1]["bsr"] == 4200
 
     @pytest.mark.asyncio
-    async def test_estimated_daily_sales_from_bsr(
-        self, org_id: uuid.UUID, asin_query: QuickResearchQuery
-    ):
+    async def test_estimated_daily_sales_from_bsr(self, org_id: uuid.UUID, asin_query: QuickResearchQuery):
         """When a product has BSR, estimated_daily_sales should be computed."""
         mock_db = AsyncMock()
 
@@ -323,14 +315,17 @@ class TestGetQuickResearchHandlesModuleFailures:
         # Duplicate from corpus that also appears in LLM
         corpus_dupe = RelatedKeyword(keyword="dragons", volume="medium", relevance=0.6, source="frequency")
 
-        with patch(
-            "app.modules.chrome_extension.service._generate_related_keywords_via_llm",
-            new_callable=AsyncMock,
-            return_value=[llm_kw],
-        ), patch(
-            "app.modules.chrome_extension.service._generate_related_keywords_from_corpus",
-            new_callable=AsyncMock,
-            return_value=[corpus_dupe, corpus_kw],
+        with (
+            patch(
+                "app.modules.chrome_extension.service._generate_related_keywords_via_llm",
+                new_callable=AsyncMock,
+                return_value=[llm_kw],
+            ),
+            patch(
+                "app.modules.chrome_extension.service._generate_related_keywords_from_corpus",
+                new_callable=AsyncMock,
+                return_value=[corpus_dupe, corpus_kw],
+            ),
         ):
             merged = await _generate_related_keywords(mock_db, org, ["fantasy"])
 
@@ -376,9 +371,7 @@ class TestRelatedKeywordsNotPlaceholder:
         ]
         mock_db.execute.return_value = mock_result
 
-        keywords = await _generate_related_keywords_from_corpus(
-            mock_db, org, ["romance"]
-        )
+        keywords = await _generate_related_keywords_from_corpus(mock_db, org, ["romance"])
 
         assert len(keywords) > 0
         keyword_texts = [kw.keyword.lower() for kw in keywords]
@@ -402,9 +395,7 @@ class TestRelatedKeywordsNotPlaceholder:
         ]
         mock_db.execute.return_value = mock_result
 
-        keywords = await _generate_related_keywords_from_corpus(
-            mock_db, org, ["romance"]
-        )
+        keywords = await _generate_related_keywords_from_corpus(mock_db, org, ["romance"])
 
         keyword_texts = {kw.keyword.lower() for kw in keywords}
         assert "romance" not in keyword_texts
@@ -421,9 +412,7 @@ class TestRelatedKeywordsNotPlaceholder:
         ]
         mock_db.execute.return_value = mock_result
 
-        keywords = await _generate_related_keywords_from_corpus(
-            mock_db, org, ["novel"]
-        )
+        keywords = await _generate_related_keywords_from_corpus(mock_db, org, ["novel"])
 
         keyword_texts = {kw.keyword.lower() for kw in keywords}
         # Common stop words should be filtered out
@@ -441,9 +430,7 @@ class TestRelatedKeywordsNotPlaceholder:
         mock_result.all.return_value = []
         mock_db.execute.return_value = mock_result
 
-        keywords = await _generate_related_keywords_from_corpus(
-            mock_db, org, ["sci-fi", "space opera"]
-        )
+        keywords = await _generate_related_keywords_from_corpus(mock_db, org, ["sci-fi", "space opera"])
 
         # With no data, should return the input keywords as low-confidence suggestions
         assert len(keywords) == 2
@@ -462,22 +449,23 @@ class TestRelatedKeywordsNotPlaceholder:
 
         # Create many keywords
         llm_keywords = [
-            RelatedKeyword(keyword=f"llm_kw_{i}", volume="medium", relevance=0.8, source="llm")
-            for i in range(15)
+            RelatedKeyword(keyword=f"llm_kw_{i}", volume="medium", relevance=0.8, source="llm") for i in range(15)
         ]
         corpus_keywords = [
-            RelatedKeyword(keyword=f"corpus_kw_{i}", volume="low", relevance=0.5, source="frequency")
-            for i in range(15)
+            RelatedKeyword(keyword=f"corpus_kw_{i}", volume="low", relevance=0.5, source="frequency") for i in range(15)
         ]
 
-        with patch(
-            "app.modules.chrome_extension.service._generate_related_keywords_via_llm",
-            new_callable=AsyncMock,
-            return_value=llm_keywords,
-        ), patch(
-            "app.modules.chrome_extension.service._generate_related_keywords_from_corpus",
-            new_callable=AsyncMock,
-            return_value=corpus_keywords,
+        with (
+            patch(
+                "app.modules.chrome_extension.service._generate_related_keywords_via_llm",
+                new_callable=AsyncMock,
+                return_value=llm_keywords,
+            ),
+            patch(
+                "app.modules.chrome_extension.service._generate_related_keywords_from_corpus",
+                new_callable=AsyncMock,
+                return_value=corpus_keywords,
+            ),
         ):
             merged = await _generate_related_keywords(mock_db, org, ["fantasy"])
 

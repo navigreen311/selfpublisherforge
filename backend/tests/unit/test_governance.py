@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agent_system.governance import (
@@ -24,19 +23,17 @@ from app.modules.agent_system.models import (
     Agent,
     AgentBudget,
     AgentTask,
-    AgentType,
     AgentWorkflow,
     AuditTrail,
     PermissionLevel,
-    TaskPriority,
     TaskStatus,
     WorkflowStatus,
 )
 
-
 # ---------------------------------------------------------------------------
 # Permission checks
 # ---------------------------------------------------------------------------
+
 
 class TestCheckPermission:
     def test_disabled_agent_raises(self, sample_agent: Agent):
@@ -112,6 +109,7 @@ class TestRequiresApproval:
 # Budget checks
 # ---------------------------------------------------------------------------
 
+
 class TestCheckBudget:
     @pytest.mark.asyncio
     async def test_creates_default_budget_if_missing(
@@ -177,9 +175,7 @@ class TestCheckBudget:
         sample_budget: AgentBudget,
     ):
         """Should pass when within all limits."""
-        budget = await check_budget(
-            db, sample_agent, estimated_tokens=100, estimated_cost=0.01
-        )
+        budget = await check_budget(db, sample_agent, estimated_tokens=100, estimated_cost=0.01)
         assert budget is not None
 
     @pytest.mark.asyncio
@@ -190,7 +186,7 @@ class TestCheckBudget:
         sample_budget: AgentBudget,
     ):
         """Daily counters should reset when last_reset_daily is > 1 day ago."""
-        sample_budget.last_reset_daily = datetime.now(timezone.utc) - timedelta(days=2)
+        sample_budget.last_reset_daily = datetime.now(UTC) - timedelta(days=2)
         sample_budget.tokens_used_today = 50000
         sample_budget.usd_used_today = 5.0
         await db.flush()
@@ -228,6 +224,7 @@ class TestRecordUsage:
 # Quality SLA validation
 # ---------------------------------------------------------------------------
 
+
 class TestValidateQuality:
     def test_above_threshold_passes(self):
         assert validate_quality(0.9, threshold=0.7) is True
@@ -247,6 +244,7 @@ class TestValidateQuality:
 # ---------------------------------------------------------------------------
 # Emergency stop
 # ---------------------------------------------------------------------------
+
 
 class TestEmergencyStop:
     @pytest.mark.asyncio
@@ -270,9 +268,7 @@ class TestEmergencyStop:
             db.add(task)
         await db.flush()
 
-        tasks_cancelled, wf_cancelled = await emergency_stop(
-            db, org_id, actor_id=user_id
-        )
+        tasks_cancelled, wf_cancelled = await emergency_stop(db, org_id, actor_id=user_id)
 
         # PENDING and RUNNING should be cancelled; COMPLETED should not
         assert tasks_cancelled == 2
@@ -297,9 +293,7 @@ class TestEmergencyStop:
             db.add(wf)
         await db.flush()
 
-        tasks_cancelled, wf_cancelled = await emergency_stop(
-            db, org_id, actor_id=user_id
-        )
+        tasks_cancelled, wf_cancelled = await emergency_stop(db, org_id, actor_id=user_id)
 
         assert wf_cancelled == 2  # RUNNING and PAUSED
 

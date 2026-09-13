@@ -6,21 +6,22 @@ marketing ROI, and portfolio overviews.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
-import os
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.modules.analytics.models import Report, RoyaltyRecord
 from app.modules.analytics.schemas import OutputFormat, ReportStatus, ReportType
+
+logger = logging.getLogger(__name__)
 
 
 class ReportGenerationError(Exception):
@@ -64,15 +65,14 @@ async def generate_report(
             extension = "pdf"
 
         # Store file to local disk (in production, upload to S3)
-        reports_dir = os.path.join(os.getcwd(), "generated_reports")
-        os.makedirs(reports_dir, exist_ok=True)
-        file_name = f"{report.id}.{extension}"
-        file_path = os.path.join(reports_dir, file_name)
+        reports_dir = Path.cwd() / "generated_reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        file_path = reports_dir / f"{report.id}.{extension}"
 
-        with open(file_path, "wb") as f:
-            f.write(file_bytes)
+        # write_bytes blocks; keep it off the event loop
+        await asyncio.to_thread(file_path.write_bytes, file_bytes)
 
-        report.file_path = file_path
+        report.file_path = str(file_path)
         report.file_size = len(file_bytes)
         report.status = ReportStatus.COMPLETED.value
         report.generated_at = datetime.now(UTC)
@@ -119,18 +119,15 @@ async def _gather_revenue_summary(
 ) -> dict[str, Any]:
     """Gather data for a revenue summary report."""
     # Total revenue
-    totals_query = (
-        select(
-            func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("total_revenue"),
-            func.coalesce(func.sum(RoyaltyRecord.gross_revenue), 0).label("gross_revenue"),
-            func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("total_units"),
-            func.count(RoyaltyRecord.id).label("record_count"),
-        )
-        .where(
-            and_(
-                RoyaltyRecord.org_id == org_id,
-                RoyaltyRecord.deleted_at.is_(None),
-            )
+    totals_query = select(
+        func.coalesce(func.sum(RoyaltyRecord.net_revenue), 0).label("total_revenue"),
+        func.coalesce(func.sum(RoyaltyRecord.gross_revenue), 0).label("gross_revenue"),
+        func.coalesce(func.sum(RoyaltyRecord.net_units), 0).label("total_units"),
+        func.count(RoyaltyRecord.id).label("record_count"),
+    ).where(
+        and_(
+            RoyaltyRecord.org_id == org_id,
+            RoyaltyRecord.deleted_at.is_(None),
         )
     )
     result = await db.execute(totals_query)
@@ -152,10 +149,7 @@ async def _gather_revenue_summary(
         .group_by(RoyaltyRecord.platform)
     )
     platform_result = await db.execute(platform_query)
-    platforms = [
-        {"platform": r.platform, "revenue": str(r.revenue), "units": r.units}
-        for r in platform_result.all()
-    ]
+    platforms = [{"platform": r.platform, "revenue": str(r.revenue), "units": r.units} for r in platform_result.all()]
 
     return {
         "report_type": "Revenue Summary",
@@ -192,8 +186,7 @@ async def _gather_book_performance(
     )
     result = await db.execute(books_query)
     books = [
-        {"title": r.title, "revenue": str(r.revenue), "units": r.units, "records": r.records}
-        for r in result.all()
+        {"title": r.title, "revenue": str(r.revenue), "units": r.units, "records": r.records} for r in result.all()
     ]
 
     return {
@@ -277,8 +270,7 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
         )
     except ImportError as exc:
         raise ReportGenerationError(
-            "The 'reportlab' package is required for PDF generation. "
-            "Install it with:  pip install reportlab"
+            "The 'reportlab' package is required for PDF generation. " "Install it with:  pip install reportlab"
         ) from exc
 
     buf = io.BytesIO()
@@ -321,15 +313,17 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
     report_type = data.get("report_type", "Report")
 
     elements.append(Paragraph(title, title_style))
-    elements.append(
-        Paragraph(f"{report_type}  |  Generated: {generated_at}", subtitle_style)
-    )
+    elements.append(Paragraph(f"{report_type}  |  Generated: {generated_at}", subtitle_style))
 
     # --- Horizontal rule via thin table ---
-    hr = Table([[""]],  colWidths=[7 * inch], rowHeights=[1])
-    hr.setStyle(TableStyle([
-        ("LINEABOVE", (0, 0), (-1, 0), 1, colors.HexColor("#0f3460")),
-    ]))
+    hr = Table([[""]], colWidths=[7 * inch], rowHeights=[1])
+    hr.setStyle(
+        TableStyle(
+            [
+                ("LINEABOVE", (0, 0), (-1, 0), 1, colors.HexColor("#0f3460")),
+            ]
+        )
+    )
     elements.append(hr)
     elements.append(Spacer(1, 12))
 
@@ -355,15 +349,19 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
     if summary_rows:
         elements.append(Paragraph("Summary", section_style))
         t = Table(summary_rows, colWidths=[3 * inch, 4 * inch])
-        t.setStyle(TableStyle([
-            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 10),
-            ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#16213e")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("LINEBELOW", (0, 0), (-1, -2), 0.5, colors.lightgrey),
-            ("LINEBELOW", (0, -1), (-1, -1), 1, colors.HexColor("#0f3460")),
-        ]))
+        t.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),
+                    ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#16213e")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("LINEBELOW", (0, 0), (-1, -2), 0.5, colors.lightgrey),
+                    ("LINEBELOW", (0, -1), (-1, -1), 1, colors.HexColor("#0f3460")),
+                ]
+            )
+        )
         elements.append(t)
         elements.append(Spacer(1, 12))
 
@@ -371,22 +369,23 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
     if data.get("by_platform"):
         elements.append(Paragraph("Revenue by Platform", section_style))
         header = ["Platform", "Revenue", "Units"]
-        rows = [header] + [
-            [p["platform"], f"${p['revenue']}", str(p["units"])]
-            for p in data["by_platform"]
-        ]
+        rows = [header] + [[p["platform"], f"${p['revenue']}", str(p["units"])] for p in data["by_platform"]]
         t = Table(rows, colWidths=[2.5 * inch, 2.25 * inch, 2.25 * inch])
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f3460")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 10),
-            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ]))
+        t.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f3460")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
+                ]
+            )
+        )
         elements.append(t)
         elements.append(Spacer(1, 12))
 
@@ -404,17 +403,21 @@ def _build_pdf(title: str, data: dict[str, Any]) -> bytes:
             for b in data["books"][:25]
         ]
         t = Table(rows, colWidths=[3 * inch, 1.5 * inch, 1.25 * inch, 1.25 * inch])
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f3460")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ]))
+        t.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f3460")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
+                ]
+            )
+        )
         elements.append(t)
 
     # --- Footer note ---
@@ -445,12 +448,18 @@ def _build_xlsx(title: str, data: dict[str, Any]) -> bytes:
     """
     try:
         from openpyxl import Workbook
-        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side, numbers
+        from openpyxl.styles import (  # noqa: F401
+            Alignment,
+            Border,
+            Font,
+            PatternFill,
+            Side,
+            numbers,
+        )
         from openpyxl.utils import get_column_letter
     except ImportError as exc:
         raise ReportGenerationError(
-            "The 'openpyxl' package is required for XLSX generation. "
-            "Install it with:  pip install openpyxl"
+            "The 'openpyxl' package is required for XLSX generation. " "Install it with:  pip install openpyxl"
         ) from exc
 
     wb = Workbook()
@@ -468,8 +477,8 @@ def _build_xlsx(title: str, data: dict[str, Any]) -> bytes:
     title_font = Font(name="Calibri", bold=True, size=16, color="1A1A2E")
     subtitle_font = Font(name="Calibri", size=10, color="888888")
     label_font = Font(name="Calibri", bold=True, size=11)
-    currency_format = '#,##0.00'
-    integer_format = '#,##0'
+    currency_format = "#,##0.00"
+    integer_format = "#,##0"
 
     def _style_header_row(ws: Any, row: int, max_col: int) -> None:
         """Apply header styling to a row."""

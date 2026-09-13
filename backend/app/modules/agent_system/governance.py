@@ -10,8 +10,6 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,9 +25,13 @@ from app.modules.agent_system.models import (
     WorkflowStatus,
 )
 
+logger = logging.getLogger(__name__)
+
+
 # ---------------------------------------------------------------------------
 # Permission enforcement
 # ---------------------------------------------------------------------------
+
 
 class PermissionDenied(Exception):
     """Raised when an action is not permitted by the governance layer."""
@@ -80,17 +82,17 @@ def check_permission(
                     "which does not allow autonomous execution."
                 )
             if level == PermissionLevel.AUTO_EXECUTE_HIGH and user_role not in ("admin", "owner"):
-                raise PermissionDenied(
-                    "Auto-execute (high risk) requires admin or owner role."
-                )
+                raise PermissionDenied("Auto-execute (high risk) requires admin or owner role.")
             if level == PermissionLevel.FULL_AUTONOMOUS and user_role not in ("admin", "owner"):
-                raise PermissionDenied(
-                    "Full autonomous requires admin or owner role."
-                )
+                raise PermissionDenied("Full autonomous requires admin or owner role.")
 
         if action == "approve":
             # Draft-only and suggest both require human approval
-            if level in (PermissionLevel.AUTO_EXECUTE_LOW, PermissionLevel.AUTO_EXECUTE_HIGH, PermissionLevel.FULL_AUTONOMOUS):
+            if level in (
+                PermissionLevel.AUTO_EXECUTE_LOW,
+                PermissionLevel.AUTO_EXECUTE_HIGH,
+                PermissionLevel.FULL_AUTONOMOUS,
+            ):
                 # Auto-approve is valid
                 pass
 
@@ -100,7 +102,9 @@ def check_permission(
     except (AttributeError, TypeError):
         logger.exception(
             "Permission check failed for agent '%s' action '%s' (role=%s) — denying by default",
-            agent.name, action, user_role,
+            agent.name,
+            action,
+            user_role,
         )
         return False  # Fail closed: deny permission on error
 
@@ -117,6 +121,7 @@ def requires_approval(agent: Agent) -> bool:
 # Budget checking
 # ---------------------------------------------------------------------------
 
+
 async def check_budget(
     db: AsyncSession,
     agent: Agent,
@@ -128,9 +133,7 @@ async def check_budget(
     Returns the budget record, raises BudgetExceeded if over limit.
     Also handles daily/monthly reset logic.
     """
-    result = await db.execute(
-        select(AgentBudget).where(AgentBudget.agent_id == agent.id)
-    )
+    result = await db.execute(select(AgentBudget).where(AgentBudget.agent_id == agent.id))
     budget = result.scalar_one_or_none()
 
     if budget is None:
@@ -165,28 +168,25 @@ async def check_budget(
         budget.last_reset_monthly = now
 
     # Check daily token limit
-    if budget.daily_token_limit > 0:
-        if budget.tokens_used_today + estimated_tokens > budget.daily_token_limit:
-            raise BudgetExceeded(
-                f"Daily token limit exceeded. Used: {budget.tokens_used_today}, "
-                f"Limit: {budget.daily_token_limit}, Estimated: {estimated_tokens}"
-            )
+    if budget.daily_token_limit > 0 and budget.tokens_used_today + estimated_tokens > budget.daily_token_limit:
+        raise BudgetExceeded(
+            f"Daily token limit exceeded. Used: {budget.tokens_used_today}, "
+            f"Limit: {budget.daily_token_limit}, Estimated: {estimated_tokens}"
+        )
 
     # Check daily USD limit
-    if budget.daily_usd_limit > 0:
-        if budget.usd_used_today + estimated_cost > budget.daily_usd_limit:
-            raise BudgetExceeded(
-                f"Daily USD limit exceeded. Used: ${budget.usd_used_today:.4f}, "
-                f"Limit: ${budget.daily_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
-            )
+    if budget.daily_usd_limit > 0 and budget.usd_used_today + estimated_cost > budget.daily_usd_limit:
+        raise BudgetExceeded(
+            f"Daily USD limit exceeded. Used: ${budget.usd_used_today:.4f}, "
+            f"Limit: ${budget.daily_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
+        )
 
     # Check monthly USD limit
-    if budget.monthly_usd_limit > 0:
-        if budget.usd_used_this_month + estimated_cost > budget.monthly_usd_limit:
-            raise BudgetExceeded(
-                f"Monthly USD limit exceeded. Used: ${budget.usd_used_this_month:.4f}, "
-                f"Limit: ${budget.monthly_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
-            )
+    if budget.monthly_usd_limit > 0 and budget.usd_used_this_month + estimated_cost > budget.monthly_usd_limit:
+        raise BudgetExceeded(
+            f"Monthly USD limit exceeded. Used: ${budget.usd_used_this_month:.4f}, "
+            f"Limit: ${budget.monthly_usd_limit:.2f}, Estimated: ${estimated_cost:.4f}"
+        )
 
     await db.flush()
     return budget
@@ -199,9 +199,7 @@ async def record_usage(
     cost_usd: float,
 ) -> AgentBudget:
     """Record token/cost usage against the agent's budget."""
-    result = await db.execute(
-        select(AgentBudget).where(AgentBudget.agent_id == agent_id)
-    )
+    result = await db.execute(select(AgentBudget).where(AgentBudget.agent_id == agent_id))
     budget = result.scalar_one_or_none()
 
     if budget is None:
@@ -244,6 +242,7 @@ def validate_quality(
 # ---------------------------------------------------------------------------
 # Emergency stop
 # ---------------------------------------------------------------------------
+
 
 async def emergency_stop(
     db: AsyncSession,

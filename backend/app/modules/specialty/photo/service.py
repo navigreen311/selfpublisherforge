@@ -1,4 +1,5 @@
 """Photo Integration service layer."""
+
 from __future__ import annotations
 
 import logging
@@ -11,8 +12,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, NotFoundError
-from app.modules.specialty.models.photo import PhotoReference
 from app.modules.specialty.models.enums import PhotoUsageType
+from app.modules.specialty.models.photo import PhotoReference
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +107,7 @@ async def get_photo(db: AsyncSession, org_id: UUID, photo_id: UUID) -> dict[str,
     return _photo_to_dict(photo)
 
 
-async def update_photo(
-    db: AsyncSession, org_id: UUID, photo_id: UUID, payload: dict[str, Any]
-) -> dict[str, Any]:
+async def update_photo(db: AsyncSession, org_id: UUID, photo_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
     """Update photo reference metadata."""
     photo = await _get_or_404(db, org_id, photo_id)
 
@@ -168,7 +167,11 @@ async def generate_with_references(
             references.append(_photo_to_dict(photo))
 
     if not references:
-        raise AppException("No valid photo references found for the given IDs.")
+        raise AppException(
+            status_code=400,
+            code="NO_PHOTO_REFERENCES",
+            message="No valid photo references found for the given IDs.",
+        )
 
     # Stub: in production this would call an AI image generation API
     generated_id = _uuid.uuid4()
@@ -213,7 +216,7 @@ def _photo_to_dict(photo: PhotoReference) -> dict[str, Any]:
         "mime_type": photo.mime_type,
         "width": photo.width,
         "height": photo.height,
-        "usage_type": photo.usage_type if isinstance(photo.usage_type, str) else photo.usage_type.value,
+        "usage_type": getattr(photo.usage_type, "value", photo.usage_type),
         "tags": photo.tags,
         "metadata_json": photo.metadata_json,
         "book_type": photo.book_type,

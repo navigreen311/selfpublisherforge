@@ -4,145 +4,299 @@ Revision ID: 001_initial_schema
 Revises: None
 Create Date: 2026-02-09
 """
-from typing import Sequence, Union
-from alembic import op
+
+from collections.abc import Sequence
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "001_initial_schema"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # ── Extensions ─────────────────────────────────────────────────────
+    # pg_trgm supplies the gin_trgm_ops operator class the chapters
+    # full-text index below asks for. Without it this migration fails on a
+    # clean database, which is every CI run.
+    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+
     # ── Enums ──────────────────────────────────────────────────────────
     plan_tier = postgresql.ENUM(
-        "free", "starter", "pro", "business", "enterprise",
-        name="plan_tier", create_type=False,
+        "free",
+        "starter",
+        "pro",
+        "business",
+        "enterprise",
+        name="plan_tier",
+        create_type=False,
     )
     subscription_status = postgresql.ENUM(
-        "active", "trialing", "past_due", "canceled", "unpaid",
-        name="subscription_status", create_type=False,
+        "active",
+        "trialing",
+        "past_due",
+        "canceled",
+        "unpaid",
+        name="subscription_status",
+        create_type=False,
     )
     user_role = postgresql.ENUM(
-        "owner", "admin", "editor", "writer", "viewer",
-        name="user_role", create_type=False,
+        "owner",
+        "admin",
+        "editor",
+        "writer",
+        "viewer",
+        name="user_role",
+        create_type=False,
     )
     project_type = postgresql.ENUM(
-        "book", "series", "course",
-        name="project_type", create_type=False,
+        "book",
+        "series",
+        "course",
+        name="project_type",
+        create_type=False,
     )
     project_status = postgresql.ENUM(
-        "draft", "active", "archived", "completed",
-        name="project_status", create_type=False,
+        "draft",
+        "active",
+        "archived",
+        "completed",
+        name="project_status",
+        create_type=False,
     )
     book_format = postgresql.ENUM(
-        "ebook", "print", "audio",
-        name="book_format", create_type=False,
+        "ebook",
+        "print",
+        "audio",
+        name="book_format",
+        create_type=False,
     )
     book_status = postgresql.ENUM(
-        "draft", "writing", "editing", "formatting", "published", "archived",
-        name="book_status", create_type=False,
+        "draft",
+        "writing",
+        "editing",
+        "formatting",
+        "published",
+        "archived",
+        name="book_status",
+        create_type=False,
     )
     series_status = postgresql.ENUM(
-        "planned", "active", "completed", "abandoned",
-        name="series_status", create_type=False,
+        "planned",
+        "active",
+        "completed",
+        "abandoned",
+        name="series_status",
+        create_type=False,
     )
     content_type = postgresql.ENUM(
-        "fiction", "nonfiction", "poetry", "screenplay",
-        name="content_type", create_type=False,
+        "fiction",
+        "nonfiction",
+        "poetry",
+        "screenplay",
+        name="content_type",
+        create_type=False,
     )
     manuscript_status = postgresql.ENUM(
-        "draft", "revision", "final", "archived",
-        name="manuscript_status", create_type=False,
+        "draft",
+        "revision",
+        "final",
+        "archived",
+        name="manuscript_status",
+        create_type=False,
     )
     chapter_status = postgresql.ENUM(
-        "outline", "draft", "revision", "final",
-        name="chapter_status", create_type=False,
+        "outline",
+        "draft",
+        "revision",
+        "final",
+        name="chapter_status",
+        create_type=False,
     )
     asset_type_enum = postgresql.ENUM(
-        "cover", "image", "document", "audio", "video",
-        name="asset_type", create_type=False,
+        "cover",
+        "image",
+        "document",
+        "audio",
+        "video",
+        name="asset_type",
+        create_type=False,
     )
     publishing_platform = postgresql.ENUM(
-        "kdp", "ingramspark", "d2d", "acx",
-        name="publishing_platform", create_type=False,
+        "kdp",
+        "ingramspark",
+        "d2d",
+        "acx",
+        name="publishing_platform",
+        create_type=False,
     )
     publishing_account_status = postgresql.ENUM(
-        "active", "inactive", "error", "pending",
-        name="publishing_account_status", create_type=False,
+        "active",
+        "inactive",
+        "error",
+        "pending",
+        name="publishing_account_status",
+        create_type=False,
     )
     listing_status = postgresql.ENUM(
-        "draft", "pending", "live", "suppressed", "removed",
-        name="listing_status", create_type=False,
+        "draft",
+        "pending",
+        "live",
+        "suppressed",
+        "removed",
+        name="listing_status",
+        create_type=False,
     )
     validation_type = postgresql.ENUM(
-        "format", "content", "metadata", "cover",
-        name="validation_type", create_type=False,
+        "format",
+        "content",
+        "metadata",
+        "cover",
+        name="validation_type",
+        create_type=False,
     )
     scan_type_enum = postgresql.ENUM(
-        "copyright", "trademark", "content_policy", "ai_disclosure",
-        name="scan_type", create_type=False,
+        "copyright",
+        "trademark",
+        "content_policy",
+        "ai_disclosure",
+        name="scan_type",
+        create_type=False,
     )
     risk_level = postgresql.ENUM(
-        "green", "yellow", "red",
-        name="risk_level", create_type=False,
+        "green",
+        "yellow",
+        "red",
+        name="risk_level",
+        create_type=False,
     )
     campaign_platform = postgresql.ENUM(
-        "amazon_ads", "facebook", "bookbub", "google", "tiktok",
-        name="campaign_platform", create_type=False,
+        "amazon_ads",
+        "facebook",
+        "bookbub",
+        "google",
+        "tiktok",
+        name="campaign_platform",
+        create_type=False,
     )
     campaign_status = postgresql.ENUM(
-        "draft", "active", "paused", "completed", "archived",
-        name="campaign_status", create_type=False,
+        "draft",
+        "active",
+        "paused",
+        "completed",
+        "archived",
+        name="campaign_status",
+        create_type=False,
     )
     ad_creative_type = postgresql.ENUM(
-        "image", "video", "text", "carousel",
-        name="ad_creative_type", create_type=False,
+        "image",
+        "video",
+        "text",
+        "carousel",
+        name="ad_creative_type",
+        create_type=False,
     )
     launch_plan_status = postgresql.ENUM(
-        "planning", "active", "completed", "canceled",
-        name="launch_plan_status", create_type=False,
+        "planning",
+        "active",
+        "completed",
+        "canceled",
+        name="launch_plan_status",
+        create_type=False,
     )
     agent_type_enum = postgresql.ENUM(
-        "research", "writing", "editing", "marketing", "analytics", "publishing",
-        name="agent_type", create_type=False,
+        "research",
+        "writing",
+        "editing",
+        "marketing",
+        "analytics",
+        "publishing",
+        name="agent_type",
+        create_type=False,
     )
     permission_level = postgresql.ENUM(
-        "read_only", "suggest", "execute", "autonomous",
-        name="permission_level", create_type=False,
+        "read_only",
+        "suggest",
+        "execute",
+        "autonomous",
+        name="permission_level",
+        create_type=False,
     )
     agent_task_status = postgresql.ENUM(
-        "pending", "running", "completed", "failed", "canceled",
-        name="agent_task_status", create_type=False,
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "canceled",
+        name="agent_task_status",
+        create_type=False,
     )
     budget_type_enum = postgresql.ENUM(
-        "daily", "weekly", "monthly", "per_task",
-        name="budget_type", create_type=False,
+        "daily",
+        "weekly",
+        "monthly",
+        "per_task",
+        name="budget_type",
+        create_type=False,
     )
     actor_type_enum = postgresql.ENUM(
-        "user", "agent", "system",
-        name="actor_type", create_type=False,
+        "user",
+        "agent",
+        "system",
+        name="actor_type",
+        create_type=False,
     )
     ab_test_status = postgresql.ENUM(
-        "draft", "running", "completed", "canceled",
-        name="ab_test_status", create_type=False,
+        "draft",
+        "running",
+        "completed",
+        "canceled",
+        name="ab_test_status",
+        create_type=False,
     )
     report_status = postgresql.ENUM(
-        "pending", "generating", "completed", "failed",
-        name="report_status", create_type=False,
+        "pending",
+        "generating",
+        "completed",
+        "failed",
+        name="report_status",
+        create_type=False,
     )
 
     # Create all enums
     for enum_type in [
-        plan_tier, subscription_status, user_role, project_type, project_status,
-        book_format, book_status, series_status, content_type, manuscript_status,
-        chapter_status, asset_type_enum, publishing_platform, publishing_account_status,
-        listing_status, validation_type, scan_type_enum, risk_level, campaign_platform,
-        campaign_status, ad_creative_type, launch_plan_status, agent_type_enum,
-        permission_level, agent_task_status, budget_type_enum, actor_type_enum,
-        ab_test_status, report_status,
+        plan_tier,
+        subscription_status,
+        user_role,
+        project_type,
+        project_status,
+        book_format,
+        book_status,
+        series_status,
+        content_type,
+        manuscript_status,
+        chapter_status,
+        asset_type_enum,
+        publishing_platform,
+        publishing_account_status,
+        listing_status,
+        validation_type,
+        scan_type_enum,
+        risk_level,
+        campaign_platform,
+        campaign_status,
+        ad_creative_type,
+        launch_plan_status,
+        agent_type_enum,
+        permission_level,
+        agent_task_status,
+        budget_type_enum,
+        actor_type_enum,
+        ab_test_status,
+        report_status,
     ]:
         enum_type.create(op.get_bind(), checkfirst=True)
 
@@ -168,7 +322,9 @@ def upgrade() -> None:
     op.create_index("ix_organizations_settings_gin", "organizations", ["settings"], postgresql_using="gin")
     op.create_index("ix_organizations_limits_gin", "organizations", ["limits"], postgresql_using="gin")
     op.create_index(
-        "ix_organizations_deleted_at_partial", "organizations", ["id"],
+        "ix_organizations_deleted_at_partial",
+        "organizations",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -195,7 +351,9 @@ def upgrade() -> None:
     op.create_index("ix_users_role", "users", ["role"])
     op.create_index("ix_users_preferences_gin", "users", ["preferences"], postgresql_using="gin")
     op.create_index(
-        "ix_users_deleted_at_partial", "users", ["id"],
+        "ix_users_deleted_at_partial",
+        "users",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_users_org_id_created_at", "users", ["org_id", "created_at"])
@@ -221,7 +379,9 @@ def upgrade() -> None:
     op.create_index("ix_api_keys_user_id", "api_keys", ["user_id"])
     op.create_index("ix_api_keys_scopes_gin", "api_keys", ["scopes"], postgresql_using="gin")
     op.create_index(
-        "ix_api_keys_deleted_at_partial", "api_keys", ["id"],
+        "ix_api_keys_deleted_at_partial",
+        "api_keys",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -243,7 +403,9 @@ def upgrade() -> None:
     op.create_index("ix_user_sessions_user_id", "user_sessions", ["user_id"])
     op.create_index("ix_user_sessions_device_info_gin", "user_sessions", ["device_info"], postgresql_using="gin")
     op.create_index(
-        "ix_user_sessions_deleted_at_partial", "user_sessions", ["id"],
+        "ix_user_sessions_deleted_at_partial",
+        "user_sessions",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -265,7 +427,9 @@ def upgrade() -> None:
     op.create_index("ix_pen_names_active", "pen_names", ["active"])
     op.create_index("ix_pen_names_brand_guidelines_gin", "pen_names", ["brand_guidelines"], postgresql_using="gin")
     op.create_index(
-        "ix_pen_names_deleted_at_partial", "pen_names", ["id"],
+        "ix_pen_names_deleted_at_partial",
+        "pen_names",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_pen_names_org_id_created_at", "pen_names", ["org_id", "created_at"])
@@ -291,7 +455,9 @@ def upgrade() -> None:
     op.create_index("ix_projects_status", "projects", ["status"])
     op.create_index("ix_projects_settings_gin", "projects", ["settings"], postgresql_using="gin")
     op.create_index(
-        "ix_projects_deleted_at_partial", "projects", ["id"],
+        "ix_projects_deleted_at_partial",
+        "projects",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_projects_org_id_created_at", "projects", ["org_id", "created_at"])
@@ -320,7 +486,9 @@ def upgrade() -> None:
     op.create_index("ix_books_status", "books", ["status"])
     op.create_index("ix_books_metadata_gin", "books", ["metadata"], postgresql_using="gin")
     op.create_index(
-        "ix_books_deleted_at_partial", "books", ["id"],
+        "ix_books_deleted_at_partial",
+        "books",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -344,7 +512,9 @@ def upgrade() -> None:
     op.create_index("ix_series_book_order_gin", "series", ["book_order"], postgresql_using="gin")
     op.create_index("ix_series_reading_order_gin", "series", ["reading_order"], postgresql_using="gin")
     op.create_index(
-        "ix_series_deleted_at_partial", "series", ["id"],
+        "ix_series_deleted_at_partial",
+        "series",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_series_org_id_created_at", "series", ["org_id", "created_at"])
@@ -366,7 +536,9 @@ def upgrade() -> None:
     op.create_index("ix_book_versions_book_id", "book_versions", ["book_id"])
     op.create_index("ix_book_versions_created_by", "book_versions", ["created_by"])
     op.create_index(
-        "ix_book_versions_deleted_at_partial", "book_versions", ["id"],
+        "ix_book_versions_deleted_at_partial",
+        "book_versions",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -388,7 +560,9 @@ def upgrade() -> None:
     op.create_index("ix_manuscripts_status", "manuscripts", ["status"])
     op.create_index("ix_manuscripts_content_type", "manuscripts", ["content_type"])
     op.create_index(
-        "ix_manuscripts_deleted_at_partial", "manuscripts", ["id"],
+        "ix_manuscripts_deleted_at_partial",
+        "manuscripts",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -413,13 +587,14 @@ def upgrade() -> None:
     op.create_index("ix_chapters_order_index", "chapters", ["order_index"])
     op.create_index("ix_chapters_ai_metrics_gin", "chapters", ["ai_metrics"], postgresql_using="gin")
     op.create_index(
-        "ix_chapters_deleted_at_partial", "chapters", ["id"],
+        "ix_chapters_deleted_at_partial",
+        "chapters",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     # Full-text index on chapters.content using gin_trgm_ops
     op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_chapters_content_fulltext "
-        "ON chapters USING gin (content gin_trgm_ops)"
+        "CREATE INDEX IF NOT EXISTS ix_chapters_content_fulltext " "ON chapters USING gin (content gin_trgm_ops)"
     )
 
     # ── style_profiles ─────────────────────────────────────────────────
@@ -438,12 +613,22 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_style_profiles_org_id", "style_profiles", ["org_id"])
-    op.create_index("ix_style_profiles_voice_fingerprint_gin", "style_profiles", ["voice_fingerprint"], postgresql_using="gin")
-    op.create_index("ix_style_profiles_vocabulary_stats_gin", "style_profiles", ["vocabulary_stats"], postgresql_using="gin")
-    op.create_index("ix_style_profiles_sentence_patterns_gin", "style_profiles", ["sentence_patterns"], postgresql_using="gin")
-    op.create_index("ix_style_profiles_sample_sources_gin", "style_profiles", ["sample_sources"], postgresql_using="gin")
     op.create_index(
-        "ix_style_profiles_deleted_at_partial", "style_profiles", ["id"],
+        "ix_style_profiles_voice_fingerprint_gin", "style_profiles", ["voice_fingerprint"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_style_profiles_vocabulary_stats_gin", "style_profiles", ["vocabulary_stats"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_style_profiles_sentence_patterns_gin", "style_profiles", ["sentence_patterns"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_style_profiles_sample_sources_gin", "style_profiles", ["sample_sources"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_style_profiles_deleted_at_partial",
+        "style_profiles",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_style_profiles_org_id_created_at", "style_profiles", ["org_id", "created_at"])
@@ -467,7 +652,9 @@ def upgrade() -> None:
     op.create_index("ix_writing_sessions_book_id", "writing_sessions", ["book_id"])
     op.create_index("ix_writing_sessions_chapter_id", "writing_sessions", ["chapter_id"])
     op.create_index(
-        "ix_writing_sessions_deleted_at_partial", "writing_sessions", ["id"],
+        "ix_writing_sessions_deleted_at_partial",
+        "writing_sessions",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -491,7 +678,9 @@ def upgrade() -> None:
     op.create_index("ix_content_assets_mime_type", "content_assets", ["mime_type"])
     op.create_index("ix_content_assets_metadata_gin", "content_assets", ["metadata"], postgresql_using="gin")
     op.create_index(
-        "ix_content_assets_deleted_at_partial", "content_assets", ["id"],
+        "ix_content_assets_deleted_at_partial",
+        "content_assets",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_content_assets_org_id_created_at", "content_assets", ["org_id", "created_at"])
@@ -518,7 +707,9 @@ def upgrade() -> None:
     op.create_index("ix_market_categories_path_gin", "market_categories", ["path"], postgresql_using="gin")
     op.create_index("ix_market_categories_competition_score", "market_categories", ["competition_score"])
     op.create_index(
-        "ix_market_categories_deleted_at_partial", "market_categories", ["id"],
+        "ix_market_categories_deleted_at_partial",
+        "market_categories",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -541,7 +732,9 @@ def upgrade() -> None:
     op.create_index("ix_market_keywords_search_volume", "market_keywords", ["search_volume"])
     op.create_index("ix_market_keywords_competition_score", "market_keywords", ["competition_score"])
     op.create_index(
-        "ix_market_keywords_deleted_at_partial", "market_keywords", ["id"],
+        "ix_market_keywords_deleted_at_partial",
+        "market_keywords",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -567,9 +760,13 @@ def upgrade() -> None:
     op.create_index("ix_competitor_books_asin", "competitor_books", ["asin"])
     op.create_index("ix_competitor_books_bsr_current", "competitor_books", ["bsr_current"])
     op.create_index("ix_competitor_books_bsr_history_gin", "competitor_books", ["bsr_history"], postgresql_using="gin")
-    op.create_index("ix_competitor_books_category_ids_gin", "competitor_books", ["category_ids"], postgresql_using="gin")
     op.create_index(
-        "ix_competitor_books_deleted_at_partial", "competitor_books", ["id"],
+        "ix_competitor_books_category_ids_gin", "competitor_books", ["category_ids"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_competitor_books_deleted_at_partial",
+        "competitor_books",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -577,7 +774,9 @@ def upgrade() -> None:
     op.create_table(
         "competitor_reviews",
         sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column("competitor_book_id", sa.Uuid(), sa.ForeignKey("competitor_books.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "competitor_book_id", sa.Uuid(), sa.ForeignKey("competitor_books.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("rating", sa.Float(), nullable=True),
         sa.Column("review_text", sa.Text(), nullable=True),
         sa.Column("sentiment_score", sa.Float(), nullable=True),
@@ -591,9 +790,13 @@ def upgrade() -> None:
     op.create_index("ix_competitor_reviews_competitor_book_id", "competitor_reviews", ["competitor_book_id"])
     op.create_index("ix_competitor_reviews_rating", "competitor_reviews", ["rating"])
     op.create_index("ix_competitor_reviews_sentiment_score", "competitor_reviews", ["sentiment_score"])
-    op.create_index("ix_competitor_reviews_weakness_signals_gin", "competitor_reviews", ["weakness_signals"], postgresql_using="gin")
     op.create_index(
-        "ix_competitor_reviews_deleted_at_partial", "competitor_reviews", ["id"],
+        "ix_competitor_reviews_weakness_signals_gin", "competitor_reviews", ["weakness_signals"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_competitor_reviews_deleted_at_partial",
+        "competitor_reviews",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     # Full-text index on competitor_reviews.review_text using gin_trgm_ops
@@ -617,10 +820,14 @@ def upgrade() -> None:
     )
     op.create_index("ix_market_snapshots_category_id", "market_snapshots", ["category_id"])
     op.create_index("ix_market_snapshots_snapshot_date", "market_snapshots", ["snapshot_date"])
-    op.create_index("ix_market_snapshots_top_100_asins_gin", "market_snapshots", ["top_100_asins"], postgresql_using="gin")
+    op.create_index(
+        "ix_market_snapshots_top_100_asins_gin", "market_snapshots", ["top_100_asins"], postgresql_using="gin"
+    )
     op.create_index("ix_market_snapshots_metrics_gin", "market_snapshots", ["metrics"], postgresql_using="gin")
     op.create_index(
-        "ix_market_snapshots_deleted_at_partial", "market_snapshots", ["id"],
+        "ix_market_snapshots_deleted_at_partial",
+        "market_snapshots",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -642,7 +849,9 @@ def upgrade() -> None:
     op.create_index("ix_publishing_accounts_platform", "publishing_accounts", ["platform"])
     op.create_index("ix_publishing_accounts_status", "publishing_accounts", ["status"])
     op.create_index(
-        "ix_publishing_accounts_deleted_at_partial", "publishing_accounts", ["id"],
+        "ix_publishing_accounts_deleted_at_partial",
+        "publishing_accounts",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_publishing_accounts_org_id_created_at", "publishing_accounts", ["org_id", "created_at"])
@@ -652,7 +861,12 @@ def upgrade() -> None:
         "listings",
         sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("book_id", sa.Uuid(), sa.ForeignKey("books.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("publishing_account_id", sa.Uuid(), sa.ForeignKey("publishing_accounts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "publishing_account_id",
+            sa.Uuid(),
+            sa.ForeignKey("publishing_accounts.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("platform_id", sa.String(100), nullable=True),
         sa.Column("status", listing_status, server_default="draft", nullable=False),
         sa.Column("listing_data", postgresql.JSONB(), nullable=True),
@@ -667,7 +881,9 @@ def upgrade() -> None:
     op.create_index("ix_listings_status", "listings", ["status"])
     op.create_index("ix_listings_listing_data_gin", "listings", ["listing_data"], postgresql_using="gin")
     op.create_index(
-        "ix_listings_deleted_at_partial", "listings", ["id"],
+        "ix_listings_deleted_at_partial",
+        "listings",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -693,7 +909,9 @@ def upgrade() -> None:
     op.create_index("ix_upload_validations_errors_gin", "upload_validations", ["errors"], postgresql_using="gin")
     op.create_index("ix_upload_validations_warnings_gin", "upload_validations", ["warnings"], postgresql_using="gin")
     op.create_index(
-        "ix_upload_validations_deleted_at_partial", "upload_validations", ["id"],
+        "ix_upload_validations_deleted_at_partial",
+        "upload_validations",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -717,7 +935,9 @@ def upgrade() -> None:
     op.create_index("ix_compliance_scans_findings_gin", "compliance_scans", ["findings"], postgresql_using="gin")
     op.create_index("ix_compliance_scans_reviewed_by", "compliance_scans", ["reviewed_by"])
     op.create_index(
-        "ix_compliance_scans_deleted_at_partial", "compliance_scans", ["id"],
+        "ix_compliance_scans_deleted_at_partial",
+        "compliance_scans",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -739,7 +959,9 @@ def upgrade() -> None:
     op.create_index("ix_pricing_rules_strategy", "pricing_rules", ["strategy"])
     op.create_index("ix_pricing_rules_rules_gin", "pricing_rules", ["rules"], postgresql_using="gin")
     op.create_index(
-        "ix_pricing_rules_deleted_at_partial", "pricing_rules", ["id"],
+        "ix_pricing_rules_deleted_at_partial",
+        "pricing_rules",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -765,7 +987,9 @@ def upgrade() -> None:
     op.create_index("ix_campaigns_status", "campaigns", ["status"])
     op.create_index("ix_campaigns_results_gin", "campaigns", ["results"], postgresql_using="gin")
     op.create_index(
-        "ix_campaigns_deleted_at_partial", "campaigns", ["id"],
+        "ix_campaigns_deleted_at_partial",
+        "campaigns",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_campaigns_org_id_created_at", "campaigns", ["org_id", "created_at"])
@@ -789,7 +1013,9 @@ def upgrade() -> None:
     op.create_index("ix_ad_creatives_active", "ad_creatives", ["active"])
     op.create_index("ix_ad_creatives_performance_gin", "ad_creatives", ["performance"], postgresql_using="gin")
     op.create_index(
-        "ix_ad_creatives_deleted_at_partial", "ad_creatives", ["id"],
+        "ix_ad_creatives_deleted_at_partial",
+        "ad_creatives",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -813,7 +1039,9 @@ def upgrade() -> None:
     op.create_index("ix_launch_plans_phases_gin", "launch_plans", ["phases"], postgresql_using="gin")
     op.create_index("ix_launch_plans_checklist_gin", "launch_plans", ["checklist"], postgresql_using="gin")
     op.create_index(
-        "ix_launch_plans_deleted_at_partial", "launch_plans", ["id"],
+        "ix_launch_plans_deleted_at_partial",
+        "launch_plans",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -837,7 +1065,9 @@ def upgrade() -> None:
     op.create_index("ix_email_sequences_emails_gin", "email_sequences", ["emails"], postgresql_using="gin")
     op.create_index("ix_email_sequences_performance_gin", "email_sequences", ["performance"], postgresql_using="gin")
     op.create_index(
-        "ix_email_sequences_deleted_at_partial", "email_sequences", ["id"],
+        "ix_email_sequences_deleted_at_partial",
+        "email_sequences",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_email_sequences_org_id_created_at", "email_sequences", ["org_id", "created_at"])
@@ -857,10 +1087,14 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_reader_panels_org_id", "reader_panels", ["org_id"])
-    op.create_index("ix_reader_panels_recruitment_criteria_gin", "reader_panels", ["recruitment_criteria"], postgresql_using="gin")
+    op.create_index(
+        "ix_reader_panels_recruitment_criteria_gin", "reader_panels", ["recruitment_criteria"], postgresql_using="gin"
+    )
     op.create_index("ix_reader_panels_tests_gin", "reader_panels", ["tests"], postgresql_using="gin")
     op.create_index(
-        "ix_reader_panels_deleted_at_partial", "reader_panels", ["id"],
+        "ix_reader_panels_deleted_at_partial",
+        "reader_panels",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_reader_panels_org_id_created_at", "reader_panels", ["org_id", "created_at"])
@@ -886,7 +1120,9 @@ def upgrade() -> None:
     op.create_index("ix_agents_active", "agents", ["active"])
     op.create_index("ix_agents_configuration_gin", "agents", ["configuration"], postgresql_using="gin")
     op.create_index(
-        "ix_agents_deleted_at_partial", "agents", ["id"],
+        "ix_agents_deleted_at_partial",
+        "agents",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_agents_org_id_created_at", "agents", ["org_id", "created_at"])
@@ -914,7 +1150,9 @@ def upgrade() -> None:
     op.create_index("ix_agent_tasks_input_gin", "agent_tasks", ["input"], postgresql_using="gin")
     op.create_index("ix_agent_tasks_output_gin", "agent_tasks", ["output"], postgresql_using="gin")
     op.create_index(
-        "ix_agent_tasks_deleted_at_partial", "agent_tasks", ["id"],
+        "ix_agent_tasks_deleted_at_partial",
+        "agent_tasks",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -935,9 +1173,13 @@ def upgrade() -> None:
     op.create_index("ix_agent_workflows_org_id", "agent_workflows", ["org_id"])
     op.create_index("ix_agent_workflows_active", "agent_workflows", ["active"])
     op.create_index("ix_agent_workflows_steps_gin", "agent_workflows", ["steps"], postgresql_using="gin")
-    op.create_index("ix_agent_workflows_trigger_conditions_gin", "agent_workflows", ["trigger_conditions"], postgresql_using="gin")
     op.create_index(
-        "ix_agent_workflows_deleted_at_partial", "agent_workflows", ["id"],
+        "ix_agent_workflows_trigger_conditions_gin", "agent_workflows", ["trigger_conditions"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_agent_workflows_deleted_at_partial",
+        "agent_workflows",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_agent_workflows_org_id_created_at", "agent_workflows", ["org_id", "created_at"])
@@ -960,7 +1202,9 @@ def upgrade() -> None:
     op.create_index("ix_agent_budgets_org_id", "agent_budgets", ["org_id"])
     op.create_index("ix_agent_budgets_budget_type", "agent_budgets", ["budget_type"])
     op.create_index(
-        "ix_agent_budgets_deleted_at_partial", "agent_budgets", ["id"],
+        "ix_agent_budgets_deleted_at_partial",
+        "agent_budgets",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_agent_budgets_org_id_created_at", "agent_budgets", ["org_id", "created_at"])
@@ -1037,7 +1281,9 @@ def upgrade() -> None:
     op.create_index("ix_royalty_records_period_start", "royalty_records", ["period_start"])
     op.create_index("ix_royalty_records_period_end", "royalty_records", ["period_end"])
     op.create_index(
-        "ix_royalty_records_deleted_at_partial", "royalty_records", ["id"],
+        "ix_royalty_records_deleted_at_partial",
+        "royalty_records",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -1058,10 +1304,16 @@ def upgrade() -> None:
     )
     op.create_index("ix_portfolio_metrics_org_id", "portfolio_metrics", ["org_id"])
     op.create_index("ix_portfolio_metrics_snapshot_date", "portfolio_metrics", ["snapshot_date"])
-    op.create_index("ix_portfolio_metrics_roi_by_book_gin", "portfolio_metrics", ["roi_by_book"], postgresql_using="gin")
-    op.create_index("ix_portfolio_metrics_projections_gin", "portfolio_metrics", ["projections"], postgresql_using="gin")
     op.create_index(
-        "ix_portfolio_metrics_deleted_at_partial", "portfolio_metrics", ["id"],
+        "ix_portfolio_metrics_roi_by_book_gin", "portfolio_metrics", ["roi_by_book"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_portfolio_metrics_projections_gin", "portfolio_metrics", ["projections"], postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_portfolio_metrics_deleted_at_partial",
+        "portfolio_metrics",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_portfolio_metrics_org_id_created_at", "portfolio_metrics", ["org_id", "created_at"])
@@ -1088,7 +1340,9 @@ def upgrade() -> None:
     op.create_index("ix_ab_tests_variants_gin", "ab_tests", ["variants"], postgresql_using="gin")
     op.create_index("ix_ab_tests_results_gin", "ab_tests", ["results"], postgresql_using="gin")
     op.create_index(
-        "ix_ab_tests_deleted_at_partial", "ab_tests", ["id"],
+        "ix_ab_tests_deleted_at_partial",
+        "ab_tests",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
@@ -1111,7 +1365,9 @@ def upgrade() -> None:
     op.create_index("ix_reports_status", "reports", ["status"])
     op.create_index("ix_reports_parameters_gin", "reports", ["parameters"], postgresql_using="gin")
     op.create_index(
-        "ix_reports_deleted_at_partial", "reports", ["id"],
+        "ix_reports_deleted_at_partial",
+        "reports",
+        ["id"],
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
     op.create_index("ix_reports_org_id_created_at", "reports", ["org_id", "created_at"])
@@ -1120,30 +1376,80 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Drop all tables in reverse order of creation
     tables = [
-        "reports", "ab_tests", "portfolio_metrics", "royalty_records",
-        "analytics_events", "audit_trail", "agent_budgets", "agent_workflows",
-        "agent_tasks", "agents", "reader_panels", "email_sequences",
-        "launch_plans", "ad_creatives", "campaigns", "pricing_rules",
-        "compliance_scans", "upload_validations", "listings",
-        "publishing_accounts", "market_snapshots", "competitor_reviews",
-        "competitor_books", "market_keywords", "market_categories",
-        "content_assets", "writing_sessions", "style_profiles", "chapters",
-        "manuscripts", "book_versions", "series", "books", "projects",
-        "pen_names", "user_sessions", "api_keys", "users", "organizations",
+        "reports",
+        "ab_tests",
+        "portfolio_metrics",
+        "royalty_records",
+        "analytics_events",
+        "audit_trail",
+        "agent_budgets",
+        "agent_workflows",
+        "agent_tasks",
+        "agents",
+        "reader_panels",
+        "email_sequences",
+        "launch_plans",
+        "ad_creatives",
+        "campaigns",
+        "pricing_rules",
+        "compliance_scans",
+        "upload_validations",
+        "listings",
+        "publishing_accounts",
+        "market_snapshots",
+        "competitor_reviews",
+        "competitor_books",
+        "market_keywords",
+        "market_categories",
+        "content_assets",
+        "writing_sessions",
+        "style_profiles",
+        "chapters",
+        "manuscripts",
+        "book_versions",
+        "series",
+        "books",
+        "projects",
+        "pen_names",
+        "user_sessions",
+        "api_keys",
+        "users",
+        "organizations",
     ]
     for table in tables:
         op.drop_table(table)
 
     # Drop all enum types
     enums = [
-        "report_status", "ab_test_status", "actor_type", "budget_type",
-        "agent_task_status", "permission_level", "agent_type",
-        "launch_plan_status", "ad_creative_type", "campaign_status",
-        "campaign_platform", "risk_level", "scan_type", "validation_type",
-        "listing_status", "publishing_account_status", "publishing_platform",
-        "asset_type", "chapter_status", "manuscript_status", "content_type",
-        "series_status", "book_status", "book_format", "project_status",
-        "project_type", "user_role", "subscription_status", "plan_tier",
+        "report_status",
+        "ab_test_status",
+        "actor_type",
+        "budget_type",
+        "agent_task_status",
+        "permission_level",
+        "agent_type",
+        "launch_plan_status",
+        "ad_creative_type",
+        "campaign_status",
+        "campaign_platform",
+        "risk_level",
+        "scan_type",
+        "validation_type",
+        "listing_status",
+        "publishing_account_status",
+        "publishing_platform",
+        "asset_type",
+        "chapter_status",
+        "manuscript_status",
+        "content_type",
+        "series_status",
+        "book_status",
+        "book_format",
+        "project_status",
+        "project_type",
+        "user_role",
+        "subscription_status",
+        "plan_tier",
     ]
     for enum_name in enums:
         postgresql.ENUM(name=enum_name).drop(op.get_bind(), checkfirst=True)

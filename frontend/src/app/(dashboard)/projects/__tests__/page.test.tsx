@@ -26,6 +26,10 @@ jest.mock("next/link", () => {
 
 // Mock lucide-react icons to simple elements
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Plus: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="plus-icon" {...props} />
   ),
@@ -115,6 +119,8 @@ const mockUseProjects = jest.fn();
 jest.mock("@/modules/projects/hooks", () => ({
   useProjects: (...args: unknown[]) => mockUseProjects(...args),
   // Re-export the Project type as a no-op; TypeScript types are erased at runtime
+  useDeleteProject: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useUpdateProject: () => ({ mutate: jest.fn(), mutateAsync: jest.fn().mockResolvedValue({}), isPending: false, isError: false, error: null, reset: jest.fn() }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -236,10 +242,14 @@ describe("ProjectsPage", () => {
     const projectLinks = links.filter((link) =>
       link.getAttribute("href")?.startsWith("/projects/proj-")
     );
-    expect(projectLinks).toHaveLength(3);
-    expect(projectLinks[0]).toHaveAttribute("href", "/projects/proj-1");
-    expect(projectLinks[1]).toHaveAttribute("href", "/projects/proj-2");
-    expect(projectLinks[2]).toHaveAttribute("href", "/projects/proj-3");
+    // Each card links twice — from its title and from its footer row — and the
+    // list is sorted for display, so assert the set of destinations.
+    const hrefs = projectLinks.map((link) => link.getAttribute("href"));
+    expect(Array.from(new Set(hrefs)).sort()).toEqual([
+      "/projects/proj-1",
+      "/projects/proj-2",
+      "/projects/proj-3",
+    ]);
   });
 
   it("shows empty state when no projects match", () => {
@@ -351,7 +361,7 @@ describe("ProjectsPage", () => {
     render(<ProjectsPage />);
 
     expect(
-      screen.getByText("Manage all your publishing projects")
+      screen.getByText("Manage all your book projects")
     ).toBeInTheDocument();
   });
 });

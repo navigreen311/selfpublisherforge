@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
+import uuid
 from dataclasses import dataclass
 
 import redis.asyncio as redis
@@ -100,8 +101,12 @@ class SlidingWindowRateLimiter:
         # 1. Remove expired entries (outside the window)
         pipe.zremrangebyscore(redis_key, "-inf", window_start)
 
-        # 2. Add current request with current timestamp as score
-        pipe.zadd(redis_key, {f"{now}": now})
+        # 2. Add current request, timestamp as score. The member has to be
+        #    unique per request: keyed by timestamp alone, two requests in the
+        #    same clock tick collapse into one entry and the window
+        #    under-counts.
+        member = f"{now}:{uuid.uuid4().hex}"
+        pipe.zadd(redis_key, {member: now})
 
         # 3. Count entries in the window (including the one we just added)
         pipe.zcard(redis_key)
@@ -123,7 +128,7 @@ class SlidingWindowRateLimiter:
 
         if not allowed:
             # Remove the request we just added since it's denied
-            await r.zrem(redis_key, f"{now}")
+            await r.zrem(redis_key, member)
 
             # Calculate retry_after: time until oldest request expires
             # Get the oldest entry in the window

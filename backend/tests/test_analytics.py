@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import base64
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,12 +22,8 @@ from app.modules.analytics.schemas import (
     AnalyticsEventResponse,
     DashboardData,
     KPICard,
-    OutputFormat,
-    Platform,
     PortfolioMetrics,
     ReportResponse,
-    ReportStatus,
-    ReportType,
     RevenueDataPoint,
     RevenueResponse,
     RoyaltyImportResponse,
@@ -35,10 +31,10 @@ from app.modules.analytics.schemas import (
     TrendDataPoint,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def org_id():
@@ -60,8 +56,8 @@ async def client(mock_user):
     """Yield an HTTP test client with auth and DB dependencies overridden."""
     app = create_app()
 
-    from app.database import get_db
     from app.core.dependencies import get_current_user
+    from app.database import get_db
 
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
@@ -87,11 +83,12 @@ async def client(mock_user):
 # 1. Dashboard endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestDashboard:
     @pytest.mark.asyncio
     async def test_get_dashboard_returns_200(self, client, org_id):
         """GET /api/v1/analytics/dashboard should return 200 with dashboard data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         dashboard = DashboardData(
             kpis=[
                 KPICard(label="Revenue", value="$1,000.00", change_percent=5.0, change_direction="up"),
@@ -124,11 +121,12 @@ class TestDashboard:
 # 2. Revenue endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestRevenue:
     @pytest.mark.asyncio
     async def test_get_revenue_returns_200(self, client, org_id):
         """GET /api/v1/analytics/revenue should return 200 with revenue data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         revenue = RevenueResponse(
             total_revenue=Decimal("2500.00"),
             total_units=100,
@@ -157,13 +155,13 @@ class TestRevenue:
     @pytest.mark.asyncio
     async def test_get_revenue_with_filters(self, client, org_id):
         """GET /api/v1/analytics/revenue with platform and date filters."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         revenue = RevenueResponse(
             total_revenue=Decimal("800.00"),
             total_units=30,
             data_points=[],
-            period_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            period_end=datetime(2024, 6, 30, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            period_start=datetime(2024, 1, 1, tzinfo=UTC),
+            period_end=datetime(2024, 6, 30, 23, 59, 59, 999999, tzinfo=UTC),
             aggregation=AggregationPeriod.WEEKLY,
             by_platform={},
             by_book=[],
@@ -191,11 +189,12 @@ class TestRevenue:
 # 3. Portfolio endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestPortfolio:
     @pytest.mark.asyncio
     async def test_get_portfolio_returns_200(self, client, org_id):
         """GET /api/v1/analytics/portfolio should return portfolio metrics."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         portfolio = PortfolioMetrics(
             total_books=15,
             total_revenue=Decimal("12000.00"),
@@ -225,12 +224,13 @@ class TestPortfolio:
 # 4. Events endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestEvents:
     @pytest.mark.asyncio
     async def test_record_event_returns_201(self, client, org_id):
         """POST /api/v1/analytics/events should record an event and return 201."""
         event_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         event_response = AnalyticsEventResponse(
             id=event_id,
@@ -271,12 +271,13 @@ class TestEvents:
 # 5. Reports endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestReports:
     @pytest.mark.asyncio
     async def test_generate_report_returns_201(self, client, org_id, user_id):
         """POST /api/v1/analytics/reports/generate should create a report."""
         report_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         report_response = ReportResponse(
             id=report_id,
@@ -345,9 +346,7 @@ class TestReports:
         with patch("app.modules.analytics.router.service") as mock_service:
             mock_service.get_report_by_id = AsyncMock(return_value=None)
 
-            response = await client.get(
-                f"/api/v1/analytics/reports/{report_id}/download"
-            )
+            response = await client.get(f"/api/v1/analytics/reports/{report_id}/download")
 
             assert response.status_code == 404
             body = response.json()
@@ -360,11 +359,12 @@ class TestReports:
 # 6. Trends endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestTrends:
     @pytest.mark.asyncio
     async def test_get_trends_returns_200(self, client, org_id):
         """GET /api/v1/analytics/trends should return trend data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         trends = TrendData(
             metric="revenue",
             data_points=[
@@ -396,6 +396,7 @@ class TestTrends:
 # 7. Royalties endpoints
 # ---------------------------------------------------------------------------
 
+
 class TestRoyalties:
     @pytest.mark.asyncio
     async def test_get_royalties_returns_200(self, client, org_id):
@@ -424,9 +425,7 @@ class TestRoyalties:
     @pytest.mark.asyncio
     async def test_import_royalties_returns_200(self, client, org_id):
         """POST /api/v1/analytics/royalties/import should accept CSV data."""
-        csv_content = base64.b64encode(
-            b"Title,ASIN,Units Sold,Royalty\nMy Book,B001,10,29.99"
-        ).decode()
+        csv_content = base64.b64encode(b"Title,ASIN,Units Sold,Royalty\nMy Book,B001,10,29.99").decode()
 
         import_response = RoyaltyImportResponse(
             import_batch_id=uuid.uuid4(),

@@ -18,19 +18,17 @@ raises ``KeyError``.  Tests that need rendered output therefore mock
 from __future__ import annotations
 
 import smtplib
-import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.modules.notifications.email_channel import (
-    EMAIL_TEMPLATES,
     _DEFAULT_CONTEXT,
+    EMAIL_TEMPLATES,
     _wrap_template,
     send_email,
     send_template_email,
 )
-
 
 # ===========================================================================
 # Template structure tests
@@ -119,9 +117,20 @@ class TestEmailTemplates:
 
     def test_default_context_has_all_common_keys(self):
         """_DEFAULT_CONTEXT should provide fallback values for common placeholders."""
-        required_keys = {"name", "dashboard_url", "reset_url", "invite_url",
-                         "download_url", "preferences_url", "org_name", "role",
-                         "report_name", "expiry_hours", "expiry_days", "year"}
+        required_keys = {
+            "name",
+            "dashboard_url",
+            "reset_url",
+            "invite_url",
+            "download_url",
+            "preferences_url",
+            "org_name",
+            "role",
+            "report_name",
+            "expiry_hours",
+            "expiry_days",
+            "year",
+        }
         assert required_keys.issubset(set(_DEFAULT_CONTEXT.keys()))
 
     def test_wrap_template_returns_html_string(self):

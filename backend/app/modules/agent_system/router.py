@@ -5,6 +5,7 @@ All endpoints under /api/v1/agents.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -14,7 +15,7 @@ from starlette.responses import StreamingResponse
 from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
 from app.modules.agent_system import service
-from app.modules.agent_system.audit import list_audit_entries
+from app.modules.agent_system.audit import list_audit_entries, record_audit
 from app.modules.agent_system.governance import (
     emergency_stop as gov_emergency_stop,
 )
@@ -37,7 +38,6 @@ from app.modules.agent_system.schemas import (
     CustomAgentCreateRequest,
     EmergencyStopResponse,
     TaskApproveRequest,
-    TaskApproveResponse,
     TaskCancelRequest,
     TaskCreate,
     TaskCreateRequest,
@@ -67,19 +67,11 @@ def _get_client_ip(request: Request) -> str | None:
 def _compute_budget_pcts(budget) -> dict:
     """Compute percentage fields for a budget."""
     daily_token_pct = (
-        (budget.tokens_used_today / budget.daily_token_limit * 100)
-        if budget.daily_token_limit > 0
-        else 0.0
+        (budget.tokens_used_today / budget.daily_token_limit * 100) if budget.daily_token_limit > 0 else 0.0
     )
-    daily_usd_pct = (
-        (budget.usd_used_today / budget.daily_usd_limit * 100)
-        if budget.daily_usd_limit > 0
-        else 0.0
-    )
+    daily_usd_pct = (budget.usd_used_today / budget.daily_usd_limit * 100) if budget.daily_usd_limit > 0 else 0.0
     monthly_usd_pct = (
-        (budget.usd_used_this_month / budget.monthly_usd_limit * 100)
-        if budget.monthly_usd_limit > 0
-        else 0.0
+        (budget.usd_used_this_month / budget.monthly_usd_limit * 100) if budget.monthly_usd_limit > 0 else 0.0
     )
     return {
         "daily_token_pct": round(daily_token_pct, 2),
@@ -265,7 +257,7 @@ async def approve_task(
             ip_address=_get_client_ip(request),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
@@ -296,7 +288,7 @@ async def reject_task(
             ip_address=_get_client_ip(request),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
@@ -327,7 +319,7 @@ async def cancel_task(
             ip_address=_get_client_ip(request),
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
@@ -425,9 +417,9 @@ async def get_budgets(
     description="Update budget limits for a specific agent. Requires admin or owner role.",
 )
 async def update_budgets(
+    payload: BudgetUpdate,
+    request: Request,
     agent_id: UUID = Query(...),
-    payload: BudgetUpdate = ...,
-    request: Request = ...,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role("admin", "owner")),
 ):
@@ -709,7 +701,8 @@ async def get_agent_usage(
 ):
     """Get usage statistics for agents."""
     from sqlalchemy import func, select
-    from app.modules.agent_system.models import AgentTask, Agent
+
+    from app.modules.agent_system.models import Agent, AgentTask
 
     # Parse period to days
     days = 30
@@ -718,12 +711,12 @@ async def get_agent_usage(
 
     # Calculate date threshold
     from datetime import timedelta
+
     threshold = datetime.now(UTC) - timedelta(days=days)
 
     # Total tasks
     total_result = await db.execute(
-        select(func.count(AgentTask.id))
-        .where(
+        select(func.count(AgentTask.id)).where(
             AgentTask.org_id == current_user["org_id"],
             AgentTask.created_at >= threshold,
         )
@@ -732,8 +725,7 @@ async def get_agent_usage(
 
     # Running tasks
     running_result = await db.execute(
-        select(func.count(AgentTask.id))
-        .where(
+        select(func.count(AgentTask.id)).where(
             AgentTask.org_id == current_user["org_id"],
             AgentTask.status == TaskStatus.RUNNING,
         )
@@ -745,8 +737,7 @@ async def get_agent_usage(
         select(
             func.sum(AgentTask.tokens_used),
             func.sum(AgentTask.cost_usd),
-        )
-        .where(
+        ).where(
             AgentTask.org_id == current_user["org_id"],
             AgentTask.created_at >= threshold,
         )
@@ -820,13 +811,17 @@ async def configure_agent(
             "context_sources": payload.context_sources,
             "budget_per_task": payload.budget_per_task,
             "monthly_budget": payload.monthly_budget,
-        } if any([
-            payload.default_execution_mode,
-            payload.task_types,
-            payload.context_sources,
-            payload.budget_per_task,
-            payload.monthly_budget,
-        ]) else None,
+        }
+        if any(
+            [
+                payload.default_execution_mode,
+                payload.task_types,
+                payload.context_sources,
+                payload.budget_per_task,
+                payload.monthly_budget,
+            ]
+        )
+        else None,
     )
 
     agent = await service.update_agent_config(

@@ -5,22 +5,20 @@ mocking only the database session and authentication dependencies.
 Follows the pattern from test_user_api.py.
 """
 
-import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.modules.auth.router import router
-from app.database import get_db
 from app.core.dependencies import get_current_user
-from app.core.exceptions import AppException
 from app.core.error_handler import app_exception_handler
-from app.modules.auth.utils import generate_token_hash, generate_totp_secret, verify_totp
+from app.core.exceptions import AppException
+from app.database import get_db
 from app.models.user import UserRole
-
+from app.modules.auth.router import router
+from app.modules.auth.utils import generate_token_hash, generate_totp_secret
 
 # ---------------------------------------------------------------------------
 # Fixtures & helpers
@@ -130,6 +128,7 @@ def _create_app_no_auth() -> tuple[FastAPI, AsyncMock]:
 # Forgot Password Tests
 # ===========================================================================
 
+
 class TestForgotPassword:
     """Tests for POST /api/v1/auth/forgot-password."""
 
@@ -194,6 +193,7 @@ class TestForgotPassword:
 # Reset Password Tests
 # ===========================================================================
 
+
 class TestResetPassword:
     """Tests for POST /api/v1/auth/reset-password."""
 
@@ -206,7 +206,7 @@ class TestResetPassword:
         token_hash = generate_token_hash(raw_token)
         user_mock = _make_user_mock(
             password_reset_token=token_hash,
-            password_reset_expires=datetime.now(timezone.utc) + timedelta(hours=1),
+            password_reset_expires=datetime.now(UTC) + timedelta(hours=1),
         )
         mock_db.execute.return_value = _make_scalar_result(user_mock)
 
@@ -289,7 +289,7 @@ class TestResetPassword:
         token_hash = generate_token_hash(raw_token)
         user_mock = _make_user_mock(
             password_reset_token=token_hash,
-            password_reset_expires=datetime.now(timezone.utc) + timedelta(hours=1),
+            password_reset_expires=datetime.now(UTC) + timedelta(hours=1),
         )
         # First call returns the user, second call is the session deletion
         mock_db.execute.return_value = _make_scalar_result(user_mock)
@@ -310,6 +310,7 @@ class TestResetPassword:
 # ===========================================================================
 # MFA Setup Tests
 # ===========================================================================
+
 
 class TestMFASetup:
     """Tests for POST /api/v1/auth/mfa/setup."""
@@ -376,6 +377,7 @@ class TestMFASetup:
 # ===========================================================================
 # MFA Verify Tests
 # ===========================================================================
+
 
 class TestMFAVerify:
     """Tests for POST /api/v1/auth/mfa/verify."""
@@ -486,6 +488,7 @@ class TestMFAVerify:
 # MFA Disable Tests
 # ===========================================================================
 
+
 class TestMFADisable:
     """Tests for POST /api/v1/auth/mfa/disable."""
 
@@ -579,6 +582,7 @@ class TestMFADisable:
 # Verify Email Tests
 # ===========================================================================
 
+
 class TestVerifyEmail:
     """Tests for POST /api/v1/auth/verify-email."""
 
@@ -591,7 +595,7 @@ class TestVerifyEmail:
         user_mock = _make_user_mock(
             email_verified=False,
             email_verify_token=token_hash,
-            email_verify_expires=datetime.now(timezone.utc) + timedelta(hours=48),
+            email_verify_expires=datetime.now(UTC) + timedelta(hours=48),
         )
         mock_db.execute.return_value = _make_scalar_result(user_mock)
 

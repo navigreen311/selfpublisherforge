@@ -138,8 +138,7 @@ TAGS_METADATA: list[dict[str, Any]] = [
     {
         "name": "pipelines",
         "description": (
-            "Production Pipeline -- manuscript formatting, "
-            "EPUB/PDF export orchestration, and stage tracking."
+            "Production Pipeline -- manuscript formatting, " "EPUB/PDF export orchestration, and stage tracking."
         ),
     },
     {
@@ -170,8 +169,7 @@ TAGS_METADATA: list[dict[str, Any]] = [
     {
         "name": "marketing",
         "description": (
-            "Marketing & Launch Command -- launch plans, email sequences, "
-            "social media content, and ARC campaigns."
+            "Marketing & Launch Command -- launch plans, email sequences, " "social media content, and ARC campaigns."
         ),
     },
     {
@@ -196,8 +194,7 @@ TAGS_METADATA: list[dict[str, Any]] = [
     {
         "name": "agents",
         "description": (
-            "AI Agent System -- autonomous task execution with governance, "
-            "budgets, approvals, and audit logs."
+            "AI Agent System -- autonomous task execution with governance, " "budgets, approvals, and audit logs."
         ),
     },
     {
@@ -267,6 +264,7 @@ _SECURITY_SCHEMES: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def custom_openapi_schema(app: FastAPI) -> Callable[[], dict[str, Any]]:
     """Return a zero-arg callable that lazily builds and caches the OpenAPI schema.

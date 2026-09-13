@@ -22,6 +22,7 @@ def _utcnow() -> datetime:
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class TaskTypeEnum(str, Enum):
     """Mirrors router_config.TaskType for API validation."""
 
@@ -47,6 +48,7 @@ class QualityLevelEnum(str, Enum):
 # Chat messages
 # ---------------------------------------------------------------------------
 
+
 class ChatMessage(BaseModel):
     """A single message in a chat conversation."""
 
@@ -61,6 +63,7 @@ class ChatMessage(BaseModel):
 # ---------------------------------------------------------------------------
 # Model configuration
 # ---------------------------------------------------------------------------
+
 
 class ModelConfig(BaseModel):
     """Per-request model configuration overrides."""
@@ -81,6 +84,7 @@ class ModelConfig(BaseModel):
 # ---------------------------------------------------------------------------
 # Completion request / response
 # ---------------------------------------------------------------------------
+
 
 class CompletionRequest(BaseModel):
     """Request body for a single-turn LLM completion."""
@@ -107,6 +111,7 @@ class CompletionRequest(BaseModel):
 
 class CompletionResponse(BaseModel):
     """Response body for a completed LLM generation."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     content: str = ""
@@ -129,6 +134,7 @@ class CompletionResponse(BaseModel):
 # Chat request / response
 # ---------------------------------------------------------------------------
 
+
 class ChatRequest(BaseModel):
     """Request body for a multi-turn chat completion.
 
@@ -149,6 +155,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     """Response body for a chat completion."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     content: str = ""
@@ -171,8 +178,10 @@ class ChatResponse(BaseModel):
 # Cost estimation
 # ---------------------------------------------------------------------------
 
+
 class CostEstimateRequest(BaseModel):
     """Request body for estimating the cost of a generation."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     model_id: str = Field(
@@ -185,6 +194,7 @@ class CostEstimateRequest(BaseModel):
 
 class CostEstimate(BaseModel):
     """Estimated USD cost for a generation request."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     model_id: str
@@ -198,6 +208,7 @@ class CostEstimate(BaseModel):
 # ---------------------------------------------------------------------------
 # Quality report
 # ---------------------------------------------------------------------------
+
 
 class QualityReport(BaseModel):
     """Quality assessment of a generated LLM response."""
@@ -225,6 +236,7 @@ class QualityReport(BaseModel):
 # ---------------------------------------------------------------------------
 # Usage statistics
 # ---------------------------------------------------------------------------
+
 
 class UsageStats(BaseModel):
     """Aggregated usage statistics for an organization."""

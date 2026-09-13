@@ -24,9 +24,6 @@ import pytest
 from app.modules.specialty_books.service_kindle_export import (
     DEVICE_SPECS,
     KDP_MAX_FILE_SIZE_BYTES,
-    TRIM_TO_VIEWPORT,
-    DevicePreviewResponse,
-    ExportFormat,
     FixedLayoutEPUBResponse,
     HighlightMode,
     KindleDevice,
@@ -34,16 +31,16 @@ from app.modules.specialty_books.service_kindle_export import (
     KPFExportResponse,
     MultiDevicePreviewResponse,
     ReadAloudSyncResponse,
+    _build_ncx,
+    _build_opf,
+    _build_text_popups,
+    _compute_simulated_file_size,
+    _viewport_for_trim,
     generate_device_preview,
     generate_fixed_epub,
     generate_kpf,
     generate_read_aloud_sync,
     validate_kindle_export,
-    _build_opf,
-    _build_ncx,
-    _build_text_popups,
-    _viewport_for_trim,
-    _compute_simulated_file_size,
 )
 
 # ---------------------------------------------------------------------------
@@ -170,9 +167,7 @@ class TestDevicePreview:
 
     @pytest.mark.asyncio
     async def test_paperwhite_preview_is_grayscale(self):
-        result = await generate_device_preview(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.KINDLE_PAPERWHITE
-        )
+        result = await generate_device_preview(None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.KINDLE_PAPERWHITE)
         pw = result.previews[0]
         assert pw.grayscale is True
         assert pw.resolution_width == 1236
@@ -183,9 +178,7 @@ class TestDevicePreview:
 
     @pytest.mark.asyncio
     async def test_non_paperwhite_is_color(self):
-        result = await generate_device_preview(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.KINDLE_FIRE_HD_10
-        )
+        result = await generate_device_preview(None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.KINDLE_FIRE_HD_10)
         preview = result.previews[0]
         assert preview.grayscale is False
         for pp in preview.page_previews:
@@ -193,9 +186,7 @@ class TestDevicePreview:
 
     @pytest.mark.asyncio
     async def test_single_device_preview(self):
-        result = await generate_device_preview(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.IPAD
-        )
+        result = await generate_device_preview(None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.IPAD)
         assert len(result.previews) == 1
         assert result.previews[0].device == KindleDevice.IPAD
         assert result.previews[0].resolution_width == 2048
@@ -203,9 +194,7 @@ class TestDevicePreview:
 
     @pytest.mark.asyncio
     async def test_device_preview_has_frame_overlay(self):
-        result = await generate_device_preview(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.IPHONE
-        )
+        result = await generate_device_preview(None, BOOK_TYPE, BOOK_ID, ORG_ID, KindleDevice.IPHONE)
         assert result.previews[0].frame_overlay_url is not None
         assert "iphone" in result.previews[0].frame_overlay_url
 
@@ -235,9 +224,7 @@ class TestReadAloudSync:
 
     @pytest.mark.asyncio
     async def test_sentence_mode_maps_regions(self):
-        result = await generate_read_aloud_sync(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE
-        )
+        result = await generate_read_aloud_sync(None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE)
         assert isinstance(result, ReadAloudSyncResponse)
         assert result.highlight_mode == HighlightMode.SENTENCE
         assert result.total_regions > 0
@@ -246,22 +233,16 @@ class TestReadAloudSync:
 
     @pytest.mark.asyncio
     async def test_word_mode_maps_regions(self):
-        result = await generate_read_aloud_sync(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.WORD
-        )
+        result = await generate_read_aloud_sync(None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.WORD)
         assert result.highlight_mode == HighlightMode.WORD
         assert result.total_regions > 0
         # Word mode should produce more regions than sentence mode
-        sentence_result = await generate_read_aloud_sync(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE
-        )
+        sentence_result = await generate_read_aloud_sync(None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE)
         assert result.total_regions > sentence_result.total_regions
 
     @pytest.mark.asyncio
     async def test_sync_regions_have_bounding_boxes(self):
-        result = await generate_read_aloud_sync(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE
-        )
+        result = await generate_read_aloud_sync(None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE)
         for region in result.regions:
             assert "x" in region.bounding_box
             assert "y" in region.bounding_box
@@ -270,9 +251,7 @@ class TestReadAloudSync:
 
     @pytest.mark.asyncio
     async def test_sync_timing_is_sequential(self):
-        result = await generate_read_aloud_sync(
-            None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE
-        )
+        result = await generate_read_aloud_sync(None, BOOK_TYPE, BOOK_ID, ORG_ID, HighlightMode.SENTENCE)
         for i in range(1, len(result.regions)):
             assert result.regions[i].start_ms >= result.regions[i - 1].end_ms
 

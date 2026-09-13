@@ -5,10 +5,11 @@ default management.
 
 ~14 test cases.
 """
+
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -26,14 +27,21 @@ class TestStyleCloneCRUD:
         """Create a style clone profile with name and sample images."""
         mock_service = AsyncMock()
         mock_service.create_profile.return_value = {
-            "id": str(PROFILE_ID), "name": "Watercolor Whimsy",
-            "book_type": "childrens", "description": "Soft watercolor style",
+            "id": str(PROFILE_ID),
+            "name": "Watercolor Whimsy",
+            "book_type": "childrens",
+            "description": "Soft watercolor style",
             "sample_image_ids": [str(uuid.uuid4()), str(uuid.uuid4())],
-            "style_prompt": "", "is_default": False, "org_id": str(ORG_ID),
+            "style_prompt": "",
+            "is_default": False,
+            "org_id": str(ORG_ID),
         }
         result = await mock_service.create_profile(
-            org_id=ORG_ID, name="Watercolor Whimsy", book_type="childrens",
-            description="Soft watercolor style", sample_image_ids=[uuid.uuid4(), uuid.uuid4()],
+            org_id=ORG_ID,
+            name="Watercolor Whimsy",
+            book_type="childrens",
+            description="Soft watercolor style",
+            sample_image_ids=[uuid.uuid4(), uuid.uuid4()],
         )
         assert result["name"] == "Watercolor Whimsy"
         assert result["book_type"] == "childrens"
@@ -46,7 +54,10 @@ class TestStyleCloneCRUD:
         mock_service = AsyncMock()
         profiles = [{"id": str(uuid.uuid4()), "name": f"Style {i}"} for i in range(6)]
         mock_service.list_profiles.return_value = {
-            "items": profiles[:3], "total": 6, "page": 1, "page_size": 3,
+            "items": profiles[:3],
+            "total": 6,
+            "page": 1,
+            "page_size": 3,
         }
         result = await mock_service.list_profiles(org_id=ORG_ID, page=1, page_size=3)
         assert len(result["items"]) == 3
@@ -57,7 +68,8 @@ class TestStyleCloneCRUD:
         """Filter style profiles by book type."""
         mock_service = AsyncMock()
         mock_service.list_profiles.return_value = {
-            "items": [{"id": str(PROFILE_ID), "book_type": "coloring"}], "total": 1,
+            "items": [{"id": str(PROFILE_ID), "book_type": "coloring"}],
+            "total": 1,
         }
         result = await mock_service.list_profiles(org_id=ORG_ID, book_type="coloring")
         assert all(p["book_type"] == "coloring" for p in result["items"])
@@ -67,11 +79,15 @@ class TestStyleCloneCRUD:
         """Get a single style profile with full attributes."""
         mock_service = AsyncMock()
         mock_service.get_profile.return_value = {
-            "id": str(PROFILE_ID), "name": "Watercolor Whimsy",
-            "book_type": "childrens", "style_prompt": "watercolor, soft edges",
+            "id": str(PROFILE_ID),
+            "name": "Watercolor Whimsy",
+            "book_type": "childrens",
+            "style_prompt": "watercolor, soft edges",
             "style_attributes": {
-                "color_palette": "warm_pastels", "line_quality": "soft",
-                "texture": "watercolor_paper", "detail_level": "medium",
+                "color_palette": "warm_pastels",
+                "line_quality": "soft",
+                "texture": "watercolor_paper",
+                "detail_level": "medium",
             },
             "is_default": True,
         }
@@ -84,11 +100,13 @@ class TestStyleCloneCRUD:
         """Update profile name and description."""
         mock_service = AsyncMock()
         mock_service.update_profile.return_value = {
-            "id": str(PROFILE_ID), "name": "Updated Watercolor",
+            "id": str(PROFILE_ID),
+            "name": "Updated Watercolor",
             "description": "Updated description with bolder tones",
         }
         result = await mock_service.update_profile(
-            profile_id=PROFILE_ID, name="Updated Watercolor",
+            profile_id=PROFILE_ID,
+            name="Updated Watercolor",
             description="Updated description with bolder tones",
         )
         assert result["name"] == "Updated Watercolor"
@@ -112,8 +130,10 @@ class TestStyleAnalysis:
         mock_service.analyze_style.return_value = {
             "profile_id": str(PROFILE_ID),
             "attributes": {
-                "color_palette": "warm_pastels", "line_quality": "soft_flowing",
-                "texture": "watercolor_paper", "detail_level": "medium",
+                "color_palette": "warm_pastels",
+                "line_quality": "soft_flowing",
+                "texture": "watercolor_paper",
+                "detail_level": "medium",
             },
             "confidence": 0.87,
         }
@@ -155,7 +175,8 @@ class TestStyleGeneration:
             "prompt_used": "A friendly bear in a forest, watercolor style",
         }
         result = await mock_service.test_generate(
-            profile_id=PROFILE_ID, prompt="A friendly bear in a forest",
+            profile_id=PROFILE_ID,
+            prompt="A friendly bear in a forest",
         )
         assert len(result["images"]) == 2
         assert all("url" in img for img in result["images"])
@@ -170,7 +191,9 @@ class TestStyleGeneration:
             "images": [{"url": f"https://example.com/gen_{i}.png", "seed": i} for i in range(requested_count)],
         }
         result = await mock_service.test_generate(
-            profile_id=PROFILE_ID, prompt="Test prompt", count=requested_count,
+            profile_id=PROFILE_ID,
+            prompt="Test prompt",
+            count=requested_count,
         )
         assert len(result["images"]) == requested_count
 
@@ -183,7 +206,8 @@ class TestDriftDetection:
         """Verify drift check returns a drift score."""
         mock_service = AsyncMock()
         mock_service.check_drift.return_value = {
-            "profile_id": str(PROFILE_ID), "image_id": str(uuid.uuid4()),
+            "profile_id": str(PROFILE_ID),
+            "image_id": str(uuid.uuid4()),
             "drift_score": 0.15,
             "details": {"color_drift": 0.1, "line_drift": 0.2, "texture_drift": 0.15},
             "within_tolerance": True,
@@ -198,7 +222,8 @@ class TestDriftDetection:
         mock_service = AsyncMock()
         for expected_score in [0.0, 0.25, 0.5, 0.75, 1.0]:
             mock_service.check_drift.return_value = {
-                "profile_id": str(PROFILE_ID), "drift_score": expected_score,
+                "profile_id": str(PROFILE_ID),
+                "drift_score": expected_score,
                 "within_tolerance": expected_score < 0.3,
             }
             result = await mock_service.check_drift(profile_id=PROFILE_ID, image_id=uuid.uuid4())
@@ -213,8 +238,10 @@ class TestDefaultManagement:
         """Verify a profile can be set as the default for its book type."""
         mock_service = AsyncMock()
         mock_service.set_default.return_value = {
-            "id": str(PROFILE_ID), "name": "Watercolor Whimsy",
-            "book_type": "childrens", "is_default": True,
+            "id": str(PROFILE_ID),
+            "name": "Watercolor Whimsy",
+            "book_type": "childrens",
+            "is_default": True,
         }
         result = await mock_service.set_default(profile_id=PROFILE_ID, book_type="childrens")
         assert result["is_default"] is True
@@ -225,20 +252,26 @@ class TestDefaultManagement:
         """Verify setting a new default unsets the previous default for that book type."""
         mock_service = AsyncMock()
         mock_service.set_default.return_value = {
-            "id": str(PROFILE_ID), "is_default": True, "book_type": "childrens",
+            "id": str(PROFILE_ID),
+            "is_default": True,
+            "book_type": "childrens",
         }
         result_a = await mock_service.set_default(profile_id=PROFILE_ID, book_type="childrens")
         assert result_a["is_default"] is True
 
         mock_service.set_default.return_value = {
-            "id": str(OTHER_PROFILE_ID), "is_default": True, "book_type": "childrens",
+            "id": str(OTHER_PROFILE_ID),
+            "is_default": True,
+            "book_type": "childrens",
         }
         result_b = await mock_service.set_default(profile_id=OTHER_PROFILE_ID, book_type="childrens")
         assert result_b["is_default"] is True
         assert result_b["id"] == str(OTHER_PROFILE_ID)
 
         mock_service.get_profile.return_value = {
-            "id": str(PROFILE_ID), "is_default": False, "book_type": "childrens",
+            "id": str(PROFILE_ID),
+            "is_default": False,
+            "book_type": "childrens",
         }
         result_check = await mock_service.get_profile(profile_id=PROFILE_ID)
         assert result_check["is_default"] is False

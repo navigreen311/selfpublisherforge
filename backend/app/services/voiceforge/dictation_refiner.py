@@ -58,8 +58,16 @@ class DictationRefiner:
 
     # Common filler words to remove in regex fallback
     FILLERS: ClassVar[list[str]] = [
-        "um", "uh", "er", "ah", "like", "you know",
-        "i mean", "sort of", "kind of", "basically",
+        "um",
+        "uh",
+        "er",
+        "ah",
+        "like",
+        "you know",
+        "i mean",
+        "sort of",
+        "kind of",
+        "basically",
     ]
 
     async def refine_transcript(
@@ -98,8 +106,8 @@ class DictationRefiner:
             "3. Remove filler words (um, uh, like, you know, etc.) and false starts\n"
             "4. Split into proper sentences\n"
             "5. Group into logical paragraphs\n"
-            "6. Convert spoken voice commands: \"new paragraph\" → paragraph break, "
-            "\"period\" → \".\"\n"
+            '6. Convert spoken voice commands: "new paragraph" → paragraph break, '
+            '"period" → "."\n'
             "7. Preserve the original meaning and content exactly\n\n"
             f"Raw dictation:\n{raw_text}\n\n"
             "Return ONLY the cleaned text, no explanation."
@@ -136,7 +144,10 @@ class DictationRefiner:
         # Remove fillers
         for filler in self.FILLERS:
             result = re.sub(
-                rf"\b{re.escape(filler)}\b[,]?\s*", "", result, flags=re.IGNORECASE,
+                rf"\b{re.escape(filler)}\b[,]?\s*",
+                "",
+                result,
+                flags=re.IGNORECASE,
             )
 
         # Remove repeated words (e.g. "the the" → "the")
@@ -170,7 +181,10 @@ class DictationRefiner:
         result = text
         for filler in self.FILLERS:
             result = re.sub(
-                rf"\b{re.escape(filler)}\b[,]?\s*", "", result, flags=re.IGNORECASE,
+                rf"\b{re.escape(filler)}\b[,]?\s*",
+                "",
+                result,
+                flags=re.IGNORECASE,
             )
         return re.sub(r"\s+", " ", result).strip()
 
@@ -233,21 +247,37 @@ class DictationRefiner:
             original = " ".join(raw_words[i1:i2])
             new = " ".join(refined_words[j1:j2])
             if op == "equal":
-                segments.append(DiffSegment(
-                    type="unchanged", original_text=original, new_text=new,
-                ))
+                segments.append(
+                    DiffSegment(
+                        type="unchanged",
+                        original_text=original,
+                        new_text=new,
+                    )
+                )
             elif op == "replace":
-                segments.append(DiffSegment(
-                    type="changed", original_text=original, new_text=new,
-                ))
+                segments.append(
+                    DiffSegment(
+                        type="changed",
+                        original_text=original,
+                        new_text=new,
+                    )
+                )
             elif op == "insert":
-                segments.append(DiffSegment(
-                    type="added", original_text="", new_text=new,
-                ))
+                segments.append(
+                    DiffSegment(
+                        type="added",
+                        original_text="",
+                        new_text=new,
+                    )
+                )
             elif op == "delete":
-                segments.append(DiffSegment(
-                    type="removed", original_text=original, new_text="",
-                ))
+                segments.append(
+                    DiffSegment(
+                        type="removed",
+                        original_text=original,
+                        new_text="",
+                    )
+                )
         return segments
 
     def _summarize_changes(self, raw: str, refined: str) -> dict:

@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for Portfolio Economics, Audience DNA, and Seasonal Calendar."""
+
 from datetime import UTC, date, datetime
 from enum import Enum
 from uuid import UUID
@@ -6,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
+
 
 class DecisionType(str, Enum):
     KILL = "kill"
@@ -41,8 +43,10 @@ class ProjectionPeriod(str, Enum):
 
 # ─── Portfolio Economics Schemas ──────────────────────────────────────────────
 
+
 class GreenlightRequest(BaseModel):
     """Request to evaluate a book idea's ROI potential."""
+
     model_config = ConfigDict(from_attributes=True)
 
     title: str = Field(..., min_length=1, max_length=500, description="Working title of the book")
@@ -61,6 +65,7 @@ class GreenlightRequest(BaseModel):
 
 class GreenlightResult(BaseModel):
     """ROI forecast for a book idea."""
+
     model_config = ConfigDict(from_attributes=True)
 
     title: str
@@ -90,6 +95,7 @@ class GreenlightResult(BaseModel):
 
 class KillScaleRequest(BaseModel):
     """Request for kill/scale analysis on an existing book."""
+
     model_config = ConfigDict(from_attributes=True)
 
     book_id: UUID
@@ -108,6 +114,7 @@ class KillScaleRequest(BaseModel):
 
 class KillScaleDecision(BaseModel):
     """Kill or scale recommendation for a book."""
+
     model_config = ConfigDict(from_attributes=True)
 
     book_id: UUID
@@ -132,26 +139,24 @@ class KillScaleDecision(BaseModel):
 
 class BacklistProjection(BaseModel):
     """Revenue projection for backlist compounding."""
+
     model_config = ConfigDict(from_attributes=True)
 
     period: ProjectionPeriod
     months: int
     monthly_projections: list[dict] = Field(
-        default_factory=list,
-        description="Month-by-month revenue projections [{month, revenue, cumulative}]"
+        default_factory=list, description="Month-by-month revenue projections [{month, revenue, cumulative}]"
     )
     total_projected_revenue: float = Field(..., ge=0.0)
     total_projected_royalty: float = Field(..., ge=0.0)
     average_monthly_revenue: float = Field(..., ge=0.0)
-    compounding_factor: float = Field(
-        ..., ge=0.0,
-        description="Revenue growth multiplier from backlist effects"
-    )
+    compounding_factor: float = Field(..., ge=0.0, description="Revenue growth multiplier from backlist effects")
     assumptions: dict = Field(default_factory=dict)
 
 
 class BookSummary(BaseModel):
     """Summary of a book in the portfolio."""
+
     model_config = ConfigDict(from_attributes=True)
 
     book_id: UUID
@@ -167,6 +172,7 @@ class BookSummary(BaseModel):
 
 class PortfolioOverview(BaseModel):
     """Full portfolio overview with aggregated metrics."""
+
     model_config = ConfigDict(from_attributes=True)
 
     org_id: UUID
@@ -186,6 +192,7 @@ class PortfolioOverview(BaseModel):
 
 class PortfolioRecommendation(BaseModel):
     """AI-generated recommendation for portfolio optimization."""
+
     model_config = ConfigDict(from_attributes=True)
 
     category: str = Field(..., description="diversification / optimization / growth / risk")
@@ -198,8 +205,10 @@ class PortfolioRecommendation(BaseModel):
 
 # ─── Audience DNA Schemas ─────────────────────────────────────────────────────
 
+
 class AudienceAnalyzeRequest(BaseModel):
     """Request to build audience profile from book data."""
+
     model_config = ConfigDict(from_attributes=True)
 
     book_id: UUID | None = None
@@ -214,6 +223,7 @@ class AudienceAnalyzeRequest(BaseModel):
 
 class AudiencePersona(BaseModel):
     """Reader persona profile."""
+
     model_config = ConfigDict(from_attributes=True)
 
     persona_id: UUID
@@ -226,8 +236,7 @@ class AudiencePersona(BaseModel):
     preferred_formats: list[str] = Field(default_factory=list, description="['ebook', 'paperback', 'audio']")
     price_sensitivity: str = Field(..., description="low / medium / high")
     discovery_channels: list[str] = Field(
-        default_factory=list,
-        description="How they find books: ['amazon_search', 'bookstagram', 'newsletters']"
+        default_factory=list, description="How they find books: ['amazon_search', 'bookstagram', 'newsletters']"
     )
     motivations: list[str] = Field(default_factory=list, description="Why they read this genre")
     pain_points: list[str] = Field(default_factory=list, description="What frustrates them")
@@ -238,6 +247,7 @@ class AudiencePersona(BaseModel):
 
 class AlsoBoughtItem(BaseModel):
     """A single also-bought title."""
+
     model_config = ConfigDict(from_attributes=True)
 
     asin: str
@@ -247,14 +257,12 @@ class AlsoBoughtItem(BaseModel):
     price: float = 0.0
     rating: float = 0.0
     review_count: int = 0
-    overlap_score: float = Field(
-        0.0, ge=0.0, le=1.0,
-        description="How much audience overlap exists"
-    )
+    overlap_score: float = Field(0.0, ge=0.0, le=1.0, description="How much audience overlap exists")
 
 
 class AlsoBoughtIntelligence(BaseModel):
     """Also-bought analysis for a book."""
+
     model_config = ConfigDict(from_attributes=True)
 
     book_id: UUID
@@ -269,6 +277,7 @@ class AlsoBoughtIntelligence(BaseModel):
 
 class AudienceGrowthPoint(BaseModel):
     """A single data point in audience growth tracking."""
+
     model_config = ConfigDict(from_attributes=True)
 
     date: date
@@ -281,6 +290,7 @@ class AudienceGrowthPoint(BaseModel):
 
 class AudienceGrowthResponse(BaseModel):
     """Audience growth tracking response."""
+
     model_config = ConfigDict(from_attributes=True)
 
     org_id: UUID
@@ -294,6 +304,7 @@ class AudienceGrowthResponse(BaseModel):
 
 class ChurnPredictionRequest(BaseModel):
     """Request for churn prediction."""
+
     model_config = ConfigDict(from_attributes=True)
 
     book_id: UUID | None = None
@@ -307,6 +318,7 @@ class ChurnPredictionRequest(BaseModel):
 
 class ChurnPredictionResult(BaseModel):
     """Churn prediction result."""
+
     model_config = ConfigDict(from_attributes=True)
 
     churn_risk: ChurnRisk
@@ -319,8 +331,10 @@ class ChurnPredictionResult(BaseModel):
 
 # ─── Seasonal Calendar Schemas ────────────────────────────────────────────────
 
+
 class SeasonalEvent(BaseModel):
     """A seasonal event relevant to publishing."""
+
     model_config = ConfigDict(from_attributes=True)
 
     event_id: str
@@ -337,28 +351,23 @@ class SeasonalEvent(BaseModel):
 
 class NicheSeasonality(BaseModel):
     """Seasonality data for a specific niche/genre."""
+
     model_config = ConfigDict(from_attributes=True)
 
     genre: str
     monthly_demand: dict[str, float] = Field(
-        default_factory=dict,
-        description="Month name -> relative demand index (1.0 = average)"
+        default_factory=dict, description="Month name -> relative demand index (1.0 = average)"
     )
     peak_months: list[str] = Field(default_factory=list)
     low_months: list[str] = Field(default_factory=list)
     seasonal_events: list[SeasonalEvent] = Field(default_factory=list)
-    best_launch_windows: list[dict] = Field(
-        default_factory=list,
-        description="[{start_month, end_month, reason}]"
-    )
-    avoid_windows: list[dict] = Field(
-        default_factory=list,
-        description="[{start_month, end_month, reason}]"
-    )
+    best_launch_windows: list[dict] = Field(default_factory=list, description="[{start_month, end_month, reason}]")
+    avoid_windows: list[dict] = Field(default_factory=list, description="[{start_month, end_month, reason}]")
 
 
 class LaunchRecommendRequest(BaseModel):
     """Request for launch date recommendation."""
+
     model_config = ConfigDict(from_attributes=True)
 
     genre: str = Field(..., min_length=1, max_length=200)
@@ -373,6 +382,7 @@ class LaunchRecommendRequest(BaseModel):
 
 class LaunchRecommendation(BaseModel):
     """Recommended launch date with reasoning."""
+
     model_config = ConfigDict(from_attributes=True)
 
     recommended_date: date
@@ -385,20 +395,15 @@ class LaunchRecommendation(BaseModel):
     competing_events: list[str] = Field(default_factory=list)
     favorable_events: list[str] = Field(default_factory=list)
 
-    pre_launch_checklist: list[dict] = Field(
-        default_factory=list,
-        description="[{days_before, action, description}]"
-    )
-    marketing_timeline: list[dict] = Field(
-        default_factory=list,
-        description="[{date, action, channel}]"
-    )
+    pre_launch_checklist: list[dict] = Field(default_factory=list, description="[{days_before, action, description}]")
+    marketing_timeline: list[dict] = Field(default_factory=list, description="[{date, action, channel}]")
 
     calculated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class SeasonalCalendarResponse(BaseModel):
     """Full seasonal calendar response."""
+
     model_config = ConfigDict(from_attributes=True)
 
     year: int

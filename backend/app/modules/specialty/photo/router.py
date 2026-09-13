@@ -1,4 +1,5 @@
 """FastAPI router for Photo Integration."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -10,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.contracts import PaginatedResponse, SuccessResponse
 from app.core.dependencies import get_current_user
 from app.database import get_db
-from app.modules.specialty.photo import service
 from app.modules.specialty.models.enums import PhotoUsageType
+from app.modules.specialty.photo import service
 
 router = APIRouter(prefix="/specialty/photo-references", tags=["photo-references"])
 
@@ -112,9 +113,7 @@ async def delete_photo(
 ):
     deleted = await service.delete_photo(db, current_user["org_id"], photo_id)
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found")
     return
 
 
@@ -129,7 +128,5 @@ async def generate_with_references(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await service.generate_with_references(
-        db, current_user["org_id"], payload
-    )
+    result = await service.generate_with_references(db, current_user["org_id"], payload)
     return SuccessResponse(data=result)

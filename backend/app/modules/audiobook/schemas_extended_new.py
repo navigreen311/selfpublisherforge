@@ -8,7 +8,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ── Project schemas ──────────────────────────────────────────────────────
 
 
@@ -24,7 +23,9 @@ class ProjectCreateRequest(BaseModel):
     sample_rate: int = Field(44100, description="Audio sample rate in Hz.")
     bit_rate: int = Field(192, description="Audio bit rate in kbps.")
     channels: int = Field(1, description="Number of audio channels (1=mono, 2=stereo).")
-    target_platform: str = Field("acx", description="Target distribution platform.", pattern="^(acx|findaway|authors_republic|generic)$")
+    target_platform: str = Field(
+        "acx", description="Target distribution platform.", pattern="^(acx|findaway|authors_republic|generic)$"
+    )
     settings: dict[str, Any] | None = Field(None, description="Additional project settings.")
     created_by: UUID | None = Field(None, description="User who created the project.")
 
@@ -142,7 +143,9 @@ class VoiceCloneRequest(BaseModel):
     """Request body for cloning a voice."""
 
     name: str = Field(..., min_length=1, max_length=255, description="Name for the cloned voice.")
-    provider: str = Field("coqui_xtts", description="TTS provider for cloning.", pattern="^(coqui_xtts|elevenlabs|custom_clone)$")
+    provider: str = Field(
+        "coqui_xtts", description="TTS provider for cloning.", pattern="^(coqui_xtts|elevenlabs|custom_clone)$"
+    )
     voice_type: str = Field("custom", description="Voice type.", pattern="^(narrator|character|custom)$")
     gender: str | None = Field(None, description="Voice gender.")
     language: str = Field("en", description="Language code.")

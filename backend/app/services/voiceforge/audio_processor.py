@@ -23,7 +23,7 @@ import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -254,7 +254,9 @@ class AudioProcessor:
 
         logger.info(
             "Applying compression to %s (ratio=%.1f, threshold=%.1f dB)",
-            audio_path, ratio, threshold_db,
+            audio_path,
+            ratio,
+            threshold_db,
         )
 
         data, rate = sf.read(str(audio_path))
@@ -262,10 +264,18 @@ class AudioProcessor:
 
         threshold_linear = 10.0 ** (threshold_db / 20.0)
 
-        compressed = np.copy(data)
-        mask = np.abs(data) > threshold_linear
-        above = np.abs(data[mask]) - threshold_linear
-        compressed[mask] = np.sign(data[mask]) * (threshold_linear + above / ratio)
+        magnitude = np.abs(data)
+        above = magnitude - threshold_linear
+        # np.where rather than a boolean-mask assignment: same result, and it
+        # keeps the sample dtype instead of silently promoting to float64.
+        compressed = np.asarray(
+            np.where(
+                magnitude > threshold_linear,
+                np.sign(data) * (threshold_linear + above / ratio),
+                data,
+            ),
+            dtype=data.dtype,
+        )
 
         out_path = self._temp_path(audio_path, "_compressed")
         sf.write(str(out_path), compressed, rate)
@@ -330,7 +340,9 @@ class AudioProcessor:
 
         logger.info(
             "Adding room tone to %s (head=%.2fs, tail=%.2fs)",
-            audio_path, head_seconds, tail_seconds,
+            audio_path,
+            head_seconds,
+            tail_seconds,
         )
 
         data, rate = sf.read(str(audio_path))
@@ -340,8 +352,8 @@ class AudioProcessor:
         head_samples = int(rate * head_seconds)
         tail_samples = int(rate * tail_seconds)
 
-        head = rng.normal(0, 0.0001, head_samples).astype(data.dtype)
-        tail = rng.normal(0, 0.0001, tail_samples).astype(data.dtype)
+        head = np.asarray(rng.normal(0, 0.0001, head_samples), dtype=data.dtype)
+        tail = np.asarray(rng.normal(0, 0.0001, tail_samples), dtype=data.dtype)
 
         result = np.concatenate([head, data, tail])
 
@@ -395,7 +407,14 @@ class AudioProcessor:
         except Exception:
             # File may not have existing ID3 tags
             audio = MP3(str(audio_path))
+
+        # Opening succeeds on a file with no ID3 frames at all, leaving `tags`
+        # as None; only the except branch used to create them.
+        if audio.tags is None:
             audio.add_tags()
+        tags = audio.tags
+        if tags is None:  # pragma: no cover - add_tags() always populates it
+            raise RuntimeError(f"Could not create ID3 tags for {audio_path}")
 
         tag_map: dict[str, Any] = {
             "title": lambda v: TIT2(encoding=3, text=[v]),
@@ -409,7 +428,7 @@ class AudioProcessor:
 
         for key, value in metadata.items():
             if value and key in tag_map:
-                audio.tags.add(tag_map[key](value))
+                tags.add(tag_map[key](value))
             elif key not in tag_map:
                 logger.warning("Unknown metadata key ignored: %s", key)
 
@@ -509,7 +528,8 @@ class AudioProcessor:
         else:
             logger.warning(
                 "ACX validation FAILED (score=%d, fixable=%s)",
-                result.score, auto_fixable,
+                result.score,
+                auto_fixable,
             )
 
         return result
@@ -533,7 +553,7 @@ class AudioProcessor:
         peak_db = 20.0 * np.log10(peak) if peak > 0 else -100.0
 
         # RMS
-        rms = float(np.sqrt(np.mean(data ** 2)))
+        rms = float(np.sqrt(np.mean(data**2)))
         rms_db = 20.0 * np.log10(rms) if rms > 0 else -100.0
 
         # Noise floor: average RMS of the quietest 10 % of 100 ms frames
@@ -541,7 +561,7 @@ class AudioProcessor:
         num_full_frames = len(data) // frame_size
         if num_full_frames > 0:
             frames = data[: num_full_frames * frame_size].reshape(num_full_frames, frame_size)
-            frame_rms_vals = np.sqrt(np.mean(frames ** 2, axis=1))
+            frame_rms_vals = np.sqrt(np.mean(frames**2, axis=1))
             frame_rms_sorted = np.sort(frame_rms_vals)
             n_quiet = max(1, len(frame_rms_sorted) // 10)
             noise_rms = float(np.mean(frame_rms_sorted[:n_quiet]))
@@ -590,22 +610,26 @@ class AudioProcessor:
             elif not is_silent and silence_start is not None:
                 duration_samples = i - silence_start
                 if duration_samples >= min_samples:
-                    segments.append(SilenceSegment(
-                        start_seconds=silence_start / rate,
-                        end_seconds=i / rate,
-                        duration_seconds=duration_samples / rate,
-                    ))
+                    segments.append(
+                        SilenceSegment(
+                            start_seconds=silence_start / rate,
+                            end_seconds=i / rate,
+                            duration_seconds=duration_samples / rate,
+                        )
+                    )
                 silence_start = None
 
         # Handle trailing silence
         if silence_start is not None:
             duration_samples = len(data) - silence_start
             if duration_samples >= min_samples:
-                segments.append(SilenceSegment(
-                    start_seconds=silence_start / rate,
-                    end_seconds=len(data) / rate,
-                    duration_seconds=duration_samples / rate,
-                ))
+                segments.append(
+                    SilenceSegment(
+                        start_seconds=silence_start / rate,
+                        end_seconds=len(data) / rate,
+                        duration_seconds=duration_samples / rate,
+                    )
+                )
 
         logger.info("Detected %d silence segments in %s", len(segments), audio_path)
         return segments
@@ -774,7 +798,7 @@ class AudioProcessor:
     def _ensure_mono(data: np.ndarray) -> np.ndarray:
         """Convert multi-channel audio to mono by averaging channels."""
         if data.ndim > 1:
-            return data.mean(axis=1)
+            return cast("np.ndarray", data.mean(axis=1))
         return data
 
     def _temp_path(self, original: Path, suffix: str = "") -> Path:
@@ -797,7 +821,7 @@ class AudioProcessor:
             data, rate = sf.read(str(path))
             data = self._ensure_mono(data)
             duration = len(data) / rate
-            rms = float(np.sqrt(np.mean(data ** 2)))
+            rms = float(np.sqrt(np.mean(data**2)))
             peak = float(np.max(np.abs(data)))
         except Exception:
             logger.warning("Could not read processed file %s for metrics; using defaults.", path)

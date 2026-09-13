@@ -20,7 +20,7 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC
-from typing import Any
+from typing import Any, cast
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.exc import SQLAlchemyError
@@ -59,7 +59,7 @@ def execute_agent_task(self, task_id: str, user_role: str = "viewer") -> dict[st
     Returns:
         Dict with task_id, status, and optional error.
     """
-    return _run_async(_execute_agent_task_async(task_id, user_role))
+    return cast("dict[str, Any]", _run_async(_execute_agent_task_async(task_id, user_role)))
 
 
 async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, Any]:
@@ -70,9 +70,7 @@ async def _execute_agent_task_async(task_id: str, user_role: str) -> dict[str, A
 
     async with async_session() as db:
         try:
-            result = await db.execute(
-                select(AgentTask).where(AgentTask.id == uuid.UUID(task_id))
-            )
+            result = await db.execute(select(AgentTask).where(AgentTask.id == uuid.UUID(task_id)))
             task = result.scalar_one_or_none()
 
             if task is None:
@@ -151,7 +149,7 @@ def execute_agent_workflow(
     Returns:
         Dict with workflow_id, status, and optional error.
     """
-    return _run_async(_execute_agent_workflow_async(workflow_id, user_role))
+    return cast("dict[str, Any]", _run_async(_execute_agent_workflow_async(workflow_id, user_role)))
 
 
 async def _execute_agent_workflow_async(
@@ -165,9 +163,7 @@ async def _execute_agent_workflow_async(
 
     async with async_session() as db:
         try:
-            result = await db.execute(
-                select(AgentWorkflow).where(AgentWorkflow.id == uuid.UUID(workflow_id))
-            )
+            result = await db.execute(select(AgentWorkflow).where(AgentWorkflow.id == uuid.UUID(workflow_id)))
             workflow = result.scalar_one_or_none()
 
             if workflow is None:
@@ -180,13 +176,9 @@ async def _execute_agent_workflow_async(
             engine = WorkflowEngine(db)
 
             if workflow.status == WorkflowStatus.DRAFT:
-                workflow = await engine.start_workflow(
-                    workflow, user_role=user_role
-                )
+                workflow = await engine.start_workflow(workflow, user_role=user_role)
             elif workflow.status in (WorkflowStatus.RUNNING, WorkflowStatus.PAUSED):
-                workflow = await engine.resume_workflow(
-                    workflow, user_role=user_role
-                )
+                workflow = await engine.resume_workflow(workflow, user_role=user_role)
             else:
                 return {
                     "workflow_id": workflow_id,
@@ -244,7 +236,7 @@ def reset_daily_budgets(self) -> dict[str, Any]:
 
     Intended to be scheduled via Celery Beat (e.g., daily at midnight UTC).
     """
-    return _run_async(_reset_daily_budgets_async())
+    return cast("dict[str, Any]", _run_async(_reset_daily_budgets_async()))
 
 
 async def _reset_daily_budgets_async() -> dict[str, Any]:
@@ -282,7 +274,7 @@ def reset_monthly_budgets(self) -> dict[str, Any]:
 
     Intended to be scheduled via Celery Beat (e.g., 1st of each month).
     """
-    return _run_async(_reset_monthly_budgets_async())
+    return cast("dict[str, Any]", _run_async(_reset_monthly_budgets_async()))
 
 
 async def _reset_monthly_budgets_async() -> dict[str, Any]:

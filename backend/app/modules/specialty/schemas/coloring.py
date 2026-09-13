@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for the Coloring Book Creator."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,16 +9,15 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
 
 class Audience(str, Enum):
-    KIDS = "kids"          # 3-8
-    TEENS = "teens"        # 9-14
-    ADULTS = "adults"      # 15+
+    KIDS = "kids"  # 3-8
+    TEENS = "teens"  # 9-14
+    ADULTS = "adults"  # 15+
 
 
 class LineStyle(str, Enum):
@@ -94,12 +94,8 @@ class ColoringBookCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=300, description="Book title")
     subtitle: str | None = Field(None, max_length=300, description="Optional subtitle")
     audience: Audience = Field(..., description="Target audience")
-    page_count: int = Field(
-        ..., ge=20, le=60, description="Number of coloring pages"
-    )
-    trim_size: str = Field(
-        ..., max_length=20, description="Trim size, e.g. '8.5x11'"
-    )
+    page_count: int = Field(..., ge=20, le=60, description="Number of coloring pages")
+    trim_size: str = Field(..., max_length=20, description="Trim size, e.g. '8.5x11'")
     line_style: LineStyle = Field(..., description="Line art style")
     line_weight: float = Field(
         2.0,
@@ -113,21 +109,13 @@ class ColoringBookCreate(BaseModel):
         le=1.0,
         description="Complexity slider (0 = simple, 1 = highly detailed)",
     )
-    stroke_uniformity: bool = Field(
-        True, description="Enforce uniform stroke thickness across pages"
-    )
-    single_sided: bool = Field(
-        True, description="Single-sided layout with blank backs (enforced for print)"
-    )
+    stroke_uniformity: bool = Field(True, description="Enforce uniform stroke thickness across pages")
+    single_sided: bool = Field(True, description="Single-sided layout with blank backs (enforced for print)")
     theme_description: str | None = Field(
         None, max_length=2000, description="Overall theme or description for content generation"
     )
-    series_id: UUID | None = Field(
-        None, description="Series ID if part of a multi-volume set"
-    )
-    volume_number: int | None = Field(
-        None, ge=1, description="Volume number within the series"
-    )
+    series_id: UUID | None = Field(None, description="Series ID if part of a multi-volume set")
+    volume_number: int | None = Field(None, ge=1, description="Volume number within the series")
 
 
 class ColoringBookUpdate(BaseModel):
@@ -199,14 +187,10 @@ class ColoringPageResponse(BaseModel):
     closed_shapes_score: float | None = Field(None, ge=0, le=100)
     stroke_uniformity_score: float | None = Field(None, ge=0, le=100)
     speck_count: int | None = Field(None, ge=0, description="Number of stray specks detected")
-    ink_density: float | None = Field(
-        None, ge=0, le=100, description="Ink density percentage"
-    )
+    ink_density: float | None = Field(None, ge=0, le=100, description="Ink density percentage")
     background_pure_white: bool | None = None
     complexity_score: float | None = Field(None, ge=0, le=100)
-    quality_pipeline_step: QualityStep | None = Field(
-        None, description="Last completed pipeline step"
-    )
+    quality_pipeline_step: QualityStep | None = Field(None, description="Last completed pipeline step")
     quality_passed: bool | None = Field(None, description="True if final quality check passed")
     created_at: datetime
     updated_at: datetime
@@ -220,18 +204,10 @@ class ColoringPageResponse(BaseModel):
 class GenerateLineArtRequest(BaseModel):
     """Generate line art for a single coloring page."""
 
-    description: str = Field(
-        ..., min_length=1, max_length=2000, description="Description of the image to generate"
-    )
-    line_style: LineStyle | None = Field(
-        None, description="Override book-level line style for this page"
-    )
-    complexity: float | None = Field(
-        None, ge=0.0, le=1.0, description="Override complexity for this page"
-    )
-    run_cleanup: bool = Field(
-        True, description="Automatically run the cleanup pipeline after generation"
-    )
+    description: str = Field(..., min_length=1, max_length=2000, description="Description of the image to generate")
+    line_style: LineStyle | None = Field(None, description="Override book-level line style for this page")
+    complexity: float | None = Field(None, ge=0.0, le=1.0, description="Override complexity for this page")
+    run_cleanup: bool = Field(True, description="Automatically run the cleanup pipeline after generation")
 
 
 class CleanLinesRequest(BaseModel):
@@ -241,23 +217,15 @@ class CleanLinesRequest(BaseModel):
         None,
         description="Specific pipeline steps to run; None = run all steps",
     )
-    line_weight_override: float | None = Field(
-        None, ge=0.5, le=5.0, description="Override target line weight"
-    )
+    line_weight_override: float | None = Field(None, ge=0.5, le=5.0, description="Override target line weight")
 
 
 class VectorizeRequest(BaseModel):
     """Convert a coloring page to SVG vectors."""
 
-    output_format: str = Field(
-        "svg", description="Output format: 'svg' or 'pdf'"
-    )
-    simplify_paths: bool = Field(
-        True, description="Simplify vector paths for smaller file size"
-    )
-    stroke_width: float | None = Field(
-        None, ge=0.5, le=5.0, description="Override stroke width in vectors"
-    )
+    output_format: str = Field("svg", description="Output format: 'svg' or 'pdf'")
+    simplify_paths: bool = Field(True, description="Simplify vector paths for smaller file size")
+    stroke_width: float | None = Field(None, ge=0.5, le=5.0, description="Override stroke width in vectors")
 
 
 # ---------------------------------------------------------------------------
@@ -292,12 +260,8 @@ class QualityCheckResponse(BaseModel):
     """Per-page quality check result."""
 
     score: float = Field(..., ge=0, le=100, description="Overall page quality score")
-    steps: list[QualityStepResult] = Field(
-        ..., description="Result of each pipeline step"
-    )
-    issues: list[QualityIssue] = Field(
-        default_factory=list, description="All quality issues found"
-    )
+    steps: list[QualityStepResult] = Field(..., description="Result of each pipeline step")
+    issues: list[QualityIssue] = Field(default_factory=list, description="All quality issues found")
     passed: bool = Field(..., description="True if the page passes all critical checks")
 
 
@@ -318,12 +282,8 @@ class BatchGenerateRequest(BaseModel):
         VariationMode.DIVERSE,
         description="How to prevent similar compositions across pages",
     )
-    run_auto_qa: bool = Field(
-        True, description="Auto-run quality pipeline on each generated page"
-    )
-    cost_estimate_only: bool = Field(
-        False, description="If true, return cost estimate without generating"
-    )
+    run_auto_qa: bool = Field(True, description="Auto-run quality pipeline on each generated page")
+    cost_estimate_only: bool = Field(False, description="If true, return cost estimate without generating")
 
 
 class PageBatchStatus(BaseModel):
@@ -343,9 +303,7 @@ class BatchStatusResponse(BaseModel):
     status: str = Field(
         ..., description="Overall status: 'pending', 'processing', 'completed', 'paused', 'cancelled', 'failed'"
     )
-    progress: float = Field(
-        0, ge=0, le=100, description="Completion percentage"
-    )
+    progress: float = Field(0, ge=0, le=100, description="Completion percentage")
     total_pages: int = Field(..., ge=0)
     completed_pages: int = Field(0, ge=0)
     per_page_status: list[PageBatchStatus] = Field(default_factory=list)
@@ -365,13 +323,9 @@ class PlanSeriesRequest(BaseModel):
 
     series_name: str = Field(..., min_length=1, max_length=300, description="Series name")
     total_volumes: int = Field(..., ge=2, le=50, description="Number of volumes planned")
-    themes: list[str] = Field(
-        ..., min_length=1, description="Theme for each volume"
-    )
+    themes: list[str] = Field(..., min_length=1, description="Theme for each volume")
     pages_per_volume: int = Field(30, ge=20, le=60, description="Pages per volume")
-    branding_locked: bool = Field(
-        True, description="Lock branding across volumes (title font, position, spine)"
-    )
+    branding_locked: bool = Field(True, description="Lock branding across volumes (title font, position, spine)")
 
 
 class VolumePlan(BaseModel):
@@ -427,13 +381,9 @@ class QualityDashboardResponse(BaseModel):
     complexity_histogram: list[ComplexityBucket] = Field(
         default_factory=list, description="Distribution of page complexity"
     )
-    theme_cohesion: float = Field(
-        ..., ge=0, le=100, description="How well pages feel like a cohesive set"
-    )
+    theme_cohesion: float = Field(..., ge=0, le=100, description="How well pages feel like a cohesive set")
     print_quality_summary: PrintQualitySummary
-    duplicate_pages_detected: int = Field(
-        0, ge=0, description="Number of visually duplicate pages detected"
-    )
+    duplicate_pages_detected: int = Field(0, ge=0, description="Number of visually duplicate pages detected")
 
 
 # ---------------------------------------------------------------------------
@@ -447,12 +397,8 @@ class ExportRequest(BaseModel):
     format: ColoringExportFormat = Field(..., description="Export format")
     dpi: int = Field(300, ge=72, le=600, description="Output resolution")
     include_bleed: bool = Field(True, description="Include bleed area")
-    include_blank_backs: bool = Field(
-        True, description="Include blank back pages for single-sided print"
-    )
-    include_bonus_pages: bool = Field(
-        True, description="Include title, belongs-to, and other bonus pages"
-    )
+    include_blank_backs: bool = Field(True, description="Include blank back pages for single-sided print")
+    include_bonus_pages: bool = Field(True, description="Include title, belongs-to, and other bonus pages")
 
 
 class PreflightCheck(BaseModel):

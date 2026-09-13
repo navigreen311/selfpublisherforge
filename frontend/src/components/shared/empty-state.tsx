@@ -12,10 +12,17 @@ interface EmptyStateProps {
   onAction?: () => void;
 }
 
-function isLucideIcon(
+// A component type can be a plain function component OR an exotic component
+// (forwardRef/memo), which is an object like {$$typeof, render} — NOT a function.
+// Lucide icons are forwardRef components, so a `typeof === "function"` check
+// alone misses them and they get rendered as a raw object (React throws).
+function isComponentType(
   icon: React.ReactNode | LucideIcon
 ): icon is LucideIcon {
-  return typeof icon === "function";
+  return (
+    typeof icon === "function" ||
+    (typeof icon === "object" && icon !== null && !React.isValidElement(icon))
+  );
 }
 
 export function EmptyState({
@@ -28,13 +35,13 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
       <div className="rounded-full bg-muted p-4 mb-4">
-        {isLucideIcon(icon) ? (
+        {isComponentType(icon) ? (
           React.createElement(icon, {
             className: "h-10 w-10 text-muted-foreground",
           })
         ) : (
           <span className="h-10 w-10 text-muted-foreground flex items-center justify-center">
-            {icon}
+            {icon as React.ReactNode}
           </span>
         )}
       </div>

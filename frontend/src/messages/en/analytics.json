@@ -125,6 +125,11 @@
     "chartFilterEnd": " to {date}",
     "chartDataPoints": "Showing {count} data points.",
     "chartNoData": "No data points available.",
-    "revenueByBook": "Revenue by Book"
+    "revenueByBook": "Revenue by Book",
+    "summary": "Revenue summary statistics",
+    "filterStartDate": "Filter by start date",
+    "filterEndDate": "Filter by end date",
+    "filterPlatform": "Filter by publishing platform",
+    "filterAggregation": "Select data aggregation period"
   }
 }

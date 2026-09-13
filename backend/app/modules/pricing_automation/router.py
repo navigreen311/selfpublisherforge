@@ -24,6 +24,12 @@ from app.core.contracts import SuccessResponse
 from app.core.dependencies import get_current_user
 from app.core.pagination import PaginatedResponse
 from app.database import get_db
+from app.modules.pricing_automation import (
+    price_history_service,
+    royalty_analyzer,
+    scheduled_changes_service,
+    strategy_manager,
+)
 from app.modules.pricing_automation.schemas import (
     ABTestCreate,
     ABTestResponse,
@@ -50,12 +56,6 @@ from app.modules.pricing_automation.schemas import (
     StrategyUpdateRequest,
 )
 from app.modules.pricing_automation.service import PricingAutomationService
-from app.modules.pricing_automation import (
-    price_history_service,
-    royalty_analyzer,
-    scheduled_changes_service,
-    strategy_manager,
-)
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 
@@ -83,9 +83,7 @@ async def list_pricing_rules(
 ):
     """List all pricing rules for the current organization."""
     org_id = current_user["org_id"]
-    rules, total = await service.list_rules(
-        org_id=org_id, status=status, book_id=book_id, limit=limit, offset=offset
-    )
+    rules, total = await service.list_rules(org_id=org_id, status=status, book_id=book_id, limit=limit, offset=offset)
     return PaginatedResponse(
         items=rules,
         total_count=total,
@@ -422,9 +420,7 @@ async def create_scheduled_change(
 ):
     """Create a scheduled price change."""
     org_id = current_user["org_id"]
-    result = await scheduled_changes_service.create_scheduled_change(
-        db, org_id, data.model_dump()
-    )
+    result = await scheduled_changes_service.create_scheduled_change(db, org_id, data.model_dump())
     return SuccessResponse(data=result)
 
 
@@ -442,9 +438,7 @@ async def list_scheduled_changes(
 ):
     """List scheduled price changes."""
     org_id = current_user["org_id"]
-    result = await scheduled_changes_service.list_scheduled_changes(
-        db, org_id, book_id=book_id, status=change_status
-    )
+    result = await scheduled_changes_service.list_scheduled_changes(db, org_id, book_id=book_id, status=change_status)
     return SuccessResponse(data=result)
 
 
@@ -461,9 +455,7 @@ async def cancel_scheduled_change(
 ):
     """Cancel a scheduled price change."""
     org_id = current_user["org_id"]
-    cancelled = await scheduled_changes_service.cancel_scheduled_change(
-        db, org_id, change_id
-    )
+    cancelled = await scheduled_changes_service.cancel_scheduled_change(db, org_id, change_id)
     if not cancelled:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -489,9 +481,7 @@ async def get_price_history(
 ):
     """Get price change history."""
     org_id = current_user["org_id"]
-    entries = await price_history_service.get_price_history(
-        db, org_id, book_id=book_id, period=period
-    )
+    entries = await price_history_service.get_price_history(db, org_id, book_id=book_id, period=period)
     return SuccessResponse(
         data=PriceHistoryResponse(
             entries=entries,
@@ -545,32 +535,31 @@ async def simulate_enhanced(
     )
 
     curve_prices = [
-        round(data.current_price * mult, 2)
-        for mult in [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0]
+        round(data.current_price * mult, 2) for mult in [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0]
     ]
     # Ensure proposed price is included
     if data.proposed_price not in curve_prices:
         curve_prices.append(data.proposed_price)
-    curve_prices = sorted(set(p for p in curve_prices if p > 0))
+    curve_prices = sorted({p for p in curve_prices if p > 0})
 
     revenue_curve: list[dict] = []
     best_royalty = 0.0
     optimal_price = data.current_price
 
     for price in curve_prices:
-        est_sales = _estimate_sales_change(
-            data.current_price, price, data.current_daily_sales, data.elasticity
-        )
+        est_sales = _estimate_sales_change(data.current_price, price, data.current_daily_sales, data.elasticity)
         point = _build_price_point(price, est_sales, data.book_format, data.royalty_rate)
         monthly_royalty = point.estimated_monthly_royalties
 
-        revenue_curve.append({
-            "price": price,
-            "estimated_daily_sales": point.estimated_daily_sales,
-            "estimated_monthly_revenue": point.estimated_monthly_revenue,
-            "estimated_monthly_royalties": monthly_royalty,
-            "royalty_rate": point.royalty_rate,
-        })
+        revenue_curve.append(
+            {
+                "price": price,
+                "estimated_daily_sales": point.estimated_daily_sales,
+                "estimated_monthly_revenue": point.estimated_monthly_revenue,
+                "estimated_monthly_royalties": monthly_royalty,
+                "royalty_rate": point.royalty_rate,
+            }
+        )
 
         if monthly_royalty > best_royalty:
             best_royalty = monthly_royalty

@@ -1,12 +1,14 @@
 "use client";
 
+import * as React from "react";
+
 import { type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   icon: LucideIcon;
   trend?: {
     value: number;

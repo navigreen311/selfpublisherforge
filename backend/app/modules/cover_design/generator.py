@@ -7,6 +7,7 @@ upload to S3).
 Enhanced with support for multiple formats (ebook, paperback, audiobook),
 variable variations, art style presets, reference images, and spine calculation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -22,6 +23,7 @@ from app.modules.cover_design.schemas import (
     CoverPlatform,
 )
 from app.modules.cover_design.templates import (
+    FORMAT_DIMENSIONS,
     get_dimensions_for_platform,
     get_template_by_id,
 )
@@ -36,6 +38,7 @@ settings = get_settings()
 
 class CoverFormat:
     """Cover format types."""
+
     EBOOK = "ebook"
     PAPERBACK = "paperback"
     AUDIOBOOK = "audiobook"
@@ -43,6 +46,7 @@ class CoverFormat:
 
 class ArtStyle:
     """Art style presets for cover generation."""
+
     MINIMAL = "minimal"
     PHOTOGRAPHIC = "photographic"
     ILLUSTRATED = "illustrated"
@@ -52,13 +56,6 @@ class ArtStyle:
 
 
 # Format-specific dimensions
-FORMAT_DIMENSIONS: dict[str, CoverDimensions] = {
-    CoverFormat.EBOOK: CoverDimensions(width_px=2560, height_px=1600, dpi=300, bleed_px=0),
-    CoverFormat.AUDIOBOOK: CoverDimensions(width_px=3000, height_px=3000, dpi=300, bleed_px=0),
-    # Paperback requires dynamic spine calculation
-}
-
-
 # Art style prompt guidance
 ART_STYLE_PROMPTS: dict[str, str] = {
     ArtStyle.MINIMAL: (
@@ -114,8 +111,7 @@ def calculate_spine_width(
         Spine width in inches
     """
     thickness_per_page = 0.0025 if paper_type.lower() == "cream" else 0.002252
-    spine_inches = page_count * thickness_per_page
-    return spine_inches
+    return page_count * thickness_per_page
 
 
 def get_paperback_dimensions(
@@ -155,7 +151,6 @@ def get_paperback_dimensions(
         dpi=dpi,
         bleed_px=bleed_px,
     )
-
 
 
 # ---------------------------------------------------------------------------
@@ -296,48 +291,37 @@ _GENRE_PROMPT_FRAGMENTS: dict[CoverGenre, str] = {
         "Space vistas, technology, futuristic cityscapes."
     ),
     CoverGenre.FANTASY: (
-        "Epic, magical. Rich jewel tones. Ornate typography. "
-        "Landscapes, mythical creatures, magical elements."
+        "Epic, magical. Rich jewel tones. Ornate typography. " "Landscapes, mythical creatures, magical elements."
     ),
     CoverGenre.HORROR: (
-        "Dark, unsettling. Very limited palette â€” blacks, reds, greys. "
-        "Distressed fonts. Creepy imagery."
+        "Dark, unsettling. Very limited palette â€” blacks, reds, greys. " "Distressed fonts. Creepy imagery."
     ),
     CoverGenre.LITERARY_FICTION: (
-        "Artistic, understated. Sophisticated design with thoughtful typography. "
-        "Abstract or metaphorical imagery."
+        "Artistic, understated. Sophisticated design with thoughtful typography. " "Abstract or metaphorical imagery."
     ),
     CoverGenre.NONFICTION: (
-        "Professional, authoritative. Clean layout, strong typography. "
-        "Solid backgrounds or subtle patterns."
+        "Professional, authoritative. Clean layout, strong typography. " "Solid backgrounds or subtle patterns."
     ),
     CoverGenre.SELF_HELP: (
         "Uplifting, accessible. Warm, bright colours. Clear, friendly fonts. "
         "Nature imagery or abstract positive symbols."
     ),
     CoverGenre.BUSINESS: (
-        "Corporate, polished. Navy, charcoal, gold accents. "
-        "Authoritative serif or clean sans-serif fonts."
+        "Corporate, polished. Navy, charcoal, gold accents. " "Authoritative serif or clean sans-serif fonts."
     ),
     CoverGenre.CHILDRENS: (
         "Bright, playful, illustrated. Bold primary colours. "
         "Fun rounded fonts. Cartoon or watercolour illustration style."
     ),
     CoverGenre.YOUNG_ADULT: (
-        "Trendy, bold. Eye-catching colours and modern typography. "
-        "Stylish imagery that appeals to teens."
+        "Trendy, bold. Eye-catching colours and modern typography. " "Stylish imagery that appeals to teens."
     ),
     CoverGenre.MEMOIR: (
         "Personal, textured. Warm or muted tones. Handwritten or serif fonts. "
         "Personal photography or intimate illustration."
     ),
-    CoverGenre.COOKBOOK: (
-        "Appetising, clean. Warm colours. Space for food photography. "
-        "Clean, readable fonts."
-    ),
-    CoverGenre.OTHER: (
-        "Clean, professional book cover with balanced composition."
-    ),
+    CoverGenre.COOKBOOK: ("Appetising, clean. Warm colours. Space for food photography. " "Clean, readable fonts."),
+    CoverGenre.OTHER: ("Clean, professional book cover with balanced composition."),
 }
 
 

@@ -30,6 +30,7 @@ ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 # Derangement generation (no letter maps to itself)
 # ---------------------------------------------------------------------------
 
+
 def _generate_derangement() -> dict[str, str]:
     """
     Generate a random derangement of A-Z (no fixed points).
@@ -41,8 +42,8 @@ def _generate_derangement() -> dict[str, str]:
     while True:
         shuffled = letters[:]
         random.shuffle(shuffled)
-        if all(a != b for a, b in zip(letters, shuffled)):
-            return dict(zip(letters, shuffled))
+        if all(a != b for a, b in zip(letters, shuffled, strict=False)):
+            return dict(zip(letters, shuffled, strict=False))
 
 
 def _apply_cipher(text: str, cipher_map: dict[str, str]) -> str:
@@ -76,15 +77,11 @@ def _frequency_hints(encoded: str, cipher_map: dict[str, str]) -> list[str]:
     most_common = counts.most_common(1)[0]
     enc_letter = most_common[0]
     orig_letter = reverse_map.get(enc_letter, "?")
-    hints.append(
-        f"The most frequent letter '{enc_letter}' represents '{orig_letter}'"
-    )
+    hints.append(f"The most frequent letter '{enc_letter}' represents '{orig_letter}'")
     return hints
 
 
-def _starter_hints(cipher_map: dict[str, str],
-                   unique_letters: set[str],
-                   count: int = 2) -> list[dict[str, str]]:
+def _starter_hints(cipher_map: dict[str, str], unique_letters: set[str], count: int = 2) -> list[dict[str, str]]:
     """
     Reveal *count* letter mappings as starter hints.
 
@@ -94,10 +91,12 @@ def _starter_hints(cipher_map: dict[str, str],
     selected: list[dict[str, str]] = []
     for letter in priority:
         if letter in unique_letters and len(selected) < count:
-            selected.append({
-                "encoded": cipher_map[letter],
-                "decoded": letter,
-            })
+            selected.append(
+                {
+                    "encoded": cipher_map[letter],
+                    "decoded": letter,
+                }
+            )
     return selected
 
 
@@ -105,8 +104,8 @@ def _starter_hints(cipher_map: dict[str, str],
 # Difficulty calculation
 # ---------------------------------------------------------------------------
 
-def calculate_difficulty(phrase_length: int, unique_letters: int,
-                         letter_frequency_distribution: float) -> float:
+
+def calculate_difficulty(phrase_length: int, unique_letters: int, letter_frequency_distribution: float) -> float:
     """
     Calculate a difficulty score from 0 to 100.
 
@@ -137,8 +136,8 @@ def calculate_difficulty(phrase_length: int, unique_letters: int,
 # Public API
 # ---------------------------------------------------------------------------
 
-def generate_cryptogram(phrase: str,
-                        reveal_count: int = 2) -> dict[str, Any]:
+
+def generate_cryptogram(phrase: str, reveal_count: int = 2) -> dict[str, Any]:
     """
     Generate a cryptogram puzzle.
 
@@ -191,11 +190,13 @@ def generate_cryptogram(phrase: str,
 
     difficulty_score = calculate_difficulty(phrase_length, unique_count, std_dev)
 
-    content_hash = generate_content_hash({
-        "encoded": encoded,
-        "original": phrase,
-        "cipher_map": cipher_map,
-    })
+    content_hash = generate_content_hash(
+        {
+            "encoded": encoded,
+            "original": phrase,
+            "cipher_map": cipher_map,
+        }
+    )
 
     svg = render_cryptogram_svg(encoded, phrase, cipher_map, starter)
 
@@ -214,10 +215,10 @@ def generate_cryptogram(phrase: str,
 # SVG rendering
 # ---------------------------------------------------------------------------
 
-def render_cryptogram_svg(encoded: str, original: str,
-                          cipher_map: dict[str, str],
-                          starters: list[dict[str, str]],
-                          chars_per_line: int = 30) -> str:
+
+def render_cryptogram_svg(
+    encoded: str, original: str, cipher_map: dict[str, str], starters: list[dict[str, str]], chars_per_line: int = 30
+) -> str:
     """
     Render the cryptogram as SVG with encoded letters on top and
     small answer boxes below each letter.
@@ -253,9 +254,9 @@ def render_cryptogram_svg(encoded: str, original: str,
     parts.append(svg_rect(0, 0, width, height, fill="white", stroke="none"))
 
     # Title
-    parts.append(svg_text(width // 2, padding, "Cryptogram",
-                          font_size=22, font_weight="bold",
-                          font_family="sans-serif"))
+    parts.append(
+        svg_text(width // 2, padding, "Cryptogram", font_size=22, font_weight="bold", font_family="sans-serif")
+    )
 
     y = padding + 40
     for line in lines:
@@ -263,32 +264,43 @@ def render_cryptogram_svg(encoded: str, original: str,
         for ch in line:
             if ch.isalpha():
                 # Encoded letter on top
-                parts.append(svg_text(x + cell_w // 2, y,
-                                      ch.upper(), font_size=16,
-                                      font_family="monospace",
-                                      font_weight="bold"))
+                parts.append(
+                    svg_text(x + cell_w // 2, y, ch.upper(), font_size=16, font_family="monospace", font_weight="bold")
+                )
                 # Answer box below
                 box_y = y + 8
-                parts.append(svg_rect(x + 2, box_y, cell_w - 4, 22,
-                                      fill="white", stroke="black"))
+                parts.append(svg_rect(x + 2, box_y, cell_w - 4, 22, fill="white", stroke="black"))
                 # If this is a revealed starter letter, show it
                 upper_ch = ch.upper()
                 if upper_ch in revealed:
-                    parts.append(svg_text(x + cell_w // 2, box_y + 11,
-                                          revealed[upper_ch], font_size=14,
-                                          font_family="monospace", fill="blue"))
+                    parts.append(
+                        svg_text(
+                            x + cell_w // 2,
+                            box_y + 11,
+                            revealed[upper_ch],
+                            font_size=14,
+                            font_family="monospace",
+                            fill="blue",
+                        )
+                    )
             else:
                 # Non-alpha (space, punctuation) — just render the character
-                parts.append(svg_text(x + cell_w // 2, y, ch, font_size=16,
-                                      font_family="monospace"))
+                parts.append(svg_text(x + cell_w // 2, y, ch, font_size=16, font_family="monospace"))
             x += cell_w
         y += line_spacing
 
     # Hint area
-    parts.append(svg_text(padding, y + 10,
-                          "Hint: Each letter stands for a different letter.",
-                          font_size=12, anchor="start",
-                          font_family="sans-serif", fill="gray"))
+    parts.append(
+        svg_text(
+            padding,
+            y + 10,
+            "Hint: Each letter stands for a different letter.",
+            font_size=12,
+            anchor="start",
+            font_family="sans-serif",
+            fill="gray",
+        )
+    )
 
     parts.append(svg_footer())
     return "".join(parts)

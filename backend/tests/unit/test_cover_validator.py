@@ -6,9 +6,6 @@ import pytest
 
 from app.modules.kdp_validation.cover_validator import CoverValidator
 from app.modules.kdp_validation.rules import (
-    BLEED_SIZE,
-    MIN_EBOOK_DPI,
-    MIN_PRINT_DPI,
     PaperType,
     calculate_spine_width,
     expected_print_cover_height,
@@ -35,33 +32,33 @@ def _make_print_cover(**overrides) -> CoverValidationRequest:
     spine = _spine(200, "white")
     exp_w = expected_print_cover_width(6.0, spine)
     exp_h = expected_print_cover_height(9.0)
-    defaults = dict(
-        cover_type="print",
-        width_inches=round(exp_w, 4),
-        height_inches=round(exp_h, 4),
-        dpi=300,
-        file_format="TIFF",
-        color_space="CMYK",
-        trim_size="6x9",
-        page_count=200,
-        paper_type="white",
-        has_text_in_bleed=False,
-    )
+    defaults = {
+        "cover_type": "print",
+        "width_inches": round(exp_w, 4),
+        "height_inches": round(exp_h, 4),
+        "dpi": 300,
+        "file_format": "TIFF",
+        "color_space": "CMYK",
+        "trim_size": "6x9",
+        "page_count": 200,
+        "paper_type": "white",
+        "has_text_in_bleed": False,
+    }
     defaults.update(overrides)
     return CoverValidationRequest(**defaults)
 
 
 def _make_ebook_cover(**overrides) -> CoverValidationRequest:
     """Create a valid-by-default ebook cover request."""
-    defaults = dict(
-        cover_type="ebook",
-        width_inches=6.0,
-        height_inches=9.0,
-        dpi=72,
-        file_format="JPEG",
-        color_space="RGB",
-        has_text_in_bleed=False,
-    )
+    defaults = {
+        "cover_type": "ebook",
+        "width_inches": 6.0,
+        "height_inches": 9.0,
+        "dpi": 72,
+        "file_format": "JPEG",
+        "color_space": "RGB",
+        "has_text_in_bleed": False,
+    }
     defaults.update(overrides)
     return CoverValidationRequest(**defaults)
 
@@ -69,6 +66,7 @@ def _make_ebook_cover(**overrides) -> CoverValidationRequest:
 # ===================================================================
 # Resolution
 # ===================================================================
+
 
 class TestResolution:
     def test_print_cover_at_min_dpi(self, validator: CoverValidator):
@@ -107,13 +105,13 @@ class TestResolution:
 # Dimensions
 # ===================================================================
 
+
 class TestDimensions:
     def test_correct_dimensions(self, validator: CoverValidator):
         req = _make_print_cover()
         result = validator.validate(req)
         dim_errors = [
-            i for i in result.issues
-            if i.rule in ("cover_width", "cover_height") and i.severity == Severity.ERROR
+            i for i in result.issues if i.rule in ("cover_width", "cover_height") and i.severity == Severity.ERROR
         ]
         assert len(dim_errors) == 0
 
@@ -186,6 +184,7 @@ class TestDimensions:
 # Safe zones
 # ===================================================================
 
+
 class TestSafeZones:
     def test_no_text_in_bleed(self, validator: CoverValidator):
         req = _make_print_cover(has_text_in_bleed=False)
@@ -204,6 +203,7 @@ class TestSafeZones:
 # ===================================================================
 # File format
 # ===================================================================
+
 
 class TestFileFormat:
     def test_print_tiff_accepted(self, validator: CoverValidator):
@@ -247,6 +247,7 @@ class TestFileFormat:
 # Color space
 # ===================================================================
 
+
 class TestColorSpace:
     def test_print_cmyk_passes(self, validator: CoverValidator):
         req = _make_print_cover(color_space="CMYK")
@@ -289,6 +290,7 @@ class TestColorSpace:
 # ===================================================================
 # Overall status
 # ===================================================================
+
 
 class TestOverallStatus:
     def test_perfect_print_cover(self, validator: CoverValidator):

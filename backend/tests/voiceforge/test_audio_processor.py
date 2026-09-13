@@ -6,6 +6,7 @@ normalization, waveform generation, silence detection, and format conversion.
 The module is loaded directly from the file path to avoid triggering the
 package __init__.py import chain which requires the full app to be wired up.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -23,13 +24,7 @@ import soundfile as sf
 # Direct module import — bypass app.services.voiceforge.__init__.py
 # ---------------------------------------------------------------------------
 
-_MODULE_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "app"
-    / "services"
-    / "voiceforge"
-    / "audio_processor.py"
-)
+_MODULE_PATH = Path(__file__).resolve().parents[2] / "app" / "services" / "voiceforge" / "audio_processor.py"
 
 # Pre-register a stub for app.config so the module-level `from app.config
 # import get_settings` inside AudioProcessor.__init__ works at import time.
@@ -245,7 +240,7 @@ class TestValidateACXSpecs:
             assert "actual" in check
             assert "expected" in check
             assert "auto_fixable" in check
-            assert check["passed"] is True or check["passed"] is False or isinstance(check["passed"], (bool, np.bool_))
+            assert check["passed"] is True or check["passed"] is False or isinstance(check["passed"], bool | np.bool_)
 
     def test_validate_acx_thresholds_peak(self, processor: AudioProcessor, loud_wav: Path):
         """Peak must be <= -3 dB — loud audio should fail."""
@@ -264,7 +259,7 @@ class TestValidateACXSpecs:
         """Noise floor must be < -60 dB."""
         result = processor.validate_acx(sample_wav)
         nf_check = next(c for c in result.checks if "Noise Floor" in c["name"])
-        assert isinstance(nf_check["passed"], (bool, np.bool_))
+        assert isinstance(nf_check["passed"], bool | np.bool_)
 
     def test_validate_acx_thresholds_sample_rate(self, processor: AudioProcessor, sample_wav: Path):
         """Sample rate must be 44100 Hz."""
@@ -331,13 +326,11 @@ class TestNormalize:
 
         # Read back the normalized audio and measure
         data, rate = sf.read(str(result.audio_path))
-        rms = float(np.sqrt(np.mean(data ** 2)))
+        rms = float(np.sqrt(np.mean(data**2)))
         rms_db = 20.0 * np.log10(rms) if rms > 0 else -100.0
 
         # Allow 3 dB tolerance (LUFS normalization isn't exact RMS)
-        assert abs(rms_db - target_rms) < 3.0, (
-            f"Expected RMS ~{target_rms} dB, got {rms_db:.1f} dB"
-        )
+        assert abs(rms_db - target_rms) < 3.0, f"Expected RMS ~{target_rms} dB, got {rms_db:.1f} dB"
 
     def test_normalize_peak_limiting(self, processor: AudioProcessor, loud_wav: Path):
         """Normalized audio should have peaks limited to target_peak."""
@@ -348,9 +341,7 @@ class TestNormalize:
         peak = float(np.max(np.abs(data)))
         peak_db = 20.0 * np.log10(peak) if peak > 0 else -100.0
 
-        assert peak_db <= target_peak + 0.1, (
-            f"Peak {peak_db:.1f} dB exceeds target {target_peak} dB"
-        )
+        assert peak_db <= target_peak + 0.1, f"Peak {peak_db:.1f} dB exceeds target {target_peak} dB"
 
     def test_normalize_silent_audio(self, processor: AudioProcessor, silent_wav: Path):
         """Normalizing silent audio should not crash (LUFS = -inf edge case)."""
@@ -515,15 +506,17 @@ class TestSilenceDetection:
         # Should cover nearly the entire 2-second file
         assert total_silence > 1.5
 
-    def test_silence_detection_min_duration_filter(
-        self, processor: AudioProcessor, audio_with_silence: Path
-    ):
+    def test_silence_detection_min_duration_filter(self, processor: AudioProcessor, audio_with_silence: Path):
         """Short min_duration finds gaps; long min_duration may filter them out."""
         short_min = processor.detect_silence(
-            audio_with_silence, threshold_db=-30.0, min_duration_seconds=0.3,
+            audio_with_silence,
+            threshold_db=-30.0,
+            min_duration_seconds=0.3,
         )
         long_min = processor.detect_silence(
-            audio_with_silence, threshold_db=-30.0, min_duration_seconds=5.0,
+            audio_with_silence,
+            threshold_db=-30.0,
+            min_duration_seconds=5.0,
         )
 
         assert len(short_min) >= 1
@@ -562,7 +555,9 @@ class TestFormatConversion:
     def test_format_conversion_preserves_sample_rate(self, processor: AudioProcessor, sample_wav: Path):
         """Converted file should have the target sample rate."""
         result = processor.convert_format(
-            sample_wav, target_format="mp3", sample_rate=_ACX_SAMPLE_RATE,
+            sample_wav,
+            target_format="mp3",
+            sample_rate=_ACX_SAMPLE_RATE,
         )
         assert result.sample_rate == _ACX_SAMPLE_RATE
 
@@ -595,11 +590,14 @@ class TestNoiseGate:
         assert result.audio_path.exists()
 
     def test_noise_gate_attenuates_quiet_sections(
-        self, processor: AudioProcessor, audio_with_silence: Path,
+        self,
+        processor: AudioProcessor,
+        audio_with_silence: Path,
     ):
         """Gated audio should have quieter silent sections than original."""
         result = processor.apply_noise_gate(
-            audio_with_silence, threshold_db=-30.0,
+            audio_with_silence,
+            threshold_db=-30.0,
         )
         original, _ = sf.read(str(audio_with_silence))
         gated, _ = sf.read(str(result.audio_path))

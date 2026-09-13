@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agent_system.executor import (
@@ -19,21 +18,14 @@ from app.modules.agent_system.models import (
     Agent,
     AgentBudget,
     AgentTask,
-    AgentType,
-    AuditAction,
     PermissionLevel,
-    TaskPriority,
     TaskStatus,
 )
-from app.modules.agent_system.governance import (
-    BudgetExceeded,
-    PermissionDenied,
-)
-
 
 # ---------------------------------------------------------------------------
 # Helpers – fake LLM responses used by multiple test classes
 # ---------------------------------------------------------------------------
+
 
 def _make_fake_llm_response(*, content: str = "Generated text.", total_tokens: int = 42, model_id: str = "test-model"):
     """Return a mock object that behaves like an ``LLMResponse``."""
@@ -47,7 +39,9 @@ def _make_fake_llm_response(*, content: str = "Generated text.", total_tokens: i
     return resp
 
 
-def _make_fake_call_llm_result(*, text: str = "Generated text.", tokens_used: int = 42, cost_usd: float = 0.000126, model: str = "test-model"):
+def _make_fake_call_llm_result(
+    *, text: str = "Generated text.", tokens_used: int = 42, cost_usd: float = 0.000126, model: str = "test-model"
+):
     """Return a dict matching the shape produced by ``_call_llm``."""
     return {
         "text": text,
@@ -60,6 +54,7 @@ def _make_fake_call_llm_result(*, text: str = "Generated text.", tokens_used: in
 # ---------------------------------------------------------------------------
 # LLM stub tests
 # ---------------------------------------------------------------------------
+
 
 class TestCallLLM:
     @pytest.mark.asyncio
@@ -183,8 +178,8 @@ class TestTaskExecutor:
             daily_token_limit=100000,
             daily_usd_limit=10.0,
             monthly_usd_limit=200.0,
-            last_reset_daily=datetime.now(timezone.utc),
-            last_reset_monthly=datetime.now(timezone.utc),
+            last_reset_daily=datetime.now(UTC),
+            last_reset_monthly=datetime.now(UTC),
         )
         db.add(budget)
         await db.flush()

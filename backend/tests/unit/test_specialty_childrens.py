@@ -6,23 +6,50 @@ trademark/sensitivity scanning, provenance, font licensing).
 
 Blueprint Section 17.1 — 32 test cases.
 """
+
 from __future__ import annotations
 
 import hashlib
-import math
 import re
 
 import pytest
+
+from app.modules.specialty.childrens.bilingual import (
+    SUPPORTED_LANGUAGES,
+    _age_constraints_prompt,
+    get_bilingual_layout,
+    sync_translations,
+    validate_translation,
+)
+from app.modules.specialty.childrens.bilingual import (
+    translate_book as bilingual_translate_book,
+)
+from app.modules.specialty.childrens.safety import (
+    TRADEMARK_BLOCKLIST,
+    IssueSeverity,
+    check_font_license,
+    generate_provenance_record,
+    scan_content_sensitivity,
+    scan_trademarks,
+)
+
+# Service-layer constants (no DB interaction for these)
+from app.modules.specialty.childrens.service import (
+    AGE_BAND_RULES as SVC_AGE_BAND_RULES,
+)
+from app.modules.specialty.childrens.service import (
+    CONTENT_SENSITIVITY_PATTERNS,
+    TRADEMARK_TERMS,
+    _analyze_readability,
+    _compute_rhythm_score,
+    _parse_story_pages,
+)
 
 # ---------------------------------------------------------------------------
 # Pure-function modules (no DB required)
 # ---------------------------------------------------------------------------
 from app.modules.specialty.childrens.text_analysis import (
-    AGE_BAND_RULES as TA_AGE_BAND_RULES,
-    Violation,
-    _extract_words,
     _resolve_age_range,
-    _split_sentences,
     analyze_text,
     calculate_readability_score,
     calculate_rhythm_score,
@@ -31,38 +58,6 @@ from app.modules.specialty.childrens.text_analysis import (
     score_look_inside,
     suggest_rhyme_fixes,
 )
-from app.modules.specialty.childrens.safety import (
-    TRADEMARK_BLOCKLIST,
-    FontLicenseInfo,
-    IssueSeverity,
-    ProvenanceRecord,
-    SensitivityIssue,
-    TrademarkIssue,
-    check_font_license,
-    generate_provenance_record,
-    scan_content_sensitivity,
-    scan_trademarks,
-)
-from app.modules.specialty.childrens.bilingual import (
-    SUPPORTED_LANGUAGES,
-    _age_constraints_prompt,
-    _validate_language,
-    get_bilingual_layout,
-    sync_translations,
-    translate_book as bilingual_translate_book,
-    validate_translation,
-)
-
-# Service-layer constants (no DB interaction for these)
-from app.modules.specialty.childrens.service import (
-    AGE_BAND_RULES as SVC_AGE_BAND_RULES,
-    CONTENT_SENSITIVITY_PATTERNS,
-    TRADEMARK_TERMS,
-    _analyze_readability,
-    _compute_rhythm_score,
-    _parse_story_pages,
-)
-
 
 # ===================================================================
 # 1. Age range adjusts page count, font size, and language rules
@@ -177,17 +172,13 @@ class TestLanguageGate:
     def test_chapter_book_allows_long_sentences(self):
         text = " ".join(["word"] * 14) + "."
         result = analyze_text(text, "chapter")
-        sentence_violations = [
-            v for v in result["violations"] if v["rule"] == "max_sentence_words"
-        ]
+        sentence_violations = [v for v in result["violations"] if v["rule"] == "max_sentence_words"]
         assert len(sentence_violations) == 0
 
     def test_picture_book_flags_moderate_length(self):
         text = "The little fox jumped over the stream and ran into the forest quickly."
         result = analyze_text(text, "picture")
-        sentence_violations = [
-            v for v in result["violations"] if v["rule"] == "max_sentence_words"
-        ]
+        sentence_violations = [v for v in result["violations"] if v["rule"] == "max_sentence_words"]
         # 13 words > 8 max for picture_3_5
         assert len(sentence_violations) > 0
 
@@ -482,10 +473,7 @@ class TestCharacterContinuity:
     """Service helpers for continuity checking (pure-logic subset)."""
 
     def test_parse_story_pages_preserves_character_names(self):
-        raw = (
-            "PAGE 1:\nTEXT: Luna the bunny hopped.\n"
-            "ILLUSTRATION: Luna bunny hopping in a meadow.\n"
-        )
+        raw = "PAGE 1:\nTEXT: Luna the bunny hopped.\n" "ILLUSTRATION: Luna bunny hopping in a meadow.\n"
         pages = _parse_story_pages(raw, 1)
         assert "Luna" in pages[0]["text"]
         assert "Luna" in pages[0]["illustration_prompt"]
@@ -606,9 +594,7 @@ class TestBilingualTranslation:
 
     def test_unsupported_language_raises(self):
         with pytest.raises(ValueError, match="Unsupported language"):
-            bilingual_translate_book(
-                [{"page_number": 1, "text_content": "Hi"}], "xx", "board"
-            )
+            bilingual_translate_book([{"page_number": 1, "text_content": "Hi"}], "xx", "board")
 
     def test_empty_page_skipped(self):
         pages = [

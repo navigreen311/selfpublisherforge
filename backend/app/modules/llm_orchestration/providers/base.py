@@ -74,9 +74,7 @@ class BaseLLMProvider(ABC):
         ...
 
     @abstractmethod
-    async def generate_stream(
-        self, request: LLMRequest
-    ) -> AsyncIterator[LLMStreamChunk]:
+    async def generate_stream(self, request: LLMRequest) -> AsyncIterator[LLMStreamChunk]:
         """Send a completion request and yield streamed chunks."""
         ...
 

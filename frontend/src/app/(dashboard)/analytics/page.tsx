@@ -18,12 +18,12 @@ export default function AnalyticsDashboardPage() {
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <nav aria-label="Analytics navigation" className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
             <Link href="/analytics/revenue" aria-label="View detailed revenue analytics">
               {t("navigation.revenueDetails")}
             </Link>
           </Button>
-          <Button size="sm" asChild className="gap-1.5">
+          <Button size="sm" asChild className="gap-1.5 w-full sm:w-auto">
             <Link href="/analytics/reports" aria-label="Generate analytics reports">
               <FileText className="h-4 w-4" />
               Generate Report

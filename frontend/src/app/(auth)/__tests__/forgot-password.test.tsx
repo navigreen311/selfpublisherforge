@@ -24,12 +24,34 @@ jest.mock("next/link", () => {
 });
 
 jest.mock("lucide-react", () => ({
+  // Spread the real module first: these factories list only the icons the test
+  // asserts on, and any icon used deeper in the tree (dialog.tsx's X, for one)
+  // arrived as undefined and crashed the render.
+  ...jest.requireActual("lucide-react"),
   Mail: (props: React.SVGAttributes<SVGElement>) => (
     <svg data-testid="mail-icon" {...props} />
   ),
 }));
 
 jest.mock("@radix-ui/react-slot", () => ({
+  // @radix-ui/react-primitive calls createSlot() at module load, so a mock
+  // without it throws before any test in the file runs.
+  createSlot: () =>
+    React.forwardRef(function MockSlot(
+      {
+        children,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>,
+      ref: React.Ref<HTMLElement>
+    ) {
+      return React.isValidElement(children)
+        ? React.cloneElement(children, { ...props, ref } as Record<string, unknown>)
+        : React.createElement("span", { ref, ...props }, children as React.ReactNode);
+    }),
+  createSlottable: () =>
+    function MockSlottable({ children }: { children?: React.ReactNode }) {
+      return children as React.ReactElement;
+    },
   Slot: React.forwardRef(
     (
       {
@@ -192,7 +214,7 @@ describe("ForgotPasswordPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("myemail@domain.com")).toBeInTheDocument();
+      expect(screen.getByText(/If an account exists for myemail@domain\.com/)).toBeInTheDocument();
     });
   });
 

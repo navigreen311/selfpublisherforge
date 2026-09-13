@@ -10,25 +10,22 @@ Validates:
 
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import MagicMock
-
 import pytest
 from fastapi import FastAPI
 
 from app.core.openapi import (
+    _SECURITY_SCHEMES,
     API_DESCRIPTION,
     API_TITLE,
     API_VERSION,
     TAGS_METADATA,
-    _SECURITY_SCHEMES,
     custom_openapi_schema,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_app() -> FastAPI:
     """Create a minimal FastAPI app for schema generation."""
@@ -49,8 +46,8 @@ def _make_app() -> FastAPI:
 # API metadata constants
 # =========================================================================
 
-class TestAPIMetadataConstants:
 
+class TestAPIMetadataConstants:
     def test_api_title(self):
         assert API_TITLE == "SelfPublisherForge API"
 
@@ -71,8 +68,8 @@ class TestAPIMetadataConstants:
 # Tags metadata
 # =========================================================================
 
-class TestTagsMetadata:
 
+class TestTagsMetadata:
     EXPECTED_TAGS = [
         "health",
         "auth",
@@ -133,8 +130,8 @@ class TestTagsMetadata:
 # Security schemes
 # =========================================================================
 
-class TestSecuritySchemes:
 
+class TestSecuritySchemes:
     def test_bearer_auth_exists(self):
         assert "BearerAuth" in _SECURITY_SCHEMES
 
@@ -156,8 +153,8 @@ class TestSecuritySchemes:
 # custom_openapi_schema() factory
 # =========================================================================
 
-class TestCustomOpenApiSchema:
 
+class TestCustomOpenApiSchema:
     def test_returns_callable(self):
         app = _make_app()
         result = custom_openapi_schema(app)

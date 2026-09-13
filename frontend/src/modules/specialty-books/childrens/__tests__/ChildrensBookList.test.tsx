@@ -31,7 +31,8 @@ describe("ChildrensBookList", () => {
     mockUseChildrensBooks.mockReturnValue({ data: undefined, isLoading: true });
     render(<ChildrensBookList onCreateNew={onCreateNew} />, { wrapper });
     // Skeletons rendered (6 skeleton cards)
-    expect(document.querySelectorAll("[class*=skeleton], [class*=Skeleton]").length).toBeGreaterThanOrEqual(1);
+    // The shared Skeleton renders as `animate-pulse`, with no "skeleton" class.
+    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders empty state when no books exist", () => {

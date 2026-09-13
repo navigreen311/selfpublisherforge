@@ -14,7 +14,11 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.modules.advertising.amazon_ads import AmazonAdsClient, AmazonAdsError
+from app.modules.advertising.amazon_ads import (
+    AmazonAdsClient,
+    AmazonAdsError,
+    AmazonAdsNotConfiguredError,
+)
 from app.modules.advertising.creative_generator import AdCreativeGenerator
 from app.modules.advertising.facebook_ads import FacebookAdsClient, FacebookAdsError
 from app.modules.advertising.models import (
@@ -193,7 +197,13 @@ class AdvertisingService:
                 )
                 campaign.external_campaign_id = ext_result.get("external_campaign_id")
             await self.db.flush()
-        except (AmazonAdsError, FacebookAdsError, httpx.HTTPError, OSError) as e:
+        except (
+            AmazonAdsError,
+            AmazonAdsNotConfiguredError,
+            FacebookAdsError,
+            httpx.HTTPError,
+            OSError,
+        ) as e:
             logger.warning("Failed to sync campaign to external platform: %s", e)
 
         # Create keyword bids from targeting keywords
@@ -280,9 +290,7 @@ class AdvertisingService:
                 message="Campaign not found",
             )
 
-        perf_query = select(CampaignPerformance).where(
-            CampaignPerformance.campaign_id == campaign_id
-        )
+        perf_query = select(CampaignPerformance).where(CampaignPerformance.campaign_id == campaign_id)
 
         if query:
             if query.date_from:
@@ -371,9 +379,7 @@ class AdvertisingService:
         else:
             # All keywords across org campaigns
             campaign_ids_q = select(Campaign.id).where(Campaign.org_id == org_id)
-            query = select(KeywordBid).where(
-                KeywordBid.campaign_id.in_(campaign_ids_q)
-            )
+            query = select(KeywordBid).where(KeywordBid.campaign_id.in_(campaign_ids_q))
 
         query = query.order_by(KeywordBid.created_at.desc())
         result = await self.db.execute(query)
@@ -398,7 +404,9 @@ class AdvertisingService:
                 bid_id = UUID(bid_id)
 
             result = await self.db.execute(
-                select(KeywordBid).join(Campaign).where(
+                select(KeywordBid)
+                .join(Campaign)
+                .where(
                     and_(
                         KeywordBid.id == bid_id,
                         Campaign.org_id == org_id,
@@ -501,17 +509,19 @@ class AdvertisingService:
         # Build performance data for optimizer
         kw_perf_data = []
         for kw in keywords:
-            kw_perf_data.append(KeywordPerformanceData(
-                keyword_bid_id=kw.id,
-                keyword=kw.keyword,
-                current_bid=kw.bid_amount,
-                impressions=kw.impressions,
-                clicks=kw.clicks,
-                spend=kw.spend,
-                sales=kw.sales,
-                acos=kw.acos,
-                days_of_data=request.min_data_points,  # Assume sufficient data for now
-            ))
+            kw_perf_data.append(
+                KeywordPerformanceData(
+                    keyword_bid_id=kw.id,
+                    keyword=kw.keyword,
+                    current_bid=kw.bid_amount,
+                    impressions=kw.impressions,
+                    clicks=kw.clicks,
+                    spend=kw.spend,
+                    sales=kw.sales,
+                    acos=kw.acos,
+                    days_of_data=request.min_data_points,  # Assume sufficient data for now
+                )
+            )
 
         # Get campaign-level ACOS
         summary = await self._get_performance_summary(campaign_id)
@@ -552,7 +562,9 @@ class AdvertisingService:
         # Today's spend
         today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
         today_spend_result = await self.db.execute(
-            select(func.sum(CampaignPerformance.spend)).join(Campaign).where(
+            select(func.sum(CampaignPerformance.spend))
+            .join(Campaign)
+            .where(
                 and_(
                     Campaign.org_id == org_id,
                     CampaignPerformance.date >= today,
@@ -567,7 +579,9 @@ class AdvertisingService:
             select(
                 func.sum(CampaignPerformance.spend).label("spend"),
                 func.sum(CampaignPerformance.sales).label("sales"),
-            ).join(Campaign).where(
+            )
+            .join(Campaign)
+            .where(
                 and_(
                     Campaign.org_id == org_id,
                     CampaignPerformance.date >= month_start,
@@ -584,13 +598,16 @@ class AdvertisingService:
 
         # Top campaigns
         top_campaigns_result = await self.db.execute(
-            select(Campaign).where(
+            select(Campaign)
+            .where(
                 and_(
                     Campaign.org_id == org_id,
                     Campaign.status == CampaignStatus.ACTIVE.value,
                     Campaign.deleted_at.is_(None),
                 )
-            ).order_by(Campaign.created_at.desc()).limit(5)
+            )
+            .order_by(Campaign.created_at.desc())
+            .limit(5)
         )
         top_campaigns = []
         for campaign in top_campaigns_result.scalars().all():
@@ -611,7 +628,7 @@ class AdvertisingService:
                     )
                 )
             )
-            camp_ids = [r for r in platform_campaigns.scalars().all()]
+            camp_ids = list(platform_campaigns.scalars().all())
             if camp_ids:
                 platform_perf = await self.db.execute(
                     select(
@@ -696,9 +713,7 @@ class AdvertisingService:
             limit=limit,
             status_filter=status_filter,
         )
-        campaigns = [
-            FacebookCampaignResponse(**c) for c in result.get("campaigns", [])
-        ]
+        campaigns = [FacebookCampaignResponse(**c) for c in result.get("campaigns", [])]
         return FacebookCampaignListResponse(
             campaigns=campaigns,
             total_count=result.get("total_count", len(campaigns)),

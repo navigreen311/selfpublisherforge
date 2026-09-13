@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for the Competitor Weakness Finder module."""
+
 from datetime import datetime
 from enum import Enum
 from uuid import UUID
@@ -8,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class WeaknessCategory(str, Enum):
     CONTENT_QUALITY = "content_quality"
@@ -48,8 +50,10 @@ class AlertSeverity(str, Enum):
 # Request schemas
 # ---------------------------------------------------------------------------
 
+
 class CompetitorAnalyzeRequest(BaseModel):
     """Request to deep-analyze a single competitor book."""
+
     book_id: UUID
     include_opportunity: bool = Field(
         default=True,
@@ -65,6 +69,7 @@ class CompetitorAnalyzeRequest(BaseModel):
 
 class BatchAnalyzeRequest(BaseModel):
     """Request to analyze the top N books in a category."""
+
     category: str = Field(..., min_length=1, max_length=300)
     top_n: int = Field(default=10, ge=1, le=50)
     include_opportunity: bool = True
@@ -72,6 +77,7 @@ class BatchAnalyzeRequest(BaseModel):
 
 class GapAnalysisRequest(BaseModel):
     """Request for cover/title/content gap analysis in a niche."""
+
     niche: str = Field(..., min_length=1, max_length=300)
     category: str | None = Field(default=None, max_length=300)
     book_ids: list[UUID] | None = Field(
@@ -85,8 +91,10 @@ class GapAnalysisRequest(BaseModel):
 # Evidence and sub-schemas
 # ---------------------------------------------------------------------------
 
+
 class ReviewEvidence(BaseModel):
     """An excerpt from a review used as evidence for a weakness signal."""
+
     review_id: UUID | None = None
     excerpt: str
     rating: int | None = None
@@ -95,6 +103,7 @@ class ReviewEvidence(BaseModel):
 
 class WeaknessSignalSchema(BaseModel):
     """A single detected weakness signal."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -113,6 +122,7 @@ class WeaknessSignalSchema(BaseModel):
 
 class WeaknessSignalCreate(BaseModel):
     """Internal schema for creating a weakness signal."""
+
     category: WeaknessCategory
     severity: Severity
     signal_text: str
@@ -127,8 +137,10 @@ class WeaknessSignalCreate(BaseModel):
 # Opportunity Blueprint
 # ---------------------------------------------------------------------------
 
+
 class ContentStrategy(BaseModel):
     """AI-generated content strategy details."""
+
     key_topics: list[str] = Field(default_factory=list)
     unique_angles: list[str] = Field(default_factory=list)
     depth_level: str = "intermediate"
@@ -138,6 +150,7 @@ class ContentStrategy(BaseModel):
 
 class PricingStrategy(BaseModel):
     """AI-generated pricing strategy."""
+
     recommended_price: float | None = None
     price_range_low: float | None = None
     price_range_high: float | None = None
@@ -147,6 +160,7 @@ class PricingStrategy(BaseModel):
 
 class OpportunityBlueprintSchema(BaseModel):
     """Full opportunity blueprint for beating a competitor."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -167,8 +181,10 @@ class OpportunityBlueprintSchema(BaseModel):
 # Competitor Analysis (main response)
 # ---------------------------------------------------------------------------
 
+
 class CompetitorBookBrief(BaseModel):
     """Brief view of a competitor book embedded in analysis responses."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -184,6 +200,7 @@ class CompetitorBookBrief(BaseModel):
 
 class CompetitorAnalysisSchema(BaseModel):
     """Full analysis result for a competitor book."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -205,6 +222,7 @@ class CompetitorAnalysisSchema(BaseModel):
 
 class CompetitorAnalysisDetail(CompetitorAnalysisSchema):
     """Analysis with embedded weaknesses and opportunity."""
+
     weaknesses: list[WeaknessSignalSchema] = Field(default_factory=list)
     opportunity: OpportunityBlueprintSchema | None = None
 
@@ -213,8 +231,10 @@ class CompetitorAnalysisDetail(CompetitorAnalysisSchema):
 # Gap Analysis
 # ---------------------------------------------------------------------------
 
+
 class CoverGap(BaseModel):
     """A detected gap in cover design across a niche."""
+
     gap_type: str
     description: str
     prevalence: float = 0.0  # 0-1 how common
@@ -223,6 +243,7 @@ class CoverGap(BaseModel):
 
 class TitleGap(BaseModel):
     """A detected gap in title/subtitle patterns across a niche."""
+
     gap_type: str
     description: str
     missing_keywords: list[str] = Field(default_factory=list)
@@ -231,6 +252,7 @@ class TitleGap(BaseModel):
 
 class ContentGap(BaseModel):
     """A detected gap in content coverage across a niche."""
+
     topic: str
     description: str
     demand_signal: str | None = None
@@ -239,6 +261,7 @@ class ContentGap(BaseModel):
 
 class GapAnalysisSchema(BaseModel):
     """Full gap analysis result for a niche."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -260,8 +283,10 @@ class GapAnalysisSchema(BaseModel):
 # Competitor Alerts
 # ---------------------------------------------------------------------------
 
+
 class CompetitorAlertSchema(BaseModel):
     """A single competitor alert."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -282,8 +307,10 @@ class CompetitorAlertSchema(BaseModel):
 # Batch / list responses
 # ---------------------------------------------------------------------------
 
+
 class BatchAnalyzeResponse(BaseModel):
     """Response for a batch analysis request."""
+
     task_id: str
     analyses_created: int
     book_ids: list[UUID]

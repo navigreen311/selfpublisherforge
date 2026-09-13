@@ -34,9 +34,7 @@ async def create_automation(
     return automation
 
 
-async def get_automations(
-    db: AsyncSession, pipeline_id: uuid.UUID
-) -> list[PipelineAutomation]:
+async def get_automations(db: AsyncSession, pipeline_id: uuid.UUID) -> list[PipelineAutomation]:
     """List all automations for a pipeline."""
     stmt = (
         select(PipelineAutomation)
@@ -47,9 +45,7 @@ async def get_automations(
     return list(result.scalars().all())
 
 
-async def update_automation(
-    db: AsyncSession, automation_id: uuid.UUID, **kwargs
-) -> PipelineAutomation | None:
+async def update_automation(db: AsyncSession, automation_id: uuid.UUID, **kwargs) -> PipelineAutomation | None:
     """Update an automation rule."""
     stmt = select(PipelineAutomation).where(PipelineAutomation.id == automation_id)
     result = await db.execute(stmt)
@@ -66,9 +62,7 @@ async def update_automation(
     return automation
 
 
-async def delete_automation(
-    db: AsyncSession, automation_id: uuid.UUID
-) -> bool:
+async def delete_automation(db: AsyncSession, automation_id: uuid.UUID) -> bool:
     """Delete an automation rule."""
     stmt = select(PipelineAutomation).where(PipelineAutomation.id == automation_id)
     result = await db.execute(stmt)
@@ -99,19 +93,17 @@ async def evaluate_trigger(
 
         # Check trigger config matches event data
         trigger_cfg = auto.trigger_config or {}
-        if event_type == "task_moved_to_stage":
-            if trigger_cfg.get("stage_id") and event_data:
-                if str(trigger_cfg["stage_id"]) != str(event_data.get("stage_id", "")):
-                    continue
-        elif event_type == "all_tasks_complete_in_stage":
+        if event_type == "task_moved_to_stage" or event_type == "all_tasks_complete_in_stage":
             if trigger_cfg.get("stage_id") and event_data:
                 if str(trigger_cfg["stage_id"]) != str(event_data.get("stage_id", "")):
                     continue
 
-        actions.append({
-            "automation_id": str(auto.id),
-            "action_type": auto.action_type,
-            "action_config": auto.action_config,
-        })
+        actions.append(
+            {
+                "automation_id": str(auto.id),
+                "action_type": auto.action_type,
+                "action_config": auto.action_config,
+            }
+        )
 
     return actions

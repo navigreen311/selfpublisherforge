@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 # Channel enum
 # ---------------------------------------------------------------------------
 
+
 class WSChannel(str, Enum):
     WRITING = "writing"
     AGENTS = "agents"
@@ -22,8 +23,10 @@ class WSChannel(str, Enum):
 # Base message envelope
 # ---------------------------------------------------------------------------
 
+
 class WSMessage(BaseModel):
     """Canonical envelope for every WebSocket message."""
+
     type: str
     channel: WSChannel
     room_id: str
@@ -34,6 +37,7 @@ class WSMessage(BaseModel):
 # ---------------------------------------------------------------------------
 # Writing channel events
 # ---------------------------------------------------------------------------
+
 
 class CursorMoveData(BaseModel):
     user_id: str
@@ -65,6 +69,7 @@ class SaveAckData(BaseModel):
 # ---------------------------------------------------------------------------
 # Agent channel events
 # ---------------------------------------------------------------------------
+
 
 class TaskStartedData(BaseModel):
     task_id: str
@@ -98,6 +103,7 @@ class BudgetAlertData(BaseModel):
 # Analytics channel events
 # ---------------------------------------------------------------------------
 
+
 class MetricUpdateData(BaseModel):
     metric_name: str
     value: float
@@ -119,6 +125,7 @@ class ReportReadyData(BaseModel):
 # ---------------------------------------------------------------------------
 # Publishing channel events
 # ---------------------------------------------------------------------------
+
 
 class ValidationProgressData(BaseModel):
     step: str
@@ -197,14 +204,14 @@ class CostUpdateData(BaseModel):
 # Mapping of event type strings to their data schemas
 # ---------------------------------------------------------------------------
 
-WRITING_EVENT_TYPES = {
+WRITING_EVENT_TYPES: dict[str, type[BaseModel]] = {
     "cursor_move": CursorMoveData,
     "text_change": TextChangeData,
     "ai_suggestion": AISuggestionData,
     "save_ack": SaveAckData,
 }
 
-AGENT_EVENT_TYPES = {
+AGENT_EVENT_TYPES: dict[str, type[BaseModel]] = {
     "task_started": TaskStartedData,
     "task_progress": TaskProgressData,
     "task_completed": TaskCompletedData,
@@ -212,19 +219,19 @@ AGENT_EVENT_TYPES = {
     "budget_alert": BudgetAlertData,
 }
 
-ANALYTICS_EVENT_TYPES = {
+ANALYTICS_EVENT_TYPES: dict[str, type[BaseModel]] = {
     "metric_update": MetricUpdateData,
     "alert_triggered": AlertTriggeredData,
     "report_ready": ReportReadyData,
 }
 
-PUBLISHING_EVENT_TYPES = {
+PUBLISHING_EVENT_TYPES: dict[str, type[BaseModel]] = {
     "validation_progress": ValidationProgressData,
     "upload_progress": UploadProgressData,
     "listing_synced": ListingSyncedData,
 }
 
-AUDIOBOOK_EVENT_TYPES = {
+AUDIOBOOK_EVENT_TYPES: dict[str, type[BaseModel]] = {
     "chapter_generation_started": ChapterGenerationStartedData,
     "chapter_generation_progress": ChapterGenerationProgressData,
     "chapter_generation_complete": ChapterGenerationCompleteData,
@@ -235,7 +242,7 @@ AUDIOBOOK_EVENT_TYPES = {
     "cost_update": CostUpdateData,
 }
 
-CHANNEL_EVENT_TYPES = {
+CHANNEL_EVENT_TYPES: dict[WSChannel, dict[str, type[BaseModel]]] = {
     WSChannel.WRITING: WRITING_EVENT_TYPES,
     WSChannel.AGENTS: AGENT_EVENT_TYPES,
     WSChannel.ANALYTICS: ANALYTICS_EVENT_TYPES,

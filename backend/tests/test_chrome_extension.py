@@ -2,10 +2,11 @@
 
 Covers schemas, service helpers, and router configuration.
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -19,17 +20,14 @@ from app.modules.chrome_extension.schemas import (
     ExtractDataRequest,
     ExtractedAmazonData,
     ExtractedDataResponse,
-    QuickResearchQuery,
     QuickResearchResponse,
     ReviewSummary,
 )
 from app.modules.chrome_extension.service import (
     _estimate_daily_sales,
-    save_extracted_data,
-    get_quick_research,
     save_clip,
+    save_extracted_data,
 )
-
 
 # ---------------------------------------------------------------------------
 # Schema validation tests
@@ -93,7 +91,7 @@ class TestResponseSchemas:
             asin="B0CTEST001",
             title="Test",
             bsr=100,
-            saved_at=datetime.now(timezone.utc),
+            saved_at=datetime.now(UTC),
         )
         assert resp.asin == "B0CTEST001"
 
@@ -103,7 +101,7 @@ class TestResponseSchemas:
             org_id=uuid.uuid4(),
             clip_type=ClipType.TEXT,
             title="Clip",
-            saved_at=datetime.now(timezone.utc),
+            saved_at=datetime.now(UTC),
         )
         assert resp.clip_type == ClipType.TEXT
 
@@ -172,7 +170,7 @@ class TestSaveExtractedDataService:
 
         product_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         async def fake_refresh(obj):
             obj.id = product_id
@@ -209,7 +207,7 @@ class TestSaveClipService:
 
         clip_id = uuid.uuid4()
         org_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         async def fake_refresh(obj):
             obj.id = clip_id
@@ -244,8 +242,9 @@ class TestRouterConfig:
     """Verify the router is properly configured."""
 
     def test_router_exists_and_is_api_router(self):
-        from app.modules.chrome_extension.router import router
         from fastapi import APIRouter
+
+        from app.modules.chrome_extension.router import router
 
         assert isinstance(router, APIRouter)
 

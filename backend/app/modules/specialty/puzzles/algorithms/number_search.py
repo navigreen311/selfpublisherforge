@@ -13,7 +13,6 @@ Algorithm:
 
 from __future__ import annotations
 
-import copy
 import random
 from typing import Any
 
@@ -28,17 +27,18 @@ from .utils import (
 
 # Direction vectors: (row_delta, col_delta)
 _DIRECTIONS_4 = [
-    (0, 1),   # right
-    (1, 0),   # down
+    (0, 1),  # right
+    (1, 0),  # down
     (0, -1),  # left
     (-1, 0),  # up
 ]
 
-_DIRECTIONS_8 = _DIRECTIONS_4 + [
-    (1, 1),   # down-right
+_DIRECTIONS_8 = [
+    *_DIRECTIONS_4,
+    (1, 1),  # down-right
     (1, -1),  # down-left
     (-1, 1),  # up-right
-    (-1, -1), # up-left
+    (-1, -1),  # up-left
 ]
 
 
@@ -52,9 +52,8 @@ def _get_directions(direction_count: int) -> list[tuple[int, int]]:
 # Placement helpers
 # ---------------------------------------------------------------------------
 
-def _can_place(grid: list[list[str]], number: str,
-               row: int, col: int, dr: int, dc: int,
-               grid_size: int) -> bool:
+
+def _can_place(grid: list[list[str]], number: str, row: int, col: int, dr: int, dc: int, grid_size: int) -> bool:
     """Check whether *number* can be placed starting at (row, col) in direction (dr, dc)."""
     for i, digit in enumerate(number):
         r = row + i * dr
@@ -67,8 +66,7 @@ def _can_place(grid: list[list[str]], number: str,
     return True
 
 
-def _place(grid: list[list[str]], number: str,
-           row: int, col: int, dr: int, dc: int) -> list[tuple[int, int]]:
+def _place(grid: list[list[str]], number: str, row: int, col: int, dr: int, dc: int) -> list[tuple[int, int]]:
     """Place *number* into the grid. Returns list of (row, col) positions."""
     positions: list[tuple[int, int]] = []
     for i, digit in enumerate(number):
@@ -79,9 +77,9 @@ def _place(grid: list[list[str]], number: str,
     return positions
 
 
-def _try_place_number(grid: list[list[str]], number: str,
-                      grid_size: int, directions: list[tuple[int, int]],
-                      max_attempts: int = 200) -> list[tuple[int, int]] | None:
+def _try_place_number(
+    grid: list[list[str]], number: str, grid_size: int, directions: list[tuple[int, int]], max_attempts: int = 200
+) -> list[tuple[int, int]] | None:
     """Attempt to place *number* at a random position/direction."""
     for _ in range(max_attempts):
         dr, dc = random.choice(directions)
@@ -96,9 +94,8 @@ def _try_place_number(grid: list[list[str]], number: str,
 # Public API
 # ---------------------------------------------------------------------------
 
-def generate_number_search(numbers: list[str],
-                           grid_size: int = 12,
-                           directions: int = 4) -> dict[str, Any]:
+
+def generate_number_search(numbers: list[str], grid_size: int = 12, directions: int = 4) -> dict[str, Any]:
     """
     Generate a number search puzzle.
 
@@ -143,10 +140,12 @@ def generate_number_search(numbers: list[str],
     for number in clean_numbers:
         positions = _try_place_number(grid, number, grid_size, dir_vectors)
         if positions is not None:
-            placed_numbers.append({
-                "number": number,
-                "positions": positions,
-            })
+            placed_numbers.append(
+                {
+                    "number": number,
+                    "positions": positions,
+                }
+            )
         else:
             not_placed.append(number)
 
@@ -162,10 +161,12 @@ def generate_number_search(numbers: list[str],
             if grid[r][c] == "":
                 grid[r][c] = str(random.randint(0, 9))
 
-    content_hash = generate_content_hash({
-        "grid": grid,
-        "placed_numbers": [p["number"] for p in placed_numbers],
-    })
+    content_hash = generate_content_hash(
+        {
+            "grid": grid,
+            "placed_numbers": [p["number"] for p in placed_numbers],
+        }
+    )
 
     svg = render_number_search_svg(grid, placed_numbers, grid_size)
 
@@ -183,10 +184,10 @@ def generate_number_search(numbers: list[str],
 # SVG rendering
 # ---------------------------------------------------------------------------
 
-def render_number_search_svg(grid: list[list[str]],
-                              placed_numbers: list[dict[str, Any]],
-                              grid_size: int,
-                              cell_size: int = 40) -> str:
+
+def render_number_search_svg(
+    grid: list[list[str]], placed_numbers: list[dict[str, Any]], grid_size: int, cell_size: int = 40
+) -> str:
     """Render the number search grid and number list to SVG."""
     padding = 30
     grid_total = grid_size * cell_size
@@ -199,14 +200,13 @@ def render_number_search_svg(grid: list[list[str]],
     parts.append(svg_rect(0, 0, width, height, fill="white", stroke="none"))
 
     # Title
-    parts.append(svg_text(width // 2, padding - 5, "Number Search",
-                          font_size=20, font_weight="bold",
-                          font_family="sans-serif"))
+    parts.append(
+        svg_text(width // 2, padding - 5, "Number Search", font_size=20, font_weight="bold", font_family="sans-serif")
+    )
 
     # Grid lines
     gy = padding + 10
-    parts.append(svg_grid(grid_size, grid_size, cell_size,
-                          offset_x=padding, offset_y=gy))
+    parts.append(svg_grid(grid_size, grid_size, cell_size, offset_x=padding, offset_y=gy))
 
     # Digits
     font_size = max(12, cell_size // 2)
@@ -214,14 +214,12 @@ def render_number_search_svg(grid: list[list[str]],
         for c in range(grid_size):
             cx = padding + c * cell_size + cell_size // 2
             cy = gy + r * cell_size + cell_size // 2
-            parts.append(svg_text(cx, cy, grid[r][c], font_size,
-                                  font_family="monospace"))
+            parts.append(svg_text(cx, cy, grid[r][c], font_size, font_family="monospace"))
 
     # Number list at bottom
     list_y = gy + grid_total + 25
     nums_label = "Find: " + "  ".join(p["number"] for p in placed_numbers)
-    parts.append(svg_text(width // 2, list_y, nums_label,
-                          font_size=14, font_family="sans-serif"))
+    parts.append(svg_text(width // 2, list_y, nums_label, font_size=14, font_family="sans-serif"))
 
     parts.append(svg_footer())
     return "".join(parts)

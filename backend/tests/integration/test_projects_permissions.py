@@ -3,16 +3,17 @@
 These tests verify that permission checks are properly enforced on project endpoints.
 """
 
-import pytest
 import uuid
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.security import create_access_token, hash_password
-from app.models.user import User, UserRole
 from app.models.organization import Organization
-from app.models.project import Project, ProjectType, ProjectStatus
+from app.models.project import Project, ProjectStatus, ProjectType
+from app.models.user import User, UserRole
 
 settings = get_settings()
 PREFIX = f"{settings.API_V1_PREFIX}/projects"
@@ -21,6 +22,7 @@ PREFIX = f"{settings.API_V1_PREFIX}/projects"
 # ---------------------------------------------------------------------------
 # Helper Functions
 # ---------------------------------------------------------------------------
+
 
 async def _create_org(db: AsyncSession, name: str = "Test Org") -> Organization:
     """Create a test organization."""
@@ -97,6 +99,7 @@ def _auth_headers(token: str) -> dict:
 # Unauthenticated Access Tests
 # ---------------------------------------------------------------------------
 
+
 class TestUnauthenticatedAccess:
     """Verify unauthenticated users cannot access project endpoints."""
 
@@ -111,13 +114,13 @@ class TestUnauthenticatedAccess:
                 "project_type": "book",
             },
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_projects_requires_auth(self, client: AsyncClient):
         """Unauthenticated user cannot list projects."""
         resp = await client.get(f"{PREFIX}/")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_get_project_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -126,7 +129,7 @@ class TestUnauthenticatedAccess:
         project = await _create_project(db, org.id)
 
         resp = await client.get(f"{PREFIX}/{project.id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_update_project_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -138,7 +141,7 @@ class TestUnauthenticatedAccess:
             f"{PREFIX}/{project.id}",
             json={"title": "Hacked Title"},
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_delete_project_requires_auth(self, client: AsyncClient, db: AsyncSession):
@@ -147,12 +150,13 @@ class TestUnauthenticatedAccess:
         project = await _create_project(db, org.id)
 
         resp = await client.delete(f"{PREFIX}/{project.id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------
 # Cross-Organization Access Tests
 # ---------------------------------------------------------------------------
+
 
 class TestCrossOrganizationAccess:
     """Verify users cannot access projects from other organizations."""
@@ -174,8 +178,8 @@ class TestCrossOrganizationAccess:
         data = resp.json()
 
         # Should only see org1's project
-        assert len(data) == 1
-        assert data[0]["title"] == "Org1 Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Org1 Project"
 
     @pytest.mark.asyncio
     async def test_cannot_get_other_org_project(self, client: AsyncClient, db: AsyncSession):
@@ -227,6 +231,7 @@ class TestCrossOrganizationAccess:
 # ---------------------------------------------------------------------------
 # Role-Based Access Control Tests
 # ---------------------------------------------------------------------------
+
 
 class TestRoleBasedAccess:
     """Verify role-based access control on project endpoints."""
@@ -336,6 +341,7 @@ class TestRoleBasedAccess:
 # Soft Delete Tests
 # ---------------------------------------------------------------------------
 
+
 class TestSoftDeletedProjects:
     """Verify soft-deleted projects don't appear in lists."""
 
@@ -355,7 +361,7 @@ class TestSoftDeletedProjects:
         resp = await client.get(f"{PREFIX}/", headers=_auth_headers(token))
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 2
+        assert len(data["projects"]) == 2
 
         # Delete one project
         resp = await client.delete(
@@ -368,8 +374,8 @@ class TestSoftDeletedProjects:
         resp = await client.get(f"{PREFIX}/", headers=_auth_headers(token))
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Active Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Active Project"
 
     @pytest.mark.asyncio
     async def test_deleted_project_not_accessible(self, client: AsyncClient, db: AsyncSession):
@@ -400,6 +406,7 @@ class TestSoftDeletedProjects:
 # Project Filtering Tests
 # ---------------------------------------------------------------------------
 
+
 class TestProjectFiltering:
     """Verify project filtering by type and status."""
 
@@ -422,8 +429,8 @@ class TestProjectFiltering:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Book Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Book Project"
 
     @pytest.mark.asyncio
     async def test_filter_by_status(self, client: AsyncClient, db: AsyncSession):
@@ -445,5 +452,5 @@ class TestProjectFiltering:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Active Project"
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["title"] == "Active Project"

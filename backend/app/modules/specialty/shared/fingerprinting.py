@@ -11,6 +11,7 @@ types:
 
 Blueprint refs: 7.1, 7.3, 7.4
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -26,10 +27,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.specialty.models.shared import ContentFingerprint
 
-
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class FingerprintResult:
@@ -54,6 +55,7 @@ class DuplicateGuardrailResult:
 # ---------------------------------------------------------------------------
 # Internal fingerprint generators
 # ---------------------------------------------------------------------------
+
 
 def _average_hash(image_bytes: bytes, hash_size: int = 8) -> str:
     """Compute a simplified average-hash (aHash) for an image.
@@ -88,8 +90,7 @@ def _average_hash(image_bytes: bytes, hash_size: int = 8) -> str:
     bits = "".join("1" if px >= mean_val else "0" for px in sampled)
 
     # Convert to hex
-    hex_str = format(int(bits, 2), f"0{total_pixels // 4}x")
-    return hex_str
+    return format(int(bits, 2), f"0{total_pixels // 4}x")
 
 
 def _grid_data_hash(grid_data: Any) -> str:
@@ -128,6 +129,7 @@ def _ngram_fingerprint(text: str, n: int = 3) -> str:
 # ---------------------------------------------------------------------------
 # Comparison helpers
 # ---------------------------------------------------------------------------
+
 
 def _hamming_distance(hex_a: str, hex_b: str) -> float:
     """Normalised Hamming distance between two hex hash strings (0.0-1.0).
@@ -174,6 +176,7 @@ def _cosine_similarity(vec_a: dict[str, int], vec_b: dict[str, int]) -> float:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def generate_fingerprint(
     content_type: str,
     content_data: Any,
@@ -204,34 +207,31 @@ def generate_fingerprint(
             method="average_hash",
             metadata={"hash_size": 8},
         )
-    elif content_type == "puzzle_grids":
+    if content_type == "puzzle_grids":
         fp = _grid_data_hash(content_data)
         return FingerprintResult(
             content_type=content_type,
             fingerprint=fp,
             method="sha256_grid",
         )
-    elif content_type == "word_lists":
+    if content_type == "word_lists":
         vec = _jaccard_vector(content_data)
         # Use a hash of the sorted word list as the canonical fingerprint
-        fp = hashlib.sha256(
-            json.dumps(vec, sort_keys=True).encode()
-        ).hexdigest()
+        fp = hashlib.sha256(json.dumps(vec, sort_keys=True).encode()).hexdigest()
         return FingerprintResult(
             content_type=content_type,
             fingerprint=fp,
             method="jaccard",
             metadata={"word_count": len(vec["words"]), "words": vec["words"]},
         )
-    elif content_type == "text":
+    if content_type == "text":
         fp = _ngram_fingerprint(content_data)
         return FingerprintResult(
             content_type=content_type,
             fingerprint=fp,
             method="ngram_3",
         )
-    else:
-        raise ValueError(f"Unsupported content_type: {content_type!r}")
+    raise ValueError(f"Unsupported content_type: {content_type!r}")
 
 
 def compare_fingerprints(
@@ -244,31 +244,27 @@ def compare_fingerprints(
     is chosen based on the content type of *fp1*.
     """
     if fp1.content_type != fp2.content_type:
-        raise ValueError(
-            f"Cannot compare different content types: "
-            f"{fp1.content_type!r} vs {fp2.content_type!r}"
-        )
+        raise ValueError(f"Cannot compare different content types: " f"{fp1.content_type!r} vs {fp2.content_type!r}")
 
     if fp1.content_type == "images":
         # Hamming distance gives dissimilarity; invert for similarity
         return 1.0 - _hamming_distance(fp1.fingerprint, fp2.fingerprint)
 
-    elif fp1.content_type == "puzzle_grids":
+    if fp1.content_type == "puzzle_grids":
         # SHA-256: either identical or not
         return 1.0 if fp1.fingerprint == fp2.fingerprint else 0.0
 
-    elif fp1.content_type == "word_lists":
+    if fp1.content_type == "word_lists":
         words_a = set(fp1.metadata.get("words", []))
         words_b = set(fp2.metadata.get("words", []))
         return _jaccard_similarity(words_a, words_b)
 
-    elif fp1.content_type == "text":
+    if fp1.content_type == "text":
         vec_a: dict[str, int] = json.loads(fp1.fingerprint) if fp1.fingerprint else {}
         vec_b: dict[str, int] = json.loads(fp2.fingerprint) if fp2.fingerprint else {}
         return _cosine_similarity(vec_a, vec_b)
 
-    else:
-        raise ValueError(f"Unsupported content_type: {fp1.content_type!r}")
+    raise ValueError(f"Unsupported content_type: {fp1.content_type!r}")
 
 
 async def cross_book_comparison(
@@ -357,26 +353,19 @@ def check_anti_duplicate_guardrails(
         threshold = 0.85
         if unique_ratio < threshold:
             violations.append(
-                f"Coloring book has {unique_ratio:.0%} unique pages "
-                f"(minimum {threshold:.0%} required)"
+                f"Coloring book has {unique_ratio:.0%} unique pages " f"(minimum {threshold:.0%} required)"
             )
     elif book_type == "puzzle":
         threshold = 1.0
         if unique_ratio < threshold:
-            violations.append(
-                f"Puzzle book has {unique_ratio:.0%} unique grids "
-                f"(100% unique grids required)"
-            )
+            violations.append(f"Puzzle book has {unique_ratio:.0%} unique grids " f"(100% unique grids required)")
     else:
         # Children's books -- no specific page uniqueness threshold
         threshold = 0.0
 
     # Word overlap check (applies to all types with word-based content)
     if word_overlap_ratio > 0.30:
-        violations.append(
-            f"Word overlap between volumes is {word_overlap_ratio:.0%} "
-            f"(maximum 30% allowed)"
-        )
+        violations.append(f"Word overlap between volumes is {word_overlap_ratio:.0%} " f"(maximum 30% allowed)")
 
     passed = len(violations) == 0
     return DuplicateGuardrailResult(
@@ -391,6 +380,7 @@ def check_anti_duplicate_guardrails(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _row_to_fingerprint_result(row: ContentFingerprint) -> FingerprintResult | None:
     """Convert a DB row back into a FingerprintResult for comparison."""
     ct = row.content_type
@@ -403,7 +393,7 @@ def _row_to_fingerprint_result(row: ContentFingerprint) -> FingerprintResult | N
             fingerprint=row.phash,
             method="average_hash",
         )
-    elif ct == "puzzle_grids":
+    if ct == "puzzle_grids":
         if not row.data_hash:
             return None
         return FingerprintResult(
@@ -411,20 +401,18 @@ def _row_to_fingerprint_result(row: ContentFingerprint) -> FingerprintResult | N
             fingerprint=row.data_hash,
             method="sha256_grid",
         )
-    elif ct == "word_lists":
+    if ct == "word_lists":
         if not row.jaccard_vector:
             return None
         words = row.jaccard_vector.get("words", [])
-        fp = hashlib.sha256(
-            json.dumps(row.jaccard_vector, sort_keys=True).encode()
-        ).hexdigest()
+        fp = hashlib.sha256(json.dumps(row.jaccard_vector, sort_keys=True).encode()).hexdigest()
         return FingerprintResult(
             content_type=ct,
             fingerprint=fp,
             method="jaccard",
             metadata={"word_count": len(words), "words": words},
         )
-    elif ct == "text":
+    if ct == "text":
         if not row.ngram_fingerprint:
             return None
         return FingerprintResult(

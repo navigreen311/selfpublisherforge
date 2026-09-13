@@ -223,11 +223,7 @@ class ConnectionManager:
 
     def get_all_rooms(self) -> list[tuple[str, str, int]]:
         """Return a list of ``(channel, room_id, connection_count)`` tuples."""
-        return [
-            (ch.value, rid, len(conns))
-            for (ch, rid), conns in self.active_connections.items()
-            if conns
-        ]
+        return [(ch.value, rid, len(conns)) for (ch, rid), conns in self.active_connections.items() if conns]
 
     # ------------------------------------------------------------------
     # Shutdown
@@ -252,3 +248,14 @@ class ConnectionManager:
             await self._pubsub.close()
         if self._redis is not None:
             await self._redis.close()
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton
+# ---------------------------------------------------------------------------
+# realtime/service.py imported `connection_manager` from here and it had never
+# existed; the only instance lived in realtime/router.py. Defining it here
+# keeps a single manager and lets the router alias it.
+from app.config import get_settings  # noqa: E402  # after ConnectionManager is defined
+
+connection_manager = ConnectionManager(redis_url=get_settings().REDIS_URL)

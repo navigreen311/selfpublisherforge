@@ -20,6 +20,7 @@ const mockUseAdDashboard = jest.fn();
 
 jest.mock("@/modules/advertising/hooks", () => ({
   useAdDashboard: (...args: unknown[]) => mockUseAdDashboard(...args),
+  useEnhancedDashboard: () => ({ data: undefined, isLoading: false, isError: false, error: null, refetch: jest.fn() }),
 }));
 
 // Mock the CampaignCard component
@@ -180,7 +181,7 @@ describe("AdvertisingDashboardPage", () => {
 
     render(<AdvertisingDashboardPage />);
 
-    const viewAllLink = screen.getByRole("link", { name: /view all campaigns/i });
+    const viewAllLink = screen.getByRole("link", { name: /view all advertising campaigns/i });
     expect(viewAllLink).toBeInTheDocument();
     expect(viewAllLink).toHaveAttribute("href", "/advertising/campaigns");
   });
@@ -277,7 +278,7 @@ describe("AdvertisingDashboardPage", () => {
 
     expect(screen.getByText("No active campaigns yet.")).toBeInTheDocument();
 
-    const createLink = screen.getByRole("link", { name: /create your first campaign/i });
+    const createLink = screen.getByRole("link", { name: /create your first advertising campaign/i });
     expect(createLink).toBeInTheDocument();
     expect(createLink).toHaveAttribute("href", "/advertising/campaigns");
   });

@@ -761,4 +761,18 @@ const en = {
 
 export default en;
 
-export type SpecialtyI18n = typeof en;
+/**
+ * Translation dictionaries share `en`'s KEY structure, not its VALUES.
+ *
+ * `en` is declared `as const`, so `typeof en` types every value as a string
+ * *literal* ("Specialty Books"). Annotating es.ts / de.ts with that type
+ * therefore demanded that every translated string be identical to the English
+ * one, which produced 1,139 TS2322 errors across the two files.
+ *
+ * `Widen` keeps the nested key structure — so a missing or misspelled
+ * translation key is still a type error, which is the check that matters —
+ * while allowing any string as the value.
+ */
+type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> };
+
+export type SpecialtyI18n = Widen<typeof en>;

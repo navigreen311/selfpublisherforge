@@ -230,20 +230,24 @@ export function CreateChildrensBookWizard({ open, onOpenChange }: CreateChildren
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <Label>Title *</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="My Amazing Story" />
+              <Label htmlFor="childrens-title">Title *</Label>
+              <Input id="childrens-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="My Amazing Story" />
             </div>
             <div>
-              <Label>Subtitle</Label>
-              <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Optional subtitle" />
+              <Label htmlFor="childrens-subtitle">Subtitle</Label>
+              <Input id="childrens-subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Optional subtitle" />
             </div>
             <div>
-              <Label>Author *</Label>
-              <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Your name or pen name" />
+              <Label htmlFor="childrens-author">Author *</Label>
+              <Input id="childrens-author" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Your name or pen name" />
             </div>
             <div>
-              <Label>Age Range</Label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <Label id="childrens-age-range-label">Age Range</Label>
+              <div
+                role="group"
+                aria-labelledby="childrens-age-range-label"
+                className="grid grid-cols-2 gap-2 mt-1"
+              >
                 {AGE_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
@@ -264,8 +268,14 @@ export function CreateChildrensBookWizard({ open, onOpenChange }: CreateChildren
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Checkbox checked={bilingual} onCheckedChange={(c) => setBilingual(c === true)} />
-              <Label className="text-sm">Bilingual edition</Label>
+              <Checkbox
+                id="childrens-bilingual"
+                checked={bilingual}
+                onCheckedChange={(c) => setBilingual(c === true)}
+              />
+              <Label htmlFor="childrens-bilingual" className="text-sm">
+                Bilingual edition
+              </Label>
               {bilingual && (
                 <Select value={secondaryLanguage} onValueChange={setSecondaryLanguage}>
                   <SelectTrigger className="w-40 ml-2">

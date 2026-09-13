@@ -80,9 +80,7 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
 
                 for review in reviews:
                     try:
-                        analysis = await analyze_sentiment_llm(
-                            review.body, review.star_rating
-                        )
+                        analysis = await analyze_sentiment_llm(review.body, review.star_rating)
                         review.sentiment = analysis.sentiment.value
                         review.sentiment_score = analysis.score
                         review.themes = {
@@ -116,9 +114,7 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
                         db.add(review)
 
                 await db.commit()
-                logger.info(
-                    f"Successfully analyzed {analyzed}/{len(reviews)} reviews"
-                )
+                logger.info(f"Successfully analyzed {analyzed}/{len(reviews)} reviews")
                 return {"analyzed": analyzed, "total": len(reviews)}
             except SQLAlchemyError as e:
                 logger.error(
@@ -135,7 +131,7 @@ def analyze_pending_reviews(self, org_id: str, book_id: str | None = None):
         raise
     except Exception as e:
         logger.error(f"Task analyze_pending_reviews failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @celery_app.task(
@@ -187,7 +183,7 @@ def check_alerts(self, org_id: str, book_id: str):
         raise
     except Exception as e:
         logger.error(f"Alert check task failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @celery_app.task(
@@ -204,9 +200,7 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
     Calculates review counts and stats for the most recent period
     and stores them in the review_velocity_snapshots table.
     """
-    logger.info(
-        f"Computing velocity snapshot for org {org_id}, book {book_id}, period {period}"
-    )
+    logger.info(f"Computing velocity snapshot for org {org_id}, book {book_id}, period {period}")
 
     async def _compute():
         from sqlalchemy import and_, func, select
@@ -222,36 +216,26 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
 
                 now = datetime.now(UTC)
                 if vel_period == VelocityPeriod.DAILY:
-                    period_start = now.replace(
-                        hour=0, minute=0, second=0, microsecond=0
-                    ) - timedelta(days=1)
+                    period_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
                     period_end = period_start + timedelta(days=1)
                 elif vel_period == VelocityPeriod.WEEKLY:
                     # Start from last Monday
                     days_since_monday = now.weekday()
-                    period_end = now.replace(
-                        hour=0, minute=0, second=0, microsecond=0
-                    ) - timedelta(days=days_since_monday)
+                    period_end = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+                        days=days_since_monday
+                    )
                     period_start = period_end - timedelta(weeks=1)
                 else:  # monthly
-                    period_end = now.replace(
-                        day=1, hour=0, minute=0, second=0, microsecond=0
-                    )
+                    period_end = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                     period_start = (period_end - timedelta(days=1)).replace(day=1)
 
                 # Aggregate reviews for the period
                 stmt = select(
                     func.count(BookReview.id).label("count"),
                     func.avg(BookReview.star_rating).label("avg_rating"),
-                    func.count(
-                        func.nullif(BookReview.sentiment == "positive", False)
-                    ).label("positive"),
-                    func.count(
-                        func.nullif(BookReview.sentiment == "neutral", False)
-                    ).label("neutral"),
-                    func.count(
-                        func.nullif(BookReview.sentiment == "negative", False)
-                    ).label("negative"),
+                    func.count(func.nullif(BookReview.sentiment == "positive", False)).label("positive"),
+                    func.count(func.nullif(BookReview.sentiment == "neutral", False)).label("neutral"),
+                    func.count(func.nullif(BookReview.sentiment == "negative", False)).label("negative"),
                 ).where(
                     and_(
                         BookReview.org_id == UUID(org_id),
@@ -273,9 +257,7 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
                     period_start=period_start,
                     period_end=period_end,
                     review_count=row.count or 0,
-                    avg_rating=(
-                        round(float(row.avg_rating), 2) if row.avg_rating else None
-                    ),
+                    avg_rating=(round(float(row.avg_rating), 2) if row.avg_rating else None),
                     positive_count=row.positive or 0,
                     neutral_count=row.neutral or 0,
                     negative_count=row.negative or 0,
@@ -306,7 +288,7 @@ def compute_velocity_snapshots(self, org_id: str, book_id: str, period: str = "w
         raise
     except Exception as e:
         logger.error(f"Velocity snapshot task failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 @celery_app.task(name="review_intelligence.compute_reputation", soft_time_limit=300, time_limit=600)
@@ -320,14 +302,9 @@ def compute_reputation(org_id: str, book_id: str):
 
         async with async_session() as db:
             try:
-                metrics = await compute_reputation_score(
-                    db, UUID(org_id), UUID(book_id)
-                )
+                metrics = await compute_reputation_score(db, UUID(org_id), UUID(book_id))
                 await db.commit()
-                logger.info(
-                    f"Reputation computed: score={metrics.overall_score}, "
-                    f"grade={metrics.health_grade}"
-                )
+                logger.info(f"Reputation computed: score={metrics.overall_score}, " f"grade={metrics.health_grade}")
                 return {
                     "overall_score": metrics.overall_score,
                     "health_grade": metrics.health_grade,

@@ -58,7 +58,6 @@ _PLATFORM_ALIASES: dict[str, Platform] = {
     "amazon_kdp": Platform.KDP,
     "kindle": Platform.KDP,
     "ingram": Platform.INGRAM_SPARK,
-    "draft2digital": Platform.DRAFT2DIGITAL,
     "other": Platform.KDP,  # fallback: treat as KDP format
 }
 
@@ -69,6 +68,7 @@ _REQUIRED_FIELDS = {"title", "units_sold", "net_revenue", "period_start"}
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _safe_decimal(value: str | None, default: Decimal = Decimal("0.00")) -> Decimal:
     """Safely convert a string to ``Decimal``, stripping currency symbols."""
@@ -108,8 +108,8 @@ def _parse_date(value: str | None) -> datetime | None:
         "%m/%d/%y",
         "%d/%m/%Y",
         "%Y-%m-%dT%H:%M:%S",
-        "%B %Y",   # "January 2024"
-        "%b %Y",   # "Jan 2024"
+        "%B %Y",  # "January 2024"
+        "%b %Y",  # "Jan 2024"
     ]
     cleaned = value.strip()
     for fmt in formats:
@@ -156,9 +156,8 @@ def _resolve_platform(platform: str) -> Platform:
         return Platform(key)
     except ValueError:
         raise ValueError(
-            f"Unrecognised platform identifier: {platform!r}. "
-            f"Supported values: {sorted(_PLATFORM_ALIASES.keys())}"
-        )
+            f"Unrecognised platform identifier: {platform!r}. " f"Supported values: {sorted(_PLATFORM_ALIASES.keys())}"
+        ) from None
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +166,7 @@ def _resolve_platform(platform: str) -> Platform:
 # Each function accepts a single ``csv.DictReader`` row (dict) and the
 # row number (for error reporting) and returns a normalised royalty dict
 # or ``None`` if the row should be skipped.
+
 
 def _parse_kdp_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
     """Parse one KDP CSV row into a normalised royalty dict.
@@ -181,26 +181,16 @@ def _parse_kdp_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
         logger.debug("KDP row %d: missing title, skipping", row_num)
         return None
 
-    marketplace = (
-        row.get("Marketplace") or row.get("marketplace") or "Amazon.com"
-    ).strip()
+    marketplace = (row.get("Marketplace") or row.get("marketplace") or "Amazon.com").strip()
     units_sold = _safe_int(row.get("Units Sold") or row.get("units_sold"))
-    units_refunded = _safe_int(
-        row.get("Units Refunded") or row.get("units_refunded")
-    )
-    net_units = _safe_int(
-        row.get("Net Units Sold") or row.get("net_units_sold")
-    )
+    units_refunded = _safe_int(row.get("Units Refunded") or row.get("units_refunded"))
+    net_units = _safe_int(row.get("Net Units Sold") or row.get("net_units_sold"))
     if net_units == 0 and (units_sold or units_refunded):
         net_units = units_sold - units_refunded
 
-    list_price = _safe_decimal(
-        row.get("Avg List Price") or row.get("avg_list_price")
-    )
+    list_price = _safe_decimal(row.get("Avg List Price") or row.get("avg_list_price"))
     royalty = _safe_decimal(row.get("Royalty") or row.get("royalty"))
-    currency = (
-        row.get("Currency") or row.get("currency") or "USD"
-    ).strip() or "USD"
+    currency = (row.get("Currency") or row.get("currency") or "USD").strip() or "USD"
 
     period_str = row.get("Royalty Date") or row.get("royalty_date") or ""
     period_start = _parse_date(period_str)
@@ -215,9 +205,7 @@ def _parse_kdp_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
         "title": title,
         "asin": (row.get("ASIN") or row.get("asin") or "").strip() or None,
         "isbn": (row.get("ISBN") or row.get("isbn") or "").strip() or None,
-        "format_type": _infer_format(
-            row.get("Royalty Type") or row.get("royalty_type") or ""
-        ),
+        "format_type": _infer_format(row.get("Royalty Type") or row.get("royalty_type") or ""),
         "units_sold": units_sold,
         "units_refunded": units_refunded,
         "net_units": net_units,
@@ -232,9 +220,7 @@ def _parse_kdp_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
     }
 
 
-def _parse_ingram_spark_row(
-    row: dict[str, str], row_num: int
-) -> dict[str, Any] | None:
+def _parse_ingram_spark_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
     """Parse one IngramSpark CSV row into a normalised royalty dict.
 
     Expected IngramSpark columns:
@@ -247,17 +233,10 @@ def _parse_ingram_spark_row(
         return None
 
     quantity = _safe_int(row.get("Quantity") or row.get("quantity"))
-    compensation = _safe_decimal(
-        row.get("Publisher Compensation")
-        or row.get("publisher_compensation")
-    )
-    currency = (
-        row.get("Currency Code") or row.get("currency_code") or "USD"
-    ).strip() or "USD"
+    compensation = _safe_decimal(row.get("Publisher Compensation") or row.get("publisher_compensation"))
+    currency = (row.get("Currency Code") or row.get("currency_code") or "USD").strip() or "USD"
 
-    sale_type = (
-        row.get("Sale/Return") or row.get("sale_return") or "Sale"
-    ).strip()
+    sale_type = (row.get("Sale/Return") or row.get("sale_return") or "Sale").strip()
     if sale_type.lower() == "return":
         units_sold = 0
         units_refunded = abs(quantity)
@@ -266,9 +245,7 @@ def _parse_ingram_spark_row(
         units_refunded = 0
     net_units = units_sold - units_refunded
 
-    period_str = (
-        row.get("Reporting Date") or row.get("reporting_date") or ""
-    )
+    period_str = row.get("Reporting Date") or row.get("reporting_date") or ""
     period_start = _parse_date(period_str)
     if period_start is None:
         period_start = datetime.now(UTC).replace(day=1)
@@ -281,9 +258,7 @@ def _parse_ingram_spark_row(
         "title": title,
         "asin": None,
         "isbn": (row.get("ISBN") or row.get("isbn") or "").strip() or None,
-        "format_type": _infer_format(
-            row.get("Format") or row.get("format") or ""
-        ),
+        "format_type": _infer_format(row.get("Format") or row.get("format") or ""),
         "units_sold": units_sold,
         "units_refunded": units_refunded,
         "net_units": net_units,
@@ -311,9 +286,7 @@ def _parse_d2d_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
 
     units = _safe_int(row.get("Units") or row.get("units"))
     payout = _safe_decimal(row.get("Payout") or row.get("payout"))
-    currency = (
-        row.get("Currency") or row.get("currency") or "USD"
-    ).strip() or "USD"
+    currency = (row.get("Currency") or row.get("currency") or "USD").strip() or "USD"
 
     period_str = row.get("Period") or row.get("period") or ""
     period_start = _parse_date(period_str)
@@ -324,9 +297,7 @@ def _parse_d2d_row(row: dict[str, str], row_num: int) -> dict[str, Any] | None:
 
     return {
         "platform": Platform.DRAFT2DIGITAL.value,
-        "marketplace": (
-            row.get("Channel") or row.get("channel") or "D2D"
-        ).strip() or "D2D",
+        "marketplace": (row.get("Channel") or row.get("channel") or "D2D").strip() or "D2D",
         "title": title,
         "asin": None,
         "isbn": (row.get("ISBN") or row.get("isbn") or "").strip() or None,
@@ -356,6 +327,7 @@ _ROW_PARSERS: dict[Platform, Any] = {
 # ---------------------------------------------------------------------------
 # CSVImportQueue
 # ---------------------------------------------------------------------------
+
 
 class CSVImportQueue:
     """Queue-like service that accepts raw CSV data, parses and validates it,
@@ -479,8 +451,7 @@ class CSVImportQueue:
                 logger.warning("CSV parse error at row %d: %s", i, exc, exc_info=True)
 
         logger.info(
-            "CSVImportQueue processed %d valid record(s) for platform %s "
-            "(%d error(s))",
+            "CSVImportQueue processed %d valid record(s) for platform %s " "(%d error(s))",
             len(validated),
             self.platform.value,
             len(self.errors),
@@ -491,6 +462,7 @@ class CSVImportQueue:
 # ---------------------------------------------------------------------------
 # High-level async import function
 # ---------------------------------------------------------------------------
+
 
 async def process_csv_import(
     db_session: AsyncSession,
@@ -530,8 +502,7 @@ async def process_csv_import(
 
     if not validated_records:
         logger.info(
-            "No valid records to import for account %s (platform=%s). "
-            "Errors: %s",
+            "No valid records to import for account %s (platform=%s). " "Errors: %s",
             account_id,
             platform,
             queue.errors[:10] if queue.errors else "none",
@@ -564,8 +535,7 @@ async def process_csv_import(
         await db_session.flush()
 
     logger.info(
-        "CSV import complete for account %s (platform=%s): "
-        "%d record(s) imported, %d skipped, batch_id=%s",
+        "CSV import complete for account %s (platform=%s): " "%d record(s) imported, %d skipped, batch_id=%s",
         account_id,
         platform,
         imported,

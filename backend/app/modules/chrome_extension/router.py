@@ -6,6 +6,7 @@ Endpoints:
     GET  /api/v1/extension/quick-research  — Quick niche data for sidebar
     POST /api/v1/extension/clip            — Save clip to Knowledge Vault
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, status

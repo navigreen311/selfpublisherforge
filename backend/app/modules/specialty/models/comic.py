@@ -1,23 +1,24 @@
 """SQLAlchemy models for Comic Books."""
+
 from __future__ import annotations
 
 import uuid
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Enum,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import TenantModel, BaseModel
+from app.database import BaseModel, TenantModel
 from app.modules.specialty.models.enums import (
     BookStatus,
     BorderStyle,
@@ -77,9 +78,7 @@ class Comic(TenantModel):
     )
 
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
-    trim_size: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="6.625x10.25"
-    )
+    trim_size: Mapped[str] = mapped_column(String(20), nullable=False, default="6.625x10.25")
 
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
     premise: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -102,7 +101,7 @@ class Comic(TenantModel):
     safety_settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     status: Mapped[str] = mapped_column(
-        Enum(BookStatus, name="book_status", native_enum=True, create_constraint=False),
+        Enum(BookStatus, name="specialty_book_status", native_enum=True, create_constraint=False),
         nullable=False,
         default=BookStatus.draft,
         server_default="draft",
@@ -111,13 +110,13 @@ class Comic(TenantModel):
 
     # Relationships
     pages: Mapped[list[ComicPage]] = relationship(
-        "ComicPage",
+        "app.modules.specialty.models.comic.ComicPage",
         back_populates="comic",
         cascade="all, delete-orphan",
         order_by="ComicPage.page_number",
     )
     characters: Mapped[list[ComicCharacter]] = relationship(
-        "ComicCharacter",
+        "app.modules.specialty.models.comic.ComicCharacter",
         back_populates="comic",
         cascade="all, delete-orphan",
     )
@@ -135,9 +134,7 @@ class ComicPage(BaseModel):
         index=True,
     )
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    page_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="story"
-    )
+    page_type: Mapped[str] = mapped_column(String(30), nullable=False, default="story")
     script_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     full_art_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -145,9 +142,9 @@ class ComicPage(BaseModel):
     panel_count: Mapped[int] = mapped_column(Integer, nullable=False, default=6)
 
     # Relationships
-    comic: Mapped[Comic] = relationship("Comic", back_populates="pages")
+    comic: Mapped[Comic] = relationship("app.modules.specialty.models.comic.Comic", back_populates="pages")
     panels: Mapped[list[ComicPanel]] = relationship(
-        "ComicPanel",
+        "app.modules.specialty.models.comic.ComicPanel",
         back_populates="page",
         cascade="all, delete-orphan",
         order_by="ComicPanel.panel_order",
@@ -188,9 +185,9 @@ class ComicPanel(BaseModel):
     background_color: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Relationships
-    page: Mapped[ComicPage] = relationship("ComicPage", back_populates="panels")
+    page: Mapped[ComicPage] = relationship("app.modules.specialty.models.comic.ComicPage", back_populates="panels")
     bubbles: Mapped[list[ComicBubble]] = relationship(
-        "ComicBubble",
+        "app.modules.specialty.models.comic.ComicBubble",
         back_populates="panel",
         cascade="all, delete-orphan",
         order_by="ComicBubble.bubble_order",
@@ -223,7 +220,7 @@ class ComicBubble(BaseModel):
     tail_direction: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Relationships
-    panel: Mapped[ComicPanel] = relationship("ComicPanel", back_populates="bubbles")
+    panel: Mapped[ComicPanel] = relationship("app.modules.specialty.models.comic.ComicPanel", back_populates="bubbles")
 
 
 class ComicCharacter(BaseModel):
@@ -242,26 +239,24 @@ class ComicCharacter(BaseModel):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     visual_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     reference_images: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    auto_append: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default="true"
-    )
+    auto_append: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     default_costume: Mapped[str | None] = mapped_column(String(100), nullable=True)
     color_palette: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    comic: Mapped[Comic] = relationship("Comic", back_populates="characters")
+    comic: Mapped[Comic] = relationship("app.modules.specialty.models.comic.Comic", back_populates="characters")
     expressions: Mapped[list[CharacterExpression]] = relationship(
-        "CharacterExpression",
+        "app.modules.specialty.models.comic.CharacterExpression",
         back_populates="character",
         cascade="all, delete-orphan",
     )
     poses: Mapped[list[CharacterPose]] = relationship(
-        "CharacterPose",
+        "app.modules.specialty.models.comic.CharacterPose",
         back_populates="character",
         cascade="all, delete-orphan",
     )
     costumes: Mapped[list[CharacterCostume]] = relationship(
-        "CharacterCostume",
+        "app.modules.specialty.models.comic.CharacterCostume",
         back_populates="character",
         cascade="all, delete-orphan",
     )
@@ -284,7 +279,8 @@ class CharacterExpression(BaseModel):
 
     # Relationships
     character: Mapped[ComicCharacter] = relationship(
-        "ComicCharacter", back_populates="expressions"
+        "app.modules.specialty.models.comic.ComicCharacter",
+        back_populates="expressions",
     )
 
 
@@ -305,7 +301,8 @@ class CharacterPose(BaseModel):
 
     # Relationships
     character: Mapped[ComicCharacter] = relationship(
-        "ComicCharacter", back_populates="poses"
+        "app.modules.specialty.models.comic.ComicCharacter",
+        back_populates="poses",
     )
 
 
@@ -323,11 +320,10 @@ class CharacterCostume(BaseModel):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     reference_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    is_default: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     # Relationships
     character: Mapped[ComicCharacter] = relationship(
-        "ComicCharacter", back_populates="costumes"
+        "app.modules.specialty.models.comic.ComicCharacter",
+        back_populates="costumes",
     )

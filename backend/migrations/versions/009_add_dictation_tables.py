@@ -9,6 +9,7 @@ Revision ID: c9d0e1f2a3b4
 Revises: b7c8d9e0f1a2
 Create Date: 2026-02-12
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql

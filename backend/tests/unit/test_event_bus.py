@@ -1,31 +1,29 @@
 """Unit tests for the Redis event bus: publishing, subscribing, and dead letter handling."""
+
 from __future__ import annotations
 
-import asyncio
 import json
-import time
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
-from app.core.event_types import BaseEvent, EventType, EventPublisher
+from app.core.event_types import BaseEvent, EventPublisher, EventType
 from app.core.events import (
+    DLQ_STREAM,
+    STREAM_PREFIX,
     RedisEventPublisher,
     RedisEventSubscriber,
-    _serialize_event,
     _deserialize_event,
-    STREAM_PREFIX,
-    GLOBAL_STREAM,
-    DLQ_STREAM,
+    _serialize_event,
 )
 from app.tasks.dead_letter import DeadLetter, DeadLetterQueue
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_event(
     event_type: EventType = EventType.USER_REGISTERED,
@@ -37,7 +35,7 @@ def _make_event(
         org_id=org_id or uuid4(),
         actor_id=actor_id or uuid4(),
         actor_type="user",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         data={"foo": "bar"},
     )
 
@@ -63,8 +61,8 @@ def _async_redis_mock():
 # Serialization / deserialization
 # ========================================================================
 
-class TestSerialization:
 
+class TestSerialization:
     def test_serialize_produces_flat_dict(self):
         event = _make_event()
         fields = _serialize_event(event)
@@ -97,8 +95,8 @@ class TestSerialization:
 # RedisEventPublisher
 # ========================================================================
 
-class TestRedisEventPublisher:
 
+class TestRedisEventPublisher:
     @pytest.mark.asyncio
     async def test_publish_writes_to_two_streams(self):
         """RedisEventPublisher publishes to the correct Pub/Sub channel."""
@@ -139,8 +137,8 @@ class TestRedisEventPublisher:
 # RedisEventSubscriber
 # ========================================================================
 
-class TestRedisEventSubscriber:
 
+class TestRedisEventSubscriber:
     @pytest.mark.asyncio
     async def test_subscribe_creates_consumer_group(self):
         redis_mock = _async_redis_mock()
@@ -168,11 +166,7 @@ class TestRedisEventSubscriber:
         redis_mock = _async_redis_mock()
         redis_mock.xgroup_create = AsyncMock()
         redis_mock.xack = AsyncMock()
-        redis_mock.xreadgroup = AsyncMock(
-            return_value=[
-                (stream_key.encode(), [(b"1-0", byte_fields)])
-            ]
-        )
+        redis_mock.xreadgroup = AsyncMock(return_value=[(stream_key.encode(), [(b"1-0", byte_fields)])])
 
         subscriber = RedisEventSubscriber(redis_mock, "grp", "c1")
         callback = AsyncMock()
@@ -197,11 +191,7 @@ class TestRedisEventSubscriber:
         redis_mock = _async_redis_mock()
         redis_mock.xgroup_create = AsyncMock()
         redis_mock.xack = AsyncMock()
-        redis_mock.xreadgroup = AsyncMock(
-            return_value=[
-                (stream_key.encode(), [(b"1-0", byte_fields)])
-            ]
-        )
+        redis_mock.xreadgroup = AsyncMock(return_value=[(stream_key.encode(), [(b"1-0", byte_fields)])])
 
         subscriber = RedisEventSubscriber(redis_mock, "grp", "c1")
         callback = AsyncMock()
@@ -225,11 +215,7 @@ class TestRedisEventSubscriber:
         redis_mock.xgroup_create = AsyncMock()
         redis_mock.xack = AsyncMock()
         redis_mock.xadd = AsyncMock()
-        redis_mock.xreadgroup = AsyncMock(
-            return_value=[
-                (stream_key.encode(), [(b"1-0", byte_fields)])
-            ]
-        )
+        redis_mock.xreadgroup = AsyncMock(return_value=[(stream_key.encode(), [(b"1-0", byte_fields)])])
 
         subscriber = RedisEventSubscriber(redis_mock, "grp", "c1")
         callback = AsyncMock(side_effect=RuntimeError("processing failed"))
@@ -278,8 +264,8 @@ class TestRedisEventSubscriber:
 # DeadLetterQueue (Redis-backed)
 # ========================================================================
 
-class TestDeadLetterQueue:
 
+class TestDeadLetterQueue:
     def _make_redis_mock(self):
         """Synchronous Redis mock for DeadLetterQueue."""
         mock = MagicMock()
