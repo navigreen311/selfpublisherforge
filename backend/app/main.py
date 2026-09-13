@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.core.error_handler import register_error_handlers
+from app.core.observability import register_observability
 from app.core.openapi import custom_openapi_schema
 from app.database import init_db
 
@@ -98,6 +99,9 @@ def create_app() -> FastAPI:
 
     # Error handlers
     register_error_handlers(app)
+
+    # /metrics and error tracking
+    register_observability(app)
 
     # Health check
     @app.get("/health", summary="Health check", tags=["health"])
